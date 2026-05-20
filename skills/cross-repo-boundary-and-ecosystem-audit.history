@@ -1,0 +1,1700 @@
+## Superseded from ecosystem-audit-remediation
+
+---
+name: ecosystem-audit-remediation
+description: 'Systematic cross-repo ecosystem audit and remediation. Use when: validating
+  multi-repo integration boundaries, hunting cross-repo contract bugs, or remediating
+  documentation drift.'
+category: architecture
+date: 2026-03-16
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Objective** | Audit and remediate a distributed multi-repo ecosystem for integration bugs, documentation drift, and pattern inconsistencies |
+| **Scope** | 12 repositories, 6 PRs, 6 issues filed |
+| **Findings** | 4 critical bugs, 9 important issues, 5 minor issues |
+| **Duration** | Single session — plan mode audit → 5-wave remediation → verification → PRs |
+
+## When to Use
+
+- Multiple repos share contracts (NATS subjects, REST API fields, status enums) and you need to verify they agree
+- Documentation (architecture.md, ADRs) may have drifted from implementation
+- A new repo was scaffolded and needs validation against the ecosystem's actual integration points
+- You need to find "silent failures" where code runs without errors but drops messages or uses wrong field names
+
+## Verified Workflow
+
+### Quick Reference
+
+1. **Audit phase** (plan mode): Read every repo's code + docs, build alignment matrix
+2. **Categorize**: Critical (runtime breaks) > Important (confusion/drift) > Minor (style)
+3. **Wave execution**: Fix criticals first, docs second, integration third, standardization fourth, cleanup fifth
+4. **Verification**: Run tests after each wave, use sub-agents for parallel file-level verification
+5. **PR creation**: One PR per repo, file follow-up issues for remaining work
+
+### Phase 1: Cross-Repo Audit
+
+Build an alignment matrix comparing documented behavior vs actual behavior:
+
+| Repo | Documented Role | Actual Role | Aligned? |
+| ------ | ---------------- | ------------- | ---------- |
+| Each repo | What docs say | What code does | Yes/No |
+
+Key areas to cross-check:
+- **NATS subjects**: Compare publisher subjects (Hermes) vs subscriber filters (Keystone, Telemachy) vs documentation (Odysseus ADRs)
+- **API field names**: Compare REST client field mappings vs Pydantic model attributes vs CLAUDE.md references
+- **Status enums**: Compare status values across all repos that handle task lifecycle
+- **Dependency claims**: Verify "imported by X" claims in architecture docs against actual `pixi.toml`/`pyproject.toml` dependencies
+
+### Phase 2: Wave-Based Remediation
+
+Execute fixes in dependency order:
+
+1. **Wave 1 — Critical runtime bugs**: Fix code that crashes or silently drops data
+2. **Wave 2 — Documentation**: Fix architecture docs, create missing ADRs, add central references
+3. **Wave 3 — Integration gaps**: Fix subscription mismatches, missing event types
+4. **Wave 4 — Pattern standardization**: Unify config patterns, client patterns, status values
+5. **Wave 5 — Cleanup**: Gitignore, naming conventions, minor consistency
+
+### Phase 3: Verification
+
+- Run `just test` in every modified repo
+- Use parallel sub-agents for file-level verification (PASS/FAIL per check)
+- Fix any issues found during verification before committing
+
+### Phase 4: PR and Issue Creation
+
+- One branch + PR per repo (consistent naming: `ecosystem-audit-remediation`)
+- File GitHub issues for follow-up work discovered but out of scope
+- Set PRs to auto-merge
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Trusting CLAUDE.md status values over code | Used `todo`/`done` from CLAUDE.md as authoritative | Code actually uses `pending`/`completed` — CLAUDE.md was stale | Always treat code (especially Pydantic models and enums) as the source of truth for field names and status values |
+| Assuming NATS subject part count from comments | Code comment said "6 parts" so check was `< 6` | `hi.tasks.team.task.updated` is actually 5 parts — the comment was wrong | Count the actual dots in the subject string; never trust comments over split() behavior |
+| Creating PRs targeting default branch without checking | Used `gh pr create` without `--base` flag | Some repos use `main`, others `master` — PR creation failed with "no common history" | Always check `gh repo view --json defaultBranchRef` and verify local branch was created from the correct base |
+| Skipping HMAC in webhook tests | Tests sent raw JSON without computing HMAC signature | `.env` file had `WEBHOOK_SECRET` set, so server validated HMAC and returned 401 | When migrating config to pydantic-settings (which auto-loads `.env`), check if `.env` contains values that change behavior — especially secrets that gate auth checks |
+| Removing `close()` calls without adding the method | Removed `await maestro_client.close()` from daemon.py as the fix for C3 | When later refactoring MaestroClient to persistent connections, `close()` became valid and needed | Consider the full fix arc — if you're going to refactor a client later in the same session, plan the close() story end-to-end |
+
+## Results & Parameters
+
+### Bugs Fixed
+
+```yaml
+critical:
+  C1: NATSListener parts count < 6 → < 5 (was dropping ALL messages)
+  C2: daemon.py task.title/assigned_to/depends_on → subject/assignee_agent_id/blocked_by
+  C3: MaestroClient refactored to persistent connections with close()
+  C4: Odysseus architecture.md Keystone "secrets management" → "DAG execution"
+
+important:
+  I1: NATS subject hi.tasks.*.*.updated → hi.tasks.> (catch all verbs)
+  I2: Hermes registrar missing task.completed/task.failed subscriptions
+  I3: Core NATS → JetStream durable consumer (at-least-once delivery)
+  I4: CLAUDE.md status values aligned with code (todo→pending, done→completed)
+  I5: ADR 005 created documenting actual NATS subject schema
+  I6: Keystone MaestroClient persistent httpx.AsyncClient
+  I7: Hephaestus "imported by all" → "not yet imported"
+  I8: Hermes + Telemachy config migrated to pydantic-settings
+  I9: .gitignore cleanup for ProjectMnemosyne/ and build/ artifacts
+
+minor:
+  M1: 8 new NATSListener tests
+  M2: pixi.toml names standardized (project-telemachy, project-hephaestus)
+  M4: docs/nats-subjects.md central reference created
+  M5: Odysseus justfile recipes for keystone-start/status, scylla-test
+```
+
+### Test Results
+
+```yaml
+ProjectKeystone: 27/27 passed
+ProjectHermes: 19/19 passed (was 14/18 — fixed HMAC in tests)
+ProjectTelemachy: 24/24 passed
+```
+
+### Cross-Check Pattern (reusable)
+
+```bash
+# Find all NATS subject definitions across ecosystem
+grep -r "hi\.tasks\|hi\.agents\|TASK_SUBJECT\|AGENT_EVENTS" ~/Project*/src/ ~/Odysseus/docs/
+
+# Find all status enum definitions
+grep -r "completed\|pending\|backlog\|in_progress" ~/Project*/src/*/models.py
+
+# Find all maestro_client patterns
+grep -r "httpx.AsyncClient\|async with.*client" ~/Project*/src/*/maestro_client.py
+
+# Verify config patterns
+grep -r "BaseSettings\|os.environ.get\|load_dotenv" ~/Project*/src/*/config.py
+```
+
+---
+
+### Notes: ecosystem-audit-remediation
+
+# Ecosystem Audit & Remediation — Session Notes
+
+## Date: 2026-03-16
+
+## Context
+
+The HomericIntelligence ecosystem has 12 repositories organized around ai-maestro (core platform). This session performed a full audit validating repo integration boundaries, documentation accuracy, and code correctness.
+
+## Repositories Audited
+
+1. ai-maestro (core, not modified)
+2. AchaeanFleet
+3. ProjectHermes — webhook → NATS bridge
+4. ProjectArgus — observability
+5. Myrmidons — GitOps agent provisioning
+6. ProjectTelemachy — workflow engine
+7. ProjectKeystone — DAG executor (most bugs found here)
+8. ProjectProteus — CI/CD
+9. ProjectMnemosyne — skills marketplace
+10. ProjectHephaestus — shared utilities
+11. ProjectOdyssey — research/training
+12. ProjectScylla — testing/chaos
+
+## Critical Findings Detail
+
+### C1: NATSListener Subject Parsing Bug
+
+**File**: `ProjectKeystone/src/keystone/nats_listener.py:42-43`
+
+The code had:
+```python
+# Expected: hi . tasks . {team_id} . {task_id} . updated  (6 parts)
+if len(parts) < 6:
+```
+
+But `"hi.tasks.team.task.updated".split(".")` produces `["hi", "tasks", "team", "task", "updated"]` = 5 parts, not 6. Every single NATS message was silently dropped with a warning log. The daemon's only working path was the startup scan.
+
+### C2: Daemon AttributeError
+
+**File**: `ProjectKeystone/src/keystone/daemon.py:79-82`
+
+Used `task.title`, `task.assigned_to`, `task.depends_on` but the Task model has `task.subject`, `task.assignee_agent_id`, `task.blocked_by`. This was clearly a case of writing code against CLAUDE.md documentation rather than the actual model.
+
+### C3: Missing close() Method
+
+**File**: `ProjectKeystone/src/keystone/daemon.py:95,114`
+
+Called `await maestro_client.close()` but MaestroClient created new httpx.AsyncClient per request and had no close() method. Fixed by refactoring to persistent client with proper lifecycle.
+
+### C4: Odysseus Architecture Completely Wrong About Keystone
+
+**File**: `Odysseus/docs/architecture.md`
+
+Described Keystone as "Secrets and credential management; injects secrets into ai-maestro agent configs" with "Vault or SOPS backend". Keystone has zero secrets-related code — it's a DAG executor that watches NATS events. This was likely a placeholder from initial scaffolding that was never updated.
+
+## Integration Contract Mismatches Found
+
+| Contract | Publisher (Hermes) | Subscriber (Keystone) | Docs (Odysseus) |
+| ---------- | ------------------- | ---------------------- | ----------------- |
+| NATS subjects | `hi.tasks.{team}.{task}.{verb}` | Was: `hi.tasks.*.*.updated` only | Was: `maestro.task.*` |
+| Task verbs | `updated`, `completed`, `failed` | Was: only `updated` | Not documented |
+| Subscribed events | `_TASK_EVENTS` has 3 | `_SUBSCRIBED_EVENTS` had only 1 task event | N/A |
+| Status values | Passes through from ai-maestro | Code: `completed`, CLAUDE.md: `done` | Not documented |
+
+## Config Pattern Audit
+
+| Repo | Before | After |
+| ------ | -------- | ------- |
+| Keystone | pydantic-settings (good) | unchanged |
+| Hermes | os.environ.get + python-dotenv | pydantic-settings |
+| Telemachy | os.environ.get + python-dotenv | pydantic-settings |
+
+## PRs Created
+
+| Repo | PR | URL |
+| ------ | ----- | ----- |
+| ProjectKeystone | #82 | https://github.com/HomericIntelligence/ProjectKeystone/pull/82 |
+| ProjectHermes | #1 | https://github.com/HomericIntelligence/ProjectHermes/pull/1 |
+| ProjectTelemachy | #1 | https://github.com/HomericIntelligence/ProjectTelemachy/pull/1 |
+| Odysseus | #1 | https://github.com/HomericIntelligence/Odysseus/pull/1 |
+| Myrmidons | #1 | https://github.com/HomericIntelligence/Myrmidons/pull/1 |
+| ProjectHephaestus | #17 (updated) | https://github.com/HomericIntelligence/ProjectHephaestus/pull/17 |
+
+## Key Lesson
+
+The most dangerous bugs were "silent" — NATSListener dropping all messages logged a warning but never crashed. If you only look at error logs, you'd think it was working. The startup scan masked the problem by advancing DAGs on boot. Only by tracing the actual subject string through `.split(".")` and counting parts could you find the off-by-one.
+
+---
+
+## Superseded from multi-domain-audit-remediation
+
+---
+name: multi-domain-audit-remediation
+description: 'Workflow for implementing a multi-domain production-grade audit remediation
+  plan touching exception handling, logging hygiene, DRY violations, CI alignment,
+  and documentation. Use when: (1) an audit report surfaces critical/major/minor issues
+  across several independent dimensions simultaneously, (2) converting f-string logging
+  anti-patterns and print() calls to structured logger calls across a library codebase,
+  (3) consolidating duplicated file discovery logic into a shared utility.'
+category: architecture
+date: 2026-03-14
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Skill** | multi-domain-audit-remediation |
+| **Category** | architecture |
+| **Source** | ProjectHephaestus 2026-03-14 post-audit remediation v2 |
+| **Trigger** | Audit report with critical/major/minor issues across multiple independent domains |
+
+This skill captures the verified workflow for implementing a multi-domain audit remediation plan
+in a Python library codebase. It covers the exact sequence for: narrowing broad `except Exception`
+clauses, converting f-string logging anti-patterns to lazy `%s` format, replacing library-level
+`print()` with `logger`, extracting a shared markdown file discovery utility to eliminate DRY
+violations, aligning CI coverage thresholds, and updating documentation to match actual code.
+
+## When to Use
+
+- An audit scorecard surfaces findings across exception handling, logging, DRY, CI/CD, and docs
+  simultaneously and you need to work through them in a safe order
+- You have `logger.info(f"Found {count} files")` patterns across many files and need to convert
+  them to `logger.info("Found %d files", count)` without breaking tests
+- Library modules use `print()` for status output that should go through the logging framework
+- The same file discovery loop is implemented in 3+ modules; you want to extract a shared utility
+- CI `--cov-fail-under` threshold doesn't match `pyproject.toml`'s `fail_under` value
+- README/scripts docs reference non-existent files or omit real ones
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Check for f-string logging anti-patterns
+grep -rn 'logger\.\(info\|warning\|error\|debug\)(f"' hephaestus/
+
+# Check for print() in library code (not cli/utils.py or main())
+grep -rn '^    print(' hephaestus/ | grep -v cli/utils | grep -v 'def main'
+
+# Check broad except clauses
+grep -rn 'except Exception' hephaestus/
+
+# After changes: verify ruff noqa comments don't reference un-selected rules
+pixi run ruff check hephaestus/ --select=BLE 2>&1 | head -5
+# If BLE is not in pyproject.toml select list → don't add # noqa: BLE001
+
+# Run full suite
+pixi run pytest tests/unit -v
+pre-commit run --all-files
+```
+
+### Step 1: Read all files before changing anything
+
+Read every file in the audit's "Files to Modify" list before writing any edits. This prevents
+mid-implementation surprises (circular imports, type mismatches, existing logger setup).
+
+Key things to check in each file:
+- Does it already import a logger? (If not, add `from hephaestus.logging.utils import get_logger` and `logger = get_logger(__name__)`)
+- Does `sys` only appear for `sys.stderr` prints? (If yes, remove `import sys` when replacing those prints with logger)
+- Is the file a CLI entry point (`main()` function)? (Keep `print()` in `main()` — those are user-facing)
+
+### Step 2: Convert f-string logging (critical priority)
+
+**Pattern to replace**:
+```python
+# BEFORE — deferred string interpolation bypassed; extra allocation per call
+logger.info(f"Found {count} files in {path}")
+logger.warning(f"  ✗ {message}")
+logger.error(f"Error accessing repo {repo_name}: {e}")
+```
+
+**Pattern to use**:
+```python
+# AFTER — lazy evaluation, only interpolates if log level is active
+logger.info("Found %d files in %s", count, path)
+logger.warning("  ✗ %s", message)
+logger.error("Error accessing repo %s: %s", repo_name, e)
+```
+
+Rules:
+- Integer format: `%d`, float: `%.2f`, everything else: `%s`
+- Never use `%s` for integers that need formatting (e.g. counts) — use `%d`
+- When logging exceptions, always pass `e` as the last argument, not `str(e)`
+
+### Step 3: Replace print() in library code
+
+Distinguish three classes of `print()` calls:
+
+| Class | Action |
+| ------- | -------- |
+| Library internal status (inside a class method or non-`main()` function) | Replace with `logger.info/warning/error` |
+| CLI output in `main()` or `process_path()` | Replace with `logger.info/warning/error` if it's operational, keep as `print()` only for truly interactive terminal prompts |
+| Progress bar (`print("\r...", end="", flush=True)`) | Keep as `print()` — this is a terminal UI pattern |
+
+After removing `print()` from a file, check if `sys` is still used:
+```python
+# Only keep `import sys` if sys.exit() or sys.executable or sys.argv is still present
+grep -n 'sys\.' hephaestus/markdown/link_fixer.py
+```
+
+### Step 4: Narrow broad except clauses
+
+**Strategy by module type**:
+
+| Module | Recommended exceptions |
+| -------- | ---------------------- |
+| File I/O (`open`, `read_text`, `write_text`) | `OSError` |
+| YAML parsing | Keep `Exception` + add comment (yaml raises undocumented subtypes) |
+| Subprocess | `subprocess.CalledProcessError`, `OSError` |
+| GitHub API (PyGithub) | Keep `Exception` + comment (PyGithub raises many subtypes) |
+| Retry utilities | Keep `Exception` + comment (intentional generic retry) |
+| Gzip decompression | `(OSError, EOFError)` |
+| Unicode file reads | `(OSError, UnicodeDecodeError)` |
+| Path resolution | `(OSError, ValueError)` |
+
+**Critical**: Before narrowing, check what the existing tests raise. Tests often use
+`mock.side_effect = Exception("error message")`. If tests use bare `Exception`, either:
+- Update the tests to raise the specific type you're narrowing to, OR
+- Keep `Exception` with a justifying comment if the actual runtime exceptions are unpredictable
+
+**`# noqa: BLE001` pattern**: Only works if `BLE` is in your ruff `select` list. Check first:
+```bash
+grep "select" pyproject.toml | grep BLE
+```
+If `BLE` is not selected, use a plain comment instead:
+```python
+except Exception as e:  # broad catch intentional: yaml has undocumented exception subtypes
+```
+
+### Step 5: Extract shared utilities (DRY fix)
+
+When the same pattern appears in 3+ places, create a shared module:
+
+```python
+# hephaestus/markdown/utils.py
+from pathlib import Path
+from hephaestus.constants import DEFAULT_EXCLUDE_DIRS
+
+def find_markdown_files(
+    directory: Path, exclude_dirs: set[str] | frozenset[str] | None = None
+) -> list[Path]:
+    """Find all markdown files in a directory recursively."""
+    if exclude_dirs is None:
+        exclude_dirs = set(DEFAULT_EXCLUDE_DIRS)
+    return sorted(
+        f for f in directory.rglob("*.md")
+        if not any(part in exclude_dirs for part in f.parts)
+    )
+```
+
+**Type signature gotcha**: If callers can pass `frozenset[str]` (common when the value comes
+from a dataclass default), the signature must accept `set[str] | frozenset[str] | None`, not
+just `set[str] | None`. mypy will catch this immediately.
+
+Update `__init__.py` to export the new utility, then update all 3 callers.
+
+### Step 6: Align CI coverage threshold
+
+Check for threshold mismatches:
+```bash
+# pyproject.toml
+grep "fail-under\|fail_under" pyproject.toml
+
+# CI workflow
+grep "cov-fail-under" .github/workflows/test.yml
+```
+
+If they differ, set both to the higher value (the pyproject.toml value is authoritative).
+
+### Step 7: Update documentation
+
+For README.md subpackage listings: list ALL subpackages in the directory tree section.
+
+For scripts/README.md: list the ACTUAL files in the scripts/ directory, not what was there
+originally. Verify with `ls scripts/*.py`.
+
+For CONTRIBUTING.md references to non-existent files: either create the file or remove the
+reference. Creating a minimal `CODE_OF_CONDUCT.md` using Contributor Covenant v2.1 is the
+preferred approach.
+
+### Step 8: Verify end-to-end
+
+```bash
+pixi run ruff check hephaestus/ tests/
+pixi run ruff format --check hephaestus/ tests/
+pixi run mypy hephaestus/
+pixi run pytest tests/unit -v --tb=short
+pre-commit run --all-files
+```
+
+All must pass before committing.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Added `# noqa: BLE001` to intentional broad except clauses | Used `except Exception as e: # noqa: BLE001` to suppress ruff warnings | `BLE` is not in the ruff `select` list — ruff flagged `RUF100` (unused noqa directive) | Always check `pyproject.toml` select list before adding noqa comments |
+| Narrowed PyGithub API exceptions to `(OSError, KeyError)` | Changed `except Exception` to `(OSError, KeyError)` in pr_merge.py | 3 tests failed — tests use `mock.side_effect = Exception("API error")` which doesn't match the narrow type | When narrowing exceptions in GitHub API code, keep `Exception` with comment; API libraries raise unpredictable subtypes |
+| Added `# noqa: BLE001` comment that was too long | `except Exception as e: # broad catch intentional: yaml raises undocumented exception subtypes` | Line exceeded 100-character limit → ruff E501 error | Keep inline comments short; truncate to stay within line length |
+| Removed `sys` import from fixer.py after replacing stderr prints | Deleted `import sys` when `print()` calls to `sys.stderr` were replaced | `sys.exit(0)` in `main()` still requires `sys` | Always grep for all `sys.` usages before removing the import |
+| Used `set[str] \| None` type for shared find_markdown_files | `def find_markdown_files(directory, exclude_dirs: set[str] \| None = None)` | mypy error: callers pass `frozenset[str]` from dataclass defaults | Use `set[str] \| frozenset[str] \| None` for exclude_dirs parameters |
+
+## Results & Parameters
+
+**Session outcome**: 24 files modified, 358 tests pass (7 new), 81.66% coverage, all pre-commit hooks green.
+
+| Metric | Before | After |
+| -------- | -------- | ------- |
+| Tests passing | 351 | 358 |
+| Coverage | 81.65% | 81.66% |
+| Broad `except Exception` (unjustified) | 21 | 0 |
+| F-string logging instances | 35 | 0 |
+| `print()` in library code | 44 | 0 |
+| Duplicated markdown discovery | 3 locations | 1 shared utility |
+
+**Files modified** (summary):
+- Source: `pr_merge.py`, `config_lint.py`, `structure.py`, `readme_commands.py`, `validation/markdown.py`, `fixer.py`, `link_fixer.py`, `downloader.py`, `helpers.py`, `system/info.py`, `version/manager.py`, `git/changelog.py`, `io/utils.py`, `utils/retry.py`
+- New: `hephaestus/markdown/utils.py`, `CODE_OF_CONDUCT.md`
+- Docs: `README.md`, `scripts/README.md`, `CONTRIBUTING.md`
+- Config: `pyproject.toml` (typo fix), `.github/workflows/test.yml` (threshold), `.gitignore`
+- `hephaestus/__init__.py` (design doc comment), `hephaestus/markdown/__init__.py` (export)
+
+**CI threshold alignment**:
+```yaml
+# .github/workflows/test.yml — was 75, now matches pyproject.toml
+--cov-fail-under=80
+```
+
+**Logging migration pattern** (copy-paste):
+```python
+# Add to any module that needs logger
+from hephaestus.logging.utils import get_logger
+logger = get_logger(__name__)
+
+# F-string → lazy format
+# BEFORE: logger.info(f"Processing {count} files in {path}")
+# AFTER:  logger.info("Processing %d files in %s", count, path)
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectHephaestus | Post-audit remediation v2 branch, 2026-03-14 | [notes.md](../references/notes.md) |
+
+---
+
+### Notes: multi-domain-audit-remediation
+
+# Session Notes: multi-domain-audit-remediation
+
+## Session Context
+
+**Date**: 2026-03-14
+**Repository**: ProjectHephaestus (branch: `hephaestus-audit-remediation-v2`, based on `hephaestus-full-remediation`)
+**Trigger**: Audit report grading 15 sections with B average (82%), identifying critical/major/minor issues
+
+## Audit Scorecard
+
+| Section | Grade | Score | Status |
+| --------- | ------- | ------- | -------- |
+| Project Structure & Organization | B+ | 87% | Healthy |
+| Documentation | C+ | 75% | Needs attention |
+| Architecture & Design | B | 83% | Healthy |
+| Source Code Quality | B- | 78% | Needs attention |
+| Testing | B+ | 85% | Healthy |
+| CI/CD & Build Pipeline | B | 82% | Healthy |
+| Dependency & Package Management | B+ | 86% | Healthy |
+| Security | B+ | 85% | Healthy |
+| Safety & Reliability | C+ | 76% | Needs attention |
+| **OVERALL** | **B** | **82%** | **Conditional GO** |
+
+## Issues Fixed
+
+### Critical
+1. **35 f-string logging anti-patterns** — converted to lazy `%s` format across 4 files
+2. **21 broad `except Exception` clauses** — narrowed to specific types or documented with justifying comments
+
+### Major
+3. **44 `print()` calls in library code** — replaced with `logger.info/warning/error`
+4. **CI coverage threshold mismatch** — CI was 75%, pyproject.toml was 80%; aligned to 80%
+5. **README.md missing 6 of 13 subpackages** — updated directory structure section
+6. **scripts/README.md severely outdated** — referenced 4 non-existent scripts, omitted 5 real ones
+7. **CONTRIBUTING.md references non-existent CODE_OF_CONDUCT.md** — created the file
+8. **DRY: markdown file discovery in 3 locations** — extracted to `hephaestus/markdown/utils.py`
+
+### Minor
+9. **Typo in pyproject.toml keywords** — `"homercintelligence"` → `"homericintelligence"`
+10. **Patch files at repo root** — added `*.patch` to .gitignore
+11. **`__all__` vs `_LAZY_IMPORTS` gap undocumented** — added comment to `__init__.py`
+
+## Key Technical Details
+
+### The PyGithub Exception Problem
+Tests in `test_github_utils.py` used `mock.side_effect = Exception("API error")` for API failure
+scenarios. Narrowing to `(OSError, KeyError)` caused 3 test failures. Solution: keep broad
+`Exception` for all PyGithub API calls (4 locations) with justifying comments. The API library's
+exception hierarchy is not well-documented.
+
+### The noqa BLE001 Problem
+Attempted to use `# noqa: BLE001` on intentional broad except clauses. ruff returned `RUF100`
+(unused noqa directive). `BLE` rule group is not in ProjectHephaestus's ruff `select` list
+(`["E", "F", "W", "I", "N", "D", "UP", "S101", "S102", "S105", "S106", "B", "SIM", "C4", "C901", "RUF"]`).
+Use plain comments instead.
+
+### The frozenset Type Signature Problem
+The new `find_markdown_files()` utility initially had `exclude_dirs: set[str] | None`. mypy
+failed immediately because `MarkdownFixer.exclude_patterns` is typed as `set[str] | frozenset[str]`
+(comes from `DEFAULT_EXCLUDE_DIRS` which can be a frozenset). Fixed by widening the parameter type.
+
+### sys Import Cleanup
+After replacing all `print(..., file=sys.stderr)` in `link_fixer.py`, the `sys` import appeared
+removable. However, `sys` was NOT needed at all in that file (no `sys.exit()` either — `main()`
+was not present). Safe to remove. In `fixer.py`, `sys.exit(0)` remains in `main()`, so `sys` stays.
+
+### Version Manager print() Pattern
+`version/manager.py` had 15 `print()` calls using emoji characters (`✓`, `⚠️`, `✗`). These were
+replaced with `logger.info/warning/error`. The emoji characters were dropped from the log messages
+since they add little value in a log context.
+
+## File Change Summary
+
+| File | Change Type | Key Change |
+| ------ | ------------ | ------------ |
+| `hephaestus/github/pr_merge.py` | Exception narrowing + f-string logging | 7 broad excepts → commented; 16 f-strings → %s |
+| `hephaestus/validation/config_lint.py` | Exception narrowing + f-string logging | OSError for IO; yaml keeps Exception; 7 f-strings → %s |
+| `hephaestus/validation/structure.py` | F-string logging | 10 f-strings → %s |
+| `hephaestus/validation/readme_commands.py` | Exception narrowing | (OSError, ValueError) for subprocess |
+| `hephaestus/validation/markdown.py` | F-string logging + DRY | 1 f-string; removed duplicate find_markdown_files() |
+| `hephaestus/markdown/fixer.py` | Exception narrowing + print→logger + DRY | OSError; 8 prints → logger; uses shared utility |
+| `hephaestus/markdown/link_fixer.py` | Exception narrowing + print→logger + DRY | (OSError, UnicodeDecodeError); 8 prints → logger; removed sys import |
+| `hephaestus/datasets/downloader.py` | Exception narrowing + print→logger | OSError/(OSError,EOFError); 7 prints → logger |
+| `hephaestus/utils/helpers.py` | Print→logger | Added logger; 4 prints → logger |
+| `hephaestus/version/manager.py` | Print→logger | Added logger; 15 prints → logger |
+| `hephaestus/io/utils.py` | Exception narrowing | OSError for backup |
+| `hephaestus/utils/retry.py` | Documentation | Added justifying comment |
+| `hephaestus/markdown/utils.py` | NEW | Shared find_markdown_files() |
+| `hephaestus/markdown/__init__.py` | Export | Added find_markdown_files to __all__ |
+| `hephaestus/__init__.py` | Documentation | Design comment for __all__ vs _LAZY_IMPORTS |
+| `README.md` | Documentation | Added 6 missing subpackages |
+| `scripts/README.md` | Documentation | Full rewrite matching actual scripts |
+| `CONTRIBUTING.md` | Documentation | CODE_OF_CONDUCT.md now resolves |
+| `CODE_OF_CONDUCT.md` | NEW | Contributor Covenant v2.1 |
+| `pyproject.toml` | Typo fix | homercintelligence → homericintelligence |
+| `.github/workflows/test.yml` | CI alignment | --cov-fail-under=75 → 80 |
+| `.gitignore` | Hygiene | Added *.patch |
+
+## Test Results
+
+```
+358 passed in 2.33s
+Coverage: 81.66% (threshold: 80%)
+All 19 pre-commit hooks: PASSED
+```
+
+New tests added: `tests/unit/markdown/test_utils.py` (7 tests for `find_markdown_files`)
+
+---
+
+## Superseded from dataset-repo-charter-stacked-deletion-prs
+
+---
+name: dataset-repo-charter-stacked-deletion-prs
+description: "Enforce a 'dataset-only' repo charter by locking a written charter, bucketing every artifact as in-charter vs out-of-charter, then porting or deleting out-of-charter code via stacked deletion PRs. Use when: (1) a repo has suffered massive scope creep and contains reconcilers/converters/runtime logic that belong elsewhere, (2) you need to reshape a repo to be ONLY schemas + data + validators + docs + CI wrappers, (3) the cleanup will delete 10k+ LOC and you want small reviewable diffs, (4) the receiving repos for ported code are different repos in the same org and you do NOT want to coordinate merge ordering, (5) you need to distinguish 'dataset repo' (just data + schema) from 'consumer repo with reconciler' — the reconciler ALWAYS lives in the consumer, never the dataset, (6) deciding whether to coordinate cross-repo merges or open independent PRs that link back to each other for reconstruction."
+category: architecture
+date: 2026-05-17
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [charter, scope-creep, dataset-repo, stacked-prs, deletion-pr, multi-repo, repo-boundary, reconciler, port-vs-delete]
+---
+
+# Dataset Repo Charter Enforcement via Stacked Deletion PRs
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-17 |
+| **Objective** | Cleanly reshape a repo back to its intended charter (dataset-only) after major scope creep, deleting tens of thousands of lines without breaking the receiving consumers. |
+| **Outcome** | Successful: -24,632 lines / 159 files deleted from Myrmidons across 4 stacked PRs (#730, #731, #732, #733); reconciler ported to ProjectAgamemnon (#405); hello-world ported to AchaeanFleet (#664); 127 GitHub issues auto-closed as out-of-charter. |
+| **Verification** | verified-local — PRs opened, local repo state validates, CI on the PRs themselves was not waited on within the session |
+
+## When to Use
+
+- A repo started as "data + schema" but accumulated reconcilers, runtime logic, integration code, and operational tooling that belongs in consuming repos.
+- You want to delete a large amount of out-of-charter code but reviewers will balk at a single 25k-line diff.
+- Multiple receiving repos (the "consumers") need to absorb ported code but you do NOT want to block cleanup on cross-repo merge ordering.
+- You need a defensible criterion to mass-close GitHub issues that are now out-of-charter (so reviewers see a principled bucket, not arbitrary closures).
+- You are about to coordinate "Repo A imports the code, THEN Repo B deletes it" and want to know whether that's necessary (usually it isn't).
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Lock the charter in writing (commit to CLAUDE.md or CHARTER.md first)
+#    "This repo is ONLY: <thing 1>, <thing 2>, <thing 3>. Anything else is out-of-charter."
+
+# 2. Bucket every artifact — code, issues, ADRs, lints, workflows — as in-charter or out-of-charter
+
+# 3. For each out-of-charter file/dir, decide PORT or DELETE
+#    - Has a consumer that needs it?  -> PORT to that consumer's repo (independent PR)
+#    - No consumer / dead code?       -> DELETE in this repo
+
+# 4. Open stacked deletion PRs in this repo (C1 -> C2 -> C3 -> C4), each rebased on the prior
+git checkout -b cleanup/c1-<topic> main
+# ... delete files for cluster 1 ...
+gh pr create --base main --title "cleanup(c1): remove <topic>"
+
+git checkout -b cleanup/c2-<topic> cleanup/c1-<topic>
+# ... delete files for cluster 2 ...
+gh pr create --base cleanup/c1-<topic> --title "cleanup(c2): remove <topic>"
+# repeat for C3, C4
+
+# 5. Mass-close out-of-charter issues with verdict buckets
+gh issue list --state open --json number,title,labels --limit 500 > /tmp/issues.json
+# Classify each issue into a verdict bucket (e.g., MOVED-TO-AGAMEMNON, MOVED-TO-FLEET, OBSOLETE, DUPLICATE)
+# Then close each bucket with a templated comment linking to the migration PR
+for n in $(jq -r '.[] | select(.verdict=="MOVED-TO-AGAMEMNON") | .number' /tmp/classified.json); do
+  gh issue close "$n" --comment "Out-of-charter per <charter-link>. Migrated to ProjectAgamemnon: <PR-url>"
+done
+```
+
+### Detailed Steps
+
+1. **Lock the charter FIRST.** Before deleting anything, write the charter into a tracked file
+   (e.g., `CLAUDE.md`, `README.md`, `docs/CHARTER.md`) and commit it as its own PR. The charter
+   is a single sentence: "This repo is ONLY X, Y, Z." Every subsequent deletion PR references
+   this charter as the justification — reviewers can argue with the charter but not with each
+   individual deletion.
+
+2. **Bucket every artifact.** Walk the repo (files), issue tracker (open issues), ADR list, lint
+   configs, and CI workflows. For each, ask: "Does this serve X, Y, or Z?" If yes → in-charter,
+   leave alone. If no → out-of-charter, mark for port-or-delete.
+
+3. **For each out-of-charter artifact, decide PORT vs DELETE:**
+   - **Has a clear consumer** (another repo that will actually use this code at runtime) → PORT.
+     Open an independent PR on the consumer repo that contains the code. Do NOT block the
+     cleanup PR on the port PR merging — see step 5.
+   - **No consumer / dead code / superseded** → DELETE in the cleanup PR.
+
+4. **The reconciler-vs-dataset boundary:** If repo A (dataset) supplies data that repo B
+   (consumer) reads, any reconciler / converger / "make actual match desired" logic lives in B,
+   not A. The dataset repo only emits data; the consumer pulls it. This is the single most
+   common scope-creep direction — runtime logic creeping into the dataset repo because "it
+   needs the YAML."
+
+5. **Open independent PRs across repos. Do NOT coordinate merge ordering.** Initial instinct is
+   to coordinate: "Agamemnon imports reconciler THEN Myrmidons deletes it." This is almost
+   always unnecessary. The cleanup PR in the dataset repo can land first; the receiving repo
+   reconstructs the code from the PR's commit history and links. Each PR description links to
+   its sibling PRs so any reviewer can find the full story. This unblocks the cleanup
+   immediately and avoids cross-repo deadlock.
+
+6. **Stack the deletion PRs (C1 → C2 → C3 → C4), each rebased on the prior.** Reviewers see a
+   small diff per PR (a few thousand lines, focused on one theme) but the net reduction across
+   the stack is large. Use a clear topic per cluster (e.g., "remove reconciler", "remove
+   integration tests for reconciler", "remove TLS env-var docs that referenced the
+   reconciler", "remove CI workflows for reconciler"). After C1 merges, rebase the stack;
+   reviewers approve C2 etc. in sequence.
+
+7. **Mass-close out-of-charter issues by verdict bucket, not individually.** Classify every
+   open issue into one of a small number of verdict buckets (e.g., MOVED-TO-AGAMEMNON,
+   MOVED-TO-FLEET, OBSOLETE, DUPLICATE-OF-NN). Close each bucket with a templated comment
+   linking to the relevant migration PR or charter section. This gives a defensible paper
+   trail and lets the issue author understand WHY it was closed.
+
+8. **Trust the actual issue count, not the plan estimate.** Initial estimates (e.g., "~118
+   issues") will be wrong. Re-run `gh issue list` after each closure wave; classification
+   bucket sums rarely match the upfront estimate. Actual closure was 127, not 118.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Coordinated cross-repo merge ordering | Tried to gate "Agamemnon imports reconciler" BEFORE "Myrmidons deletes it" so consumers were never broken | User vetoed: "Don't block on other repos, just implement here what needs to be implemented and link back to the PRs from the other repos. They can reconstruct the results." Cross-repo merge dependencies introduce deadlock risk and slow every PR to the speed of the slowest reviewer. | PR links + commit history are enough for the receiving repo to reconstruct. Open independent PRs across repos; let each merge on its own schedule. The dataset repo never imports from the consumer, so it CAN delete safely even before the consumer absorbs the code. |
+| Single monolithic deletion PR | Considered one big "-24,632 lines / 159 files" PR for the whole cleanup | Reviewer cognitive load is too high. A 25k-line diff cannot be reviewed line-by-line; reviewers either rubber-stamp or stall. | Stack 4 deletion PRs (C1 → C4) each rebased on the prior, each a few thousand lines and one focused theme. Net reduction is the same, but each PR is reviewable. |
+| Estimating issue counts up-front | Estimated "~118 issues to close" from a partial scan | Actual count was 127 across 4 verdict buckets. Bucket sums don't equal upfront estimate because the scan undercounts edge cases (stale issues, transferred issues, hidden labels). | Re-run `gh issue list` after every closure wave. Trust the live count, not the plan estimate. |
+| Mixing PORT and DELETE in one PR | Considered "delete reconciler in Myrmidons AND copy it to Agamemnon in the same diff" using a meta-PR or coordinated rev | Cross-repo coordinated PRs don't exist as a primitive in `gh`; you can only open one PR per repo. Mixing the two operations also makes review harder because deletion is binary (yes/no) while porting requires code review of the new copy. | Always split: one PORT PR on the consumer repo, one DELETE PR on the dataset repo. Cross-link in each PR body. |
+| Treating the reconciler as part of the dataset | Initially Myrmidons contained the reconciler that converged desired-state YAML against ProjectAgamemnon's REST API | The reconciler is consumer logic — it READS Myrmidons YAML and WRITES to Agamemnon. By the dataset/consumer rule, it belongs in Agamemnon (or a dedicated reconciler repo), not in the dataset. | Apply the reconciler-vs-dataset boundary rule: any "make actual match desired" code lives in the consumer that has the actual state, not in the repo that defines desired state. |
+
+## Results & Parameters
+
+**Verdict buckets used (Myrmidons session, 2026-05-17):**
+
+| Bucket | Count | Disposition |
+|--------|-------|-------------|
+| MOVED-TO-AGAMEMNON | ~52 | Closed with link to ProjectAgamemnon#405 (reconciler import) |
+| MOVED-TO-FLEET | ~14 | Closed with link to AchaeanFleet#664 (hello-world port) |
+| OBSOLETE (out-of-charter) | ~48 | Closed citing CLAUDE.md charter |
+| DUPLICATE | ~13 | Closed with link to canonical issue |
+| **TOTAL** | **127** | |
+
+**Stacked deletion PR sizing (Myrmidons #730 → #733):**
+
+```text
+PR #730 (C1: remove reconciler core)        ~  8,200 lines deleted, 52 files
+PR #731 (C2: remove reconciler tests)        ~  6,400 lines deleted, 38 files
+PR #732 (C3: remove TLS/auth docs/scripts)   ~  5,600 lines deleted, 41 files
+PR #733 (C4: remove reconciler CI/workflows) ~  4,400 lines deleted, 28 files
+-----------------------------------------------------------------------------
+TOTAL                                          -24,632 lines, 159 files
+```
+
+**Cross-repo PR map:**
+
+```text
+Myrmidons (dataset)         Receiving repos
+-------------------         ------------------
+#730 delete reconciler   →  ProjectAgamemnon#405 (reconciler import)
+#732 delete TLS docs     →  (no receiver — docs only described code that moved)
+hello-world removal      →  AchaeanFleet#664 (hello-world port)
+```
+
+**Post-cleanup repo charter (committed to CLAUDE.md):**
+
+> Myrmidons is the source of truth for *desired* agent state. The repo contains ONLY:
+> YAML schemas, agent descriptions, dataset validators, dataset docs, and CI wrappers
+> for those validators. Reconcilers, runtime logic, and consumer-side tooling live
+> elsewhere (ProjectAgamemnon).
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| HomericIntelligence/Myrmidons | 2026-05-17 cleanup session — repo started as "look at open PRs" but pivoted to charter enforcement when scope creep was discovered | PRs #730, #731, #732, #733 (stacked deletion); 127 issues auto-closed; -24,632 lines |
+| HomericIntelligence/ProjectAgamemnon | Receiving repo for reconciler port | #405 |
+| HomericIntelligence/AchaeanFleet | Receiving repo for hello-world port | #664 |
+
+---
+
+## Superseded from architecture-odysseus-ai-maestro-integration-gap
+
+---
+name: architecture-odysseus-ai-maestro-integration-gap
+description: "Deep analysis of ai-maestro's internal architecture vs actual ecosystem usage, identifying the 90% integration gap. Use when: (1) analyzing ai-maestro REST/WebSocket API surface, (2) planning new satellite repo integrations, (3) auditing endpoint usage, (4) investigating the webhook/NATS pipeline gap, (5) evaluating unused capabilities (memory, AMP, AID, lifecycle)."
+category: architecture
+date: 2026-03-27
+version: 1.0.0
+user-invocable: false
+tags: [ai-maestro, odysseus, integration-gap, api-audit, webhook, nats, memory, amp, aid]
+---
+
+# Architecture: Odysseus ai-maestro Integration Gap Analysis
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-27 |
+| **Objective** | Map the full integration surface between ai-maestro (23blocks-OS/ai-maestro v0.26.5) and the HomericIntelligence/Odysseus ecosystem, quantifying what is used vs unused |
+| **Outcome** | Ecosystem uses approximately 10% of ai-maestro's API surface (4 of ~100 REST endpoints). Critical mismatches identified in task webhooks, PUT semantics, soft-delete behavior, and consumer naming. Entire subsystems (memory, AMP, AID, agent lifecycle) are unused. |
+| **Verification** | Unverified -- research/analysis session only, no code was executed or tested |
+| **Output** | /home/mvillmow/agents/odysseus-ai-maestro-analysis.md (comprehensive report) |
+
+## When to Use
+
+- Analyzing ai-maestro's REST API surface to understand what endpoints exist and which are actually consumed
+- Planning a new satellite repo integration with ai-maestro (need to know which endpoints to target)
+- Auditing endpoint usage across the Odysseus ecosystem
+- Investigating the webhook/NATS pipeline -- specifically how task events reach NATS when ai-maestro has no task webhooks
+- Evaluating unused ai-maestro capabilities (memory system, AMP protocol, AID identity, agent lifecycle) for potential adoption
+- Debugging PUT-related data loss (field nullification on partial updates)
+- Understanding soft-delete behavior when querying agents
+- Planning authentication/authorization strategy using AID v0.2.0
+
+## Verified Workflow
+
+> **Note**: This is an unverified analysis -- research only, no code was executed or tested during this session. Findings should be verified against the live ai-maestro instance before acting on them.
+
+### Quick Reference
+
+```
+Integration surface summary:
+- ai-maestro exposes ~100 REST routes + WebSocket endpoints
+- Ecosystem uses 4 endpoints (GET teams, GET tasks, GET agents/unified, PUT task)
+- 13 critical findings documented below
+- Key gap: no task.* webhook events exist -- only agent.* events
+```
+
+### Phase 1: ai-maestro API Surface Inventory
+
+ai-maestro v0.26.5 exposes approximately 100 REST API routes organized across these domains:
+
+```yaml
+endpoint_domains:
+  agents:
+    count: ~25 routes
+    includes: CRUD, hibernate/wake, transfer, import/export, skills, metrics,
+              docs, code-graph, repos, tracking, metadata, subconscious,
+              brain-inbox, playback
+    used_by_ecosystem: 1 (GET /api/agents/unified)
+
+  teams:
+    count: ~15 routes
+    includes: CRUD, members, tasks, task assignment
+    used_by_ecosystem: 1 (GET /api/teams)
+
+  tasks:
+    count: ~10 routes
+    includes: CRUD (team-scoped), assignment, status updates
+    used_by_ecosystem: 2 (GET /api/teams/{id}/tasks, PUT /api/teams/{id}/tasks/{taskId})
+    critical_note: "Tasks are team-scoped -- no standalone /tasks endpoint exists"
+
+  memory:
+    count: ~15 routes
+    includes: per-agent CozoDB, vector embeddings (HuggingFace+ONNX),
+              hybrid search (semantic+BM25+RRF fusion), long-term consolidation,
+              confidence scoring, tier levels
+    used_by_ecosystem: 0
+
+  amp:
+    count: ~10 routes
+    includes: AMP v0.1.3 message routing, cryptographic signatures,
+              read receipts, content security scanning (34 prompt injection patterns)
+    used_by_ecosystem: 0
+
+  aid:
+    count: ~5 routes
+    includes: AID v0.2.0, Ed25519 identity documents, OAuth 2.0 token exchange,
+              scoped JWT tokens
+    used_by_ecosystem: 0
+
+  cerebellum:
+    count: ~5 routes
+    includes: motor learning, procedural memory
+    used_by_ecosystem: 0
+
+  webhooks:
+    count: ~5 routes
+    includes: webhook registration and delivery
+    fires_events: "agent.created, agent.updated, agent.deleted, agent.email.changed ONLY"
+    critical_note: "NO task.* webhook events exist"
+    used_by_ecosystem: 0
+
+  plugins:
+    count: ~5 routes
+    includes: plugin builder, marketplace
+    used_by_ecosystem: 0
+
+  misc:
+    count: ~5 routes
+    includes: health, search, organization
+    used_by_ecosystem: 0
+```
+
+### Phase 2: Endpoint Usage by ProjectKeystone
+
+ProjectKeystone's `maestro_client.py` is the primary (and nearly sole) consumer of ai-maestro's REST API:
+
+```yaml
+endpoints_used:
+  - method: GET
+    path: /api/teams
+    purpose: Fetch team list for task scoping
+    consumer: ProjectKeystone maestro_client.py
+
+  - method: GET
+    path: /api/teams/{id}/tasks
+    purpose: Fetch tasks for DAG construction
+    consumer: ProjectKeystone maestro_client.py
+
+  - method: GET
+    path: /api/agents/unified
+    purpose: Fetch agent roster for task assignment
+    consumer: ProjectKeystone maestro_client.py
+
+  - method: PUT
+    path: /api/teams/{id}/tasks/{taskId}
+    purpose: Update task status after DAG execution
+    consumer: ProjectKeystone maestro_client.py
+    bug: "PUT overwrites ALL fields -- partial payloads silently null omitted fields (issue #251)"
+```
+
+### Phase 3: Critical Mismatches
+
+#### 1. Task Webhook Gap (Critical -- Open Question)
+
+```yaml
+problem: |
+  ai-maestro webhook service fires ONLY agent.* events:
+    - agent.created
+    - agent.updated
+    - agent.deleted
+    - agent.email.changed
+  There are NO task.* webhook events (task.created, task.updated, etc.)
+
+question: |
+  How does ProjectHermes generate hi.tasks.* NATS events?
+  Possibilities:
+    a) Hermes polls ai-maestro REST API for task changes (wasteful)
+    b) Hermes watches ai-maestro WebSocket for task updates (undocumented)
+    c) Task events are generated by a different component entirely
+    d) The hi.tasks.* NATS pipeline is not yet functional
+
+impact: |
+  This is the most critical architectural question. The entire DAG execution
+  pipeline (Keystone subscribes to hi.tasks.* via NATS) depends on these
+  events existing. If they do not flow, the pipeline is broken.
+```
+
+#### 2. PUT Overwrites All Fields (Issue #251)
+
+```yaml
+problem: |
+  PUT /api/teams/{id}/tasks/{taskId} with partial data silently nulls out
+  all omitted fields. There is no PATCH endpoint.
+
+impact: |
+  ProjectKeystone must send complete task objects on every update.
+  If it sends only {status: "completed"}, all other fields (title, description,
+  assignee, dependencies, etc.) are set to null.
+
+workaround: |
+  Always GET the full task object first, merge changes, then PUT the complete object.
+  Or wait for a PATCH endpoint (no GitHub issue requesting this was found).
+```
+
+#### 3. Soft-Delete by Default
+
+```yaml
+problem: |
+  DELETE /api/agents/{id} performs soft-delete by default.
+  Soft-deleted agents can reappear in GET responses.
+  Permanent deletion requires ?hard=true query parameter.
+
+impact: |
+  ProjectKeystone DAG walker may encounter "deleted" agents in GET /api/agents/unified
+  responses. These agents have a non-null deletedAt field but are still returned.
+
+fix: |
+  Filter GET /api/agents/unified responses by deletedAt === null.
+  Or use ?hard=true when deletion is intentional and permanent.
+```
+
+#### 4. Durable Consumer Name Mismatch
+
+```yaml
+problem: |
+  ADR-005 documents the NATS durable consumer name as "keystone-dag".
+  ProjectKeystone code actually uses "keystone-daemon" as the consumer name.
+
+impact: |
+  Documentation and implementation disagree. Anyone setting up NATS consumers
+  from the ADR will use the wrong name. JetStream will create two separate
+  consumer groups, splitting message delivery.
+
+fix: |
+  Align ADR-005 with code (use "keystone-daemon") or vice versa.
+```
+
+#### 5. Team-Scoped Task Endpoints
+
+```yaml
+problem: |
+  Odysseus documentation references /tasks as a standalone endpoint.
+  The actual ai-maestro endpoint is /api/teams/{id}/tasks -- tasks are
+  always scoped to a team. No standalone /tasks route exists.
+
+impact: |
+  ProjectMyrmidons and ProjectTelemachy need team IDs before they can
+  interact with tasks. Any integration code that assumes /tasks exists
+  will get 404 errors.
+
+fix: |
+  Update all documentation to use /api/teams/{id}/tasks.
+  Consider whether ai-maestro should add a cross-team /api/tasks endpoint.
+```
+
+#### 6. hostUrl Unreliable on WSL2 (Issue #276)
+
+```yaml
+problem: |
+  agent.hostUrl field can contain unreachable internal IPs, especially
+  on WSL2 where the internal network IP is not routable from other hosts.
+
+impact: |
+  Any code that uses agent.hostUrl for cross-host communication will fail
+  silently on WSL2 environments.
+
+fix: |
+  Use Tailscale IPs from host-sync instead of agent.hostUrl.
+  See tailscale-maestro-setup skill for cross-host connectivity patterns.
+```
+
+### Phase 4: Unused Capabilities Assessment
+
+#### Memory System (Entirely Unused)
+
+```yaml
+capability: |
+  ai-maestro provides per-agent CozoDB databases with:
+    - Vector embeddings via HuggingFace + ONNX runtime
+    - Hybrid search: semantic + BM25 + Reciprocal Rank Fusion
+    - Long-term memory consolidation (facts, preferences, patterns, decisions, insights)
+    - Confidence scoring per memory entry
+    - Tiered memory levels (working, short-term, long-term)
+
+ecosystem_usage: None
+
+potential_value: |
+  Could replace ProjectHephaestus's skill/knowledge system with persistent
+  per-agent memory. Agents could remember past task outcomes, learn from
+  failures, and share knowledge through the memory API.
+```
+
+#### AMP Protocol (Unused Despite ADR-002)
+
+```yaml
+capability: |
+  Agent Messaging Protocol v0.1.3:
+    - Cryptographic message signatures (Ed25519)
+    - Read receipts
+    - Content security scanning (34 prompt injection patterns)
+    - Rate limiting (60 req/agent/60s on /v1/route)
+
+ecosystem_usage: None
+
+contradiction: |
+  ADR-002 states "AMP stays as the point-to-point channel for agent-to-agent
+  communication." But no satellite repo uses AMP. All messaging goes through
+  NATS, bypassing AMP's security features entirely.
+
+potential_value: |
+  AMP's prompt injection scanning alone justifies adoption for any agent
+  that processes untrusted input. The 34-pattern scanner is built-in.
+```
+
+#### AID v0.2.0 (Not Documented in Any ADR)
+
+```yaml
+capability: |
+  Agent Identity protocol introduced in v0.26.0:
+    - Ed25519 identity documents per agent
+    - Proof of possession challenges
+    - OAuth 2.0 token exchange
+    - Scoped JWT tokens with configurable permissions
+
+ecosystem_usage: None
+documentation: "Not mentioned in any Odysseus ADR"
+
+potential_value: |
+  Solves the "no REST API authentication" problem. AID could provide
+  per-agent scoped tokens for ai-maestro API access, replacing the
+  current unauthenticated Phase 1 design.
+```
+
+#### Agent Lifecycle Features (All Unused)
+
+```yaml
+unused_features:
+  - hibernate/wake: Suspend and resume agents (saves resources)
+  - transfer: Move agents between teams/orgs
+  - import/export: Serialize agent state for backup/migration
+  - skills: Register agent capabilities
+  - metrics: Per-agent performance tracking
+  - docs: Agent documentation storage
+  - code-graph: Code structure analysis per agent
+  - repos: Git repository association
+  - tracking: Activity and usage tracking
+  - metadata: Custom key-value metadata
+  - subconscious: Background processing pipeline
+  - brain-inbox: Queued messages for offline agents
+  - playback: Replay agent actions
+```
+
+### Phase 5: Authentication Gap
+
+```yaml
+current_state: |
+  Phase 1 design -- no authentication middleware on any REST route.
+  MAESTRO_API_KEY config key exists but defaults to empty string.
+  Only AMP /v1/route has rate limiting (60 req/agent/60s).
+
+risk: |
+  Any network-accessible ai-maestro instance accepts unauthenticated
+  requests. In the Tailscale-only deployment model this is mitigated
+  by network-level access control, but any port exposure is a full
+  API compromise.
+
+future_path: |
+  AID v0.2.0 provides the authentication primitives (Ed25519 + JWT).
+  Integration path:
+    1. Generate AID identity documents for each satellite repo
+    2. Configure ai-maestro to require AID JWT on REST routes
+    3. Update ProjectKeystone maestro_client.py to include JWT in headers
+    4. Use AID scopes to enforce least-privilege per satellite
+
+security_note: |
+  CozoDB query injection was found and fixed (issue #286, March 2026).
+  Unescaped template literals in CozoDB queries allowed injection.
+  This is fixed but highlights the importance of input validation.
+```
+
+### Phase 6: Recommended Immediate Fixes
+
+```yaml
+priority_1_documentation:
+  - Update Odysseus docs to use /api/teams/{id}/tasks (not /tasks)
+  - Document AID v0.2.0 in a new ADR
+  - Align ADR-005 consumer name with ProjectKeystone code
+  - Document the task webhook gap explicitly
+
+priority_2_code:
+  - ProjectKeystone: Always send complete task objects on PUT (workaround for #251)
+  - ProjectKeystone: Filter GET /api/agents/unified by deletedAt === null
+  - ProjectKeystone: Use Tailscale IPs, not agent.hostUrl
+
+priority_3_investigation:
+  - Determine how hi.tasks.* NATS events are generated (the task webhook gap)
+  - Evaluate AID adoption for REST API authentication
+  - Assess memory system for ProjectHephaestus knowledge storage
+  - Investigate AMP adoption for agent-to-agent message security
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Assumed /tasks endpoint exists | Checked for standalone /tasks route based on Odysseus docs | ai-maestro only has team-scoped /api/teams/{id}/tasks -- no standalone route | Always verify endpoint paths against the actual ai-maestro source (server.mjs route registrations), not downstream documentation |
+| Looked for task webhook events | Searched ai-maestro webhook service for task.* event types | Only agent.* events are implemented (created, updated, deleted, email.changed) | The webhook event vocabulary is smaller than expected -- do not assume CRUD events exist for all resource types |
+| Searched for PATCH endpoint | Looked for PATCH /api/teams/{id}/tasks/{taskId} as alternative to PUT | No PATCH endpoint exists for tasks | ai-maestro uses PUT-as-replace semantics -- always send complete objects |
+| Checked for REST auth middleware | Searched for authentication middleware in ai-maestro route setup | MAESTRO_API_KEY defaults to empty string; no middleware enforces auth | Phase 1 security model relies entirely on network-level access control (Tailscale) |
+
+## Results & Parameters
+
+### Integration Surface Metrics
+
+```yaml
+ai_maestro_version: v0.26.5
+total_rest_routes: ~100
+routes_used_by_ecosystem: 4
+usage_percentage: ~4%
+websocket_endpoints: multiple (undocumented usage)
+webhook_event_types: 4 (all agent.*, no task.*)
+
+unused_subsystems:
+  - memory (CozoDB + vector embeddings)
+  - AMP v0.1.3 (agent messaging protocol)
+  - AID v0.2.0 (agent identity)
+  - cerebellum (motor learning)
+  - plugins (builder + marketplace)
+  - agent lifecycle (hibernate, wake, transfer, import/export)
+  - agent skills, metrics, docs, code-graph, repos, tracking
+  - agent metadata, subconscious, brain-inbox, playback
+
+critical_mismatches:
+  - task_webhook_gap: "No task.* webhook events -- pipeline unclear"
+  - put_semantics: "PUT nulls omitted fields (issue #251)"
+  - soft_delete: "DELETE is soft by default, agents reappear in queries"
+  - consumer_name: "ADR-005 says keystone-dag, code says keystone-daemon"
+  - team_scoped_tasks: "No standalone /tasks -- must use /api/teams/{id}/tasks"
+  - hosturl_wsl2: "agent.hostUrl unreachable on WSL2 (issue #276)"
+
+authentication:
+  current: "None (Phase 1 -- MAESTRO_API_KEY defaults to empty)"
+  future: "AID v0.2.0 (Ed25519 + OAuth 2.0 + scoped JWT)"
+```
+
+### GitHub Issues Referenced
+
+```yaml
+open_issues:
+  - "#251": "PUT overwrites all fields with partial payload"
+  - "#276": "agent.hostUrl unreliable on WSL2"
+
+closed_issues:
+  - "#286": "CozoDB query injection via unescaped template literals (fixed March 2026)"
+
+ai_maestro_release_velocity: "18 releases in 7 weeks (high churn)"
+```
+
+### Key File Paths
+
+```yaml
+analysis_output: /home/mvillmow/agents/odysseus-ai-maestro-analysis.md
+ai_maestro_source: /home/mvillmow/ai-maestro/
+keystone_client: ProjectKeystone/src/keystone/maestro_client.py
+odysseus_adrs: Odysseus/docs/adr/ADR-001 through ADR-005
+odysseus_architecture: Odysseus/docs/architecture.md
+odysseus_nats_subjects: Odysseus/docs/nats-subjects.md
+```
+
+### Related Skills
+
+- [architecture-odysseus-ruflo-comparison](architecture-odysseus-ruflo-comparison.md) -- Compares Odysseus with Ruflo framework (different topic: external framework comparison vs internal integration gap)
+- [ecosystem-audit-remediation](ecosystem-audit-remediation.md) -- Cross-repo contract bug audit (complementary: found some of the same mismatches, this skill goes deeper on ai-maestro internals)
+- [tailscale-maestro-setup](tailscale-maestro-setup.md) -- Cross-host connectivity setup (referenced for hostUrl workaround)
+
+## References
+
+- [ai-maestro repository](https://github.com/23blocks-OS/ai-maestro)
+- [Odysseus meta-repo](https://github.com/HomericIntelligence/Odysseus)
+- [Full analysis report](/home/mvillmow/agents/odysseus-ai-maestro-analysis.md)
+
+---
+
+## Superseded from architecture-odysseus-ruflo-comparison
+
+---
+name: architecture-odysseus-ruflo-comparison
+description: "Deep architectural comparison of multi-repo agent ecosystem (Odysseus) vs in-process agent orchestration framework (Ruflo). Use when: (1) comparing infrastructure-centric vs application-centric agent architectures, (2) evaluating integration opportunities between container-based and in-process orchestration, (3) performing ecosystem audit of HomericIntelligence repos against external agent frameworks."
+category: architecture
+date: 2026-03-27
+version: 1.0.0
+user-invocable: false
+tags: [odysseus, ruflo, agent-orchestration, multi-repo, comparison, ecosystem-audit]
+---
+
+# Architecture: Odysseus vs Ruflo Comparison
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-27 |
+| **Objective** | Deep architectural comparison of HomericIntelligence/Odysseus (12-submodule meta-repo) with ruflo (TypeScript/Rust monorepo v3.5), identifying complementarity and integration opportunities |
+| **Outcome** | Analysis complete — 6 integration proposals identified. No code executed; research only. |
+| **Verification** | Unverified — analysis only, no code was executed or tested |
+| **Output** | /home/mvillmow/agents/odysseus-ruflo-analysis.md (12-section comprehensive report) |
+
+## When to Use
+
+- Analyzing how HomericIntelligence/Odysseus compares to a third-party agent orchestration framework
+- Evaluating whether to integrate an external AI agent library into the Odysseus ecosystem
+- Identifying gaps in Odysseus capabilities (especially memory/vector search) that external tools could fill
+- Designing integration patterns between container-based infrastructure (Nomad/Podman) and in-process orchestration
+- Auditing the complementarity between infrastructure-centric and application-centric agent architectures
+
+## Verified Workflow
+
+> **Note**: This is a proposed workflow — analysis only, no code was executed or tested during this session.
+
+### Quick Reference
+
+```
+Parallel exploration strategy:
+1. Sub-agent A: Clone + explore Odysseus (git submodules, ADRs, justfile, architecture.md)
+2. Sub-agent B: Clone + explore Ruflo (src/, CLAUDE.md, ADRs, core TypeScript files)
+3. Plan agent: Design 12-section analysis structure
+4. Sequential: Write analysis merging both sub-agent findings
+```
+
+### Phase 1: Repository Exploration (Parallel Sub-Agents)
+
+**Odysseus exploration checklist:**
+- Read all ADRs (`docs/adr/`)
+- Read `architecture.md` and any runbooks
+- Read `justfile` for operational patterns
+- List all 12 submodule names and their roles
+- Note: Odysseus is a meta-repo — actual implementations live in submodules (ai-maestro, ProjectTelemachy, ProjectKeystone, ProjectHermes, AchaeanFleet, etc.)
+
+**Ruflo exploration checklist:**
+- Read `CLAUDE.md` for project summary
+- Read core orchestration files: `SwarmCoordinator.ts`, `WorkflowEngine.ts`, `Task.ts`, `Agent.ts`, `HybridBackend.ts`
+- Read all ADRs (Ruflo had 10+ at time of analysis)
+- Note TypeScript/Rust hybrid architecture (Node.js + WASM modules)
+
+### Phase 2: Dimensional Analysis Framework
+
+Compare across these 6 dimensions:
+
+| Dimension | Odysseus Pattern | Ruflo Pattern |
+| ----------- | ----------------- | --------------- |
+| **Paradigm** | Infrastructure-centric (process boundaries, 12 repos) | Application-centric (DDD monorepo, in-process) |
+| **Orchestration** | 3-layer REST/NATS (ai-maestro → Telemachy → Keystone DAGs) | In-process SwarmCoordinator + Q-Learning 3-tier router |
+| **Agent model** | Container-per-agent (Podman + Nomad, strong isolation) | Logical TypeScript objects (60+ types, shared heap) |
+| **Memory** | Key-value only (ai-maestro), no vector search | HNSW vector search, ReasoningBank, SONA, Knowledge Graph |
+| **Distribution** | Real multi-host (Tailscale + Nomad across WSL2 hosts) | Application-simulated (FederationHub in Node.js process) |
+| **Recovery** | GitOps (Myrmidons `just apply-all` from YAML git) | SQLite WAL only — in-flight state lost on crash |
+
+### Phase 3: Gap and Strength Identification
+
+Key asymmetry found in this analysis:
+
+- **Odysseus BIGGEST GAP**: Memory — ai-maestro key-value only, no vector search, no learning
+- **Ruflo BIGGEST STRENGTH**: Memory — HNSW vector search (150x–12,500x faster than linear scan), ReasoningBank, SONA (self-optimizing neural architecture), Knowledge Graph, 3-scope isolation
+
+- **Ruflo BIGGEST GAP**: Distribution resilience — FederationHub is simulated within a single Node.js process; crash loses in-flight state
+- **Odysseus BIGGEST STRENGTH**: Infrastructure resilience — real multi-host via Tailscale + Nomad, GitOps recovery
+
+### Phase 4: Integration Proposal Generation
+
+Use the complementarity framework to generate integration proposals (value-ordered):
+
+1. **Ruflo as AchaeanFleet vessel** — Containerize Ruflo in Nomad; Odysseus provides infra, Ruflo provides intelligence
+2. **NATS as Ruflo's external event bus** — Solve Ruflo's crash-recovery gap via durable JetStream streams
+3. **Ruflo QueenCoordinator as Odysseus routing advisor** — ProjectKeystone feeds tasks to Ruflo's complexity scorer
+4. **MCP bridge for ai-maestro REST endpoints** — Expose ai-maestro tools to Ruflo agents via MCP protocol
+5. **AgentDB as ai-maestro memory backend sidecar** — Add vector search to Odysseus without replacing ai-maestro
+6. **ProjectHephaestus maestro-client for shared memory bridge** — Shared memory layer between both systems
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A — research session | Direct parallel exploration approach worked | N/A | For architectural comparisons, parallel sub-agents (one per codebase) are more efficient than sequential exploration |
+
+## Results & Parameters
+
+### Architectural Paradigm Classification
+
+```yaml
+infrastructure_centric:
+  example: Odysseus (HomericIntelligence)
+  characteristics:
+    - Process-boundary separation between components
+    - Each service is a separate repo/container
+    - Orchestration via message broker (NATS) + REST
+    - Deployment via container scheduler (Nomad)
+    - Recovery via GitOps (declarative YAML + git)
+  tradeoffs:
+    strengths: [real-isolation, multi-host, crash-resilience, ops-maturity]
+    weaknesses: [memory-gap, no-learning, cross-service-latency]
+
+application_centric:
+  example: Ruflo (ruvnet)
+  characteristics:
+    - All coordination in-process (single Node.js runtime)
+    - DDD monorepo with rich domain types (60+ TypeScript types)
+    - Orchestration via in-process coordinator + ML router
+    - Distribution simulated within process (FederationHub)
+    - Memory: HNSW vector search + knowledge graph
+  tradeoffs:
+    strengths: [rich-memory, ml-routing, vector-search, type-richness]
+    weaknesses: [fake-distribution, crash-loses-state, single-process-limit]
+```
+
+### Q-Learning Router Tiers (Ruflo-specific)
+
+```yaml
+tier_1_wasm:
+  latency: "<1ms"
+  use_case: "Simple deterministic tasks"
+  model: "Compiled WASM module"
+
+tier_2_haiku:
+  latency: "~500ms"
+  use_case: "Moderate reasoning tasks"
+  model: "Claude Haiku"
+
+tier_3_opus:
+  latency: "2-5s"
+  use_case: "Complex multi-step reasoning"
+  model: "Claude Opus"
+```
+
+### Memory Architecture Gap (Odysseus vs Ruflo)
+
+```yaml
+odysseus_memory:
+  type: key-value
+  backend: ai-maestro built-in store
+  vector_search: false
+  learning: false
+  cross_session: limited
+
+ruflo_memory:
+  type: multi-tier
+  backends:
+    - HNSW_vector_index   # 150x–12,500x faster than linear scan
+    - ReasoningBank       # episodic memory for reasoning chains
+    - SONA                # self-optimizing neural architecture
+    - KnowledgeGraph      # entity-relationship store
+  vector_search: true
+  learning: true          # SONA adapts over time
+  cross_session: full
+  scope_isolation: [agent, team, global]
+```
+
+### Integration Pattern: Ruflo in Nomad
+
+```hcl
+# AchaeanFleet vessel for Ruflo
+job "ruflo-swarm" {
+  type = "service"
+
+  group "coordinator" {
+    task "ruflo" {
+      driver = "podman"
+      config {
+        image = "ruflo:v3.5"
+        ports = ["http", "metrics"]
+      }
+      # NATS sidecar for durable event recovery
+      resources {
+        cpu    = 2000
+        memory = 4096
+      }
+    }
+  }
+}
+```
+
+### Key File Paths Explored
+
+```yaml
+odysseus:
+  meta_repo: ~/HomericIntelligence/Odysseus/
+  adrs: docs/adr/ADR-001 through ADR-005
+  architecture: docs/architecture.md
+  justfile: justfile
+
+ruflo:
+  repo: ~/ruvnet/ruflo/  (github.com/ruvnet/ruflo)
+  core_files:
+    - src/SwarmCoordinator.ts
+    - src/WorkflowEngine.ts
+    - src/Task.ts
+    - src/Agent.ts
+    - src/HybridBackend.ts
+  claude_md: CLAUDE.md
+  adrs: docs/adr/ (10+ ADRs)
+```
+
+### Complementarity Matrix
+
+| Odysseus Gap | Ruflo Capability | Integration Path |
+| ------------- | ------------------ | ------------------ |
+| No vector memory | HNSW search | AgentDB sidecar or Ruflo vessel |
+| No ML routing | Q-Learning 3-tier | QueenCoordinator → Keystone |
+| No learning | SONA adaptation | Shared memory bridge via Hephaestus |
+| No MCP tooling | Can consume MCP | MCP bridge for ai-maestro REST |
+
+| Ruflo Gap | Odysseus Capability | Integration Path |
+| ----------- | --------------------- | ------------------ |
+| Fake distribution | Real Tailscale+Nomad | Containerize Ruflo in AchaeanFleet |
+| Crash loses state | NATS JetStream | NATS as Ruflo external event bus |
+| No container isolation | Podman per agent | Nomad task driver wraps Ruflo workers |
+
+## References
+
+- [Odysseus meta-repo](https://github.com/HomericIntelligence/Odysseus)
+- [Ruflo framework](https://github.com/ruvnet/ruflo)
+- [Full analysis report](/home/mvillmow/agents/odysseus-ruflo-analysis.md)
+- [ecosystem-audit-remediation skill](ecosystem-audit-remediation.md)
+
+---
+
+## Superseded from architecture-homeric-ecosystem-ground-truth
+
+---
+name: architecture-homeric-ecosystem-ground-truth
+description: "Map the actual implementation state of every HomericIntelligence component against documentation claims. Use when: (1) verifying what's real code vs aspirational docs, (2) planning deployment of the agent mesh, (3) assessing component readiness, (4) checking submodule pin freshness, (5) onboarding to the ecosystem."
+category: architecture
+date: 2026-04-03
+version: 1.1.0
+user-invocable: false
+tags:
+  - architecture
+  - ecosystem
+  - ground-truth
+  - component-inventory
+  - deployment-readiness
+---
+
+# Architecture: HomericIntelligence Ecosystem Ground Truth
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-03 |
+| **Objective** | Map the actual state of every HomericIntelligence component — what's real code vs documentation claims |
+| **Outcome** | Complete component readiness matrix distinguishing production-ready, needs-work, not-started, and not-relevant components |
+| **Verification** | verified-local — verified by reading source code of every component |
+
+## When to Use
+
+- You need to know which HomericIntelligence components are real, deployable services vs libraries vs meta-repos
+- Planning a deployment and need to know what actually works end-to-end
+- Onboarding to the ecosystem and need ground truth, not aspirational architecture docs
+- Checking whether a submodule pin in Odysseus matches the standalone checkout
+- Assessing which components have NATS/REST integration vs which are standalone
+
+## Component Ground Truth
+
+### Agamemnon — Real C++20 Service
+
+- **Type**: REST API server on port 8080
+- **Endpoints**: `/v1/agents`, `/v1/teams`, `/v1/tasks`, `/v1/chaos/*`
+- **Tech stack**: cpp-httplib, nats.c v3.9.1, nlohmann_json
+- **Storage**: In-memory only (no persistence yet — issue #71)
+- **NATS**: Creates 6 JetStream streams on startup: `homeric-agents`, `homeric-tasks`, `homeric-myrmidon`, `homeric-research`, `homeric-pipeline`, `homeric-logs`
+- **Binary path**: `control/ProjectAgamemnon/build/debug/agamemnon` — NOT `build/agamemnon`
+- **NATS reconnect**: Does NOT auto-reconnect after NATS restart — kill and restart Agamemnon
+- **Status**: Production ready
+
+### Nestor — Real C++20 Service
+
+- **Type**: REST API server on port 8081
+- **Endpoints**: `/v1/health`, `/v1/research/stats`, `POST /v1/research`
+- **Tech stack**: Same as Agamemnon (cpp-httplib, nats.c, nlohmann_json)
+- **Binary path**: `control/ProjectNestor/build/debug/nestor` — NOT `build/nestor`
+- **NATS reconnect**: Does NOT auto-reconnect after NATS restart — kill and restart Nestor
+- **Status**: Production ready
+
+### Hermes — Production Python FastAPI
+
+- **Type**: FastAPI service on port 8085
+- **Endpoints**: `/health`, `POST /webhook`, `GET /subjects`
+- **Security**: HMAC-SHA256 webhook validation
+- **NATS**: Auto-creates JetStream streams
+- **uvicorn entry point**: `hermes.server:app` — NOT `hermes.main:app` (that module does not exist)
+- **Status**: Production ready
+
+### Keystone — Library, NOT a Service
+
+- **Type**: C++20 library providing MessageBus + ThreadPool + coroutines
+- **Phases 1-3 complete**: 4-layer HMAS architecture
+- **Phase 8 (gRPC)**: Optional, not required
+- **Critical misconception**: Architecture docs describe Keystone as an invisible transport daemon. It is actually a library. Components connect to NATS directly via nats.c — Keystone's transport abstraction is aspirational.
+- **BlazingMQ**: No binary exists anywhere in the ecosystem
+- **Status**: Needs work (library exists, daemon does not)
+
+### Odysseus — Meta-Repo, NOT a Service
+
+- **Type**: Coordination repo with justfile commands + configs + ADRs
+- **No HTTP server, no daemon**
+- **The "user interface" role** is fulfilled by CLI commands and the odysseus-console NATS subscriber
+- **Status**: Production ready (for what it is)
+
+### Myrmidons — Two States
+
+- **Submodule pin in Odysseus**: Was stale (targeting ai-maestro)
+- **Standalone checkout**: Already migrated to Agamemnon
+- **hello-myrmidon**: Python NATS pull consumer demonstrating the worker pattern
+- **Status**: Needs work (submodule pin alignment)
+
+### ProjectOdyssey — NOT Part of the Agent Mesh
+
+- **Type**: Standalone Mojo ML training framework (~198K lines)
+- **Zero NATS/REST integration**
+- **"Agents" in that repo** refers to Claude Code automation, not distributed services
+- **Critical misconception**: Architecture docs say "research sandbox graduates to AchaeanFleet" — but Odyssey has nothing to do with the agent mesh
+- **Status**: Not relevant to mesh deployment
+
+## Verified Workflow
+
+### Auditing a Component
+
+1. **Read actual source code**, not architecture docs or CLAUDE.md descriptions
+2. **Check for HTTP server bindings** (cpp-httplib, FastAPI, etc.) to determine if it's a service
+3. **Check for NATS connections** (nats.c, nats.py) to determine mesh integration
+4. **Compare submodule pin** against standalone checkout (they can diverge after migrations)
+5. **Verify port bindings** and endpoint paths against what other components expect
+
+### Verifying Submodule Freshness
+
+```bash
+# Compare submodule pin in Odysseus vs standalone checkout
+git -C ~/Odysseus/provisioning/Myrmidons log -1 --oneline
+git -C ~/Myrmidons log -1 --oneline
+# If they differ, the submodule pin is stale
+```
+
+### Checking What's Actually Deployed
+
+```bash
+# Check which services respond
+curl -s http://localhost:8080/v1/agents  # Agamemnon
+curl -s http://localhost:8081/v1/health  # Nestor
+curl -s http://localhost:8085/health     # Hermes
+
+# Check NATS streams
+nats stream ls  # Should show homeric-agents, homeric-tasks, etc.
+
+# Check NATS monitoring (port 8222, NOT 4222)
+# 4222 = client pub/sub port; 8222 = HTTP monitoring port
+curl -s http://localhost:8222/varz | jq '{connections, routes, num_subscriptions}'
+curl -s http://localhost:8222/jsz   # JetStream stats
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Assumed Myrmidons scripts target ai-maestro | Read submodule version of api.sh | Submodule was stale; standalone checkout was already migrated | Always check both submodule pin AND standalone checkout |
+| Planned Keystone as transport daemon | Architecture docs describe Keystone as invisible transport | Keystone is a library with MessageBus, not a deployable service | Read actual source, not just architecture docs |
+| Expected Odyssey to integrate with mesh | Architecture calls it "research sandbox graduates to AchaeanFleet" | It's a pure ML framework with zero NATS/REST code | ProjectOdyssey has nothing to do with the agent mesh |
+| `uvicorn hermes.main:app` | Used `hermes.main:app` as Hermes entry point (2026-04-27) | Module is `hermes.server:app`; `hermes.main` does not exist | Always use `hermes.server:app` for Hermes uvicorn launch |
+| Binary at `build/agamemnon` | Looked for Agamemnon at `build/agamemnon` (2026-04-27) | Debug build lands in `build/debug/agamemnon` | C++ debug builds are in `build/debug/`, not `build/` root |
+| NATS monitoring on port 4222 | `curl localhost:4222/varz` (2026-04-27) | Port 4222 is client port; monitoring is on 8222 | NATS monitoring: 8222. Client: 4222 |
+| Agamemnon survives NATS restart | Expected Agamemnon to reconnect after NATS restart (2026-04-27) | Agamemnon and Nestor do not auto-reconnect reliably | After NATS restart, kill and restart Agamemnon + Nestor |
+
+## Results & Parameters
+
+### Component Readiness Matrix
+
+```yaml
+PRODUCTION_READY:
+  - Agamemnon    # C++20 REST API, 6 JetStream streams, port 8080
+  - Nestor       # C++20 REST API, port 8081
+  - Hermes       # Python FastAPI, HMAC webhooks, port 8085
+  - hello-myrmidon  # Python NATS pull consumer
+  - Argus        # Observability stack
+  - E2E compose  # Full pipeline validation
+
+NEEDS_WORK:
+  - Myrmidons          # Submodule pin stale after ai-maestro migration
+  - NATS configs       # Leafnode port configuration
+  - hi.logs.> pipeline # Only hello-myrmidon publishes
+
+NOT_STARTED:
+  - Keystone daemon    # Library exists, daemon does not
+  - BlazingMQ          # No binary anywhere in ecosystem
+  - Peer discovery     # Tailscale integration not implemented
+  - GitHub Issues store # Agamemnon is in-memory only (issue #71)
+  - Chaos injection    # API stubs only in Agamemnon /v1/chaos/*
+  - Nomad scheduling   # Configs exist but not used
+
+NOT_RELEVANT:
+  - ProjectOdyssey     # Standalone Mojo ML framework, zero mesh integration
+```
+
+### Key Technical Facts
+
+```yaml
+ports:
+  agamemnon: 8080
+  nestor: 8081
+  hermes: 8085
+
+jetstream_streams:
+  - homeric-agents
+  - homeric-tasks
+  - homeric-myrmidon
+  - homeric-research
+  - homeric-pipeline
+  - homeric-logs
+
+tech_stacks:
+  agamemnon: [cpp-httplib, "nats.c v3.9.1", nlohmann_json]
+  nestor: [cpp-httplib, "nats.c", nlohmann_json]
+  hermes: [FastAPI, "nats.py", HMAC-SHA256]
+  keystone: [MessageBus, ThreadPool, coroutines]
+  hello-myrmidon: [Python, "nats.py", pull-consumer]
+```
+
+### Cross-Reference Commands
+
+```bash
+# Find all HTTP server bindings across ecosystem
+grep -r "httplib\|FastAPI\|uvicorn\|app\.run" ~/Project*/src/ ~/Odysseus/
+
+# Find all NATS connection strings
+grep -r "nats://\|nats_connect\|NATS_URL\|nats.connect" ~/Project*/src/
+
+# Find all JetStream stream creation
+grep -r "JetStreamManager\|js_add_stream\|add_stream" ~/Project*/src/
+
+# Verify port assignments don't conflict
+grep -r "8080\|8081\|8085\|4222" ~/Project*/src/ ~/Odysseus/configs/
+```
+
+---
