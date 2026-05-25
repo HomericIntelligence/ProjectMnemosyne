@@ -1,13 +1,13 @@
 ---
 name: audit-driven-remediation-workflow
-description: "Canonical end-to-end audit-driven remediation workflow: audit pass → severity classification → batch fix planning → PR generation → verification. Use when: (1) running a strict audit across a repo or ecosystem, (2) reconciling audit-finding issue counts against open issues, (3) generating remediation PRs from audit findings, (4) coordinating audit + fix + verification across multiple repos, (5) deciding fix vs accept/suppress for findings."
+description: "Canonical end-to-end audit-driven remediation workflow: audit pass → severity classification → batch fix planning → PR generation → verification. Use when: (1) running a strict audit across a repo or ecosystem, (2) reconciling audit-finding issue counts against open issues, (3) generating remediation PRs from audit findings, (4) coordinating audit + fix + verification across multiple repos, (5) deciding fix vs accept/suppress for findings, (6) you added a new producer-side signal and must verify every downstream consumer reads it."
 category: tooling
-date: 2026-05-18
-version: "1.0.0"
+date: 2026-05-25
+version: "1.1.0"
 user-invocable: false
 verification: verified-local
 history: audit-driven-remediation-workflow.history
-tags: [merged, audit, remediation, ecosystem-audit, strict-audit, repo-hygiene]
+tags: [merged, audit, remediation, ecosystem-audit, strict-audit, repo-hygiene, downstream-consumer-drift, strict-audit-self-review, producer-consumer-pattern]
 ---
 
 # Audit-Driven Remediation Workflow
@@ -32,6 +32,7 @@ tags: [merged, audit, remediation, ecosystem-audit, strict-audit, repo-hygiene]
 - You are running parallel Myrmidon fixer agents against a large document corpus (20+ files)
 - You need to grade AI architecture research documents for structural/citation compliance
 - A skills marketplace has grown past ~500 files and `/advise` is returning too many near-duplicate results
+- You added a new producer-side signal (verdict marker, state flag, dispatch event) — audit MUST trace every downstream consumer and confirm the signal is read, not just emitted.
 
 ## Verified Workflow
 
@@ -378,6 +379,37 @@ gh pr create \
 gh pr merge --auto --rebase
 ```
 
+## Downstream-Consumer Drift Audit (added v1.1.0)
+
+When an audit-driven remediation introduces a new producer-side signal (a marker in a comment, a state field, a dispatched event), the remediation is INCOMPLETE until every downstream consumer is verified to read the signal correctly. Producer-side unit tests pass without proving the signal is honored. This is the most common gap a strict audit catches.
+
+### Detection workflow
+
+1. Identify the signal: marker constant, state enum value, event topic, etc.
+2. Grep for the signal's contract:
+   ```bash
+   # If signal is a string marker:
+   grep -rn '<marker-substring>' --include='*.py' --include='*.sh' --include='*.ts'
+   # If signal is a state field:
+   grep -rn 'state\.<field>' --include='*.py'
+   # If signal is an event topic:
+   grep -rn 'subscribe.*<topic>\|listen.*<topic>' --include='*.py'
+   ```
+3. For each match outside the producer module, verify the consumer reads + acts on the signal — not just receives it.
+4. Add at least one integration test that exercises the producer → consumer flow end-to-end (not mocked at the consumer boundary).
+
+### Real example (2026-05-25)
+
+Producer: `plan_reviewer.py` posts `**Verdict: APPROVED**` markers in GitHub issue comments. Skip-gate `_latest_review_is_final` works correctly in isolation.
+
+Consumer: `implementer.py:583` calls `_has_plan(issue_number)` which only checks for substring `"Implementation Plan"`. It NEVER scans for the verdict marker. A `**Verdict: BLOCK**` plan would still be implemented.
+
+Test coverage gap: 530 automation unit tests pass. None exercise the producer → consumer flow. The bug shipped through self-review.
+
+Strict audit caught this in <10 minutes by reading both files in parallel via `pc-research-reviewer` agents. Cost of the audit: trivial. Cost of the bug landing on main: blocked plans implemented automatically.
+
+See [[debugging-silent-pipeline-stage-via-argparse-required-grep]] for the related "silent-pipeline-stage" pattern when the consumer is silent due to argparse-time failures rather than missing logic.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -407,6 +439,8 @@ gh pr merge --auto --rebase
 | Explore agents for fingerprinting waves | Used `subagent_type: Explore` for fingerprinting shards | Explore agents are read-only — cannot call Write tool | Any wave whose output must persist to a file MUST use `general-purpose` or another writable agent type |
 | Oversized fingerprinting shards | Used 332-file shards for Wave 1 | Agents hit output limits; 81.8% coverage with silent gaps | Limit fingerprinting shards to ≤103 files; cross-check surviving files vs fingerprinted set after Wave 1 |
 | Fixer agents downgrade canonical versions | Dispatched fixer agents to fix content-deficit clusters | Agents rewrote canonical files from scratch, reverting to older versions | Fixer agents must be given explicit version floor constraints; provide pre-fixer commit SHA for recovery |
+| Trust the implementer's self-review of "all tests pass" without dispatching a strict audit | Implementer (me) reported `pixi run pytest tests/unit: 2362 passed; ruff clean; manual smoke OK` and treated the work as done. Did NOT dispatch a strict review. | A reviewer agent (`pc-research-reviewer`) scoped to the diff caught 13 findings including 3 CRITICALs. Self-review by the implementing model under-weights "did I solve the user's actual intent" vs "did the code I wrote pass its own tests" | Always run `repo-analyze-strict-full` (or equivalent) scoped to the diff before claiming work is complete. Dispatch as a separate sub-agent — the implementing agent has cognitive bias toward justifying its own choices. |
+| Add a producer-side signal (`**Verdict: APPROVED**` marker in plan-reviewer) and verify only the producer's tests pass | Plan-reviewer's `_latest_review_is_final` gate was tested in isolation. 10 new unit tests, all green. PR opened. | The implementer.py phase that runs AFTER plan-reviewer never read the verdict. `_has_plan(issue_number)` only checks for substring `"Implementation Plan"`. A BLOCK plan got implemented. The user's stated workflow was silently broken. | When adding a producer-side signal, grep for EVERY downstream consumer and add an integration test that exercises the full pipeline. Use `grep -rn "<consumer-marker-pattern>" --include='*.py'` to find them. |
 
 ## Results & Parameters
 

@@ -1,5 +1,27 @@
 # audit-driven-remediation-workflow — History
 
+## v1.1.0 (2026-05-25)
+
+**Changed by:** ProjectHephaestus PR #567 + epic #550 (run_automation_loop.sh silent-abort + plan-reviewer verdict gate)
+**Verification:** verified-local
+
+### What changed
+- Added "Downstream-Consumer Drift Audit" section between Verified Workflow and Failed Attempts
+- Added 2 new Failed Attempts rows (trust-self-review, producer-tests-not-enough)
+- Added new "When to Use" trigger (producer-side signal)
+- Updated description and tags
+- Internal cross-reference to [[debugging-silent-pipeline-stage-via-argparse-required-grep]] (which now also amended to v1.1.0 in the same session)
+
+### Why
+Session showed an implementing agent claiming work was complete based on 2362 passing unit tests + ruff clean + manual smoke. A strict audit dispatched as a separate sub-agent found 13 findings in <10 minutes, including 3 CRITICALs. The load-bearing finding was downstream-consumer drift: a new verdict marker was added to plan_reviewer.py, with full producer-side unit-test coverage, but the implementer.py consumer never read the marker. The user's stated workflow was silently broken. This pattern — producer tested, consumer unaware — is the single most common gap in audit-driven remediation and was not documented in v1.0.0.
+
+### Previous version (v1.0.0) snapshot
+
+The v1.0.0 entry remains immediately below this entry (unchanged) and continues to document the
+2026-05-18 14-skills merge. No content was deleted in v1.1.0 — only additive changes.
+
+---
+
 ## v1.0.0 (2026-05-18) — Merge of 14 skills
 
 **Changed by:** Skill-merge swarm (Phase B Wave 1, M8 / #1777)
