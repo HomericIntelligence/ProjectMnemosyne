@@ -1,3 +1,40 @@
+## v1.1.0 (2026-05-24)
+
+**Changed by:** ProjectHephaestus PR #543 — `scripts/run_automation_loop.sh` fan-out argument contract fix
+**Verification:** verified-precommit (bash -n + ShellCheck + silent-failure-workaround pre-commit hook all pass; CI gate on PR #543 mergeable but not yet merged at time of writing)
+
+### What changed
+
+- Added new Verified Workflow section 6: "Fan-Out Orchestrator Argument Contract (Auto-Discover vs Required-Arg Phases)"
+- Added 3 Failed Attempts rows: (1) trusting shell-header API contract claims, (2) uniform `|| echo "Warning"` swallowing argparse exit 2, (3) the rejected "push auto-discovery into every required-arg main()" approach
+- Added new tags: `fan-out`, `argparse`, `orchestrator-contract`, `required-args`
+- Extended description with trigger (6): shell orchestrator fan-out where some phases declare `--issues` as `required=True` and others auto-discover
+- Added new Verified On row for ProjectHephaestus PR #543
+- Added `verification: verified-precommit` frontmatter field (was missing)
+
+### Why
+
+`scripts/run_automation_loop.sh` advertises a 6-phase pipeline (plan → review-plans →
+implement → review-prs → address-review → drive-green). Two phases (`planner.main`,
+`implementer.main`) auto-discover open issues via `gh_list_open_issues()` when `--issues`
+is omitted. The other four declare `--issues … required=True` in argparse with no
+fallback. The shell invoked all four uniformly without `--issues`, so each exited with
+argparse code 2 every loop. The `|| echo "Warning: <phase> exited non-zero"` clauses
+swallowed the failures, and the orchestrator silently reported "complete" while
+review-plans / review-prs / address-review / drive-green never did any work — for
+months. The operator reported "only planning is running" but actually planning AND
+implementation were both working; the four review-style phases were dead.
+
+The fix is a two-tier contract: discover work once per orchestration unit (per repo
+per loop) in the shell, then pass via `${ISSUE_ARGS[@]}` to the four required-arg
+phases while leaving the auto-discovering phases untouched. Push orchestration
+knowledge into the orchestrator, not into the phase.
+
+### Previous version (v1.0.0)
+
+See entries below (initial consolidation from 5 superseded skills).
+
+---
 
 ## Superseded from automation-implementer-dryrun-guard
 

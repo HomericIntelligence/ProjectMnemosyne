@@ -1,12 +1,13 @@
 ---
 name: automation-pipeline-observability-and-dryrun
-description: "Operational reliability of automation pipeline scripts (implement_issues.py, curses UI runners, Claude Code harness). Use when: (1) dry-run mode leaks into post-implementation phases (PR creation, /learn, follow-up), (2) errors are swallowed or invisible in curses UI automation scripts, (3) execution logs are not persisted after worktree cleanup, (4) debugging implement_issues.py pipeline failures (git parsing, branch reuse, import errors), (5) auditing that runtime components are actually wired in the composition root and not structurally dead code."
+description: "Operational reliability of automation pipeline scripts (implement_issues.py, curses UI runners, Claude Code harness, multi-phase shell orchestrators). Use when: (1) dry-run mode leaks into post-implementation phases (PR creation, /learn, follow-up), (2) errors are swallowed or invisible in curses UI automation scripts, (3) execution logs are not persisted after worktree cleanup, (4) debugging implement_issues.py pipeline failures (git parsing, branch reuse, import errors), (5) auditing that runtime components are actually wired in the composition root and not structurally dead code, (6) a shell orchestrator fans out to multiple Python entry points and some phases declare --issues (or similar) as required=True while others auto-discover — uniform invocation produces silent argparse exit 2 in the required-arg phases."
 category: debugging
-date: 2026-05-19
-version: "1.0.0"
+date: 2026-05-24
+version: "1.1.0"
 user-invocable: false
+verification: verified-precommit
 history: automation-pipeline-observability-and-dryrun.history
-tags: [dry-run, automation, implementer, curses-ui, error-visibility, log-persistence, composition-root, wiring, hephaestus, worktree]
+tags: [dry-run, automation, implementer, curses-ui, error-visibility, log-persistence, composition-root, wiring, hephaestus, worktree, fan-out, argparse, orchestrator-contract, required-args]
 ---
 
 # Automation Pipeline: Observability and Dry-Run Guard
@@ -84,6 +85,33 @@ except subprocess.TimeoutExpired as e:
 ```bash
 grep -rn "pkg.New" cmd/ --include='*.go' | grep -v '_test.go'
 # Zero hits = structurally dead code
+```
+
+**Fan-out orchestrator argument contract** — shell-side discovery, two-tier fix:
+
+```bash
+# Once per repo per loop, discover open issues ONCE:
+local OPEN_ISSUES=()
+mapfile -t OPEN_ISSUES < <(
+  gh issue list --repo "$ORG/$repo" --state open --limit 200 \
+    --json number --jq '.[].number' 2>/dev/null
+)
+local ISSUE_ARGS=()
+[[ ${#OPEN_ISSUES[@]} -gt 0 ]] && ISSUE_ARGS=(--issues "${OPEN_ISSUES[@]}")
+
+# Pass ISSUE_ARGS ONLY to required-arg phases (review-plans, review-prs,
+# address-review, drive-green). Auto-discovering phases (plan, implement)
+# must NOT receive --issues — they poll mid-loop for newly opened issues.
+"$PYTHON" "$SCRIPT_DIR/review_plans.py" "${ISSUE_ARGS[@]}" -v $DRY_RUN_FLAGS \
+  || echo "  [$repo] Warning: review-plans exited non-zero (loop $loop)"
+```
+
+Verify the contract before trusting the orchestrator:
+
+```bash
+grep -nE "add_argument\([\"']--issues[\"'].*required=True" \
+  $(find . -name "*.py" -path "*/automation/*")
+# Any hit = orchestrator MUST pass --issues to that phase
 ```
 
 ### 1. Dry-Run Guard for Multi-Phase CLI Tools
@@ -220,6 +248,83 @@ grep -rhn --include='*.go' --exclude='*_test.go' \
 
 Any line starting with `DEAD` is a release blocker until proven a deliberate library export.
 
+### 6. Fan-Out Orchestrator Argument Contract (Auto-Discover vs Required-Arg Phases)
+
+> **See also:** `debugging-silent-pipeline-stage-via-argparse-required-grep` covers
+> the *diagnostic* (how to detect this bug class in ~60 seconds via source-grep).
+> This section covers the *remediation* (the two-tier shell-side discovery pattern).
+
+When a shell orchestrator fans out to multiple Python entry points across phases (plan,
+review-plans, implement, review-prs, address-review, drive-green), the entry points are
+*not* uniform. Some phases auto-discover open issues via `gh_list_open_issues()` when
+`--issues` is omitted; others declare `--issues … required=True` in argparse and have no
+auto-discovery fallback. Calling them uniformly without `--issues` and swallowing exit
+codes with `|| echo "Warning"` makes the required-arg phases silently dead: argparse
+exits with code 2 every loop, the operator sees "complete", and no work happens.
+
+**Symptom**: orchestrator reports success; user thinks "only planning is running" — in
+reality, planning and implementation work (they auto-discover), and 4 review-style phases
+have been dead since the script was written.
+
+**Root cause grep — verify the contract before trusting the orchestrator**:
+
+```bash
+# For every Python entry point the orchestrator calls, check argparse
+grep -nE "add_argument\([\"']--issues[\"'].*required=True" \
+  $(find . -name "*.py" -path "*/automation/*")
+# Any hit = the orchestrator MUST pass --issues to that phase
+```
+
+**Two-tier fix — discover once per orchestration unit (per repo per loop) in the shell**:
+
+```bash
+# Once per repo per loop, AFTER rebase, BEFORE Phase 1
+local OPEN_ISSUES=()
+mapfile -t OPEN_ISSUES < <(
+  gh issue list --repo "$ORG/$repo" --state open --limit 200 \
+    --json number --jq '.[].number' 2>/dev/null
+)
+local ISSUE_ARGS=()
+if [[ ${#OPEN_ISSUES[@]} -gt 0 ]]; then
+  ISSUE_ARGS=(--issues "${OPEN_ISSUES[@]}")
+fi
+```
+
+Then in each required-arg phase block (review-plans, review-prs, address-review, drive-green):
+
+```bash
+if phase_enabled review-plans; then
+  if [[ ${#OPEN_ISSUES[@]} -eq 0 ]]; then
+    echo "  [$repo] No open issues — skipping review-plans"
+  else
+    echo "  [$repo] Reviewing plans..."
+    ( cd "$dir"
+      "$PYTHON" "$SCRIPT_DIR/review_plans.py" \
+        "${ISSUE_ARGS[@]}" \
+        --max-workers "$MAX_WORKERS" -v $DRY_RUN_FLAGS \
+        || echo "  [$repo] Warning: review-plans exited non-zero (loop $loop)"
+    )
+  fi
+fi
+```
+
+**Do NOT** add `--issues` to auto-discovering phases (plan, implement) — they
+intentionally poll for issues themselves so they can pick up issues opened mid-loop by
+an earlier phase. The orchestration knowledge lives where it belongs: the shell.
+
+**Why not push auto-discovery into the 4 required-arg `main()`s?** Larger blast radius:
+4 argparse changes, 4 new code paths, downstream consumers (cron jobs, fleet wrappers)
+inherit the new "called without --issues" surface area. Shell already owns per-repo
+per-loop state — discovery belongs there.
+
+**Distinguish argparse-2 from per-issue failures** — swallowing exit codes with
+`|| echo "Warning: <phase> exited non-zero"` is uniform across both, which is what made
+this bug invisible. Either:
+
+- surface exit codes loudly with a per-repo error counter, or
+- (better) make the contract impossible to violate via either uniform auto-discovery or
+  shell-side discovery passed uniformly (the fix above).
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -233,6 +338,9 @@ Any line starting with `DEAD` is a release blocker until proven a deliberate lib
 | Trust the `/metrics` endpoint as evidence metrics work | `internal/server/AtlasMetrics` was defined, registered, and exposed at `/metrics`; endpoint returned valid Prometheus output | None of the `Inc*` / `Observe*` / `Set*` methods were called from production code — every counter permanently read zero; alerting rules referencing them could never fire | Endpoint reachability is not instrumentation correctness. Grep mutator methods excluding the defining package and tests; if only hits are inside the defining file, the metric is dead instrumentation |
 | Hope reviewers catch wiring gaps during code review | Three rounds of human review on Atlas missed the gap for months | Wiring lives at the seam between PRs; per-PR review cannot catch "package added in PR A, never called from main.go modified in PR B" | Spine-wiring checks must be a release-gate audit step, not a reviewer-vibes check |
 | Patch `Path.write_text` in tests | Mocked `Path.write_text` to avoid file I/O in unit tests for log persistence | Caused infinite recursion when the implementation itself called `write_text` during the test | Use real file I/O with `tmp_path` for log persistence tests; mock external processes, not file writes |
+| Document the argument contract in the shell-script header | Added comment "Issue discovery is delegated to each phase's Python entrypoint (gh_list_open_issues)" and called all 6 phases of `run_automation_loop.sh` uniformly without `--issues` | The claim was only true for 2 of 6 phases (plan, implement); the other 4 (review-plans, review-prs, address-review, drive-green) declared `--issues … required=True` in argparse. Result: 4 phases failed argparse exit 2 silently every loop for months | Don't rely on header comments asserting an API contract — grep `required=True` against every entry point the orchestrator calls to verify the contract is real |
+| Catch fan-out errors with `\|\| echo "Warning: <phase> exited non-zero"` | Same warning template for every phase's invocation in the orchestrator loop | argparse exit code 2 was swallowed identically to a real per-issue failure; the operator never saw the difference between "ran but found nothing" and "argparse rejected the invocation" | Either surface exit codes loudly with a per-repo error counter, or make orchestrator-pipeline contracts impossible to violate (uniform discovery in shell, or auto-discovery in every phase) — uniform warning-swallowing turns required-arg violations into invisible no-ops |
+| Push auto-discovery into each required-arg `main()` (the "Option ii" approach) | Considered adding `if not args.issues: args.issues = gh_list_open_issues(...)` to all 4 required-arg phases | Larger blast radius: 4 argparse changes, 4 new code paths, downstream consumers (cron jobs, fleet wrappers) inherit the new "called without --issues" surface area | Push orchestration knowledge into the orchestrator, not into the phase. Shell already owns per-repo per-loop state — discovery belongs there. One mapfile + one ISSUE_ARGS array beats four argparse refactors |
 
 ## Results & Parameters
 
@@ -283,3 +391,4 @@ LOG_PREFIXES    = {"error": "ERROR", "warning": "WARN", "info": ""}
 | ProjectScylla | PR #633 / Issue #632 — curses UI error visibility; 211 tests pass | Dual logging, granular status, exception classification |
 | ProjectScylla | Issue #602 — log persistence; 30 tests pass (24 before) | Logs persisted to `.issue_implementer/` on all exit paths |
 | Atlas (Go) | `/hephaestus:repo-analyze-strict-full` 2026-05-05 — wiring audit | Five dead-spine bugs caught; PRs #444–#448 merged; Atlas v0.2.0 shipped |
+| ProjectHephaestus | PR #543 — `scripts/run_automation_loop.sh` fan-out argument contract; bash -n + ShellCheck + silent-failure-workaround pre-commit hook pass | Two-tier discovery: shell-side `mapfile` of open issues per repo per loop, passed via `${ISSUE_ARGS[@]}` to the 4 required-arg phases (review-plans, review-prs, address-review, drive-green); auto-discovering phases (plan, implement) unchanged. Verification: verified-precommit (CI gate pending merge) |
