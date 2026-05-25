@@ -1,5 +1,28 @@
 # pre-commit-hooks-and-linting-config -- History
 
+## v1.1.0 (2026-05-24) -- Add pixi environment selection for pre-commit hooks
+
+**Changed by:** ProjectHephaestus PRs #483, #526, #532 (release workflow + dep-sync hooks)
+**Verification:** verified-ci
+
+### What changed
+
+- Added new "When to Use" triggers for the pixi-environment-selection problem.
+- Added a new Detailed Steps subsection: "Pixi environment selection for hooks that invoke `pixi run <task>`" that documents the two-rule pattern (explicit `--environment default` in hook entries, explicit `pixi run dev-install` step in CI).
+- Added 3 new Failed Attempts rows covering: (1) omitting `--environment` from hook entries, (2) `--no-build-isolation` breaking editable install, (3) skipping `dev-install` and relying on `pixi install` alone.
+- Added `pixi-environment` tag.
+- Bumped verification level from `verified-local` to `verified-ci` (these changes shipped via PRs whose CI is green).
+
+### Why
+
+When a repo has multiple pixi environments (e.g. `default` with the editable package install + dev tools, and a slim `lint` env with only ruff/mypy), pre-commit hooks that shell out to `pixi run <task>` silently inherit whichever env pre-commit was launched from. If the package's console scripts are not in that env, hooks fail with `command not found` even though the same command works fine in an interactive shell. The fix is two-pronged (hook-side `--environment default` flag, CI-side explicit editable install) and was not captured in v1.0.0.
+
+### Previous version (v1.0.0) snapshot
+
+See `## v1.0.0 (2026-05-18) -- Merge of 53 skills` below; the full v1.0.0 skill text was carried forward into v1.1.0 with only the additions described above, so no separate snapshot is reproduced here.
+
+---
+
 ## v1.0.0 (2026-05-18) -- Merge of 53 skills
 
 **Changed by:** Skill-merge swarm (Phase B Wave 1, M1 / #1769)

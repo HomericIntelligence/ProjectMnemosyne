@@ -2,12 +2,12 @@
 name: pre-commit-hooks-and-linting-config
 description: "Canonical guide to pre-commit hook configuration, single-source-of-truth versioning, CI/local parity, and integration of ruff/mypy/clang-format/yamllint/actionlint/golangci-lint/bandit/hadolint/shellcheck/markdownlint. Use when: (1) writing or amending .pre-commit-config.yaml, (2) diagnosing why a hook passes locally but fails in CI (version drift), (3) deciding fix-vs-suppress for lint findings, (4) adding a new linter to an existing pre-commit pipeline, (5) reconciling ruff/mypy/markdownlint config across multiple repos."
 category: tooling
-date: 2026-05-18
-version: "1.0.0"
+date: 2026-05-24
+version: "1.1.0"
 user-invocable: false
-verification: verified-local
+verification: verified-ci
 history: pre-commit-hooks-and-linting-config.history
-tags: [merged, pre-commit, linting, ruff, mypy, clang-format, yamllint, actionlint, hooks]
+tags: [merged, pre-commit, linting, ruff, mypy, clang-format, yamllint, actionlint, hooks, pixi-environment]
 ---
 
 # Pre-commit Hooks and Linting Configuration
@@ -36,6 +36,8 @@ tags: [merged, pre-commit, linting, ruff, mypy, clang-format, yamllint, actionli
 - Setting up per-directory mypy baseline or per-file invocation for hyphenated dirs
 - Ensuring `pass_filenames:` is correct for hook scripts
 - Unit-testing pre-commit hook regex logic with pytest
+- Pre-commit hook shells out to `pixi run <task>` and reports `command not found` for a package entry point (pixi environment selection)
+- Designing CI workflow that invokes pre-commit when the repo declares multiple pixi environments (e.g. `default` vs `lint`)
 
 ## Verified Workflow
 
@@ -188,6 +190,40 @@ Use `language: system` (not `language: pygrep`) when exclusion is needed:
   pass_filenames: true
 ```
 
+#### Pixi environment selection for hooks that invoke `pixi run <task>`
+
+When a repository declares multiple pixi environments (e.g. `default` with the editable package install + dev tools, and `lint` with just ruff/mypy), `pixi run <task>` resolves the environment from the **current shell state**, not from `pixi.toml` task defaults. This bites in two places:
+
+1. **Local pre-commit invocation** — if a developer starts pre-commit from inside an env that does not have the package installed (`pixi run --environment lint pre-commit run`), every hook that shells out to a package console script (`pixi run hephaestus-check-dep-sync`) inherits the `lint` env and fails with `command not found`.
+2. **CI workflow** — running `pre-commit run --all-files` after `pixi install --environment default` is not enough on its own when the package itself is not declared as a self-dependency. The package's editable install must be explicit (`pixi run dev-install` -> `pip install -e . --no-deps`) so console scripts resolve.
+
+Two rules:
+
+1. **Every pre-commit hook that shells out to a package entry point MUST pin the environment explicitly:**
+
+   ```yaml
+   - id: check-dep-sync
+     name: Check dependency sync
+     entry: pixi run --environment default hephaestus-check-dep-sync
+     language: system
+     pass_filenames: false
+   ```
+
+   Never write `entry: pixi run hephaestus-check-dep-sync` — the env is whatever shell happens to be active when pre-commit fires.
+
+2. **CI must install the package into the default env before running pre-commit:**
+
+   ```yaml
+   # .github/workflows/pre-commit.yml
+   - run: pixi install --environment default
+   - run: pixi run dev-install          # pip install -e . --no-deps
+   - run: pre-commit run --all-files
+   ```
+
+   `pixi install` installs declared deps but does NOT install the host package itself (especially once the self-reference is removed from `pyproject.toml` to stop lockfile churn). Skipping `dev-install` means console scripts will not exist for hooks to call.
+
+Verified by ProjectHephaestus PRs #483, #526, and #532.
+
 #### markdownlint MD060 bulk table fix
 
 ```python
@@ -266,6 +302,9 @@ ruff check --fix scripts/fix_md_tables.py
 | `sed -i` for trailing blank line in YAML | `sed -i '${/^$/d}' file.yml` | Fragile -- only deletes one blank line; fails on macOS sed | Use Python `content.rstrip() + '\n'` -- handles multiple trailing blank lines portably |
 | String splitting for YAML value parsing | `partition(':')` or `split(':', 1)` to parse values with colons | Splits inside quoted strings at wrong colon | Use a real YAML parser (`yaml.safe_load()`), not string splitting |
 | Removing conflict markers without checking trailing whitespace | Resolved git merge conflict in YAML file | Left trailing blank line introduced by conflict resolution | Always run yamllint after YAML conflict resolution |
+| `entry: pixi run <task>` without `--environment` | Wrote hook entry as `pixi run hephaestus-check-dep-sync` assuming pixi.toml task default env applies | Hook inherited whichever env pre-commit was launched from (e.g. `lint`); console script not installed there -> `command not found` | `pixi run` resolves the environment from current shell state, not from `pixi.toml`. Always write `pixi run --environment default <task>` for hooks that need a package entry point |
+| `pip install -e . --no-deps --no-build-isolation` in CI | Tried to skip build isolation to speed up the editable install | pip subprocess could not locate `hatchling` because `--no-build-isolation` requires the build backend be pre-installed in the same env | Drop `--no-build-isolation`; let pip do standard build isolation — pixi's env already has hatchling available to the pip child |
+| Skip `dev-install` and rely on `pixi install --environment default` | Assumed `pixi install` would install the host package along with its deps | `pixi install` installs declared deps only; once the self-reference is removed from `pyproject.toml` (to stop lockfile churn) it does not install the host package | After removing self-reference, an explicit `pip install -e . --no-deps` (via `pixi run dev-install`) is mandatory in CI before any hook that imports the package or calls a console script |
 
 ## Results & Parameters
 
