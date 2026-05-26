@@ -25,7 +25,7 @@ tags:
 | ----- | ----- |
 | **Date** | 2026-05-26 |
 | **Objective** | Stop CI's markdownlint job from failing MD060 on table separators after local pre-commit Markdown Lint already passed |
-| **Outcome** | Verified — converting `|---|---|---|` to `| --- | --- | --- |` and re-running `pixi run npx markdownlint-cli2` locally produces 0 errors and unblocks CI |
+| **Outcome** | Verified — converting `\|---\|---\|---\|` to `\| --- \| --- \| --- \|` and re-running `pixi run npx markdownlint-cli2` locally produces 0 errors and unblocks CI |
 | **Verification** | verified-ci (CI passed on PR #5457 after fix applied to `docs/dev/autograd-phase2-design.md`) |
 
 ## When to Use
@@ -106,7 +106,7 @@ pixi run npx markdownlint-cli2 docs/dev/<file>.md
 | ------- | -------------- | ------------- | -------------- |
 | Trusted local pre-commit Markdown Lint hook | Ran `pixi run pre-commit run --from-ref origin/main --to-ref HEAD`; the `Markdown Lint` hook printed `Passed` and the PR was pushed | CI's `markdownlint` job is a **separate gate** with a different markdownlint-cli2 invocation/config that enables MD060 strictly. Local pre-commit's hook config did not flag MD060 on compact separators | Local pre-commit passing does NOT imply CI markdownlint will pass. Always run `pixi run npx markdownlint-cli2 <file>.md` directly before pushing any .md change |
 | `markdownlint-cli2 --fix` to auto-fix MD060 | Ran `pixi run npx markdownlint-cli2 --fix docs/dev/<file>.md` expecting auto-repair like other MD0xx rules | `--fix` covers many markdownlint rules but **not** MD060/table-column-style. The tool reported 0 modifications and the error persisted | MD060 has no autofix. Apply the regex/Python snippet (or hand-edit) — do not waste a cycle on `--fix` |
-| Adding more dashes to compact separators | Tried `|------|------|------|` thinking MD060 wanted longer dashes | MD060 is about **space padding around pipes**, not dash count. Compact-style separators fail regardless of how many `-` chars sit between the pipes | Spaces around pipes are the fix; dash count is irrelevant |
+| Adding more dashes to compact separators | Tried `\|------\|------\|------\|` thinking MD060 wanted longer dashes | MD060 is about **space padding around pipes**, not dash count. Compact-style separators fail regardless of how many `-` chars sit between the pipes | Spaces around pipes are the fix; dash count is irrelevant |
 
 ## Results & Parameters
 
