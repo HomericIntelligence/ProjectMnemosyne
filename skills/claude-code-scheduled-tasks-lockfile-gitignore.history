@@ -1,0 +1,78 @@
+# claude-code-scheduled-tasks-lockfile-gitignore — History
+
+## v1.1.0 (2026-05-26)
+
+**Changed by:** ProjectOdyssey PR #5457 (autograd Phase 2 substrate) — same lockfile churn struck a totally unrelated PR; reinforced that the durable fix is mandatory because the one-line newline workaround regresses on the very next session.
+**Verification:** verified-ci
+
+### What changed
+
+- Added second verified-CI data point: ProjectOdyssey PR #5457 (2026-05-26) blocked by the same `Fixing .claude/scheduled_tasks.lock` failure on an unrelated branch.
+- Added two new Failed Attempts rows:
+  - Ignoring the failure as "unrelated to my PR — wait for someone else to fix it" (PR stays BLOCKED indefinitely; nobody else owns it).
+  - The fast one-line `printf '\n' >> .claude/scheduled_tasks.lock` chore commit (unblocks the current PR but regresses on the next session that writes the lockfile, so every subsequent PR re-hits the same failure).
+- Promoted the "one-line newline" pattern from "obvious wrong fix" to "acceptable triage workaround when you need to unblock a single PR fast, but must be followed by the durable `git rm --cached` + `.gitignore` fix."
+- Expanded "When to Use" with the cross-PR recurrence signature.
+
+### Why
+
+The v1.0.0 skill correctly diagnosed the problem and prescribed the durable fix on PR #5445 (commit 702a5a2e). However, the durable fix was never landed to main — only the temporary fix was applied to that PR's branch, and the file remained tracked on main. As a result the failure recurred on PR #5457 two days later, blocking unrelated autograd work. This amendment captures the recurrence as evidence that:
+
+1. The fast workaround (append newline) IS valid for unblocking the current PR but MUST NOT be treated as the fix.
+2. Treating the failure as "someone else's problem" leaves PRs blocked because no one owns the durable cleanup.
+3. The durable fix (`git rm --cached` + `.gitignore`) must be landed to main, not just to a feature branch, to prevent recurrence.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: claude-code-scheduled-tasks-lockfile-gitignore
+description: "Untrack and gitignore Claude Code's .claude/scheduled_tasks.lock runtime lockfile to stop end-of-file-fixer pre-commit failures in CI. Use when: (1) CI pre-commit / lint check fails on `Fixing .claude/scheduled_tasks.lock` even though the user's diff didn't touch it, (2) the `/schedule` skill is in use and the lockfile got accidentally committed via `git add .`."
+category: tooling
+date: 2026-05-24
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [claude-code, gitignore, pre-commit, end-of-file-fixer, lockfile, scheduled-tasks]
+---
+
+# Claude Code `scheduled_tasks.lock` Gitignore Fix
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-24 |
+| **Objective** | Stop CI `pre-commit` / `end-of-file-fixer` failures caused by Claude Code's `/schedule` skill writing a runtime lockfile (`.claude/scheduled_tasks.lock`) that was accidentally committed and lacks a trailing newline. |
+| **Outcome** | Two-part fix: `git rm --cached` the file and add it to `.gitignore`. After applying on ProjectOdyssey PR #5445 (commit 702a5a2e), the `pre-commit` and `lint` Required Checks went from FAILURE to SUCCESS. |
+| **Verification** | verified-ci |
+
+## When to Use
+
+- CI `pre-commit` workflow or `lint` job fails with `Fix End of Files....Failed` and the log shows `Fixing .claude/scheduled_tasks.lock`.
+- The pre-commit hook reports a file was "modified" but the user's commit/diff did not touch that file (giveaway signature).
+- The `/schedule` skill (Claude Code scheduled tasks / routines) is in use on the project.
+- Setting up a new repo or template that will be used with Claude Code — preempt the issue by adding the gitignore entry up front.
+
+## Verified Workflow
+
+### Quick Reference
+
+(See v1.1.0 for full content; preserved here is intent — `git rm --cached .claude/scheduled_tasks.lock` plus `.gitignore` entry.)
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Re-run pre-commit locally on a different machine | Hoped a fresh `end-of-file-fixer` pass would settle the file | The lockfile is rewritten every time `/schedule` acquires the lock; it's perpetually missing its trailing newline | Don't fight the hook — untrack the file from git entirely |
+| Manually append a trailing newline and commit | One-shot newline addition to satisfy `end-of-file-fixer` | The next `/schedule` invocation in any session rewrote the file with no trailing newline, regressing immediately | Fix the tracking, not the formatting — runtime state must not be tracked |
+| Add `.claude/scheduled_tasks.lock` to `.gitignore` without `git rm --cached` | Just gitignored, no index removal | `.gitignore` does NOT untrack files already in the index; the file stays tracked and CI keeps failing | Both steps are required: `git rm --cached` AND `.gitignore` entry |
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectOdyssey | PR #5445 (AnyTensor overload repro branch, 2026-05-24) — CI `pre-commit` and `lint` checks failing every push on `Fixing .claude/scheduled_tasks.lock` despite unrelated diff | Two-part fix (`git rm --cached` + `.gitignore` entry) on commit 702a5a2e unblocked CI; both checks went FAILURE → SUCCESS |
+```
+
+---
