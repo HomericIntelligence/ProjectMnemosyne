@@ -1,13 +1,13 @@
 ---
 name: audit-driven-remediation-workflow
-description: "Canonical end-to-end audit-driven remediation workflow: audit pass → severity classification → batch fix planning → PR generation → verification. Use when: (1) running a strict audit across a repo or ecosystem, (2) reconciling audit-finding issue counts against open issues, (3) generating remediation PRs from audit findings, (4) coordinating audit + fix + verification across multiple repos, (5) deciding fix vs accept/suppress for findings, (6) you added a new producer-side signal and must verify every downstream consumer reads it."
+description: "Canonical end-to-end audit-driven remediation workflow: audit pass → severity classification → batch fix planning → PR generation → verification. Use when: (1) running a strict audit across a repo or ecosystem, (2) reconciling audit-finding issue counts against open issues, (3) generating remediation PRs from audit findings, (4) coordinating audit + fix + verification across multiple repos, (5) deciding fix vs accept/suppress for findings, (6) you added a new producer-side signal and must verify every downstream consumer reads it, (7) after landing a bug-pattern fix, grep sibling modules for the same pattern, (8) before declaring an epic complete, run a strict-audit by an independent reviewer agent."
 category: tooling
 date: 2026-05-25
-version: "1.1.0"
+version: "1.2.0"
 user-invocable: false
 verification: verified-local
 history: audit-driven-remediation-workflow.history
-tags: [merged, audit, remediation, ecosystem-audit, strict-audit, repo-hygiene, downstream-consumer-drift, strict-audit-self-review, producer-consumer-pattern]
+tags: [merged, audit, remediation, ecosystem-audit, strict-audit, repo-hygiene, downstream-consumer-drift, strict-audit-self-review, producer-consumer-pattern, cross-module-duplication, copy-paste-bugs, test-mask, fixture-contract-violation, post-completion-audit, strict-mode-review-discovers-bug]
 ---
 
 # Audit-Driven Remediation Workflow
@@ -33,6 +33,8 @@ tags: [merged, audit, remediation, ecosystem-audit, strict-audit, repo-hygiene, 
 - You need to grade AI architecture research documents for structural/citation compliance
 - A skills marketplace has grown past ~500 files and `/advise` is returning too many near-duplicate results
 - You added a new producer-side signal (verdict marker, state flag, dispatch event) — audit MUST trace every downstream consumer and confirm the signal is read, not just emitted.
+- After landing a bug-pattern fix in one module — grep every sibling module for the same pattern. Bundle-style swarms that touch related code via copy-paste are especially prone to this missed-copy class of bugs.
+- After declaring an epic complete — run `/hephaestus:repo-analyze-strict-full` scoped to the session's deliverables. Independent reviewer agents (separate from the implementing model) catch bugs that the implementers and downstream-consumer-drift section both miss.
 
 ## Verified Workflow
 
@@ -410,6 +412,47 @@ Strict audit caught this in <10 minutes by reading both files in parallel via `p
 
 See [[debugging-silent-pipeline-stage-via-argparse-required-grep]] for the related "silent-pipeline-stage" pattern when the consumer is silent due to argparse-time failures rather than missing logic.
 
+## Cross-Module Duplication Audit (added v1.2.0)
+
+When an audit-driven remediation fixes a bug pattern in one module, the same pattern is often duplicated in sibling modules — particularly when the original codebase was created by parallel agents in a swarm that copy-pasted helper logic. Fixing only the originally-reported file leaves the duplicates live.
+
+The 2026-05-25 session demonstrated this cleanly: PR #575 fixed `get_repo_slug(...).split("/", 1)` in `plan_reviewer.py:295-296` and closed #574. The IDENTICAL pattern in `review_state.py:87-88` (a sibling module created by Bundle B's #573 in the same swarm) survived untouched. The test fixture for the sibling masked the bug by patching `get_repo_slug` to return a slash-bearing string. The implementer's APPROVED-gate check on the production hot path crashed every issue. Phase 3 of the automation loop was silently broken despite both epics #550 and #576 being CLOSED.
+
+### Detection workflow
+
+1. Identify the buggy pattern: API call, regex, control-flow shape, or string-manipulation chain. Reduce it to a greppable signature.
+2. Run the signature-grep across the WHOLE codebase, not just the originally-reported file:
+   ```bash
+   # If the buggy pattern is "get_repo_slug(...).split('/', 1)":
+   grep -rn 'get_repo_slug.*\.split\|get_repo_slug(' --include='*.py'
+   # If the buggy pattern is "result = future.result(); future.cancel()":
+   grep -rn 'future\.result.*\n.*future\.cancel' --include='*.py'
+   ```
+3. For each match outside the originally-reported file, classify: same bug, different-but-related bug, or unrelated coincidence. Fix the same-bug instances in the SAME PR (or file as immediate-followup CRITICAL issues if scope blows up).
+4. **Audit the test fixtures of sibling files**: a fixture that returns a value satisfying the buggy pattern's expectations (e.g. mocking `get_repo_slug` to return `"owner/name"` instead of `"AchaeanFleet"`) silently masks the production crash. The mock must satisfy the documented CONTRACT of the function, not the buggy code's incidental expectations.
+
+### Real example (2026-05-25, ProjectHephaestus session)
+
+- **Originating fix**: PR #575 fixed `plan_reviewer.py:295-296` (`get_repo_slug → split → unpack` crash). Test added at `test_plan_reviewer.py:test_uses_owner_repo_tuple_from_get_repo_info`. Closed #574.
+- **Missed copy**: `review_state.py:87-88` had the identical pattern. The module was created by Bundle B (PR #573) in the same swarm as Bundle A (which created the original buggy `plan_reviewer.py` change in PR #571). Both copies share parentage in the swarm-coordinated effort.
+- **Test mask**: `test_review_state.py:160-163` patched `get_repo_slug` to return `"owner/name"` — a slash-containing string that split correctly. The fixture violated the documented contract of `get_repo_slug` (returns short name, no slash). Production crashed; tests passed.
+- **Detection**: caught by a `/hephaestus:repo-analyze-strict-full` strict-mode review of the session's deliverables, AFTER the epics were closed. The reviewer traced the call path from `implementer.py:629` (the APPROVED-gate check) outward, not by re-reading the supposedly-fixed `plan_reviewer.py`.
+- **Fix**: PR #589 applied the identical `get_repo_info` replacement to `review_state.py:87-91` + corrected the test mock + added a regression test. Closed #588.
+
+## Post-Completion Strict Audit (added v1.2.0)
+
+The audit-driven remediation workflow is INCOMPLETE without a post-merge strict review run by an independent reviewer agent. The implementing model self-anchors on the modules it touched and misses bugs in unmodified-but-related call sites. The 2026-05-25 session had ~12 swarm agents land 12 PRs across 2 epics — none of them caught the `review_state.py` copy until a separate `pc-research-reviewer` agent traced the call path post-merge.
+
+### Mandatory final step
+
+After ALL swarm PRs in an audit-driven remediation epic have landed and the epic is about to be closed:
+
+1. Dispatch `/hephaestus:repo-analyze-strict-full` scoped to the session's deliverables (the diff across all the merged PRs).
+2. Use independent reviewer agents (e.g. `pc-research-reviewer`) — NOT the implementing agents.
+3. Each reviewer must trace at least one call path that EXERCISES the changed code in production, not just the changed module itself.
+4. If a CRITICAL finding emerges, file a follow-up issue + PR before declaring the epic complete.
+5. Update the audit-driven-remediation workflow itself (this skill) with the lesson if a new failure mode is discovered.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -441,6 +484,8 @@ See [[debugging-silent-pipeline-stage-via-argparse-required-grep]] for the relat
 | Fixer agents downgrade canonical versions | Dispatched fixer agents to fix content-deficit clusters | Agents rewrote canonical files from scratch, reverting to older versions | Fixer agents must be given explicit version floor constraints; provide pre-fixer commit SHA for recovery |
 | Trust the implementer's self-review of "all tests pass" without dispatching a strict audit | Implementer (me) reported `pixi run pytest tests/unit: 2362 passed; ruff clean; manual smoke OK` and treated the work as done. Did NOT dispatch a strict review. | A reviewer agent (`pc-research-reviewer`) scoped to the diff caught 13 findings including 3 CRITICALs. Self-review by the implementing model under-weights "did I solve the user's actual intent" vs "did the code I wrote pass its own tests" | Always run `repo-analyze-strict-full` (or equivalent) scoped to the diff before claiming work is complete. Dispatch as a separate sub-agent — the implementing agent has cognitive bias toward justifying its own choices. |
 | Add a producer-side signal (`**Verdict: APPROVED**` marker in plan-reviewer) and verify only the producer's tests pass | Plan-reviewer's `_latest_review_is_final` gate was tested in isolation. 10 new unit tests, all green. PR opened. | The implementer.py phase that runs AFTER plan-reviewer never read the verdict. `_has_plan(issue_number)` only checks for substring `"Implementation Plan"`. A BLOCK plan got implemented. The user's stated workflow was silently broken. | When adding a producer-side signal, grep for EVERY downstream consumer and add an integration test that exercises the full pipeline. Use `grep -rn "<consumer-marker-pattern>" --include='*.py'` to find them. |
+| Fix the bug only in the originally-reported file | PR #575 replaced `get_repo_slug(...).split("/", 1)` with `get_repo_info(get_repo_root())` in `plan_reviewer.py:295-296`. Closed #574. | An identical bug pattern in `review_state.py:87-88` (a sibling module created by Bundle B in the same swarm) was not touched. Production crashed on every implementer gate check. The session declared both epics CLOSED while the user's stated workflow was silently broken. | When fixing a bug pattern, grep the WHOLE codebase for the same signature — especially in modules created by sibling agents in the same swarm. The originating fix is necessary but not sufficient. |
+| Trust that the swarm's own tests verify end-to-end correctness | The Part 2 swarm ran 5 sub-agent PRs; each agent independently asserted `pixi run pytest tests/unit -q -x` passed. Both epics were marked complete after 2362+ passing tests across all PRs. | The test for `review_state.py` patched `get_repo_slug` to return `"owner/name"` (slash-bearing, splits cleanly) — a contract violation that masked the production crash. Per-PR test passes do not establish system-level correctness when fixtures lie. | Test fixtures must satisfy the documented CONTRACT of the function they mock, not the buggy code's incidental expectations. Audit fixtures for "did this mock return a realistic value?" as part of every PR review. |
 
 ## Results & Parameters
 

@@ -1,5 +1,26 @@
 # audit-driven-remediation-workflow — History
 
+## v1.2.0 (2026-05-25)
+
+**Changed by:** ProjectHephaestus PR #589 + post-completion strict-mode audit of epics #550, #576.
+**Verification:** verified-local
+
+### What changed
+- Added "Cross-Module Duplication Audit" section after the v1.1.0 Downstream-Consumer Drift section.
+- Added "Post-Completion Strict Audit" section as the workflow's mandatory final step.
+- Added 2 new Failed Attempts rows (fix-only-the-originating-file, trust-swarm-self-tests).
+- Added 2 new "When to Use" triggers (post-fix grep, post-epic strict audit).
+- Updated tags.
+
+### Why
+Same session that produced v1.1.0. After the 12-PR swarm declared both epics CLOSED, a /hephaestus:repo-analyze-strict-full audit scoped to the session's deliverables caught a CRITICAL missed-copy bug in `review_state.py:87-88`: PR #575 had fixed the identical bug pattern in `plan_reviewer.py` but the duplicate in a sibling module (created by a sibling swarm agent) survived untouched. The implementer's APPROVED-gate check on the production hot path crashed every issue. Test fixtures masked the bug by patching the helper to return a contract-violating value. v1.2.0 elevates "grep sibling modules for the same pattern" and "post-completion independent strict audit" from implicit best-practices to mandatory workflow steps.
+
+### Previous version (v1.1.0) snapshot
+
+The v1.1.0 entry remains immediately below this entry (unchanged). The v1.1.0-rendered .md file content prior to v1.2.0 edits is preserved in git history at the parent commit of this amendment.
+
+---
+
 ## v1.1.0 (2026-05-25)
 
 **Changed by:** ProjectHephaestus PR #567 + epic #550 (run_automation_loop.sh silent-abort + plan-reviewer verdict gate)
