@@ -142,7 +142,7 @@ exec pixi run pre-commit run --from-ref "${remote_ref}" --to-ref HEAD
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectOdyssey | PR #5453 ([link](https://github.com/HomericIntelligence/ProjectOdyssey/pull/5453)) — Mojo refactor delegated to sub-agent; sub-agent's `model.mojo` and `run_train.mojo` passed the sub-agent's per-file pre-commit, failed CI mojo-format after orchestrator's fixup push. Applying `pixi run pre-commit run --from-ref origin/main --to-ref HEAD` before the next push produced a green CI run. | verified-ci |
+| ProjectOdyssey | [PR #5453](https://github.com/HomericIntelligence/ProjectOdyssey/pull/5453) — Mojo refactor delegated to sub-agent; sub-agent's `model.mojo` and `run_train.mojo` passed the sub-agent's per-file pre-commit, failed CI mojo-format after orchestrator's fixup push. Applying `pixi run pre-commit run --from-ref origin/main --to-ref HEAD` before the next push produced a green CI run. | verified-ci |
 
 ## References
 
