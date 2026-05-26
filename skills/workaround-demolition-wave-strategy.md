@@ -1,9 +1,9 @@
 ---
 name: workaround-demolition-wave-strategy
-description: "Multi-PR sequencing framework for safely ripping out workarounds after an upstream library/compiler bug is fixed. Use when: (1) an upstream dependency (compiler, runtime, library) just shipped a fix for a bug your repo has accumulated workarounds for, (2) workarounds are spread across CI retry loops, continue-on-error flags, build flags, debug infrastructure, ADRs, dev docs, reproducer files, test-file comments, and agent-facing skills/memory, (3) you need to avoid one giant unreviewable demolition PR and instead want a safe, bisectable, reviewable sequence, (4) you have to decide between scorched-earth deletion vs preservation-with-Superseded-markers for documentation/ADRs, (5) some workaround-removals are risky one-liners not exercised by your validation matrix and need their own CI gate."
+description: "Multi-PR sequencing framework for safely ripping out workarounds after an upstream library/compiler bug is fixed. Use when: (1) an upstream dependency (compiler, runtime, library) just shipped a fix for a bug your repo has accumulated workarounds for, (2) workarounds are spread across CI retry loops, continue-on-error flags, build flags, debug infrastructure, ADRs, dev docs, reproducer files, test-file comments, and agent-facing skills/memory, (3) you need to avoid one giant unreviewable demolition PR and instead want a safe, bisectable, reviewable sequence, (4) you have to decide between scorched-earth deletion vs preservation-with-Superseded-markers for documentation/ADRs, (5) some workaround-removals are risky one-liners not exercised by your validation matrix and need their own CI gate, (6) Wave 2 scorched-earth targets a directory (e.g. `repro/`) where files may correspond to DISTINCT upstream bugs sharing only symptom surface — partition by bug, not by directory, before deletion."
 category: ci-cd
-date: 2026-05-25
-version: "1.0.0"
+date: 2026-05-26
+version: "1.1.0"
 user-invocable: false
 verification: verified-ci
 tags: [workaround-removal, multi-pr-strategy, upstream-fix, wave-sequencing, ci-discipline, demolition, rollback-strategy]
@@ -15,7 +15,7 @@ tags: [workaround-removal, multi-pr-strategy, upstream-fix, wave-sequencing, ci-
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-05-25 |
+| **Date** | 2026-05-26 |
 | **Objective** | Frame the safe, bisectable, reviewable sequence for tearing out an accumulated tangle of workarounds after the upstream bug they targeted has been fixed. |
 | **Outcome** | Verified end-to-end on a real upstream-fix-landed scenario (modular/modular#6413 family). Wave 0/1/1.5/2/3 PRs were all green/merging in the target repo. |
 | **Verification** | verified-ci |
@@ -129,6 +129,43 @@ Post as a comment on each related tracking GitHub issue (now-closed is fine — 
 
 **Pre-deletion cross-reference audit**: see [[mkdocs-pre-deletion-audit]]. Grep surviving docs/README/ADRs for references to the to-be-deleted files BEFORE pushing. Otherwise `mkdocs --strict` (or your docs builder) fails and you need follow-up commits.
 
+##### Pre-Deletion Bug-Partition Checklist (added v1.1.0)
+
+**Partition by bug, not by directory.** A scorched-earth Wave 2 targets ONE upstream bug. Files
+sharing a *directory* (e.g. `repro/`), a *runtime lib name* (e.g. `libKGEN`), or a *symptom surface*
+(e.g. JIT crash / SIGILL) with the demolition target are NOT automatically demolition candidates.
+Symptoms cluster; root causes don't. Multiple unrelated upstream bugs can produce overlapping
+stack traces in the same runtime lib.
+
+For EVERY file in the candidate-delete set, answer all four questions:
+
+1. **Issue citation**: Does this file's docstring / header / commit message cite the demolition-target
+   issue # by its EXACT number? If not → CANDIDATE B (independent bug, validate separately).
+2. **Companion filing**: Is there a paired `issues/<filing>.md` (or equivalent upstream-issue-filing
+   artifact)? If yes → check the filing's upstream link. If linked issue ≠ demolition target →
+   CANDIDATE B. **A standalone `issues/*.md` filing is evidence the file is a distinct bug** —
+   treat the filing as a "do not bulk delete" marker.
+3. **Symptom vs signature**: Does the runtime symptom (stack trace, signal, lib name, reproducer
+   trigger) MATCH the demolition target's signature, or just OVERLAP? `libKGEN` appears in many
+   unrelated bugs; `libAsyncRTRuntimeGlobals.so` is a different runtime entirely. Overlap alone
+   → CANDIDATE B.
+4. **Post-fix validation citation**: Can you cite the post-fix toolchain version + green CI run
+   that proves this specific bug is closed? If no → **DO NOT DELETE**. Mark TRIAGE-PENDING and
+   open a follow-up issue.
+
+Only files where all four answers say "demolish" go in the Wave 2 delete commit. Everything else
+gets a TRIAGE-PENDING marker (e.g., `repro/README.md` triage table) and a follow-up issue.
+
+**Bundling rule**: One demolition PR per upstream bug. If a file's header / workflow comment /
+companion filing cites a DIFFERENT issue #, it does NOT belong in this demolition — even if it
+lives in the same directory and feels "related." (Real example: a `gradient-soak.yml` workflow
+targeting issue #5170 / #5104 was bulk-deleted alongside `#6413` demolition because both crashed
+in the JIT; they were unrelated bugs requiring independent validation.)
+
+**Verification before claiming "demolition complete"**: GitHub PR `state: MERGED` is NOT ground
+truth for "file is gone from main." Always `git fetch && git log origin/main -- <path>` to verify
+physical deletion landed. Local refs go stale; trust the remote log.
+
 #### Wave 3 — Memory / Agent-Guidance Updates (no PR — direct edit)
 
 Update agent-facing memory/feedback files (e.g., `~/.claude/projects/.../memory/feedback_*.md`) to:
@@ -166,6 +203,9 @@ Independent timeline; no dependency on Waves 0-3 merging.
 | Debug "why is Wave 1 lint failing" on the branch | Spent time bisecting branch commits | A stale `.claude/scheduled_tasks.lock` had been committed accidentally in an unrelated prior PR and was failing pre-commit on every branch including ours | Before blaming your branch for a CI failure, check whether the same failure exists on `main`. Rebase early to inherit recent main fixes. |
 | Push Wave 2 doc deletions and let CI find broken links | Pushed deletions, doc-deploy job (mkdocs --strict) failed | 3 separate iterations needed to chase broken links from surviving docs to deleted docs | Always pre-audit doc cross-references before deletion. See [[mkdocs-pre-deletion-audit]]. |
 | Put workaround-removal AND demolition in the validation PR | Tried to make Wave 0 do double duty | Conflated "does the bump work?" with "does removing X work?" — when CI failed, signal was muddled and rollback was painful | Keep Wave 0 a pure canary. Demolition belongs in Wave 1+ where the diff scope makes failures attributable. |
+| Bulk-delete `repro/` directory in Wave 2 | `git rm -r repro/` after an audit comment listed every path under the directory | 13+ reproducer files were for DISTINCT upstream bugs (libAsyncRT crash, JIT volume exhaustion, parametric monomorphization, module-import chain crashes, deterministic-allocator heap corruption) — not the demolition-target bug. They shared only the JIT-crash symptom surface. User audit caught it post-merge; required restoration PR HomericIntelligence/ProjectOdyssey#5464 to recover from commits `e8c5609a` and `7cde386d`. | **Partition by bug, not by directory.** Each `repro_<bug_name>.mojo` with a companion `issues/*.md` filing is its own bug. Apply the Pre-Deletion Bug-Partition Checklist to every file individually before deletion. |
+| Bundling unrelated workflow into bug-specific demolition | Deleted `.github/workflows/gradient-soak.yml` (targets issues #5170 / #5104, per-element bitcast elimination) inside the `#6413` AVX-512 Wave 2 PR | The soak workflow targets a DIFFERENT intermittent JIT crash, not AVX-512 mis-emission. Its own header documents the removal criterion ("REMOVE once enough consecutive clean runs") — a decision requiring independent validation against its own bug, not piggybacking on #6413's fix. | One demolition PR per upstream bug. If a file's header or commit message cites a DIFFERENT issue #, it does not belong in this demolition. Open a separate Wave 2 (or independent removal PR) for that bug after its own validation. |
+| Treating GitHub PR `state: MERGED` as ground truth for "file is deleted on main" | Trusted `gh pr view --json state` showing MERGED without verifying `origin/main` log for the deleted paths | Local refs were stale; a follow-up audit still saw deleted files in its workspace and assumed deletion was incomplete, OR concluded files were physically gone when an earlier-stale checkout showed them present | Always `git fetch && git log origin/main -- <path>` to verify physical deletion before claiming demolition complete OR before opening a restoration PR. The remote log is ground truth; PR state is metadata. |
 
 ## Results & Parameters
 
@@ -242,3 +282,4 @@ Rationale: scorched-earth policy chosen because (a) workaround is fully obsolete
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectOdyssey | Upstream Mojo runtime fix (modular/modular#6413 family) — multiple-surface workaround demolition spanning CI retry loops, `continue-on-error`, gdb wrappers, build flags (`--target-features -avx512*`), ADRs, dev docs, reproducer files, agent memory | This skill is the framework extracted from that demolition. PR sequence ran Wave 0 → Wave 1 → Wave 1.5 → Wave 2 → Wave 3 (memory) → Wave 4 (cross-repo skills, including this one). |
+| ProjectOdyssey (2026-05-26) | Wave 2 over-deletion audit and restoration — PR HomericIntelligence/ProjectOdyssey#5464 | The original Wave 2 `git rm -r repro/` and `gradient-soak.yml` deletions bundled ~13 distinct-bug reproducer files plus an unrelated soak workflow under the `#6413` demolition. User audit caught it; restoration PR #5464 recovered files from commits `e8c5609a` and `7cde386d` and marked every restored reproducer `TRIAGE-PENDING` pending independent post-fix validation. This event drove the v1.1.0 Pre-Deletion Bug-Partition Checklist and the new Failed Attempts rows. |

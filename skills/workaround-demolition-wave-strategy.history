@@ -1,0 +1,50 @@
+# workaround-demolition-wave-strategy — History
+
+## Changelog
+
+### v1.1.0 — 2026-05-26
+
+**Amendment**: extended Wave 2 with a pre-deletion bug-partition checklist after a real
+ProjectOdyssey demolition (modular#6413 family) over-deleted ~13 reproducer files plus a
+soak-test workflow that targeted distinct upstream bugs (not the demolition target).
+
+Restoration PR: HomericIntelligence/ProjectOdyssey#5464 (restore commit `21f874f3`,
+sourced files from pre-Wave-2 commits `e8c5609a` and `7cde386d`). All restored
+reproducers marked `TRIAGE-PENDING` for independent post-fix-toolchain validation.
+
+Changes:
+
+- Added "Pre-Deletion Bug-Partition Checklist" subsection to Wave 2 — 4-question filter
+  separating files demonstrably caused by the demolition-target bug from files with
+  overlapping symptoms but distinct root causes.
+- Added 3 new rows to Failed Attempts: bulk-delete-by-directory, bundling-unrelated-
+  workflow, and stale-MERGED-status-trust.
+- Strengthened Wave 2 policy: "Partition by bug, not by directory."
+- Added PR #5464 to Verified On table.
+- Updated description field to mention bug-partition discipline.
+
+Backward compatibility: fully additive; v1.0.0 wave-sequencing model unchanged.
+
+---
+
+## v1.0.0 — 2026-05-25 (snapshot)
+
+Initial version. Full v1.0.0 source below for archaeology.
+
+```markdown
+---
+name: workaround-demolition-wave-strategy
+description: "Multi-PR sequencing framework for safely ripping out workarounds after an upstream library/compiler bug is fixed. Use when: (1) an upstream dependency (compiler, runtime, library) just shipped a fix for a bug your repo has accumulated workarounds for, (2) workarounds are spread across CI retry loops, continue-on-error flags, build flags, debug infrastructure, ADRs, dev docs, reproducer files, test-file comments, and agent-facing skills/memory, (3) you need to avoid one giant unreviewable demolition PR and instead want a safe, bisectable, reviewable sequence, (4) you have to decide between scorched-earth deletion vs preservation-with-Superseded-markers for documentation/ADRs, (5) some workaround-removals are risky one-liners not exercised by your validation matrix and need their own CI gate."
+category: ci-cd
+date: 2026-05-25
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [workaround-removal, multi-pr-strategy, upstream-fix, wave-sequencing, ci-discipline, demolition, rollback-strategy]
+---
+
+(See git history at commit af093fe0 for full v1.0.0 body — 244 lines.
+Key shape preserved in v1.1.0: Wave 0/1/1.5/2/3/4 sequencing, audit-trail-via-issue-
+comments, guardrail-note template, pre-commit-marker-grep template, original 5-row
+Failed Attempts table.)
+```
