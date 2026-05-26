@@ -175,8 +175,9 @@ via `gh pr view --json body,autoMergeRequest` plus a GraphQL signature query.
 PR creation. If you run `gh pr create` and then `gh pr merge --auto --squash` as two
 sequential commands, the gate can read `autoMergeRequest` **before** the auto-merge
 enablement has propagated, failing with `::error::Auto-merge is not enabled on this PR`
-even though auto-merge IS enabled moments later. (Observed on ProjectHephaestus PRs #423 and
-#428; PR #430 passed first try because auto-merge was enabled fast enough to beat the job.)
+even though auto-merge IS enabled moments later. (Observed on ProjectHephaestus
+PRs #423 and #428; PR #430 passed first try because auto-merge was enabled fast
+enough to beat the job.)
 
 **Fixes, in order of preference:**
 
