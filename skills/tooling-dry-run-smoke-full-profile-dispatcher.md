@@ -18,7 +18,7 @@ user-invocable: false
 | Item | Details |
 | ------ | --------- |
 | Date | 2026-05-25 |
-| Objective | Provide a uniform `./train.sh {dry-run|smoke|full}` entrypoint for long-running scripts so users (and CI) never accidentally launch the multi-hour run when they meant to verify a code change. |
+| Objective | Provide a uniform `./train.sh {dry-run\|smoke\|full}` entrypoint for long-running scripts so users (and CI) never accidentally launch the multi-hour run when they meant to verify a code change. |
 | Outcome | Operational — implemented as `examples/grok/lenet_emnist/train.sh` in ProjectOdyssey PR #5453. `./train.sh dry-run` exits 0 in ~30s. |
 
 ## When to Use
@@ -197,7 +197,7 @@ accidentally turns `dry-run` into a 30-minute job, CI catches it.
 ## Verification
 
 verified-ci: implemented as `examples/grok/lenet_emnist/train.sh` in ProjectOdyssey PR
-#5453. `./train.sh dry-run` exits 0 in ~30s and produces the expected output (1 EPOCH log
+\#5453. `./train.sh dry-run` exits 0 in ~30s and produces the expected output (1 EPOCH log
 line, 7 checkpoint subdirs). All three profiles parsed correctly. Bash parameter-expansion
 bug (the `:?` usage-string trap) was hit and fixed locally before push.
 
