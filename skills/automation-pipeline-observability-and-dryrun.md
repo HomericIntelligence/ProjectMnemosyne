@@ -1,13 +1,13 @@
 ---
 name: automation-pipeline-observability-and-dryrun
-description: "Operational reliability of automation pipeline scripts (implement_issues.py, curses UI runners, Claude Code harness, multi-phase shell orchestrators). Use when: (1) dry-run mode leaks into post-implementation phases (PR creation, /learn, follow-up), (2) errors are swallowed or invisible in curses UI automation scripts, (3) execution logs are not persisted after worktree cleanup, (4) debugging implement_issues.py pipeline failures (git parsing, branch reuse, import errors), (5) auditing that runtime components are actually wired in the composition root and not structurally dead code, (6) a shell orchestrator fans out to multiple Python entry points and some phases declare --issues (or similar) as required=True while others auto-discover — uniform invocation produces silent argparse exit 2 in the required-arg phases."
+description: "Operational reliability of automation pipeline scripts (implement_issues.py, curses UI runners, Claude Code harness, multi-phase shell orchestrators). Use when: (1) dry-run mode leaks into post-implementation phases (PR creation, /learn, follow-up), (2) errors are swallowed or invisible in curses UI automation scripts, (3) execution logs are not persisted after worktree cleanup, (4) debugging implement_issues.py pipeline failures (git parsing, branch reuse, import errors), (5) auditing that runtime components are actually wired in the composition root and not structurally dead code, (6) a shell orchestrator fans out to multiple Python entry points and some phases declare --issues (or similar) as required=True while others auto-discover — uniform invocation produces silent argparse exit 2 in the required-arg phases, (7) a multi-phase bash orchestrator silently aborts mid-pipeline after phase N completes — phases N+1..K never log a banner, the outer `wait` reports non-zero, and `bash -x` + ERR/EXIT traps inside the function reveal no continuation past the phase N subshell, (8) an accumulated stack of bash safety layers (`set -euo pipefail` + `set -m` + `set +e` defang + RETURN trap + single-command subshells + mapfile + process substitution) keeps producing new silent-abort triggers despite per-PR fixes for prior triggers — the structural fix is to rewrite the orchestrator as a Python module."
 category: debugging
-date: 2026-05-24
-version: "1.1.0"
+date: 2026-05-26
+version: "1.2.0"
 user-invocable: false
 verification: verified-precommit
 history: automation-pipeline-observability-and-dryrun.history
-tags: [dry-run, automation, implementer, curses-ui, error-visibility, log-persistence, composition-root, wiring, hephaestus, worktree, fan-out, argparse, orchestrator-contract, required-args]
+tags: [dry-run, automation, implementer, curses-ui, error-visibility, log-persistence, composition-root, wiring, hephaestus, worktree, fan-out, argparse, orchestrator-contract, required-args, bash-to-python-rewrite, silent-abort, set-euo-pipefail, set-m, subprocess-orchestrator, phase-isolation]
 ---
 
 # Automation Pipeline: Observability and Dry-Run Guard
@@ -29,6 +29,8 @@ tags: [dry-run, automation, implementer, curses-ui, error-visibility, log-persis
 - `implement_issues.py` fails with git parsing errors, "branch already exists", or import errors
 - Tests pass but a feature is "done but not working" — metrics read zero, alerts never fire
 - Before releasing any multi-phase CLI tool or tagging a version: verify every runtime component is wired in `cmd/` / `main`
+- A multi-phase bash orchestrator silently aborts mid-pipeline after phase N completes — phases N+1..K never log a banner, the outer `wait` reports non-zero, and `bash -x` + ERR/EXIT traps inside the function reveal no continuation past the phase N subshell
+- An accumulated stack of bash safety layers (`set -euo pipefail` + `set -m` + `set +e` defang + RETURN trap + single-command subshells + mapfile + process substitution) keeps producing new silent-abort triggers despite per-PR fixes for prior triggers
 
 ## Verified Workflow
 
@@ -325,10 +327,99 @@ this bug invisible. Either:
 - (better) make the contract impossible to violate via either uniform auto-discovery or
   shell-side discovery passed uniformly (the fix above).
 
+### 7. Bash-to-Python Orchestrator Rewrite
+
+When a bash multi-phase orchestrator accumulates incompatible safety layers and keeps producing new silent-abort triggers despite per-PR fixes, the structural fix is to replace the bash script with a Python module. Patching one trigger at a time (PR #557, #570, etc.) only delays the next one — the safety-layer stack itself is the problem.
+
+**When to consider this rewrite**:
+
+- The bash script has **3+ stacked safety mechanisms** (typically: `set -euo pipefail` + `set -m` job control + `set +e` defang inside a function + `RETURN`/`ERR`/`EXIT` traps + single-command subshells + `mapfile` + process substitution).
+- There have been **2+ prior silent-abort fixes** to the same script for distinct root causes. Each fix patched one trigger; a new trigger appeared.
+- Diagnostic traps (`set -E`, `ERR`/`EXIT` with stderr capture) confirm phase N START fires but `phase_done` never runs, even with stderr captured to a file. The control-flow gap is real, not a logging artifact.
+- The single-command subshell exec-optimization is involved (e.g., `( $PLAN_BIN "$@" )` where the subshell has only one command — bash may `exec` instead of `fork+exec`, and `set -m` + errexit interaction with the exec'd child becomes load-bearing).
+
+**Module shape (Python orchestrator)**:
+
+```python
+# hephaestus/automation/loop_runner.py — sketch
+
+PHASES: list[Phase] = [
+    Phase(name="plan",            module="hephaestus.automation.planner"),
+    Phase(name="review-plans",    module="hephaestus.automation.review_plan"),
+    Phase(name="implement",       module="hephaestus.automation.implementer"),
+    Phase(name="review-prs",      module="hephaestus.automation.pr_reviewer"),
+    Phase(name="address-review",  module="hephaestus.automation.address_review"),
+    Phase(name="drive-green",     module="hephaestus.automation.drive_green"),
+]
+
+# Phase-binary inventory + flag matrix encoded as a dict (no per-phase if/else)
+PHASE_FLAGS: dict[str, list[str]] = {
+    "plan":           ["-v"],
+    "review-plans":   ["--issues", *issues, "-v"],
+    "implement":      ["-v"],
+    "review-prs":     ["--issues", *issues, "-v"],
+    "address-review": ["--issues", *issues, "-v"],
+    "drive-green":    ["--issues", *issues, "-v"],
+}
+
+def process_repo(repo: str, ...) -> RepoResult:
+    """Per-worker entry. BaseException catch is structural — no phase failure leaks."""
+    results: list[PhaseResult] = []
+    try:
+        for phase in PHASES:                  # plain for-loop — NO `break` on failure
+            rc = subprocess.run(
+                [sys.executable, "-m", phase.module, *PHASE_FLAGS[phase.name]],
+                cwd=repo_path,
+                # Phase-specific env vars stay phase-scoped — do NOT leak HEPH_LOOP_INDEX etc.
+                env={**os.environ, **phase.env},
+            ).returncode
+            results.append(PhaseResult(phase=phase.name, rc=rc))
+            # control unconditionally proceeds to phase N+1
+        return RepoResult(repo=repo, phases=results)
+    except BaseException as exc:              # per-worker net (catches SystemExit, KeyboardInterrupt)
+        return RepoResult(repo=repo, runner_error=repr(exc))
+
+def run_loop(repos: list[str], parallel: int) -> int:
+    # Upfront sequential clone pass BEFORE any worker thread starts
+    # (avoids concurrent-clone race when --parallel-repos > 1)
+    for repo in repos:
+        clone_if_missing(repo)
+
+    with ThreadPoolExecutor(max_workers=parallel) as ex:
+        futs = {ex.submit(process_repo, r): r for r in repos}
+        for fut in as_completed(futs):
+            try:
+                result = fut.result()
+            except BaseException as exc:      # second net for ThreadPoolExecutor edge cases
+                log.error("worker %s crashed: %r", futs[fut], exc)
+                continue
+            ...
+```
+
+**Invariants that must hold**:
+
+1. **Phase isolation**: `for phase in ALL_PHASES:` loop body **must not** `break` on failure. Phase N failing is a `PhaseResult(rc=N)`, control proceeds to N+1. This is the load-bearing replacement for "the bash script should not abort mid-pipeline".
+2. **Two-level `except BaseException` net**: one inside `process_repo` (per worker), one inside `run_loop` around `fut.result()` (per future). `BaseException`, not `Exception` — captures `SystemExit` from inside child modules.
+3. **Phase-binary inventory + flag matrix as a dict**: avoids per-phase `if/else` duplication and the class of double-flag bugs (e.g., accidentally passing `--issues` to auto-discovering phases — see Section 6).
+4. **Env-var scoping**: phase-specific env vars (e.g. `HEPH_LOOP_INDEX`, `HEPH_PR_REVIEW_MODE`) must not leak to phases that don't need them. Build per-phase `env=` dicts; don't mutate `os.environ`.
+5. **Upfront sequential clone pass** before any worker thread starts. Concurrent-clone races at `--parallel-repos > 1` corrupt `.git/objects` and are tedious to reproduce.
+
+**Wiring**:
+
+- Add console_script entry in `pyproject.toml`:
+  ```toml
+  [project.scripts]
+  hephaestus-automation-loop = "hephaestus.automation.loop_runner:main"
+  ```
+- **Preserve the CLI flag surface verbatim** from the bash script. Existing operator muscle memory and pinned callers (cron, systemd units, fleet wrappers) keep working. Do not "improve" flag names at rewrite time.
+
+**Why this is structurally lower-risk than another bash patch**: Python's plain `for phase in ALL_PHASES:` loop makes the phase-isolation invariant **impossible to circumvent** by accident. There is no `set -e` to re-enable, no subshell exec-optimization, no job-control interaction. The Python interpreter does not have a configuration knob that quietly aborts a `for` loop after the first iteration.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 | --- | --- | --- | --- |
+| Patch the bash orchestrator's silent-abort with more `set +e` and ERR/EXIT traps | Added `set +e` inside `process_repo`, `trap 'set -e' RETURN`, then `set -E` + ERR/EXIT diagnostic traps in a follow-up PR | New silent-abort trigger appeared (`set -m` + single-command subshell exec-optimization). Diagnostic traps confirmed phase 1 START fired but `phase_done` never ran, even with stderr capture. Each patch fixed one trigger but the safety-layer stack kept producing new ones (PR #557 / #570 fixed git-fetch-under-errexit; a fresh trigger appeared post-merge). | When a bash orchestrator has 3+ stacked safety mechanisms and 2+ silent-abort fixes already, rewriting as a Python module is lower-risk than patching. Python's plain `for phase in ALL_PHASES:` loop makes phase isolation structural and impossible to circumvent. |
 | Short-circuit only `_run_claude_code()` | Returned `None` from `_run_claude_code()` when `dry_run=True` | Execution continued to `_ensure_pr_created()` which called `gh pr create` on an empty branch, producing "No commits between main and `<branch>`" errors | A single method guard is not enough; the entire post-simulation pipeline must be skipped via an early return at the worker level |
 | Check `dry_run` inside `_ensure_pr_created()` | Added `if self.options.dry_run: return` inside PR creation | Worked for PR creation but still ran `_run_learn()` and `_file_follow_up_issues()`, creating noise in skill files and issue trackers during testing | Each downstream method needs its own guard — brittle. One early return at the worker level is cleaner and more robust |
 | Trust that empty `session_id` would prevent PR creation | Assumed `session_id = None` from `_run_claude_code()` would be checked before `_ensure_pr_created()` | `_ensure_pr_created()` did not check `session_id` before attempting PR creation | Never rely on implicit sentinel values flowing through to downstream steps; use explicit control flow |
@@ -392,3 +483,4 @@ LOG_PREFIXES    = {"error": "ERROR", "warning": "WARN", "info": ""}
 | ProjectScylla | Issue #602 — log persistence; 30 tests pass (24 before) | Logs persisted to `.issue_implementer/` on all exit paths |
 | Atlas (Go) | `/hephaestus:repo-analyze-strict-full` 2026-05-05 — wiring audit | Five dead-spine bugs caught; PRs #444–#448 merged; Atlas v0.2.0 shipped |
 | ProjectHephaestus | PR #543 — `scripts/run_automation_loop.sh` fan-out argument contract; bash -n + ShellCheck + silent-failure-workaround pre-commit hook pass | Two-tier discovery: shell-side `mapfile` of open issues per repo per loop, passed via `${ISSUE_ARGS[@]}` to the 4 required-arg phases (review-plans, review-prs, address-review, drive-green); auto-discovering phases (plan, implement) unchanged. Verification: verified-precommit (CI gate pending merge) |
+| ProjectHephaestus | 2026-05-26 — bash-to-Python orchestrator rewrite: `scripts/run_automation_loop.sh` → `hephaestus/automation/loop_runner.py`. The bash script silently aborted inside `process_repo` immediately after phase 1 (planner). Root cause: `set -euo pipefail` + `set -m` job control + single-command `( $PLAN_BIN ... )` subshell exec-optimization; `set +e` defang + ERR/EXIT traps insufficient. PRs #557 and #570 had previously fixed a related symptom (git-fetch under errexit), but a new trigger appeared. | Structural fix: each phase is `subprocess.run(...)` inside a plain `for phase in ALL_PHASES:` loop with no `break` on failure; `process_repo` wraps in `except BaseException` → `RepoResult(runner_error=...)`; `run_loop` wraps `fut.result()` in a second `except BaseException` net for `ThreadPoolExecutor`. Phase-binary inventory + flag matrix encoded as a dict. CLI flag surface preserved verbatim. Verification: verified-precommit (smoke test showed phase 1 done + phase 2 start; 31 unit tests pass; full CI not yet run on the new PR) |

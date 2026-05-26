@@ -1,3 +1,33 @@
+## v1.2.0 (2026-05-26)
+
+**Changed by:** ProjectHephaestus 2026-05-26 — bash-to-Python orchestrator rewrite (`scripts/run_automation_loop.sh` → `hephaestus/automation/loop_runner.py`)
+**Verification:** verified-precommit (smoke test showed phase 1 done + phase 2 start; 31 unit tests pass; full CI not yet run on the new PR)
+
+### What changed
+
+- Added 2 new "When to Use" triggers:
+  - (7) A multi-phase bash orchestrator silently aborts mid-pipeline after phase N completes — phases N+1..K never log a banner, `bash -x` + ERR/EXIT traps reveal no continuation past the phase N subshell
+  - (8) An accumulated stack of bash safety layers (`set -euo pipefail` + `set -m` + `set +e` defang + RETURN trap + single-command subshells + mapfile + process substitution) keeps producing new silent-abort triggers despite per-PR fixes
+- Added new Verified Workflow section 7: "Bash-to-Python Orchestrator Rewrite" — covers when to consider the rewrite (3+ stacked safety mechanisms AND 2+ prior silent-abort fixes), the module shape (subprocess.run per phase, ThreadPoolExecutor per repo, double `except BaseException` net), the phase-isolation invariant (`for phase in ALL_PHASES:` with no break on failure), env-var scoping rules, upfront sequential clone pass to avoid concurrent-clone race, and console_script wiring with verbatim CLI flag preservation
+- Added a Failed Attempts row: "Patch the bash orchestrator's silent-abort with more `set +e` and ERR/EXIT traps" — documents the trigger-of-the-month dynamic that justifies the rewrite over another bash patch
+- Added new tags: `bash-to-python-rewrite`, `silent-abort`, `set-euo-pipefail`, `set-m`, `subprocess-orchestrator`, `phase-isolation`
+- Added Verified On row for ProjectHephaestus 2026-05-26 loop_runner.py rewrite
+- Bumped MINOR (new trigger + new workflow section, no breaking changes; previous content intact)
+
+### Why
+
+`scripts/run_automation_loop.sh` (a 6-phase orchestrator: plan → review-plans → implement → review-prs → address-review → drive-green) silently aborted inside `process_repo` immediately after phase 1 (the planner). Cause: a combination of `set -euo pipefail` + `set -m` (job control) + single-command `( $PLAN_BIN ... )` subshell exec-optimization, with `set +e` defang and ERR/EXIT traps insufficient to surface or prevent the abort. PR #557 / #570 had previously fixed a related symptom (git-fetch under errexit), but a new trigger appeared.
+
+After two distinct silent-abort fixes against the same script, the structural pattern emerged: the safety-layer stack itself is the problem. Each patch fixes one trigger; the stack produces another. The rewrite replaces the bash orchestrator with `hephaestus/automation/loop_runner.py`, where each phase is `subprocess.run(...)` inside a plain `for phase in ALL_PHASES:` loop — phase failure is `PhaseResult(rc=N)` and control unconditionally proceeds to phase N+1. The phase-isolation invariant is now structural (a Python `for` loop has no `set -e` knob to circumvent).
+
+CLI flag surface preserved verbatim so existing operator muscle memory and pinned callers keep working.
+
+### Previous version (v1.1.0) snapshot
+
+See entry below.
+
+---
+
 ## v1.1.0 (2026-05-24)
 
 **Changed by:** ProjectHephaestus PR #543 — `scripts/run_automation_loop.sh` fan-out argument contract fix
