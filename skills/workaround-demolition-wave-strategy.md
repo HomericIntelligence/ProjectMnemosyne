@@ -87,7 +87,7 @@ Single PR including:
 - Removal of `continue-on-error: true` on the affected test groups
 - Removal of debug/forensics infrastructure (gdb wrappers, coredump-capture composite actions)
 - Re-enabling any test jobs that were disabled citing the upstream bug
-- Add a CLAUDE.md / AGENTS.md / `notes/` entry: "<dep> is stable as of <version>; execution crashes are real bugs, do NOT add retry loops"
+- Add a CLAUDE.md / AGENTS.md / `notes/` entry: "`<dep>` is stable as of `<version>`; execution crashes are real bugs, do NOT add retry loops"
 - (Recommended) Pre-commit guard that grep-fails on workaround marker strings (e.g., the issue number, the retry loop's signature comment)
 
 EXCLUDE from Wave 1: any change that is workaround-removal-shaped but was not exercised by Wave 0's CI. Those belong in Wave 1.5.
@@ -170,8 +170,8 @@ physical deletion landed. Local refs go stale; trust the remote log.
 
 Update agent-facing memory/feedback files (e.g., `~/.claude/projects/.../memory/feedback_*.md`) to:
 
-- Strengthen existing "don't dismiss crashes as <thing>" entries with the upstream-fix-resolved status
-- Add a new "don't re-introduce <workaround pattern>" feedback file naming the specific patterns (retry loops, `continue-on-error`, build flags, debug infrastructure)
+- Strengthen existing "don't dismiss crashes as `<thing>`" entries with the upstream-fix-resolved status
+- Add a new "don't re-introduce `<workaround pattern>`" feedback file naming the specific patterns (retry loops, `continue-on-error`, build flags, debug infrastructure)
 - Index in `MEMORY.md`
 
 These live OUTSIDE the repo in user-specific memory; no PR is involved. The main agent does this directly rather than delegating — memory files are user-context-specific.
