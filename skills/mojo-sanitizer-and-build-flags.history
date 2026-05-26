@@ -1,5 +1,39 @@
 # mojo-sanitizer-and-build-flags — History
 
+## v1.1.0 (2026-05-25) — AVX-512 driver-vs-sanitizer codegen asymmetry
+
+**Changed by:** Multi-PR demolition of JIT/AVX-512 workarounds after modular/modular#6413 driver-path fix landed in Mojo 1.0.0b2.dev2026052306+
+**Verification:** verified-ci
+
+### What changed
+
+- Bumped version 1.0.0 → 1.1.0 (minor: new finding, new Failed Attempts row, new section, no breaking changes to existing workflow)
+- Updated `date` to 2026-05-25 and bumped `verification` from `verified-local` to `verified-ci` (47+ green required-check runs across 6 Comprehensive Mojo Tests shards + ASAN Tests pass)
+- Extended description, When to Use (item 10), and tags (`avx512`, `target-features`, `codegen`) to surface the new finding for `/advise` discovery
+- Added Verified Workflow §9 "AVX-512 Driver-vs-Sanitizer Codegen Asymmetry" with:
+  - Context: modular/modular#6413 driver fix lands via xgetbv-gated AVX-512 emission (dgurchenkov comment, 2026-05-22)
+  - Pre-fix vs post-fix `mojo build --print-effective-target` behavior on AVX-512-masked runners
+  - Sanitizer-codegen exception: ASAN-instrumented binaries still SIGILL on masked runners
+  - Verified mitigation: retain `MOJO_TARGET_CPU` ONLY on `MOJO_ASAN`/`MOJO_TSAN`, strip elsewhere
+  - Decision rule table per build path
+  - Upstream follow-up issue recommendation
+- Renumbered §9 "Mojo Memory Safety Ownership Patterns" → §10
+- Added one row to Failed Attempts: "Stripping `MOJO_TARGET_CPU` from ALL build flags" with the SIGILL evidence and the sanitizer-only retention lesson
+- Added one row to Verified On documenting the multi-shard CI verification
+- Extended Quick Reference with the sanitizer-composite Make snippet
+
+### Why
+
+A multi-PR workflow validated the modular/modular#6413 driver-path fix on Mojo 1.0.0b2.dev2026052506: non-sanitizer paths now run cleanly without the `--target-features -avx512*` strip across all required CI shards. An early attempt to remove the strip from everywhere — including `MOJO_ASAN := "--sanitize address " + MOJO_TARGET_CPU` → `MOJO_ASAN := "--sanitize address"` — was caught by ASAN Tests CI with `Illegal instruction (core dumped) / killed by signal 4` (the same SIGILL signature as pre-fix #6413). Diagnosis: the driver fix uses xgetbv at codegen time to gate AVX-512 emission, but the sanitizer-instrumented codegen pipeline bypasses that gate and still emits AVX-512 encodings.
+
+This is non-obvious — a reasonable engineer would expect the upstream driver fix to apply uniformly. The amendment captures the asymmetry so future cleanup work scopes the strip retention correctly on the first try and avoids burning a CI cycle to rediscover it.
+
+### Previous version (v1.0.0) snapshot
+
+The v1.0.0 snapshot (Merge of 8 skills) is preserved in the entry below.
+
+---
+
 ## v1.0.0 (2026-05-18) — Merge of 8 skills (M3 sub-PR 3/4)
 
 **Changed by:** Skill-merge swarm (Phase D, M3 sanitizer-build-flags sub-cluster / #1772)

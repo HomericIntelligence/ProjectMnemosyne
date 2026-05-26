@@ -1,13 +1,13 @@
 ---
 name: mojo-sanitizer-and-build-flags
-description: "Canonical patterns for Mojo sanitizer integration and build-flag matrices: ASAN/TSAN scope, tcmalloc/sanitizer incompatibility, sanitizer-only build flavors, build-flag matrix design, compiler-flag conflicts that break Mojo compilation. Use when: (1) enabling a sanitizer for Mojo CI, (2) diagnosing a tcmalloc/sanitizer crash, (3) designing a multi-flag CI matrix for Mojo builds, (4) reconciling conflicting compiler flags that surface only on Mojo."
+description: "Canonical patterns for Mojo sanitizer integration and build-flag matrices: ASAN/TSAN scope, tcmalloc/sanitizer incompatibility, sanitizer-only build flavors, build-flag matrix design, AVX-512 driver-vs-sanitizer codegen asymmetry, compiler-flag conflicts that break Mojo compilation. Use when: (1) enabling a sanitizer for Mojo CI, (2) diagnosing a tcmalloc/sanitizer crash, (3) designing a multi-flag CI matrix for Mojo builds, (4) reconciling conflicting compiler flags that surface only on Mojo, (5) removing AVX-512 strip workarounds after modular/modular#6413 fix, (6) sanitizer builds SIGILL on AVX-512-masked CI runners even after the driver-path fix."
 category: ci-cd
-date: 2026-05-18
-version: "1.0.0"
+date: 2026-05-25
+version: "1.1.0"
 user-invocable: false
-verification: verified-local
+verification: verified-ci
 history: mojo-sanitizer-and-build-flags.history
-tags: [merged, mojo, sanitizer, asan, tsan, build-flags, tcmalloc]
+tags: [merged, mojo, sanitizer, asan, tsan, build-flags, tcmalloc, avx512, target-features, codegen]
 ---
 
 # Mojo Sanitizer and Build Flags
@@ -32,6 +32,7 @@ tags: [merged, mojo, sanitizer, asan, tsan, build-flags, tcmalloc]
 7. Activating commented-out exports in `__init__.mojo` after underlying modules are ready
 8. Adding convenience `from shared import X` top-level re-exports and verifying with import tests
 9. Reviewing code for Mojo ownership/borrow safety or debugging memory / segfault issues
+10. Removing AVX-512 `--target-features` strip workarounds after the modular/modular#6413 driver-path fix landed (Mojo 1.0.0b2.dev2026052306+) — and discovering sanitizer codegen still SIGILLs on masked runners
 
 ## Verified Workflow
 
@@ -61,6 +62,14 @@ grep -rn "^struct\|^fn\|^trait" shared/core/layers/ | grep -v "__"
 # Import from leaf module directly (NOT via intermediate __init__.mojo)
 # from shared.autograd.optimizers import AdaGrad   ← correct
 # from shared.autograd import AdaGrad              ← fails (re-export chain)
+
+# AVX-512 driver-vs-sanitizer asymmetry (post modular/modular#6413 fix):
+#   Driver fix landed in Mojo 1.0.0b2.dev2026052306+ (xgetbv-gated AVX-512 emission).
+#   Non-sanitizer builds: safe to strip `--target-features -avx512*`.
+#   Sanitizer builds (ASAN/TSAN): MUST retain the strip — codegen still emits AVX-512.
+MOJO_TARGET_CPU := "--target-features -avx512bf16,-avx512bitalg,-avx512bw,-avx512cd,-avx512dq,-avx512f,-avx512ifma,-avx512vbmi,-avx512vbmi2,-avx512vl,-avx512vnni,-avx512vpopcntdq"
+MOJO_ASAN := "--sanitize address " + MOJO_TARGET_CPU   # KEEP the strip
+MOJO_TSAN := "--sanitize thread "  + MOJO_TARGET_CPU   # KEEP the strip
 ```
 
 ### 1. Sanitizer Support Matrix (Mojo 1.0.0b2)
@@ -245,7 +254,59 @@ fn test_adagrad_direct_import() raises:
 
 Always update both `test_imports.mojo` AND `test_imports_part1.mojo` (≤10 `fn test_` functions per file).
 
-### 9. Mojo Memory Safety Ownership Patterns
+### 9. AVX-512 Driver-vs-Sanitizer Codegen Asymmetry (post modular/modular#6413 fix)
+
+The upstream Mojo driver bug `modular/modular#6413` (AVX-512 mis-emission on AVX-512-masked CPUs) was fixed in **Mojo 1.0.0b2.dev2026052306+** via `xgetbv`-gated AVX-512 emission (see dgurchenkov's comment on the issue, 2026-05-22). The driver path now correctly downgrades the target when the OS/container masks AVX-512:
+
+```bash
+# Pre-fix: reported znver4 with +avx512f,+avx512vl,... even when OS masked AVX-512
+# Post-fix on masked runner:
+$ mojo build --print-effective-target hello.mojo
+# → lunarlake with ZERO +avx512* features
+```
+
+**However, the fix does NOT propagate through sanitizer-instrumented codegen.** On Mojo 1.0.0b2.dev2026052506, ASAN-instrumented binaries still emit AVX-512 encodings and SIGILL at runtime on AVX-512-masked CI runners (e.g., GitHub Actions hosted runners):
+
+```text
+Running (ASAN): tests/projectodyssey/core/test_hash.mojo
+--- build ---
+--- run ---
+Illegal instruction (core dumped)
+killed by signal 4   # SIGILL — same #6413 symptom
+```
+
+**Mitigation:** Retain the `--target-features -avx512*` strip **only** on sanitizer composite variables. Strip it from every non-sanitizer code path:
+
+```make
+# Disable AVX-512 for sanitizer-instrumented builds only.
+#
+# The upstream AVX-512 mis-emission bug (modular/modular#6413) is fixed in the
+# driver path: `mojo build --print-effective-target` correctly downgrades the
+# target when the runner masks AVX-512. However, ASAN-instrumented codegen on
+# Mojo 1.0.0b2.dev2026052506 still emits AVX-512 encodings that SIGILL on
+# AVX-512-masked GHA runners. Until that asymmetry is fixed upstream, keep
+# the strip on sanitizer composites only.
+
+MOJO_TARGET_CPU := "--target-features -avx512bf16,-avx512bitalg,-avx512bw,-avx512cd,-avx512dq,-avx512f,-avx512ifma,-avx512vbmi,-avx512vbmi2,-avx512vl,-avx512vnni,-avx512vpopcntdq"
+MOJO_ASAN := "--sanitize address " + MOJO_TARGET_CPU
+MOJO_TSAN := "--sanitize thread "  + MOJO_TARGET_CPU
+# Non-sanitizer flags (MOJO_FLAGS, package builds, release, debug) MUST NOT
+# concatenate MOJO_TARGET_CPU — the driver fix handles those paths correctly.
+```
+
+**Decision rule when migrating off the AVX-512 strip:**
+
+| Build path | Driver-fix applies? | Action |
+| ---------- | ------------------- | ------ |
+| `mojo build` / `mojo package` (no sanitizer) | YES | Remove `MOJO_TARGET_CPU` from this flag group |
+| `mojo build --sanitize=address` (ASAN) | NO | Keep `MOJO_TARGET_CPU` on `MOJO_ASAN` |
+| `mojo build --sanitize=thread` (TSAN compile) | NO (unverified — TSAN aborts at startup anyway) | Keep `MOJO_TARGET_CPU` on `MOJO_TSAN` defensively |
+
+**Validation signal:** if you strip `MOJO_TARGET_CPU` from a path that still needs it, CI fails with `Illegal instruction (core dumped)` / `killed by signal 4` on the first sanitized test that hits an AVX-512 codegen site. Non-sanitizer paths surface the bug as the same SIGILL pre-fix, but post-fix they run cleanly across all required Comprehensive Mojo Tests shards.
+
+**Upstream tracking:** the sanitizer-codegen asymmetry should be filed against modular/modular as a follow-up to #6413 (the driver fix did not propagate through the sanitizer codegen path). Reference dgurchenkov's `xgetbv` gating comment as the baseline behavior the sanitizer path should match.
+
+### 10. Mojo Memory Safety Ownership Patterns
 
 ```mojo
 # Owned parameter - takes ownership
@@ -284,6 +345,7 @@ Key rules:
 | Using `Float32` in test instantiation | `var normalizer = Normalize(Float32(0.5), Float32(0.5))` | `Normalize.__init__` takes `Float64` — compile error | Always grep the leaf module `__init__` signature before writing test code |
 | Modifying `__init__.mojo` from scratch | Tried to add re-exports anew | Export was already present (added in prior work with `# Issue #NNNN` comment) | Always check `__init__.mojo` first — the re-export is often done; only tests are missing |
 | Using `just` command runner | `just build` or `just --list` | `just` not in PATH on this host | Use `pixi run <cmd>` directly; fall back to CI for compilation |
+| Stripping `MOJO_TARGET_CPU` from ALL build flags after modular/modular#6413 fix | `MOJO_ASAN := "--sanitize address"` (dropped the `+ MOJO_TARGET_CPU` concat) along with stripping it from non-sanitizer flags during AVX-512 workaround demolition | ASAN Tests CI: `Illegal instruction (core dumped) / killed by signal 4` (SIGILL — same #6413 symptom) on the first sanitized test that hit an AVX-512 codegen site. The modular/modular#6413 driver-path fix (xgetbv-gated AVX-512 emission, landed Mojo 1.0.0b2.dev2026052306+) does NOT propagate through ASAN-instrumented codegen on 1.0.0b2.dev2026052506 | Driver-fix coverage is asymmetric: non-sanitizer paths run cleanly without the strip, but sanitizer codegen still emits AVX-512 encodings. Retain `MOJO_TARGET_CPU` ONLY on `MOJO_ASAN` / `MOJO_TSAN` composites; strip from everywhere else. File a follow-up upstream issue referencing #6413 |
 
 ## Results & Parameters
 
@@ -350,6 +412,7 @@ Key rules:
 | ProjectOdyssey | Issue #3219, PR #3738 / Issue #3745, PR #4785 — Package re-exports | SGD/Adam/AdamW activated; AdaGrad/RMSprop added to top-level shared package. |
 | ProjectOdyssey | Issue #3221, PR #3748 — LossTracker/AccuracyMetric chain wiring | Intermediate and root `__init__.mojo` wired; alias pattern confirmed. |
 | ProjectOdyssey | Issue #3851, PR #4814 — DataLoader/DataBatch export | Import tests added to both `test_imports.mojo` and `test_imports_part1.mojo`. |
+| ProjectOdyssey | Mojo 1.0.0b2.dev2026052506 — AVX-512 workaround demolition | Non-sanitizer paths verified clean post-#6413-fix: 47+ green required-check runs across all 6 Comprehensive Mojo Tests shards after `MOJO_TARGET_CPU` removal. Sanitizer asymmetry caught in CI: stripping `MOJO_TARGET_CPU` from `MOJO_ASAN` produced SIGILL (signal 4) in `tests/projectodyssey/core/test_hash.mojo`. After retaining `MOJO_TARGET_CPU` on sanitizer composites only, ASAN Tests passed (2m08s) + all 6 Comprehensive Mojo Tests shards green. |
 
 ## See Also
 
