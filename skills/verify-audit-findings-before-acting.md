@@ -60,7 +60,7 @@ Each is a structurally plausible failure. None of them was true in the verified 
 |--------------|-------------|
 | "Reference to missing file X" | `ls X && grep -rln 'reference-pattern' <dir>` — if file absent AND no reference exists, finding is hallucinated |
 | "No SAST/secrets-scan/dep-audit in CI" | `grep -rE 'gitleaks\|trufflehog\|detect-secrets\|pip-audit\|bandit\|codeql\|semgrep' .pre-commit-config.yaml .github/workflows/*.yml` — if any line matches, the tool IS present |
-| "Function X has wrong return type" | `grep -nE '^def X' <file> && grep -nE 'return|sys.exit' <file>` — read the actual signature + every return |
+| "Function X has wrong return type" | `grep -nE '^def X' <file> && grep -nE 'return\|sys.exit' <file>` — read the actual signature + every return |
 | "Bootstrap/setup is broken" | Run the bootstrap recipe in a clean env (or read it + the dependencies it triggers); don't trust audit prose |
 | "Coverage gap in module Y" | `pixi run pytest tests/ --cov=hephaestus.Y --no-cov-fail` — measure real coverage, not the audit's count |
 
