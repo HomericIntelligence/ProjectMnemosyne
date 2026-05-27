@@ -8,10 +8,13 @@ description: >-
   a missing dtype case (bfloat16) causes silent zero reads/writes, (5) multi-dim
   slice ignores step, returning all elements instead of strided subset, (6) IEEE 754
   NaN bit patterns produce inconsistent hashes across runs, (7) a seed parameter is
-  declared but never wired to the PRNG causing non-reproducible random tensors.
+  declared but never wired to the PRNG causing non-reproducible random tensors,
+  (8) byte-pointer arithmetic on a `UnsafePointer[UInt8]` tensor buffer silently
+  copies one byte per element regardless of dtype, leaving 3/4 of float32 storage
+  uninitialized and quietly corrupting training data.
 category: debugging
-date: 2026-05-19
-version: "1.0.0"
+date: 2026-05-26
+version: "1.1.0"
 user-invocable: false
 history: tensor-numeric-correctness-bugs.history
 tags:
@@ -42,7 +45,7 @@ seed wiring.
 
 | Attribute | Value |
 | ----------- | ------- |
-| **Date** | 2026-05-19 |
+| **Date** | 2026-05-26 |
 | **Category** | debugging |
 | **Theme** | Silent correctness bugs in tensor/array numeric operations |
 | **Outcome** | Canonical covering stride, dtype, memory-safety, hash, and seed patterns |
@@ -65,6 +68,12 @@ Use this skill when:
   (signaling NaN vs quiet NaN, negative NaN, different NaN payloads)
 - Tests using `randn(shape, dtype, seed=N)` produce different values each run because
   the `seed` parameter is declared but never passed to the PRNG
+- A batch-extraction or buffer-copy loop walks `AnyTensor._data` (a
+  `UnsafePointer[UInt8]`) with `(ptr + i).load()` / `.store()` and the tensor's
+  dtype is wider than one byte (float16/bfloat16/float32/float64/int32/int64);
+  training data, weights, or activations look "close to correct" but downstream
+  training plateaus at chance accuracy or diverges from a matching reference
+  implementation
 
 ## Verified Workflow
 
@@ -295,6 +304,72 @@ grep -rn "seed: Int" shared/       # all declarations
 grep -rn "random_seed(" shared/    # all actual wiring calls
 ```
 
+### Pattern 8: Byte-Pointer Arithmetic on Dtype-Wider Tensors
+
+`AnyTensor._data` is `UnsafePointer[UInt8]`. Pointer arithmetic on a byte pointer
+moves in byte units, and `.load()` / `.store()` on a `UInt8*` transfers exactly
+ONE BYTE — regardless of the tensor's declared dtype. A batch-extraction loop
+written as raw byte-pointer math therefore copies only 1 byte per element instead
+of `dtype_size` bytes, leaving the remaining `dtype_size - 1` bytes at their
+prior value (typically zero from a `zeros()` allocation).
+
+**Vulnerable pattern (from `examples/lenet_emnist/train.mojo` and `train_autograd.mojo`):**
+
+```mojo
+# WRONG — byte-pointer arithmetic silently copies 1 byte per element
+(batch_images._data + dst_idx).store(
+    (train_images._data + src_idx).load()
+)
+```
+
+For a `float32` tensor (4 bytes/element):
+
+- `dst_idx` and `src_idx` were *element* indices (0, 1, 2, …, N-1)
+- The loop ran N iterations and transferred 1 byte each — total N bytes
+- The float32 storage needed 4N bytes; the other 3N bytes stayed at `zeros()`
+
+**Downstream effect:** training data is silently "quantized" to a near-garbage
+state where only ~1/4 of each float's bits survive. Manual SGD may still
+converge (raw SGD on LeNet+EMNIST reached 74% test accuracy on corrupted data)
+because enough class signal leaks through. More sensitive paths (autograd,
+deeper models, smaller learning rates) asymptote to chance — for 47-class
+EMNIST, loss = ln(47) = 3.85 and accuracy ≈ 1/47 ≈ 2.13%.
+
+**Fix:** Replace byte-pointer load/store with dtype-agnostic accessors that
+round-trip through `Float64` at the tensor's actual precision:
+
+```mojo
+# RIGHT — dtype-agnostic accessor preserves the actual element value
+batch_images._set_float64(dst_idx, train_images._get_float64(src_idx))
+```
+
+**Diagnose — find vulnerable byte-pointer arithmetic on `_data`:**
+
+```bash
+grep -rn "_data + " examples/ src/ shared/ \
+  | grep -E "\.(load|store)\("
+```
+
+Any hit where the surrounding tensor is not `DType.uint8`/`DType.int8` is suspect.
+
+**Sentinel-based regression check:**
+
+```mojo
+# Write a known sentinel, read back via dtype-aware accessor
+var t = zeros([4], DType.float32)
+t._set_float64(0, 1.25)         # IEEE 754 bits: 0x3FA00000
+print(t._get_float64(0))         # must print 1.25
+# A 1-byte copy bug shows 0.0 (only low byte 0x00 written)
+# or ~1.984e-1 (only high byte 0x3F written) instead
+```
+
+**End-to-end convergence check:** Run the affected pipeline for ≥1 epoch
+against a known-good reference (e.g., manual SGD vs autograd) on the same
+seed and assert per-epoch loss/accuracy match within fp32 reduction-order
+noise (typically <0.2 pp). Equality on the first batch is the strongest
+signal — if epoch-1 batch-1 loss differs from the reference, the data
+pipeline is the prime suspect before any backward op.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -314,6 +389,9 @@ grep -rn "random_seed(" shared/    # all actual wiring calls
 | Canonicalize in stored tensor data | Modify `_data` bytes to replace NaN bits | Violates principle that hash must not mutate stored data; breaks roundtrip fidelity | NaN canonicalization is hash-side only — never mutate tensor data |
 | Model state mutation as randn bug cause | Assumed SimpleMLP forward() mutated state causing different outputs | forward() was deterministic; inputs were non-reproducible | Trace actual values in the error message before assuming model-side cause |
 | Check only strides after as_contiguous | Verified `_strides` and `is_contiguous()` return value | Strides correctly set on output but input was read with flat offsets | Contiguity of output does not validate correctness of input reads |
+| Initial diagnosis: blame conv2d backward | Wrote a chained convergence test with all-uniform weight init (0.05 everywhere) and saw conv kernel gradients come back at 1e-8 magnitude vs FC gradients at 1e-1 — looked like 7 orders of magnitude too small | The all-uniform FC weights made softmax output uniform, the gradient back through FC was algebraically zero, and conv kernels saw only fp32 cancellation noise. Symmetric-init pathology, not a substrate bug. Cost ~30 min misdirection. | Before claiming a magnitude bug in a backward op, verify with asymmetric weight init (e.g., `t[i] = base + i * slope`). Better: compare manual and autograd gradients directly on the same input — L2 diff should be 0.0 if the substrate is correct. |
+| Skipped past batch-extraction loop in initial review | Saw identical batch-copy code in `train.mojo` and `train_autograd.mojo`, assumed "same code = same correctness, both work" since manual SGD converged | Same code, same bug — but downstream sensitivity differs. The manual SGD path was robust enough to converge on corrupted data; the autograd path with more allocations and reduction-order variance asymptoted to chance | Code that is identical in two files can still be buggy in both. The path that converges may simply be the path that is more tolerant of the bug. Test the data pipeline end-to-end with known-good inputs, not only via downstream consumers. |
+| Trusted that downstream `_get/_set_float64` accessors would protect against bad raw bytes | Forward pass uses `_get_float64` which correctly reads float32, so I assumed it would surface NaN/Inf if the bytes were garbage | `_get_float64` reads exactly the bytes that are there — and zero-filled high bytes of a float32 just decode to denormals or tiny normals. No NaN, no Inf, no error — just numerically valid but signal-free training data | Defensive dtype-correct accessors only protect against type confusion, not against pre-corrupted byte storage. Validate buffer contents directly, e.g., compare `_get_float64(0)` against the known source value before any training starts. |
 
 ## Results & Parameters
 
@@ -345,6 +423,27 @@ All three produce identical `libKGENCompilerRTShared.so+0x3cb78b` output:
 | Mojo heap corruption | Same bitcast UAF with more churn | heap-use-after-free | No (same Mojo bug) |
 | Slice view bad-free | `__del__` frees offset `_data` pointer from slice() | bad-free | Yes (our bug) |
 
+### Byte-Pointer vs Dtype-Pointer Batch Copy
+
+```mojo
+# WRONG — byte-pointer arithmetic silently copies 1 byte per element
+(batch_images._data + dst_idx).store(
+    (train_images._data + src_idx).load()
+)
+
+# RIGHT — dtype-agnostic accessor preserves the actual element value
+batch_images._set_float64(dst_idx, train_images._get_float64(src_idx))
+```
+
+Diagnostic snippet to verify a buffer was copied correctly at the byte level:
+
+```mojo
+# Write known sentinel, read back via dtype-aware accessor
+var t = zeros([4], DType.float32)
+t._set_float64(0, 1.25)  # 0x3FA00000
+print(t._get_float64(0))  # must print 1.25, not 0.0 (only low byte 0x00) or 1.984e-1 (only high byte 0x3F)
+```
+
 ### Key Audit Commands
 
 ```bash
@@ -374,6 +473,7 @@ grep -rn "random_seed(" shared/
 | Slice step | step=2 both dims, step=-1, step=3 3D, step=1 explicit, no step |
 | NaN hash | +qNaN vs -qNaN, payload variants, sNaN vs qNaN, mixed tensor, shape/dtype sensitivity |
 | Seed | Two calls with same seed produce identical tensors; seed=0 is non-reproducible |
+| Byte-pointer batch copy | Sentinel round-trip (`_set_float64(0, 1.25)` → `_get_float64(0)` == 1.25); end-to-end convergence matches a known-good reference within fp32 noise (<0.2 pp/epoch) |
 
 ## Verified On
 
@@ -386,3 +486,4 @@ grep -rn "random_seed(" shared/
 | ProjectOdyssey | Issue #4463, PR #4884 | Multi-dim slice step validation |
 | ProjectOdyssey | Issue #3382, PR #4058 | NaN hash canonicalization |
 | ProjectOdyssey | PR #2980 | Fix unused randn seed parameter |
+| ProjectOdyssey | PR #5466 — fix(examples): correct 1-byte-per-element batch copy in lenet_emnist | Bit-for-bit identical loss trajectory with manual baseline post-fix; autograd 5-epoch EMNIST acc 74.24% (matches manual 74.39%) |
