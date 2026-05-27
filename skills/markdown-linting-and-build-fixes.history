@@ -1,5 +1,35 @@
 # History — markdown-linting-and-build-fixes
 
+## v1.1.0 (2026-05-26)
+
+**Changed by:** 5-PR parallel swarm false-positive fix wave (PRs #1937, #1959, #1960, #1965, #1978)
+**Verification:** verified-ci
+
+### What changed
+
+- Added Step 7 "False-positive escape catalog" covering 4 new rules:
+  - MD033/no-inline-html on `<placeholder>` in prose → backtick-wrap recipe
+  - MD018/no-missing-space-atx on line-start `#NNN` → reflow or `\#NNN` recipe
+  - MD059/descriptive-link-text on `[link]`/`[here]`/`[click]` → use subject as link text
+  - MD056 on non-GHA pipes (CLI syntax, regex alternation) → same `\|` escape as GHA
+- Extended When to Use with 4 new trigger conditions
+- Extended Step 1 failure-type triage table with 4 new rows
+- Added 5 new Failed Attempts rows documenting tried-and-failed approaches
+- Added 5 new Verified On entries for the swarm PRs
+- Added frontmatter `verification: verified-ci`
+- Added tags: MD033, MD018, MD059, false-positives
+
+### Why
+
+v1.0.0 covered the structural failures (MD056 inside GHA expressions, MD060, mkdocs
+out-of-tree links, CLAUDE.md trim, shared-link drift). It did NOT cover the broader
+class of false-positives where markdownlint misinterprets ordinary prose as syntax
+violations. The 5-PR swarm produced a tested catalog of escape recipes for the four
+most common false-positive patterns. Adding them here keeps the catalog comprehensive
+rather than splitting into a sibling skill.
+
+---
+
 Superseded originals snapshotted verbatim below.
 
 ---

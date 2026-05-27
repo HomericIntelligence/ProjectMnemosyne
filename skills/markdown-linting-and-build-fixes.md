@@ -8,8 +8,9 @@ description: "Use when: (1) markdownlint CI reports MD056/table-column-count err
   the same markdownlint check pointing to the same file:line — systemic main-branch
   regression needing fix + bulk queue recovery"
 category: documentation
-date: 2026-05-19
-version: "1.0.0"
+date: 2026-05-26
+version: "1.1.0"
+verification: verified-ci
 user-invocable: false
 history: markdown-linting-and-build-fixes.history
 tags:
@@ -25,6 +26,10 @@ tags:
   - ci-unblocking
   - queue-unblock
   - admin-merge
+  - MD033
+  - MD018
+  - MD059
+  - false-positives
 ---
 
 # Markdown Linting and Documentation Build Fixes
@@ -50,6 +55,17 @@ tags:
   duplicate content in `.claude/shared/`, or MD060 table-column-style errors need fixing
 - **Shared-link drift**: `.claude/shared/` files exist on disk but are absent from a root
   file's Quick Links section; pre-commit hook needed to prevent future drift
+- **MD033 false-positive on placeholders**: angle-bracket placeholders in prose like
+  `` `<version>` ``, `` `<dep>` ``, `` `<thing>` `` trigger `MD033/no-inline-html` even
+  though they are documentation prose, not HTML tags
+- **MD018 false-positive on `#NNN` at column 1**: a line beginning with an issue
+  reference like `\#5453.` triggers `MD018/no-missing-space-atx` (the `#` is misread as
+  a malformed heading)
+- **MD059 false-positive on link text**: link text like `[link](url)`, `[here](url)`,
+  `[click](url)` triggers `MD059/descriptive-link-text`
+- **MD056 in non-table cells**: pipe-containing syntax examples like
+  `{dry-run\|smoke\|full}` or nested markdown-table examples inside a cell, not just
+  GitHub Actions expressions
 
 ## Verified Workflow
 
@@ -91,6 +107,10 @@ Read the CI error output to classify:
 | `Aborted with N warnings in strict mode` in mkdocs job | mkdocs out-of-tree link | Step 4 |
 | CLAUDE.md over line budget or MD060 errors | Token trim | Step 5 |
 | `.claude/shared/` file missing from Quick Links | Shared-link audit | Step 6 |
+| MD033 on `<version>`/`<placeholder>` in prose | Placeholder false-positive | Step 7 |
+| MD018 on line starting with `#NNN` | Issue-ref false-positive | Step 7 |
+| MD059 on `[link]`/`[here]`/`[click]` text | Non-descriptive link | Step 7 |
+| MD056 on `{a\|b\|c}` syntax inside a cell | Non-GHA pipe in cell | Step 7 |
 
 ### Step 2 — Fix MD056: escape pipes inside backticks in table cells
 
@@ -283,6 +303,96 @@ re.compile(r"\(/?\.claude/shared/([^)#\s]+)(?:#[^)]*)?\)")
       pass_filenames: false
 ```
 
+### Step 7 — False-positive escape catalog (MD033, MD018, MD059, MD056-non-GHA)
+
+These four rules routinely misfire on ordinary documentation prose. Each has a
+character-level escape recipe — DO NOT reword the prose.
+
+#### MD033/no-inline-html on `<placeholder>` in prose
+
+**Trigger:** angle-bracket placeholders like `<version>`, `<dep>`, `<thing>` appearing
+in prose. The linter parses them as HTML tags.
+
+**Fix:** backtick-wrap the placeholder so it renders as code.
+
+```markdown
+<!-- BEFORE (MD033 fires) -->
+Upgrade <dep> to <version> before running migrations.
+
+<!-- AFTER (passes MD033, renders as code in marketplace UI) -->
+Upgrade `<dep>` to `<version>` before running migrations.
+```
+
+DO NOT use HTML entities (`&lt;version&gt;`) — they render as literal entities in the
+marketplace UI. DO NOT remove the angle brackets — they convey "this is a substitution
+slot" semantically.
+
+#### MD018/no-missing-space-atx on line-start `#NNN`
+
+**Trigger:** any line beginning at column 1 with `#` followed by digits, e.g.,
+`#5453 fixed the issue.` — the linter reads `#5453` as a malformed ATX heading.
+
+**Fix (preferred):** reflow the preceding paragraph so `#NNN` is no longer at column 1.
+
+```markdown
+<!-- BEFORE (MD018 fires) -->
+See the following PR for details.
+#5453 introduced the regression.
+
+<!-- AFTER (preferred — reflow) -->
+See the following PR for details. #5453 introduced
+the regression.
+```
+
+**Fix (escape):** if reflow is awkward, backslash-escape the `#`.
+
+```markdown
+\#5453 introduced the regression.
+```
+
+#### MD059/descriptive-link-text
+
+**Trigger:** generic link text — `[link]`, `[here]`, `[click]`, `[this]`, `[more]`.
+
+**Fix:** rewrite using the actual subject as link text. Rewording to another generic
+word (e.g., `[see here]`) does NOT fix it — "here" is also on the non-descriptive list.
+
+```markdown
+<!-- BEFORE (MD059 fires) -->
+See PR #5453 ([link](https://github.com/org/repo/pull/5453)) for context.
+
+<!-- AFTER (descriptive — passes MD059) -->
+See [PR #5453](https://github.com/org/repo/pull/5453) for context.
+```
+
+#### MD056 on non-GHA pipes inside table cells
+
+**Trigger:** any literal `|` inside a table cell (not just GHA expressions). Common
+offenders: CLI option syntax `{dry-run|smoke|full}`, regex alternations `(a|b|c)`,
+nested markdown-table example fragments `|---|---|---|`.
+
+**Fix:** backslash-escape every literal `\|` inside the cell, exactly as for GHA
+expressions (Step 2).
+
+```markdown
+<!-- BEFORE (MD056 fires: cell adds 2 phantom columns) -->
+| Flag | Values |
+| ---- | ------ |
+| --mode | `{dry-run|smoke|full}` |
+
+<!-- AFTER (passes MD056) -->
+| Flag | Values |
+| ---- | ------ |
+| --mode | `{dry-run\|smoke\|full}` |
+```
+
+**Validate the file:**
+
+```bash
+npx --yes markdownlint-cli2 "skills/<name>.md"
+# Must be "Summary: 0 error(s)"
+```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -301,6 +411,11 @@ re.compile(r"\(/?\.claude/shared/([^)#\s]+)(?:#[^)]*)?\)")
 | Running `just pre-commit-all` as validation | Used `just pre-commit-all` as the validation step for CLAUDE.md edits | Fails with unrelated pixi "Text file busy" errors — exit 1 even when all hooks pass | Run `pixi run npx markdownlint-cli2 CLAUDE.md` directly |
 | Editing main repo instead of worktree | Made CLAUDE.md edits to the main repo path instead of the active worktree | Worktree on a feature branch tracks a different commit | Edit the worktree directly or `cp` changes from main repo to the worktree path |
 | Regex `[^)#\s]+` as full shared-link pattern | Pattern stopped capture at `#` but required `)` immediately after | Links with anchors like `foo.md#section` never matched | Use `([^)#\s]+)(?:#[^)]*)?` — optional non-capturing group consumes the anchor before `)` |
+| HTML-entity escape for MD033 placeholders | Replaced `<version>` with `&lt;version&gt;` to silence MD033 | Renders as literal HTML entities in the marketplace UI — readers see `&lt;version&gt;` text instead of `<version>` | Backtick-wrap (`` `<version>` ``) is both lint-clean AND renders correctly as code |
+| Removed angle brackets to dodge MD033 | Replaced `<placeholder>` with `placeholder` to avoid the rule entirely | Lost semantic meaning — readers cannot tell it is a substitution slot vs. a literal word | Backtick-wrap preserves both lint-cleanness and substitution-slot semantics |
+| Reworded link text from `[link]` to `[here]` for MD059 | Assumed any non-`link` word would satisfy descriptive-link-text | Still fires — `here`, `click`, `this`, `more` are all on the rule's non-descriptive blocklist | Use the actual subject as link text (e.g., `[PR #5453](url)`), not another generic word |
+| Adding a leading space to dodge MD018 on `#NNN` | Indented `#5453.` by one space hoping to escape the ATX-heading parser | Linter still treats it as malformed heading after stripping leading whitespace | Reflow the preceding line so `#NNN` is mid-sentence, OR backslash-escape as `\#NNN` |
+| Assuming MD056 only fires on GitHub Actions expressions | Searched only for `${{` patterns when triaging MD056 errors | Missed CLI syntax cells like `{dry-run\|smoke\|full}` and regex-alternation cells — same root cause, different content | Triage by counting literal `\|` inside backticks per cell; the content type does not matter |
 
 ## Results & Parameters
 
@@ -355,3 +470,8 @@ backslashes: `MD056 Expected: 4; Actual: 6`.
 | ProjectOdyssey | PR \#5381 (commit 63b9db7f9) — mkdocs --strict out-of-tree links fixed in `docs/dev/mojo-jit-crash-capture-core.md` | Replaced `../../scripts/` and `../../.github/` style links with absolute GitHub URLs |
 | ProjectOdyssey | PR \#4763 — CLAUDE.md trim from 1,257 to 1,012 lines; MD060 fixed in 3 tables | Issue \#3158: reduce token consumption |
 | ProjectOdyssey | PR \#4024 — shared-link audit script + pre-commit hook | Issue \#3366: 3 missing `.claude/shared/` entries; 20 pytest tests all passed |
+| ProjectMnemosyne | PR \#1937 (`65fa3558`) — MD033 placeholder backtick-wrap | 5-PR parallel swarm false-positive fix wave |
+| ProjectMnemosyne | PR \#1959 (`3fa354e1`) — MD059 descriptive link text rewrite | 5-PR parallel swarm false-positive fix wave |
+| ProjectMnemosyne | PR \#1960 (`f2aa0aaa`) — MD018 line-start `\#NNN` reflow | 5-PR parallel swarm false-positive fix wave |
+| ProjectMnemosyne | PR \#1965 — MD056 non-GHA pipe escape in cells | 5-PR parallel swarm false-positive fix wave |
+| ProjectMnemosyne | PR \#1978 (`b2a3150d`) — combined false-positive catalog fixes | 5-PR parallel swarm false-positive fix wave |
