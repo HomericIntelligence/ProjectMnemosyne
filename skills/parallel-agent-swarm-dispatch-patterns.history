@@ -1,6 +1,42 @@
 <!-- markdownlint-disable MD024 -->
 # parallel-agent-swarm-dispatch-patterns — History
 
+## v1.1.0 (2026-05-28)
+
+**Changed by:** ProjectHephaestus 9-issue Myrmidon swarm session (2026-05-28)
+**Verification:** verified-local (6 PRs merged, main green, 762 automation tests pass — process/orchestration learning, not CI-gated code change)
+
+### What changed
+
+- Added **Part 10** — Orchestrator Pre-Dispatch Re-Grade Gate (new section in Verified Workflow)
+- Added delegation-shim-ratio heuristic table (≥50% shims = DONE-ALREADY, 25–49% = PARTIAL, <25% = KEEP)
+- Added 3 new Failed Attempts rows (28, 29, 30): CI matrix already-done, shim-ratio dispatch avoidance, plan-reviewer self-review non-convergence
+- Added 2 new "When to Use" bullet points for pre-dispatch re-grade and God-Class shim-ratio evaluation
+- Updated description to add trigger (8): re-grading a batch of GitHub issues against CURRENT repo state
+- Added 8 new tags: `pre-dispatch-regrade`, `delegation-shim-ratio`, `already-done-classification`, `moot-churn`, `god-class-decomposition`, `orchestrator-gate`
+- Added ProjectHephaestus 2026-05-28 row to Verified On table
+- Updated Overview Outcome paragraph with v1.1.0 summary
+- Bumped version 1.0.0 → 1.1.0, date 2026-05-19 → 2026-05-28
+
+### Why
+
+Part 8 (stop-and-reassess gate) covered between-phases re-grade, but no section covered the
+orchestrator-level pre-dispatch re-grade — checking every issue against CURRENT code before
+dispatching any agent. Of 9 ProjectHephaestus issues: #539 was fully resolved (grep returned
+no matches), #468 was effectively decomposed (shim ratio 21/40 = 52.5% — all 6 named
+responsibilities already extracted), and #614 was only partial (scaffolding present, break not
+wired). Without the pre-dispatch gate, an orchestrator would dispatch moot implementation agents
+causing churn with regression risk against a live automation pipeline. Also capturing the
+plan-reviewer self-review non-convergence bug (issue #671).
+
+### Previous version (v1.0.0) snapshot
+
+See "Superseded from tooling-myrmidon-swarm-prompt-guardrails-reduce-stall-rate" section below
+for v1.0.0 content. The v1.0.0 consolidated skill had 9 parts (Part 1–9), 27 Failed Attempts rows,
+and was verified across ProjectScylla, ProjectArgus, ProjectAgamemnon, Myrmidons, and ProjectMnemosyne.
+
+---
+
 ## Superseded from tooling-myrmidon-swarm-prompt-guardrails-reduce-stall-rate
 
 ```markdown

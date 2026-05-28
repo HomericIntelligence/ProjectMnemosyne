@@ -1,9 +1,9 @@
 ---
 name: parallel-agent-swarm-dispatch-patterns
-description: "Patterns for dispatching, prompting, and verifying parallel sub-agents in Myrmidon swarms. Use when: (1) preparing to dispatch 5+ agents in parallel via Task isolation=worktree, (2) a prior swarm round had high stall rate or sub-agents produced incorrect or missing artifacts, (3) writing dispatch prompts for issue implementation, skill-creation, or report generation, (4) routing tasks to model tiers (Opus / Sonnet / Haiku), (5) N wave issues share the same hot file and fan-out would cause rebase contention, (6) a plan has a bulk-transformation phase followed by an implementation phase that must be gated, (7) verifying sub-agent PR reports or artifacts after dispatch."
+description: "Patterns for dispatching, prompting, and verifying parallel sub-agents in Myrmidon swarms. Use when: (1) preparing to dispatch 5+ agents in parallel via Task isolation=worktree, (2) a prior swarm round had high stall rate or sub-agents produced incorrect or missing artifacts, (3) writing dispatch prompts for issue implementation, skill-creation, or report generation, (4) routing tasks to model tiers (Opus / Sonnet / Haiku), (5) N wave issues share the same hot file and fan-out would cause rebase contention, (6) a plan has a bulk-transformation phase followed by an implementation phase that must be gated, (7) verifying sub-agent PR reports or artifacts after dispatch, (8) re-grading a batch of GitHub issues against CURRENT repo state before dispatching any agent (issue text reflects filing time, not now)."
 category: tooling
-date: 2026-05-19
-version: "1.0.0"
+date: 2026-05-28
+version: "1.1.0"
 user-invocable: false
 history: parallel-agent-swarm-dispatch-patterns.history
 tags:
@@ -35,6 +35,12 @@ tags:
   - survivor-queue
   - phase-boundary
   - agent-dispatch
+  - pre-dispatch-regrade
+  - delegation-shim-ratio
+  - already-done-classification
+  - moot-churn
+  - god-class-decomposition
+  - orchestrator-gate
 ---
 
 # Skill: Parallel Agent Swarm Dispatch Patterns
@@ -43,9 +49,9 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-05-19 |
+| **Date** | 2026-05-28 |
 | **Objective** | Consolidate the full set of dispatch, prompt-engineering, verification, and phase-gating patterns for Myrmidon parallel sub-agent swarms into one authoritative reference. |
-| **Outcome** | Synthesised from 9 skills validated across ProjectScylla, ProjectArgus, ProjectAgamemnon, Myrmidons, and ProjectMnemosyne sessions (2026-05-06 → 2026-05-19). Key results: stall rate 80% → 0% (7 guardrails), zero file-collision incidents with explicit ownership lines, artifact-confabulation failures caught by post-hoc `stat`/`gh pr view`, hot-file rebase contention eliminated by bundling, and moot implementation work avoided by stop-and-reassess gates. |
+| **Outcome** | Synthesised from 9 skills validated across ProjectScylla, ProjectArgus, ProjectAgamemnon, Myrmidons, and ProjectMnemosyne sessions (2026-05-06 → 2026-05-19). v1.1.0 adds the orchestrator-level pre-dispatch re-grade gate (Part 10): of 9 ProjectHephaestus issues, 2 were DONE-ALREADY (#539 fully resolved, #468 already decomposed to delegation-shim ratio 21/40), 1 was PARTIAL (#614). Also adds the delegation-shim-ratio heuristic for quantifying God-Class decomposition progress without dispatching an agent. Key results: stall rate 80% → 0% (7 guardrails), zero file-collision incidents with explicit ownership lines, artifact-confabulation failures caught by post-hoc `stat`/`gh pr view`, hot-file rebase contention eliminated by bundling, and moot implementation work avoided by stop-and-reassess and pre-dispatch gates. |
 | **Verification** | verified-local and verified-ci across multiple projects |
 
 ## When to Use
@@ -59,6 +65,8 @@ tags:
 - Two or more parallel agents target the same output file (skill file, report, config)
 - A wave plan shows 3+ issues sharing the same hot file (e.g., `src/store.cpp`, `CMakeLists.txt`)
 - A plan has a bulk-transformation phase (mass-close, mass-delete) followed by an implementation phase
+- Before dispatching agents against a list of GitHub issues filed weeks/months ago — re-grade each against CURRENT code before any dispatch (issue text reflects filing time, not now)
+- Evaluating a God-Class decomposition issue — compute the delegation-shim ratio to quantify progress without dispatching an agent
 
 ## Verified Workflow
 
@@ -322,6 +330,76 @@ python3 -c "import json; json.load(open('$f'))"
 2. **Hallucinated tool restriction** — agent invents "TEXT ONLY per system constraints" framing.
 3. **Tool-capability blindness** — agent claims a Write its profile does not allow.
 
+### Part 10 — Orchestrator Pre-Dispatch Re-Grade Gate
+
+**The core discipline**: GitHub issue text reflects repo state AT FILING TIME, not now. Before
+dispatching any agent, the orchestrator MUST re-grade every issue in the batch against CURRENT
+code and reclassify:
+
+```text
+DONE-ALREADY  →  verify with grep/stat evidence, post evidence to issue, close or escalate to human
+PARTIAL       →  scope the agent down to the remaining delta only; do NOT re-implement what exists
+KEEP          →  dispatch normally
+```
+
+**How to run the pre-dispatch re-grade (~2 min for a 9-issue batch):**
+
+```bash
+# For each issue:
+# 1. Check file sizes / line counts (God-Class issues)
+wc -l <target-file>
+
+# 2. Check for the feature the issue requested (grep/find)
+grep -rn "<feature-keyword>" <directory>/ | head -20
+
+# 3. For OS-matrix / CI issues — grep workflow files directly
+grep -rn "macos-latest\|windows-latest" .github/
+
+# 4. Compute delegation-shim ratio for decomposition issues
+python3 - <<'EOF'
+import ast, sys
+src = open("<target-file>").read()
+tree = ast.parse(src)
+cls = next(n for n in ast.walk(tree) if isinstance(n, ast.ClassDef) and n.name == "<ClassName>")
+methods = [n for n in ast.walk(cls) if isinstance(n, ast.FunctionDef)]
+shims = [m for m in methods if len(m.body) <= 2]  # 1-2 line delegation shims
+print(f"Methods: {len(methods)}, Shims: {len(shims)}, Ratio: {len(shims)}/{len(methods)}")
+EOF
+```
+
+**Delegation-shim ratio heuristic for God-Class decomposition issues:**
+
+A "shim" is a method whose body is 1–2 lines forwarding to an already-extracted collaborator.
+A high shim ratio means the decomposition is effectively complete — the class is a thin facade.
+
+| Shim ratio | Interpretation | Action |
+| ---------- | -------------- | ------ |
+| ≥ 50% shims | Decomposition effectively complete — class is a thin facade | DONE-ALREADY; post evidence; no dispatch |
+| 25–49% shims | Partial decomposition; collaborators exist | PARTIAL; scope agent to remaining 1–2 responsibilities |
+| < 25% shims | Real God-Class; decomposition has not started | KEEP; dispatch implementation agent |
+
+**Example from ProjectHephaestus #468 (2026-05-28):**
+- Issue filed when class was 1912 lines / N methods
+- At dispatch time: 872 lines / 40 methods, 21/40 shims (52.5% ratio)
+- All 6 named responsibilities already extracted as collaborators
+- Classification: DONE-ALREADY → posted shim-ratio evidence to issue, no agent dispatched
+
+**Example from ProjectHephaestus #539 (2026-05-28):**
+- Issue filed to revert OS matrix to ubuntu-only
+- At dispatch time: `grep -rn "macos-latest\|windows-latest" .github/` → no matches
+- Classification: DONE-ALREADY → verified-and-close comment posted, no PR
+
+**Example from ProjectHephaestus #614 (2026-05-28):**
+- Issue filed to add early-exit scaffolding to loop runner
+- At dispatch time: `produced_work` and `work_units` variables already present, but `break` not wired
+- Classification: PARTIAL → agent scoped to wire the break only (< 10 LOC delta)
+
+**When DONE-ALREADY, the correct action is:**
+1. Run `grep`/`stat`/`wc -l` and capture exact file:line evidence
+2. Post the evidence as a comment to the GitHub issue
+3. Let the human decide to close — do NOT fabricate work to "complete" the issue
+4. Do NOT dispatch an implementation agent
+
 ### Quick Reference
 
 Paste this template into a Task call with `subagent_type="general-purpose"` and `isolation=worktree`:
@@ -389,6 +467,9 @@ The user does NOT see your tool calls — only this final summary.
 | 25 | Inlined full brief in each of 14 parallel agent prompts | ~3000 tokens × 14 agents spent on instruction repetition | Write brief to `~/.tmp/<topic>-brief.md`, point each agent at it with a 5-line pointer-prompt |
 | 26 | Invoked `/hephaestus:myrmidon-swarm` for work already planned | Orchestrator re-ran Phase-1 (consult Mnemosyne, decompose, plan) — redundant when parent already did it | When planning is complete, dispatch Agents directly with the `Agent` tool |
 | 27 | Trusted valid JSON existence without parsing | Trailing comma after final `unclustered[]` entry silently broke `json.load`; gate pipeline crashed with `JSONDecodeError` | Always parse structured artifacts with `python3 -c "import json; json.load(open(f))"` — `ls`/`stat` cannot catch trailing commas |
+| 28 | Dispatched implementation agent on #539 (revert OS matrix) without pre-dispatch re-grade | `grep -rn "macos-latest\|windows-latest" .github/` returned no matches — already done | Run the 4-command re-grade on every issue before dispatch; skip DONE-ALREADY with evidence comment |
+| 29 | Dispatched implementation agent on #468 (God-Class decomposition) without computing delegation-shim ratio | Class was 872 lines / 40 methods with 21/40 shims (52.5%) — all 6 named responsibilities already extracted | Compute shim ratio (`wc`, `ast.parse`) before dispatching; ≥50% shims = DONE-ALREADY; avoid moot-churn refactors |
+| 30 | Plan-reviewer reviewing its own prior plan-review comment, causing non-convergence | Agent even logged "I recognize this plan text — it's my own previous review" but continued; loop non-terminating | Bound retries at the orchestrator; log malformed verdicts; file a tracker issue (ProjectHephaestus #671) |
 
 ## Results & Parameters
 
@@ -479,3 +560,4 @@ gh pr merge "$PR_NUMBER" --auto --rebase --repo HomericIntelligence/ProjectMnemo
 | HomericIntelligence/Myrmidons | 2026-05-17 | Charter-cleanup stop-gate; TLS env-var doc issues identified as MOOT-NOW |
 | ProjectMnemosyne | 2026-05-18 | Skill-clustering swarm: `Explore` agents lost JSON outputs; confabulated completion summaries caught by `stat`; stop-gate applied between waves |
 | HomericIntelligence/ProjectArgus | 2026-05-06 → 2026-05-19 | Atlas v0.2.1 patch series — trust-but-verify caught CONFLICTING PR and silent auto-merge failure |
+| ProjectHephaestus | 2026-05-28 | 9-issue Myrmidon swarm: pre-dispatch re-grade caught 2 DONE-ALREADY (#539, #468 shim-ratio 21/40) and 1 PARTIAL (#614); 6 PRs merged, main green, 762 automation tests pass |
