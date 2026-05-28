@@ -1,12 +1,46 @@
+# code-quality-bot-ignores-noqa — History
+
+## v1.1.0 (2026-05-28) — Fresh confirmation + dynamic re-export nuance
+
+**Changed by:** ProjectHephaestus PR #659 — find_pr_for_issue re-export false-positive, MERGED after thread resolution
+**Verification:** verified-ci
+
+### What changed
+- Added a third "Verified On" row for ProjectHephaestus PR #659.
+- Documented the "dynamic re-export" trigger: the bot bites the `_impl_module`-style
+  pattern where a symbol is imported with `# noqa: F401` and ONLY referenced via dynamic
+  module attribute access (`self._impl_module.NAME` / `module.NAME`), never as a bare name.
+- Explained the seemingly-inconsistent flagging: sibling re-exports following the identical
+  pattern are NOT flagged because the bot only comments on lines changed in the current diff.
+- Added the exact reply-then-resolve GraphQL recipe (addPullRequestReviewThreadReply →
+  reviewThreads enumeration → resolveReviewThread).
+- Added a Failed Attempts row for `gh pr view --json reviewThreads` (field does not exist).
+
+### Why
+Session hit the EXACT scenario the skill describes a second time on a different PR, providing
+a strong fresh confirmation, plus two refinements (dynamic re-export trigger, diff-scoped
+flagging) that explain previously-unclear behavior and the reply-then-resolve GraphQL recipe.
+
+---
+
+## v1.0.0 (2026-05-27) — Initial version.
+
+**Changed by:** ProjectHephaestus PRs #604 and #606
+**Verification:** verified-ci
+
+Initial version.
+
+Full snapshot of v1.0.0 content:
+
+```markdown
 ---
 name: code-quality-bot-ignores-noqa
 description: "GitHub's `github-code-quality[bot]` static analyzer flags imports as 'unused' even when they have explicit `# noqa: F401` markers, blocking PR merge under org rulesets with `required_review_thread_resolution`. The fix isn't to fight the bot or rewrite the imports — it's to resolve the threads via `gh api graphql resolveReviewThread` with one explanatory PR comment. Use when: (1) bot review comments flag deliberate test-patch-seam re-exports as 'unused imports', (2) PR shows `MERGEABLE / BLOCKED` with all CI checks green, (3) `required_review_thread_resolution` is in the org ruleset."
 category: tooling
-date: 2026-05-28
-version: "1.1.0"
+date: 2026-05-27
+version: "1.0.0"
 user-invocable: false
 verification: verified-ci
-history: code-quality-bot-ignores-noqa.history
 tags: [github, pull-request, code-quality, review-threads, noqa]
 ---
 
@@ -28,23 +62,11 @@ tags: [github, pull-request, code-quality, review-threads, noqa]
 - `gh pr view <N>` shows `mergeStateStatus: BLOCKED` even though `[.statusCheckRollup[] | select(.conclusion == "FAILURE")]` is empty
 - Your repo's org-level branch protection (or rulesets) has `required_review_thread_resolution: true`
 
-**The "dynamic re-export" trigger (the most common cause).** This bites the `_impl_module`-style
-pattern where a symbol is imported with `# noqa: F401` and is ONLY referenced via dynamic module
-attribute access (`self._impl_module.NAME` or `module.NAME` lookups), never as a bare name in the
-source. Ruff sees the `# noqa` and stays silent; the code-quality bot does NOT honor `# noqa` and
-flags the line as "unused import."
-
-**Why flagging looks inconsistent.** Sibling re-exports in the SAME file that follow the identical
-pattern (e.g. `invoke_claude_with_session`, `current_trunk_githash`) are NOT flagged. The reason is
-that the bot only comments on lines CHANGED in the current diff — so only a newly-added re-export
-gets a comment, while pre-existing ones in unchanged lines are silently skipped. This explains the
-seemingly-arbitrary subset of imports that get flagged.
-
 ## Verified Workflow
 
 ### Quick Reference
 
-```bash
+\`\`\`bash
 # 1. List all unresolved review threads with their IDs
 gh api graphql -f query='
 query {
@@ -69,27 +91,7 @@ for TID in PRRT_AAA PRRT_BBB PRRT_CCC; do
       }
     }' -f tid="$TID" --jq '.data.resolveReviewThread.thread'
 done
-```
-
-### Reply-then-resolve recipe (single thread)
-
-When you want to leave an in-thread explanation before resolving (instead of a top-level comment),
-use this exact sequence. NOTE: `gh pr view <N> --json reviewThreads` does NOT work
-(`Unknown JSON field: "reviewThreads"`); you MUST enumerate threads via GraphQL.
-
-```bash
-# a. Find the unresolved thread id (and the bot comment that opened it)
-gh api graphql -f query='{repository(owner:"O",name:"R"){pullRequest(number:N){reviewThreads(first:50){nodes{id isResolved comments(first:1){nodes{author{login} body}}}}}}}' \
-  --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved==false)'
-
-# b. Reply in the thread with the explanation
-gh api graphql -f query='mutation($tid:ID!,$body:String!){addPullRequestReviewThreadReply(input:{pullRequestReviewThreadId:$tid, body:$body}){clientMutationId}}' \
-  -f tid="<PRRT_...>" -f body="<explanation>"
-
-# c. Resolve the thread
-gh api graphql -f query='mutation($tid:ID!){resolveReviewThread(input:{threadId:$tid}){thread{isResolved}}}' \
-  -f tid="<PRRT_...>"
-```
+\`\`\`
 
 ### Detailed Steps
 
@@ -99,11 +101,11 @@ gh api graphql -f query='mutation($tid:ID!){resolveReviewThread(input:{threadId:
 
 **Why you should NOT just remove the imports.** Test-patch-seam re-exports preserve the existing test-mock surface after a refactor. Example: when extracting `BaseReviewer.__init__` from `PRReviewer` / `AddressReviewer`, the base class does:
 
-```python
+\`\`\`python
 def _resolve_from_subclass_module(cls: type, name: str):
     module = importlib.import_module(cls.__module__)
     return getattr(module, name)
-```
+\`\`\`
 
 This means `BaseReviewer.__init__` reads `WorktreeManager` from `pr_reviewer`'s OWN namespace — so existing tests doing `patch("hephaestus.automation.pr_reviewer.WorktreeManager", ...)` still intercept. Removing the import per the bot's suggestion breaks `getattr(module, "WorktreeManager")` → `AttributeError`, breaking ~24 existing tests immediately.
 
@@ -132,7 +134,6 @@ Then use the GraphQL `resolveReviewThread` mutation for each thread. The REST `p
 | Remove the imports as the bot suggests | Take the bot's "best fix" recommendation literally | Breaks 24+ tests that use `patch("hephaestus.automation.X.Y", ...)` where Y is the now-removed re-export. The `getattr(module, "Y")` in the BaseReviewer pattern raises `AttributeError`. | Bots that statically analyze don't know about runtime `getattr` lookups. Reject suggestions that break runtime behavior to satisfy static rules. |
 | Reply to each bot comment individually with a regular `gh pr comment` | Hope GitHub auto-resolves threads on follow-up | A reply is just another comment in the thread. Threads only resolve via the explicit `resolveReviewThread` mutation. | Resolving a thread is a state mutation; commenting in a thread is not. |
 | Force-push to dismiss the bot's review | Hope the bot reposts on the new SHA and the old threads get auto-resolved | Threads pinned to specific lines persist across force-pushes if the lines still exist. New review run posts NEW threads on top of the old unresolved ones. | Force-push doesn't resolve threads. It can multiply them. |
-| `gh pr view <N> --json reviewThreads` to enumerate threads | Pull the review-thread IDs via the convenient `gh pr view --json` interface | `gh` rejects it with `Unknown JSON field: "reviewThreads"` — review threads are not exposed on the REST-backed `gh pr view` JSON fields. | Use the GraphQL `reviewThreads(first:50)` query to enumerate thread IDs; `gh pr view --json` cannot do it. |
 
 ## Results & Parameters
 
@@ -146,7 +147,7 @@ Then use the GraphQL `resolveReviewThread` mutation for each thread. The REST `p
 
 **Template for the explanatory PR comment:**
 
-```markdown
+\`\`\`markdown
 The `github-code-quality` bot flagged N imports as "unused" in `<file_paths>`. All N findings
 are intentional and I'm resolving them as won't-fix.
 
@@ -161,11 +162,11 @@ Removing the imports per the bot's suggestion would break those tests immediatel
 inline comments document this; the bot doesn't honor `noqa` directives.
 
 Resolving all N unresolved bot threads on this PR.
-```
+\`\`\`
 
 **Detection one-liner — is your blocked PR a victim of unresolved bot threads?**
 
-```bash
+\`\`\`bash
 # Returns the list of unresolved review threads. If the only authors are bots and your CI is green,
 # this skill applies.
 gh pr view <N> --json mergeStateStatus,statusCheckRollup,reviews --jq '{
@@ -173,7 +174,7 @@ gh pr view <N> --json mergeStateStatus,statusCheckRollup,reviews --jq '{
   failingChecks: [.statusCheckRollup[] | select(.conclusion == "FAILURE") | .name],
   reviews: [.reviews[] | {state, author: .author.login}]
 }'
-```
+\`\`\`
 
 If `state: BLOCKED` + `failingChecks: []` + all reviews are by bots → run the resolveReviewThread loop.
 
@@ -181,6 +182,6 @@ If `state: BLOCKED` + `failingChecks: []` + all reviews are by bots → run the 
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectHephaestus | PR #604 (BaseReviewer dedupe refactor) | 7 bot comments on `pr_reviewer.py` + `address_review.py` flagging re-exports of WorktreeManager / StatusTracker / ThreadLogManager / get_repo_root. Resolved with one PR comment ([4555021222](https://github.com/HomericIntelligence/ProjectHephaestus/pull/604#issuecomment-4555021222)) + 6 GraphQL resolveReviewThread mutations. PR auto-merged. |
+| ProjectHephaestus | PR #604 (BaseReviewer dedupe refactor) | 7 bot comments on `pr_reviewer.py` + `address_review.py` flagging re-exports of WorktreeManager / StatusTracker / ThreadLogManager / get_repo_root. Resolved with one PR comment + 6 GraphQL resolveReviewThread mutations. PR auto-merged. |
 | ProjectHephaestus | PR #606 (IssueImplementer phase-runner split) | 8 bot comments on `implementer.py` flagging re-exports of invoke_claude_with_session / get_repo_slug / is_plan_review_approved / AGENT_IMPLEMENTER. Same resolution: 1 explanatory comment + 4 mutations (4 already resolved from first bot run). PR auto-merged. |
-| ProjectHephaestus | PR #659 (find_pr_for_issue re-export) | A deliberate `from ._review_utils import find_pr_for_issue  # noqa: F401` re-export in `implementer.py` — added so tests can `patch("hephaestus.automation.implementer.find_pr_for_issue")` and the runtime call `self._impl_module.find_pr_for_issue(...)` resolves dynamically — was flagged "Import of 'find_pr_for_issue' is not used." PR showed `mergeStateStatus: BLOCKED`, `mergeable: MERGEABLE`, all CI green. Sibling re-exports (`invoke_claude_with_session`, `current_trunk_githash`) followed the identical pattern but were NOT flagged (only diff-changed lines get comments). Resolved 1 thread via `addPullRequestReviewThreadReply` (one explanatory reply) + `resolveReviewThread` → PR unblocked and MERGED within seconds. |
+```
