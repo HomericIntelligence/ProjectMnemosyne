@@ -1,9 +1,9 @@
 ---
 name: github-issue-workflow-and-preflight-gates
-description: "Use when: (1) starting work on any GitHub issue — run preflight checks to avoid duplicate implementation, (2) building or maintaining automated preflight safety gates in issue-implementation workflows, (3) filing 10–40 audit findings as a tracked GitHub issue queue with a parent tracker, (4) filing issues that cite repo-internal markdown docs — push docs to origin/main first so URLs resolve on first render, (5) posting structured progress updates or completion summaries to GitHub issues, (6) filing a feature request against a third-party OSS repo with a proposed patch and duplicate check"
+description: "Use when: (1) starting work on any GitHub issue — run preflight checks to avoid duplicate implementation, (2) building or maintaining automated preflight safety gates in issue-implementation workflows, (3) filing 10–40 audit findings as a tracked GitHub issue queue with a parent tracker, (4) filing issues that cite repo-internal markdown docs — push docs to origin/main first so URLs resolve on first render, (5) posting structured progress updates or completion summaries to GitHub issues, (6) filing a feature request against a third-party OSS repo with a proposed patch and duplicate check, (7) verifying an already-resolved issue and closing it with grep evidence"
 category: tooling
-date: 2026-05-19
-version: "1.0.0"
+date: 2026-05-28
+version: "1.1.0"
 user-invocable: false
 history: github-issue-workflow-and-preflight-gates.history
 tags: [github, issues, preflight, duplicate-prevention, workflow, bulk-filing, tracker, audit, progress-update, upstream, feature-request, safety-gates, automation]
@@ -32,6 +32,7 @@ Consolidates: `preflight-verify-before-implementing`, `preflight-script-integrat
 - **Doc-push-first**: Filing N>5 issues that cite repo-internal markdown not yet on `origin/main`; issues that cross-reference each other by GitHub number
 - **Progress updates**: Reporting implementation progress, design decisions, blockers, or completion summaries to a GitHub issue
 - **Upstream feature requests**: Filing a feature/bug against a third-party OSS repo with a proposed patch gist and duplicate check
+- **Verify-and-close**: An issue is suspected to be already resolved — verify absence of the removed content with grep, confirm replacement content exists at path:line, comment the evidence on the issue, then close it
 
 **Don't use when:**
 - Filing 1–3 standalone issues with no cross-references — manual filing is fine
@@ -144,6 +145,21 @@ gh gist create /tmp/patch.diff --desc "Proposed patch: <feature>"   # secret by 
 gh issue create --repo <owner>/<repo> --title "..." --label enhancement \
   --body-file /tmp/issue-body.md
 rm -rf /tmp/<repo>-$$
+
+# ── VERIFY-AND-CLOSE (issue believed already resolved) ──
+
+# 1. Confirm the removed content is truly gone (exit code 1 = not found = good)
+grep -rn "old-content\|other-old-pattern" .github/    # or relevant directory
+echo "Exit code: $?"  # must be 1 (no matches)
+
+# 2. Confirm the replacement content exists at expected path:line
+grep -n "new-content" path/to/relevant/file
+
+# 3. Post evidence comment on issue
+gh issue comment <number> --body "$(printf 'Verified already resolved.\n\nEvidence:\n- `path/to/file:NN`: `new-content` — correct state confirmed.\n- grep for old-content returned exit code 1 (no matches).\n\nClosing as completed.')"
+
+# 4. Close the issue
+gh issue close <number> --reason completed
 ```
 
 ### Preflight Decision Matrix
@@ -288,6 +304,7 @@ Syntax-checked with `bash -n`; smoke-tested with `<DEV_MODE>=1` in throwaway rep
 | Filing from memory / stale context of upstream code | Drafted issue without re-reading current source | Existing pattern may differ from memory; patch becomes inconsistent | Always read the full source file before proposing a change |
 | Skipping duplicate check before filing upstream | Jumped straight to implementation | Risk of filing a duplicate issue, wasting maintainer time | Always run `gh issue list --state all --search "<keywords>"` first |
 | Pipe to preserve exit code in bash preflight tests | `bash -c "..." \| cat; echo $?` | Pipe runs in subshell; `$?` is lost | Write output to temp file, capture `LAST_EXIT=$?` after |
+| Concluding "already resolved" from keyword presence without grep | Assumed absence of macos/windows CI refs from memory | Keyword presence elsewhere in context does not prove absence in files | Always run `grep -rn <removed-content> <dir>` and confirm exit code 1 before closing |
 
 ## Results & Parameters
 
@@ -359,3 +376,4 @@ Use secret gists for proposed patches on third-party repos.
 | ProjectScylla | 2026-05-07 audit filing | Filed 26 issues (#1934 tracker + #1935–#1959); 0 rate-limit errors |
 | mvillmow/Random | Predictive-Coding-in-Mojo Pass 4 | Filed epic #4 + 25 child issues #5–#29; all 25 cross-links resolved on first render |
 | HaywardMorihara/gh-tidy | `--auto-delete` feature request | Issue #62 filed; gist created; throwaway clone cleaned up |
+| ProjectHephaestus | Issue #539 verify-and-close | `grep -rn "macos-latest\|windows-latest" .github/` → exit 1; `.github/workflows/test.yml:58: os: [ubuntu-latest]` confirmed; issue closed via `gh issue close 539 --reason completed` |
