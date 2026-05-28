@@ -1,5 +1,29 @@
 # pre-commit-hooks-and-linting-config -- History
 
+## v1.3.0 (2026-05-28) -- Document system-installed package shadowing pixi env locally
+
+**Changed by:** ProjectHephaestus PR #652 rebase session (dependency PR onto green main)
+**Verification:** verified-local
+
+### What changed
+
+- Updated description field to add trigger (6): console script false-fails locally due to system-installed package shadowing pixi env.
+- Added new "When to Use" bullet for the `~/.local/bin` shadowing scenario.
+- Added 1 new Failed Attempts row: "System-installed hephaestus shadows pixi default env version locally" — describes how `pixi run --environment default` does NOT prevent `~/.local/bin` from being used when the host package isn't installed into the pixi env via `dev-install`.
+- Bumped version 1.2.0 → 1.3.0.
+
+### Why
+
+During the PR #652 rebase session, `pre-commit run --all-files` failed on `check-dep-sync` with
+"pyproject.toml contains [project.optional-dependencies] — remove it" — an error that does NOT
+exist in the in-tree `dep_sync.py`, but DOES exist in the system-installed `~/.local/bin/hephaestus-check-dep-sync`.
+CI passes because it always runs `pixi run dev-install` first (installing the local package into the
+pixi env, making its console scripts shadow `$PATH`). Locally in a fresh worktree, `dev-install` had
+not been run, so `pixi run --environment default hephaestus-check-dep-sync` resolved to the system
+binary. Fix: `pixi run dev-install` in every new worktree before running pre-commit.
+
+---
+
 ## v1.2.0 (2026-05-28) -- Add bandit severity-level tuning and stray-file MD033 fix
 
 **Changed by:** ProjectHephaestus PR #657 (fix broken main CI)

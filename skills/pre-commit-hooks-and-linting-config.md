@@ -1,9 +1,9 @@
 ---
 name: pre-commit-hooks-and-linting-config
-description: "Canonical guide to pre-commit hook configuration, single-source-of-truth versioning, CI/local parity, and integration of ruff/mypy/clang-format/yamllint/actionlint/golangci-lint/bandit/hadolint/shellcheck/markdownlint. Use when: (1) writing or amending .pre-commit-config.yaml, (2) diagnosing why a hook passes locally but fails in CI (version drift), (3) deciding fix-vs-suppress for lint findings, (4) adding a new linter to an existing pre-commit pipeline, (5) reconciling ruff/mypy/markdownlint config across multiple repos."
+description: "Canonical guide to pre-commit hook configuration, single-source-of-truth versioning, CI/local parity, and integration of ruff/mypy/clang-format/yamllint/actionlint/golangci-lint/bandit/hadolint/shellcheck/markdownlint. Use when: (1) writing or amending .pre-commit-config.yaml, (2) diagnosing why a hook passes locally but fails in CI (version drift), (3) deciding fix-vs-suppress for lint findings, (4) adding a new linter to an existing pre-commit pipeline, (5) reconciling ruff/mypy/markdownlint config across multiple repos, (6) a pre-commit hook using a pixi console script false-fails locally even though CI passes — system-installed package in ~/.local/bin shadows the local dev version."
 category: tooling
 date: 2026-05-28
-version: "1.2.0"
+version: "1.3.0"
 user-invocable: false
 verification: verified-ci
 history: pre-commit-hooks-and-linting-config.history
@@ -35,6 +35,7 @@ tags: [merged, pre-commit, linting, ruff, mypy, clang-format, yamllint, actionli
 - Adding pygrep hook with exclusion logic (language: system over language: pygrep)
 - Setting up per-directory mypy baseline or per-file invocation for hyphenated dirs
 - Ensuring `pass_filenames:` is correct for hook scripts
+- A pre-commit hook using a pixi console script (`hephaestus-check-dep-sync`, etc.) false-fails locally with stricter errors than CI — system-installed package in `~/.local/bin` shadows the pixi default env version; fix with `pixi run dev-install`
 - Unit-testing pre-commit hook regex logic with pytest
 - Pre-commit hook shells out to `pixi run <task>` and reports `command not found` for a package entry point (pixi environment selection)
 - Designing CI workflow that invokes pre-commit when the repo declares multiple pixi environments (e.g. `default` vs `lint`)
@@ -356,6 +357,7 @@ Verified by ProjectHephaestus PR #657.
 | `entry: pixi run <task>` without `--environment` | Wrote hook entry as `pixi run hephaestus-check-dep-sync` assuming pixi.toml task default env applies | Hook inherited whichever env pre-commit was launched from (e.g. `lint`); console script not installed there -> `command not found` | `pixi run` resolves the environment from current shell state, not from `pixi.toml`. Always write `pixi run --environment default <task>` for hooks that need a package entry point |
 | `pip install -e . --no-deps --no-build-isolation` in CI | Tried to skip build isolation to speed up the editable install | pip subprocess could not locate `hatchling` because `--no-build-isolation` requires the build backend be pre-installed in the same env | Drop `--no-build-isolation`; let pip do standard build isolation — pixi's env already has hatchling available to the pip child |
 | Skip `dev-install` and rely on `pixi install --environment default` | Assumed `pixi install` would install the host package along with its deps | `pixi install` installs declared deps only; once the self-reference is removed from `pyproject.toml` (to stop lockfile churn) it does not install the host package | After removing self-reference, an explicit `pip install -e . --no-deps` (via `pixi run dev-install`) is mandatory in CI before any hook that imports the package or calls a console script |
+| System-installed hephaestus shadows pixi default env version locally | `pixi run --environment default hephaestus-check-dep-sync` ran the binary from `~/.local/bin` (an older/newer system install) instead of the pixi env | When `hephaestus-check-dep-sync` resolves to `~/.local/bin` (user-level pip install), pixi `--environment default` doesn't shadow `$PATH`; the system binary has a different version of `dep_sync.py` with stricter checks that reject `[project.optional-dependencies]` — CI passes green because CI runs `pixi run dev-install` first, installing the local package into the pixi default env and making its console scripts take precedence | Always run `pixi run dev-install` in a fresh worktree before running pre-commit locally. The `~/.local/bin` system install is stale and will diverge from the in-tree version over time. After `dev-install` the local package's console scripts are installed into the pixi env and take priority over `~/.local/bin`. |
 
 ## Results & Parameters
 
