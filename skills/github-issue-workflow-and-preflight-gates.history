@@ -1,6 +1,27 @@
 <!-- markdownlint-disable MD024 -->
 # github-issue-workflow-and-preflight-gates — History
 
+## v1.1.0 (2026-05-28)
+
+**Changed by:** ProjectHephaestus issue #539 verify-and-close session
+**Verification:** verified-local
+
+### What changed
+
+- Added "Verify-and-close" trigger to description and When to Use
+- Added `── VERIFY-AND-CLOSE ──` Quick Reference block in Verified Workflow
+- Added 1 new Failed Attempts row: "Concluding already resolved from keyword presence without grep"
+- Added 1 new Verified On row: ProjectHephaestus issue #539
+
+### Why
+
+Documented the pattern of independently verifying an issue is already resolved using
+`grep -rn` with exit-code evidence, then posting a structured comment and closing with
+`gh issue close --reason completed`. This is faster and safer than implementation when
+the preliminary checks strongly suggest the fix is already in place.
+
+---
+
 ## Superseded from preflight-verify-before-implementing
 
 ```text
