@@ -1,9 +1,9 @@
 ---
 name: pre-commit-hooks-and-linting-config
-description: "Canonical guide to pre-commit hook configuration, single-source-of-truth versioning, CI/local parity, and integration of ruff/mypy/clang-format/yamllint/actionlint/golangci-lint/bandit/hadolint/shellcheck/markdownlint. Use when: (1) writing or amending .pre-commit-config.yaml, (2) diagnosing why a hook passes locally but fails in CI (version drift), (3) deciding fix-vs-suppress for lint findings, (4) adding a new linter to an existing pre-commit pipeline, (5) reconciling ruff/mypy/markdownlint config across multiple repos, (6) a pre-commit hook using a pixi console script false-fails locally even though CI passes — system-installed package in ~/.local/bin shadows the local dev version, (7) ruff I001/RUF059 fires on inline imports or unused tuple unpacking inside test functions after adding new tests."
+description: "Canonical guide to pre-commit hook configuration, single-source-of-truth versioning, CI/local parity, and integration of ruff/mypy/clang-format/yamllint/actionlint/golangci-lint/bandit/hadolint/shellcheck/markdownlint. Use when: (1) writing or amending .pre-commit-config.yaml, (2) diagnosing why a hook passes locally but fails in CI (version drift), (3) deciding fix-vs-suppress for lint findings, (4) adding a new linter to an existing pre-commit pipeline, (5) reconciling ruff/mypy/markdownlint config across multiple repos, (6) a pre-commit hook using a pixi console script false-fails locally even though CI passes — system-installed package in ~/.local/bin shadows the local dev version, (7) ruff I001/RUF059 fires on inline imports or unused tuple unpacking inside test functions after adding new tests, (8) mypy pre-commit hook fails because an UNTRACKED test file references methods not yet committed — the hook checks ALL .py files on disk including untracked ones."
 category: tooling
 date: 2026-05-28
-version: "1.4.0"
+version: "1.5.0"
 user-invocable: false
 verification: verified-ci
 history: pre-commit-hooks-and-linting-config.history
@@ -42,6 +42,7 @@ tags: [merged, pre-commit, linting, ruff, mypy, clang-format, yamllint, actionli
 - Bandit SAST hook reports 100+ LOW findings (B404/B603/B607) masking real MEDIUM+ findings — tune `--severity-level medium`
 - A stray agent-prompt artifact file (e.g. `.claude-prompt-NNN.md`) is committed to the repo root and fails markdownlint MD033 due to inline HTML tags (`<NONCE>`, `<LABEL>`) — remove and add `.gitignore` pattern
 - ruff pre-commit fires `I001` (import block unsorted) or `RUF059` (unpacked variable never used) on newly added test functions that contain inline imports or unused tuple returns
+- mypy pre-commit hook fails on an **untracked** test file that references methods not yet in the staged commit — you are doing a multi-commit workflow where commit 2 adds the methods referenced in a test file that is already on disk
 
 ## Verified Workflow
 
@@ -263,6 +264,35 @@ Do NOT blanket-suppress via `--skip` flags. Always add rationale comments for `#
 
 Verified by ProjectHephaestus PR #657.
 
+#### mypy pre-commit failure on untracked test file (multi-commit workflow)
+
+When creating two atomic commits (e.g., commit 1 = implementation, commit 2 = tests that use the new API), mypy runs on ALL `.py` files on disk — including **untracked** files — not just the staged files. If commit 2's test file is already on disk when you attempt commit 1, mypy sees it, notices methods it references do not exist yet, and fails with `attr-defined` or `module-attribute` errors.
+
+**Workaround (verified):** temporarily move the untracked test file out of the worktree before commit 1, then restore it for commit 2.
+
+```bash
+# Before commit 1 (implementation only):
+cp tests/unit/foo/test_new_feature.py /tmp/test_new_feature_backup.py
+rm tests/unit/foo/test_new_feature.py
+
+# Create commit 1 — mypy no longer sees the untracked test file
+git add hephaestus/foo/new_feature.py tests/unit/foo/test_existing.py
+git commit -S -m "feat(foo): add new_feature"
+
+# Restore test file for commit 2:
+cp /tmp/test_new_feature_backup.py tests/unit/foo/test_new_feature.py
+git add hephaestus/foo/new_feature.py tests/unit/foo/test_new_feature.py
+git commit -S -m "test(foo): cover new_feature"
+```
+
+Two caveats:
+1. This only works in a **worktree** (not the main checkout) — move the file to `/tmp`, not to another path inside the same repo.
+2. The pre-commit hook may also stash unstaged changes; confirm the stash restore completed cleanly after commit 1.
+
+Alternatively, refactor the two commits so the test file only references methods that exist in the same commit. This is cleaner but not always possible when task requirements impose atomic commit ordering.
+
+Verified by ProjectHephaestus PR #670 (Issues #615/#616).
+
 #### Removing stray agent-prompt artifact files (markdownlint MD033 fix)
 
 Agent-prompt artifacts like `.claude-prompt-NNN.md` are occasionally committed to the repo
@@ -351,6 +381,7 @@ Verified by ProjectHephaestus PR #657.
 | Fix MD033 by editing stray `.claude-prompt-NNN.md` to remove HTML tags | Tried to strip `<NONCE>` / `<LABEL>` tags from the file | File is an agent artifact with no source value; editing it is wasted effort and the file can recur | Always `git rm` accidental artifact files; add `.gitignore` pattern to prevent recurrence |
 | `bandit --exit-zero` to pass CI while investigating | Added `--exit-zero` flag during bandit hook integration | All real findings invisible to CI; defeating the purpose of SAST | Never suppress exit codes; fix each MEDIUM+ finding properly |
 | Security hook blocking workflow file `Edit` | Used `Edit` tool on `.github/workflows/pre-commit.yml` | Project security hook fires on all Actions workflow edits | Use `python3 -c "..."` via Bash to write the file instead |
+| mypy fails on untracked test file referencing not-yet-committed methods | Created both test file and implementation file but only staged the implementation for commit 1 | mypy pre-commit hook runs on ALL `.py` files on disk, including untracked ones; sees `attr-defined` / `module-attribute` errors in the untracked test | Temporarily move the untracked test file to `/tmp` before commit 1; restore and stage it for commit 2. Only needed for strict multi-commit atomic ordering. |
 | Removing `$# -eq 0` guard from `report_unmanaged()` | Cleaned up what appeared redundant | Broke bats test -- guard is needed in `report_unmanaged()` specifically | Only remove the guard from `get_unmanaged_names()`; keep it in `report_unmanaged()` |
 | `sed -i` for trailing blank line in YAML | `sed -i '${/^$/d}' file.yml` | Fragile -- only deletes one blank line; fails on macOS sed | Use Python `content.rstrip() + '\n'` -- handles multiple trailing blank lines portably |
 | String splitting for YAML value parsing | `partition(':')` or `split(':', 1)` to parse values with colons | Splits inside quoted strings at wrong colon | Use a real YAML parser (`yaml.safe_load()`), not string splitting |
