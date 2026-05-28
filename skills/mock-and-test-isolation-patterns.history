@@ -1,6 +1,42 @@
 <!-- markdownlint-disable MD024 -->
 # mock-and-test-isolation-patterns — History
 
+## v1.1.0 (2026-05-28)
+
+**Changed by:** ProjectHephaestus PR #644 — fixing real test failures across all Python versions
+**Verification:** verified-ci (2601 unit tests pass locally; CI triggered on push)
+
+### What changed
+
+- Added trigger (9) to description: stale logger after `importlib.reload`
+- Added `When to Use` trigger 9: stale logger object after reload
+- Added `### Quick Reference` Pattern 9 code example
+- Added `### Pattern 9: Stale Module Reference After importlib.reload` detailed section
+- Added `Failed Attempts` row 9 documenting the exact symptom and diagnosis
+- Added ProjectHephaestus PR #644 to Verified On table
+- Bumped date to 2026-05-28
+- Tags: added `importlib-reload`, `stale-reference`, `string-patch`
+
+### Why
+
+Three tests in `test_general_utils.py` failed silently across all Python versions (3.10–3.13):
+`test_log_on_error_true_emits_error_log`, `test_long_argv_truncated_in_error_log`,
+`test_timeout_expired_is_logged_and_reraised`. All used `patch.object(imported_logger, "error")`.
+
+Root cause: `test_constants.py` calls `importlib.reload(helpers)` inside
+`test_metadata_timeout_env_override` and `test_network_timeout_env_override` to test env-var
+override of `METADATA_TIMEOUT`/`NETWORK_TIMEOUT`. After reload, `helpers.logger` is a new
+`ContextLogger` instance. The `logger` imported at module load time in `test_general_utils.py`
+is the old instance. `run_subprocess` uses the new one; the patch targets the old one.
+
+Diagnosis clue: `mock_error.called == False` but the error line appears in captured stdout —
+confirming the code executed but via a different object than the mock.
+
+Fix: `patch("hephaestus.utils.helpers.logger.error")` (string form) resolves `helpers.logger`
+at patch-entry time, always targeting the current instance.
+
+---
+
 ## v1.0.0 (2026-05-19) — Merge of 9 skills
 
 **Changed by:** Skill-merge swarm (Phase 2 testing re-pass, M57 / #1863)

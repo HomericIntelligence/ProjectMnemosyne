@@ -1,9 +1,9 @@
 ---
 name: mock-and-test-isolation-patterns
-description: "Use when: (1) writing chaos/fault injection tests where a mock service must simulate latency, kill, or queue-starvation side effects — not just record the fault command, (2) a FastAPI/Pydantic endpoint test expects a specific HTTP status code (e.g. 503) but receives 500 because MagicMock attributes fail Pydantic response serialization, (3) tests pass individually but fail together due to mock pollution across test files and real file I/O with tmp_path is a cleaner alternative, (4) a test name says 'and' but only one side is asserted — a patch.object is missing 'as mock_X' and assert_called_once(), (5) a test bypasses the runner entry point and calls an internal delegate directly, leaving the full path untested, (6) adding unit tests for a class that constructs collaborators internally — patch the instance attribute after construction, (7) testing RuntimeError precondition guards (if-None, subprocess returncode, or _is_setup state) with parametrize or side_effect lists, (8) testing closure guards inside action-builder methods without a full state machine."
+description: "Use when: (1) writing chaos/fault injection tests where a mock service must simulate latency, kill, or queue-starvation side effects — not just record the fault command, (2) a FastAPI/Pydantic endpoint test expects a specific HTTP status code (e.g. 503) but receives 500 because MagicMock attributes fail Pydantic response serialization, (3) tests pass individually but fail together due to mock pollution across test files and real file I/O with tmp_path is a cleaner alternative, (4) a test name says 'and' but only one side is asserted — a patch.object is missing 'as mock_X' and assert_called_once(), (5) a test bypasses the runner entry point and calls an internal delegate directly, leaving the full path untested, (6) adding unit tests for a class that constructs collaborators internally — patch the instance attribute after construction, (7) testing RuntimeError precondition guards (if-None, subprocess returncode, or _is_setup state) with parametrize or side_effect lists, (8) testing closure guards inside action-builder methods without a full state machine, (9) tests pass in isolation but fail when run after a test that calls importlib.reload() — patch.object on a module-imported object becomes stale after reload; use patch() string form instead."
 category: testing
-date: 2026-05-19
-version: "1.0.0"
+date: 2026-05-28
+version: "1.1.0"
 user-invocable: false
 history: mock-and-test-isolation-patterns.history
 tags:
@@ -20,6 +20,9 @@ tags:
   - guard-tests
   - instance-attribute-patching
   - subprocess
+  - importlib-reload
+  - stale-reference
+  - string-patch
 ---
 
 # Mock and Test Isolation Patterns
@@ -45,6 +48,7 @@ Use this skill when any of the following apply:
 6. **Instance attribute patching** — class constructor builds collaborator internally (`self.x = SomeClass(arg)`); passing a `MagicMock()` as the constructor arg creates a real collaborator, not a mock.
 7. **RuntimeError precondition guards** — testing `if x is None: raise RuntimeError(...)`, `result.returncode != 0`, or `_is_setup` state guards; multi-guard functions with sequential `subprocess.run` calls.
 8. **Closure guards in action builders** — guards inside closures returned from `_build_experiment_actions` or `TierActionBuilder.build()` cannot be tested through the state machine; call the builder, get the closure dict, invoke the key directly.
+9. **Stale logger/object after importlib.reload** — tests use `patch.object(imported_logger, "error")` but a different test file called `importlib.reload(module)`, replacing the module-level logger with a new instance; the patch targets the old object while the code uses the new one; mock.called stays False even though the log appears in captured output.
 
 ## Verified Workflow
 
@@ -116,6 +120,17 @@ actions = runner._build_experiment_actions(
 )
 with pytest.raises(RuntimeError, match="experiment_dir must be set"):
     actions[ExperimentState.TIERS_COMPLETE]()
+
+# --- Pattern 9: Stale logger after importlib.reload — use string patch form ---
+# WRONG: patch.object resolves the object at import time; reload replaces it
+with patch.object(imported_logger, "error") as mock_err:
+    run_subprocess(["false"])
+    # mock_err.called == False even though log appears in captured output!
+
+# CORRECT: string form resolves module-level logger at patch time (runtime)
+with patch("hephaestus.utils.helpers.logger.error") as mock_err:
+    run_subprocess(["false"])
+    assert mock_err.called  # Works even after importlib.reload(helpers)
 ```
 
 ### Pattern 1: Chaos Mock — Simulate Side Effects
@@ -196,6 +211,33 @@ runner.experiment_dir = Path("/results/exp")  # plain attrs: assign directly
 - Direct attribute assignment is simpler than `patch.object(runner, "attr", ...)` as a context manager for instance attributes.
 - Use `==` for Pydantic model equality; use `is` only when verifying the exact same object reference.
 
+### Pattern 9: Stale Module Reference After importlib.reload
+
+**Symptom:** `mock_error.called` is `False` but the log message appears in `Captured stdout`. Tests pass when run alone but fail in the full suite.
+
+**Root cause:** Another test file calls `importlib.reload(module)` to test env-var overrides. After reload, `module.logger` is a new object. The test file imported `logger` at module load time, so `patch.object(logger, "error")` patches the **old** object. The production code uses the **new** `module.logger` — the mock is invisible to it.
+
+**Diagnosis:** Run the failing test in isolation (passes) vs. after the reload test (fails). Check for `importlib.reload` calls in other test files that reload the same module.
+
+**Fix:** Replace `patch.object(imported_obj, "attr")` with `patch("package.module.obj.attr")`. The string form looks up `module.obj` at patch execution time (runtime), not import time, so it always targets the current object regardless of any intervening reloads.
+
+```python
+# Wrong — imports logger once at module load; stale after reload
+from hephaestus.utils.helpers import logger
+with patch.object(logger, "error") as mock_err: ...
+
+# Correct — resolves hephaestus.utils.helpers.logger at test runtime
+with patch("hephaestus.utils.helpers.logger.error") as mock_err: ...
+```
+
+**Alternative (if you must use patch.object):** Use `importlib.import_module` inside the test to get the current module reference:
+
+```python
+import importlib
+helpers = importlib.import_module("hephaestus.utils.helpers")
+with patch.object(helpers.logger, "error") as mock_err: ...
+```
+
 ### Pattern 7: RuntimeError Guard Tests
 
 **Single guard (simple form):**
@@ -239,6 +281,7 @@ Always patch `defining_module.ClassName`, not `caller_module.ClassName` for loca
 | 6 | Passed `MagicMock()` as the `tiers_dir` constructor argument to avoid instantiating a real `TierManager`. | The constructor accepts it without crashing, but `runner.tier_manager` is still a real `TierManager` — not a mock. Method calls on it fail or produce unexpected results. | Always reassign `runner.tier_manager` (and similar constructed collaborators) directly on the instance after construction. |
 | 7 | Patched `scylla.e2e.runner.HeartbeatThread` to control the heartbeat in `run()`. | `runner.py` uses a local import (`from scylla.e2e.health import HeartbeatThread` inside `run()`), so `scylla.e2e.runner` has no `HeartbeatThread` attribute — patch raises `AttributeError`. | For local imports inside function bodies, patch the defining module (`scylla.e2e.health.HeartbeatThread`), not the caller's namespace. |
 | 8 | Tested closure guard by setting up the full state machine and driving it to the target state. | State machine setup was complex and fragile; intermediate states required many mocks. | Call the action-builder method directly to get the closure dict, set the attribute to `None`, and invoke the closure key — no state machine needed. |
+| 9 | Used `patch.object(imported_logger, "error")` to assert that `run_subprocess` logs errors; tests passed in isolation but all 3 mock assertions failed when the full suite ran. | A sibling test file calls `importlib.reload(helpers)` to test env-var timeout overrides. Reload replaces `helpers.logger` with a new `ContextLogger` instance. The imported `logger` reference is stale; `run_subprocess` uses the new instance, so the patch is invisible. The log message still appears in captured stdout (confirming the code ran) but `mock_err.called` stays `False`. | Use the string form `patch("package.module.obj.attr")` which resolves the module attribute at patch time rather than at import time. Always suspect stale references when a mock's `called` is `False` but the side-effect (log line, file write) visibly occurred. |
 
 ## Results & Parameters
 
@@ -325,3 +368,4 @@ When mocking objects whose attributes populate a Pydantic response model:
 | ProjectScylla | PR #819 — internal method unit tests (issue #773) | 3 tests added for `_select_best_baseline_from_group`, all 2208 pass |
 | ProjectScylla | PR #1210 — RuntimeError guard tests (issue #1144) | 8 new guard tests, 3265 passed, 78.42% coverage |
 | ProjectScylla | PR #1310 — WorkspaceManager guard tests (issue #1215) | 3 new guard tests, 25 module tests pass |
+| ProjectHephaestus | PR #644 — timeout= on subprocess calls; test_constants.py reload poisoned test_general_utils.py logger mocks | 2601 unit tests pass after switching to `patch("hephaestus.utils.helpers.logger.error")` |
