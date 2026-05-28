@@ -1,0 +1,59 @@
+# llm-output-verdict-parse-last-line-not-substring — History
+
+## v1.1.0 (2026-05-28)
+
+**Changed by:** PR #670 — Issues #615/#616 (verdict-loop fix + batch comment fetch)
+**Verification:** verified-ci
+
+### What changed
+
+- Extended `description` with triggers (6) and (7) for the infinite-re-review loop and missing log context
+- Extended `When to Use` with two new bullet points for the infinite-loop and missing-log-context scenarios
+- Added bounded-retry cap pattern to `### Quick Reference`: `count_unparseable_verdict_passes()`, `exceeds_unparseable_verdict_cap()`, `MAX_UNPARSEABLE_VERDICT_PASSES = 3`
+- Added `### Detailed Steps` step 3 (bounded-retry guard before re-requesting review) and step 4 (WARNING-level logging with first line + URL)
+- Extended test coverage checklist to include 3 new cases for `count_unparseable_verdict_passes` and `exceeds_unparseable_verdict_cap`
+- Added 2 new `Failed Attempts` rows (5 and 6) for DEBUG-level logging and missing retry cap; added row 7 for "loosen regex" (intentionally rejected)
+- Added `MAX_UNPARSEABLE_VERDICT_PASSES: int = 3` to `Results & Parameters`
+- Updated `Verified On` table with `review_state.py`, Issues #615/#616, PR #670
+- Bumped `verification` from `verified-local` to `verified-ci`
+- Added `history` frontmatter field
+
+### Why
+
+v1.0.0 documented the correct regex pattern but did not cover what happens when the regex
+never matches (malformed output from the LLM reviewer): the gate returns False every pass,
+causing the loop to re-trigger indefinitely.  Issues #455, #468, #484 were each re-reviewed
+12+ times across loops 2–5 before the operator noticed.  Two complementary fixes shipped:
+(1) WARNING-level log with the first line of the offending comment + its URL so operators
+can inspect the malformed output, and (2) `exceeds_unparseable_verdict_cap()` so callers
+can exit the re-review loop after 3 failed parses instead of spinning forever.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: llm-output-verdict-parse-last-line-not-substring
+description: "Parse discrete LLM-emitted verdicts (APPROVED/REVISE/BLOCK, GO/NOGO, SAFE/UNSAFE) using last-line regex extraction, not substring `in` checks. Use when: (1) adding a Python/shell consumer that reads a classification marker from LLM output, (2) the prompt instructs the LLM that 'readers take the LAST matching line', (3) the LLM may discuss multiple options before settling on a verdict, (4) a substring-in check would fire on quoted/discussed markers, (5) auditing an existing parser for false-positive verdict reads."
+category: architecture
+date: 2026-05-25
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - llm-output-parsing
+  - verdict-gate
+  - regex
+  - last-line-wins
+  - claude-output
+  - prompt-parser-contract
+  - false-positive
+  - substring-vs-regex
+---
+... (full v1.0.0 content omitted for brevity; see git history for exact snapshot)
+```
+
+---
+
+## v1.0.0 (2026-05-25)
+
+**Initial version.**
