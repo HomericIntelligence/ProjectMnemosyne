@@ -1,5 +1,29 @@
 # pre-commit-hooks-and-linting-config -- History
 
+## v1.2.0 (2026-05-28) -- Add bandit severity-level tuning and stray-file MD033 fix
+
+**Changed by:** ProjectHephaestus PR #657 (fix broken main CI)
+**Verification:** verified-ci
+
+### What changed
+
+- Added 2 new "When to Use" triggers: bandit LOW-noise flood and stray agent-prompt MD033 failure.
+- Added new Detailed Steps subsection: "Bandit SAST severity-level tuning" documenting use of `--severity-level medium` and per-finding `# nosec BXXX -- <rationale>` pattern.
+- Added new Detailed Steps subsection: "Removing stray agent-prompt artifact files" documenting `git rm` + `.gitignore` fix for MD033 failures from accidentally-committed agent artifacts.
+- Added 3 new Failed Attempts rows: blanket `--skip` for bandit, editing artifact files instead of removing, `--exit-zero` suppression.
+- Added `bandit`, `markdownlint`, `sast` tags.
+
+### Why
+
+PR #657 fixed three trunk failures in ProjectHephaestus. Two were pre-commit failures:
+(1) bandit hook added by PR #648 reported 130+ LOW findings masking real MEDIUM issues —
+the fix (`--severity-level medium`) was not documented anywhere; (2) an accidentally-committed
+`.claude-prompt-627.md` failed MD033 — the pattern of agent artifacts landing in the repo
+and how to handle them was not captured. Both learnings are worth preserving to avoid
+re-investigation.
+
+---
+
 ## v1.1.0 (2026-05-24) -- Add pixi environment selection for pre-commit hooks
 
 **Changed by:** ProjectHephaestus PRs #483, #526, #532 (release workflow + dep-sync hooks)

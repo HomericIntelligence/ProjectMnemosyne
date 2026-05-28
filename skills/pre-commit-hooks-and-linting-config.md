@@ -2,12 +2,12 @@
 name: pre-commit-hooks-and-linting-config
 description: "Canonical guide to pre-commit hook configuration, single-source-of-truth versioning, CI/local parity, and integration of ruff/mypy/clang-format/yamllint/actionlint/golangci-lint/bandit/hadolint/shellcheck/markdownlint. Use when: (1) writing or amending .pre-commit-config.yaml, (2) diagnosing why a hook passes locally but fails in CI (version drift), (3) deciding fix-vs-suppress for lint findings, (4) adding a new linter to an existing pre-commit pipeline, (5) reconciling ruff/mypy/markdownlint config across multiple repos."
 category: tooling
-date: 2026-05-24
-version: "1.1.0"
+date: 2026-05-28
+version: "1.2.0"
 user-invocable: false
 verification: verified-ci
 history: pre-commit-hooks-and-linting-config.history
-tags: [merged, pre-commit, linting, ruff, mypy, clang-format, yamllint, actionlint, hooks, pixi-environment]
+tags: [merged, pre-commit, linting, ruff, mypy, clang-format, yamllint, actionlint, hooks, pixi-environment, bandit, markdownlint, sast]
 ---
 
 # Pre-commit Hooks and Linting Configuration
@@ -38,6 +38,8 @@ tags: [merged, pre-commit, linting, ruff, mypy, clang-format, yamllint, actionli
 - Unit-testing pre-commit hook regex logic with pytest
 - Pre-commit hook shells out to `pixi run <task>` and reports `command not found` for a package entry point (pixi environment selection)
 - Designing CI workflow that invokes pre-commit when the repo declares multiple pixi environments (e.g. `default` vs `lint`)
+- Bandit SAST hook reports 100+ LOW findings (B404/B603/B607) masking real MEDIUM+ findings — tune `--severity-level medium`
+- A stray agent-prompt artifact file (e.g. `.claude-prompt-NNN.md`) is committed to the repo root and fails markdownlint MD033 due to inline HTML tags (`<NONCE>`, `<LABEL>`) — remove and add `.gitignore` pattern
 
 ## Verified Workflow
 
@@ -235,6 +237,52 @@ python3 scripts/fix_md_tables.py --all
 ruff check --fix scripts/fix_md_tables.py
 ```
 
+#### Bandit SAST severity-level tuning (silence LOW noise without disabling checks)
+
+When a new bandit hook is added (e.g. via a CI improvement PR), it commonly reports 100+ LOW
+findings — mostly B404 (subprocess import), B603/B607 (subprocess call/exec), B311 (random
+jitter), and B101 (assert). These LOW findings drown out real MEDIUM/HIGH issues. The correct
+fix is to add `--severity-level medium` to the pixi task (not the hook) so the threshold
+applies both locally and in CI:
+
+```toml
+# pixi.toml
+[tasks]
+sast = { cmd = "bandit -r hephaestus scripts -ll --severity-level medium --ini .bandit" }
+```
+
+For each remaining MEDIUM+ finding, decide per finding:
+- `# nosec BXXX -- <one-line rationale>` for false positives (e.g. B310 urlopen on a
+  hardcoded HTTPS URL; B301 pickle.load on MD5-verified CIFAR data)
+- `contextlib.suppress(...)` instead of bare `except ...: pass`
+- Real fix for anything that is a genuine security issue
+
+Do NOT blanket-suppress via `--skip` flags. Always add rationale comments for `# nosec`.
+
+Verified by ProjectHephaestus PR #657.
+
+#### Removing stray agent-prompt artifact files (markdownlint MD033 fix)
+
+Agent-prompt artifacts like `.claude-prompt-NNN.md` are occasionally committed to the repo
+root when CI scaffolding runs. They fail MD033 (no-inline-html) because they contain tags
+like `<NONCE>` and `<LABEL>`. The fix:
+
+```bash
+# 1. Confirm the file is an accident (check recent git log)
+git log --oneline -- .claude-prompt-NNN.md
+
+# 2. Confirm nothing references it
+grep -rn 'claude-prompt-NNN' .
+
+# 3. Remove and add gitignore entry
+git rm .claude-prompt-NNN.md
+echo '/.claude-prompt-*.md' >> .gitignore
+```
+
+Add the `.gitignore` pattern BEFORE the next CI run to prevent recurrence.
+
+Verified by ProjectHephaestus PR #657.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -297,6 +345,9 @@ ruff check --fix scripts/fix_md_tables.py
 | Go-based tools via pixi/conda-forge | `pixi search gitleaks`, `pixi search go` | Not available or outdated (Go 1.15 only on conda-forge) | Go-based security tools: use pre-built GitHub release binaries |
 | pygrep alternation with `\|` syntax | Wrote `print.*NOTE\|print.*TODO` (grep syntax) | pygrep uses Python `re`; `\|` is a literal pipe character | Use `(NOTE\|TODO\|FIXME)` group syntax |
 | pygrep commented-out prints as negative test cases | Added `# print("NOTE: ...")` to NEGATIVE_CASES | pygrep matches raw line -- comment still contains `print.*NOTE` | Move commented-out prints to POSITIVE_CASES; pygrep does not understand comments |
+| Blanket `--skip B404,B603,B607` to silence bandit noise | Passed all three LOW-severity subprocess IDs to `--skip` | Skips injection-check IDs entirely, removing real signal for any future subprocess misuse | Use `--severity-level medium` instead -- filters by severity, not by check ID |
+| Fix MD033 by editing stray `.claude-prompt-NNN.md` to remove HTML tags | Tried to strip `<NONCE>` / `<LABEL>` tags from the file | File is an agent artifact with no source value; editing it is wasted effort and the file can recur | Always `git rm` accidental artifact files; add `.gitignore` pattern to prevent recurrence |
+| `bandit --exit-zero` to pass CI while investigating | Added `--exit-zero` flag during bandit hook integration | All real findings invisible to CI; defeating the purpose of SAST | Never suppress exit codes; fix each MEDIUM+ finding properly |
 | Security hook blocking workflow file `Edit` | Used `Edit` tool on `.github/workflows/pre-commit.yml` | Project security hook fires on all Actions workflow edits | Use `python3 -c "..."` via Bash to write the file instead |
 | Removing `$# -eq 0` guard from `report_unmanaged()` | Cleaned up what appeared redundant | Broke bats test -- guard is needed in `report_unmanaged()` specifically | Only remove the guard from `get_unmanaged_names()`; keep it in `report_unmanaged()` |
 | `sed -i` for trailing blank line in YAML | `sed -i '${/^$/d}' file.yml` | Fragile -- only deletes one blank line; fails on macOS sed | Use Python `content.rstrip() + '\n'` -- handles multiple trailing blank lines portably |
