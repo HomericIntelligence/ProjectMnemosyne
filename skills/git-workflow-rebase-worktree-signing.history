@@ -1,5 +1,29 @@
 # git-workflow-rebase-worktree-signing — History
 
+## v1.1.0 (2026-05-28) — Add stale staged/unstaged changes pattern for already-rebased worktrees
+
+**Changed by:** ProjectHephaestus PR #639 (PlannerHost Protocol rebase + fix)
+**Verification:** verified-local
+
+### What changed
+
+- Expanded `description` to include trigger (12): "finding stale staged or unstaged changes in a worktree that has already been rebased onto main"
+- Added new "When to Use" bullet: worktree already rebased onto main has stale staged/unstaged changes from a prior session
+- Added new section D3: "Stale staged/unstaged changes in an already-rebased worktree" with triage workflow, key pitfall note, and recovery pattern
+- Added 2 new Failed Attempts rows: `gh pr checkout` on branch already used in a worktree; committing staged changes without `git diff --cached` inspection first
+
+### Why
+
+During PR #639 remediation, the assigned worktree had stale staged changes (a partial REVERT
+removing the PlannerHost Protocol class) and an unstaged valid fix (RUF059 variable rename).
+The staged change was leftover from a prior agent session and would have silently undone the
+PR's entire purpose if committed. The triage procedure — `git diff --cached` before committing,
+`git restore --staged` to unstage false-positive changes — was not documented. Additionally,
+`gh pr checkout 639` failed because the branch was already checked out in the worktree;
+the error message is cryptic enough to cause confusion.
+
+---
+
 ## v1.0.0 (2026-05-18) — Merge of 11 skills
 
 **Changed by:** Skill-merge swarm (Phase C Wave 2, M7 / #1774)
