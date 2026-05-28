@@ -1,0 +1,152 @@
+# gh-check-ci-status — History
+
+## v1.1.0 (2026-05-28)
+
+**Changed by:** ProjectHephaestus PR #655 / issue #654 — gh pr checks --json schema fix
+**Verification:** verified-ci (fixed end-to-end and shipped as PR #655 with passing local tests + CI in source repo ProjectHephaestus)
+
+### What changed
+
+- Added frontmatter `verification: verified-ci` (was previously unverified) and `history: gh-check-ci-status.history`.
+- Added a "When to Use" trigger for constructing/validating `gh ... --json` field lists in automation.
+- Added a "gh pr checks --json schema (valid fields)" subsection listing the verbatim valid field set, `state`/`bucket` semantics, and the bucket→pass/fail/skip/pending mapping table. Explicitly warns that `status`/`conclusion`/`required` are NOT valid on `gh pr checks`.
+- Added a "Validate --json field names before shipping" tip with copy-paste commands to query the real per-subcommand schema, plus the guard-test defense.
+- Added an "Automation: deterministic CLI errors must NOT be retried" subsection documenting the circuit-breaker incident.
+- Added 2 real "Failed Attempts" rows (the `name,status,conclusion,workflow,required` rejection, and the transient-misclassification → circuit-breaker batch failure); removed the placeholder N/A row.
+
+### Why
+
+`gh pr checks <pr> --json` has a narrow, easy-to-get-wrong schema. The only valid fields are `bucket, completedAt, description, event, link, name, startedAt, state, workflow` — there is no `status`, `conclusion`, or `required` (those belong to other gh surfaces like `gh pr view --json statusCheckRollup`). Requesting any invalid field makes gh reject the entire call with `Unknown JSON field: "<x>"` and exit non-zero.
+
+In the real incident, an automation loop requested `name,status,conclusion,workflow,required`; every call failed, the deterministic error was misclassified as transient and retried, and 5 consecutive failures tripped a `gh_cli` circuit breaker — after which ALL remaining work items failed instantly (`0 successful, 10 failed`). One wrong field name bricked an entire batch. Two lessons folded in: (1) validate `--json` field names against the real per-subcommand schema; (2) deterministic CLI-arg errors must be classified non-transient / fail-fast so they are never retried and never trip shared circuit breakers. The bug shipped because all unit tests mocked the gh wrapper and fabricated its output, so the wrong field list was never exercised against the real schema — hence the added guard-test defense.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: gh-check-ci-status
+description: Check CI/CD status of a pull request including workflow runs and test
+  results
+category: ci-cd
+date: 2025-12-30
+version: 1.0.0
+---
+# Check CI Status
+
+Verify CI/CD status of a pull request and investigate failures.
+
+## Overview
+
+| Date | Objective | Outcome |
+| ------ | ----------- | --------- |
+| 2025-12-30 | Efficiently monitor and debug CI status | Faster identification of CI failures |
+
+## When to Use
+
+- (1) Verifying PR checks are passing before merge
+- (2) Investigating CI failures
+- (3) Monitoring long-running CI jobs
+- (4) Checking before pushing changes
+
+## Verified Workflow
+
+1. **Check status**: Run `gh pr checks <pr>` to see all checks
+2. **Identify failures**: Look for X (failed) or O (pending)
+3. **View logs**: Use `gh run view` to see failure details
+4. **Fix locally**: Reproduce issue locally and test
+5. **Push fix**: Commit and push changes
+6. **Verify**: Watch CI with `--watch` flag
+
+## Results
+
+Copy-paste ready commands:
+
+```bash
+# Check PR CI status
+gh pr checks <pr>
+
+# Watch CI in real-time
+gh pr checks <pr> --watch
+
+# Get detailed status
+gh pr view <pr> --json statusCheckRollup
+
+# View failed logs
+gh run view <run-id> --log-failed
+
+# Rerun failed checks
+gh run rerun <run-id>
+```
+
+### Status Indicators
+
+- `PASS` - Check passed
+- `FAIL` - Check failed
+- `PENDING` - In progress
+- `SKIPPED` - Check was skipped
+
+### Common CI Failures
+
+**Pre-commit issues** (formatting/linting):
+```bash
+just pre-commit-all  # Fix locally
+git add . && git commit --amend --no-edit
+git push --force-with-lease
+```
+
+**Test failures**:
+```bash
+mojo test tests/          # Run locally
+pytest tests/             # Python tests
+# Fix code and retest
+```
+
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Error Handling
+
+| Problem | Solution |
+| --------- | ---------- |
+| No checks found | PR may not trigger CI (check workflow) |
+| Pending forever | Check logs for stuck jobs |
+| Auth error | Verify `gh auth status` |
+| API rate limit | Wait or authenticate properly |
+
+## Pre-Merge Verification
+
+Before merging:
+
+- [ ] All required checks passing
+- [ ] No pending checks
+- [ ] Latest commit has checks
+- [ ] Branch up-to-date with base
+
+```bash
+gh pr checks <pr>          # All passing?
+gh pr view <pr>            # Up-to-date?
+gh pr diff <pr>            # Changes correct?
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | CI status monitoring workflow | Generic patterns applicable to any GitHub project |
+
+## References
+
+- See verify-pr-ready for complete pre-merge checklist
+- See analyze-ci-failure-logs for debugging failures
+- GitHub CLI docs: https://cli.github.com/manual/gh_pr_checks
+```
+
+## v1.0.0 (2025-12-30)
+
+Initial version.
