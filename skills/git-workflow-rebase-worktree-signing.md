@@ -1,9 +1,9 @@
 ---
 name: git-workflow-rebase-worktree-signing
-description: "Canonical git-workflow guide covering rebase conflict resolution, worktree lifecycle, GPG signing pitfalls, submodule coordination, and branch-state recovery. Use when: (1) rebasing a feature branch with non-trivial conflicts, (2) creating/cleaning git worktrees, (3) a commit is rejected because GPG signing produced an unknown key, (4) reconciling submodule state across branches, (5) recovering a branch that's in a detached/dirty state, (6) batch-rebasing many sibling branches in parallel, (7) salvaging commits from a rejected PR via cherry-pick, (8) recovering commits accidentally made on local main, (9) resolving stash-pop conflicts blocked by Safety Net, (10) cleaning up stale worktrees/branches/stashes with a preservation bias, (11) dispatching agents into submodule worktrees that hit transient permission errors."
+description: "Canonical git-workflow guide covering rebase conflict resolution, worktree lifecycle, GPG signing pitfalls, submodule coordination, and branch-state recovery. Use when: (1) rebasing a feature branch with non-trivial conflicts, (2) creating/cleaning git worktrees, (3) a commit is rejected because GPG signing produced an unknown key, (4) reconciling submodule state across branches, (5) recovering a branch that's in a detached/dirty state, (6) batch-rebasing many sibling branches in parallel, (7) salvaging commits from a rejected PR via cherry-pick, (8) recovering commits accidentally made on local main, (9) resolving stash-pop conflicts blocked by Safety Net, (10) cleaning up stale worktrees/branches/stashes with a preservation bias, (11) dispatching agents into submodule worktrees that hit transient permission errors, (12) finding stale staged or unstaged changes in a worktree that has already been rebased onto main."
 category: tooling
-date: 2026-05-18
-version: "1.0.0"
+date: 2026-05-28
+version: "1.1.0"
 user-invocable: false
 verification: verified-local
 history: git-workflow-rebase-worktree-signing.history
@@ -34,6 +34,7 @@ tags: [merged, git, rebase, worktree, gpg-signing, submodule, branch-state, cher
 - Resolving `git stash pop` conflicts when Safety Net blocks discard and drop
 - Cleaning up stale worktrees / branches / stashes with a preservation bias
 - Sub-agents inside submodule worktrees hitting transient "permission denied" on git commands
+- A worktree already rebased onto main has stale staged or unstaged changes that weren't committed (leftover partial work from a prior session)
 
 ## Verified Workflow
 
@@ -334,6 +335,48 @@ For each stale PR:
 5. Delete stale remote branches: `git push origin --delete <branch-name>`
    Note: the push hook runs the full test suite even for branch deletions. Use background tasks for multiple deletes.
 
+#### D3. Stale staged/unstaged changes in an already-rebased worktree
+
+When entering a worktree and `git status` shows staged or unstaged changes even though the branch was already rebased onto main, triage carefully before committing:
+
+```bash
+# Step 1 — inspect what's staged (may be a prior partial revert or fix)
+git diff --cached
+# If staged diff is a REVERT of the PR's own changes → this is leftover partial work; UNSTAGE
+git restore --staged <file>
+
+# Step 2 — inspect what's unstaged
+git diff
+# If unstaged diff is a valid improvement (e.g. lint fix, variable rename) → apply it properly
+git restore <file>   # discard if wrong
+# OR edit the file to apply the fix correctly, then stage+commit
+
+# Step 3 — understand HEAD's state independently
+git show HEAD:<file> | head -60  # see what the committed version looks like
+# The staged/unstaged diffs are relative to HEAD, not to main
+
+# Step 4 — distinguish "leftover revert" from "valid fix in working tree"
+# Leftover revert: staged diff removes the PR's key feature (e.g. removes Protocol class)
+# Valid fix: unstaged diff renames variable, fixes lint error, adds `pass` instead of `...`
+# → ONLY the valid fix should be committed; the revert must be discarded
+
+# Step 5 — after resolving, verify ruff passes
+pixi run ruff check <changed files>
+pixi run ruff format --check <changed files>
+```
+
+**Key pitfall:** In a worktree that was used by a prior agent session, stale staged changes are often a partial revert that was never committed. These silently undo the PR's purpose if committed without inspection. Always `git diff --cached` before `git add` in a worktree you didn't create fresh.
+
+**Recovery pattern when staged diff reverts the PR's main feature:**
+
+```bash
+# DO NOT commit the staged revert — it would undo the PR
+git restore --staged <file>   # unstage the revert
+git restore <file>             # also discard from working tree if it's still dirty
+# Now working tree and HEAD both have the Protocol (correct state)
+# Apply only the valid fix (e.g. RUF059 variable rename) as a new file edit
+```
+
 ### E. Cherry-Pick Decision Procedure
 
 When salvaging commits from a rejected PR, a commit's subject line can disguise the fact that it only operates on dropped code.
@@ -504,6 +547,8 @@ Six-test checklist for any SKILL.md transformer: fixture exists, initial conditi
 | Orchestrator `git push --force-with-lease` after swarm agent advanced remote | Lease reports "stale info" | Local ref now older than remote; lease refuses | Read live remote tip with `git ls-remote`, pass to `--force-with-lease=<branch>:<sha>` |
 | Sonnet model for mechanical worktree tasks | Used Sonnet for import migration and config edits | Sonnet over-plans simple tasks; returned plans 3/5 times | Use Haiku for mechanical tasks; flat numbered `Run:` prompt format |
 | Mass rebase of all "ahead" branches without cherry check | Rebased all 57 "ahead N" branches | All 57 were squash-merged; cherry=0 for every branch — rebasing produced empty/reword conflicts | Always run `git cherry origin/main <branch>` first; "ahead N" in `git branch -vv` is the squash-merge artifact |
+| Calling `gh pr checkout <N>` on a branch already checked out in a worktree | `gh pr checkout 639` in the parent repo while the worktree at `.claude/worktrees/agent-*/` was already on that branch | `fatal: '620-auto-impl' is already used by worktree at ...` — `gh pr checkout` creates/updates local branches and conflicts with the existing worktree | When working inside a dedicated worktree for a branch, skip `gh pr checkout` — the worktree IS already on that branch. Just verify with `git branch --show-current`. |
+| Committing stale staged changes without inspecting `git diff --cached` first | Found staged changes in worktree, assumed they were the intended fix, committed without reading the diff | Staged diff was a partial REVERT (removed Protocol class, replaced with direct `Planner` reference) — the opposite of the PR's purpose | Always `git diff --cached` before staging more or committing in a worktree you didn't create fresh. A prior agent may have staged partial work. Unstage with `git restore --staged <file>` if the staged diff undoes the PR's intent. |
 
 ## Results & Parameters
 
