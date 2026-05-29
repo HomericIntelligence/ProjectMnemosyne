@@ -7,10 +7,12 @@ description: >-
   (3) fixing circular import errors caused by partially-initialized modules or
   eager __init__.py re-exports, (4) refactoring class methods to purely
   functional/immutable style, (5) preparing a codebase for extensibility
-  through extraction, parameterization, and protocol-based abstraction.
+  through extraction, parameterization, and protocol-based abstraction,
+  (6) extracting a CLI entry point or main() out of a module while preserving
+  existing patch-based tests without edits (reverse-delegation pattern).
 category: architecture
-date: 2026-05-19
-version: "1.0.0"
+date: 2026-05-28
+version: "1.1.0"
 user-invocable: false
 history: python-module-decomposition-and-refactor-patterns.history
 tags:
@@ -23,6 +25,9 @@ tags:
   - module-decomposition
   - collaborator-extraction
   - extensibility
+  - cli-extraction
+  - patch-routing
+  - entry-point
 ---
 
 # Python Module Decomposition and Refactor Patterns
@@ -31,10 +36,10 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-05-19 |
+| **Date** | 2026-05-28 |
 | **Objective** | Decompose oversized Python modules/classes into focused, independently testable units using SRP, TDD, and DRY principles |
-| **Outcome** | Synthesized from 7 verified skills; covers function-level extraction, class-based extraction, circular import fixes, immutability refactoring, and extensibility-driven decomposition |
-| **Trigger** | Files >800 lines, circular import errors, mixed-concern methods, C901 complexity, extensibility requirements |
+| **Outcome** | Synthesized from 7 verified skills; covers function-level extraction, class-based extraction, circular import fixes, immutability refactoring, extensibility-driven decomposition, and CLI entry-point extraction with preserved patch routing |
+| **Trigger** | Files >800 lines, circular import errors, mixed-concern methods, C901 complexity, extensibility requirements, CLI main() extraction |
 
 ## When to Use
 
@@ -62,11 +67,18 @@ Decision tree:
   Circular ImportError on startup       → Symbol Extraction to leaf module
   Immutable API inconsistency           → Local-variable + early-return fix
   Extensibility blocked by coupling     → Extract-Parameterize-Protocol pattern
+  Extract CLI main() while keeping      → Reverse-Delegation Pattern (Phase 11)
+    existing patch.object tests intact    (new module calls collaborators THROUGH original)
 
 Universal rule for mock patches after any move:
   Patch where the name is LOOKED UP at call time — not where it was defined.
   WRONG: patch("pkg.old_module.symbol")
   RIGHT: patch("pkg.new_module.symbol")
+
+  EXCEPTION — Reverse-Delegation (CLI extraction):
+  When tests already patch.object(original, "helper") and you cannot edit them,
+  have the new module resolve helpers THROUGH the original module namespace so
+  the lookup site stays on the original. See Phase 11.
 ```
 
 ### Phase 1: Measure and Map (Read, Do Not Write)
@@ -317,6 +329,7 @@ SKIP=audit-doc-policy pre-commit run --files \
 | `Unexpected keyword argument "cost_of_pass"` | It's a `@property` — remove from constructor |
 | `Module does not explicitly export attribute` | Use `from module import X as X` for re-exports |
 | `F841 Local variable assigned to but never used` | Remove the unused variable entirely |
+| `Module "original" does not explicitly export attribute "SYMBOL"` (after reverse-delegation) | The new module accesses `_impl.SYMBOL` but SYMBOL was a plain `from x import SYMBOL` in original — add `from x import SYMBOL as SYMBOL` to original |
 
 ### Phase 10: Verify
 
@@ -325,6 +338,117 @@ wc -l <package>/<file>.py            # must meet target
 python -c "from <package>.<module> import <cls>; print('OK')"
 pytest tests/unit/<package>/ -q      # all tests pass
 ```
+
+### Phase 11: CLI Entry-Point Extraction — Reverse-Delegation Pattern
+
+Use when extracting `main()` / `_parse_args()` / CLI helpers out of a module into a new
+sibling module, **but existing tests already call `original.main()` and patch collaborators
+on the original module** (e.g. `patch.object(implementer, "gh_list_open_issues")`). Editing
+those tests is not acceptable (they serve as characterization tests).
+
+**The problem with a naive move**: The moved `main` looks up its collaborators in the NEW
+module's namespace. Patches applied on `original` no longer intercept — the mock is never
+triggered.
+
+**Reverse-delegation fix (zero test edits)**:
+
+In the new CLI module, have `main` resolve its patchable collaborators THROUGH the original
+module's namespace — a lazy import inside the function body avoids import cycles and keeps the
+lookup site on the original:
+
+```python
+# new_module.py (e.g. implementer_cli.py)
+from __future__ import annotations
+
+
+def main(argv: list[str] | None = None) -> int:
+    # Import lazily to avoid cycles; keeps lookup site on original module
+    # so patch.object(implementer, "helper") keeps intercepting these calls.
+    from . import implementer as _impl
+
+    args = _impl._parse_args(argv)        # resolved on original → patches work
+    repo_root = _impl.get_repo_root()     # resolved on original → patches work
+    issues = _impl.gh_list_open_issues(repo_root)
+    ui = _impl.CursesUI(issues)
+    return _impl.IssueImplementer(ui).run()
+```
+
+**Re-export with explicit `as` aliases in the original module**:
+
+Re-export the moved callables from the original with `as X` (redundant alias form). This:
+1. Keeps `pkg.original:main` console-script entry point resolving (setuptools looks up
+   `original.main`, which now re-exports it).
+2. Satisfies mypy `implicit_reexport=false` — the `as X` form is the recognized explicit
+   re-export idiom; ruff treats it as intentional so no `# noqa` is needed.
+3. Keeps `original.main` / `original._parse_args` importable for existing test `import`
+   statements.
+
+```python
+# original module (e.g. implementer.py) — add at the bottom of imports
+from .implementer_cli import (
+    main as main,
+    _parse_args as _parse_args,
+    _setup_logging as _setup_logging,
+)
+```
+
+**Corollary mypy gotcha — re-exporting transitive symbols**:
+
+If the moved function accesses `original.SYMBOL` where `SYMBOL` was a plain
+`from x import SYMBOL` in the original, mypy raises:
+`Module "original" does not explicitly export attribute "SYMBOL"`.
+
+Fix by re-importing those symbols in the original with explicit `as` aliases:
+
+```python
+# implementer.py — make implicitly-used symbols explicit re-exports too
+from .git_utils import get_repo_root as get_repo_root
+from .github_api import gh_list_open_issues as gh_list_open_issues
+```
+
+**Coverage omit-allowlist guard**:
+
+If the project has a frozen coverage omit-allowlist guarded by tests (e.g.
+`tests/unit/validation/test_omit_allowlist.py` and `tests/integration/test_orchestration_smoke.py`),
+adding a new orchestration/entry-point module requires updating BOTH the pyproject omit list
+AND those guard tests (counts + module lists) in the same PR, or CI fails.
+
+**Issue-scoping gotcha**:
+
+When the umbrella issue (e.g. "decompose God Class") is mostly done and the PR only covers one
+slice, the required pr-policy CI gate hard-requires `Closes #N` on its own line — `Refs #N` alone
+blocks CI. Resolution: file a narrow tracking sub-issue for the specific slice, put
+`Closes #<sub-issue>` + `Refs #<umbrella>` in the PR body. The umbrella stays open; CI passes.
+
+**Verification checklist for reverse-delegation extraction**:
+
+```bash
+# 1. Run pre-existing tests UNCHANGED — they ARE the characterization tests
+pytest tests/unit/<package>/test_<original>.py -v   # all N tests pass
+
+# 2. Import-cycle guard
+python -c "from <package>.<new_cli_module> import main; print('OK')"
+python -c "from <package>.<original> import main; print('OK')"
+
+# 3. Console-script entry-point smoke test
+<package>-cli --help   # or: python -m <package>.<original> --help
+
+# 4. Full suite
+pytest tests/ -q
+```
+
+**Results (ProjectHephaestus PR #674)**:
+
+| Metric | Value |
+| -------- | ------- |
+| `implementer.py` before | 872 lines |
+| `implementer.py` after | 702 lines (−19%) |
+| New `implementer_cli.py` | 236 lines |
+| Pre-existing tests unchanged | 45 pass |
+| New tests added | 6 |
+| Full automation suite | 780 tests pass |
+| ruff + mypy | clean (288 files) |
+| Verification level | verified-local |
 
 ## Failed Attempts
 
@@ -344,6 +468,11 @@ pytest tests/unit/<package>/ -q      # all tests pass
 | **Trying to refactor everything in one PR** | Single large PR with all extraction changes | Too many changes to review; hard to isolate breaks; difficult rollback | Split into focused PRs following dependency order (extract → verify → delete) |
 | **Deleting scripts before creating library** | Considered deleting old code first, then extracting | Would break workflows during transition; no way to verify extraction matches original | Always follow: Extract → Verify → Delete pattern |
 | **Linter reverting collaborator changes** | Committed SubtestProvider extraction without checking linter state | Black ran between commit and next work session; reverted changes | Always `git status` before starting new work; verify imports immediately after refactoring |
+| **Naive move of main() breaks patch.object tests** | Moved `main()` directly to new CLI module; existing tests used `patch.object(implementer, "gh_list_open_issues")` | New `main` looked up `gh_list_open_issues` in new module namespace — patch on old module never intercepted; mocks showed 0 calls | Use Reverse-Delegation: new `main` imports original lazily (`from . import implementer as _impl`) and calls `_impl.helper()` so lookup stays on the original (Phase 11) |
+| **Bare re-export without `as` alias in original** | Added `from .implementer_cli import main` (no `as main`) to original module | mypy `implicit_reexport=false`: `Module "implementer" does not explicitly export attribute "main"`; console-script entry-point also failed to resolve | Use `from .implementer_cli import main as main` — the redundant alias is the recognized re-export idiom for both mypy and ruff |
+| **Forgetting transitive symbol re-exports** | Moved `main` called `_impl.get_repo_root()` but `get_repo_root` was a plain `from .git_utils import get_repo_root` in original | mypy: `Module "implementer" does not explicitly export attribute "get_repo_root"` | Re-import every symbol the new module accesses via `_impl.X` with explicit `as X` alias in the original: `from .git_utils import get_repo_root as get_repo_root` |
+| **Missing coverage omit-allowlist update** | Added new `implementer_cli.py` orchestration module without updating pyproject omit list or guard tests | `test_omit_allowlist.py` and `test_orchestration_smoke.py` failed: counts mismatch + module not in expected list | Update the omit list in `pyproject.toml` AND both guard test files in the same PR as the new module |
+| **Using `Refs #N` only on partial-fix PR** | Opened PR for one CLI-extraction slice with `Refs #468` (umbrella) but no `Closes #N` | pr-policy CI gate hard-requires literal `Closes #N` line; PR was blocked | File a narrow sub-issue for the specific slice, put `Closes #<sub>` + `Refs #<umbrella>` in PR body — umbrella stays open, CI passes |
 
 ## Results & Parameters
 
@@ -352,6 +481,7 @@ pytest tests/unit/<package>/ -q      # all tests pass
 | Source | Before | After | Reduction | New files |
 | ------- | ------- | ------- | --------- | --------- |
 | `implementer.py` (function-level) | 1,221 | 837 | −31% | `retrospective.py`, `follow_up.py`, `pr_manager.py` |
+| `implementer.py` (CLI extraction, reverse-delegation) | 872 | 702 | −19% | `implementer_cli.py` (236 lines) |
 | `runner.py` (class-based, 3 collaborators) | 1,527 | 1,105 | −28% | `TierActionBuilder`, `ParallelTierRunner`, `ExperimentResultWriter` |
 | `runner.py` (single method → `ResumeManager`) | 1,638 | 1,509 | −8% | `resume_manager.py` (175 lines, 98.5% coverage) |
 | `llm_judge.py` (module decomposition) | 1,488 | 142 | −90% | `build_pipeline.py`, `judge_context.py`, `judge_execution.py`, `judge_artifacts.py` |
@@ -426,3 +556,4 @@ def __init__(self, required: Path, optional: Path | None = None):
 | ProjectHephaestus | PR #308 — `__init__.py` eager re-export circular import fix | Superseded `python-circular-import-symbol-extraction` |
 | ProjectScylla | PR #1311 — `ResumeManager.handle_zombie` immutable refactor | Superseded `immutable-method-refactor` |
 | ProjectScylla | PRs #356–#361 — extensibility refactor (discovery lib, SubtestProvider, TestFixture) | Superseded `refactor-for-extensibility` |
+| ProjectHephaestus | PR #674 — `implementer.py` 872→702 lines; new `implementer_cli.py` (236 lines); reverse-delegation preserves 45 pre-existing tests unchanged; 780 automation tests pass; ruff+mypy clean (verified-local) | CLI entry-point extraction with preserved patch routing (Phase 11) |
