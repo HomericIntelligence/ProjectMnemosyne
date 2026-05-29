@@ -1,5 +1,93 @@
 # llm-output-verdict-parse-last-line-not-substring — History
 
+## v1.2.0 (2026-05-28)
+
+**Changed by:** ProjectHephaestus GO/NOGO verdict unification (PR #679 / issue #678)
+**Verification:** verified-ci (skill overall, from prior #670 validation) — the v1.2.0 work itself is verified-local with CI in flight (full local suite of 845 automation tests passed, mypy clean, pre-commit all-files green; PR #679 in CI with auto-merge enabled)
+
+### What changed
+
+- New finding: a single pipeline can legitimately need **TWO different verdict parsers**, and conflating them is a real regression.
+  - **Persisted-comment GATE parser → must be LAST-match-wins.** A gate that reads a stored GitHub `## 🔍 Plan Review` comment to decide "may the implementer proceed?" must scan for the LAST `Verdict: GO|NOGO` line, because a long-lived comment may accumulate an earlier draft verdict before the reviewer's final word. Failing toward NOGO is safe (re-review); failing toward GO implements an unreviewed plan (the #455/#468/#484 bug class). Implemented as a dedicated `_GATE_VERDICT_RE` with `findall(...)[-1]`.
+  - **In-loop / fresh-output parser → first-match is fine.** The reviewer running inside the loop emits exactly one verdict line per the prompt contract ("end your response with EXACTLY ONE verdict line, emit NOTHING after it"). Its parser (`parse_review_verdict`, `.search()` = first match) decides loop termination and fails safe to NOGO on AMBIGUOUS. First-match is correct because the contract guarantees one line.
+- Extended `description` with triggers (8) first-match vs last-match parser selection and (9) auditing a "parser unification" refactor that may have silently dropped a last-wins safety guarantee.
+- Added a new `### Two Parsers: Gate (last-match) vs In-Loop (first-match)` subsection under Verified Workflow with the `_GATE_VERDICT_RE` snippet, GO/NOGO vocabulary, and the input-contract decision table.
+- Added 1 new `Failed Attempts` row (8) for the gate-onto-first-match unification regression.
+- Updated `Verified On` with the GO/NOGO unification context (PR #679, issue #678).
+- Bumped `version` 1.1.0 → 1.2.0 (MINOR — new finding + new failed attempt).
+
+### Why
+
+During a refactor that unified the verdict vocabulary to GO/NOGO, the persisted-comment
+gate was "simplified" to reuse the in-loop first-match `parse_review_verdict`. This SILENTLY
+broke the last-wins safety guarantee: a posted review reading
+`Verdict: GO … on reflection … Verdict: NOGO` (reviewer changed its mind to REJECT) now
+parsed as GO → a rejected plan would be implemented. The regression was caught only because
+a sub-agent's trust-but-verify flagged two failing regression tests
+(`test_false_when_go_precedes_nogo_in_same_body`, `test_true_when_nogo_precedes_go_in_same_body`)
+whose docstrings explicitly guard the last-wins contract. Lesson: when unifying parsers,
+check whether each call site's INPUT contract differs — "exactly one line" (fresh output)
+vs "may accumulate lines" (persisted state) demand different match semantics; do NOT collapse
+them. Keep two parsers, document why. (Clarification: the anchored `^\s*\**\s*Verdict:` regex
+already ignores mid-sentence mentions like "we did not pick Verdict: GO here" because such a
+line does not START with `Verdict:` — inline-prose false positives are handled by
+line-anchoring regardless of first/last.)
+
+### Previous version (v1.1.0) snapshot
+
+```markdown
+---
+name: llm-output-verdict-parse-last-line-not-substring
+description: "Parse discrete LLM-emitted verdicts (APPROVED/REVISE/BLOCK, GO/NOGO, SAFE/UNSAFE) using last-line regex extraction, not substring `in` checks. Use when: (1) adding a Python/shell consumer that reads a classification marker from LLM output, (2) the prompt instructs the LLM that 'readers take the LAST matching line', (3) the LLM may discuss multiple options before settling on a verdict, (4) a substring-in check would fire on quoted/discussed markers, (5) auditing an existing parser for false-positive verdict reads, (6) a reviewer comment exists but its verdict is never parsed — causing the pipeline to re-review the same issue every pass forever (#615 infinite loop), (7) diagnosing a re-review loop where the log gives no clue what the reviewer wrote."
+category: architecture
+date: 2026-05-28
+version: "1.1.0"
+user-invocable: false
+verification: verified-ci
+history: llm-output-verdict-parse-last-line-not-substring.history
+tags:
+  - llm-output-parsing
+  - verdict-gate
+  - regex
+  - last-line-wins
+  - claude-output
+  - prompt-parser-contract
+  - false-positive
+  - substring-vs-regex
+  - bounded-retry
+  - infinite-loop
+  - observability
+---
+
+# LLM Output Verdict Parse: Last-Line Regex, Not Substring
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-28 |
+| **Objective** | Prevent false-positive verdict reads when a Python/shell consumer parses a discrete classification marker (`**Verdict: APPROVED**` etc.) from LLM output. Also prevent the complementary infinite-re-review loop when the verdict is malformed and never parseable. |
+| **Outcome** | SUCCESS — regex fix shipped in PR #552; bounded-retry cap + WARNING diagnostic logging shipped in PR #670 (Issues #615/#616). 53-pass infinite loop for issues #455/#468/#484 eliminated. |
+| **Verification** | verified-ci — PR #670 passed all pre-commit hooks and CI. |
+| **History** | [changelog](./llm-output-verdict-parse-last-line-not-substring.history) |
+
+## When to Use
+
+- You are adding a Python or shell consumer that reads a classification marker (verdict, severity, action, command) from LLM output.
+- The prompt that generated the output explicitly says "readers take only the LAST matching line" (or equivalent).
+- The LLM is permitted to discuss multiple options before settling — multiple matching markers may legitimately appear.
+- A substring `in` check would fire on a quoted/discussed marker.
+- You are auditing an existing parser (skip-gate, finalize-gate, ship-gate) for false-positive reads.
+- **A plan-review loop re-reviews the same issue every pass without ever terminating** — symptom of a malformed verdict that regex cannot parse.
+- **The pipeline log gives no clue what the reviewer wrote** — only says "verdict is None" or "not APPROVED" at DEBUG level.
+
+(Verified Workflow, Failed Attempts rows 1–7, Results & Parameters, and Verified On
+follow as in v1.1.0; full v1.1.0 body preserved in git history at the commit prior to
+the v1.2.0 amendment.)
+```
+
+---
+
 ## v1.1.0 (2026-05-28)
 
 **Changed by:** PR #670 — Issues #615/#616 (verdict-loop fix + batch comment fetch)
