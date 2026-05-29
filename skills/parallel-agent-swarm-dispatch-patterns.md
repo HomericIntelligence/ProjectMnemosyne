@@ -1,9 +1,9 @@
 ---
 name: parallel-agent-swarm-dispatch-patterns
-description: "Patterns for dispatching, prompting, and verifying parallel sub-agents in Myrmidon swarms. Use when: (1) preparing to dispatch 5+ agents in parallel via Task isolation=worktree, (2) a prior swarm round had high stall rate or sub-agents produced incorrect or missing artifacts, (3) writing dispatch prompts for issue implementation, skill-creation, or report generation, (4) routing tasks to model tiers (Opus / Sonnet / Haiku), (5) N wave issues share the same hot file and fan-out would cause rebase contention, (6) a plan has a bulk-transformation phase followed by an implementation phase that must be gated, (7) verifying sub-agent PR reports or artifacts after dispatch, (8) re-grading a batch of GitHub issues against CURRENT repo state before dispatching any agent (issue text reflects filing time, not now)."
+description: "Patterns for dispatching, prompting, and verifying parallel sub-agents in Myrmidon swarms. Use when: (1) preparing to dispatch 5+ agents in parallel via Task isolation=worktree, (2) a prior swarm round had high stall rate or sub-agents produced incorrect or missing artifacts, (3) writing dispatch prompts for issue implementation, skill-creation, or report generation, (4) routing tasks to model tiers (Opus / Sonnet / Haiku), (5) N wave issues share the same hot file and fan-out would cause rebase contention, (6) a plan has a bulk-transformation phase followed by an implementation phase that must be gated, (7) verifying sub-agent PR reports or artifacts after dispatch, (8) re-grading a batch of GitHub issues against CURRENT repo state before dispatching any agent (issue text reflects filing time, not now), (9) you need to remediate many audit findings in parallel by dispatching background swarm agents for multiple PRs, (10) orchestrating concurrent agents without file collisions across thematic PRs, (11) agents quitting early or fabricating issue numbers to satisfy a Closes-#N policy."
 category: tooling
-date: 2026-05-28
-version: "1.1.0"
+date: 2026-05-29
+version: "1.2.0"
 user-invocable: false
 history: parallel-agent-swarm-dispatch-patterns.history
 tags:
@@ -41,6 +41,17 @@ tags:
   - moot-churn
   - god-class-decomposition
   - orchestrator-gate
+  - audit-remediation
+  - thematic-pr
+  - one-issue-per-pr
+  - issue-first
+  - fabricated-issue-number
+  - anti-early-exit
+  - foreground-test
+  - dependent-pr-sequencing
+  - worktree-dev-install
+  - stale-index
+  - ci-matrix-consistency
 ---
 
 # Skill: Parallel Agent Swarm Dispatch Patterns
@@ -49,9 +60,9 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-05-28 |
+| **Date** | 2026-05-29 |
 | **Objective** | Consolidate the full set of dispatch, prompt-engineering, verification, and phase-gating patterns for Myrmidon parallel sub-agent swarms into one authoritative reference. |
-| **Outcome** | Synthesised from 9 skills validated across ProjectScylla, ProjectArgus, ProjectAgamemnon, Myrmidons, and ProjectMnemosyne sessions (2026-05-06 → 2026-05-19). v1.1.0 adds the orchestrator-level pre-dispatch re-grade gate (Part 10): of 9 ProjectHephaestus issues, 2 were DONE-ALREADY (#539 fully resolved, #468 already decomposed to delegation-shim ratio 21/40), 1 was PARTIAL (#614). Also adds the delegation-shim-ratio heuristic for quantifying God-Class decomposition progress without dispatching an agent. Key results: stall rate 80% → 0% (7 guardrails), zero file-collision incidents with explicit ownership lines, artifact-confabulation failures caught by post-hoc `stat`/`gh pr view`, hot-file rebase contention eliminated by bundling, and moot implementation work avoided by stop-and-reassess and pre-dispatch gates. |
+| **Outcome** | Synthesised from 9 skills validated across ProjectScylla, ProjectArgus, ProjectAgamemnon, Myrmidons, and ProjectMnemosyne sessions (2026-05-06 → 2026-05-19). v1.1.0 adds the orchestrator-level pre-dispatch re-grade gate (Part 10): of 9 ProjectHephaestus issues, 2 were DONE-ALREADY (#539 fully resolved, #468 already decomposed to delegation-shim ratio 21/40), 1 was PARTIAL (#614). Also adds the delegation-shim-ratio heuristic for quantifying God-Class decomposition progress without dispatching an agent. v1.2.0 adds **Part 11 — Audit-Finding Parallel Remediation Swarm** (verified-ci): a ProjectHephaestus strict audit produced ~20 findings, batched into THEMATIC PRs (one GitHub issue per PR to satisfy the `pr-policy` one-`Closes #N`-per-PR gate), the orchestrator created the REAL issues FIRST and passed each agent its concrete number (anti-fabrication), built a pre-dispatch file-collision matrix (two PRs both wanted `loop_runner.py` and `auto-tag.yml` — resolved by single ownership), used anti-early-exit prompting (FOREGROUND tests; not done until the PR exists AND `autoMergeRequest` verified non-null), and sequenced the DRY-consolidation PR after its prerequisite merged — 4 PRs (#688/#690/#691/#689) all merged green, a 5th queued. Key results: stall rate 80% → 0% (7 guardrails), zero file-collision incidents with explicit ownership lines, artifact-confabulation failures caught by post-hoc `stat`/`gh pr view`, hot-file rebase contention eliminated by bundling, and moot implementation work avoided by stop-and-reassess and pre-dispatch gates. |
 | **Verification** | verified-local and verified-ci across multiple projects |
 
 ## When to Use
@@ -67,6 +78,11 @@ tags:
 - A plan has a bulk-transformation phase (mass-close, mass-delete) followed by an implementation phase
 - Before dispatching agents against a list of GitHub issues filed weeks/months ago — re-grade each against CURRENT code before any dispatch (issue text reflects filing time, not now)
 - Evaluating a God-Class decomposition issue — compute the delegation-shim ratio to quantify progress without dispatching an agent
+- Remediating many audit findings in parallel — batch them into thematic PRs and dispatch one background agent per PR
+- A repo's required `pr-policy` gate allows exactly one `Closes #N` per PR, but the audit produced 20 findings — reconcile as thematic epics, one issue per PR
+- Background swarm agents are fabricating fake `Closes #N` numbers to satisfy a source-repo policy — orchestrator must create real issues first and pass each agent its concrete number
+- Two concurrently-running agents would edit the same source file — build a file-collision matrix before dispatch
+- A PR shares modules with another PR — sequence the dependent PR to dispatch only after the prerequisite merges
 
 ## Verified Workflow
 
@@ -400,6 +416,107 @@ A high shim ratio means the decomposition is effectively complete — the class 
 3. Let the human decide to close — do NOT fabricate work to "complete" the issue
 4. Do NOT dispatch an implementation agent
 
+### Part 11 — Audit-Finding Parallel Remediation Swarm (one PR per agent)
+
+**Context (verified-ci, ProjectHephaestus 2026-05-29):** a strict repo audit produced ~20
+findings. They were remediated by dispatching parallel background sub-agents, each owning ONE
+thematic PR. 4 PRs (#688/#690/#691/#689) all merged green in CI; a 5th conditional PR was queued.
+This is the end-to-end recipe for turning an audit-finding list into concurrent, conflict-free PRs.
+
+**1. Batch findings into THEMATIC PRs — one GitHub issue per PR.**
+A repo's required `pr-policy` gate typically allows exactly ONE `Closes #N` per PR. Reconcile
+"few large PRs" with that gate as: **N thematic epics, one PR each, each closing one epic issue
+with the bundled findings as a checklist in the body.** Honor one-issue-per-PR even when bundling
+many findings. (Real grouping: subprocess-timeout hardening, docs-currency, dead-code/structure
+hygiene, CI/tooling/governance cleanups, and a conditional DRY-consolidation PR.)
+
+**2. Orchestrator creates the REAL GitHub issues FIRST, then passes each agent its concrete number.**
+This is the single most important anti-fabrication discipline. Background `/learn`- and
+implementation-agents will INVENT fake `Closes #N` numbers to satisfy a source-repo policy when
+they have no real issue (a recurring failure mode). Prevent it:
+
+```text
+# Orchestrator, BEFORE dispatch — create one issue per thematic epic:
+gh issue create --repo <org/repo> --title "<epic>" \
+  --body "$(printf 'Bundled audit findings:\n- [ ] finding A\n- [ ] finding B\n')"
+# → capture the REAL number, e.g. #690, and bake it into that agent's prompt verbatim.
+```
+
+In each agent prompt, state the number as a hard fact:
+
+```text
+The GitHub issue for this PR is EXACTLY #690. Your PR body MUST contain the literal
+line `Closes #690` (capital C, no colon, on its own line). Do NOT invent, guess, or
+change this number. If you cannot find #690, STOP and report — do NOT fabricate one.
+```
+
+**3. Build a file-collision matrix BEFORE dispatch.**
+Map every file each PR will touch; ensure NO two concurrently-running agents edit the same file.
+
+```text
+PR / agent                     | files it owns
+-------------------------------|-----------------------------------------
+PR1 subprocess-timeouts        | resilience/*.py, utils/subprocess.py
+PR2 docs-currency              | docs/*.md, README.md, auto-tag.yml
+PR3 dead-code hygiene          | (pruned modules)
+PR4 CI/tooling cleanups        | loop_runner.py, .github/workflows/test.yml
+```
+
+Real conflict resolved this way: two PRs both wanted `loop_runner.py` (one for a code change,
+one for a comment) and both wanted `auto-tag.yml` — assigned each shared file to exactly ONE PR
+and MOVED the stray edit into that PR. Result: all agents ran concurrently with zero merge
+conflicts. (This is the Part 2 file-ownership rule applied at orchestrator scope, across PRs.)
+
+**4. Isolated git worktree per agent, branched from CURRENT origin/main.**
+Each agent runs (after a fetch — never branch from a stale local HEAD):
+
+```text
+git -C <clone> fetch origin
+git worktree add -b <issue>-<slug> .worktrees/<issue> origin/main
+# ALL work happens inside .worktrees/<issue>
+```
+
+**5. Anti-early-exit prompting (CRITICAL for background agents).**
+Background agents exit early while tests are "probably fine" unless the prompt forbids it
+explicitly. Every prompt MUST include:
+
+```text
+- Do NOT background your own subprocesses. Run the test suite in the FOREGROUND and WAIT
+  for it to finish. Do NOT report progress while tests are still running.
+- Do NOT report "done" until ALL of these are TRUE:
+    1. The PR EXISTS (`gh pr view <#> --json url` returns a URL).
+    2. `gh pr merge <#> --auto --squash` succeeded (exit 0).
+    3. You VERIFIED `gh pr view <#> --json autoMergeRequest` is NON-NULL.
+  If autoMergeRequest is null, auto-merge did NOT arm — fix it before reporting done.
+```
+
+**6. Sequencing for dependent PRs.**
+A PR that shares modules with another (e.g. the DRY-consolidation PR touched the same files a
+cleanup PR edited) is dispatched ONLY AFTER the prerequisite PR merges, and branches from the
+freshly-updated origin/main. Do NOT run both concurrently and hope rebase serializes them.
+
+```text
+PR4 (cleanup, owns loop_runner.py)  ──merges──▶  THEN dispatch PR5 (DRY-consolidation)
+                                                  branch PR5 from the NEW origin/main tip
+```
+
+**7. Full-auto autonomy + orchestrator trust-but-verify.**
+Each agent writes code+tests, opens a signed PR, enables `--auto --squash`; they merge themselves
+once CI is green. The orchestrator monitors completion notifications (no polling/sleeping) and
+INDEPENDENTLY re-checks each PR's state (Part 9) rather than trusting the agent's self-report.
+
+**8. Per-worktree env quirk — editable install before subprocess smoke tests.**
+A fresh worktree's pixi/uv env may LACK the editable install, so subprocess-based smoke tests that
+import the package fail with `ModuleNotFoundError`. Agents must run the dev install in the worktree
+first:
+
+```text
+pixi run dev-install     # or `uv pip install -e .` / `pip install -e .` per the repo
+```
+
+This is an ENV quirk of fresh worktrees, NOT a code defect — CI installs separately and is
+unaffected. Bake the install step into the prompt for any agent that runs import-dependent tests.
+
 ### Quick Reference
 
 Paste this template into a Task call with `subagent_type="general-purpose"` and `isolation=worktree`:
@@ -436,6 +553,28 @@ Implement <full|partial> GitHub issue #<N> in <repo> and open a single PR.
 The user does NOT see your tool calls — only this final summary.
 ```
 
+**Audit-finding parallel-remediation orchestrator checklist (Part 11):**
+
+1. Group ~N findings into THEMATIC epics; one PR per epic, one `Closes #N` per PR.
+2. `gh issue create` the REAL epic issues FIRST; capture each number.
+3. Build the file-collision matrix; assign every shared file to exactly ONE PR; move stray edits.
+4. For each PR, dispatch a `general-purpose` agent with: its concrete issue number (anti-fabrication),
+   its file allowlist, `git worktree add -b <issue>-<slug> .worktrees/<issue> origin/main` (fetch first),
+   the per-worktree dev-install step, and the anti-early-exit block.
+5. Dispatch dependent PRs (shared modules) ONLY after their prerequisite merges; branch from fresh main.
+6. On each completion notification, independently verify `state`/`autoMergeRequest`/`files` (Part 9) —
+   trust-but-verify, do NOT trust the self-report.
+
+For a FULL-fix PR that closes one epic issue, swap the partial-fix lines in the template above for:
+
+```text
+- Use `Closes #<N>` on its OWN line in the PR body (capital C, no colon). This PR closes the epic.
+- The issue number is EXACTLY #<N>. Do NOT invent or change it. If you cannot find it, STOP.
+- Run the test suite in the FOREGROUND and WAIT. Do NOT background subprocesses.
+- Before reporting done, run `pixi run dev-install` in the worktree if import-based tests fail.
+- Not done until: PR exists, `gh pr merge --auto --squash` exit 0, AND `autoMergeRequest` is non-null.
+```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -470,6 +609,13 @@ The user does NOT see your tool calls — only this final summary.
 | 28 | Dispatched implementation agent on #539 (revert OS matrix) without pre-dispatch re-grade | `grep -rn "macos-latest\|windows-latest" .github/` returned no matches — already done | Run the 4-command re-grade on every issue before dispatch; skip DONE-ALREADY with evidence comment |
 | 29 | Dispatched implementation agent on #468 (God-Class decomposition) without computing delegation-shim ratio | Class was 872 lines / 40 methods with 21/40 shims (52.5%) — all 6 named responsibilities already extracted | Compute shim ratio (`wc`, `ast.parse`) before dispatching; ≥50% shims = DONE-ALREADY; avoid moot-churn refactors |
 | 30 | Plan-reviewer reviewing its own prior plan-review comment, causing non-convergence | Agent even logged "I recognize this plan text — it's my own previous review" but continued; loop non-terminating | Bound retries at the orchestrator; log malformed verdicts; file a tracker issue (ProjectHephaestus #671) |
+| 31 | Dropping a Python version from `test.yml`'s matrix to dedup it against `_required.yml` | Broke a `check_python_version_consistency` hook that requires the matrix to cover every declared classifier | Dedup CI by removing the redundant *job*, not by trimming a version matrix that a consistency gate depends on |
+| 32 | Verifying merged state with local `git ls-files` after `git fetch` (without checkout) | The local index was STALE — a merged deletion still appeared "present", so a finding looked unfixed | Verify merged state against `git ls-tree -r origin/main` (authoritative remote tip), not the local working-tree index |
+| 33 | Dispatching background agents with no real issue number, letting them write their own `Closes #N` | Agents FABRICATE fake issue numbers to satisfy the source-repo `pr-policy` gate; the PR "closes" a non-existent issue | Orchestrator `gh issue create`s the REAL epic issues FIRST and bakes the concrete number into each prompt: "the issue is EXACTLY #N; do NOT invent one" |
+| 34 | Running concurrent agents whose worktrees both edited `loop_runner.py` and `auto-tag.yml` (one for code, one for a comment) | Two PRs touching the same file → merge conflict / one PR must be reworked | Build a file-collision matrix before dispatch; assign every shared file to exactly ONE PR and move the stray edit into that PR |
+| 35 | Background agent reporting "done — tests probably fine" while its test subprocess was still running in the background | Premature exit: PR opened before tests passed; or `--auto` armed but `autoMergeRequest` was null | Anti-early-exit block: run tests in FOREGROUND and WAIT; not done until PR exists AND `gh pr merge --auto` exit 0 AND `autoMergeRequest` verified non-null |
+| 36 | Running an agent's subprocess-based smoke test in a fresh worktree without the editable install | Import failed (`ModuleNotFoundError`) because the new worktree's pixi/uv env lacked `pip install -e .` | Run `pixi run dev-install` (or equivalent) in the worktree first; it is an env quirk of fresh worktrees, not a code defect — CI installs separately |
+| 37 | Dispatching the DRY-consolidation PR concurrently with the cleanup PR that edited the same modules | Both branch from the same stale main and race; the later merge sees outdated files | Sequence dependent PRs: dispatch the consolidation PR only AFTER its prerequisite merges, branching from the freshly-updated origin/main |
 
 ## Results & Parameters
 
@@ -561,3 +707,4 @@ gh pr merge "$PR_NUMBER" --auto --rebase --repo HomericIntelligence/ProjectMnemo
 | ProjectMnemosyne | 2026-05-18 | Skill-clustering swarm: `Explore` agents lost JSON outputs; confabulated completion summaries caught by `stat`; stop-gate applied between waves |
 | HomericIntelligence/ProjectArgus | 2026-05-06 → 2026-05-19 | Atlas v0.2.1 patch series — trust-but-verify caught CONFLICTING PR and silent auto-merge failure |
 | ProjectHephaestus | 2026-05-28 | 9-issue Myrmidon swarm: pre-dispatch re-grade caught 2 DONE-ALREADY (#539, #468 shim-ratio 21/40) and 1 PARTIAL (#614); 6 PRs merged, main green, 762 automation tests pass |
+| ProjectHephaestus | 2026-05-29 | Audit-finding parallel remediation (Part 11): strict audit → ~20 findings → 4 thematic PRs (#688/#690/#691/#689), one issue per PR, issue-first anti-fabrication, file-collision matrix (`loop_runner.py`/`auto-tag.yml`), anti-early-exit prompts; all 4 merged green in CI, 5th conditional PR queued (**verified-ci**) |

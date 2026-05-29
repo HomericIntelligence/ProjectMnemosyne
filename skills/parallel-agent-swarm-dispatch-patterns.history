@@ -1,6 +1,60 @@
 <!-- markdownlint-disable MD024 -->
 # parallel-agent-swarm-dispatch-patterns — History
 
+## v1.2.0 (2026-05-29)
+
+**Changed by:** ProjectHephaestus audit-finding parallel remediation swarm session (2026-05-29)
+**Verification:** verified-ci (4 PRs #688/#690/#691/#689 all merged green in CI; a 5th conditional PR queued)
+
+### What changed
+
+- Added **Part 11** — Audit-Finding Parallel Remediation Swarm (one PR per agent): the end-to-end
+  recipe for turning a strict-audit finding list (~20 findings) into concurrent, conflict-free PRs.
+  Eight numbered patterns: (1) thematic-PR batching with one `Closes #N` per PR, (2) orchestrator
+  creates REAL issues FIRST and bakes each concrete number into the agent prompt (anti-fabrication),
+  (3) pre-dispatch file-collision matrix, (4) isolated worktree per agent branched from fresh
+  origin/main, (5) anti-early-exit prompting (FOREGROUND tests; not done until PR exists AND
+  `autoMergeRequest` non-null), (6) dependent-PR sequencing, (7) full-auto autonomy + trust-but-verify,
+  (8) per-worktree editable-install env quirk.
+- Added an `### Quick Reference` "audit-finding parallel-remediation orchestrator checklist" plus a
+  full-fix (`Closes #N`) variant of the dispatch-prompt template.
+- Added 5 new "When to Use" bullets (parallel audit remediation, one-issue-per-PR reconciliation,
+  anti-fabrication, file-collision matrix, dependent-PR sequencing).
+- Added 7 new Failed Attempts rows (31–37): trimming a version matrix a consistency hook depends on,
+  stale local `git ls-files` index vs `git ls-tree -r origin/main`, agents fabricating `Closes #N`,
+  concurrent agents editing the same file, premature "tests probably fine" exit, missing editable
+  install in a fresh worktree, and racing a dependent PR instead of sequencing it.
+- Added 11 new tags: `audit-remediation`, `thematic-pr`, `one-issue-per-pr`, `issue-first`,
+  `fabricated-issue-number`, `anti-early-exit`, `foreground-test`, `dependent-pr-sequencing`,
+  `worktree-dev-install`, `stale-index`, `ci-matrix-consistency`.
+- Added description triggers (9)–(11); added a ProjectHephaestus 2026-05-29 row to Verified On.
+- Updated Overview Outcome paragraph with the v1.2.0 summary; bumped version 1.1.0 → 1.2.0,
+  date 2026-05-28 → 2026-05-29.
+
+### Why
+
+The skill covered intra-repo swarm dispatch (file ownership, hot-file bundling, trust-but-verify,
+pre-dispatch re-grade) but had no end-to-end recipe for the common case of remediating a large
+audit-finding list with one background agent per thematic PR. The 2026-05-29 ProjectHephaestus
+session ran this end-to-end and surfaced verified-ci patterns and failure modes not previously
+captured: the one-`Closes #N`-per-PR reconciliation against a `pr-policy` gate, the issue-first
+anti-fabrication discipline (agents invent fake issue numbers otherwise), the cross-PR
+file-collision matrix (two PRs both wanted `loop_runner.py` and `auto-tag.yml`), anti-early-exit
+prompting for background agents, dependent-PR sequencing, and the fresh-worktree editable-install
+quirk. Two failed approaches are recorded as anti-patterns: dedup-by-trimming-a-version-matrix
+broke a `check_python_version_consistency` hook, and verifying merged state via a stale local index
+masked a merged deletion (use `git ls-tree -r origin/main`).
+
+### Previous version (v1.1.0) snapshot
+
+The v1.2.0 change is purely additive — Part 11, the Quick Reference checklist, rows 31–37, and the
+new tags/triggers were appended; no prior Part 1–10 content, Failed Attempts row, or table was
+removed or rewritten. The v1.1.0 state is therefore fully recoverable as this file MINUS the
+additions listed above, and via git history of `skills/parallel-agent-swarm-dispatch-patterns.md`.
+See the v1.1.0 entry below and the consolidated source snapshots further down for prior content.
+
+---
+
 ## v1.1.0 (2026-05-28)
 
 **Changed by:** ProjectHephaestus 9-issue Myrmidon swarm session (2026-05-28)
