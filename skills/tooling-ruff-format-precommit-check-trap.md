@@ -1,0 +1,180 @@
+---
+name: tooling-ruff-format-precommit-check-trap
+description: "Running `pixi run ruff check` (or `ruff check`) locally does NOT exercise `ruff format --check` — they are SEPARATE tools sharing a binary. `check` is the linter (errors/warnings); `format` is the formatter (line-wrap/style). A worktree-driven edit that passes `ruff check`, `mypy`, and `pytest` locally can still fail the CI pre-commit gate because the project's pre-commit config runs `ruff-format` (which uses `--diff`/`--check` mode) and finds reflowable multi-line signatures. Use when: (1) CI pre-commit ruff-format hook failed but local `ruff check` passed, (2) deciding what to run before pushing a worktree edit, (3) `ruff check` vs `ruff format` difference unclear, (4) pre-commit hooks running locally before push, (5) editor format-on-save bypassed because edits came from tooling/Edit calls instead of editor save, (6) muscle-memory says 'I ran ruff' but the format step was skipped, (7) lint and tests pass yet CI rejects with multi-line function signatures that should fit on one line under the 100-col limit."
+category: tooling
+date: 2026-05-29
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - ruff
+  - ruff-format
+  - ruff-check
+  - pre-commit
+  - formatter
+  - linter
+  - worktree
+  - pre-push
+  - ci-parity
+  - pixi
+---
+
+# Ruff Format vs Ruff Check: The Pre-Commit Trap
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-29 |
+| **Objective** | Stop CI pre-commit `ruff-format` failures caused by worktree edits where the agent ran `ruff check` (and other gates) locally but never ran `ruff format` — the two are different tools and `check` does not exercise the formatter. |
+| **Outcome** | Distinguishes `ruff check` (lint) from `ruff format` (style); prescribes a 4-command pre-commit sequence; CI re-run pending for the verifying commit. |
+| **Verification** | verified-local — observed in CI on HomericIntelligence/ProjectHephaestus PR #707; fix in commit `820eec0` reformatted 6 files; locally clean post-fix; CI re-run pending at time of skill capture. |
+
+## When to Use
+
+- A CI pre-commit `ruff-format` (or `ruff format --check`) hook failed even though `pixi run ruff check` passed locally.
+- You finished a worktree-driven multi-file edit and are about to `git push`.
+- You "ran ruff" mentally but cannot recall whether you ran `format` or just `check`.
+- Editor format-on-save is normally trusted, but the edits came from tooling (Edit calls, sed/awk scripts, codegen) that bypassed the editor entirely.
+- You want a defensive pre-push checklist that catches every CI gate without doing a multi-minute `--all-files` run.
+- Diagnosing a CI failure that shows multi-line function signatures being reflowed to one line (or vice-versa) under a project's column limit (often 100).
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# --- THE 4-COMMAND PRE-COMMIT SEQUENCE (run in this order, in the worktree) ---
+pixi run ruff format hephaestus/ tests/          # 1. FORMAT (in place) — catches line-wrap/style
+pixi run ruff check hephaestus/ tests/           # 2. LINT — catches errors/warnings
+pixi run mypy                                    # 3. TYPES
+pre-commit run --files <touched files>           # 4. FULL HOOK SIMULATION (markdownlint, yamllint, shellcheck, …)
+
+# --- WHY ALL FOUR ---
+# 1 and 2 are SEPARATE tools that share the `ruff` binary. Running 2 does not run 1.
+# 3 catches type errors that lint+format both miss.
+# 4 is the most defensive — runs every configured pre-commit hook against the changed files,
+#   catching everything the CI gate would, including non-Python hooks.
+
+# --- WHAT NOT TO DO ---
+pixi run ruff check . && git push   # WRONG — `check` does not exercise `ruff format`
+```
+
+### Detailed Steps
+
+#### The two tools, one binary
+
+`ruff` ships two distinct subcommands:
+
+- `ruff check` — the linter. Catches errors, unused imports, RUF/F/E/I rule violations.
+- `ruff format` — the formatter. Reflows whitespace, line wraps, quote style, trailing commas.
+
+They share a binary and a config file (`pyproject.toml [tool.ruff]`), but their RULE SETS DO NOT OVERLAP. `check` does not enforce formatter style; `format` does not enforce lint rules. Running one tells you nothing about the other.
+
+Pre-commit configs typically register `ruff-check` and `ruff-format` as TWO SEPARATE HOOKS. The `ruff-format` hook runs in check/diff mode (it does not rewrite during CI) and fails if any file would be reformatted.
+
+#### Reproducing the trap
+
+1. Edit several Python files via tooling (Edit tool calls, scripted refactors). Some new function signatures end up multi-line.
+2. Locally run `pixi run ruff check hephaestus/ tests/` → "All checks passed!"
+3. Locally run `pixi run mypy` → "Success: no issues found"
+4. Locally run `pixi run pytest tests/unit/<area>` → tests pass.
+5. Commit, push. CI's pre-commit step fails:
+   - Hook id: `ruff-format`
+   - Output: a diff showing function signatures being reflowed from multi-line back to single-line under the project's 100-col limit.
+   - Exit code: 1.
+
+The local gates never saw the formatter difference because none of them invoked `ruff format`.
+
+#### The fix (mechanical)
+
+```bash
+pixi run ruff format hephaestus/ tests/   # rewrites in place
+git diff --stat                            # see what was reflowed
+git add -A
+git commit -S -m "style(ruff): reformat after worktree edits"
+git push
+```
+
+Reformatting is a separate concern from the feature change. A dedicated `style:` commit keeps PR review focused on logic.
+
+#### Why this is so easy to miss
+
+- Most editors auto-format on save with `black`/`ruff format`. But worktree edits made via tooling (Edit, scripts, codegen) bypass the editor entirely — no save event, no format-on-save.
+- `ruff check` is the muscle-memory command. It sounds comprehensive ("check everything"), and the success message ("All checks passed!") feels like a green light.
+- Test and type gates passing reinforces false confidence: the agent reasons "everything passed, so the formatter is fine too."
+- The two tools are documented as separate, but the shared binary name encourages mental conflation.
+
+#### The defensive pre-push habit
+
+Run the 4-command sequence ABOVE before every `git push` from a worktree where edits came from tooling rather than an interactive editor. Cost: a few seconds per file. Saves a CI round-trip. The last command (`pre-commit run --files <touched>`) is the strongest single gate because it runs every configured hook against the actual changed files — markdownlint, yamllint, shellcheck, and so on.
+
+#### Targeted vs `--all-files`
+
+`pre-commit run --all-files` is the universally safe invocation but is slow on large repos (multi-minute). For worktree edits, `pre-commit run --files <touched files>` is fast and sufficient. If a sub-agent committed earlier in the same PR, prefer `pre-commit run --from-ref origin/main --to-ref HEAD` to cover the full PR diff. See `precommit-scope-full-pr-diff-not-current-edit.md`.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Trust `pixi run ruff check` alone before push | Ran lint, mypy, pytest; all green; pushed | `ruff check` does not exercise `ruff format`; CI's `ruff-format` hook then failed on 6 files with multi-line signatures that should have been single-line under the 100-col limit | `check` and `format` are TWO TOOLS, not one. Run both. |
+| Trust the editor's format-on-save | Assumed any unformatted file would be caught by the editor saving | Worktree edits came from tooling (Edit calls) that bypassed the editor entirely — no save event triggered the formatter | When edits originate from tooling, the editor's format-on-save is not in the loop. Run `ruff format` explicitly. |
+| Skip `ruff format` because "lint passed" | Reasoned that if `ruff check` is green, `ruff format` is implied | The two subcommands enforce ORTHOGONAL rule sets. Lint rules say nothing about line wrap; format rules say nothing about unused imports. | False confidence. Orthogonal tools give orthogonal signals. |
+| Run `pre-commit run --all-files` only | Used the universal "safe" invocation as the sole pre-push gate | Multi-minute runtime on large repos discourages adoption; engineers drop to `--files` and the gap reappears | Use `pre-commit run --files <touched>` for routine pre-push; reserve `--all-files` for major changes. |
+| Run `pre-commit run --files <only Python files>` | Listed only the `.py` files in the `--files` argument | Missed markdown, yaml, shell hooks that would also fail in CI on co-changed non-Python files | List ALL touched files in `--files`, not just the Python ones. Or use `--from-ref/--to-ref` for the full PR diff. |
+| Change `.editorconfig` to "fix" line wrapping | Assumed editor config drove the formatter's column choice | `.editorconfig` is consumed by editors, not by `ruff format`. The formatter reads `pyproject.toml [tool.ruff] line-length` | Single source of truth for ruff formatting is `pyproject.toml`. Editor configs are advisory only. |
+| `--amend` after the format pass | Tried to fold the reformat into the feature commit to keep history clean | Once shared (pushed), amending requires force-push, which is forbidden under the repo's git safety protocol | Create a NEW `style(ruff):` commit. PR-history noise is acceptable; rewriting shared history is not. |
+| Disable `ruff-format` in pre-commit "because it's redundant with ruff-check" | Removed the `ruff-format` hook believing `ruff check` covered formatting | Lint rules and format rules are disjoint; without `ruff-format`, style drift accumulates silently and shows up in PR diffs as cosmetic noise | Keep both hooks. They are not redundant. |
+
+## Results & Parameters
+
+### Exact commands per project type
+
+```bash
+# --- PIXI-MANAGED PYTHON PROJECT (ProjectHephaestus pattern) ---
+pixi run ruff format hephaestus/ tests/
+pixi run ruff check hephaestus/ tests/
+pixi run mypy
+pre-commit run --files <touched files>
+
+# --- POETRY OR VANILLA PYTHON PROJECT ---
+poetry run ruff format src/ tests/
+poetry run ruff check src/ tests/
+poetry run mypy src/
+pre-commit run --files <touched files>
+
+# --- DIRECT INVOCATION (no env manager) ---
+ruff format <touched dirs>
+ruff check <touched dirs>
+mypy <touched dirs>
+pre-commit run --files <touched files>
+
+# --- FULL PR DIFF (after sub-agent work) ---
+pre-commit run --from-ref origin/main --to-ref HEAD
+```
+
+### What each command catches
+
+| Command | Catches | Does NOT catch |
+| --------- | --------- | ----------------- |
+| `ruff format` | Line wrap, whitespace, quote style, trailing commas | Lint errors (unused imports, RUF/F/E rules), types |
+| `ruff check` | Lint errors, unused imports, import order, RUF/F/E/I rules | Line wrap, formatter style |
+| `mypy` | Type errors, missing annotations | Lint, format, runtime errors |
+| `pre-commit run --files` | All configured hooks against listed files: ruff-format, ruff-check, markdownlint, yamllint, shellcheck, mypy, custom hooks | Hooks not in `.pre-commit-config.yaml` (CI-only validators) |
+
+### Concrete observation (PR #707)
+
+- Project: `HomericIntelligence/ProjectHephaestus`
+- Trigger: worktree-driven multi-file edit
+- Local gates (all green): `pixi run ruff check hephaestus/ tests/`, `pixi run mypy`, `pixi run pytest tests/unit/automation` (911 passed)
+- CI failure: `Run pre-commit` step, `ruff-format` hook, exit code 1
+- Files needing reformat: 6
+- Fix commit: `820eec0` — ran `pixi run ruff format hephaestus/ tests/`; reformatted 6 files in place
+- Post-fix local verification: clean
+- CI re-run: pending at time of capture
+
+### Related skills
+
+- `pre-commit-hooks-and-linting-config.md` — canonical guide to pre-commit config across the ecosystem
+- `precommit-scope-full-pr-diff-not-current-edit.md` — when sub-agents have committed in the same PR, use `--from-ref/--to-ref` instead of `--files`
+- `pixi-precommit-hook-binary-resolution.md` — when the pre-commit hook resolves the wrong binary
