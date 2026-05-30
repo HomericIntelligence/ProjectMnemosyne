@@ -102,7 +102,7 @@ gh label list --repo "$repo" --limit 200 --json name -q \
    | length'
 ```
 
-The provisioning script that *created* the labels did not need a change — `gh label create --force` is per-label and is not paginated. Only the *reader* needed the flag.
+The provisioning script that _created_ the labels did not need a change — `gh label create --force` is per-label and is not paginated. Only the _reader_ needed the flag.
 
 #### Why this is so easy to miss
 
@@ -176,6 +176,6 @@ fi
 
 ### Related skills
 
-- `audit-driven-remediation-workflow.md` — references `gh label list --limit 100` for label validation; this skill explains *why* the explicit `--limit` is mandatory
+- `audit-driven-remediation-workflow.md` — references `gh label list --limit 100` for label validation; this skill explains _why_ the explicit `--limit` is mandatory
 - `ci-grep-deprecation-guard.md` — references `gh label list` for checking known labels before `gh pr create --label`
 - `batch-pr-rebase-workflow.md` — uses `gh pr list --limit 200` in scripted form; same default-30 trap would otherwise apply
