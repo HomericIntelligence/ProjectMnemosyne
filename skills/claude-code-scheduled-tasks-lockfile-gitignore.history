@@ -1,5 +1,47 @@
 # claude-code-scheduled-tasks-lockfile-gitignore — History
 
+## v1.2.0 (2026-05-30)
+
+**Changed by:** ProjectHephaestus PR #816 — same `.claude/scheduled_tasks.lock` file blocked an entirely different tool (`hephaestus-tidy`) that pre-checks `git status --porcelain` before doing any work. Verifies the gitignore fix is the universal remediation, not specific to the `end-of-file-fixer` pre-commit hook.
+**Verification:** verified-ci
+
+### What changed
+
+- Added a third verified-CI data point: ProjectHephaestus PR #816 (2026-05-30). The same lockfile, untracked-and-unignored on a fresh clone, caused `pixi run hephaestus-tidy` to abort immediately on the `_working_tree_clean()` check (hephaestus/github/tidy.py:76-89) which treats any non-empty `git status --porcelain` output as dirty. Adding `.claude/scheduled_tasks.lock` to `.gitignore` immediately unblocked the tool; tidy then ran successfully and deleted 6 stale merged branches without needing the conflict-resolution swarm.
+- Generalized the failure surface in "When to Use": this is NOT only a `pre-commit` / `end-of-file-fixer` problem. ANY tool that checks `git status --porcelain` for cleanliness will refuse to start as long as the lockfile is both present on disk AND untracked-but-not-ignored. `hephaestus-tidy` is the canonical example; the same shape will hit pre-push hooks, CI guard scripts, and `release-please` style checks.
+- Added two new Failed Attempts rows specific to the runtime-process angle of this failure mode:
+  - Tried to stash the file (`git stash push .claude/scheduled_tasks.lock`) → races with the live Claude session that holds the file open; the next scheduled-task acquisition re-creates it within seconds, so stash leaves the working tree dirty again.
+  - Tried to delete the file (`rm .claude/scheduled_tasks.lock`) → the live Claude session re-creates it immediately on next scheduled-task acquisition; you can't out-race a process that owns the lock.
+- Added a "pattern anchoring" note to Results & Parameters: write the gitignore entry as `.claude/scheduled_tasks.lock` (relative path, no leading slash) rather than `/.claude/scheduled_tasks.lock`. The unanchored form matches the file in nested git worktrees and submodules; the anchored form only matches at repo root, which silently fails when the same repo is used as a worktree elsewhere.
+- Updated the description to surface both failure modes (CI pre-commit hook AND CLI dirty-tree guard).
+- Promoted "verify with `git check-ignore -v`" into the Verified Workflow as the universal post-fix sanity check.
+
+### Why
+
+The v1.1.0 skill correctly diagnosed and prescribed the gitignore fix, but framed the problem narrowly as a CI `pre-commit` / `end-of-file-fixer` issue. PR #816 in ProjectHephaestus revealed the same root cause biting a completely different tool (a local CLI tidy utility) through a completely different mechanism (a working-tree cleanliness pre-check, not a normalizing hook). Both failure modes have the same fix because both stem from the lockfile being untracked-but-not-ignored. Generalizing the skill prevents future readers from concluding "this only applies if I see `Fixing .claude/scheduled_tasks.lock` in a pre-commit log" — they should reach for this skill any time a Claude Code-using repo's `git status --porcelain` is unexpectedly non-empty.
+
+Additionally, this wave introduced two new wrong-fix attempts (stash, delete) that v1.1.0 didn't anticipate because the prior context (CI checkout) had no live Claude session writing the file. On a developer's local machine, the file is actively held by the running Claude session and cannot be removed by any client-side trick — only `.gitignore` works.
+
+### Previous version (v1.1.0) snapshot
+
+```markdown
+---
+name: claude-code-scheduled-tasks-lockfile-gitignore
+description: "Untrack and gitignore Claude Code's .claude/scheduled_tasks.lock runtime lockfile to stop end-of-file-fixer pre-commit failures in CI. Use when: (1) CI pre-commit / lint check fails on `Fixing .claude/scheduled_tasks.lock` even though the user's diff didn't touch it, (2) the same failure recurs across unrelated PRs in the same repo, (3) the `/schedule` skill is in use and the lockfile got accidentally committed via `git add .`."
+category: ci-cd
+date: 2026-05-26
+version: "1.1.0"
+user-invocable: false
+verification: verified-ci
+history: claude-code-scheduled-tasks-lockfile-gitignore.history
+tags: [claude-code, gitignore, pre-commit, end-of-file-fixer, lockfile, scheduled-tasks, ci-flake, runtime-state]
+---
+
+(Full v1.1.0 body preserved in git history — see commit predating v1.2.0 amendment. Key shape: durable fix = `git rm --cached .claude/scheduled_tasks.lock` + `.gitignore` entry; triage workaround = `printf '\n' >> .claude/scheduled_tasks.lock`. Failure surface scoped to `end-of-file-fixer` pre-commit hook. Verified on ProjectOdyssey PR #5445 and PR #5457.)
+```
+
+---
+
 ## v1.1.0 (2026-05-26)
 
 **Changed by:** ProjectOdyssey PR #5457 (autograd Phase 2 substrate) — same lockfile churn struck a totally unrelated PR; reinforced that the durable fix is mandatory because the one-line newline workaround regresses on the very next session.
