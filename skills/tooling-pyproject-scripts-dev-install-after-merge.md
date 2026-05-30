@@ -214,7 +214,7 @@ of the above, just run `pixi run dev-install` and move on.
 | Pre-existing console scripts (e.g. `hephaestus-merge-prs`) keep working | They were already registered at the last install; their stubs are still on PATH |
 | The error `command not found` looks like a build/install bug | It IS an install issue — just a targeted one (stale `entry_points.txt`), not "the package is broken" |
 | `pip show hephaestus` reports the package as installed | True — it IS installed; just with the old entry-points list |
-| `pip list | grep hephaestus` shows the editable install | Same — the listing comes from `dist-info/`, which is stale |
+| `pip list \| grep hephaestus` shows the editable install | Same — the listing comes from `dist-info/`, which is stale |
 
 ### Concrete observation log (HomericIntelligence/ProjectHephaestus, 2026-05-29)
 
