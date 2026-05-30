@@ -175,4 +175,3 @@ AssertionError: Omit list changed. New: {'hephaestus/new_module/*'}, Removed: se
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | issue #623 (test: add per-module coverage floor + e2e backstop) | Implemented test_orchestration_smoke.py (10 modules, 4 scripts, 2 script-less) + test_omit_allowlist.py frozen set; 16 tests pass |
-
