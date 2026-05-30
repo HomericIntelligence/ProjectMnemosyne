@@ -8,8 +8,8 @@ description: "Use when: (1) markdownlint CI reports MD056/table-column-count err
   the same markdownlint check pointing to the same file:line — systemic main-branch
   regression needing fix + bulk queue recovery"
 category: documentation
-date: 2026-05-26
-version: "1.1.0"
+date: 2026-05-29
+version: "1.2.0"
 verification: verified-ci
 user-invocable: false
 history: markdown-linting-and-build-fixes.history
@@ -76,6 +76,14 @@ tags:
 # Escape every | inside backticks in a table cell as \|
 # Before: | `${{ a && '1' || '0' }}` |
 # After:  | `${{ a && '1' \|\| '0' }}` |
+# Before: | `pip list | grep hephaestus`           |
+# After:  | `pip list \| grep hephaestus`          |
+# Before: | `[.comments[]|select(.body|test(...))]` |
+# After:  | `[.comments[]\|select(.body\|test(...))]` |
+
+# --- Detect the pattern across a file ---
+grep -nE '\|.*`[^`]*\|[^`]*`' <file>
+# Finds backtick code spans containing internal pipes in table-line-ish content.
 
 # --- Validate markdownlint ---
 npx --yes markdownlint-cli2 "skills/<name>.md"
@@ -120,6 +128,34 @@ backticks on that row (each `|` adds one phantom cell; `||` adds two).
 ```bash
 gh run view <RUN_ID> --log-failed | grep MD056
 ```
+
+**Column-number triage recipe.** When markdownlint reports
+`Expected: N; Actual: N+K` at `line:col`:
+
+1. Open the file at the cited `line:col`. The column number points at where the
+   surplus `|` lives — not at the row's start.
+2. Check whether that `|` sits inside backticks. If yes, this exact bug pattern —
+   escape with `\|` inside the code span. The rendered output still shows `|`
+   (CommonMark/GitHub renders `\|` as `|`).
+3. If no, the table itself is structurally wrong (added/missing cells) — restructure
+   the table, do NOT escape.
+
+**Common offender content (NOT just GitHub Actions expressions):**
+
+- Shell pipelines: `` `pip list | grep hephaestus` ``, `` `cat foo | head` ``
+- jq filters with multiple `|` operators: `` `[.comments[]|select(.body|test(...))]` ``
+- GitHub Actions expressions: `` `${{ a && '1' || '0' }}` ``
+- CLI option syntax: `` `{dry-run|smoke|full}` ``
+- Regex alternations: `` `(foo|bar|baz)` ``
+
+The triage technique is identical regardless of content type — count literal `|`
+chars inside backticks per cell.
+
+**What does NOT fix it:**
+
+- Adding columns to the table header — breaks the table's semantics.
+- Removing the pipe from the code example — destroys the documented behavior.
+- HTML entity `&#124;` inside backticks — renders as literal entity text in code spans.
 
 **Fix:** inside any inline code span between backticks inside a table cell, replace every
 `|` with `\|`. Leave structural pipe cell-separators alone.
@@ -416,6 +452,11 @@ npx --yes markdownlint-cli2 "skills/<name>.md"
 | Reworded link text from `[link]` to `[here]` for MD059 | Assumed any non-`link` word would satisfy descriptive-link-text | Still fires — `here`, `click`, `this`, `more` are all on the rule's non-descriptive blocklist | Use the actual subject as link text (e.g., `[PR #5453](url)`), not another generic word |
 | Adding a leading space to dodge MD018 on `#NNN` | Indented `#5453.` by one space hoping to escape the ATX-heading parser | Linter still treats it as malformed heading after stripping leading whitespace | Reflow the preceding line so `#NNN` is mid-sentence, OR backslash-escape as `\#NNN` |
 | Assuming MD056 only fires on GitHub Actions expressions | Searched only for `${{` patterns when triaging MD056 errors | Missed CLI syntax cells like `{dry-run\|smoke\|full}` and regex-alternation cells — same root cause, different content | Triage by counting literal `\|` inside backticks per cell; the content type does not matter |
+| Trusted "backticks delimit a code span" intuition | Assumed `\|` inside `` `pip list \| grep x` `` was treated as code, not a column separator | markdownlint's table parser counts unescaped `\|` BEFORE applying any code-span semantics — so the row gains a phantom cell anyway | Backslash-escape every internal pipe with `\|` regardless of backtick context |
+| Adding columns to the table header to match cell count | Saw a 2-column header become a 3-cell row and tried to bump header to 3 columns | Destroyed the table's semantics — the new column had no meaning, and authors hit the same bug on the next row | Never change table arity to absorb phantom cells; escape the pipe in the offending code span |
+| Removing the pipe from the code example | Rewrote `` `pip list \| grep hephaestus` `` to `` `pip list` (then grep ...) `` | Lost the documented behavior — the example no longer showed the working command | Preserve the example verbatim; escape with `\|` and let CommonMark render it back to `\|` |
+| Searching for MD056 by line number alone | Read the cited line but missed which cell contained the surplus pipe | The MD056 error reports a column number that points directly at the surplus `\|` — using only the line wastes a search | Open at `line:col` from the error; the column lands on the offending character |
+| Treating jq filters as a structural error | Saw a 4-column table report 6 cells and assumed two cells got merged or split | The two `\|` operators inside the jq code span `` `[.comments[]\|select(.body\|test(...))]` `` each added one phantom cell | Run the file through a grep that matches backtick code spans containing internal pipes |
 
 ## Results & Parameters
 
@@ -475,3 +516,6 @@ backslashes: `MD056 Expected: 4; Actual: 6`.
 | ProjectMnemosyne | PR \#1960 (`f2aa0aaa`) — MD018 line-start `\#NNN` reflow | 5-PR parallel swarm false-positive fix wave |
 | ProjectMnemosyne | PR \#1965 — MD056 non-GHA pipe escape in cells | 5-PR parallel swarm false-positive fix wave |
 | ProjectMnemosyne | PR \#1978 (`b2a3150d`) — combined false-positive catalog fixes | 5-PR parallel swarm false-positive fix wave |
+| ProjectMnemosyne | PR \#2046 (`821a217`) — MD056 fix for `` `pip list \| grep hephaestus` `` in 2-col table line 217 | 10-PR queue triage 2026-05-29 |
+| ProjectMnemosyne | PR \#2049 (`0bb8e69`) — MD056 fix for jq `` `[.comments[]\|select(.body\|test(...))]` `` in 4-col table line 133 | 10-PR queue triage 2026-05-29 |
+| ProjectMnemosyne | PR \#2030 (`99b8026`) — MD056 fix for jq pipe filters in 4-col table lines 153-154 | 10-PR queue triage 2026-05-29 |

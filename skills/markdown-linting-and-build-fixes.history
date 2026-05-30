@@ -1,5 +1,44 @@
 # History — markdown-linting-and-build-fixes
 
+## v1.2.0 (2026-05-29)
+
+**Changed by:** 10-PR queue triage in HomericIntelligence/ProjectMnemosyne (PRs #2030, #2046, #2049 all hit identical MD056 root cause)
+**Verification:** verified-ci
+
+### What changed
+
+- Added column-number triage recipe to Step 2: the MD056 error's column number points
+  directly at the surplus `|` — open at `line:col` to find the offending character without
+  scanning the row.
+- Expanded "common offender content" beyond GitHub Actions expressions to include:
+  - Shell pipelines (`` `pip list | grep x` ``)
+  - jq filters with multiple `|` operators (`` `[.comments[]|select(.body|test(...))]` ``)
+- Added explicit "What does NOT fix it" callout (adding columns, removing the pipe,
+  `&#124;` inside backticks).
+- Added grep-based detection one-liner to Quick Reference:
+  `grep -nE '\|.*`[^`]*\|[^`]*`' <file>`
+- Added 5 new Failed Attempts rows documenting the wrong intuitions and false fixes that
+  appeared during this triage wave (trusting backticks as cell barriers, header-arity
+  changes, example removal, line-only search, jq misdiagnosis).
+- Added 3 new Verified On entries for PRs #2030, #2046, #2049 with line numbers and the
+  exact offending code spans.
+
+### Why
+
+The v1.1.0 catalog covered the structural root cause and listed CLI syntax and regex
+alternation as non-GHA offenders, but did not explicitly show shell pipelines or jq
+filters — the two most common content types where authors' "backticks are a code span"
+intuition fails. Three independent PRs in the same triage wave fell into the same trap,
+so the diagnosis recipe needed to be promoted from a Step 2 footnote to a first-class
+column-number triage flow, and the offender content list needed concrete shell/jq
+examples a reader can pattern-match against.
+
+### Previous version (v1.1.0) snapshot
+
+See git history at commit prior to this amendment, or `git show HEAD~1:skills/markdown-linting-and-build-fixes.md` from the merge commit landing v1.2.0.
+
+---
+
 ## v1.1.0 (2026-05-26)
 
 **Changed by:** 5-PR parallel swarm false-positive fix wave (PRs #1937, #1959, #1960, #1965, #1978)
