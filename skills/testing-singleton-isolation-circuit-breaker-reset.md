@@ -1,16 +1,21 @@
 ---
 name: testing-singleton-isolation-circuit-breaker-reset
-description: "Test isolation for module-level singleton instances (e.g., circuit breaker) requires calling .reset() on the held reference directly in pytest fixture. Simply clearing a registry does not reset the held instance. Use when: testing code with module-level singleton instances (breakers, caches, registries) that maintain internal state across test runs."
+description: "Test isolation for module-level singleton instances (e.g., circuit breaker, cache, registry) requires calling .reset() on the held reference directly in a pytest autouse fixture, AND that fixture must live in conftest.py at the broadest scope covering any contaminating test — not in a single test file. Use when: (1) testing code with module-level singleton instances (breakers, caches, registries, contextvar defaults) that maintain internal state across test runs, (2) a test passes locally in isolation but fails in CI with cross-test contamination, (3) the same test fails identically on multiple Python versions in CI (3.10/3.11/3.12/3.13) — a fingerprint of order-dependent shared state, (4) deciding where to put a pytest autouse fixture: single test file vs package conftest.py."
 category: testing
-date: 2026-05-28
-version: "1.0.0"
+date: 2026-05-29
+version: "1.1.0"
 user-invocable: false
+history: testing-singleton-isolation-circuit-breaker-reset.history
 verification: verified-ci
 tags:
   - test-isolation
   - singleton
   - circuit-breaker
   - pytest-fixture
+  - autouse-fixture
+  - conftest-scope
+  - cross-test-contamination
+  - ci-only-failure
   - stateful-objects
 ---
 
@@ -20,18 +25,21 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-05-28 |
-| **Objective** | Ensure test isolation for module-level singleton instances by resetting held instance state, not just clearing registries |
-| **Outcome** | 5 circuit breaker tests passing with proper isolation; no test state leakage |
-| **Verification** | verified-ci |
+| **Date** | 2026-05-29 |
+| **Objective** | Ensure test isolation for module-level singleton instances by (a) resetting the held instance state, not just clearing registries, AND (b) putting the autouse reset fixture in `conftest.py` at the broadest scope covering any contaminating test |
+| **Outcome** | v1.0.0: 5 circuit breaker tests passing in `test_gh_call_circuit_breaker.py`. v1.1.0: cross-test contamination fixed in `tests/unit/automation/` after moving the fixture into a package-level conftest; 911 tests pass locally under the new scope. |
+| **Verification** | v1.0.0 verified-ci. v1.1.0 bug (cross-test contamination) was **verified-ci** (PR #707 failed identically on 4 Python versions); the fix was **verified-local** at /learn time (CI re-run pending). |
 
 ## When to Use
 
-- Testing code with module-level singleton instances (circuit breaker, cache, connection pool, registry)
+- Testing code with module-level singleton instances (circuit breaker, cache, connection pool, registry, contextvar default, env-var snapshot)
 - Singleton maintains internal state (failure counter, open/closed state, reset timer) across test runs
 - Simply clearing a registry does not reset the held instance
 - Tests must be independent and repeatably pass in any order
 - Fixture must reset state both before AND after each test (setup + teardown)
+- **A test passes locally in isolation but fails in CI** — classic order-dependent contamination signature
+- **The same test fails identically on multiple Python versions in CI (3.10/3.11/3.12/3.13)** — singleton state is a deterministic shared resource; parallel Python versions reproduce the same test order and therefore the same contamination
+- **Deciding the scope of an autouse reset fixture**: it MUST live in `conftest.py` at the broadest package scope where any contaminating test lives. Putting it in a single `test_*.py` file only protects that file
 
 ## Verified Workflow
 
@@ -71,6 +79,79 @@ def test_breaker_closes_after_reset_timeout(monkeypatch):
     # Again, clean breaker state from fixture
     ...
 ```
+
+### Conftest Scope Pattern (v1.1.0)
+
+The fixture above is correct, but its LOCATION matters as much as its content. If it lives only inside `test_gh_call_circuit_breaker.py`, sibling tests in the same package — e.g. `test_pr_reviewer_posting.py` — do NOT get reset. They will inherit the OPEN-breaker state from any earlier test that tripped it.
+
+The fix: lift the autouse fixture into the package-level `conftest.py`.
+
+```text
+tests/unit/automation/
+├── conftest.py                       # ← autouse fixture LIVES HERE
+├── test_github_api.py                # ← no longer needs its own copy
+├── test_gh_call_circuit_breaker.py   # ← no longer needs its own copy
+├── test_pr_reviewer_posting.py       # ← now protected (was contaminated)
+└── ... every other test_*.py in the subtree is automatically protected
+```
+
+```python
+# tests/unit/automation/conftest.py
+"""Package-level fixtures for automation tests.
+
+Lives at the broadest scope covering any test that mutates the
+GitHub circuit breaker singleton, so EVERY test in this subtree
+runs with a clean breaker. Do not duplicate this fixture inside
+individual test_*.py files.
+"""
+
+import pytest
+from hephaestus.automation import github_api
+
+
+@pytest.fixture(autouse=True)
+def _reset_circuit_breakers():
+    """Reset the GitHub circuit breaker before and after each test.
+
+    Why here, not in a single test file?
+
+    The `_GH_BREAKER` singleton lives at module scope in
+    `hephaestus.automation.github_api`. Any test in this package
+    that exercises a failure path can trip it. Once tripped, the
+    OPEN state persists across test files in the same pytest
+    session. Tests later in the run order then see a generic
+    "circuit breaker is open" message instead of the domain
+    error they were asserting on, and they fail in CI even though
+    they pass locally in isolation.
+    """
+    github_api._GH_BREAKER.reset()
+    yield
+    github_api._GH_BREAKER.reset()
+```
+
+#### How to verify the scope is right
+
+Replicate CI's order-dependent contamination in one local pytest invocation by running the contaminating file FIRST, then the previously-failing file:
+
+```bash
+pixi run pytest \
+    tests/unit/automation/test_github_api.py \
+    tests/unit/automation/test_pr_reviewer_posting.py \
+    -v
+```
+
+If both pass, the conftest scope is broad enough. If the second file still fails with the breaker-open error, the conftest needs to be lifted higher (e.g. `tests/unit/conftest.py` or `tests/conftest.py`).
+
+#### Choosing the right conftest level
+
+| Where the singleton is tripped | Where the autouse reset belongs |
+|--------------------------------|---------------------------------|
+| One test file only             | That file (rare — usually wrong) |
+| Multiple files in one package  | `tests/<package>/conftest.py`   |
+| Multiple packages              | `tests/conftest.py` (top-level) |
+| Across unit + integration      | `tests/conftest.py` (top-level) |
+
+The cost of running the reset on a test that doesn't need it is negligible (a few attribute writes). The cost of a single order-dependent CI flake is hours of debugging. Default to the broader scope when in doubt.
 
 ### Detailed Steps
 
@@ -139,6 +220,11 @@ def test_breaker_closes_after_reset_timeout(monkeypatch):
 | 4 | Resetting the breaker only in fixture setup, not teardown | If a test crashed or was interrupted, subsequent tests started with dirty state. Isolation was conditional on test success. | Always reset in both setup and teardown (yield pattern). Ensures clean state even if previous test failed. |
 | 5 | Using module-scope fixture instead of function-scope | Multiple tests in one module share the same fixture run. Cross-test pollution still happened. | Use `@pytest.fixture(autouse=True)` with default function scope (resets for each test). |
 | 6 | Trying to patch CircuitBreaker.reset() method | Would break actual reset calls in production code; confusing test vs. production behavior. | Don't patch the reset method; just call it normally. |
+| 7 | Putting the autouse reset fixture in a single test file (`test_github_api.py`) instead of `conftest.py` | Only protected `test_github_api.py`. Sibling files in the same package (e.g. `test_pr_reviewer_posting.py`) still inherited the OPEN-breaker state. CI failed identically on Python 3.10/3.11/3.12/3.13 — the deterministic test order tripped the breaker before the affected test ran. (ProjectHephaestus PR #707, fixed in commit `3e4bc10`.) | The autouse reset fixture belongs in `conftest.py` at the broadest scope covering any contaminating test, not in a single test file. |
+| 8 | Widening the failing assertion to tolerate the breaker-open message (e.g. `assert '#0' in err or 'circuit breaker' in err`) | Papered over the contamination. The domain-specific `#0` diagnostic (issue-not-found) was the whole point of the test; allowing the generic breaker message meant any real regression of that diagnostic would silently slip through. | Fix the isolation, do not widen the assertion. If your test "fails" because the wrong error appeared, the wrong error is the bug, not the assertion. |
+| 9 | Per-test `monkeypatch` on the singleton — `monkeypatch.setattr(github_api, "_GH_BREAKER", CircuitBreaker(...))` inside each test | Only patches the lookup `github_api._GH_BREAKER`, not the underlying held state in other modules that may have already imported the original. Also: the next test re-instantiates and the original singleton (if accessed via `import hephaestus.automation.github_api`) is still in OPEN state. | Reset the existing instance, do not replace it. `instance.reset()` is simpler, faster, and avoids reference-aliasing bugs. |
+| 10 | Per-test reset inside each test function body (no fixture) | DRY violation. Easy to forget on a new test. The forgotten test then becomes the contaminator for every test that runs after it in CI order. | Use `@pytest.fixture(autouse=True)` in `conftest.py`. Autouse means new tests added later are automatically protected. |
+| 11 | Module-level `setup_module` / `teardown_module` | Resets at module boundaries only. Tests within a module still share state with tests in OTHER modules that ran in the same pytest session. | Use a function-scoped autouse fixture in `conftest.py`, not a module-level hook. |
 
 ## Results & Parameters
 
@@ -290,8 +376,37 @@ class CircuitBreaker:
         self.state = "closed"  # or "CLOSED" depending on implementation
 ```
 
+### General Pattern: Package-Shared Singletons That Need This Treatment
+
+The circuit breaker is one example of a broader class. Any of these singletons benefits from a package-scoped autouse reset in `conftest.py`:
+
+| Singleton family | Concrete example | Reset method |
+|------------------|-----------------|--------------|
+| Circuit breakers | `_GH_BREAKER`, `_NATS_BREAKER` | `.reset()` |
+| In-memory caches | `@lru_cache`, custom dict caches, `functools.cache` | `cache.cache_clear()` or `dict.clear()` |
+| Registry singletons | Plugin registries, agent registries, route maps | re-register from scratch, or `.clear()` |
+| `contextvars` defaults | Trace-context, request-context | `var.set(default)` |
+| Env-var snapshots | A module that captures `os.environ[...]` at import | re-read env, or `monkeypatch.setenv` + reload |
+| Connection pools | DB connection pools, HTTP session singletons | `.close()` + new instance |
+| Time / clock state | Frozen-time monkeypatches | restore wall-clock in teardown |
+
+Rule of thumb: if reading a module attribute at test start ever shows a value that depends on what other tests did, that attribute needs a conftest-level autouse reset.
+
+#### Why this bites only in CI
+
+| Symptom | Why CI shows it but local does not |
+|---------|------------------------------------|
+| Test passes locally in isolation | Single-test run never executes the contaminator |
+| Test passes in `pytest <one_file>` locally | Other files in the package are not collected; the contaminator never runs |
+| Test passes locally on full suite | Local file iteration order may differ from CI (alphabetical, but filesystem-dependent) |
+| Test fails identically on Python 3.10/3.11/3.12/3.13 in CI | Each Python version runs the same deterministic test order; the singleton is process-local but test-order-deterministic |
+| Test passes under `pytest-xdist` workers | Each worker has its own process; the singleton is per-worker, hiding cross-file contamination unless both files land on the same worker |
+
+The "passes locally" trap is real: running a single failing test in isolation always passes because no prior test has run.
+
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectHephaestus | PR #633 — CircuitBreaker testing | tests/unit/automation/test_gh_call_circuit_breaker.py; 5 tests all passing; no cross-test state leakage |
+| ProjectHephaestus | PR #633 — CircuitBreaker testing (v1.0.0) | tests/unit/automation/test_gh_call_circuit_breaker.py; 5 tests all passing; no cross-test state leakage |
+| ProjectHephaestus | PR #707 — conftest scope fix (v1.1.0) | Cross-test contamination: `test_pr_reviewer_posting.py` failed identically on Python 3.10/3.11/3.12/3.13 in CI because the autouse breaker reset lived only in `test_github_api.py`. Fixed by moving the fixture into `tests/unit/automation/conftest.py` (commit `3e4bc10`). 911 tests pass locally under the new conftest scope; CI re-run pending at /learn time, hence v1.1.0 is **verified-local** for the fix, **verified-ci** for the bug. |
