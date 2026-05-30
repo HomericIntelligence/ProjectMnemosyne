@@ -1,0 +1,46 @@
+<!-- markdownlint-disable MD024 -->
+# testing-singleton-isolation-circuit-breaker-reset — History
+
+## v1.1.0 (2026-05-29)
+
+**Changed by:** ProjectHephaestus PR #707 — fixing a CI failure reproducing identically on Python 3.10/3.11/3.12/3.13 unit and integration jobs
+**Verification:** verified-local — the bug (cross-test contamination) was verified-ci (4 Python versions failed identically). The fix landed locally (commit `3e4bc10`; 911 tests pass under the new conftest); CI verification of the fix is still pending at /learn time.
+
+### What changed
+
+- Added **conftest scope** dimension to description and triggers: the autouse reset fixture must live in `tests/<package>/conftest.py` at the broadest scope covering any contaminating test file, NOT in a single `test_*.py` file. Placing it in one file only protects that file; tests in sibling files in the same package still inherit the contaminated singleton state.
+- Added `### Conftest Scope Pattern` quick reference block showing the working `tests/unit/automation/conftest.py` layout.
+- Added two new `When to Use` triggers covering the CI-only contamination signature (same test fails identically on all Python versions; passes locally in isolation).
+- Added three new `Failed Attempts` rows: (a) widening the assertion to tolerate either error string (papered over the contamination), (b) per-test `monkeypatch` on the singleton (only patches the lookup, not the state), (c) per-test reset inside each test function (DRY violation + easy to forget).
+- Added a "General Pattern for Package-Shared Singletons" section listing the family this applies to: circuit breakers, in-memory caches, registry singletons, contextvar defaults, env-var snapshots.
+- Added ProjectHephaestus PR #707 to `Verified On`.
+- Bumped date to 2026-05-29, version to 1.1.0.
+
+### Why
+
+A pytest test in `tests/unit/automation/test_pr_reviewer_posting.py` asserted that an error message contained `"#0"` (an issue-not-found diagnostic). The test passed locally in isolation but failed identically in CI on all four Python versions (3.10/3.11/3.12/3.13) with:
+
+> `AssertionError: assert '#0' in 'GitHub API circuit breaker is open due to sustained unavailability'`
+
+The autouse `_reset_circuit_breakers` fixture lived ONLY in `tests/unit/automation/test_github_api.py`. CI's deterministic test ordering ran the contaminating tests (which exercised `_gh_call` failure paths) BEFORE `test_pr_reviewer_posting.py`, leaving `_GH_BREAKER` in OPEN state. The test then received the generic breaker-open message instead of the domain-specific `#0` diagnostic.
+
+The fix (commit `3e4bc10`): move the autouse fixture into `tests/unit/automation/conftest.py` so it applies to EVERY test in the `automation/` subtree, then drop the duplicate fixture from `test_github_api.py`. Verified locally by running the contaminating file followed by the previously-failing file in a single pytest invocation (must replicate CI's order-dependent contamination).
+
+The 1.0.0 version already covered "reset the held instance, not the registry." This amendment adds the orthogonal SCOPE dimension: where the fixture lives matters as much as what it does.
+
+---
+
+## v1.0.0 (2026-05-28) — Initial skill
+
+**Verification:** verified-ci
+
+Captured the core insight: test isolation for module-level singleton instances requires calling `.reset()` on the held reference directly in a pytest fixture. Simply clearing a registry does not reset the held instance. Verified on ProjectHephaestus PR #633 (`tests/unit/automation/test_gh_call_circuit_breaker.py`; 5 circuit breaker tests passing with proper isolation, no test state leakage).
+
+Failed approaches documented at v1.0.0:
+
+1. Clearing the registry only (`reset_all_circuit_breakers()`) — held instance kept old state.
+2. Assuming pytest auto-resets module-level instances — no such mechanism.
+3. Using `monkeypatch.setattr` to replace the breaker — fragile if other code imports it directly.
+4. Resetting only on setup, not teardown — dirty state if test crashed mid-run.
+5. Module-scope fixture instead of function-scope — cross-test pollution within module.
+6. Patching `CircuitBreaker.reset()` itself — confuses test vs. production behavior.
