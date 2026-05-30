@@ -182,4 +182,3 @@ def test_validate_json_output(capsys):
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | issue #623 (test: add per-module coverage floor + e2e backstop) | Installed [dev,schema]; added 5 targeted tests; schema.py 56% → 94.81%; 25 tests pass |
-
