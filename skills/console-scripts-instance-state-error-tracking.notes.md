@@ -230,4 +230,3 @@ def fix_file(path):
 - [x] PR auto-merge enabled
 - [x] Zero test breakage
 - [x] CI all checks green
-

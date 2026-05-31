@@ -202,4 +202,3 @@ The instance state (`self.had_error`) does not interfere with tuple unpacking or
 - **No test breakage** despite significant changes to error handling
 - **All commits cryptographically signed** (git commit -S)
 - **PR auto-merge enabled** via CI (squash merge policy)
-
