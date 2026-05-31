@@ -4,11 +4,14 @@ description: "Use when: (1) a Python script in scripts/ has zero test coverage a
   tests added; (2) a coverage threshold audit reveals that scripts/ is under-tested
   vs. the threshold; (3) a follow-up issue requests tests for specific untested modules;
   (4) you need to close CLI command-handler test gaps (cmd_run/cmd_repair style);
-  (5) you need to audit existing tests before writing new ones to avoid duplication."
+  (5) you need to audit existing tests before writing new ones to avoid duplication;
+  (6) you are running a coverage swarm with one PR per source file or test shard;
+  (7) new tests must be documented and added to CI workflows that enumerate files manually."
 category: testing
-date: 2026-05-19
-version: "1.0.0"
+date: 2026-05-29
+version: "1.1.0"
 user-invocable: false
+verification: verified-local
 history: python-script-unit-test-coverage-expansion.history
 tags:
   - python
@@ -27,7 +30,9 @@ tags:
 | Theme | Systematically adding mock-based unit tests to previously untested Python scripts and source modules |
 | Language | Python / pytest |
 | Patterns | Class-grouped tests, sys.path.insert import, tmp_path fixtures, mock-only subprocess/filesystem |
-| Proven Result | Raised scripts/ test coverage from 29% to 65% (10/34 → 22/34 scripts) across multiple sessions |
+| Proven Result | Raised scripts/ test coverage from 29% to 65% (10/34 → 22/34 scripts) across multiple sessions; coordinated Eval360-V2 coverage swarm across seven PRs |
+| Verification | verified-local |
+| History | [changelog](./python-script-unit-test-coverage-expansion.history) |
 
 ## When to Use
 
@@ -37,6 +42,9 @@ tags:
 4. You need to close CLI command-handler test gaps (e.g., cmd_run/cmd_repair patterns)
 5. You are about to write tests and need to audit what already exists to avoid duplication
 6. You need to retrofit tests onto existing code without modifying the script itself
+7. You need to fan out Python coverage work into one isolated worker PR per file or module group
+8. A repository's CI workflow manually enumerates pytest files, so new tests must be added there too
+9. The user requires every new test class/function to document what it does, what code path it executes, and why that testing style is appropriate
 
 **Trigger phrases**:
 - "X% of scripts lack unit tests"
@@ -44,6 +52,10 @@ tags:
 - "script test coverage audit"
 - "follow-up to close the test gap"
 - "tests only cover argument parsing, not what the command actually does"
+- "coverage swarm"
+- "one PR per file"
+- "new tests are not counted in CI"
+- "document every new test with What/Executes/Why"
 
 ## Verified Workflow
 
@@ -72,6 +84,20 @@ python3 -m pytest tests/unit/scripts/test_my_script.py -v
 
 # Step 5: Final validation via package manager
 <package-manager> run python -m pytest tests/unit/scripts/ -v
+
+# Coverage swarm quick gate
+git worktree add /tmp/<repo>-<module-slug> -b codex/coverage-<module-slug> origin/main
+python -m pytest <owned-test-files> -q --override-ini="addopts="
+python - <<'PY'
+import ast
+from pathlib import Path
+for path in map(Path, ["tests/test_target.py"]):
+    tree = ast.parse(path.read_text())
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test_"):
+            doc = ast.get_docstring(node) or ""
+            assert all(label in doc for label in ("What:", "Executes:", "Why:")), node.name
+PY
 ```
 
 ### Step 1: Audit Before Writing
@@ -241,7 +267,7 @@ class Test<FunctionName>:
 Key conventions:
 - `from __future__ import annotations` always first
 - Class-based test grouping (one class per function/feature)
-- Docstrings on every test method
+- Docstrings on every newly added test method
 - `tmp_path` fixture for filesystem operations
 - `pytest.CaptureFixture[str]` (not `object`) for capsys
 
@@ -344,6 +370,39 @@ Coverage:              (N+K)/M * 100%
 Goal met:              YES / NO
 ```
 
+### Step 12: Coverage Swarm and Documentation Gate
+
+Use this pattern when coverage work is too broad for one PR but still needs consistent quality.
+
+1. **Target the current worktree baseline, not stale pasted reports.** Re-run or inspect the
+   current tree first; skip coverage entries for files that no longer exist.
+2. **Give every worker a dedicated git worktree and branch.** Use one branch like
+   `codex/coverage-<module-slug>` per owned file or tight module group. Do not let multiple
+   workers edit or commit from the same checkout.
+3. **Declare file ownership before dispatch.** Each worker should own one source file or one
+   small, tightly grouped test shard and should not edit outside its assigned tests/source files.
+4. **Check CI test discovery.** If `.github/workflows/tests.yml` or similar workflows enumerate
+   pytest files manually, add every new test file to the relevant shard; otherwise local coverage
+   can improve while CI coverage ignores the file.
+5. **Require structured test documentation only for new tests.** Newly introduced `Test*`
+   classes and `test_*` functions should explain:
+   - `What:` the behavior being verified
+   - `Executes:` the source path or branch under test
+   - `Why:` why the mock/fixture/edge-case shape protects the behavior
+6. **Encapsulate common helper setup.** If a test file has module-level `_helper` functions shared
+   by classes, move them into a documented base class such as `ChoiceScoringTestBase` and have
+   test classes inherit it. Keep true fixtures as fixtures, but avoid hidden standalone helpers.
+7. **Run a structural audit before pushing.** Use an AST script to fail if any newly added
+   `test_*` lacks the required docstring labels, if existing tests still carry newly added
+   explanation blocks, or if module-level underscore helpers remain.
+8. **Validate in the worker worktree.** Run the owned test file(s) with coverage options disabled
+   if the repo's default `addopts` would pull in unrelated shards:
+
+   ```bash
+   python -m pytest <owned-test-file> -v --override-ini="addopts="
+   git diff --check
+   ```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -359,6 +418,10 @@ Goal met:              YES / NO
 | Mocking multiprocessing.Manager | Attempted to mock the Manager for RateLimitCoordinator tests | Mock didn't replicate the event/dict semantics correctly | Use a real `Manager()` in a `with Manager() as mgr:` context |
 | Thread timing test without state setup | Called `ui.start()` twice without controlling thread state | Thread completed before second call due to mocked curses.wrapper | Set `ui.running = True` and `ui.thread` manually to simulate already-running state |
 | Global subprocess mock | Used `patch("subprocess.run", ...)` | Mock was at stdlib level; module had its own import binding | Always patch at module level: `patch("<module_name>.subprocess.run", ...)` |
+| Shared checkout for multiple coverage workers | Started coverage work from one worktree before separating branches | Branch collisions and mixed staged changes required a salvage stash and replay into dedicated worktrees | Create one worktree per worker before any edits; keep file ownership explicit |
+| Relying on local test discovery only | Added new pytest files but did not update the CI workflow's manual test-file list | New tests would pass locally but not affect CI coverage because the workflow did not invoke them | Inspect `.github/workflows/*.yml`; add every new test file to the relevant shard |
+| Generic docstrings after coverage expansion | Added tests with ordinary one-line docstrings or no common-helper structure | New tests needed What/Executes/Why explanations, but applying that standard to pre-existing tests created noisy churn | Run an AST audit that requires labels only on new tests and restores existing test docstrings to their base state |
+| Targeting stale coverage entries | Used a pasted coverage report without checking the current checkout | Some reported files no longer existed, so workers would chase phantom targets | Verify the current tree first with `rg --files` and target only files that exist |
 
 ## Results & Parameters
 
@@ -370,6 +433,19 @@ Goal met:              YES / NO
 | ProjectScylla #1358 | 22/34 (65%) | 34/34 (100%) | 130 | 12 |
 | ProjectScylla #850 | ~73% | 74.93% | 106 | 5 |
 | ProjectScylla #1113 | 114 tests | 119 tests | 5 | 1 (extended) |
+| Eval360-V2 coverage swarm | 60% total baseline | 7 focused coverage PRs opened | 518+ | PRs #290-#296, verified locally |
+
+### Eval360-V2 Coverage Swarm Parameters (2026-05-29)
+
+| Parameter | Value |
+| --------- | ----- |
+| Worker isolation | One git worktree per branch under `/private/tmp/eval360-<module>` |
+| Branch naming | `codex/coverage-<module-slug>` |
+| CI quirk | `.github/workflows/tests.yml` manually enumerates test files |
+| Python environment | Python 3.14 venv with test extras installed |
+| Documentation gate | New `Test*` classes and `test_*` functions have `What:`, `Executes:`, `Why:`; existing tests keep their base docstrings |
+| Helper gate | No module-level standalone `_helper` functions in touched test files |
+| Local validation | Per-branch pytest files passed; PR #291 rebased test file later passed `39 passed` |
 
 ### pyproject.toml pytest Configuration
 

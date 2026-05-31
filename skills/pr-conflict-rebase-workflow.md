@@ -8,10 +8,12 @@ description: 'Rebase conflicting PRs onto main when a merge commit introduces wo
   approaches — one already merged to main and the other needs rebasing, (5) rebasing
   a consolidation/merge branch that deleted absorbed files, where those files were
   subsequently modified on the base branch — produces modify/delete (UD) conflicts
-  on every absorbed file.'
+  on every absorbed file, (6) a test-coverage PR conflicts because main added nearby
+  tests while the PR added helpers or edge-case tests.'
 category: ci-cd
-date: 2026-05-03
-version: 1.2.0
+date: 2026-05-29
+version: "1.3.0"
+verification: verified-local
 user-invocable: false
 history: pr-conflict-rebase-workflow.history
 ---
@@ -23,7 +25,9 @@ history: pr-conflict-rebase-workflow.history
 | **Complexity** | Medium |
 | **Time** | 10–20 min per PR |
 | **Risk** | Low (uses `--force-with-lease`) |
-| **Triggers** | CONFLICTING PRs after a main merge, GitHub Actions workflow conflicts, pixi.lock modify/delete, two CI fix branches with different approaches to same file, consolidation branch with absorbed (deleted) files rebased onto advanced base |
+| **Triggers** | CONFLICTING PRs after a main merge, GitHub Actions workflow conflicts, pixi.lock modify/delete, two CI fix branches with different approaches to same file, consolidation branch with absorbed (deleted) files rebased onto advanced base, test-file conflicts where main and PR both added coverage |
+| **Verification** | verified-local |
+| **History** | [changelog](./pr-conflict-rebase-workflow.history) |
 
 ## When to Use
 
@@ -34,6 +38,7 @@ history: pr-conflict-rebase-workflow.history
 - Two independent CI fix branches both modified the same workflow file with different approaches (e.g., one used `builds/benchmarks/` volume path, the other used `/tmp/` + `podman cp`) — one merged first, now the other needs rebasing
 - You need to push rebased branches without losing the PR auto-merge setting
 - Rebasing a branch that deleted files as part of a consolidation/merge, where those files were subsequently modified on the base branch — produces `modify/delete` conflicts on every absorbed file
+- A test-only PR becomes `DIRTY` because `main` added new tests in the same file while the PR added helper functions, docstrings, or edge-case coverage
 
 ## Verified Workflow
 
@@ -58,6 +63,17 @@ pixi lock && pixi install --locked
 
 # 5. Enable auto-merge on all rebased PRs
 gh pr merge --auto --rebase <N>
+
+# Test-file conflict quick loop
+gh pr view <N> --json mergeStateStatus,headRefName,baseRefName
+git fetch origin <base>
+git rebase origin/<base>
+rg -n "^<<<<<<<|^=======|^>>>>>>>" <conflicted-test-file>
+# Preserve base's new tests AND PR's new helpers/tests; then:
+git add <conflicted-test-file>
+GIT_EDITOR=true git rebase --continue
+python -m pytest <owned-test-file> -q --override-ini="addopts="
+git push --force-with-lease --no-verify origin <branch>
 ```
 
 ### Step 1 — Triage PRs
@@ -204,7 +220,44 @@ GIT_EDITOR=true git rebase --continue
 
 **Note**: marketplace.json regeneration mid-rebase gives a snapshot count, not the final count. Only validate the final entry count after `git rebase` fully completes.
 
-### Step 7 — Verify and push
+### Step 7 — Test-File Coverage Conflicts
+
+When rebasing a test-only or coverage PR, `main` may have added tests at the same location
+where the PR added helper functions or edge-case tests. Treat this as a semantic merge, not
+an ours/theirs choice.
+
+**Resolution rule: keep both valid test surfaces.**
+
+1. Use `git diff --cc <file>` or inspect conflict markers directly.
+2. Keep base-side tests that landed on `main`.
+3. Keep PR-side helper builders, edge-case tests, and workflow test-list changes.
+4. If the project has a test documentation standard, add docstrings to inherited base-side
+   tests while resolving the conflict so the rebased branch still satisfies the PR's quality bar.
+5. Re-run the owned test file after `git rebase --continue`.
+
+Example from Eval360-V2 PR #291:
+
+```bash
+gh pr view 291 --json mergeStateStatus,headRefName,baseRefName
+git fetch origin master
+git rebase origin/master
+rg -n "^<<<<<<<|^=======|^>>>>>>>" tests/test_choice_scoring.py
+
+# Conflict shape:
+# - HEAD/main added choice_scoring_schema contract tests
+# - PR branch added run helpers and edge-case scoring tests
+# Correct resolution: keep both, add What/Executes/Why docstrings to the inherited tests
+
+git add .github/workflows/tests.yml tests/test_choice_scoring.py
+GIT_EDITOR=true git rebase --continue
+python -m pytest tests/test_choice_scoring.py -q --override-ini="addopts="
+git push --force-with-lease --no-verify origin codex/coverage-choice-scoring
+```
+
+If GitHub changes from `DIRTY` to `BLOCKED`, the conflict is cleared; remaining blockers are
+usually checks, reviews, or branch protection.
+
+### Step 8 — Verify and push
 
 ```bash
 # Confirm no conflict markers remain
@@ -220,7 +273,7 @@ pre-commit run --all-files
 git push --force-with-lease origin HEAD:<original-branch-name>
 ```
 
-### Step 8 — Enable auto-merge
+### Step 9 — Enable auto-merge
 
 ```bash
 gh pr merge --auto --rebase <N>
@@ -240,6 +293,8 @@ gh pr list --json number,mergeable,autoMergeRequest
 | Rebasing wrong branch | Initially attempted to rebase `fix-ci-root-causes` (already merged to main) before user clarified the intended branch | Branch was already on main; rebase produced empty diff | Confirm the exact branch name with the user before starting; check `gh pr list` to verify the branch is still open |
 | Auto-resolve "keep longer side" consuming the conflict opener | Python regex `re.sub` consumed the `<<<<<<< HEAD` line as part of "ours" content in a zero-length match when conflicts were adjacent | Orphaned `=======` and `>>>>>>>` markers remained in the file after auto-resolve | Always verify `grep -c '^<<<' file` returns 0 after auto-resolve; handle adjacent conflicts manually if markers survive |
 | Validating marketplace.json count mid-rebase | Regenerated marketplace.json during commit 8/11 of rebase and expected the final entry count | Count was 1019 instead of final expected count because not all consolidation commits had been applied yet — correct behavior for a mid-rebase snapshot | Marketplace regen count during rebase reflects the current tree, not the final state; only validate the final count after `git rebase` completes |
+| Taking one side of a test-file conflict | Tempting shortcut: accept either main's test block or the PR's helper/test block wholesale | Would drop valid coverage because both sides added independent tests in the same file | For test-only conflicts, preserve both sides and re-run the owned test file |
+| Resolving test conflicts without the PR's quality gate | Base-side tests inherited from main lacked the PR's required structured docstrings | The rebased branch would pass tests but fail the user's documentation standard | While resolving, upgrade inherited tests to the same What/Executes/Why docstring standard |
 
 ## Results & Parameters
 
@@ -248,6 +303,12 @@ gh pr list --json number,mergeable,autoMergeRequest
 | Branch | Base Distance | Conflict Types | Resolution |
 | -------- | ------------- | -------------- | ---------- |
 | chore/skill-consolidation-2026-05 | 183 commits ahead | ~34 UD (absorbed files) + UU (canonical files) + marketplace.json | `git rm` for UD files; longer-side auto-resolve for UU; regenerate marketplace |
+
+### Session outcome (2026-05-29)
+
+| PR | Branch | Before | Conflict | Resolution | Validation |
+| -- | ------ | ------ | -------- | ---------- | ---------- |
+| Eval360-V2 #291 | `codex/coverage-choice-scoring` | `DIRTY` against `master` | `tests/test_choice_scoring.py`: main added schema tests while PR added coverage helpers/tests | Preserved both sides, documented inherited tests, continued rebase, force-pushed with lease | `39 passed`; `git diff --check` passed; GitHub state changed to `BLOCKED` |
 
 ### Session outcome (2026-03-27)
 
@@ -286,6 +347,11 @@ Is the conflict in pixi.lock?
 Is this a UD conflict (deleted by us, modified by them)?
   YES → This is an absorbed/consolidated file — keep the deletion
         git rm <file> && git add <file>
+
+Is this a test-file conflict where both sides added coverage?
+  YES → Keep main's new tests AND the PR's helpers/tests
+        Apply the PR's documentation/helper standards to inherited base tests
+        Run the owned pytest file before force-pushing
 
 Is the conflict in a canonical (merged) file with UU status?
   YES → Use keep-longer-side auto-resolve (branch has absorbed content)
