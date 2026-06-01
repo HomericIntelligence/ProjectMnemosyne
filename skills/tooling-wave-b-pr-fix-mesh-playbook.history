@@ -1,0 +1,71 @@
+# tooling-wave-b-pr-fix-mesh-playbook — History
+
+## v1.1.0 (2026-05-31)
+
+**Changed by:** Wave-B swarm cleanup follow-up — verifying/finishing the swarm's
+own auto-fix run (PRs across HomericIntelligence/* that the Wave-B executor logged
+as "pass" but were actually still red).
+**Verification:** verified-ci — the cleanup fixes were pushed and the targeted
+checks observed turning green in live CI.
+
+### What changed
+
+- Added a leading "Trust nothing the swarm logged" rule: Wave-B auto-fix executors
+  run a headless print-mode verification window that times out (`TIMEOUT_PENDING`)
+  before slow AchaeanFleet CI finishes, so the swarm records optimistic
+  `#NN pass` results. Always re-query live with `gh pr checks` + `gh run view
+  --log-failed`.
+- Added the `gh pr checkout` shallow-clone trap: in a shallow clone `gh pr checkout`
+  silently leaves HEAD on `main`, so commits/pushes go to `main` and are rejected by
+  branch protection. Fix: fetch + checkout the explicit `headRefName` by name.
+- Added the "fix the REAL file the live log names, not the headline file" rule — the
+  same rule can fail in a different file than the analysis named (e.g. MD013 in
+  CONTRIBUTING.md after fixing it in branch-protection.md).
+- Added the MD060-IS-autofixable nuance alongside the existing MD013-is-NOT note.
+- Added "confirm the PR isn't already MERGED before treating a missing head ref as a
+  failure" rule.
+- Added the clang-format version-mismatch demote-don't-thrash lesson.
+- Added 5 new Failed Attempts rows from this session.
+- Bumped version 1.0.0 → 1.1.0 (minor: new findings + new failed attempts, core
+  recommendation unchanged).
+
+### Why
+
+v1.0.0 already said "gh pr checks lies; the check-runs API does not," but it did not
+warn that the SWARM'S OWN run log lies even harder (it never waits for CI at all —
+its verification window times out and it records optimistic passes). It also lacked
+the `gh pr checkout`-stays-on-main trap, the fix-the-actually-failing-file rule, the
+already-merged guard, and the clang-format version-mismatch demote rule. These were
+the concrete failures that wasted time finishing a Wave-B run, so they belong in the
+playbook.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: tooling-wave-b-pr-fix-mesh-playbook
+description: "Wave-B autonomous fix-mesh playbook: green 20+ failing PRs across multiple HomericIntelligence repos by applying mechanical autofixes (markdownlint, clang-format, pixi lock, pre-commit autofixes) with signed/verified commits. Use when: (1) running an autonomous PR-sweep where many fully-auto PRs are red on the same mechanical checks, (2) re-signing previously unsigned commits to satisfy branch-protection signature policies, (3) applying a single shared-doc fix across N PRs that all inherit the same defect from main."
+category: tooling
+date: 2026-05-31
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: []
+---
+
+# Wave-B PR Fix-Mesh Playbook
+
+(see git history at commit c26cd5fd for full v1.0.0 body — Overview, When to Use,
+7-step Verified Workflow, 3-row Failed Attempts table, Results & Parameters,
+Verified On. v1.1.0 is a superset; nothing was removed.)
+```
+
+---
+
+## v1.0.0 (2026-05-31)
+
+**Initial version.** Turn red CI green on 22 fully-auto PRs across 7 HomericIntelligence
+repos using purely mechanical autofixes with signed commits. Covered: shallow-clone
+refspec trap, multi-PR shared-doc fan-out, markdownlint-cli2 `--fix` incompleteness
+(MD013/MD007/MD031/MD032/MD034), single-hook pre-commit, re-signing pushed unsigned
+commits, `gh pr checks` staleness vs check-runs API, aeolus noreply email requirement.
