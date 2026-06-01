@@ -1,6 +1,62 @@
 <!-- markdownlint-disable MD024 -->
 # parallel-agent-swarm-dispatch-patterns — History
 
+## v1.3.0 (2026-05-31)
+
+**Changed by:** ProjectHephaestus 10-PR audit-remediation swarm session (2026-05-31), where 3 of 4
+gate-loop polling agents prematurely exited and a unified PR8+PR10 sequential agent succeeded
+with zero re-launches.
+**Verification:** verified-ci (PR8 + PR10 bundled agent — both PRs landed; PR8 merged before
+PR10 was even opened, PR10 armed for auto-merge with `autoMergeRequest` non-null)
+
+### What changed
+
+- Added **Part 12** — Sequential vs Concurrent Dispatch for Dependency Chains: the decision rule
+  for choosing between N concurrent polling agents and ONE sequential state-machine agent on
+  dependency-gated waves. Captures the observed 75% (3/4) early-exit failure rate of agents whose
+  first action is a polling/gate loop on an external condition, and the verified-ci fix of
+  bundling strict chains into a single sequential agent. Includes a decision flowchart
+  (chain → 1 agent / fan-out → N agents), a comparison table (concurrent polling vs sequential
+  bundling), bundle-vs-split criteria (chain length 2–5 → bundle; 5+ → state-machine with
+  checkpoint), a state-machine agent prompt pattern, and an anti-pattern callout for "agent's
+  only initial action is a polling loop".
+- Added 2 new "When to Use" bullets: strict-chain dependency decision; agent-whose-first-action
+  -is-a-gate-loop anti-pattern.
+- Added 2 new Failed Attempts rows (38, 39): N concurrent polling agents on a strict chain (the
+  3-of-4 early-exit failure); agent whose only initial action is a polling loop on an external
+  condition (premature "monitor running" exit).
+- Added 6 new tags: `sequential-vs-concurrent`, `dependency-chain`, `state-machine-agent`,
+  `gate-loop`, `polling-agent`, `chain-bundling`.
+- Added description trigger (12): strict dependency chain decision rule.
+- Added a ProjectHephaestus 2026-05-31 row to Verified On with the PR8+PR10 bundled-agent result.
+- Updated Overview Outcome paragraph with the v1.3.0 summary; bumped version 1.2.0 → 1.3.0,
+  date 2026-05-29 → 2026-05-31.
+
+### Why
+
+The skill already covered "sequence dependent PRs" (Part 6 / Part 11 step 6 / Failed Attempt 37)
+but only addressed the simple case of dispatching B AFTER A merges at the orchestrator level. It
+did NOT cover the harder case where the orchestrator wants to dispatch B AND C AND D NOW with
+each containing its own gate loop on A — which is what failed catastrophically in the 2026-05-31
+session. Of 4 dependency-gated polling agents dispatched concurrently, 3 prematurely exited after
+their gate loop returned "still waiting" (a known failure pattern related to
+`swarm-agent-status-misread-as-premature-exit.md` but in the opposite direction: the AGENT
+misreads its own gate-wait as a terminal state and exits). The fix that worked end-to-end was to
+bundle the two PRs sharing the chain (PR8 → PR10, where PR10 depends on PR8) into ONE sequential
+state-machine agent. Part 12 codifies the decision rule (chain → 1 agent; fan-out → N agents)
+with a verified-ci result.
+
+### Previous version (v1.2.0) snapshot
+
+The v1.3.0 change is purely additive — Part 12, rows 38–39, the v1.2.0 content remains
+unchanged. The snapshot below preserves the v1.2.0 state as it was at the top of this history
+when v1.3.0 began.
+
+The full v1.2.0 content is preserved in the v1.2.0 entry below (which itself snapshots v1.1.0).
+The v1.3.0 change is purely additive over v1.2.0 (no rewrites, no deletions, no renames).
+
+---
+
 ## v1.2.0 (2026-05-29)
 
 **Changed by:** ProjectHephaestus audit-finding parallel remediation swarm session (2026-05-29)

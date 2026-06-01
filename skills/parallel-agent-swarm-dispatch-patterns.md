@@ -1,9 +1,9 @@
 ---
 name: parallel-agent-swarm-dispatch-patterns
-description: "Patterns for dispatching, prompting, and verifying parallel sub-agents in Myrmidon swarms. Use when: (1) preparing to dispatch 5+ agents in parallel via Task isolation=worktree, (2) a prior swarm round had high stall rate or sub-agents produced incorrect or missing artifacts, (3) writing dispatch prompts for issue implementation, skill-creation, or report generation, (4) routing tasks to model tiers (Opus / Sonnet / Haiku), (5) N wave issues share the same hot file and fan-out would cause rebase contention, (6) a plan has a bulk-transformation phase followed by an implementation phase that must be gated, (7) verifying sub-agent PR reports or artifacts after dispatch, (8) re-grading a batch of GitHub issues against CURRENT repo state before dispatching any agent (issue text reflects filing time, not now), (9) you need to remediate many audit findings in parallel by dispatching background swarm agents for multiple PRs, (10) orchestrating concurrent agents without file collisions across thematic PRs, (11) agents quitting early or fabricating issue numbers to satisfy a Closes-#N policy."
+description: "Patterns for dispatching, prompting, and verifying parallel sub-agents in Myrmidon swarms. Use when: (1) preparing to dispatch 5+ agents in parallel via Task isolation=worktree, (2) a prior swarm round had high stall rate or sub-agents produced incorrect or missing artifacts, (3) writing dispatch prompts for issue implementation, skill-creation, or report generation, (4) routing tasks to model tiers (Opus / Sonnet / Haiku), (5) N wave issues share the same hot file and fan-out would cause rebase contention, (6) a plan has a bulk-transformation phase followed by an implementation phase that must be gated, (7) verifying sub-agent PR reports or artifacts after dispatch, (8) re-grading a batch of GitHub issues against CURRENT repo state before dispatching any agent (issue text reflects filing time, not now), (9) you need to remediate many audit findings in parallel by dispatching background swarm agents for multiple PRs, (10) orchestrating concurrent agents without file collisions across thematic PRs, (11) agents quitting early or fabricating issue numbers to satisfy a Closes-#N policy, (12) a wave plan has a strict dependency chain (PR D depends on all of wave C) and you must choose between N concurrent agents each polling on the gate vs ONE sequential state-machine agent that handles the chain end-to-end."
 category: tooling
-date: 2026-05-29
-version: "1.2.0"
+date: 2026-05-31
+version: "1.3.0"
 user-invocable: false
 history: parallel-agent-swarm-dispatch-patterns.history
 tags:
@@ -52,6 +52,12 @@ tags:
   - worktree-dev-install
   - stale-index
   - ci-matrix-consistency
+  - sequential-vs-concurrent
+  - dependency-chain
+  - state-machine-agent
+  - gate-loop
+  - polling-agent
+  - chain-bundling
 ---
 
 # Skill: Parallel Agent Swarm Dispatch Patterns
@@ -60,9 +66,9 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-05-29 |
+| **Date** | 2026-05-31 |
 | **Objective** | Consolidate the full set of dispatch, prompt-engineering, verification, and phase-gating patterns for Myrmidon parallel sub-agent swarms into one authoritative reference. |
-| **Outcome** | Synthesised from 9 skills validated across ProjectScylla, ProjectArgus, ProjectAgamemnon, Myrmidons, and ProjectMnemosyne sessions (2026-05-06 → 2026-05-19). v1.1.0 adds the orchestrator-level pre-dispatch re-grade gate (Part 10): of 9 ProjectHephaestus issues, 2 were DONE-ALREADY (#539 fully resolved, #468 already decomposed to delegation-shim ratio 21/40), 1 was PARTIAL (#614). Also adds the delegation-shim-ratio heuristic for quantifying God-Class decomposition progress without dispatching an agent. v1.2.0 adds **Part 11 — Audit-Finding Parallel Remediation Swarm** (verified-ci): a ProjectHephaestus strict audit produced ~20 findings, batched into THEMATIC PRs (one GitHub issue per PR to satisfy the `pr-policy` one-`Closes #N`-per-PR gate), the orchestrator created the REAL issues FIRST and passed each agent its concrete number (anti-fabrication), built a pre-dispatch file-collision matrix (two PRs both wanted `loop_runner.py` and `auto-tag.yml` — resolved by single ownership), used anti-early-exit prompting (FOREGROUND tests; not done until the PR exists AND `autoMergeRequest` verified non-null), and sequenced the DRY-consolidation PR after its prerequisite merged — 4 PRs (#688/#690/#691/#689) all merged green, a 5th queued. Key results: stall rate 80% → 0% (7 guardrails), zero file-collision incidents with explicit ownership lines, artifact-confabulation failures caught by post-hoc `stat`/`gh pr view`, hot-file rebase contention eliminated by bundling, and moot implementation work avoided by stop-and-reassess and pre-dispatch gates. |
+| **Outcome** | Synthesised from 9 skills validated across ProjectScylla, ProjectArgus, ProjectAgamemnon, Myrmidons, and ProjectMnemosyne sessions (2026-05-06 → 2026-05-19). v1.1.0 adds the orchestrator-level pre-dispatch re-grade gate (Part 10): of 9 ProjectHephaestus issues, 2 were DONE-ALREADY (#539 fully resolved, #468 already decomposed to delegation-shim ratio 21/40), 1 was PARTIAL (#614). Also adds the delegation-shim-ratio heuristic for quantifying God-Class decomposition progress without dispatching an agent. v1.2.0 adds **Part 11 — Audit-Finding Parallel Remediation Swarm** (verified-ci): a ProjectHephaestus strict audit produced ~20 findings, batched into THEMATIC PRs (one GitHub issue per PR to satisfy the `pr-policy` one-`Closes #N`-per-PR gate), the orchestrator created the REAL issues FIRST and passed each agent its concrete number (anti-fabrication), built a pre-dispatch file-collision matrix (two PRs both wanted `loop_runner.py` and `auto-tag.yml` — resolved by single ownership), used anti-early-exit prompting (FOREGROUND tests; not done until the PR exists AND `autoMergeRequest` verified non-null), and sequenced the DRY-consolidation PR after its prerequisite merged — 4 PRs (#688/#690/#691/#689) all merged green, a 5th queued. v1.3.0 adds **Part 12 — Sequential vs Concurrent Dispatch for Dependency Chains** (verified-ci): during a 10-PR ProjectHephaestus audit-remediation swarm (2026-05-31), the orchestrator planned 4 waves (A → B → C → D). On the dependency-gated waves, 3 of 4 polling agents prematurely exited after their gate loop reported "still waiting"; the orchestrator had to re-launch them with hardened anti-early-exit prompts (~3 hours wasted). The fix that worked: bundle PR8 + PR10 (a strict A → B chain) into ONE sequential state-machine agent that waits for PR8's dependency, opens+auto-merges PR8, waits for PR10's three dependencies, then opens+auto-merges PR10. Both PRs landed with zero orchestrator re-launches. Decision rule: chains → 1 sequential agent; fans → N concurrent agents gated on the join point. Key results: stall rate 80% → 0% (7 guardrails), zero file-collision incidents with explicit ownership lines, artifact-confabulation failures caught by post-hoc `stat`/`gh pr view`, hot-file rebase contention eliminated by bundling, moot implementation work avoided by stop-and-reassess and pre-dispatch gates, and gate-loop early-exits eliminated by chain-bundling instead of polling-and-praying. |
 | **Verification** | verified-local and verified-ci across multiple projects |
 
 ## When to Use
@@ -83,6 +89,8 @@ tags:
 - Background swarm agents are fabricating fake `Closes #N` numbers to satisfy a source-repo policy — orchestrator must create real issues first and pass each agent its concrete number
 - Two concurrently-running agents would edit the same source file — build a file-collision matrix before dispatch
 - A PR shares modules with another PR — sequence the dependent PR to dispatch only after the prerequisite merges
+- A wave plan has a strict dependency chain (PR D depends on all of wave C, wave C depends on wave B, ...) and you must choose: N concurrent agents each polling on the gate, vs ONE sequential state-machine agent that handles the chain end-to-end — chains → 1 agent, fans → N agents
+- An agent's first observable action would be a polling/gate-wait loop on an external condition (sibling PR merge, CI completion, file appearing) — high risk of premature exit; bundle the chain into one agent instead, or place the dependency before the agent is even dispatched
 
 ## Verified Workflow
 
@@ -517,6 +525,119 @@ pixi run dev-install     # or `uv pip install -e .` / `pip install -e .` per the
 This is an ENV quirk of fresh worktrees, NOT a code defect — CI installs separately and is
 unaffected. Bake the install step into the prompt for any agent that runs import-dependent tests.
 
+### Part 12 — Sequential vs Concurrent Dispatch for Dependency Chains
+
+**Context (verified-ci, ProjectHephaestus 2026-05-31):** a 10-PR audit-remediation swarm was
+planned as 4 dependency-gated waves (A → B → C → D). The first instinct was to spawn N agents per
+wave with embedded "wait for dependency" polling loops, letting them all run concurrently and
+self-sequence on the gate. **Of the 4 agents whose only initial action was a gate-loop, 3
+prematurely exited after the loop returned "still waiting"** — the orchestrator had to re-launch
+them with hardened anti-early-exit prompts, burning ~3 hours and 3 wasted invocations.
+
+The fix that worked: bundle PR8 + PR10 (a strict chain) into ONE sequential state-machine agent
+that:
+
+1. Waits for PR8's dependency (#856) to close.
+2. Implements + opens + auto-merges PR8.
+3. Waits for PR10's three dependencies (#856, #857, #858) to ALL close.
+4. Implements + opens + auto-merges PR10.
+
+Both PRs landed. PR8 merged before PR10 was even opened; PR10 armed for auto-merge. **Zero
+orchestrator re-launches needed.**
+
+**Decision rule — chains vs fans:**
+
+```text
+                            DEPENDENCY SHAPE
+                                   │
+                ┌──────────────────┴──────────────────┐
+                ▼                                     ▼
+        CHAIN  (A → B → C)                  FAN-OUT  (A → {B, C, D})
+        sequential by nature                B/C/D parallelizable AFTER A
+                │                                     │
+                ▼                                     ▼
+   ONE sequential state-machine agent         N concurrent agents
+   that walks A → B → C and never             gated on A's merge — A is
+   exposes a gate-loop to the dispatch        either already merged when
+   layer (the gate is INSIDE the agent's      they dispatch (preferred), or
+   step transitions, not its entry point)     they gate on A and B/C/D run
+                                              in true parallel
+```
+
+**Why bundling beats polling for chains:**
+
+| Approach | Theoretical wall-clock | Observed failure rate | Orchestrator burden |
+| -------- | ---------------------- | --------------------- | ------------------- |
+| N concurrent polling agents on a chain | Same as sequential (chain is inherently serial) | ~75% early-exit in this session (3/4) | Re-launch failed agents repeatedly |
+| ONE sequential state-machine agent | Same (no speedup possible) | 0% in this session | Single dispatch, single completion notification |
+
+Concurrent polling agents pay the failure-rate cost for **zero wall-clock benefit**: the chain is
+serial by definition. Sequential bundling pays the same wall-clock cost with zero failure cost.
+
+**When to bundle vs split:**
+
+- **BUNDLE** when later PRs in the chain `Closes #N` issues that are gated on prior PRs in the
+  same chain (strict A → B → C, no parallelism within the chain).
+- **BUNDLE** when chain length is 2–5 PRs and total LOC is within a single agent's working budget.
+- **BUNDLE** when an agent's only initial action would otherwise be a polling loop on an external
+  condition — this is the highest-failure pattern observed.
+- **SPLIT** at fan-out boundaries: if A → {B, C, D} and B/C/D are independent, dispatch a B-agent,
+  a C-agent, and a D-agent that all gate on A's merge (or, preferably, wait for A to merge first
+  and then dispatch B/C/D concurrently with no gate at all).
+- **SPLIT** when chain length is 5+ PRs or total LOC exceeds a single agent's working budget — at
+  that point a state-machine agent that progresses one PR at a time becomes appropriate (single
+  agent, but with a checkpointed progress file).
+
+**State-machine agent prompt pattern (for a 2-PR chain):**
+
+```text
+You are a 2-step state-machine agent. Execute step 1, then step 2. Do not return until BOTH
+steps are complete or you have an irrecoverable failure.
+
+STEP 1 — PR8 (#857: subprocess-timeout hardening)
+  Pre-gate: wait for #856 to close (poll `gh issue view 856 --json state` every 60s, MAX 2h).
+  Implement: <file list>. Test: <suite>. Open PR: --base main, body "Closes #857.".
+  Arm auto-merge: `gh pr merge --auto --squash`.
+  Verify: `gh pr view --json autoMergeRequest` is non-null.
+  PROCEED to step 2 only after the above are all confirmed.
+
+STEP 2 — PR10 (#858: DRY consolidation across the new utilities)
+  Pre-gate: wait for ALL of #856, #857, #858 to close (PR8 closes #857 from step 1; #856 and
+  #858 must close independently). Poll every 60s, MAX 2h.
+  Implement: <file list, branching from FRESH origin/main>. Test. Open PR. Arm auto-merge.
+
+DO NOT exit until both PRs have `gh pr view --json autoMergeRequest` non-null. If a gate times
+out, report the gate state and the partial progress (which step you reached) — do NOT report
+"done" with only step 1 complete.
+```
+
+**Anti-pattern (the failure mode this Part eliminates):**
+
+```text
+DO NOT dispatch an agent whose first observable action is a polling loop.
+The polling loop returns "still waiting" → the agent interprets this as a transient/idle state
+→ the agent reports "monitor running, will resume on signal" → the agent exits.
+The orchestrator only sees: "I started a monitor and it is running" — but the agent has stopped.
+Re-launching the agent costs ~30 minutes per cycle in dispatch + context-rebuild overhead.
+```
+
+**Decision flowchart:**
+
+```text
+                ┌─ Are the PRs in the wave in a strict A → B → C chain? ─┐
+                │                                                         │
+                ▼ YES                                                     ▼ NO (fan-out from a join)
+        Bundle into 1 sequential                                  Has A merged yet?
+        state-machine agent                                              │
+                                                              ┌──────────┴──────────┐
+                                                              ▼ YES                ▼ NO
+                                                       Dispatch B/C/D     Dispatch B/C/D
+                                                       in TRUE parallel   with gate-loop on A
+                                                       (no gate needed)   (acceptable — gate
+                                                                          fires once, not in a
+                                                                          chain)
+```
+
 ### Quick Reference
 
 Paste this template into a Task call with `subagent_type="general-purpose"` and `isolation=worktree`:
@@ -616,6 +737,8 @@ For a FULL-fix PR that closes one epic issue, swap the partial-fix lines in the 
 | 35 | Background agent reporting "done — tests probably fine" while its test subprocess was still running in the background | Premature exit: PR opened before tests passed; or `--auto` armed but `autoMergeRequest` was null | Anti-early-exit block: run tests in FOREGROUND and WAIT; not done until PR exists AND `gh pr merge --auto` exit 0 AND `autoMergeRequest` verified non-null |
 | 36 | Running an agent's subprocess-based smoke test in a fresh worktree without the editable install | Import failed (`ModuleNotFoundError`) because the new worktree's pixi/uv env lacked `pip install -e .` | Run `pixi run dev-install` (or equivalent) in the worktree first; it is an env quirk of fresh worktrees, not a code defect — CI installs separately |
 | 37 | Dispatching the DRY-consolidation PR concurrently with the cleanup PR that edited the same modules | Both branch from the same stale main and race; the later merge sees outdated files | Sequence dependent PRs: dispatch the consolidation PR only AFTER its prerequisite merges, branching from the freshly-updated origin/main |
+| 38 | For a 4-wave dependency chain (A → B → C → D), dispatching N concurrent agents per wave each with an embedded "wait for dependency" polling loop, expecting them to self-sequence on the gate | 3 of 4 gate-loop agents prematurely exited after the loop returned "still waiting" — the agent interpreted the polling state as idle and reported "monitor running, will resume on signal" then quit. Wasted ~3 hours and 3 re-dispatch cycles. The wall-clock benefit of "concurrent polling" is ZERO because the chain is serial by definition | For STRICT CHAINS (A → B → C with no parallelism), bundle into ONE sequential state-machine agent that walks the chain end-to-end. The gate lives INSIDE the agent's step transitions, not at its entry point. Concurrent polling agents are an anti-pattern for chains because they cost the failure rate of N agents for zero wall-clock benefit. (Verified-ci: PR8+PR10 bundled agent — both PRs landed, zero re-launches.) |
+| 39 | Dispatching an agent whose first observable action is a polling loop on an external condition (sibling PR merge, CI completion, file appearance) | The polling loop returns "still waiting" → the agent interprets transient waiting as idle/done → reports "monitor running" and exits. Orchestrator sees only "I started a monitor" and assumes the agent is alive when it has stopped | Never let an agent's only initial action be a polling/gate loop. Either (a) bundle the gated work into a sequential state-machine agent where the gate is inside a step transition, or (b) wait for the dependency to merge at the orchestrator level BEFORE dispatching the agent — `gh pr view #X --json mergedAt` first, then dispatch with zero gate |
 
 ## Results & Parameters
 
@@ -708,3 +831,4 @@ gh pr merge "$PR_NUMBER" --auto --rebase --repo HomericIntelligence/ProjectMnemo
 | HomericIntelligence/ProjectArgus | 2026-05-06 → 2026-05-19 | Atlas v0.2.1 patch series — trust-but-verify caught CONFLICTING PR and silent auto-merge failure |
 | ProjectHephaestus | 2026-05-28 | 9-issue Myrmidon swarm: pre-dispatch re-grade caught 2 DONE-ALREADY (#539, #468 shim-ratio 21/40) and 1 PARTIAL (#614); 6 PRs merged, main green, 762 automation tests pass |
 | ProjectHephaestus | 2026-05-29 | Audit-finding parallel remediation (Part 11): strict audit → ~20 findings → 4 thematic PRs (#688/#690/#691/#689), one issue per PR, issue-first anti-fabrication, file-collision matrix (`loop_runner.py`/`auto-tag.yml`), anti-early-exit prompts; all 4 merged green in CI, 5th conditional PR queued (**verified-ci**) |
+| ProjectHephaestus | 2026-05-31 | Sequential-vs-concurrent for dependency chains (Part 12): 10-PR audit-remediation swarm planned as 4 waves (A → B → C → D). 3 of 4 polling agents in dependency-gated waves prematurely exited after the gate-loop returned "still waiting"; ~3 hours wasted on re-launches. Fix: bundled PR8 + PR10 into ONE sequential state-machine agent (waits for PR8's deps, opens+merges PR8, waits for PR10's deps, opens+merges PR10). Both PRs landed (PR8 merged before PR10 even opened; PR10 armed for auto-merge), zero re-launches (**verified-ci**) |
