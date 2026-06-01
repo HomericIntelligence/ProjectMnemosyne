@@ -1,11 +1,12 @@
 ---
 name: hi-branch-protection-two-layer
-description: "HomericIntelligence main-branch protection is split across TWO layers (repo ruleset + classic branch protection) whose UNION GitHub enforces. Use when: (1) managing HI main-branch protection or deciding whether a rule belongs in a ruleset vs classic branch protection, (2) a PR is BLOCKED by a review/check that the ruleset reports as 0/absent (the OTHER layer adds it), (3) a ruleset PUT returns HTTP 422 on required_conversation_resolution, (4) `gh api .../branches/main/protection` 404 body gets parsed as fake required-check contexts."
+description: "HomericIntelligence main-branch protection is split across TWO layers (repo ruleset + classic branch protection) whose UNION GitHub enforces. Use when: (1) managing HI main-branch protection or deciding whether a rule belongs in a ruleset vs classic branch protection, (2) a PR is BLOCKED by a review/check that the ruleset reports as 0/absent (the OTHER layer adds it), (3) a ruleset PUT returns HTTP 422 on required_conversation_resolution, (4) `gh api .../branches/main/protection` 404 body gets parsed as fake required-check contexts, (5) a `branch-protection-drift` required check fails on every PR with HTTP 403 'Resource not accessible by integration' (admin endpoint with the default token) or fails on review-count/dismiss-stale assertions that disagree with the in-repo canonical policy."
 category: ci-cd
 date: 2026-05-31
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 verification: verified-ci
+history: hi-branch-protection-two-layer.history
 tags:
   - github
   - rulesets
@@ -15,6 +16,9 @@ tags:
   - conversation-resolution
   - linear-history
   - gh-api
+  - branch-protection-drift
+  - drift-check
+  - rules-endpoint
 ---
 
 # HomericIntelligence main Branch Protection: The Two-Layer Split
@@ -25,8 +29,9 @@ tags:
 | ------- | ------- |
 | **Date** | 2026-05-31 |
 | **Objective** | Document the intentional two-layer (ruleset + classic) protection design on HI `main` and the gh-api gotchas encountered while auditing/applying it across all 15 repos |
-| **Outcome** | Successful — both layers audited and applied live via `gh api` on all 15 HomericIntelligence repos; design and constraints confirmed |
-| **Verification** | verified-ci (applied + verified live via gh api on all 15 HI repos, 2026-05-31) |
+| **Outcome** | Successful — both layers audited and applied live via `gh api` on all 15 HomericIntelligence repos; design and constraints confirmed. v1.1.0 adds the `branch-protection-drift` required-check failure mode (403 admin-endpoint masking a real ruleset-vs-canonical drift) and the ecosystem-reconcile fix |
+| **Verification** | v1.0.0 content: verified-ci (applied + verified live via gh api on all 15 HI repos, 2026-05-31). v1.1.0 additions (drift-check 403 → ecosystem reconcile): **verified-local** — the drift script's local GATE printed `branch-protection-drift: OK` against the live ruleset and fix commits are signed/verified=true, but the end-to-end CI drift-check pass was still running at session end (NOT yet verified-ci) |
+| **History** | [changelog](./hi-branch-protection-two-layer.history) |
 
 ## When to Use
 
@@ -36,6 +41,9 @@ tags:
 - A ruleset PUT returns `HTTP 422: data matches no possible input` when you add `required_conversation_resolution`
 - `gh api repos/<O>/<R>/branches/main/protection` returns a 404 body and you risk parsing its keys as fake required-check contexts
 - You see fully-signed PRs with empty `reviewDecision` that still will not merge
+- A `branch-protection-drift` (or similar) required check fails on EVERY PR — especially if it fails in ~4s with an empty `--log-failed` (read the full `--log`: the `gh api` call is throwing)
+- The drift check fails with `gh: Resource not accessible by integration (HTTP 403)` — the script is hitting the admin `branches/main/protection` endpoint with the default Actions `GITHUB_TOKEN` (contents/metadata read only)
+- The drift check fails on `required_approving_review_count` / `dismiss_stale_reviews` assertions that disagree with the live ruleset, and you must decide whether the in-repo canonical file or the live ruleset is authoritative
 
 Related: [[ci-cd-ruleset-bootstrap-deadlock]] (required-check names that exist only in the blocked PR), [[ci-cd-homeric-intelligence-merge-gotchas]] (squash-only, auto-merge behaviour), [[git-gpg-sign-email-mismatch-silent-unsigned-blocks-merge]] (`required_signatures` lives in the ruleset and silently blocks unsigned PRs).
 
@@ -159,6 +167,69 @@ gh api -X PUT repos/$O/$R/branches/main/protection --input /tmp/prot.json
      -F required_approving_review_count=0
    ```
 
+### Branch-protection-drift 403 → ecosystem reconcile
+
+> Added in v1.1.0. **Verification: verified-local** — the local GATE (step 5) printed
+> `branch-protection-drift: OK` against the live ruleset and the fix commits are
+> signed/verified, but the end-to-end CI drift-check pass was still running at session
+> end. Treat the CI-pass claim as pending until the check goes green.
+
+Symptom: a `branch-protection-drift` required check (e.g. ProjectNestor's, added in PR #81,
+script `scripts/verify-branch-protection.sh` in workflow `.github/workflows/_required.yml`)
+fails on EVERY PR — blocking main, a trivial markdownlint-fix PR, and every other open PR.
+
+1. **Read the FULL log, not `--log-failed`.** A required-script job that fails in ~4s with
+   an empty `--log-failed` is failing at the `gh api` call itself, not at an assertion. Run
+   `gh run view <id> --log` and grep for the HTTP status / `Resource not accessible`. Do not
+   write it off as a stale/transient check.
+
+2. **Switch from the admin endpoint to the rules endpoint.** The 403
+   `Resource not accessible by integration` means the script called
+   `GET /repos/{owner}/{repo}/branches/{branch}/protection`, which needs an admin-scoped
+   token the default Actions `GITHUB_TOKEN` (contents/metadata read) cannot obtain. Use
+   `GET /repos/{owner}/{repo}/rules/branches/{branch}` instead — readable with `contents: read`.
+   It returns a FLAT ARRAY of rule objects; extract the PR params with:
+   ```bash
+   gh api repos/$O/$R/rules/branches/main \
+     --jq '[.[]|select(.type=="pull_request")]|first|.parameters'
+   ```
+   Field names DIFFER from the admin endpoint: `dismiss_stale_reviews` →
+   `dismiss_stale_reviews_on_push`, and the review count is `.required_approving_review_count`
+   directly on the params object.
+
+3. **Find the AUTHORITATIVE values by surveying the ecosystem — not the in-repo file.** Fixing
+   the 403 EXPOSES a real drift the 403 was masking: the in-repo canonical
+   `.github/branch-protection/main.json` may be the STALE side. Survey every HI repo's live
+   ruleset to decide which is authoritative:
+   ```bash
+   for R in Agamemnon Keystone Hermes Scylla Odysseus Argus Hephaestus Myrmidons; do
+     gh api repos/HomericIntelligence/Project$R/rules/branches/main \
+       --jq '[.[]|select(.type=="pull_request")]|first|.parameters'
+   done
+   # (use the bare repo name for Odysseus / Myrmidons — no "Project" prefix)
+   ```
+   The HI ecosystem standard (unanimous across all 8 surveyed) is:
+   `required_approving_review_count: 0`, `dismiss_stale_reviews_on_push: false`,
+   `require_last_push_approval: false`, `required_review_thread_resolution: true`,
+   `require_code_owner_review: false`.
+
+4. **Update BOTH sides to the ecosystem standard.** Edit the canonical
+   `.github/branch-protection/main.json` AND the drift script's assertions: assert
+   `required_approving_review_count == 0`, `required_review_thread_resolution == true`, and
+   DROP the `dismiss_stale_reviews == true` assertion (the standard is `false`).
+
+5. **GATE before pushing.** On a host with `gh` authed, run the script locally against the
+   live ruleset — it MUST print `branch-protection-drift: OK`:
+   ```bash
+   bash scripts/verify-branch-protection.sh
+   ```
+
+6. **Commit signed, open PR to main, squash auto-merge** (`gh pr merge <num> --auto --squash`;
+   HI repos disable rebase-merge). If `git rebase origin/main` prints
+   `dropping <sha> ... -- patch contents already upstream` for your rules-endpoint commit, a
+   sibling PR already landed that exact fix — only the ecosystem-alignment commit remains;
+   don't re-push the dropped change.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -167,6 +238,10 @@ gh api -X PUT repos/$O/$R/branches/main/protection --input /tmp/prot.json
 | Attempt 2 | PUT the ruleset with just the two new rules in `{"rules":[...]}` | Ruleset PUT REPLACES the entire `.rules` array — this would have dropped the entire shared baseline (signatures, status checks, etc.) | Ruleset edits are NOT additive. Always fetch existing `.rules`, dedup the same type, append, then PUT the full object. |
 | Attempt 3 | Parsed `branches/main/protection` output for ProjectKeystone (which had NO classic protection) | The 404 body `{"message":...,"status":"404"}` was treated as data; its top-level keys became fake required contexts `documentation_url`/`message`/`status`, which if PUT back permanently block all merges | Always guard for `.status == "404"` (or empty/non-200) BEFORE extracting `required_status_checks.contexts`. This happened live on Keystone and had to be corrected. |
 | Attempt 4 | Assumed the ruleset's `required_approving_review_count=0` meant no review gate anywhere | ProjectNestor's CLASSIC protection independently required `1` approving review, blocking ~18 fully-signed PRs that showed empty `reviewDecision` | Audit BOTH layers; the union wins. Fix Nestor with `PATCH .../branches/main/protection/required_pull_request_reviews -F required_approving_review_count=0`. |
+| Attempt 5 (v1.1.0) | Read `gh run view <id> --log-failed` for the failing `branch-protection-drift` job | Returned empty; the ~4s failure + empty log looked like a stale/transient check | A required-script job that fails in ~4s with no log is failing at the `gh api` call itself — read the full `--log` and grep for the HTTP status; don't assume transient. |
+| Attempt 6 (v1.1.0) | Took the check name literally — assumed `branch-protection-drift: fail` meant config drift | The real cause was `gh: Resource not accessible by integration (HTTP 403)`: the script called `gh api repos/{repo}/branches/main/protection`, which needs an admin-scoped token the default Actions `GITHUB_TOKEN` (contents/metadata read) cannot obtain | A "drift" check can be a broken-permissions check in disguise; verify it actually reads config before trusting its verdict. |
+| Attempt 7 (v1.1.0) | Copied PR #91's rules-endpoint script verbatim — read `gh api repos/{repo}/rules/branches/main` (readable with `contents:read`) but kept its assertions `required_approving_review_count >= 1` and `dismiss_stale_reviews == true` | The 403 was gone, but the script then FAILED on the actual values: the live ruleset has `required_approving_review_count: 0` and `dismiss_stale_reviews_on_push: false` | Fixing the 403 EXPOSES the real drift the 403 was masking; the endpoint fix and the assertion fix are two separate problems. |
+| Attempt 8 (v1.1.0) | Treated the canonical in-repo `.github/branch-protection/main.json` (count:1, dismiss:true) as source of truth and assumed the live ruleset was drifted | The canonical file was the STALE side; every other HI repo's live ruleset (count:0, dismiss:false) is the ecosystem standard | When a declaration disagrees with a live ruleset, survey the ecosystem to decide which is authoritative — don't assume the in-repo file is right. |
 
 ## Results & Parameters
 
@@ -231,6 +306,33 @@ required_signatures / reviews / linear_history / baseline checks → ruleset
 ```
 (Use `"required_status_checks": null` if the repo has no extras.)
 
+**HI ecosystem-standard `pull_request` ruleset params (v1.1.0 — unanimous across all 8 repos surveyed: Agamemnon, Keystone, Hermes, Scylla, Odysseus, Argus, Hephaestus, Myrmidons):**
+
+| Field (rules endpoint) | Standard value | Notes |
+| ------- | ------- | ------- |
+| `required_approving_review_count` | `0` | NOT `1`; assert `== 0` in any drift script |
+| `dismiss_stale_reviews_on_push` | `false` | admin endpoint calls this `dismiss_stale_reviews`; drop any `== true` assertion |
+| `require_last_push_approval` | `false` | |
+| `required_review_thread_resolution` | `true` | the one assertion that should be `== true` |
+| `require_code_owner_review` | `false` | |
+
+Read these from the rules endpoint (readable with `contents: read`), NOT the admin
+`branches/main/protection` endpoint (needs admin scope → HTTP 403 under the default
+Actions token):
+
+```bash
+gh api repos/HomericIntelligence/<Repo>/rules/branches/main \
+  --jq '[.[]|select(.type=="pull_request")]|first|.parameters'
+```
+
+**Rebase signal — "patch contents already upstream":** while rebasing the fix PR,
+`git rebase origin/main` printed
+`dropping <sha> ... -- patch contents already upstream` for the rules-endpoint commit.
+That means the exact fix had ALREADY landed on `main` independently (a sibling PR merged
+it), and only the ecosystem-alignment commit remained. **Lesson:** a "patch contents
+already upstream" drop on rebase confirms a sibling PR already merged your change — don't
+re-push it.
+
 **Cross-references:** `required_signatures` (ruleset) is what silently blocked 5 unsigned PRs earlier in
 this session — see [[git-gpg-sign-email-mismatch-silent-unsigned-blocks-merge]]. For squash-only
 merge behaviour and auto-merge gotchas see [[ci-cd-homeric-intelligence-merge-gotchas]]. For required
@@ -242,3 +344,4 @@ check names that exist only in the blocked PR (a different deadlock) see
 | Project | Context | Details |
 | --------- | --------- | --------- |
 | HomericIntelligence (all 15 Project* repos) | Session 2026-05-31 | Both layers audited and applied live via `gh api`; union confirmed; ProjectKeystone 404-body fake-context trap hit and corrected; ProjectNestor classic `required_approving_review_count=1` blocked ~18 signed PRs and was patched to 0 |
+| ProjectNestor | Session 2026-05-31 (v1.1.0) | `branch-protection-drift` required check (PR #81, `scripts/verify-branch-protection.sh`) failed on every PR with HTTP 403 on the admin `branches/main/protection` endpoint; switched to `rules/branches/main`, surveyed 8 HI repos for the ecosystem standard (count:0/dismiss:false/thread-resolution:true), reconciled BOTH the canonical `.github/branch-protection/main.json` and the script assertions. **verified-local:** local GATE printed `branch-protection-drift: OK`, fix commits signed/verified; CI drift-check pass still running at session end |

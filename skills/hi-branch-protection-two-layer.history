@@ -1,0 +1,107 @@
+# hi-branch-protection-two-layer — History
+
+## v1.1.0 (2026-05-31)
+
+**Changed by:** Session — ProjectNestor `branch-protection-drift` required check (added in PR #81, script `scripts/verify-branch-protection.sh`) failing on EVERY PR; root-caused to an HTTP 403 admin-endpoint problem masking a real ruleset-vs-canonical drift, reconciled to the HI ecosystem standard.
+**Verification:** verified-local (script gate passed against the live ruleset; commits signed/verified=true; CI drift-check pass was still running at session end — NOT verified-ci for the end-to-end run)
+
+### What changed
+- Added 4 new Failed Attempts rows covering the `branch-protection-drift` debugging arc:
+  - empty `--log-failed` on a ~4s failure (read full `--log`, grep the HTTP status)
+  - taking the check name literally ("drift") when the real cause was `HTTP 403 Resource not accessible by integration` on the admin `branches/main/protection` endpoint
+  - copying PR #91's rules-endpoint script verbatim (fixed the 403 but kept stale assertions, exposing the real drift)
+  - treating the in-repo canonical `.github/branch-protection/main.json` as source of truth when it was actually the stale side
+- Added new Verified Workflow subsection "Branch-protection-drift 403 → ecosystem reconcile" (6 steps): detect 403 in full log → switch admin endpoint to `rules/branches/main` (readable with `contents:read`, different field names) → survey all 8 repos to find the authoritative values → update BOTH canonical JSON and script assertions → GATE locally against the live ruleset → commit signed, PR, squash auto-merge.
+- Added Results & Parameters: the HI ecosystem-standard `pull_request` params table (unanimous across 8 repos) and the rebase "patch contents already upstream" signal that a sibling PR already merged the same fix.
+- Bumped version 1.0.0 → 1.1.0; added `history` frontmatter field.
+
+### Why
+v1.0.0 documented the static two-layer design and the admin `branches/main/protection`
+404 trap. This session surfaced the *dynamic* failure mode: a `branch-protection-drift`
+required check that hit the same admin endpoint and failed with HTTP 403 (not 404),
+which read like a transient/stale check but was actually (a) a broken-permissions check
+and (b) masking a genuine drift between the in-repo canonical policy
+(`required_approving_review_count: 1`, `dismiss_stale_reviews: true`) and the live
+ecosystem standard (`0` / `false`). The fix is to read the rules endpoint
+(`rules/branches/main`, readable with `contents:read`, different field names such as
+`dismiss_stale_reviews_on_push`) and to reconcile against the ecosystem survey rather
+than trusting the in-repo file. Same search surface as v1.0.0 (HI main protection layers,
+the protection-endpoint 404/403 problem, rulesets reporting 0/absent reviews), so this is
+an amendment, not a new skill.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: hi-branch-protection-two-layer
+description: "HomericIntelligence main-branch protection is split across TWO layers (repo ruleset + classic branch protection) whose UNION GitHub enforces. Use when: (1) managing HI main-branch protection or deciding whether a rule belongs in a ruleset vs classic branch protection, (2) a PR is BLOCKED by a review/check that the ruleset reports as 0/absent (the OTHER layer adds it), (3) a ruleset PUT returns HTTP 422 on required_conversation_resolution, (4) `gh api .../branches/main/protection` 404 body gets parsed as fake required-check contexts."
+category: ci-cd
+date: 2026-05-31
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - github
+  - rulesets
+  - branch-protection
+  - classic-protection
+  - required-signatures
+  - conversation-resolution
+  - linear-history
+  - gh-api
+---
+
+# HomericIntelligence main Branch Protection: The Two-Layer Split
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-31 |
+| **Objective** | Document the intentional two-layer (ruleset + classic) protection design on HI `main` and the gh-api gotchas encountered while auditing/applying it across all 15 repos |
+| **Outcome** | Successful — both layers audited and applied live via `gh api` on all 15 HomericIntelligence repos; design and constraints confirmed |
+| **Verification** | verified-ci (applied + verified live via gh api on all 15 HI repos, 2026-05-31) |
+
+## When to Use
+
+- You are managing HomericIntelligence `main`-branch protection and need to know where a given rule lives
+- You must decide whether a new rule belongs in a **repo ruleset** vs **classic branch protection**
+- A PR is `BLOCKED` by a review or status check that the **ruleset** reports as `0`/absent — the OTHER layer (classic) is adding it
+- A ruleset PUT returns `HTTP 422: data matches no possible input` when you add `required_conversation_resolution`
+- `gh api repos/<O>/<R>/branches/main/protection` returns a 404 body and you risk parsing its keys as fake required-check contexts
+- You see fully-signed PRs with empty `reviewDecision` that still will not merge
+
+Related: [[ci-cd-ruleset-bootstrap-deadlock]], [[ci-cd-homeric-intelligence-merge-gotchas]], [[git-gpg-sign-email-mismatch-silent-unsigned-blocks-merge]].
+
+## Verified Workflow
+
+(See v1.0.0 .md — full two-layer audit/apply workflow: audit both layers, compute EXTRAS as set difference, full-replace ruleset PUT, set classic = extras + conversation-resolution only, 404 guard, independent classic-reviews audit.)
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Attempt 1 | Added `{"type":"required_conversation_resolution"}` to a repo ruleset and PUT it | HTTP 422 — not a valid ruleset rule type | `required_conversation_resolution` is classic-only |
+| Attempt 2 | PUT the ruleset with just the two new rules | Ruleset PUT REPLACES the entire `.rules` array | Ruleset edits are NOT additive — fetch, dedup, append, PUT full object |
+| Attempt 3 | Parsed `branches/main/protection` 404 body for ProjectKeystone | 404 body keys became fake required contexts | Guard for `.status == "404"` before extracting contexts |
+| Attempt 4 | Assumed ruleset `required_approving_review_count=0` meant no review gate anywhere | ProjectNestor CLASSIC required 1 review, blocking ~18 signed PRs | Audit BOTH layers; the union wins |
+
+## Results & Parameters
+
+(See v1.0.0 .md — per-layer matrix, GitHub API behaviour table, classic-protection PUT object.)
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| HomericIntelligence (all 15 Project* repos) | Session 2026-05-31 | Both layers audited/applied live via gh api; Keystone 404 fake-context trap corrected; Nestor classic review-count patched to 0 |
+```
+
+---
+
+## v1.0.0 (2026-05-31)
+
+**Initial version.** Documented the intentional two-layer (ruleset + classic) protection
+design on HI `main` and the gh-api gotchas (422 on conversation-resolution in a ruleset,
+full-replace ruleset PUT, 404-body fake-context trap, independent classic review gate).
+**Verification:** verified-ci.
