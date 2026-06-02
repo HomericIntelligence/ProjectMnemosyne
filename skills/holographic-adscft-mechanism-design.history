@@ -1,5 +1,25 @@
 # holographic-adscft-mechanism-design — History
 
+## v1.2.0 (2026-06-07)
+
+**Changed by:** Merge resolution — TSVF/weak-value oracle mechanism design (branch `skill/tsvf-mechanism-design`, PR #2092) rebased onto main
+**Verification:** unverified — theoretical design exercise
+
+### What changed
+- Merged the TSVF / weak-value retrocausal oracle mechanism design into the skill as a third physics domain, alongside the existing AdS/CFT holographic and Deutsch CTC oracle domains
+- Added "Detailed Steps — TSVF / Weak-Value Oracle Domain" (7 steps: two boundary conditions, oracle compression, retrocausal coupler, anomalous amplification, hidden-cost failure mode, root-break identification, interpretational status)
+- Added Domain 3 block to the Quick Reference (A_w formula; ABL 1964, AAV 1988, Aharonov-Vaidman 2007, Hosten-Kwiat 2008, Zizzi 2003)
+- Added the canonical TSVF/weak-value citation set
+- Added 2 TSVF-specific Failed Attempts rows (no-signaling violation, post-selection probability cost)
+- Added the TSVF root-break cascade pattern and annotated the 14-walls quick summary with [TSVF: ...] tags
+- Added Planck time, WVA amplification, and post-selection cost to Key Physical Numbers
+- Added TSVF oracle entry to the Laws Preserved vs Broken Summary
+- Added the M22 two-state-vector oracle "Verified On" row
+- Merged the `description` "Use when" list and `tags` to the union of CTC and TSVF content
+
+### Why (v1.1.0 collision resolution)
+This was a design collision: main and PR #2092 both independently bumped the skill to **v1.1.0** with different physics. Main's v1.1.0 added the Deutsch CTC (closed-timelike-curve) oracle domain (Deutsch 1991, Aaronson-Watrous 2009). PR #2092's v1.1.0 added the TSVF / weak-value retrocausal oracle domain. The two share an identical meta-workflow (real-citation-grounded speculative physics, 14-walls table, parsimony/capability scoring, root-break cascade) but cover distinct physics domains. The collision was resolved by combining BOTH physics domains into a single merged **v1.2.0**, so neither the CTC content nor the TSVF content was lost.
+
 ## v1.1.0 (2026-06-01)
 
 **Changed by:** Session context — M19 Deutsch CTC Oracle mechanism design (Myrmidon swarm physics agent)
