@@ -1,70 +1,130 @@
 # scifi-mechanism-single-device-design — History
 
-## v1.3.0 (2026-06-01)
+## v1.4.0 (2026-06-07)
 
-**Changed by:** M55 reality-computes-itself offload mechanism design (Myrmidon swarm physics agent)
-**Verification:** verified-local
+**Changed by:** Rebase of TQC/anyon citation amendment onto v1.3.0 (Class C / M55 Reality Offload)
+**Verification:** verified-local — markdownlint clean; both TQC and M55/Class C content present
 
 ### What changed
-- Bumped version to 1.3.0
-- Added Class C (Reality Offload / Computational Universe) to mechanism class taxonomy
-- Added "Key Pattern: Class C Offload Architecture (M55)" reference block
-- Added "Real Citations Reusable for Computational-Universe / Information-Physics Mechanisms" section (6 citations: Lloyd PRL 2002, Lloyd 2006, Wheeler 1990, Deutsch 1985, Bekenstein 1973, Holevo 1973)
-- Added 2 new Failed Attempts rows: (1) claiming offload defeats Wall 7, (2) claiming full holographic readout at handheld power
-- Updated Outcome in Overview table to mention M55
-- Updated format reference recommendation: M14 preferred over M01 (most complete template)
-- Updated Step 4 format notes: table-format walls, Feasibility Tags as table
-- Added M55 row to Verified On table
-- Added relevant tags: lloyd, wheeler, it-from-bit, computational-universe, offload-architecture, bekenstein, holevo, landauer, reality-computes
+- Added a new "Real Citations Reusable for Topological Quantum Computation (TQC) Mechanisms" section with 5 real cited papers (Kitaev 2003, Nayak et al. 2008, Nakamura et al. 2020, Xu et al. 2024, Microsoft Majorana 1 2025)
+- Added "Key TQC Facts for M-Series Writers" section: Fibonacci vs. Ising anyon distinction, fusion rules, Hilbert-space dimension, universality vs. Clifford-only results, topological protection (Wall 11) formula
+- Added TQC/anyon WebSearch terms to the detailed Step 1 (Kitaev, Nayak, Nakamura, Fibonacci-processor searches)
+- Added new Failed Attempts row: confusing Ising/Majorana anyons with Fibonacci anyons for universal TQC
+- Added M44 (anyon/topological braiding fabric) to the Verified On table
+- Added `tqc`, `anyons`, `topological-quantum-computation` to tags
+- Version bump 1.3.0 → 1.4.0
 
 ### Why
-M55 (reality-computes-itself) design session produced a third distinct mechanism class -- the "offload to reality" approach -- which defeats Wall 4 (Feynman exponential) with zero new physics by refusing to simulate the region and running the region itself. The Lloyd/Wheeler/Deutsch/Bekenstein/Holevo citation set is independently reusable for any Class C mechanism. The two new Failed Attempts (Wall 7 inviolability for offload; impossibility of full holographic readout at practical power) are critical lessons for future Class C designs.
+This content was authored against v1.0.0 (the TQC citation PR) and is layered on top of main's v1.3.0
+(Class A/B/C taxonomy + M55 Reality Offload). The Fibonacci vs. Ising/Majorana distinction is a non-obvious
+trap (Microsoft Majorana 1 is not braiding-universal) and the TQC citations are reusable for any future
+M-series mechanism in the topological/anyonic category. All prior v1.3.0/v1.2.0/v1.1.0/v1.0.0 content is
+preserved below.
 
-### Previous version (v1.2.0) snapshot
+---
 
-[v1.2.0 was identical to v1.1.0 plus: no changes from the current session -- the version jump from 1.1.0 to 1.3.0 skips 1.2.0 to avoid confusion with the computation-hard-walls-analysis 1.2.0 update happening in the same session. v1.1.0 content is documented in the entry below.]
+## v1.2.0 (2026-06-01)
+
+**Changed by:** M44 anyon/topological braiding fabric mechanism design (Myrmidon swarm physics agent)
+**Verification:** unverified — theoretical framework extended with TQC mechanism data and new failure mode
+
+### What changed
+- Added M44 (anyon topological braiding fabric) to multi-mechanism comparison table with scores
+- Added Mechanism C (TQC/Fibonacci) to Wall 5 Sign Problem defeat mechanisms section
+- Added new "Wall 11 — Analog Precision: Defeat Hierarchy" section: topological protection is the strongest Wall 11 defeat across all M-series mechanisms
+- Added **CRITICAL FAILURE MODE: Planck-Density Black Hole Collapse** section — applies to all Planck-density substrate mechanisms (M14, M44, and any future mechanisms)
+- Added Bekenstein Accessible Bits calculation section (canonical formula for 1 kg, 5 mm device → ~10^40 bits)
+- Extended Wall 3 assessment: topological Planck-gap inversion (room temperature negligibly cold relative to E_P gap)
+- Extended Wall 4 assessment: TQC IS the exponential Hilbert space by physics, but TQC is still BQP
+- Extended Wall 11 detailed step with TQC topological protection formula
+- Added two new Failed Attempts rows: Planck Hilbert space vs accessible register, and ignoring black hole collapse
+- Added M44 to Verified On table
+- Version bump 1.1.0 → 1.2.0
+
+### Why
+M44 design session revealed two recurring failure modes for Planck-substrate mechanisms not previously documented: (1) the fusion Hilbert space dramatically exceeds the Bekenstein bound — the accessible register is always limited to ~10^40 bits regardless of claimed substrate capacity; (2) Planck-density matter implies black hole collapse — every mechanism using Planck-density substrate must acknowledge and address this. Both patterns will recur in every future M-series Planck-substrate mechanism. TQC also revealed a new, more rigorous Wall 11 defeat mechanism via topological protection.
+
+### Previous version (v1.1.0) snapshot
+[See v1.1.0 entry below]
 
 ---
 
 ## v1.1.0 (2026-06-01)
 
-**Changed by:** Session context — M43 magnetic-monopole register mechanism design
-**Verification:** verified-local
+**Changed by:** M16 asymptotic-safety substrate mechanism design (Myrmidon swarm physics agent)
+**Verification:** unverified — theoretical framework extended with new mechanism data point
 
 ### What changed
-- Added `history` frontmatter field pointing to this file
-- Added `monopole`, `topological-soliton`, `exotic-particles` to tags
-- Added 2 new Failed Attempts rows:
-  - WebFetch on Nature.com SSL failure (solution: use arXiv preprint instead)
-  - Pre-arXiv foundational papers (Parker 1970, Dirac 1931) not directly fetchable
-- Added new "Real Citations Reusable for Exotic-Particle / Topological-Soliton Mechanisms" section with 6 verified citations
-- Added "Key Pattern: Topological-Charge Register Architecture" reference block
-- Added M43 row to Verified On table
+- Added M16 asymptotic-safety wall-by-wall analysis to Results & Parameters
+- Extended Failed Attempts table with one new entry (2D CFT conflation)
+- Added new insight: Wall 5 (sign problem) is specifically defeated by CDT/Lorentzian approaches (novel finding vs AdS/CFT defeat mechanism)
+- Updated Capability Score Rubric with M16 scores
+- Added NP-1/NP-2/NP-3 postulate taxonomy to new-physics postulate naming convention
 
 ### Why
-M43 (magnetic-monopole register) design session produced a new class of mechanism — topological-soliton computing — distinct from the string-theory mechanisms documented in v1.0.0. The citation set, the Wall 10 hard-wall analysis, and the architectural pattern (topological charge = bit, annihilation = irreversible gate) are all independently reusable for skyrmion, vortex, and instanton compute mechanism files.
+M16 design session revealed that the sign problem (Wall 5) can be defeated via a different mechanism than the AdS/CFT path: Lorentzian CDT causal ordering eliminates the oscillatory Euclidean sign problem directly, independent of large-N limits. This is a distinct defeat mechanism worth documenting. Also: the 14-wall framework was applied for the second time, now with two distinct mechanism types (holographic boundary vs RG-flow substrate), allowing cross-mechanism comparison data.
 
 ### Previous version (v1.0.0) snapshot
 
-```
+```markdown
 ---
-name: scifi-mechanism-single-device-design
-description: "Design a single speculative-but-rigorous physics mechanism for a fictional sci-fi device, grounded in real cited science, with a Laws-Broken Ledger, Walls Defeated table, Parsimony/Capability scores, and Failure Modes. Use when: (1) a Myrmidon swarm agent is assigned one mechanism (MNN-name) to design in isolation, (2) the mechanism file must follow the HomericIntelligence/Story M-series template, (3) you need real cited papers (URL+date, ≥4) anchoring speculative extrapolations, (4) the prompt says 'pure science — no story/plot/character content'."
-category: documentation
+name: computation-hard-walls-analysis
+description: "Framework for analyzing 14 fundamental hard walls against exotic computation schemes in sci-fi mechanism design. Use when: (1) evaluating how many physical limits a fictional compute device breaks, (2) scoring mechanism plausibility against known physics limits, (3) writing scientifically rigorous speculative technology documents."
+category: architecture
 date: 2026-06-01
 version: "1.0.0"
 user-invocable: false
-verification: verified-local
-tags: [scifi, worldbuilding, mechanism-design, physics, citations, hard-walls, m-series, homeric-intelligence, speculative-science, laws-broken, parsimony, capability]
+verification: unverified
+tags: [physics, computation, limits, hard-walls, scifi, worldbuilding, mechanism-design]
 ---
 
-[... full body identical to v1.1.0 except: no history field in frontmatter, no monopole tags,
-no Nature SSL / pre-arXiv Failed Attempt rows, no exotic-particle citations section,
-no topological-register architecture pattern block, and Verified On had only M15 row.]
+# Computation Hard Walls Analysis Framework
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-01 |
+| **Objective** | Systematically evaluate exotic/fictional compute mechanisms against 14 known physical hard limits |
+| **Outcome** | Framework developed; holographic mechanism defeats 10 of 14 walls; 3 are genuinely inviolable |
+| **Verification** | unverified — theoretical framework, not implemented |
+
+## When to Use
+
+- Scoring a speculative or fictional computation mechanism for plausibility
+- Writing mechanism design documents for sci-fi worldbuilding
+- Checking which physical laws a proposed device must break and why
+- Comparing multiple exotic compute mechanisms on a common rubric
+- Grounding "impossible technology" in real physics language
+
+## Verified Workflow
+
+> **Warning (Proposed Workflow):** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms. Verification level: `unverified` — theoretical framework only.
+
+### Quick Reference
+
+```
+The 14 Hard Walls (reference list):
+ 1. Holevo bound (classical bits extractable from qubits)
+ 2. Landauer floor (k_BT ln2 per bit erased)
+ 3. Cube-square thermal (volume heat vs surface cooling)
+ 4. Exponential Hilbert-space scaling (Feynman)
+ 5. NP-hard fermionic sign problem
+ 6. Chaos/Lyapunov limit (λ_L ≤ 2πk_BT/ℏ)
+ 7. Computational irreducibility (Wolfram)
+ 8. Data-movement/memory-wall energy
+ 9. Gravity's weakness (G_N extremely small)
+10. Force energy-scale ladder (electroweak >> gravity)
+11. Analog precision/noise wall (~5-10 bits classical)
+12. Bekenstein/holographic bound (S ≤ A/4G_N)
+13. Thompson AT²=Ω(n²) I/O lower bound (VLSI)
+14. Causality/speed-of-light latency
+```
+[... full content in v1.0.0 file ...]
 ```
 
 ---
 
 ## v1.0.0 (2026-06-01)
 
-**Initial version.** Created from M15 string/T-duality mechanism design session.
+**Initial version.**

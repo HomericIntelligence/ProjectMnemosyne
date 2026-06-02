@@ -3,11 +3,11 @@ name: scifi-mechanism-single-device-design
 description: "Design a single speculative-but-rigorous physics mechanism for a fictional sci-fi device, grounded in real cited science, with a Laws-Broken Ledger, Walls Defeated table, Parsimony/Capability scores, and Failure Modes. Use when: (1) a Myrmidon swarm agent is assigned one mechanism (MNN-name) to design in isolation, (2) the mechanism file must follow the HomericIntelligence/Story M-series template, (3) you need real cited papers (URL+date, ≥4) anchoring speculative extrapolations, (4) the prompt says 'pure science — no story/plot/character content'."
 category: documentation
 date: 2026-06-01
-version: "1.3.0"
+version: "1.4.0"
 user-invocable: false
 verification: verified-local
 history: scifi-mechanism-single-device-design.history
-tags: [scifi, worldbuilding, mechanism-design, physics, citations, hard-walls, m-series, homeric-intelligence, speculative-science, laws-broken, parsimony, capability, monopole, topological-soliton, exotic-particles, false-vacuum, higgs, vacuum-decay, coleman-bounce, lloyd, wheeler, it-from-bit, computational-universe, offload-architecture, bekenstein, holevo, landauer, reality-computes]
+tags: [scifi, worldbuilding, mechanism-design, physics, citations, hard-walls, m-series, homeric-intelligence, speculative-science, laws-broken, parsimony, capability, monopole, topological-soliton, exotic-particles, false-vacuum, higgs, vacuum-decay, coleman-bounce, lloyd, wheeler, it-from-bit, computational-universe, offload-architecture, bekenstein, holevo, landauer, reality-computes, tqc, anyons, topological-quantum-computation]
 ---
 
 # Sci-Fi Single Mechanism Device Design (M-Series)
@@ -79,6 +79,12 @@ Run 4 independent searches simultaneously:
 3. `"<mechanism> computation register quantum information"` — for computational reinterpretation
 4. `"<supporting concept> information storage bits"` — for holographic/information angle
 
+For TQC/anyon mechanisms specifically, use:
+1. `"Kitaev 2003 fault-tolerant anyons Annals Physics"` — canonical TQC paper
+2. `"Nayak Simon Stern Freedman Das Sarma 2008 non-abelian anyons Rev Mod Phys"` — comprehensive review
+3. `"Nakamura 2020 anyonic braiding statistics fractional quantum Hall Nature Physics"` — experiment
+4. `"Fibonacci anyons superconducting processor 2024 Nature Physics"` — recent experiment
+
 **Step 2 — WebFetch the arXiv abstract pages** (not PDFs — abstracts have clean metadata):
 
 ```
@@ -122,6 +128,7 @@ Key format observations:
 | Attempting to cite Parker 1970 from original journal | Searched for "Parker 1970 Astrophys J 160 383 monopole flux" | Predates open-access archives; original paper paywalled and not on arXiv | For foundational pre-arXiv papers, cite via journal info from review papers, verify key claim via modern review |
 | Claiming the offload architecture defeats Wall 7 (irreducibility) | M55: argued that running the region bypasses computational irreducibility | Irreducibility applies to the computation itself, not to who runs it; the physical region still runs every step | Wall 7 is inviolable even for the most elegant offload. M55 sidesteps SIMULATION cost, not COMPUTATION cost |
 | Claiming Planck-scale boundary readout at handheld power for full holographic resolution | Tried to read all I_max = 10^65 bits from R=10cm region at 300 K | Landauer cost: k_BT ln2 x 10^65 ≈ 10^44 J (Sun's output for 10^18 years) | Full holographic readout is thermodynamically impossible; always subsample to ~10^12 bits/s |
+| Confusing Ising anyons with Fibonacci anyons for TQC universality | Assuming Majorana/Ising anyon platforms (e.g., Microsoft Majorana 1) demonstrate universal TQC | Ising anyon braiding generates only the Clifford group — efficiently classically simulable (Gottesman-Knill); NOT universal | For universal TQC by braiding, Fibonacci anyons (or SU(2)_k k≥3) are required; Majorana/Ising anyons need additional non-topological "magic state distillation" |
 
 ## Results & Parameters
 
@@ -290,6 +297,73 @@ Maldacena, J. (1997). "The Large N Limit of Superconformal Field Theories and Su
 Polchinski, J. (1998). String Theory, Vol. I & II. Cambridge University Press.
 ```
 
+### Real Citations Reusable for Topological Quantum Computation (TQC) Mechanisms
+
+```
+Kitaev, A.Yu. (2003). "Fault-tolerant quantum computation by anyons."
+  Annals of Physics 303:2-30.
+  https://arxiv.org/abs/quant-ph/9707021
+  [Foundational TQC paper: toric code, topological protection, anyon braiding gates,
+   fault tolerance from energy gap, degenerate ground states as qubit register]
+
+Nayak, C., Simon, S.H., Stern, A., Freedman, M. & Das Sarma, S. (2008).
+  "Non-Abelian anyons and topological quantum computation."
+  Rev. Mod. Phys. 80:1083-1159.
+  https://arxiv.org/abs/0707.1889
+  [Comprehensive review: Fibonacci anyon model, fusion rule tau x tau = 1 + tau,
+   Hilbert space dimension phi^N, universality by braiding (Freedman-Larsen-Wang 2002),
+   TQC=BQP, CNOT gate via 6-strand braid, Solovay-Kitaev approximation]
+
+Nakamura, J., Liang, S., Gardner, G.C. & Manfra, M.J. (2020).
+  "Direct observation of anyonic braiding statistics."
+  Nature Physics 16:931-936.
+  https://www.nature.com/articles/s41567-020-1019-1
+  [First direct experimental observation of anyon braiding at nu=1/3 FQH state;
+   electronic Fabry-Perot interferometer; discrete phase slips theta=2pi/3]
+
+Xu, S. et al. [Google Quantum AI] (2024).
+  "Non-Abelian braiding of Fibonacci anyons with a superconducting processor."
+  Nature Physics 20.
+  https://www.nature.com/articles/s41567-024-02529-6
+  [Fibonacci anyon braiding demonstrated on 27-qubit superconducting processor;
+   Fibonacci string-net model; topological entanglement entropy confirmed]
+
+Microsoft Azure Quantum (2025, Feb 19).
+  "Microsoft unveils Majorana 1, the world's first quantum processor powered by topological qubits."
+  https://azure.microsoft.com/en-us/blog/quantum/2025/02/19/microsoft-unveils-majorana-1-the-worlds-first-quantum-processor-powered-by-topological-qubits/
+  [NOTE: Uses Ising anyons (Majorana zero modes), NOT Fibonacci anyons — NOT universal
+   by braiding alone; requires magic state distillation for universality. Significant
+   controversy about MZM verification. Cite as evidence of topological qubit hardware
+   concept, not universal TQC.]
+```
+
+### Key TQC Facts for M-Series Writers
+
+```
+FIBONACCI ANYONS (required for braiding-universal TQC):
+  Fusion rule:       tau x tau = 1 + tau
+  Hilbert space dim: F_{N+2}  (Fibonacci number) ~= phi^N for large N, phi=(1+sqrt5)/2~=1.618
+  100 anyons:        dim ~= phi^100 ~= 10^20.9
+  Universality:      Freedman-Larsen-Wang (2002) — braids generate dense subgroup of SU(2)
+  TQC complexity:    TQC = BQP (Freedman-Kitaev-Wang 2002)
+  BQP limitation:    TQC cannot solve NP-hard problems in general; wall 4 (Hilbert space)
+                     remains standing for arbitrary quantum simulation of large systems
+
+ISING/MAJORANA ANYONS (Microsoft, current experiments):
+  Fusion rule:       sigma x sigma = 1 + psi
+  NOT universal by braiding alone — generates Clifford group only
+  Clifford group is efficiently classically simulable (Gottesman-Knill theorem)
+  Requires non-topological magic state distillation for universality
+  Braiding + magic state = universal but loses full topological error protection
+
+TOPOLOGICAL PROTECTION (Wall 11 defeat — most rigorous in M-series):
+  Gate fidelity is exact up to anyon-crossing threshold
+  Error rate per gate: exp(-E_gap / k_B T)
+  At Planck gap (E_P ~ 10^19 GeV), room temp (k_BT ~ 0.025 eV):
+    E_gap/k_BT ~ 10^32  ->  error rate ~ exp(-10^32) ~= 0
+  No analog precision requirement: braid crossing is a discrete topological event
+```
+
 ### Real Citations Reusable for Exotic-Particle / Topological-Soliton Mechanisms
 
 ```
@@ -339,3 +413,4 @@ Rajantie, A. (2012). "Introduction to Magnetic Monopoles." Contemp. Phys. 53(3):
 | HomericIntelligence/Story | M15 string/T-duality mechanism design, 2026-06-01 | M15-string-tduality-substrate.md, ~2000 words, 7 citations, all 14 walls addressed |
 | HomericIntelligence/Story | M43 magnetic-monopole register design, 2026-06-01 | M43-magnetic-monopole-register.md, ~3000 words, 7 real citations; all 14 walls addressed; Parsimony 3/10, Capability 8/10; Wall 10 identified as hardest wall for all GUT-scale mechanisms |
 | HomericIntelligence/Story | M55 reality-computes-itself offload design, 2026-06-01 | M55-reality-computes-itself.md, ~5400 words, 6 real citations (Lloyd PRL 2002, Lloyd 2006 book, Wheeler 1990, Deutsch 1985, Bekenstein 1973, Holevo 1973); 4 new-physics postulates (NP-1 TCF, NP-2 boundary write, NP-3 boundary read, NP-4 clock acceleration); Parsimony 8/10 (one root discovery ramifies into all 4 NPs); Wall 4 defeated with zero new physics; 7 failure modes documented; full holographic readout costs 10^44 J (impractical -- must subsample) |
+| HomericIntelligence/Story | M44 anyon/topological braiding fabric, 2026-06-01 | M44-anyon-braiding-fabric.md, ~5500 words, 5 real cited papers (Kitaev 2003, Nayak et al. 2008, Nakamura et al. 2020, Xu et al. 2024, Microsoft Majorana 1 2025), all 14 walls addressed, 3 NP postulates, 6 failure modes; Wall 11 (analog precision) defeated definitively via discrete topological braiding |
