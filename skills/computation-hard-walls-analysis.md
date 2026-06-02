@@ -3,11 +3,11 @@ name: computation-hard-walls-analysis
 description: "Framework for analyzing 14 fundamental hard walls against exotic computation schemes in sci-fi mechanism design. Use when: (1) evaluating how many physical limits a fictional compute device breaks, (2) scoring mechanism plausibility against known physics limits, (3) writing scientifically rigorous speculative technology documents."
 category: architecture
 date: 2026-06-01
-version: "1.2.0"
+version: "1.3.0"
 user-invocable: false
 verification: unverified
 history: computation-hard-walls-analysis.history
-tags: [physics, computation, limits, hard-walls, scifi, worldbuilding, mechanism-design, tqc, topological, bekenstein, planck-density]
+tags: [physics, computation, limits, hard-walls, scifi, worldbuilding, mechanism-design, tqc, topological, bekenstein, planck-density, offload-architecture, lloyd, holevo, landauer, reality-computes, computational-universe]
 ---
 
 # Computation Hard Walls Analysis Framework
@@ -18,7 +18,7 @@ tags: [physics, computation, limits, hard-walls, scifi, worldbuilding, mechanism
 |-------|-------|
 | **Date** | 2026-06-01 |
 | **Objective** | Systematically evaluate exotic/fictional compute mechanisms against 14 known physical hard limits |
-| **Outcome** | Framework developed and applied: AdS/CFT holographic (M02) defeats 10/14; asymptotic-safety RG (M16) defeats 5/14 + 3 partial; anyon topological braiding (M44) defeats 9/14 — with Wall 11 (Analog Precision) most decisively defeated by topological protection. Planck-density substrate mechanisms (LQG spin-network M14, anyon fabric M44) share a recurring failure mode: Planck energy density implies black hole collapse. |
+| **Outcome** | Framework developed and applied across mechanism classes: AdS/CFT holographic (M02) defeats 10/14; asymptotic-safety RG (M16) defeats 5/14 + 3 partial; anyon topological braiding (M44) defeats 9/14 — with Wall 11 (Analog Precision) most decisively defeated by topological protection; Reality Offload / computational-universe (M55) defeats 5/14 decisively + 2 via NP-1 + 2 partially, uniquely defeating Wall 4 with zero new physics. Planck-density substrate mechanisms (LQG spin-network M14, anyon fabric M44) share a recurring failure mode: Planck energy density implies black hole collapse. 3 walls (6, 7, 14) are genuinely inviolable across all classes. |
 | **Verification** | unverified — theoretical framework, not implemented |
 | **History** | [changelog](./computation-hard-walls-analysis.history) |
 
@@ -58,6 +58,7 @@ AdS/CFT holographic boundary (M02):         10/14 defeated  — Parsimony 2/10
 Asymptotic-safety RG substrate (M16):        5/14 defeated  — Parsimony 4/10
 LQG spin-network processor (M14):           ~8/14 defeated  — Parsimony 3/10
 Anyon topological braiding fabric (M44):     9/14 defeated  — Parsimony 3/10
+Reality Offload / Comp. Universe (M55): 5/14 + 2 NP + 2 partial — Parsimony 8/10 LOW-BREAK
 Inviolable (any mechanism):                  3/14 standing  — Walls 6, 7, 14
 
 WALL 11 CHAMPION: Topological mechanisms (M44) defeat Wall 11 most rigorously —
@@ -67,20 +68,20 @@ WALL 11 CHAMPION: Topological mechanisms (M44) defeat Wall 11 most rigorously �
 ### Detailed Assessment Steps
 
 1. **For each wall, ask: does the mechanism's operating principle bypass the assumption?**
-   - Wall 1 (Holevo): Only applies to classical readout. If output is quantum, it doesn't apply.
-   - Wall 2 (Landauer): Only applies to irreversible erasure. Logically reversible / topologically protected → zero cost.
-   - Wall 3 (Cube-square): Only applies to volumetric computers. A surface computer (2D) has no cube-square problem. Topological mechanisms: if Planck-gap energy scale, room temperature is negligibly cold — thermal dissipation problem inverted.
-   - Wall 4 (Hilbert-space scaling): AdS/CFT trades exponential bulk Hilbert space for polynomial boundary CFT. TQC/Fibonacci anyons: fusion Hilbert space grows as φ^N — the physical anyon system IS the exponential register, no classical simulation needed. BUT: TQC is still BQP; arbitrary quantum simulation remains exponentially hard.
-   - Wall 5 (Sign problem): THREE distinct defeat mechanisms: (A) AdS/CFT — large-N saddle absorbs fermionic determinant into classical bulk; (B) CDT/Lorentzian RG (M16) — causal ordering eliminates Euclidean oscillatory sign problem; (C) TQC/Fibonacci (M44) — braid group representation is algebraically exact, no Monte Carlo sampling required, no sign problem exists.
-   - Wall 6 (Lyapunov): NOT bypassable. The MSS bound (λ_L ≤ 2πk_BT/ℏ) applies to any physical system. AdS/CFT saturates this bound, never exceeds it.
-   - Wall 7 (Irreducibility): NOT bypassable. A physical system is always computationally irreducible — it evolves at its own rate. No mechanism lets you skip ahead.
-   - Wall 8 (Memory wall): Entanglement encodes correlations nonlocally — no data transport, zero movement energy. TQC: information encoded in non-local fusion channels; gate operations are local braid crossings at Planck spacing.
-   - Wall 9 (Gravity weakness): G_N smallness = 1/N suppression in boundary theory — a feature of the duality, not a bug. At Planck scale: G m_P²/ℏc = 1 exactly — gravity is not weak. Planck-substrate mechanisms operate where gravity is strong.
-   - Wall 10 (Force ladder): All forces appear as operator families in the CFT spectrum. In analogue RG: energy-scale ladder collapsed by analogue Planck rescaling. In Planck-substrate mechanisms: new-physics postulate required to bridge macroscopic control to Planck-scale excitation.
-   - Wall 11 (Analog precision): Quantum shot noise 1/√N with N~10⁶⁶ gives ~10³³ digit precision for AdS/CFT. TQC (M44): braiding is a discrete topological event — no analog precision requirement at all. Error rate = exp(-E_gap/k_BT). At Planck gap, room temp: error ~ exp(-10^32) ≈ 0. This is the most rigorous Wall 11 defeat across all M-series mechanisms.
-   - Wall 12 (Holographic bound): Surface computer operating at exactly the bound — saturated, not defeated. Accessible register for 1 kg, 5 mm radius device: ~10^40 bits. Planck-substrate fusion Hilbert spaces (dim ~ 10^(10^97)) vastly exceed this — surplus is formally inaccessible (see Black Hole Failure Mode below).
-   - Wall 13 (Thompson AT²): Requires wires in classical VLSI. CFT has nonlocal correlators built into physics — Thompson bound doesn't apply. 3D braid architecture: all gates are nearest-neighbor; AT² 2D VLSI bound inapplicable.
-   - Wall 14 (Causality/latency): NOT bypassable. Entanglement wedge reconstruction is bounded by the bulk causal wedge. Anyon motion is subluminal. No-communication theorem applies universally.
+   - Wall 1 (Holevo): Only applies to classical readout. If output is quantum, it doesn't apply. M55 offload: applies to the RD boundary readout channel — Holevo limits extraction to ≤I_max bits where I_max = A/(4ℓ_P²). Enormous (~10⁶⁵ bits for R=10cm) but finite.
+   - Wall 2 (Landauer): Only applies to irreversible erasure. Logically reversible / topologically protected → zero cost. M55 offload: the region's evolution is UNITARY (reversible) during the EO phase — zero Landauer cost there; cost paid only at BE write and RD readout (~10¹² bits/s × k_BT ln2 ≈ 3 nW).
+   - Wall 3 (Cube-square): Only applies to volumetric computers. A surface computer (2D) has no cube-square problem. Topological mechanisms: if Planck-gap energy scale, room temperature is negligibly cold — thermal dissipation problem inverted. M55: no heat generated inside the target region (unitary evolution); all heat in macroscopic device electronics with normal surface area.
+   - Wall 4 (Hilbert-space scaling): AdS/CFT trades exponential bulk Hilbert space for polynomial boundary CFT. AS/RG (M16): spectral dimension collapse from 4D to 2D reduces Hilbert space. TQC/Fibonacci anyons (M44): fusion Hilbert space grows as φ^N — the physical anyon system IS the exponential register, no classical simulation needed (BUT: TQC is still BQP; arbitrary quantum simulation remains exponentially hard). Reality Offload (M55) — UNIQUE, ZERO NEW PHYSICS: device never simulates the region; the region traverses its own exponential Hilbert space. Feynman's Wall applies to classical SIMULATION; M55 sidesteps by running the actual region. Device pays only polynomial I/O cost.
+   - Wall 5 (Sign problem): FOUR distinct defeat mechanisms: (A) AdS/CFT — large-N saddle absorbs fermionic determinant into classical bulk; (B) CDT/Lorentzian RG (M16) — causal ordering eliminates Euclidean oscillatory sign problem; (C) TQC/Fibonacci (M44) — braid group representation is algebraically exact, no Monte Carlo sampling required, no sign problem exists; (D) Reality Offload (M55) — physical region has no sign problem (only classical algorithms simulating quantum systems do), but PARTIAL: the BE must prepare a fermionic initial state, which may require solving a sign problem to SPECIFY.
+   - Wall 6 (Lyapunov): NOT bypassable. The MSS bound (λ_L ≤ 2πk_BT/ℏ) applies to any physical system. AdS/CFT saturates this bound, never exceeds it. M55 offload: region evolves chaotically but does not predict or compress it; chaos bites hard at the BE stage (Planck-precision initial conditions needed for chaotic scenarios).
+   - Wall 7 (Irreducibility): NOT bypassable. A physical system is always computationally irreducible — it evolves at its own rate. No mechanism lets you skip ahead. CRITICAL for M55: "reality computes itself" does NOT defeat irreducibility — the region still runs every step in real time. The offload sidesteps the cost of CLASSICAL RECOMPUTATION, not the cost of RUNNING.
+   - Wall 8 (Memory wall): Entanglement encodes correlations nonlocally — no data transport, zero movement energy. In RG substrates: field configuration IS the memory. TQC: information encoded in non-local fusion channels; gate operations are local braid crossings at Planck spacing. M55: information moves inside region as physical field propagation at c — no external memory bus, no cache miss, no von Neumann bottleneck.
+   - Wall 9 (Gravity weakness): G_N smallness = 1/N suppression in boundary theory — a feature of the duality, not a bug. At Planck scale: G m_P²/ℏc = 1 exactly — gravity is not weak. Planck-substrate mechanisms operate where gravity is strong. M55 (NP-1 TCF): postulates O(1) coupling at Planck energies, bridging the hierarchy problem via new physics.
+   - Wall 10 (Force ladder): All forces appear as operator families in the CFT spectrum. In analogue RG: energy-scale ladder collapsed by analogue Planck rescaling. In Planck-substrate mechanisms: new-physics postulate required to bridge macroscopic control to Planck-scale excitation. M55: TCF (NP-1) must couple macroscopic eV-scale fields to Planck-scale DOFs — a ~10²⁴ energy-scale gap; NP-1 postulates a resonant cascade. NOTE: the hierarchy problem reappears inside the TCF mechanism itself — M55's deepest internal tension.
+   - Wall 11 (Analog precision): Quantum shot noise 1/√N with N~10⁶⁶ gives ~10³³ digit precision for AdS/CFT. TQC (M44): braiding is a discrete topological event — no analog precision requirement at all. Error rate = exp(-E_gap/k_BT). At Planck gap, room temp: error ~ exp(-10^32) ≈ 0. This is the most rigorous Wall 11 defeat across all M-series mechanisms. M55: boundary readout is a projective measurement — discrete eigenvalues, digital at Planck scale.
+   - Wall 12 (Holographic bound): Surface computer operating at exactly the bound — saturated, not defeated. Accessible register for 1 kg, 5 mm radius device: ~10^40 bits. Planck-substrate fusion Hilbert spaces (dim ~ 10^(10^97)) vastly exceed this — surplus is formally inaccessible (see Black Hole Failure Mode below). M55: bound EXPLOITED (not defeated) — it enables the boundary readout, I_max = A/(4ℓ_P²) bits; full holographic readout of R=10cm at 300 K costs k_BT ln2 × 10⁶⁵ ≈ 10⁴⁴ J (impossible), so M55 always subsamples in practice.
+   - Wall 13 (Thompson AT²): Requires wires in classical VLSI. CFT has nonlocal correlators built into physics — Thompson bound doesn't apply. 3D braid architecture: all gates are nearest-neighbor; AT² 2D VLSI bound inapplicable. M55: 3D computation in free space; boundary is a 2D surface; no VLSI topology applies, AT² bound irrelevant.
+   - Wall 14 (Causality/latency): NOT bypassable. Entanglement wedge reconstruction is bounded by the bulk causal wedge. Anyon motion is subluminal. No-communication theorem applies universally. M55: even with NP-4 clock acceleration, region evolves causally — latency bounded below by light-crossing time of region.
 
 2. **Score: count DEFEATED walls for Capability Score, count new postulates for Parsimony Score.**
 
@@ -100,6 +101,8 @@ WALL 11 CHAMPION: Topological mechanisms (M44) defeat Wall 11 most rigorously �
 | Claiming d_s=2 implies 2D CFT tractability | Assuming spectral dimension flow to 2 makes computation exactly solvable via Virasoro symmetry | Spectral dimension characterizes diffusion properties only; it does not imply the geometry is a smooth 2-manifold with Virasoro symmetry | Distinguish between effective (diffusion-measured) dimension and actual geometric dimension; d_s=2 is a probe property, not a Lagrangian property |
 | Treating Planck-density fusion Hilbert space as accessible register | Claiming φ^(10^98) dimensional anyon Hilbert space as the usable register | Bekenstein bound limits accessible bits to ~10^40 for a 1 kg device; the rest is topologically inaccessible and requires global measurement exponentially costly to process | Always cross-check claimed register size against Bekenstein-accessible bits; use ~10^40 bits for 1 kg, 5 mm device |
 | Ignoring black hole collapse for Planck-density substrates | Designing a "palm-sized" device with Planck-scale energy density | Schwarzschild radius of 1 cm³ of Planck-density matter (ρ ~ 5×10^96 kg/m³) is astronomically large — device is a black hole | ALL Planck-density substrate mechanisms must address this failure mode explicitly; it requires additional new-physics or reframing |
+| Claiming offload architecture defeats Wall 7 | M55: argued that running the region bypasses computational irreducibility | Irreducibility applies to the computation itself, not to who runs it; the region runs every step in real time | Wall 7 is inviolable even for the most elegant offload; offload sidesteps SIMULATION cost, not COMPUTATION cost |
+| Claiming full holographic boundary readout at handheld power | M55: tried to read all I_max = 10⁶⁵ bits from R=10cm region at 300 K | Landauer cost: k_BT ln2 × 10⁶⁵ ≈ 10⁴⁴ J (Sun's output for ~10¹⁸ years) | Full holographic readout is never feasible; all practical devices subsample to ~10¹² bits/s |
 
 ## Results & Parameters
 
@@ -116,6 +119,13 @@ Score 10: 1 postulate (most parsimonious)
 Score 5:  2 postulates
 Score 2:  5 postulates (highly exotic)
 Score 1:  10+ postulates (pure fantasy)
+
+LOW-BREAK mechanisms: mechanisms that defeat critical walls WITHOUT new physics.
+M55 is a LOW-BREAK mechanism:
+  Wall 4 defeated with ZERO new physics (just refuse to simulate).
+  Walls 2, 5 partially defeated with ZERO new physics (unitary EO phase is free).
+  New physics only needed for I/O: NP-1 (TCF coupling), NP-2 (BE write),
+    NP-3 (RD read), NP-4 (clock acceleration, optional).
 ```
 
 ### Multi-Mechanism Comparison Table
@@ -126,9 +136,30 @@ M02 AdS/CFT holo        10/14           3 (6,7,14)      5                       
 M16 AS-RG sub           5/14 + 3 part   3 (6,7,14)      3                       ~50%        4/10
 M14 LQG spin-network    ~8/14           4 (6,7,12,14)   3                       ~57%        3/10
 M44 Anyon TQC fabric    9/14 + 2 part   3 (6,7,14)      3                       ~64%        3/10
+M55 Reality Offload     5/14 + 2 part   3 (6,7,14)      4 (root: 1)             ~64%        8/10 LOW-BREAK
 ```
 
-### Wall 5 Sign Problem — Three Distinct Defeat Mechanisms
+### M55 Wall-by-Wall Summary (Reality Computes Itself)
+
+```
+Wall  Status              Key argument
+  1   LEFT STANDING       Holevo limits RD readout to ≤I_max bits (huge but finite)
+  2   PARTIALLY DEFEATED  Region EO phase is unitary → zero Landauer; pays at BE/RD I/O only
+  3   DEFEATED            No heat in region (unitary); device electronics normal surface area
+  4   DEFEATED (ZERO NP)  Device never simulates; region traverses own Hilbert space
+  5   PARTIALLY DEFEATED  Region has no sign problem; BE initial-state specification may need it
+  6   LEFT STANDING       Region evolves chaotically; Planck-precision BE init required
+  7   LEFT STANDING       Region runs every step in real time; irreducibility is irreducible
+  8   DEFEATED            Information in region travels as physical fields at c; no memory bus
+  9   BROKEN NP-1         TCF: O(1) Planck coupling via father's new physics
+ 10   BROKEN NP-1         TCF resonant cascade bridges 10^24 energy-scale gap (most speculative)
+ 11   DEFEATED            Boundary readout is projective measurement → discrete eigenvalues
+ 12   LEFT STANDING       Bekenstein exploited as readout surface; I_max ceiling stands
+ 13   IRRELEVANT          3D free space; no 2D VLSI topology; AT² bound inapplicable
+ 14   LEFT STANDING       Region evolves causally; c-latency sets minimum readout time
+```
+
+### Wall 5 Sign Problem — Four Distinct Defeat Mechanisms
 
 ```
 Mechanism A (AdS/CFT):   Large-N saddle point → classical bulk gravity; fermionic
@@ -143,6 +174,35 @@ Mechanism C (TQC/Fibonacci anyons, M44):
                          matrices are computed from representation theory, not Monte Carlo.
                          No sign problem exists because there is no path integral sum with
                          oscillatory signs; braiding unitaries are exact finite group matrices.
+
+Mechanism D (Reality Offload, M55):
+                         Physical region has no sign problem — only classical algorithms
+                         simulating quantum systems do. Running the region bypasses it.
+                         PARTIAL: BE write of a fermionic initial state may still require
+                         solving a sign problem to specify.
+```
+
+### Wall 4 Defeat — Four Distinct Mechanisms
+
+```
+A — Holographic reduction (AdS/CFT, M02):
+    Exponential bulk Hilbert space traded for polynomial boundary CFT computation.
+    Requires: AdS/CFT duality, holographic dictionary, large-N limit.
+
+B — Spectral dimension collapse (AS-RG, M16):
+    Effective spatial dimension flows from 4D to 2D at UV fixed point.
+    Requires: asymptotic safety UV fixed point; d_s → 2 at Planck scale.
+
+C — Physical exponential register (TQC/Fibonacci, M44):
+    Fusion Hilbert space grows as φ^N; the physical anyon system IS the register.
+    Requires: non-abelian anyons; still BQP (no general quantum-simulation speedup).
+
+D — Reality offload (M55) — UNIQUE, NO NEW PHYSICS:
+    Device refuses to simulate the region. Region traverses its own exponential Hilbert space.
+    Feynman's Wall applies to classical SIMULATION; offload sidesteps by not simulating.
+    Device pays only polynomial I/O cost (boundary bits).
+    NP-1 TCF needed for I/O coupling, but NOT for the Wall 4 defeat itself.
+    This is the ONLY defeat mechanism for Wall 4 requiring zero physics beyond QM + GR.
 ```
 
 ### Wall 11 — Analog Precision: Defeat Hierarchy
@@ -155,6 +215,8 @@ Strongest defeat: TQC/Fibonacci anyons (M44) — braiding is a DISCRETE TOPOLOGI
                   Error rate = exp(-E_gap/k_BT).
                   At Planck gap (E_P/k_BT ~ 10^32): error ~ exp(-10^32) ≈ 0.
                   This is the only mechanism where Wall 11 defeat is rigorous by construction.
+Also discrete:    Reality Offload (M55) — boundary readout is projective measurement,
+                  yielding discrete eigenvalues (digital at Planck scale).
 ```
 
 ### The Three Inviolable Walls
@@ -163,15 +225,39 @@ Strongest defeat: TQC/Fibonacci anyons (M44) — braiding is a DISCRETE TOPOLOGI
 Wall 6 — Chaos/Lyapunov: λ_L ≤ 2πk_BT/ℏ (Maldacena-Shenker-Stanford bound)
   Any physical quantum system saturates but cannot exceed this.
   AdS/CFT is a maximal chaos system — it saturates exactly.
+  M55 offload: region evolves chaotically; chaos bites hard at BE initial-condition write.
 
 Wall 7 — Computational Irreducibility:
   A physical system always evolves at its own rate.
   No mechanism provides speedup over the physical time of the system itself.
+  M55: "offload" sidesteps simulation cost, NOT computation cost. Region runs every step.
+  Wall 7 is inviolable even for the most elegant offload architecture.
 
 Wall 14 — Causality/Speed-of-Light Latency:
   Information cannot propagate faster than c, even via entanglement.
   Entanglement wedge reconstruction is bounded by the causal wedge.
   No-communication theorem applies universally.
+  M55: region evolves causally; RD readout is bounded by c-propagation within region.
+```
+
+### Critical Quantitative Limits for Boundary-Readout Mechanisms (M55 class)
+
+```
+Bekenstein bound (readout ceiling):
+  I_max = A/(4ℓ_P²) = 4πR² / (4 × 2.6e-70 m²)
+  For R = 10 cm: I_max ≈ 4π × 0.01 / (1.04e-69) ≈ 1.2e67 bits
+
+Landauer cost of full holographic readout at 300 K:
+  E_readout = k_BT ln2 × I_max ≈ 2.9e-21 J × 10^67 ≈ 3e46 J
+  (Sun's total output over ~7e18 years — physically impossible)
+
+Practical subsampling to human-perceptible output:
+  ~10^12 bits/s (video + audio + haptic)
+  Landauer cost: 10^12 × 2.9e-21 J ≈ 3 nW — trivial
+
+CONSEQUENCE: All boundary-readout mechanisms (M55 class) MUST subsample.
+Full holographic fidelity is thermodynamically impossible at any practical power.
+This must be stated explicitly in the failure modes of any Class C mechanism.
 ```
 
 ### Bekenstein Accessible Bits Calculation
@@ -237,18 +323,32 @@ Result: Planck-scale physics accessible at laboratory energies in the analogue
 Caveat: Only within the analogue; real gravitational physics still requires Planck energy
 ```
 
-### Laws Broken Ledger Template
+### Laws Broken Ledger Status Definitions
 
-```markdown
+```
+PRESERVED         — Mechanism obeys this law completely
+EXPLOITED         — Mechanism uses this law as operating principle (e.g., Bekenstein as readout surface)
+BENT              — Mechanism near the boundary; technically valid but unusual
+BROKEN            — Mechanism requires this law to not hold; must state new-physics postulate
+DEFEATED          — Mechanism sidesteps the wall without breaking the underlying law
+PARTIALLY DEFEATED — Wall applies in some sub-system but not the core computation
+IRRELEVANT        — Wall's assumptions (e.g., 2D VLSI) do not apply to this mechanism
+```
+
+Laws Broken Ledger template (Markdown):
+
+```text
 | Law / Principle | Status | Note |
 |---|---|---|
 | [Law name] | PRESERVED / BENT / BROKEN | [Brief justification] |
 ```
 
-Status definitions:
-- `PRESERVED`: Mechanism obeys this law completely
-- `BENT`: Mechanism operates near the boundary; technically valid but unusual
-- `BROKEN`: Mechanism requires this law to not hold; must state new-physics postulate
+## References (M55 class — boundary readout / computational universe)
+
+- Lloyd, S. "Computational Capacity of the Universe." *Phys. Rev. Lett.* 88, 237901 (2002).
+- Bekenstein, J. D. "Black Holes and Entropy." *Phys. Rev. D* 7, 2333 (1973).
+- Holevo, A. S. "Bounds for the quantity of information transmitted by a quantum channel." *Probl. Peredachi Inf.* 9, 3 (1973).
+- Landauer, R. "Irreversibility and Heat Generation in the Computing Process." *IBM J. Res. Dev.* 5, 183 (1961).
 
 ## Verified On
 
@@ -257,3 +357,4 @@ Status definitions:
 | HomericIntelligence/Story | M02 holographic boundary mechanism design, Myrmidon swarm physics agent | Applied to AdS/CFT boundary computer; see Research/Mechanisms/M02-holographic-boundary.md |
 | HomericIntelligence/Story | M16 asymptotic-safety RG substrate mechanism design, Myrmidon swarm physics agent | Applied to AS smooth substrate; see Research/Mechanisms/M16-asymptotic-safety-substrate.md |
 | HomericIntelligence/Story | M44 anyon topological braiding fabric, Myrmidon swarm physics agent, 2026-06-01 | Applied to Fibonacci anyon fabric; Planck-density black hole failure mode documented; see Research/Mechanisms/M44-anyon-braiding-fabric.md |
+| HomericIntelligence/Story | M55 reality-computes-itself offload design, 2026-06-01 | Discovered LOW-BREAK pattern for Wall 4 (zero NP); Bekenstein readout quantification (10^44 J full holographic); confirmed Wall 7 inviolable for offload; "perfect simulator must BE the region" no-go accepted. Research/Mechanisms/M55-reality-computes-itself.md |

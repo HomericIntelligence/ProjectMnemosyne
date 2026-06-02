@@ -1,5 +1,39 @@
 # computation-hard-walls-analysis — History
 
+## v1.3.0 (2026-06-07)
+
+**Changed by:** Merge of M55 reality-computes-itself offload mechanism (PR #2099) with main's M44 topological / Planck-gap content (Myrmidon swarm physics agent)
+**Verification:** unverified — theoretical framework extended with the M55 Reality Offload mechanism class, merged with existing topological/Planck-density content
+
+### Version collision resolved
+Both this branch and main independently bumped the skill to **v1.2.0** with DIFFERENT content:
+- main's v1.2.0 = M44 anyon topological braiding + Planck-density black hole failure mode + topological Planck-gap Wall 3 extension.
+- PR #2099's v1.2.0 = M55 "Reality Offload" / "reality-computes-itself" mechanism class.
+
+This v1.3.0 entry resolves the collision by **combining both** — nothing is lost. main's v1.2.0 entry is retained below.
+
+### What changed (M55 Reality Offload merged in)
+- Added Reality Offload / Comp. Universe (M55) to the Quick Reference mechanism comparison and the Multi-Mechanism Comparison Table
+- Added "M55 Wall-by-Wall Summary (Reality Computes Itself)" reference table (all 14 walls)
+- Added Mechanism D (Reality Offload) to the Wall 5 sign-problem defeat list (now four mechanisms)
+- Added Mechanism D (Reality Offload) to a new "Wall 4 Defeat — Four Distinct Mechanisms" section (zero-NP defeat via offload)
+- Added per-wall M55 annotations to the Detailed Assessment Steps (Holevo RD-boundary readout, unitary EO Landauer, etc.)
+- Added "LOW-BREAK mechanisms" concept to the Capability Score Rubric
+- Added "Critical Quantitative Limits for Boundary-Readout Mechanisms (M55 class)" section with exact Bekenstein/Landauer numbers
+- Extended the Laws Broken Ledger status definitions to include EXPLOITED, DEFEATED, PARTIALLY DEFEATED, IRRELEVANT (kept main's PRESERVED/BENT/BROKEN template)
+- Added 2 new Failed Attempts rows: (1) claiming offload defeats Wall 7, (2) claiming full holographic readout at handheld power
+- Added M55 References section (Lloyd PRL 2002, Bekenstein 1973, Holevo 1973, Landauer 1961)
+- Updated Overview outcome statement to include M55
+- Added M55 entry to the Verified On table
+- Merged tags: union of main's (tqc, topological, bekenstein, planck-density) and the PR's (offload-architecture, lloyd, holevo, landauer, reality-computes, computational-universe)
+- Kept main's topological / Planck-density content fully intact (M44, Wall 3 Planck-gap inversion, Planck-Density Black Hole Collapse failure mode, Bekenstein Accessible Bits, Wall 11 Defeat Hierarchy)
+- Version bump 1.2.0 (collided) → 1.3.0
+
+### Why
+M55 design session identified the most parsimonious Wall 4 defeat mechanism discovered so far: "just run the region instead of simulating it" requires zero new physics for the core defeat — a qualitatively different class from AdS/CFT (holographic reduction), AS-RG (spectral dimension collapse), and TQC (physical exponential register). It also quantified the Landauer cost of full Bekenstein-scale holographic readout (~10^44 J for R=10cm at 300K), a hard practical limit for all boundary-readout (Class C) mechanisms. Merging preserves main's independently-developed topological/Planck-density findings alongside the new offload class.
+
+---
+
 ## v1.2.0 (2026-06-01)
 
 **Changed by:** M44 anyon/topological braiding fabric mechanism design (Myrmidon swarm physics agent)
