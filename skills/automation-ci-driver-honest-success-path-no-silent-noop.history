@@ -1,0 +1,99 @@
+# automation-ci-driver-honest-success-path-no-silent-noop — History
+
+## v1.1.0 (2026-06-02) — Wait-for-merge + honest exit-gate partition
+
+**Changed by:** ProjectMnemosyne `/learn` AMEND workflow
+**Verification:** verified-ci (ProjectHephaestus PR #876 merged; new gate language
+appeared in a real ecosystem-run's production logs this session)
+
+### What changed
+Amended the existing `drive_prs_green` CI-driver skill with the NEXT fix on the same
+driver. v1.0.0's Guard 4 was too blunt: it exited `rc=1` whenever ANY open PR remained,
+even when every PR was `auto-merge=armed` and merging on its own. A real ecosystem run
+marked **7 of 15 repos FAILED** with zero actual driver crashes.
+
+Added (ProjectHephaestus PR #876, `hephaestus/automation/ci_driver.py`):
+
+- **`_wait_for_pr_terminal(issue, pr) -> MERGED|CLOSED|FAILING|TIMEOUT`** — bounded
+  exponential backoff (`min(2**n, 60)` cap, `HEPH_PR_MERGE_MAX_WAIT` default 1800s);
+  reacts immediately to a required check concluding `failure` after arming. Wired into
+  `_drive_issue` post-arm and into the still-OPEN branch of
+  `_check_arming_on_drive_start`. `FAILING` → `_attempt_ci_fixes`; `MERGED` → fire
+  post-merge `/learn` once.
+- **Robust Dependabot arming** — `_enable_auto_merge(pr, is_bot_pr=False)` retries
+  `gh pr merge --auto` (no `--squash`) for bot PRs on squash failure.
+- **Honest exit gate** — `_evaluate_run_result()` partitions open PRs into
+  `armed_pending` (truthy `autoMergeRequest` → WARNING, not a failure) vs `needs_action`
+  (falsy → rc=1). New log lines: `"N PR(s) armed and still merging (waited; not a
+  failure)"` and `"Repo not done: N open PR(s) need manual action"`.
+- **No-commit hardening** — `_retry_no_commit_once(..., max_retries=2)` re-engages the
+  agent up to twice (bounded) before recording the forensics marker. `max_fix_iterations`
+  left unchanged.
+
+Frontmatter: version `1.0.0` → `1.1.0`, date `2026-05-31` → `2026-06-02`, added `history`
+field, added tags `wait-for-merge`, `auto-merge-armed`, `dependabot-arming`. Added a
+v1.1.0 sub-section to Verified Workflow (steps 6–9), four new Failed Attempts rows, and
+new PR/Verified-On/References entries for PR #876.
+
+### Why
+The user rejected "exit 0 on any armed PR" in favor of "actually WAIT until the PR
+finishes (merge or fail) so the driver can react to failures/conflicts". The wait loop is
+the correct design, not early-exit.
+
+### Production verification (verified-ci)
+A follow-up ecosystem run on the new build: ProjectNestor flipped FAILED→complete;
+ProjectOdyssey waited 1743s then logged `"PR #5487 still OPEN after 1743s (limit 1800s);
+leaving armed and pending"` and `"3 PR(s) armed and still merging (waited; not a
+failure)"`, failing on only 1 genuine `needs_action` PR instead of the old 4; the
+no-commit retry landed fixes on 5 PRs the old code abandoned.
+
+### Known limitation (future enhancement)
+An `auto-merge armed` PR with `mergeStateStatus == DIRTY` (merge conflict) sits OPEN
+forever; `_wait_for_pr_terminal` returns `TIMEOUT` and makes no progress. Detect `DIRTY`
+in the wait loop and re-trigger a mechanical rebase instead of waiting out 1800s.
+
+---
+
+## v1.0.0 (2026-05-31) — Initial skill: three-guard honest success path
+
+**Verification:** verified-ci
+
+### Prior version snapshot (frontmatter)
+
+```yaml
+name: automation-ci-driver-honest-success-path-no-silent-noop
+category: ci-cd
+date: 2026-05-31
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - hephaestus-automation-loop
+  - drive-prs-green
+  - ci-driver
+  - silent-failure
+  - git-push-refspec
+  - worktree-sync
+  - honest-reporting
+  - repo-done-state
+  - homericintelligence
+```
+
+### Covered
+Stopped a multi-repo CI driver (`drive_prs_green`) from reporting "pushed CI fixes for
+PR #N" while the remote PR head SHA sat unchanged. Three compounding bugs, four guards:
+
+1. **Guard 1** — pre-sync the throwaway worktree to `origin/<pr-head>` via
+   `sync_worktree_to_remote_branch` before the agent runs (worktree setup otherwise fell
+   back to `-b <branch> ... main`, creating a NEW branch off main).
+2. **Guard 2** — snapshot HEAD post-sync; compare HEAD post-agent; fail the iteration if
+   unchanged (agent resuming an old transcript returned with no commit → silent no-op
+   push exiting 0).
+3. **Guard 3** — push with explicit refspec `HEAD:<pr-head-branch>`, not bare `HEAD`,
+   and preserve it on the force-with-lease retry.
+4. **Guard 4** — gate "repo done" on `gh api --paginate /repos/.../pulls?state=open`
+   returning empty (not `gh pr list --limit 100` which silently caps at 100); non-empty
+   ⇒ rc=1 with each open PR logged.
+
+Landed as ProjectHephaestus PR #833 (closes #832, Guards 1+3), PR #837 (closes #836,
+Guard 2), PR #839 (closes #838, Guard 4) — all merged to main.
