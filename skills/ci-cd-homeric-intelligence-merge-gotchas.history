@@ -1,13 +1,31 @@
+# ci-cd-homeric-intelligence-merge-gotchas -- History
+
+## v1.1.0 (2026-06-02)
+
+**Changed by:** ProjectNestor session -- observed on PRs #101 and #97
+**Verification:** verified-ci
+
+### What changed
+- Added a 6th trigger to the `description:` frontmatter and a matching `## When to Use` item (#6): a PR is MERGEABLE with every REQUIRED status check green but `mergeStateStatus` stays BLOCKED because `required_review_thread_resolution: true` plus unresolved CodeQL / `github-advanced-security` review threads gate the merge; detect via the GraphQL `reviewThreads` query (REST field is empty), assess each finding, document accept-rationale, then `resolveReviewThread`.
+- Added a new Verified Workflow section "Trap 6 — Unresolved review threads block merge with all checks green" with the detection GraphQL, the assess-don't-blanket-resolve discipline (with the two false-positive examples — structured-binding discard `_` and member-initializer-used static `permissive_cfg()`), the document-then-resolve step, the `resolveReviewThread` mutation, and the two companion gotchas (amend re-runs CodeQL; slow `in_progress` static-analysis ≠ failure).
+- Added two `## Failed Attempts` rows (#6 and #7): assuming all-required-checks-green + MERGEABLE auto-merges (BLOCKED on unresolved threads), and planning to blanket-resolve all CodeQL threads (some are genuine).
+- Added the GraphQL `reviewThreads` count and `resolveReviewThread` mutation to the `### Quick Reference` block.
+- Updated `version` 1.0.0 -> 1.1.0, `date` 2026-05-31 -> 2026-06-02, the Overview Objective/Outcome/Verification rows (five traps -> six), the Verified Workflow header note, and added a ProjectNestor row to the "Verified On" table.
+- Added `history:` frontmatter field and `review-thread-resolution`, `github-advanced-security` tags.
+
+### Why
+ProjectNestor PRs #101 and #97 were `MERGEABLE` with every REQUIRED status check green (build, integration-tests, unit-tests, All Build/Test Checks, All Static Analysis Checks, branch-protection-drift) yet stayed `mergeStateStatus=BLOCKED` and auto-merge would not fire. The gate was the HI ecosystem-standard branch-protection setting `required_review_thread_resolution: true`: `github-advanced-security` (CodeQL) had posted inline findings as review threads, and unresolved threads block merge regardless of check status. This is DISTINCT from the existing Trap 4 (auto-merge stalls on a non-required check still red/pending) — here ALL checks were green. The REST `reviewThreads` field was empty, so detection required GraphQL. The merged PR had 0 unresolved threads; the two BLOCKED PRs had 6 and 3 — a direct correlation. Resolving the threads flipped BLOCKED -> mergeable and both auto-merged to `main` (2026-06-02).
+
+### Previous version (v1.0.0) snapshot
 ---
 name: ci-cd-homeric-intelligence-merge-gotchas
-description: "Recurring HomericIntelligence CI/merge traps that block PR auto-merge even when the code is correct. Use when: (1) pixi-check fails 'lock-file not up-to-date with the workspace' or Lint/Type-Check break after removing pypi-dependencies; (2) a Keystone-style lint job fails fast (~20s) at 'Install build dependencies (just + linters)'; (3) CodeQL cpp/unused-{local,static}-variable flags a genuinely-used C++ variadic template parameter pack; (4) a PR is MERGEABLE with all REQUIRED checks green but auto-merge won't fire; (5) you are driving a chain of dependency-gated PRs and need to auto-arm each downstream PR when its gate merges; (6) a PR is MERGEABLE with every REQUIRED status check green, but mergeStateStatus stays BLOCKED and auto-merge won't fire — the gate is `required_review_thread_resolution: true` plus unresolved CodeQL/github-advanced-security review threads; detect via GraphQL reviewThreads (the REST field is empty), assess each finding before resolving, document accept-rationale, then resolveReviewThread."
+description: "Recurring HomericIntelligence CI/merge traps that block PR auto-merge even when the code is correct. Use when: (1) pixi-check fails 'lock-file not up-to-date with the workspace' or Lint/Type-Check break after removing pypi-dependencies; (2) a Keystone-style lint job fails fast (~20s) at 'Install build dependencies (just + linters)'; (3) CodeQL cpp/unused-{local,static}-variable flags a genuinely-used C++ variadic template parameter pack; (4) a PR is MERGEABLE with all REQUIRED checks green but auto-merge won't fire; (5) you are driving a chain of dependency-gated PRs and need to auto-arm each downstream PR when its gate merges."
 category: ci-cd
-date: 2026-06-02
-version: "1.1.0"
+date: 2026-05-31
+version: "1.0.0"
 user-invocable: false
 verification: verified-ci
-history: ci-cd-homeric-intelligence-merge-gotchas.history
-tags: [pixi, pixi-lock, codeql, auto-merge, branch-protection, just-systems, keystone, agamemnon, dependency-gated-pr, review-thread-resolution, github-advanced-security]
+tags: [pixi, pixi-lock, codeql, auto-merge, branch-protection, just-systems, keystone, agamemnon, dependency-gated-pr]
 ---
 
 # HomericIntelligence CI / Merge Gotchas
@@ -16,10 +34,10 @@ tags: [pixi, pixi-lock, codeql, auto-merge, branch-protection, just-systems, key
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-02 |
-| **Objective** | Unblock PR auto-merge across HomericIntelligence repos when the code is correct but CI/merge mechanics get in the way — pixi lock-format mismatch, just.systems install flakes, CodeQL variadic-pack false positives, auto-merge stalling on non-required checks, ordering of dependency-gated PR cascades, and `required_review_thread_resolution` blocking merge on unresolved CodeQL review threads even with all required checks green |
-| **Outcome** | Six distinct traps each have a verified, repeatable fix; established the diagnostic that distinguishes a real failure from infra flake (failing STEP NAME, not log), the correct CodeQL dismiss path (≤280-char comment + thread resolution), the required-contexts query, the action-monitor pattern that arms held downstream PRs only after their gates merge, and the GraphQL `reviewThreads` query that surfaces hidden unresolved-thread merge gates (the REST field is empty) plus the assess-then-`resolveReviewThread` discipline |
-| **Verification** | verified-ci — all six traps observed and fixed in live CI; traps 1–5 during the Keystone pure-transport refactor (Keystone #577–#581, Agamemnon #419–#421 merged 2026-05-31); trap 6 on ProjectNestor #101/#97, where resolving unresolved CodeQL review threads flipped BLOCKED→mergeable and both auto-merged to `main` (2026-06-02) |
+| **Date** | 2026-05-31 |
+| **Objective** | Unblock PR auto-merge across HomericIntelligence repos when the code is correct but CI/merge mechanics get in the way — pixi lock-format mismatch, just.systems install flakes, CodeQL variadic-pack false positives, auto-merge stalling on non-required checks, and ordering of dependency-gated PR cascades |
+| **Outcome** | Five distinct traps each have a verified, repeatable fix; established the diagnostic that distinguishes a real failure from infra flake (failing STEP NAME, not log), the correct CodeQL dismiss path (≤280-char comment + thread resolution), the required-contexts query, and the action-monitor pattern that arms held downstream PRs only after their gates merge |
+| **Verification** | verified-ci — all five traps observed and fixed in live CI during the Keystone pure-transport refactor; Keystone #577/578/579/580/581 and Agamemnon #419/420/421 all merged to `main` (2026-05-31) |
 
 ## When to Use
 
@@ -28,11 +46,10 @@ tags: [pixi, pixi-lock, codeql, auto-merge, branch-protection, just-systems, key
 3. **CodeQL variadic-pack false positive.** `cpp/unused-local-variable` or `cpp/unused-static-variable` flags a C++ variadic template parameter pack (`args`, `Rest`) that is genuinely consumed via pack-expansion or forwarding.
 4. **Auto-merge won't fire.** A PR is `MERGEABLE` with every branch-protection-required context green, yet GitHub auto-merge does not merge because a NON-required check (Coverage, security/dependency-scan) is still red or pending.
 5. **Dependency-gated cascade.** You are driving a chain where a downstream PR must not merge until its gate PR(s) merge first (extraction-before-deletion), and you want each downstream PR auto-armed the moment its gates land.
-6. **Unresolved review threads block merge.** A PR is `MERGEABLE` with every REQUIRED status check green, yet `mergeStateStatus` stays `BLOCKED` and auto-merge will not fire — the gate is the HI ecosystem-standard branch-protection setting `required_review_thread_resolution: true` plus unresolved CodeQL / `github-advanced-security` review threads. Detect via the GraphQL `reviewThreads` query (the REST `reviewThreads` field is empty/unavailable), assess each finding before resolving, document the accept-rationale, then `resolveReviewThread`.
 
 ## Verified Workflow
 
-> **Verification level:** verified-ci — every trap below was hit and resolved in live CI; traps 1–5 during the Keystone pure-transport refactor (Keystone #577–#581, Agamemnon #419–#421 merged to `main` 2026-05-31); trap 6 on ProjectNestor #101/#97 (both auto-merged to `main` 2026-06-02 once the unresolved review threads were resolved).
+> **Verification level:** verified-ci — every trap below was hit and resolved in live CI this session; Keystone #577–#581 and Agamemnon #419–#421 merged to `main` 2026-05-31.
 
 ### 1. pixi lock-format version trap
 
@@ -91,28 +108,6 @@ When PR-B must merge before PR-A is safe (e.g. extraction-before-deletion), enfo
 - Hold the downstream PR **UNARMED** (create it, run its CI, but do NOT arm auto-merge) until the monitor confirms the gates merged. This preserves the ordering invariant while CI runs in parallel.
 - When a gate's squash-merge creates a conflict for a sibling PR, rebase the sibling onto `main` (see [[parallel-swarm-pr-conflict-reconciliation]]).
 
-### 6. Unresolved review threads block merge with all checks green
-
-A PR can be `MERGEABLE` with **every REQUIRED status check green** (build, integration-tests, unit-tests, All Build/Test Checks, All Static Analysis Checks, branch-protection-drift, …) and STILL sit `mergeStateStatus=BLOCKED` with auto-merge refusing to fire. This is **distinct from Trap 4** — there a *non-required* check was still red/pending; here ALL checks (required and relevant) are green. The gate is the HI ecosystem-standard branch-protection setting **`required_review_thread_resolution: true`**: GitHub's `github-advanced-security` (CodeQL) bot posts inline findings as **review threads**, and any unresolved thread blocks merge regardless of check status.
-
-- **Detect.** `gh pr view <n> --json mergeStateStatus` shows `BLOCKED` while `gh pr checks <n>` shows all required green. The REST `reviewThreads` field is often empty/unavailable, so confirm via GraphQL:
-  ```bash
-  gh api graphql -f query='{ repository(owner:"OWNER",name:"REPO"){ pullRequest(number:N){ reviewThreads(first:50){ nodes{ isResolved path line comments(first:1){ nodes{ author{login} body } } } } }}}' \
-    --jq '[.data.repository.pullRequest.reviewThreads.nodes[]|select(.isResolved==false)]|length'
-  ```
-  A non-zero count of unresolved threads authored by `@github-advanced-security` = this trap. (In the verifying session a PR that MERGED had **0** unresolved threads; the two BLOCKED ones had **6** and **3** — a direct correlation.)
-- **Assess — do NOT blanket-resolve.** READ each unresolved thread's `path:line` + first comment before resolving. Classify:
-  - **False positive (resolve):** many CodeQL findings are stale/false after a rebase — e.g. "unused local variable `_`" on a structured-binding discard `auto [it, _] = map.emplace(...)`; "unreachable static function" that IS used in a member-initializer like `RateLimiter limiter_{permissive_cfg()}`.
-  - **Genuine (judgment call / author input):** e.g. an env-var used in a file path, a world-writable test fixture, a stack address stored non-locally. These deserve a real fix or a conscious, documented accept.
-- **Document then resolve.** When resolving findings that were assessed-and-accepted (not fixed), post a documenting PR comment FIRST recording the per-finding accept-rationale (so the security observation is consciously accepted, not silently dropped), THEN resolve. Get each thread's node `id` from the same `reviewThreads` query and resolve via mutation:
-  ```bash
-  gh api graphql -f query='mutation($id:ID!){ resolveReviewThread(input:{threadId:$id}){ thread{ isResolved } } }' \
-    -f id="<thread node id>"
-  ```
-- **Companion gotchas:**
-  - **Amending re-runs CodeQL.** A force-push amend re-runs CodeQL on the changed file and can post NEW review threads. After an amend, re-check the unresolved-thread count before assuming the PR will merge.
-  - **Slow static-analysis ≠ failure.** `clang-tidy` and `CodeQL (cpp)` showing `in_progress` is why the required aggregate `All Static Analysis Checks` has not reported yet. A PR can sit `BLOCKED` purely waiting on these slow jobs even when build/test are already green — do not mistake it for a real failure.
-
 ### Quick Reference
 
 ```bash
@@ -137,14 +132,6 @@ gh pr merge <downstream> --auto --squash
 
 # Confirm a pixi lock is v6 (the format CI's pinned pixi can load)
 grep -m1 '^version:' pixi.lock   # expect: version: 6
-
-# Count UNRESOLVED review threads (the hidden merge gate when all checks are green)
-gh api graphql -f query='{ repository(owner:"OWNER",name:"REPO"){ pullRequest(number:N){ reviewThreads(first:50){ nodes{ isResolved path line comments(first:1){ nodes{ author{login} body } } } } }}}' \
-  --jq '[.data.repository.pullRequest.reviewThreads.nodes[]|select(.isResolved==false)]|length'
-
-# Resolve a review thread (after reading + documenting accept-rationale)
-gh api graphql -f query='mutation($id:ID!){ resolveReviewThread(input:{threadId:$id}){ thread{ isResolved } } }' \
-  -f id="<thread node id>"
 ```
 
 ## Failed Attempts
@@ -156,8 +143,6 @@ gh api graphql -f query='mutation($id:ID!){ resolveReviewThread(input:{threadId:
 | 3 | Treated a fast (~20s) lint failure as a code error and re-ran blindly | It was the `just.systems` curl flake at the dep-install step, so the blind rerun wasted a cycle | Check the FAILING STEP NAME first; only rerun when it is the dep-install flake |
 | 4 | Rewrote the logger to satisfy CodeQL unused-variadic-pack | Redesigned the variadic templates twice; CodeQL still flagged the pack, just at new line numbers | It is a known false positive — DISMISS the alert (≤280-char comment) and resolve threads instead of rewriting |
 | 5 | Assumed a `MERGEABLE` PR with all required checks green would auto-merge | Auto-merge stalled on a non-required red check (Coverage) — auto-merge is stricter than branch protection | Query `required_status_checks.contexts`; fix the non-required red (don't bypass) so all checks reach a clean terminal state |
-| 6 | Assumed a PR with all required checks green + MERGEABLE would auto-merge | `mergeStateStatus` stayed `BLOCKED` on `required_review_thread_resolution` — 6 unresolved CodeQL review threads gated it | Green required checks ≠ mergeable; query GraphQL `reviewThreads` for unresolved bot findings |
-| 7 | Planned to resolve all CodeQL threads in bulk to unblock | Some findings were genuine (env-var file path, stack-address escape); blanket-resolving would silently drop real security observations | Read each thread's `path:line`+body; classify false-positive vs real; document accept-rationale before resolving; escalate genuinely-ambiguous ones |
 
 ## Results & Parameters
 
@@ -223,9 +208,8 @@ pixi install --locked
 
 | Repo | Context | PRs (all merged 2026-05-31) |
 |------|---------|------------------------------|
-| ProjectKeystone | Keystone pure-transport refactor (traps 1–5) | #577, #578, #579, #580, #581 |
-| ProjectAgamemnon | Downstream consumers of the Keystone transport change (traps 1–5) | #419, #420, #421 |
-| ProjectNestor | Unresolved CodeQL review threads gating merge (trap 6); resolving threads flipped BLOCKED→mergeable, both auto-merged 2026-06-02 | #101, #97 |
+| ProjectKeystone | Keystone pure-transport refactor | #577, #578, #579, #580, #581 |
+| ProjectAgamemnon | Downstream consumers of the Keystone transport change | #419, #420, #421 |
 
 ## Related Skills
 
