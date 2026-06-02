@@ -1,32 +1,35 @@
 ---
 name: holographic-adscft-mechanism-design
-description: "Design patterns for AdS/CFT-based holographic computation devices in sci-fi world-building. Use when: (1) designing a fictional device that uses holographic physics, (2) grounding a sci-fi simulation engine in real physics, (3) needing real citations for boundary/bulk duality mechanics."
+description: "Design patterns for exotic physics computation devices in sci-fi world-building, covering two physics domains: (1) AdS/CFT holographic boundary computers and (2) Deutsch CTC oracle (closed timelike curve) computation. Use when: (1) designing a fictional device that uses holographic or causality-breaking physics, (2) grounding a sci-fi simulation engine in real physics, (3) needing real citations for boundary/bulk duality mechanics or CTC fixed-point computation, (4) evaluating which of the 14 computational hard walls a mechanism defeats."
 category: architecture
 date: 2026-06-01
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 verification: unverified
-tags: [physics, holography, adscft, scifi, worldbuilding, mechanism-design]
+history: holographic-adscft-mechanism-design.history
+tags: [physics, holography, adscft, scifi, worldbuilding, mechanism-design, ctc, closed-timelike-curves, deutsch, causality, pspace]
 ---
 
-# Holographic AdS/CFT Mechanism Design
+# Holographic & CTC Mechanism Design (Sci-Fi Physics)
 
 ## Overview
 
 | Field | Value |
 |-------|-------|
 | **Date** | 2026-06-01 |
-| **Objective** | Design a scientifically rigorous (but fiction-licensed) holographic boundary computer using AdS/CFT for a sci-fi story |
-| **Outcome** | Complete mechanism document written; 10 of 14 computational hard walls defeated via holographic arguments |
+| **Objective** | Design scientifically rigorous (but fiction-licensed) exotic physics computation devices for sci-fi stories; two covered domains: AdS/CFT holographic and Deutsch CTC oracle |
+| **Outcome** | Complete mechanism documents written; AdS/CFT defeats 10/14 walls; Deutsch CTC oracle defeats walls 4, 5, 7, 13, 14 with a single physics break (causality) |
 | **Verification** | unverified — theoretical design exercise, not implemented |
+| **History** | [changelog](./holographic-adscft-mechanism-design.history) |
 
 ## When to Use
 
-- Designing a fictional device that simulates reality using holographic physics
-- Grounding sci-fi technology in real string theory / quantum gravity papers
-- Needing a structured framework for AdS/CFT-based storytelling science
-- Writing mechanism design documents that cite real physics (RT formula, ADH error correction)
-- Evaluating which physics laws a holographic device breaks vs. preserves
+- Designing a fictional device that simulates reality using holographic physics (AdS/CFT)
+- Designing a fictional device that computes via closed timelike curves (Deutsch oracle)
+- Grounding sci-fi technology in real physics papers with proper citations
+- Needing a structured framework for storytelling science with real math
+- Writing mechanism design documents with: one-liner, class, premise correction, how-it-works, laws-broken ledger, 14-walls table, parsimony score, capability score, failure modes, feasibility tags
+- Evaluating which of the 14 computational hard walls a mechanism defeats vs. leaves standing
 
 ## Verified Workflow
 
@@ -35,92 +38,177 @@ tags: [physics, holography, adscft, scifi, worldbuilding, mechanism-design]
 ### Quick Reference
 
 ```
+=== DOMAIN 1: AdS/CFT Holographic ===
 Key formula: S(A) = Area(γ_A) / (4 G_N ℓ_P²)
 (Ryu-Takayanagi: boundary entanglement entropy = bulk extremal surface area)
 
 Key papers:
 - Maldacena 1997: arXiv:hep-th/9711200
 - Ryu-Takayanagi 2006: arXiv:hep-th/0603001
-- HRT 2007: arXiv:0705.0016
 - Almheiri-Dong-Harlow 2014: arXiv:1411.7041
 - van Raamsdonk 2010: arXiv:1005.3310
+
+=== DOMAIN 2: Deutsch CTC Oracle ===
+Key condition: ρ_CTC = Tr_CR [ U (ρ_CR ⊗ ρ_CTC) U† ]   [Deutsch fixed-point self-consistency]
+Key result: BQP_CTC = BPP_CTC = PSPACE  [Aaronson-Watrous 2009]
+
+Key papers:
+- Deutsch 1991: Phys. Rev. D 44, 3197  https://link.aps.org/doi/10.1103/PhysRevD.44.3197
+- Aaronson & Watrous 2009: Proc. R. Soc. A 465, 631  https://www.scottaaronson.com/papers/ctc.pdf
+- Morris-Thorne-Yurtsever 1988: Phys. Rev. Lett. 61, 1446  https://link.aps.org/doi/10.1103/PhysRevLett.61.1446
+- Gödel 1949: Rev. Mod. Phys. 21, 447
+- Hawking 1992 (no-go): Phys. Rev. D 46, 603  https://link.aps.org/doi/10.1103/PhysRevD.46.603
+
+=== SHARED CONSTANTS ===
+Planck length:    ℓ_P ≈ 1.616×10⁻³⁵ m  (THIS is "Planck scale", NOT the Planck constant)
+Planck constant:  h = 6.626×10⁻³⁴ J·s  (NOT what "Planck-level fields" means in sci-fi)
+Planck time:      t_P ≈ 5.39×10⁻⁴⁴ s
+Planck energy:    E_P ≈ 1.22×10¹⁹ GeV
 ```
 
-### Detailed Design Steps
+### Detailed Steps — AdS/CFT Domain
 
-1. **Frame the boundary/bulk split:** The device IS the boundary CFT; the simulated reality IS the bulk. Never treat them as separate components — they are exactly dual.
+1. **Frame the boundary/bulk split:** The device IS the boundary CFT; the simulated reality IS the bulk. Never treat them as separate — they are exactly dual.
+2. **Choose RT/HRT surface as the rendering primitive:** Each boundary subregion A has extremal bulk surface γ_A; Area(γ_A) gives entanglement entropy. Bulk geometry = all entanglement entropies (van Raamsdonk).
+3. **Apply ADH error-correcting structure:** Boundary-to-bulk map is a quantum error-correcting code (Almheiri-Dong-Harlow 2014). Bulk point p reconstructed from any boundary subregion whose entanglement wedge contains p.
+4. **Handle dS vs AdS explicitly:** Our universe is de Sitter (Λ>0); AdS/CFT requires Λ<0. Justify departure: local AdS bubble, or invoke contested dS/CFT (Strominger 2001).
+5. **Calculate boundary DoF:** A surface of area A holds at most A/ℓ_P² qubits. 10 cm disk ≈ 3.9×10⁶⁶ cells = capacity ceiling.
+6. **State new-physics postulates explicitly and count them:** More postulates = lower parsimony score.
 
-2. **Choose the RT/HRT surface as the "rendering primitive":** Each boundary subregion A has an associated extremal bulk surface γ_A. The area of γ_A gives the entanglement entropy of A. Bulk geometry is reconstructed by knowing all entanglement entropies — "entanglement IS geometry" (van Raamsdonk 2010).
+### Detailed Steps — Deutsch CTC Oracle Domain
 
-3. **Apply the ADH error-correcting structure:** The boundary-to-bulk map is a quantum error-correcting code (Almheiri-Dong-Harlow 2014). A bulk point p can be reconstructed from any boundary subregion whose entanglement wedge contains p. This gives: fault tolerance, subregion selectivity, and syndrome-based error detection.
+1. **State the CTC construction mechanism:** Planck-scale wormholes (Morris-Thorne-Yurtsever 1988 at quantum scale) with one mouth time-lagged via negative energy density (Casimir). Requires violating weak energy condition (ρ < 0).
+2. **Apply the Deutsch fixed-point condition:** ρ_CTC = Tr_CR [ U (ρ_CR ⊗ ρ_CTC) U† ]. Fixed point always exists by Brouwer's theorem. The CTC subsystem is driven to this fixed point by the *physics of the spacetime*, not by an iterative algorithm. This is the oracle step.
+3. **Invoke the Aaronson-Watrous PSPACE result:** The fixed-point computation equals PSPACE. NP-hard problems, #P-hard problems (fermionic sign problem), and computationally irreducible systems are all tractable. Classical and quantum computers with CTC access are equally powerful.
+4. **Address the chronology protection conjecture (Hawking 1992):** Quantum vacuum fluctuations diverge on the Cauchy horizon of a CTC-forming spacetime; this likely destroys CTCs before they form. The fiction license must assert that full quantum gravity (unknown) regulates this divergence at Planck scale.
+5. **Address fixed-point non-uniqueness:** Deutsch's model guarantees existence but not uniqueness. Non-unique fixed points → ambiguous readout. Design problem encoding to enforce uniqueness, or state as a failure mode.
+6. **Address the Bennett linearity trap:** CTC computation does not compose linearly when inputs are mixed states. Practical queries must use pure-state inputs; ensemble/probabilistic inputs fall into the trap.
+7. **Score parsimony:** CTCs make ONE primary break (causality); all PSPACE capability cascades from this break with zero additional postulates. Parsimony score ≈ 9/10.
 
-4. **Handle the dS vs AdS problem explicitly:** Our universe has positive cosmological constant (de Sitter, Λ > 0). AdS/CFT requires Λ < 0. Must state this is broken and justify: either (a) the device generates a local AdS bubble, (b) invoke dS/CFT (Strominger 2001, arXiv:hep-th/0106113) which is poorly understood and likely non-unitary, or (c) use large AdS radius L to approximate flat space locally.
+### Universal Mechanism Document Structure (both domains)
 
-5. **Calculate boundary DoF from holographic bound:** A surface of area A contains at most A/ℓ_P² qubits (one per Planck area). For a 10 cm disk: ~3.9×10⁶⁶ Planck-area cells. This is the information capacity ceiling.
+```
+# MXX — [Name]
+One-liner + Class
 
-6. **Design the AKNP dictionary:** Map each boundary CFT operator family (by conformal dimension Δ) to the corresponding bulk field: Δ=3 vector → EM field, Δ=3/2 spinor → fermion, Δ=4 stress tensor → graviton. The CFT spectrum must match the Standard Model field content — a new-physics postulate.
+## Premise Correction
+  (Planck CONSTANT vs Planck LENGTH disambiguation — always required)
 
-7. **State new-physics postulates clearly:** Minimum required postulates for a handheld device:
-   - P1: Zero-erasure-cost topological zero modes (defeats Landauer floor)
-   - P2: Self-powered from bulk Casimir/curvature energy
-   - P3: CFT spectrum matching Standard Model exactly
-   - P4: Macroscopic (~10⁶⁶ qubit) quantum coherence at ambient temperature
-   - P5: Local AdS bubble in a globally dS universe
+## How It Works
+  (numbered steps with [NEW-PHYSICS] / [REAL] / [SPECULATIVE] tags)
+
+## Real-Science Anchor
+  (≥4 real papers with DOI/URL/access date; then "where it departs")
+
+## Laws-Broken Ledger
+  (table: Law | Status | How Broken)
+
+## Walls Defeated vs Left Standing
+  (all 14 walls; explain HOW each is defeated for walls that are)
+
+## Parsimony Score  (N/10 + one-break cascade explanation)
+## Capability Score (N/10 + PSPACE / holographic-bound justification)
+
+## Failure Modes / No-Go Cascades
+  (primary physical no-go first; then engineering issues)
+
+## Feasibility Tags
+  (requires-X tags, math-is-clean, one-physics-break, etc.)
+```
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| Treating it as a classical simulation | Designing the device as a numerical integrator of bulk equations of motion | Misses the point: AdS/CFT says you run the boundary CFT and the bulk self-organizes; no explicit bulk integration needed | The device runs boundary physics; bulk geometry is emergent, not computed |
-| Ignoring dS/CFT problem | Assuming AdS/CFT applies directly to our universe | Our universe is de Sitter (Λ>0); AdS/CFT requires anti-de Sitter (Λ<0); applying it directly is physically inconsistent | Always state the dS/AdS discrepancy and justify the departure explicitly |
-| Confusing Planck constant with Planck scale | Using "Planck-level fields" to mean fields with action ~h | "Planck-level" in sci-fi means Planck LENGTH scale (~1.6e-35 m), not the Planck constant h (6.626e-34 J·s) | Always disambiguate: Planck CONSTANT (action) vs Planck LENGTH/SCALE (energy/length) |
+| Treating AdS/CFT device as a classical simulation | Designing device as a numerical integrator of bulk equations of motion | Misses the point: AdS/CFT says run the boundary CFT and the bulk self-organizes; no explicit bulk integration needed | The device runs boundary physics; bulk geometry is emergent, not computed |
+| Ignoring dS/CFT problem | Assuming AdS/CFT applies directly to our universe | Our universe is de Sitter (Λ>0); AdS/CFT requires anti-de Sitter (Λ<0); physically inconsistent | Always state the dS/AdS discrepancy and justify departure explicitly |
+| Confusing Planck constant with Planck scale | Using "Planck-level fields" to mean fields with action ~h | "Planck-level" in sci-fi means Planck LENGTH scale (~1.6e-35 m), not h (6.626e-34 J·s) | Always disambiguate; add a premise correction section to every mechanism file |
+| Treating CTC fixed-point as an iterative algorithm | Describing the device as "running" the fixed-point equation many times | Misses the key point: a physical CTC enforces the fixed-point condition via spacetime structure — the computation is "already done" in the self-consistent solution | The oracle does not iterate forward; it reads out the self-consistent answer that physics enforces |
+| Claiming CTC power exceeds PSPACE | Proposing the device can solve undecidable problems | Aaronson-Watrous (2009) proved exactly: BQP_CTC = BPP_CTC = PSPACE — not more | State capability ceiling as PSPACE; avoid over-claiming |
 
 ## Results & Parameters
 
-### Canonical Citation Set for Holographic Mechanism Design
+### The 14 Computational Hard Walls — Quick Summary
 
 ```
-1. Maldacena (1997) — AdS/CFT foundation
-   arXiv: hep-th/9711200
-   URL: https://arxiv.org/abs/hep-th/9711200
+1.  Holevo bound           — limits classical bits extractable from qubits
+2.  Landauer erasure       — kT ln 2 energy per bit erased
+3.  Cube-square thermal    — volume heat vs surface cooling
+4.  Exponential Hilbert    — 2^N state space for N qubits [CTC: DEFEATED]
+5.  NP-hard sign problem   — fermionic path integral #P-hard [CTC: DEFEATED]
+6.  Chaos/Lyapunov         — sensitive dependence on initial conditions
+7.  Computational irred.   — no shortcut to evolving complex systems [CTC: DEFEATED]
+8.  Data-movement energy   — moving bits costs energy
+9.  Gravity's weakness     — G is tiny at everyday scales
+10. Force energy ladder    — unification requires Planck energies
+11. Analog precision       — ~5-10 bits in analog physical systems
+12. Bekenstein/holographic — information bounded by area [CTC: CIRCUMVENTED]
+13. Thompson AT²=Ω(n²)    — circuit complexity lower bound [CTC: DEFEATED]
+14. Causality/c latency    — no info faster than light [CTC: DEFEATED — primary break]
+```
 
-2. Ryu & Takayanagi (2006) — RT entanglement entropy formula
-   arXiv: hep-th/0603001
-   URL: https://arxiv.org/abs/hep-th/0603001
+### CTC Oracle — Walls Defeated (detail)
 
-3. Hubeny, Rangamani & Takayanagi (2007) — HRT covariant (time-dependent) formula
-   arXiv: 0705.0016
-   URL: https://arxiv.org/abs/0705.0016
+```
+Wall 4  (Exponential Hilbert): PSPACE in poly time via fixed-point oracle
+Wall 5  (Sign problem): PSPACE ⊇ #P; sign problem tractable
+Wall 7  (Irreducibility): CTC fixed-point IS the shortcut; skips step-by-step evolution
+Wall 13 (AT²): Not a circuit in causal sense; AT² lower bound does not apply
+Wall 14 (Causality): Explicit break; CTC loops are acausal by construction
+Wall 12 (Bekenstein): Circumvented — oracle queries, not storage
+```
 
-4. Almheiri, Dong & Harlow (2014) — Bulk locality = quantum error correction
-   arXiv: 1411.7041
-   URL: https://arxiv.org/abs/1411.7041
+### Parsimony Scoring Guide
 
-5. van Raamsdonk (2010) — Entanglement = spacetime geometry
-   arXiv: 1005.3310
-   URL: https://arxiv.org/abs/1005.3310
+```
+Score 9-10: Single primary physics break; all capabilities cascade from it
+            Example: CTC oracle — one break (causality) → PSPACE
+Score 6-8:  2-3 independent new-physics postulates required
+Score 3-5:  4-6 independent postulates; each adds sci-fi license cost
+Score 1-2:  Many independent breaks required; not plausible even in fiction
+```
 
-6. Strominger (2001) — dS/CFT correspondence (contested)
-   arXiv: hep-th/0106113
-   URL: https://arxiv.org/abs/hep-th/0106113
+### Canonical Citation Set — CTC Domain
+
+```
+Deutsch (1991): Fixed-point self-consistency model
+  Phys. Rev. D 44, 3197  |  https://link.aps.org/doi/10.1103/PhysRevD.44.3197
+
+Aaronson & Watrous (2009): BQP_CTC = BPP_CTC = PSPACE
+  Proc. R. Soc. A 465, 631  |  https://www.scottaaronson.com/papers/ctc.pdf
+  arXiv: 0808.2669
+
+Morris, Thorne & Yurtsever (1988): Wormhole time machine construction
+  Phys. Rev. Lett. 61, 1446  |  https://link.aps.org/doi/10.1103/PhysRevLett.61.1446
+
+Gödel (1949): First GR solution with global CTCs (rotating dust universe)
+  Rev. Mod. Phys. 21, 447
+
+Hawking (1992): Chronology protection conjecture (primary no-go)
+  Phys. Rev. D 46, 603  |  https://link.aps.org/doi/10.1103/PhysRevD.46.603
+```
+
+### Canonical Citation Set — AdS/CFT Domain
+
+```
+Maldacena (1997): arXiv:hep-th/9711200  https://arxiv.org/abs/hep-th/9711200
+Ryu & Takayanagi (2006): arXiv:hep-th/0603001  https://arxiv.org/abs/hep-th/0603001
+HRT (2007): arXiv:0705.0016  https://arxiv.org/abs/0705.0016
+Almheiri-Dong-Harlow (2014): arXiv:1411.7041  https://arxiv.org/abs/1411.7041
+van Raamsdonk (2010): arXiv:1005.3310  https://arxiv.org/abs/1005.3310
+Strominger (2001): arXiv:hep-th/0106113  https://arxiv.org/abs/hep-th/0106113
 ```
 
 ### Key Physical Numbers
 
 ```
 Planck length:    ℓ_P ≈ 1.616×10⁻³⁵ m
+Planck time:      t_P ≈ 5.39×10⁻⁴⁴ s
 Planck energy:    E_P ≈ 1.22×10¹⁹ GeV
 Planck constant:  h = 6.626×10⁻³⁴ J·s  (NOT what "Planck-scale" means)
 Holographic bound: 1 qubit per ℓ_P² of surface area
 10 cm disk:       ~3.9×10⁶⁶ Planck-area cells = maximum boundary DoF
-```
-
-### Laws Preserved vs Broken (summary for AdS/CFT device)
-
-```
-PRESERVED: Unitarity, no-cloning, RT/Bekenstein bound (saturated), SR/causality
-BENT:      General covariance (AdS interior ≠ dS exterior), thermodynamics (local)
-BROKEN:    Landauer floor (P1), quantum decoherence (P4), positive Λ (P5)
+PSPACE:           Problems solvable with polynomial memory; contains NP, co-NP, #P
 ```
 
 ## Verified On
@@ -128,3 +216,4 @@ BROKEN:    Landauer floor (P1), quantum decoherence (P4), positive Λ (P5)
 | Project | Context | Details |
 |---------|---------|---------|
 | HomericIntelligence/Story | M02 holographic boundary mechanism design, Myrmidon swarm physics agent | Mechanism file at Research/Mechanisms/M02-holographic-boundary.md |
+| HomericIntelligence/Story | M19 Deutsch CTC oracle mechanism design, Myrmidon swarm physics agent | Mechanism file at Research/Mechanisms/M19-deutsch-ctc-oracle.md |

@@ -1,0 +1,156 @@
+# holographic-adscft-mechanism-design — History
+
+## v1.1.0 (2026-06-01)
+
+**Changed by:** Session context — M19 Deutsch CTC Oracle mechanism design (Myrmidon swarm physics agent)
+**Verification:** unverified — theoretical design exercise
+
+### What changed
+- Extended skill scope to cover CTC-based (causality/time) mechanism design alongside AdS/CFT holographic design
+- Added Deutsch CTC oracle design pattern to Verified Workflow
+- Added CTC-specific citation set (Deutsch 1991, Aaronson-Watrous 2009, Morris-Thorne-Yurtsever 1988, Hawking 1992, Gödel 1949)
+- Added two new Failed Attempts rows specific to CTC mechanism design pitfalls
+- Added CTC-specific results: Walls defeated/left standing table, parsimony scoring guidance
+- Added new "Verified On" row for M19
+- Updated description to reflect dual AdS/CFT + CTC coverage
+- Updated tags
+
+### Why
+The M19 CTC oracle session followed an identical meta-workflow to the AdS/CFT mechanism design (real-citation-grounded speculative physics, 14-walls table, parsimony/capability scores, laws-broken ledger), but covers a distinct physics domain (causality/time computation via Deutsch fixed-point model vs holographic boundary/bulk duality). Rather than creating a redundant new skill, the existing mechanism-design skill was extended to cover both physics domains.
+
+### Previous version (v1.0.0) snapshot
+
+---
+name: holographic-adscft-mechanism-design
+description: "Design patterns for AdS/CFT-based holographic computation devices in sci-fi world-building. Use when: (1) designing a fictional device that uses holographic physics, (2) grounding a sci-fi simulation engine in real physics, (3) needing real citations for boundary/bulk duality mechanics."
+category: architecture
+date: 2026-06-01
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags: [physics, holography, adscft, scifi, worldbuilding, mechanism-design]
+---
+
+# Holographic AdS/CFT Mechanism Design
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-01 |
+| **Objective** | Design a scientifically rigorous (but fiction-licensed) holographic boundary computer using AdS/CFT for a sci-fi story |
+| **Outcome** | Complete mechanism document written; 10 of 14 computational hard walls defeated via holographic arguments |
+| **Verification** | unverified — theoretical design exercise, not implemented |
+
+## When to Use
+
+- Designing a fictional device that simulates reality using holographic physics
+- Grounding sci-fi technology in real string theory / quantum gravity papers
+- Needing a structured framework for AdS/CFT-based storytelling science
+- Writing mechanism design documents that cite real physics (RT formula, ADH error correction)
+- Evaluating which physics laws a holographic device breaks vs. preserves
+
+## Verified Workflow
+
+> **Warning (Proposed Workflow):** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms. Verification level: `unverified` — theoretical design exercise only.
+
+### Quick Reference
+
+```
+Key formula: S(A) = Area(γ_A) / (4 G_N ℓ_P²)
+(Ryu-Takayanagi: boundary entanglement entropy = bulk extremal surface area)
+
+Key papers:
+- Maldacena 1997: arXiv:hep-th/9711200
+- Ryu-Takayanagi 2006: arXiv:hep-th/0603001
+- HRT 2007: arXiv:0705.0016
+- Almheiri-Dong-Harlow 2014: arXiv:1411.7041
+- van Raamsdonk 2010: arXiv:1005.3310
+```
+
+### Detailed Design Steps
+
+1. **Frame the boundary/bulk split:** The device IS the boundary CFT; the simulated reality IS the bulk. Never treat them as separate components — they are exactly dual.
+
+2. **Choose the RT/HRT surface as the "rendering primitive":** Each boundary subregion A has an associated extremal bulk surface γ_A. The area of γ_A gives the entanglement entropy of A. Bulk geometry is reconstructed by knowing all entanglement entropies — "entanglement IS geometry" (van Raamsdonk 2010).
+
+3. **Apply the ADH error-correcting structure:** The boundary-to-bulk map is a quantum error-correcting code (Almheiri-Dong-Harlow 2014). A bulk point p can be reconstructed from any boundary subregion whose entanglement wedge contains p. This gives: fault tolerance, subregion selectivity, and syndrome-based error detection.
+
+4. **Handle the dS vs AdS problem explicitly:** Our universe has positive cosmological constant (de Sitter, Λ > 0). AdS/CFT requires Λ < 0. Must state this is broken and justify: either (a) the device generates a local AdS bubble, (b) invoke dS/CFT (Strominger 2001, arXiv:hep-th/0106113) which is poorly understood and likely non-unitary, or (c) use large AdS radius L to approximate flat space locally.
+
+5. **Calculate boundary DoF from holographic bound:** A surface of area A contains at most A/ℓ_P² qubits (one per Planck area). For a 10 cm disk: ~3.9×10⁶⁶ Planck-area cells. This is the information capacity ceiling.
+
+6. **Design the AKNP dictionary:** Map each boundary CFT operator family (by conformal dimension Δ) to the corresponding bulk field: Δ=3 vector → EM field, Δ=3/2 spinor → fermion, Δ=4 stress tensor → graviton. The CFT spectrum must match the Standard Model field content — a new-physics postulate.
+
+7. **State new-physics postulates clearly:** Minimum required postulates for a handheld device:
+   - P1: Zero-erasure-cost topological zero modes (defeats Landauer floor)
+   - P2: Self-powered from bulk Casimir/curvature energy
+   - P3: CFT spectrum matching Standard Model exactly
+   - P4: Macroscopic (~10⁶⁶ qubit) quantum coherence at ambient temperature
+   - P5: Local AdS bubble in a globally dS universe
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Treating it as a classical simulation | Designing the device as a numerical integrator of bulk equations of motion | Misses the point: AdS/CFT says you run the boundary CFT and the bulk self-organizes; no explicit bulk integration needed | The device runs boundary physics; bulk geometry is emergent, not computed |
+| Ignoring dS/CFT problem | Assuming AdS/CFT applies directly to our universe | Our universe is de Sitter (Λ>0); AdS/CFT requires anti-de Sitter (Λ<0); applying it directly is physically inconsistent | Always state the dS/AdS discrepancy and justify the departure explicitly |
+| Confusing Planck constant with Planck scale | Using "Planck-level fields" to mean fields with action ~h | "Planck-level" in sci-fi means Planck LENGTH scale (~1.6e-35 m), not the Planck constant h (6.626e-34 J·s) | Always disambiguate: Planck CONSTANT (action) vs Planck LENGTH/SCALE (energy/length) |
+
+## Results & Parameters
+
+### Canonical Citation Set for Holographic Mechanism Design
+
+```
+1. Maldacena (1997) — AdS/CFT foundation
+   arXiv: hep-th/9711200
+   URL: https://arxiv.org/abs/hep-th/9711200
+
+2. Ryu & Takayanagi (2006) — RT entanglement entropy formula
+   arXiv: hep-th/0603001
+   URL: https://arxiv.org/abs/hep-th/0603001
+
+3. Hubeny, Rangamani & Takayanagi (2007) — HRT covariant (time-dependent) formula
+   arXiv: 0705.0016
+   URL: https://arxiv.org/abs/0705.0016
+
+4. Almheiri, Dong & Harlow (2014) — Bulk locality = quantum error correction
+   arXiv: 1411.7041
+   URL: https://arxiv.org/abs/1411.7041
+
+5. van Raamsdonk (2010) — Entanglement = spacetime geometry
+   arXiv: 1005.3310
+   URL: https://arxiv.org/abs/1005.3310
+
+6. Strominger (2001) — dS/CFT correspondence (contested)
+   arXiv: hep-th/0106113
+   URL: https://arxiv.org/abs/hep-th/0106113
+```
+
+### Key Physical Numbers
+
+```
+Planck length:    ℓ_P ≈ 1.616×10⁻³⁵ m
+Planck energy:    E_P ≈ 1.22×10¹⁹ GeV
+Planck constant:  h = 6.626×10⁻³⁴ J·s  (NOT what "Planck-scale" means)
+Holographic bound: 1 qubit per ℓ_P² of surface area
+10 cm disk:       ~3.9×10⁶⁶ Planck-area cells = maximum boundary DoF
+```
+
+### Laws Preserved vs Broken (summary for AdS/CFT device)
+
+```
+PRESERVED: Unitarity, no-cloning, RT/Bekenstein bound (saturated), SR/causality
+BENT:      General covariance (AdS interior ≠ dS exterior), thermodynamics (local)
+BROKEN:    Landauer floor (P1), quantum decoherence (P4), positive Λ (P5)
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| HomericIntelligence/Story | M02 holographic boundary mechanism design, Myrmidon swarm physics agent | Mechanism file at Research/Mechanisms/M02-holographic-boundary.md |
+
+---
+
+*End of v1.0.0 snapshot*
