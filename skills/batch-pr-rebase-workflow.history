@@ -1,5 +1,37 @@
 # batch-pr-rebase-workflow — Version History
 
+## v2.19.0 (2026-06-02)
+
+**Changed by:** HomericIntelligence multi-repo ecosystem PR-drain session (Agamemnon, ProjectOdyssey, ProjectHephaestus, ProjectHermes, AchaeanFleet)
+**Verification:** verified-ci
+
+### What changed
+
+- Bumped version 2.18.0 → 2.19.0 (MINOR — appended new triggers, no behavioral change to existing guidance)
+- Added description items (60)-(65):
+  - (60) Dependabot refuses `@dependabot rebase` once a non-Dependabot actor commits to the bot PR branch ('edited by someone other than Dependabot') — use `@dependabot recreate` or rebase manually; don't let automation commit to bot PRs
+  - (61) a PR is permanently BLOCKED while MERGEABLE with ZERO check-runs/statuses on its head SHA — required named contexts never ran because the workflow never triggered (paused/skipped at PR-open, or a `paths:` filter); push an empty signed commit to re-trigger, or fix the workflow `paths:`
+  - (62) 'needs author fix' lint/syntax failures are usually mechanical — read the error (e.g. Mojo's deprecated variadic `List[Type](args)` → typed list literal); reserve real 'needs author' for domain decisions you lack
+  - (63) a pip-audit transitive-CVE that reds every PR is fixed by an explicit `pixi.toml` pin (not `--ignore-vuln`), shipped as a separate small PR that unblocks the whole repo
+  - (64) a CLEAN, un-armed PR just needs `gh pr merge <n> --auto --squash`
+  - (65) a self-inflicted lint-failing artifact on a bot branch is removable directly via a detached worktree + force-with-lease push
+- Added matching "When to Use" narrative bullets for each of (60)-(65)
+- Added 6 new "Failed Attempts" rows (one per learning) with the concrete recovery command
+- Added a Verified On row for the HomericIntelligence ecosystem drain (Agamemnon #422, ProjectHephaestus #881/#879, Hermes #645/#648, AchaeanFleet #690)
+- Added frontmatter tags: `dependabot-recreate`, `required-checks-never-ran`, `transitive-cve-pin`, `mechanical-not-author`
+
+### Why
+
+A real cross-repo PR-drain surfaced six recurring blockers that the prior versions didn't cover:
+Dependabot's refusal to rebase agent-edited PRs (recover with `recreate`); the BLOCKED-but-MERGEABLE
+trap where required checks never ran at all (fix by re-triggering with an empty signed commit, or
+correcting a `paths:` filter); the lesson that 'needs author fix' lint failures are usually mechanical
+and self-fixable once you read the actual error; the correct fix for a transitive-dep CVE failing
+pip-audit (an explicit version pin in pixi.toml shipped as a fast standalone unblock-PR, not the
+ignore-list); arming CLEAN-but-un-armed PRs directly; and removing a self-inflicted lint-failing
+artifact from a bot branch via a detached worktree. All prior content is unchanged — this revision
+only appends the new triggers, bullets, failed-attempt rows, and a Verified On entry.
+
 ## v2.18.0 (2026-06-02)
 
 **Changed by:** ProjectNestor serial merge train session (8 sibling feature PRs sharing hot files)
