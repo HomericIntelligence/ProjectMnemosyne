@@ -1,12 +1,30 @@
+# squash-only-repo-merge-method-docs -- History
+
+## v1.1.0 (2026-06-03)
+
+**Changed by:** ProjectHephaestus PR #904 (Closes #718)
+**Verification:** verified-ci
+
+### What changed
+- Broadened the skill from docs-only to also cover the **code/API form** of the same bug: a hardcoded PyGithub `pr.merge(merge_method="rebase")` callsite on a squash-only repo.
+- Extended `description` and `## When to Use` with two new triggers: (a) a PyGithub `pr.merge(merge_method="rebase")` callsite failing at runtime with "Rebase merges are not allowed on this repository", and (b) auditing a squash-only repo by grepping for BOTH the `gh pr merge --rebase` CLI form and the `merge_method="rebase"` code/API form.
+- Added a combined-grep snippet to the Quick Reference that finds both the CLI and code/API forms.
+- Added a Failed Attempts row about the hardcoded `merge_method="rebase"` PyGithub callsite failing at runtime (~27 errors in one automation run), with the lesson that the wrong method hides in code too, not just docs; noted the `inspect.getsource` source-inspection unit test as the durable regression guard.
+- Added a Verified On entry referencing ProjectHephaestus PR #904 / issue #718 (2026-06-03, verified-ci).
+- Bumped `version` 1.0.0 -> 1.1.0 and `date` to 2026-06-03; added `history` frontmatter field.
+
+### Why
+The v1.0.0 skill only covered stale DOCS that say `--rebase` on a squash-only repo. This session found the SAME class of bug living in PYTHON CODE: `hephaestus/github/pr_merge.py` hardcoded `pr.merge(merge_method="rebase")` (PyGithub), which on a squash-only repo fails at runtime with `GraphQL: Merge method rebase merging is not allowed on this repository (enablePullRequestAutoMerge)` and `GraphQL: Rebase merges are not allowed on this repository. (mergePullRequest)`. In one ProjectHephaestus automation run this produced ~27 such errors. A sibling code path (`github_api.py:gh_pr_create`) already correctly used `--auto --squash`; the inconsistency between the two callsites was the bug. The fix changed the PyGithub call to `merge_method="squash"` and corrected the log/argparse strings. The reinforced lesson is that when auditing a squash-only repo you must grep for BOTH the CLI form and the code/API `merge_method="rebase"` form -- docs are not the only place the wrong method hides.
+
+### Previous version (v1.0.0) snapshot
 ---
 name: squash-only-repo-merge-method-docs
-description: "Repo allows squash-only merges (allow_rebase_merge=false); using --rebase silently fails to arm auto-merge (CLI) or fails at runtime (code/API). The wrong merge method hides in BOTH docs and code. Use when: (1) gh pr merge --auto --rebase returns no error but auto-merge is not armed, (2) project docs or CLAUDE.md instruct --rebase for a repo that has disabled rebase merges, (3) a PyGithub pr.merge(merge_method='rebase') callsite on a squash-only repo fails with 'Rebase merges are not allowed on this repository', (4) verifying which merge method a repo supports before arming auto-merge, (5) updating stale documentation that references the wrong merge flag, (6) auditing a squash-only repo — grep for BOTH the gh pr merge --rebase CLI form and the merge_method=\"rebase\" code/API form."
+description: "Repo allows squash-only merges (allow_rebase_merge=false); using --rebase in gh pr merge silently fails to arm auto-merge. Use when: (1) gh pr merge --auto --rebase returns no error but auto-merge is not armed, (2) project docs or CLAUDE.md instruct --rebase for a repo that has disabled rebase merges, (3) verifying which merge method a repo supports before arming auto-merge, (4) updating stale documentation that references the wrong merge flag."
 category: ci-cd
-date: 2026-06-03
-version: "1.1.0"
+date: 2026-05-28
+version: "1.0.0"
 user-invocable: false
 verification: verified-ci
-history: squash-only-repo-merge-method-docs.history
 tags:
   - auto-merge
   - squash
@@ -31,22 +49,10 @@ project documentation (e.g. CLAUDE.md) instructs `gh pr merge --auto --rebase`, 
 silently fails to arm in squash-only repos — `gh pr merge` accepts the command without error
 but does not enable auto-merge. The fix is to use `--squash` and to correct any stale docs.
 
-**The wrong merge method also hides in CODE, not just docs.** A hardcoded PyGithub
-`pr.merge(merge_method="rebase")` callsite (or a `merge_method: rebase` config value) on a
-squash-only repo does **not** fail silently — it fails loudly at runtime with errors like
-`GraphQL: Merge method rebase merging is not allowed on this repository (enablePullRequestAutoMerge)`
-and `GraphQL: Rebase merges are not allowed on this repository. (mergePullRequest)`. When
-auditing a squash-only repo, grep for BOTH the `gh pr merge --rebase` CLI form AND the
-`merge_method="rebase"` code/API form.
-
 ## When to Use
 
 - `gh pr merge --auto --rebase` completes without error but auto-merge is not armed
 - Project CLAUDE.md or other docs instruct `--rebase` for a GitHub repo
-- A PyGithub `pr.merge(merge_method="rebase")` callsite on a squash-only repo fails at runtime
-  with "Rebase merges are not allowed on this repository" (the code form of this bug)
-- Auditing a squash-only repo — grep for BOTH the `gh pr merge --rebase` CLI form and the
-  `merge_method="rebase"` code/API form (docs are not the only place the wrong method hides)
 - Verifying which merge method a repo supports before writing automation or instructions
 - Updating stale documentation that references the wrong merge flag for a repo
 - CI gate (`pr-policy`) reports auto-merge not enabled even though `--auto` was issued
@@ -66,10 +72,6 @@ gh pr merge --auto --squash   # NOT --rebase
 # Step 3: Verify auto-merge is armed with the correct method
 gh pr view <PR_NUMBER> --json autoMergeRequest --jq '.autoMergeRequest.mergeMethod'
 # Should output: SQUASH
-
-# Step 4 (audit): find EVERY wrong-method occurrence — BOTH the CLI form and the code/API form
-grep -rn 'merge_method="rebase"\|--auto --rebase\|gh pr merge.*--rebase' .
-# Catches: PyGithub pr.merge(merge_method="rebase"), gh pr merge --auto --rebase in docs/scripts
 ```
 
 ### Detailed Steps
@@ -111,7 +113,6 @@ grep -rn 'merge_method="rebase"\|--auto --rebase\|gh pr merge.*--rebase' .
 |---------|----------------|---------------|----------------|
 | `gh pr merge --auto --rebase` on squash-only repo | Issued auto-merge with `--rebase` flag as instructed by stale CLAUDE.md | Repo has `allow_rebase_merge: false`; the command appeared to succeed but auto-merge was not armed | Always verify allowed merge methods with `gh api repos/OWNER/REPO` before using `--rebase` |
 | Relying on stale docs | CLAUDE.md documented `--rebase` because it was originally correct | Repo settings changed (or were always squash-only) without corresponding doc update | Docs about merge flags rot silently; audit CLAUDE.md against `gh api` before issuing PRs |
-| Hardcoded `pr.merge(merge_method="rebase")` in PyGithub code | `hephaestus/github/pr_merge.py` hardcoded `merge_method="rebase"` while a sibling path (`github_api.py:gh_pr_create`) already used `--auto --squash` | Failed at runtime (not silently) with `GraphQL: Rebase merges are not allowed on this repository. (mergePullRequest)` / `...(enablePullRequestAutoMerge)` — ~27 such errors in one automation run | The wrong method hides in CODE too, not just docs; grep for `merge_method="rebase"` as well as the CLI `--rebase` form, and watch for inconsistency between sibling callsites. Durable guard: a unit test that uses `inspect.getsource` on the module and asserts the source contains no `merge_method="rebase"` and does contain `merge_method="squash"` |
 
 ## Results & Parameters
 
@@ -139,35 +140,10 @@ gh pr view <PR> --json autoMergeRequest
 # {"autoMergeRequest": {"mergeMethod": "SQUASH", "enabledAt": "...", "enabledBy": {...}}}
 ```
 
-### Code-form fix (PyGithub) and regression guard
-
-The same bug in PyGithub code is fixed by changing the merge method on the `pr.merge(...)` call:
-
-```python
-# WRONG on a squash-only repo — fails at runtime:
-pr.merge(merge_method="rebase")
-# Right:
-pr.merge(merge_method="squash")
-```
-
-Also update any log/argparse strings that say "rebase". The durable regression guard is a
-source-inspection unit test:
-
-```python
-import inspect
-from hephaestus.github import pr_merge
-
-def test_pr_merge_uses_squash_not_rebase():
-    src = inspect.getsource(pr_merge)
-    assert 'merge_method="rebase"' not in src
-    assert 'merge_method="squash"' in src
-```
-
-This was shipped in ProjectHephaestus PR #904 (Closes #718, merged 2026-06-03, verified-ci).
-
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | 2026-05-28: CLAUDE.md had stale `--rebase` instruction; PR #668 corrected it | `gh pr view 668 --json autoMergeRequest` confirmed `mergeMethod=SQUASH`; issue #666 |
-| ProjectHephaestus | 2026-06-03: `hephaestus/github/pr_merge.py` hardcoded `pr.merge(merge_method="rebase")` — code form of the same bug, ~27 runtime GraphQL errors in one automation run; PR #904 changed it to `merge_method="squash"` | Closes #718; durable guard = `inspect.getsource` unit test asserting no `merge_method="rebase"`; verified-ci |
+
+---
