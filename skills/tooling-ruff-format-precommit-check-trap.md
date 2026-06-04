@@ -189,7 +189,6 @@ pre-commit run --from-ref origin/main --to-ref HEAD
 - Post-fix local verification: clean
 - CI re-run: pending at time of capture
 
-
 ### Concrete observation (PR #913)
 
 - Project: `HomericIntelligence/ProjectHephaestus`
