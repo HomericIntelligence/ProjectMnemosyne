@@ -1,12 +1,27 @@
+# tooling-ruff-format-precommit-check-trap - History
+
+## v1.1.0 (2026-06-04)
+
+**Changed by:** ProjectHephaestus PR #913 CI lint/pre-commit failure analysis
+**Verification:** verified-local
+
+### What changed
+- Added the ProjectHephaestus PR #913 failure mode where local `ruff check`, focused pytest, validation tests, and the pre-push `pytest -q` hook were green, but CI failed `ruff format --check` and `ruff-format-python`.
+- Added the exact CI parity commands for ProjectHephaestus lint/pre-commit before pushing.
+- Added failed-attempt rows for trusting pytest-only pre-push and fixing import order without running the formatter.
+
+### Why
+ProjectHephaestus PR #913 demonstrated that the local pre-push hook can run the full unit suite and still miss formatter drift. CI's `lint` job runs `pixi run --environment lint ruff format --check hephaestus scripts tests`, and CI's `pre-commit` job runs `ruff-format-python`; both failed because the new test file still needed formatter reflow.
+
+### Previous version (v1.0.0) snapshot
 ---
 name: tooling-ruff-format-precommit-check-trap
-description: "Running `pixi run ruff check` (or `ruff check`) locally does NOT exercise `ruff format --check` — they are SEPARATE tools sharing a binary. `check` is the linter (errors/warnings); `format` is the formatter (line-wrap/style). A worktree-driven edit that passes `ruff check`, `mypy`, and `pytest` locally can still fail the CI pre-commit gate because the project's pre-commit config runs `ruff-format` (which uses `--diff`/`--check` mode) and finds reflowable multi-line signatures. Use when: (1) CI pre-commit ruff-format hook failed but local `ruff check` passed, (2) deciding what to run before pushing a worktree edit, (3) `ruff check` vs `ruff format` difference unclear, (4) pre-commit hooks running locally before push, (5) ProjectHephaestus pre-push `pytest -q` passed but CI lint/pre-commit failed formatter checks, (6) editor format-on-save bypassed because edits came from tooling/Edit calls instead of editor save, (7) muscle-memory says 'I ran ruff' but the format step was skipped, (8) lint and tests pass yet CI rejects with multi-line function signatures or compact comprehensions that should fit on one line under the 100-col limit."
+description: "Running `pixi run ruff check` (or `ruff check`) locally does NOT exercise `ruff format --check` — they are SEPARATE tools sharing a binary. `check` is the linter (errors/warnings); `format` is the formatter (line-wrap/style). A worktree-driven edit that passes `ruff check`, `mypy`, and `pytest` locally can still fail the CI pre-commit gate because the project's pre-commit config runs `ruff-format` (which uses `--diff`/`--check` mode) and finds reflowable multi-line signatures. Use when: (1) CI pre-commit ruff-format hook failed but local `ruff check` passed, (2) deciding what to run before pushing a worktree edit, (3) `ruff check` vs `ruff format` difference unclear, (4) pre-commit hooks running locally before push, (5) editor format-on-save bypassed because edits came from tooling/Edit calls instead of editor save, (6) muscle-memory says 'I ran ruff' but the format step was skipped, (7) lint and tests pass yet CI rejects with multi-line function signatures that should fit on one line under the 100-col limit."
 category: tooling
-date: 2026-06-04
-version: "1.1.0"
+date: 2026-05-29
+version: "1.0.0"
 user-invocable: false
 verification: verified-local
-history: tooling-ruff-format-precommit-check-trap.history
 tags:
   - ruff
   - ruff-format
@@ -18,8 +33,6 @@ tags:
   - pre-push
   - ci-parity
   - pixi
-  - projecthephaestus
-  - ci-lint
 ---
 
 # Ruff Format vs Ruff Check: The Pre-Commit Trap
@@ -28,11 +41,10 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-04 |
+| **Date** | 2026-05-29 |
 | **Objective** | Stop CI pre-commit `ruff-format` failures caused by worktree edits where the agent ran `ruff check` (and other gates) locally but never ran `ruff format` — the two are different tools and `check` does not exercise the formatter. |
-| **Outcome** | Distinguishes `ruff check` (lint) from `ruff format` (style); prescribes a 4-command pre-commit sequence; adds the ProjectHephaestus PR #913 trap where pytest-only pre-push passed while CI formatter checks failed. |
-| **Verification** | verified-local — observed in CI on HomericIntelligence/ProjectHephaestus PR #707 and PR #913; local formatter/pre-commit parity commands documented, with PR #913 CI fix pending at capture time. |
-| **History** | [changelog](./tooling-ruff-format-precommit-check-trap.history) |
+| **Outcome** | Distinguishes `ruff check` (lint) from `ruff format` (style); prescribes a 4-command pre-commit sequence; CI re-run pending for the verifying commit. |
+| **Verification** | verified-local — observed in CI on HomericIntelligence/ProjectHephaestus PR #707; fix in commit `820eec0` reformatted 6 files; locally clean post-fix; CI re-run pending at time of skill capture. |
 
 ## When to Use
 
@@ -41,7 +53,6 @@ tags:
 - You "ran ruff" mentally but cannot recall whether you ran `format` or just `check`.
 - Editor format-on-save is normally trusted, but the edits came from tooling (Edit calls, sed/awk scripts, codegen) that bypassed the editor entirely.
 - You want a defensive pre-push checklist that catches every CI gate without doing a multi-minute `--all-files` run.
-- A ProjectHephaestus branch passed the local pre-push `pytest -q` hook, but CI `lint` or `pre-commit` failed with `Would reformat: <file>`.
 - Diagnosing a CI failure that shows multi-line function signatures being reflowed to one line (or vice-versa) under a project's column limit (often 100).
 
 ## Verified Workflow
@@ -61,13 +72,8 @@ pre-commit run --files <touched files>           # 4. FULL HOOK SIMULATION (mark
 # 4 is the most defensive — runs every configured pre-commit hook against the changed files,
 #   catching everything the CI gate would, including non-Python hooks.
 
-# --- PROJECTHEPHAESTUS CI PARITY ---
-pixi run --environment lint ruff format --check hephaestus scripts tests
-pixi run --environment lint pre-commit run --all-files --show-diff-on-failure
-
 # --- WHAT NOT TO DO ---
 pixi run ruff check . && git push   # WRONG — `check` does not exercise `ruff format`
-pytest -q && git push               # WRONG — tests do not exercise formatter hooks
 ```
 
 ### Detailed Steps
@@ -94,7 +100,7 @@ Pre-commit configs typically register `ruff-check` and `ruff-format` as TWO SEPA
    - Output: a diff showing function signatures being reflowed from multi-line back to single-line under the project's 100-col limit.
    - Exit code: 1.
 
-The local gates never saw the formatter difference because none of them invoked `ruff format`. ProjectHephaestus PR #913 repeated the trap in miniature: local `python -m ruff check tests/unit/validation/test_git_metadata_safety.py`, focused pytest, validation pytest, and the repository pre-push `pytest -q` hook all passed, but CI still failed because the formatter wanted to collapse a multi-line list comprehension to one line.
+The local gates never saw the formatter difference because none of them invoked `ruff format`.
 
 #### The fix (mechanical)
 
@@ -132,8 +138,6 @@ Run the 4-command sequence ABOVE before every `git push` from a worktree where e
 | Skip `ruff format` because "lint passed" | Reasoned that if `ruff check` is green, `ruff format` is implied | The two subcommands enforce ORTHOGONAL rule sets. Lint rules say nothing about line wrap; format rules say nothing about unused imports. | False confidence. Orthogonal tools give orthogonal signals. |
 | Run `pre-commit run --all-files` only | Used the universal "safe" invocation as the sole pre-push gate | Multi-minute runtime on large repos discourages adoption; engineers drop to `--files` and the gap reappears | Use `pre-commit run --files <touched>` for routine pre-push; reserve `--all-files` for major changes. |
 | Run `pre-commit run --files <only Python files>` | Listed only the `.py` files in the `--files` argument | Missed markdown, yaml, shell hooks that would also fail in CI on co-changed non-Python files | List ALL touched files in `--files`, not just the Python ones. Or use `--from-ref/--to-ref` for the full PR diff. |
-| Trust ProjectHephaestus pre-push `pytest -q` as CI parity | PR #913 was pushed after local `ruff check`, focused pytest, validation pytest, and the pre-push full unit suite all passed | CI `lint` ran `pixi run --environment lint ruff format --check hephaestus scripts tests`; CI `pre-commit` ran `ruff-format-python`; both failed because one test file still needed formatter reflow | ProjectHephaestus pre-push proves tests and coverage only. Run `pixi run --environment lint ruff format --check hephaestus scripts tests` or `pre-commit run --all-files` before pushing. |
-| Fix ruff I001/import order only | Adjusted import order until `python -m ruff check <file>` passed | `ruff check` covered import sorting but not formatter line reflow; CI still failed with `Would reformat: tests/unit/validation/test_git_metadata_safety.py` | After any lint/import fix, run `ruff format` or `ruff format --check`; a green lint pass is not a formatting pass. |
 | Change `.editorconfig` to "fix" line wrapping | Assumed editor config drove the formatter's column choice | `.editorconfig` is consumed by editors, not by `ruff format`. The formatter reads `pyproject.toml [tool.ruff] line-length` | Single source of truth for ruff formatting is `pyproject.toml`. Editor configs are advisory only. |
 | `--amend` after the format pass | Tried to fold the reformat into the feature commit to keep history clean | Once shared (pushed), amending requires force-push, which is forbidden under the repo's git safety protocol | Create a NEW `style(ruff):` commit. PR-history noise is acceptable; rewriting shared history is not. |
 | Disable `ruff-format` in pre-commit "because it's redundant with ruff-check" | Removed the `ruff-format` hook believing `ruff check` covered formatting | Lint rules and format rules are disjoint; without `ruff-format`, style drift accumulates silently and shows up in PR diffs as cosmetic noise | Keep both hooks. They are not redundant. |
@@ -148,10 +152,6 @@ pixi run ruff format hephaestus/ tests/
 pixi run ruff check hephaestus/ tests/
 pixi run mypy
 pre-commit run --files <touched files>
-
-# --- PROJECTHEPHAESTUS CI-PARITY FOR PRS ---
-pixi run --environment lint ruff format --check hephaestus scripts tests
-pixi run --environment lint pre-commit run --all-files --show-diff-on-failure
 
 # --- POETRY OR VANILLA PYTHON PROJECT ---
 poetry run ruff format src/ tests/
@@ -189,19 +189,9 @@ pre-commit run --from-ref origin/main --to-ref HEAD
 - Post-fix local verification: clean
 - CI re-run: pending at time of capture
 
-
-### Concrete observation (PR #913)
-
-- Project: `HomericIntelligence/ProjectHephaestus`
-- Trigger: new tracked validation test added by tooling
-- Local gates that were green: `python -m ruff check tests/unit/validation/test_git_metadata_safety.py`, `python -m pytest -q tests/unit/validation --no-cov`, focused tidy tests, and the pre-push hook's full `pytest -q` run (`3168 passed, 6 skipped`, coverage `84.98%`)
-- CI failure: `lint` job ran `pixi run --environment lint ruff format --check hephaestus scripts tests` and reported `Would reformat: tests/unit/validation/test_git_metadata_safety.py`
-- CI failure: `pre-commit` job ran `pixi run --environment lint pre-commit run --all-files --show-diff-on-failure`; hook `ruff-format-python` modified the same file
-- Formatter diff: collapsed a multi-line list comprehension return into one line under the configured line length
-- Lesson: ProjectHephaestus' local pre-push hook is test-focused, not formatter parity. Run the lint-environment formatter or pre-commit before pushing.
-
 ### Related skills
 
 - `pre-commit-hooks-and-linting-config.md` — canonical guide to pre-commit config across the ecosystem
 - `precommit-scope-full-pr-diff-not-current-edit.md` — when sub-agents have committed in the same PR, use `--from-ref/--to-ref` instead of `--files`
 - `pixi-precommit-hook-binary-resolution.md` — when the pre-commit hook resolves the wrong binary
+
