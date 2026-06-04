@@ -1,5 +1,39 @@
 # squash-only-repo-merge-method-docs -- History
 
+## v1.2.0 (2026-06-03)
+
+**Changed by:** ProjectHephaestus issue #911 — settings-aware merge-method selection; /learn skill stale --rebase
+**Verification:** verified-ci
+
+### What changed
+- Added the second-order lesson that the reactive fix of swapping a hardcoded `--rebase` to a hardcoded `--squash` is itself fragile — it merely assumes a different fixed method. The robust fix is **settings-aware merge-method selection**: query the target repo's allowed methods via `gh api repos/<repo>` and choose dynamically (preference order rebase -> squash -> merge), erroring if none are allowed.
+- Extended `description` and `## When to Use` with two new triggers: (a) a skill/plugin instruction file (e.g. `/learn`, `/finish-branch` `SKILL.md`) hardcodes `gh pr merge --auto --rebase` against a squash-only target repo, and (b) deciding the merge method for a cross-repo `gh pr merge` — detect allowed methods instead of hardcoding.
+- Added the reusable `choose_merge_flag` Bash snippet to the Verified Workflow `### Quick Reference` and to Results & Parameters, with the rebase->squash->merge preference explanation and the ERROR-on-no-methods guard.
+- Added two Failed Attempts rows: (1) swapping hardcoded `--rebase` to hardcoded `--squash` (e.g. learn skill #867) still being wrong for a rebase-only/merge-only target, and (2) the `/learn` skill plugin instruction running `--auto --rebase` against squash-only ProjectMnemosyne (three sub-agents each hit `Merge method rebase merging is not allowed on this repository`), establishing that a tooling skill's OWN instructions are a place this bug hides.
+- Added a Verified On row for ProjectHephaestus issue #911 (supersedes the narrower #721 static-swap issue and the static `--squash` swap from #867).
+- Bumped `version` 1.1.0 -> 1.2.0 and `date` to 2026-06-03.
+
+### Why
+The v1.1.0 skill covered the wrong-merge-method bug in DOCS and in PyGithub CODE, but its fix was still "use `--squash` on this repo" — a fixed substitution. This session found the bug a third place: a TOOLING SKILL's own plugin instruction. The `/hephaestus:learn` skill (`skills/learn/SKILL.md`, shipped via the ProjectHephaestus marketplace; stale plugin cache at `~/.claude/plugins/cache/.../skills/learn/SKILL.md` line 420) hardcodes `gh pr merge "$PR_NUMBER" --auto --rebase --repo HomericIntelligence/ProjectMnemosyne`. ProjectMnemosyne is squash-only (`{"rebase":false,"squash":true,"merge":true}`), so that instruction fails for EVERY Mnemosyne PR with `GraphQL: Merge method rebase merging is not allowed on this repository`. During a real `/learn` run, three sub-agents each hit this and independently fell back to `--auto --squash`. The durable fix is not another hardcode but settings-aware selection: query `gh api repos/<repo>` and pick the first allowed method in rebase->squash->merge order. This naturally yields `--squash` on a squash-mandated repo like ProjectHephaestus (rebase disabled) without special-casing. Shipped as ProjectHephaestus tracking issue #911, which supersedes #721 (narrower static swap) and #867 (the static `--squash` swap in the learn skill).
+
+### Previous version (v1.1.0) snapshot
+---
+name: squash-only-repo-merge-method-docs
+description: "Repo allows squash-only merges (allow_rebase_merge=false); using --rebase silently fails to arm auto-merge (CLI) or fails at runtime (code/API). The wrong merge method hides in BOTH docs and code. Use when: (1) gh pr merge --auto --rebase returns no error but auto-merge is not armed, (2) project docs or CLAUDE.md instruct --rebase for a repo that has disabled rebase merges, (3) a PyGithub pr.merge(merge_method='rebase') callsite on a squash-only repo fails with 'Rebase merges are not allowed on this repository', (4) verifying which merge method a repo supports before arming auto-merge, (5) updating stale documentation that references the wrong merge flag, (6) auditing a squash-only repo — grep for BOTH the gh pr merge --rebase CLI form and the merge_method=\"rebase\" code/API form."
+category: ci-cd
+date: 2026-06-03
+version: "1.1.0"
+user-invocable: false
+verification: verified-ci
+history: squash-only-repo-merge-method-docs.history
+tags:
+  - auto-merge
+  - squash
+  - rebase
+  - github
+  - docs
+---
+
 ## v1.1.0 (2026-06-03)
 
 **Changed by:** ProjectHephaestus PR #904 (Closes #718)
