@@ -1,9 +1,9 @@
 ---
 name: dry-consolidate-to-canonical-refactor
-description: "Canonical workflow for finding code duplication and refactoring to a single canonical source: discovery via grep/AST, classifying true duplicates vs incidental similarity, bulk file migration, type-alias consolidation, decomposing oversized modules by SRP, preserving git history via git mv. Use when: (1) noticing duplicate functions/constants across modules, (2) centralizing path or config constants, (3) decomposing a >2k-line module into SRP-aligned pieces, (4) consolidating duplicate Pydantic models or type aliases, (5) bulk-renaming symbols across a codebase."
+description: "Canonical workflow for finding code duplication and refactoring to a single canonical source: discovery via grep/AST, classifying true duplicates vs incidental similarity, bulk file migration, type-alias consolidation, decomposing oversized modules by SRP, dict structure consolidation, preserving git history via git mv. Use when: (1) noticing duplicate functions/constants across modules, (2) centralizing path or config constants, (3) decomposing a >2k-line module into SRP-aligned pieces, (4) consolidating duplicate Pydantic models or type aliases, (5) same dict structure built in multiple call sites, (6) bulk-renaming symbols across a codebase."
 category: architecture
-date: 2026-05-18
-version: "1.0.0"
+date: 2026-06-04
+version: "1.1.0"
 user-invocable: false
 verification: verified-local
 history: dry-consolidate-to-canonical-refactor.history
@@ -16,14 +16,15 @@ tags: [merged, dry, consolidation, refactor, canonical-source, deduplication]
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-05-18 |
+| **Date** | 2026-06-04 |
 | **Objective** | Eliminate code duplication by identifying canonical source locations, migrating references, and deleting redundant code |
-| **Outcome** | Consolidated 16 skills covering DRY/deduplication, constant centralization, method extraction, module relocation, and stale-code cleanup |
+| **Outcome** | Consolidated 17 skills covering DRY/deduplication, constant centralization, method extraction, dict structure consolidation, module relocation, and stale-code cleanup |
 
 ## When to Use
 
 - Duplicate function or class definitions exist across two or more modules (`grep` finds the same `def`/`class` name in multiple files)
 - Constants or configuration values are defined inline in multiple places instead of one canonical module
+- The same dict structure (payload, shape, serialization format) is built in multiple call sites
 - A method exceeds 50–100 LOC or has cyclomatic complexity >15 and has clear section boundaries
 - Duplicate Pydantic models or dataclasses can be unified into a base class with domain-specific subtypes
 - A module sits at the wrong package level and needs relocation (orphan module)
@@ -273,6 +274,77 @@ def fix_skill_file(skill_path: Path, dry_run: bool = False) -> tuple[bool, list[
     ...
 ```
 
+#### 3i. Dict Structure Consolidation (Shared Payload)
+
+When the same dict structure is built in multiple call sites (e.g., format functions and CLI output),
+extract into a single private helper to prevent shape drift.
+
+```python
+# Before: duplicated dict construction in two places
+# In format_stats_json() — lines 186-192
+def format_stats_json(stats: dict[str, Any]) -> str:
+    serializable = {
+        "agent_type": stats.get("agent_type"),
+        "total_delegations": stats.get("total_delegations", 0),
+        "skill_refs": stats.get("skill_refs", []),
+        "timestamp": stats.get("timestamp"),
+    }
+    return json.dumps(serializable)
+
+# In main() — lines 254-260 (identical structure)
+def main() -> None:
+    stats = {"agent_type": ..., "total_delegations": ..., "skill_refs": ..., "timestamp": ...}
+    cli_output = json.dumps({
+        "agent_type": stats.get("agent_type"),
+        "total_delegations": stats.get("total_delegations", 0),
+        "skill_refs": stats.get("skill_refs", []),
+        "timestamp": stats.get("timestamp"),
+    })
+
+# After: extract to private helper
+def _serializable_stats(stats: dict[str, Any]) -> dict[str, Any]:
+    """Convert stats dict to serializable format.
+    
+    Args:
+        stats: Raw statistics dictionary from agent runtime.
+    
+    Returns:
+        Dictionary with JSON-serializable shape:
+        - agent_type: str (from stats)
+        - total_delegations: int >= 0 (defaults to 0)
+        - skill_refs: list[str] (defaults to [])
+        - timestamp: str (from stats, may be None)
+    """
+    return {
+        "agent_type": stats.get("agent_type"),
+        "total_delegations": stats.get("total_delegations", 0),
+        "skill_refs": stats.get("skill_refs", []),
+        "timestamp": stats.get("timestamp"),
+    }
+
+# Both call sites now use the helper
+def format_stats_json(stats: dict[str, Any]) -> str:
+    return json.dumps(_serializable_stats(stats))
+
+def main() -> None:
+    cli_output = json.dumps(_serializable_stats(stats))
+```
+
+**Key rules**:
+- Private helper name: `_<noun>_<verb>()` or `_<adjective>_<noun>()` (e.g., `_serializable_stats`, `_extract_delegation_targets`)
+- Placement: after other private helpers in the same scope, before first public function that calls it
+- Type hints: Full annotations required (`dict[str, Any]` → `dict[str, Any]`)
+- Docstring: Include Args and Returns; explain default behavior for optional fields
+- Test coverage: Add regression test asserting shape parity between all call sites
+  ```python
+  def test_format_stats_json_matches_cli_json_shape():
+      """Verify that format_stats_json and main() produce same serializable shape."""
+      stats = {"agent_type": "test", "total_delegations": 5, "skill_refs": ["s1"], "timestamp": "2026-01-01"}
+      shape_from_formatter = json.loads(format_stats_json(stats))
+      shape_from_cli = json.loads(json.dumps(_serializable_stats(stats)))
+      assert shape_from_formatter == shape_from_cli, "Dict shapes diverged between call sites"
+  ```
+
 ### Phase 4: Verification
 
 ```bash
@@ -330,6 +402,7 @@ gh pr merge --auto --squash
 | Placing Mojo helper after its consumers | Inserted helper at end of file | Mojo requires definition-before-use | Always insert private helpers immediately before their first caller |
 | Direct copy of ported script without adapting paths | Copied verbatim from ProjectMnemosyne to ProjectOdyssey | Default `--skills-dir` path pointed to wrong location | Always check target repo's default paths, test import patterns, and directory structure |
 | Using `gh pr list --state merged` only | Filtered to merged state | Misses CLOSED PRs and branches with no PR | Always use `--state all` to catch all terminal states |
+| Building same dict structure in multiple call sites | Left identical dict construction in format_stats_json() and main() | Shape can drift independently if new fields added in future refactors | Extract to `_serializable_stats()` helper; add regression test pinning shape parity |
 
 ## Results & Parameters
 

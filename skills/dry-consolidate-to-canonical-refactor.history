@@ -1,5 +1,54 @@
 # dry-consolidate-to-canonical-refactor — History
 
+## v1.1.0 (2026-06-04) — Add dict structure consolidation pattern
+
+**Changed by:** ProjectHephaestus issue #737 (agent stats.py DRY fix)
+**Verification:** verified-local
+
+### What changed
+
+Added new subsection 3i: Dict Structure Consolidation (Shared Payload). Extends the canonical
+workflow with pattern for consolidating identical dict construction across multiple call sites.
+
+- New subsection: "3i. Dict Structure Consolidation (Shared Payload)"
+- Pattern: Extract to private helper `_<adjective>_<noun>()` with full type hints
+- Test coverage: Regression test pinning shape parity across call sites
+- Failed Attempts: Added row about dict shape drift prevention
+- When to Use: Added trigger condition for same dict structure in multiple call sites
+- Updated Overview outcome count: 16 → 17 consolidated skills
+
+### Why
+
+When the same dict structure is built in multiple code paths (e.g., `format_stats_json()` and
+`main()` both serializing stats), independent changes can cause shape to drift. By extracting
+to a single private helper with a regression test, future refactors touching one path update
+both consistently.
+
+### Key Learning
+
+- Private helper name: `_<adjective>_<noun>()` matches existing module conventions
+- Placement: After other private helpers, before first public caller
+- Type hints: Full annotations required (`dict[str, Any]` → `dict[str, Any]`)
+- Regression test: Assert shape parity to prevent future drift
+- All 35 existing tests + 1 new test passing locally; CI validation pending
+
+### Previous version (v1.0.0) snapshot
+
+```yaml
+name: dry-consolidate-to-canonical-refactor
+description: "Canonical workflow for finding code duplication and refactoring to a single canonical source"
+category: architecture
+date: 2026-05-18
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+```
+
+Consolidated 16 DRY/consolidation skills from three source clusters covering deduplication,
+constant centralization, method extraction, module relocation, and stale-code cleanup.
+
+---
+
 ## v1.0.0 (2026-05-18) — Merge of 16 skills
 
 **Changed by:** Skill-merge swarm (Phase B Wave 1, M11 / #1785)
