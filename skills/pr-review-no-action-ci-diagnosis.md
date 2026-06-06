@@ -1,11 +1,12 @@
 ---
 name: pr-review-no-action-ci-diagnosis
-description: "Use when: (1) a PR review-fix plan concludes no code changes are required, (2) CI failures appear on a PR but changes are unrelated to the failing jobs, (3) CI flakes need to be distinguished from PR-introduced regressions, (4) a fix commit may be local-only and not yet pushed to remote, (5) a stale branch was force-pushed dropping a fix commit, (6) verifying a PR is ready to merge despite red CI"
+description: "Use when: (1) a PR review-fix plan concludes no code changes are required, (2) CI failures appear on a PR but changes are unrelated to the failing jobs, (3) CI flakes need to be distinguished from PR-introduced regressions, (4) a fix commit may be local-only and not yet pushed to remote, (5) a stale branch was force-pushed dropping a fix commit, (6) verifying a PR is ready to merge despite red CI, (7) a REQUIRED status check (e.g. security/dependency-scan, pip-audit) fails identically across multiple unrelated PRs because of a stale build/dependency cache in CI rather than anything in the PR's diff"
 category: ci-cd
-date: 2026-03-29
-version: "2.1.0"
+date: 2026-06-05
+version: "2.2.0"
 user-invocable: false
 verification: unverified
+history: pr-review-no-action-ci-diagnosis.history
 tags: []
 ---
 # pr-review-no-action-ci-diagnosis
@@ -16,10 +17,10 @@ Consolidated skill for handling PR review plans that conclude no code changes ar
 
 | Field | Value |
 | ------- | ------- |
-| Date | 2026-03-29 |
+| Date | 2026-06-05 |
 | Objective | Consolidated skill covering all "PR review needs no action" and CI diagnosis scenarios |
-| Outcome | Merged from 7 skills covering clean state handling, no-op detection, CI flake analysis, stale branch, no-action determination, no-fixes-needed, no-op verification |
-| Verification | unverified |
+| Outcome | Merged from 7 skills covering clean state handling, no-op detection, CI flake analysis, stale branch, no-action determination, no-fixes-needed, no-op verification; extended in v2.2.0 with a verified-ci stale-cache required-check diagnosis (see Phase 5b) |
+| Verification | unverified (consolidated skill has mixed provenance; the v2.2.0 stale-cache required-check finding in Phase 5b is verified-ci) |
 
 ## When to Use
 
@@ -32,6 +33,8 @@ Consolidated skill for handling PR review plans that conclude no code changes ar
 - You need to verify auto-merge is enabled without making code changes
 - `link-check` fails on a PR that did not add new broken links
 - Runtime crash tests fail on a PR that does not touch the crashing code
+- A **required** status check (e.g. `security/dependency-scan`, pip-audit) fails **identically across multiple unrelated PRs** — and on main-derived branches too — while the failing tool passes when you run it **locally in the same env** (stale/poisoned CI build or dependency cache, not your diff) *(verified-ci, 2026-06-05)*
+- CI logs show the gate **installing** dependency version X while the gate **reports** the vulnerable version Y — the fingerprint of a poisoned/stale `.pixi` / setup-pixi cache layer *(verified-ci, 2026-06-05)*
 
 ## Verified Workflow
 
@@ -198,6 +201,85 @@ print(
 )
 ```
 
+### Phase 5b: Required check fails repo-wide due to a stale CI cache (verified-ci, 2026-06-05)
+
+This is a distinct, **verified** scenario from the rest of this skill (which is `unverified`).
+It applies when a **required** status check fails *identically across multiple unrelated PRs*
+(including branches freshly derived from main) and the diff has nothing to do with the check.
+The cause is repo-wide CI infrastructure (a stale/poisoned `.pixi` / setup-pixi build cache),
+**not** your code.
+
+**Worked example (ProjectHephaestus, 2026-06-05):** PRs #1019, #1022, #1024 were each
+BLOCKED by the required `security/dependency-scan` check. pip-audit (run in the pixi `lint`
+env) reported `urllib3 2.6.3` as vulnerable (PYSEC-2026-141/142, fix `2.7.0`) on *every*
+branch — including unrelated ones.
+
+**Diagnosis — distinguish repo-wide infra failure from a PR regression:**
+
+```bash
+# 1. Does the SAME required check fail on OTHER, unrelated branches (incl. main)?
+#    If yes -> suspect repo-wide infra, not your diff.
+gh run list --branch main --workflow "<failing-workflow>" --limit 5 \
+  --json status,conclusion,headBranch,databaseId
+
+# 2. Is the offending dependency ALREADY fixed in the committed lockfile?
+grep -n "urllib3" pixi.lock | head        # showed 2.7.0 already pinned
+
+# 3. TRUST a LOCAL run of the failing tool over the stale CI result:
+pixi run -e lint pip-audit                 # -> "No known vulnerabilities found"
+```
+
+If the lockfile already pins the fixed version **and** the tool passes locally in the same
+env, there is **nothing to fix in your PR** — the CI environment is stale.
+
+**Cache-poisoning fingerprint:** the CI log shows the gate *installing* the fixed version
+while pip-audit *simultaneously reports* the old vulnerable version:
+
+```text
+... Installing urllib3-2.7.0 ...
+pip-audit: urllib3 2.6.3  PYSEC-2026-141  Fix: 2.7.0   <-- impossible given the install above
+```
+
+That contradiction means a stale `.pixi` / setup-pixi cache layer is serving the *old*
+environment. (See the cross-referenced skill `pixi-cache-true-unreliable`: setup-pixi
+`cache: true` keyed on `pixi.lock` can keep serving a poisoned layer even right after a
+dependency bump merges — expect a window where every PR's dependency-scan is red until the
+cache is invalidated.)
+
+**Resolution — the fix is usually NOT in your PR:**
+
+```bash
+# 1. Check whether main was ALREADY fixed by a separate cache-invalidation commit:
+git log origin/main --oneline | grep -iE "unblock CI|cache poison|\.pixi cache"
+#   -> "[Fix] Unblock CI on main: ... fix .pixi cache poisoning (#1021)"
+
+# 2. If main is fixed, just pull it into the blocked PR via GitHub's update-branch:
+gh pr update-branch <N>     # creates a merge commit from the fixed main
+
+# 3. Verify the GitHub-created update-branch merge commit is signature-verified,
+#    so it still satisfies a signed-commits pr-policy gate:
+gh api repos/<owner>/<repo>/commits/<merge-sha> --jq '.commit.verification.verified'
+#   -> true
+
+# 4. The required check now re-runs against the fresh cache and flips to PASS.
+gh pr checks <N> --watch
+```
+
+**Decision logic:**
+```text
+Required check fails on my PR
+  |
+  v
+Same check fail on OTHER/unrelated branches (incl. main)?
+  NO  --> Likely a real PR regression — investigate the diff (rest of this skill).
+  YES --> Lockfile already pins the fixed version AND tool passes locally in same env?
+            NO  --> Genuine repo-wide dep issue — fix lockfile on main, not just your PR.
+            YES --> Stale CI cache. Do NOT change your PR.
+                    Look for a "[Fix] unblock CI / cache poisoning" commit on main.
+                      Found    --> gh pr update-branch <N>; verify merge-commit signature; check flips green.
+                      Not yet  --> Wait for / request a cache invalidation on main; rebase after.
+```
+
 ### Phase 6: Conclude no-op and stop
 
 If all checks confirm pre-existing failures and no fixes are needed:
@@ -240,6 +322,8 @@ Conclusion: PR is ready to merge as-is. No commit needed.
 | Blindly following "implement all fixes" wrapper | Started looking for code to change despite the plan saying no fixes needed | The task wrapper says "implement all fixes" even when the plan says there are none — the wrapper is a generic template | Always read the plan body first; the wrapper instruction is not a guarantee of work |
 | Inventing changes to justify a commit | Created changes with no real purpose just to satisfy the "commit" instruction | Adds noise to git history, violates minimal-change principle | Read the plan fully first; if no fixes, don't manufacture them |
 | Running tests before enabling merge | Running `pixi run python -m pytest` before enabling auto-merge | Unnecessary work when CI already confirmed passing | Trust CI results — don't re-run passing tests locally for no-op fixes |
+| Assume the failing required check is caused by my PR | Spent effort scrutinizing the diff because `security/dependency-scan` was red on PR #1019/#1022/#1024 | The *same* check failed identically on every branch, including ones freshly derived from main → it was repo-wide CI infra, not the diff | When a required check fails identically across multiple unrelated branches with a clean diff, suspect repo-wide infra (stale CI cache / drifted required-context), not your code |
+| Try to fix urllib3 in my PR (bump/pin) | Attempted to bump/pin urllib3 to 2.7.0 inside the blocked PR to satisfy pip-audit | `pixi.lock` already pinned 2.7.0 (PR #1007 had merged) and local `pip-audit` reported "No known vulnerabilities found" → nothing to fix in-PR | Trust a local run of the failing tool over a stale CI result; a CI log installing version X while the gate reports version Y is a cache-poisoning fingerprint. The real fix was a separate cache invalidation on main — rebase via `gh pr update-branch <N>` |
 
 ## Results & Parameters
 
@@ -313,6 +397,36 @@ When this pattern is present, skip all implementation steps and go directly to v
 worktree state and enabling auto-merge. The wrapper task instructions always say "Implement
 all fixes from the plan above" — this is a generic template; the actual plan body determines
 whether any work is needed.
+
+### Stale-cache required-check failure — verified-ci (ProjectHephaestus, 2026-06-05)
+
+**Symptom:** Required check `security/dependency-scan` BLOCKED PRs #1019, #1022, and #1024
+identically. pip-audit (pixi `lint` env) flagged `urllib3 2.6.3` (PYSEC-2026-141/142,
+fix `2.7.0`). The same check was red on unrelated branches too.
+
+**Why it was NOT a code/lockfile problem:**
+
+| Signal | Observation | Implication |
+| ------- | ----------- | ----------- |
+| Lockfile | `pixi.lock` already pinned `urllib3 2.7.0` (PR #1007 merged to main) | No vulnerable version committed |
+| Local run | `pixi run -e lint pip-audit` → "No known vulnerabilities found" (2.7.0 at runtime + metadata) | Tool passes in the same env CI uses |
+| CI log | Shows *installing* `urllib3 2.7.0` while pip-audit *reports* `2.6.3` | Contradiction = poisoned/stale `.pixi` / setup-pixi cache layer |
+| Blast radius | Identical failure across multiple unrelated branches | Repo-wide infra, not any one diff |
+
+**Resolution (verified):** main had already been fixed by a separate commit —
+`[Fix] Unblock CI on main: remove stray LEARNINGS file + fix .pixi cache poisoning (#1021)`.
+The blocked PRs were unblocked by pulling that fix in with `gh pr update-branch <N>` (no diff
+change); `security/dependency-scan` then flipped to PASS. The GitHub-created update-branch
+merge commit was confirmed signature-verified via
+`gh api repos/<owner>/<repo>/commits/<sha> --jq '.commit.verification.verified'` → `true`,
+so it still satisfied the signed-commits pr-policy gate.
+
+**Reusable insights:**
+
+1. A required check failing identically across multiple unrelated branches with a clean diff = repo-wide infra (stale CI cache / drifted required-context), not your code — distinguish from a PR-introduced regression.
+2. Trust a local run of the failing tool over a stale CI result; a CI log installing version X while the gate reports version Y is a cache-poisoning fingerprint.
+3. The fix is often NOT in your PR — check `git log origin/main` for a recent "[Fix] unblock CI / cache poisoning" commit; if main is fixed, `gh pr update-branch <N>` to pull it in, then verify the merge commit is signature-verified so the signed-commits gate still passes.
+4. Pixi/setup-pixi caches keyed on the lockfile can serve a poisoned layer right after a dependency bump merges; expect a window where every PR's dependency-scan is red until the cache is invalidated (see `pixi-cache-true-unreliable`).
 
 ### Verified No-Op Sessions
 

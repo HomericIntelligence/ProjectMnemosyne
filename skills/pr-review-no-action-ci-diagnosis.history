@@ -1,0 +1,73 @@
+# pr-review-no-action-ci-diagnosis — History
+
+## v2.2.0 (2026-06-05)
+
+**Changed by:** ProjectHephaestus /learn session (amendment) — minor bump 2.1.0 → 2.2.0
+**Verification:** unverified (consolidated skill retains mixed provenance) — but the NEW finding added in this amendment (Phase 5b: stale-cache required-check diagnosis) is **verified-ci**, confirmed live on ProjectHephaestus PRs #1019/#1022/#1024 + main fix #1021.
+
+### What changed
+
+Added a new **verified-ci** scenario for diagnosing a REQUIRED status check that fails
+repo-wide because of a stale/poisoned CI build or dependency cache — not the PR's diff.
+
+1. **Frontmatter:** bumped `version` to `2.2.0`, set `date` to `2026-06-05`, added
+   `history: pr-review-no-action-ci-diagnosis.history`. Left `verification: unverified`
+   to honestly reflect the consolidated skill's mixed provenance (the new finding is
+   marked `verified-ci` inline rather than upgrading the whole skill's field).
+2. **Description:** added trigger (7) — a required check (e.g. `security/dependency-scan`,
+   pip-audit) failing identically across multiple unrelated PRs because of a stale
+   build/dependency cache rather than anything in the PR's diff.
+3. **When to Use:** two new bullets (stale CI cache across branches; install-X-but-report-Y
+   cache-poisoning fingerprint), both tagged `(verified-ci, 2026-06-05)`.
+4. **Verified Workflow:** new **Phase 5b — Required check fails repo-wide due to a stale CI
+   cache**, with diagnosis commands, the cache-poisoning fingerprint, the
+   `gh pr update-branch` + signature-verification resolution, and a decision-logic tree.
+   Cross-references the existing `pixi-cache-true-unreliable` skill.
+5. **Failed Attempts:** two new rows — (a) "Assume the failing required check is caused by my
+   PR" → repo-wide infra; (b) "Try to fix urllib3 in my PR (bump/pin)" → lockfile already
+   2.7.0 and local pip-audit passed; real fix was a separate cache invalidation on main →
+   rebase via `gh pr update-branch`.
+6. **Results & Parameters:** new "Stale-cache required-check failure — verified-ci" subsection
+   with the symptom/signal table and the four reusable insights.
+7. **Overview:** updated Date and Outcome/Verification rows to note the v2.2.0 addition.
+
+### Why
+
+Three well-scoped ProjectHephaestus PRs (#1019, #1022, #1024) were all BLOCKED by a required
+`security/dependency-scan` check that flagged `urllib3 2.6.3` (PYSEC-2026-141/142, fix 2.7.0)
+identically on every branch — including unrelated ones. But `pixi.lock` already pinned 2.7.0
+(PR #1007), and pip-audit passed locally in the same env. The CI failure was a stale
+`.pixi` / setup-pixi cache serving the old environment — CI logs even showed *installing*
+urllib3 2.7.0 while pip-audit *reported* 2.6.3 (the poisoned-cache fingerprint). Main had
+already been fixed by a separate commit (#1021); the blocked PRs were unblocked simply by
+`gh pr update-branch <N>`. This is a high-value, reusable diagnosis pattern (distinguish
+repo-wide CI infra failure from a PR regression; trust local tool runs over stale CI;
+the fix is often already on main) that belongs alongside the existing CI-diagnosis content.
+
+### Previous version (v2.1.0) snapshot
+
+```yaml
+---
+name: pr-review-no-action-ci-diagnosis
+description: "Use when: (1) a PR review-fix plan concludes no code changes are required, (2) CI failures appear on a PR but changes are unrelated to the failing jobs, (3) CI flakes need to be distinguished from PR-introduced regressions, (4) a fix commit may be local-only and not yet pushed to remote, (5) a stale branch was force-pushed dropping a fix commit, (6) verifying a PR is ready to merge despite red CI"
+category: ci-cd
+date: 2026-03-29
+version: "2.1.0"
+user-invocable: false
+verification: unverified
+tags: []
+---
+```
+
+The full v2.1.0 body (327 lines) is preserved in git history. To recover it:
+
+```bash
+git -C ~/.agent-brain/ProjectMnemosyne show 0fd24f50:skills/pr-review-no-action-ci-diagnosis.md > /tmp/pr-review-no-action-ci-diagnosis-v2.1.0.md
+```
+
+The v2.1.0 content covered: Overview, When to Use (9 triggers), Verified Workflow
+(Phases 1–6: read plan, verify no-action claim, classify CI failures, local-only fix commit,
+stale branch after force-push, conclude no-op), a 16-row Failed Attempts table, and
+Results & Parameters (link-check/test-crash confirmation, classification template, branch
+mismatch patterns, two verified no-op sessions). No `.history` file existed prior to this
+amendment, so v2.1.0 is the first archived prior entry.
