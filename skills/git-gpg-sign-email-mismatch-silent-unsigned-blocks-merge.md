@@ -1,9 +1,9 @@
 ---
 name: git-gpg-sign-email-mismatch-silent-unsigned-blocks-merge
-description: "Diagnose and fix silent GPG-signing failure modes that BLOCK PR merge under required_signatures even with green CI. Covers: (a) commit.gpgsign=true plus user.email that does not match any UID on the GPG signing key producing UNSIGNED commits with no error (reason=no_user); (b) GraphQL pullRequest.commits.signature.state lagging 10+ minutes behind reality so commits appear UNSIGNED in `gh pr view --json commits` while REST /commits/<sha> confirms verified=true; (c) sub-agent shells inheriting commit.gpgsign=true but silently failing to sign because gpg-agent was not pre-warmed (needs GPG_TTY + a priming gpg --batch call). Use when: (1) PR shows mergeStateStatus BLOCKED with mergeable MERGEABLE and all CI green, (2) gh api .../commits returns verification.reason=no_user, (3) dispatching sub-agents that override user.email to a bot identity while keeping a personal GPG key, (4) auditing multi-repo sweeps for invisible signing failures, (5) `gh pr view --json commits` shows signature.state=null for newly-pushed commits, (6) sub-agent push produces unsigned commits despite global commit.gpgsign=true config."
+description: "Diagnose and fix silent GPG-signing failure modes that BLOCK PR merge under required_signatures / pr-policy 'every commit is signed' even with green CI. Covers: (a) commit.gpgsign=true plus author/committer email that does not match any UID on the GPG signing key producing commits GitHub reports verified=false reason=no_user (signs fine locally — %G?=G — but GitHub rejects); (b) GraphQL pullRequest.commits.signature.state lagging 10+ minutes behind reality so commits appear UNSIGNED in `gh pr view --json commits` while REST /commits/<sha> confirms verified=true; (c) sub-agent shells inheriting commit.gpgsign=true but silently failing to sign because gpg-agent was not pre-warmed (needs GPG_TTY + a priming gpg --batch call); (d) a GitHub +suffix noreply variant (e.g. user+bot@users.noreply.github.com) CANNOT be verified on a GitHub account so adding it as a key UID does NOT fix no_user — only {id}+{username}@users.noreply.github.com or a real verified email works; (e) bare `git commit -S` picking the wrong default signing key (%G?=E 'No public key') so pass `git -c user.signingkey=<subkey>`; (f) a commit that silently failed (pre-commit hook non-zero) leaves HEAD unchanged and `git log` shows the PREVIOUS commit's signature, masquerading as corruption. Use when: (1) PR shows mergeStateStatus BLOCKED with mergeable MERGEABLE and all CI green, (2) gh api .../commits returns verification.reason=no_user, (3) dispatching sub-agents that override user.email to a bot identity while keeping a personal GPG key, (4) auditing multi-repo sweeps for invisible signing failures, (5) `gh pr view --json commits` shows signature.state=null for newly-pushed commits, (6) sub-agent push produces unsigned commits despite global commit.gpgsign=true config, (7) global ~/.gitconfig sets a bot/automation email that hand-authored commits inherit and that fails verification, (8) building automated re-sign tooling that must validate the resign email against the signing key UIDs."
 category: ci-cd
-date: 2026-05-16
-version: "2.0.0"
+date: 2026-06-06
+version: "2.1.0"
 user-invocable: false
 verification: verified-ci
 history: git-gpg-sign-email-mismatch-silent-unsigned-blocks-merge.history
@@ -41,6 +41,10 @@ tags:
 - You see commits in `git log --pretty=format:'%G?'` with status `N` (no signature) when you expected `G` (good signature)
 - `gh pr view --json commits` shows `signature.state=null` (or `UNSIGNED`) for newly-pushed commits — the GraphQL field lags reality by 10+ minutes; always cross-check via REST `/commits/<sha>` before taking remediation action
 - A sub-agent push produces unsigned commits despite global `commit.gpgsign=true` config — root cause is usually a non-pre-warmed `gpg-agent` in the non-interactive subshell, not config propagation
+- Global `~/.gitconfig` sets a bot/automation `user.email` (e.g. `<user>+bot@users.noreply.github.com`) that hand-authored commits silently inherit, producing `no_user` while agent-authored commits (with the key-owner email) verify fine
+- You are tempted to "fix" `no_user` by adding the bot email as a UID to the GPG key — STOP: a GitHub `+suffix` noreply variant cannot be verified on an account, so GitHub still returns `no_user` even after the UID is added (see the dedicated subsection below)
+- `git log --show-signature` shows a Good signature but the GitHub REST commit verification still says `verified=false reason=no_user` — `--show-signature` only checks cryptographic validity against your local keyring, NOT whether GitHub can attribute the email to a verified account
+- You are building automated re-sign tooling (fleet rebase, batch resign) that must NOT re-sign dozens of commits with an unverifiable identity — guard the resolved resign email against the signing key's UID emails first
 
 ## Verified Workflow
 
@@ -92,7 +96,7 @@ gh api repos/<O>/<R>/pulls/<N>/commits \
    | `reason` | Meaning | Fix |
    |----------|---------|-----|
    | `unsigned` | No signature attached at all | Re-commit with `-S` after configuring signing |
-   | `no_user` | Signature attached but author/committer email does not match any UID on the signing key | **This skill** — re-author with the key-owner email AND re-sign |
+   | `no_user` | Signature attached but author/committer email is not a verified email on the GitHub account that owns the key | **This skill** — re-author with the key-owner's registered email (`{id}+{username}@users.noreply.github.com`) AND re-sign. Note: adding a `+suffix` noreply variant as a key UID does NOT fix this |
    | `unknown_key` | Signature attached but public key not registered as a signing key on GitHub | See `github-ssh-commit-signing-fix-unknown-key-verification` |
    | `valid` + `verified:true` | Pass | Done |
 
@@ -214,6 +218,89 @@ echo "test" | gpg --batch --yes --passphrase-fd 0 --pinentry-mode loopback \
 After this, `git commit` (with `commit.gpgsign=true` inherited from global config)
 will sign correctly. Verify with the same `%G?` tripwire from step 11.
 
+### GitHub +suffix noreply Emails Cannot Be Verified — Do NOT Patch the Key
+
+`no_user` means "GitHub cannot attribute the signing email to a verified email on
+the account that owns the key." The intuitive fix — add the offending email as a
+new UID on the GPG key (`gpg --quick-add-uid`, re-export, re-upload) — **does not
+work** when the offending email is a GitHub `+suffix` noreply variant such as
+`<user>+bot@users.noreply.github.com`. GitHub **only** accepts two email shapes for
+verification:
+
+| Email shape | Verifiable on a GitHub account? |
+|-------------|---------------------------------|
+| `{id}+{username}@users.noreply.github.com` (the canonical ID-prefixed noreply) | YES |
+| A real email you have added and verified in account settings | YES |
+| `{username}+anything@users.noreply.github.com` (arbitrary `+suffix` variant) | **NO** — cannot be added/verified; GitHub still returns `no_user` |
+
+Because the `+bot` noreply variant can never become a verified account email, you
+cannot make `no_user` go away by binding it to the key. The only working fixes:
+
+1. **Set the committer/author email to the key's already-registered address**
+   (`{id}+{username}@users.noreply.github.com`) and re-author + re-sign — this is the
+   primary workflow above.
+2. **Make automation author commits with a verifiable email** in the first place
+   (fix the global `~/.gitconfig` / agent config so it never writes the `+bot` email).
+
+```bash
+# Confirm which emails the key can actually sign as (UID emails on the key):
+gpg --list-keys --with-colons "$KEY" | awk -F: '/^uid:/{print $10}'
+# Each UID email here must ALSO be a verified email on the GitHub account that owns
+# the key for GitHub to return verified=true. A +suffix noreply UID will NOT.
+```
+
+### Always Pass the Signing Key Explicitly; Re-Verify HEAD After Every Commit
+
+Two foot-guns observed while re-signing by hand:
+
+1. **Bare `git commit -S` can pick the wrong default key.** If `user.signingkey` is
+   not set (or is shadowed), GPG falls back to a default secret key that GitHub does
+   not know about, producing `%G? = E` ("No public key" / signature cannot be
+   checked). Always pin the subkey on the command line:
+   ```bash
+   git -c user.signingkey="$SIGNING_SUBKEY" commit --amend --reset-author -S
+   # SIGNING_SUBKEY = the signing subkey fingerprint, e.g. 7FD616C4744A8A7C
+   ```
+
+2. **A "failed" commit can leave HEAD unchanged and look like corruption.** If a
+   pre-commit hook exits non-zero, `git commit` aborts and HEAD does NOT move. A
+   subsequent `git log --show-signature` then shows the *previous* commit's
+   signature/identity — which looks like the amend silently corrupted things, but the
+   amend simply never happened. Defend by capturing the exit code and re-verifying the
+   HEAD sha + message after every commit:
+   ```bash
+   PREV=$(git rev-parse HEAD)
+   git -c user.signingkey="$SIGNING_SUBKEY" commit --amend --reset-author -S; RC=$?
+   NEW=$(git rev-parse HEAD)
+   if [ "$RC" -ne 0 ] || [ "$NEW" = "$PREV" ]; then
+     echo "FATAL: commit did not happen (rc=$RC, HEAD unchanged). Fix the hook failure first."
+     exit 1
+   fi
+   git log -1 --pretty=format:'%H %G? %ae %s'   # confirm new sha, %G?=G, key-owner email
+   ```
+
+### Defensive Tooling: Validate Resign Email Against Key UIDs Before Batch Re-Sign
+
+Automated fleet/rebase tooling that re-signs many commits should refuse to run if the
+resolved resign email is not a UID on the signing key — otherwise one bad config
+re-signs dozens of commits with an unverifiable identity (which GitHub then rejects
+en masse). Pattern implemented in `fleet_sync.get_resign_email()` (ProjectHephaestus,
+PR #1026):
+
+```python
+# Pseudocode of the guard:
+# 1. Resolve the resign email (from config / CLI / env).
+# 2. Read the signing key's UID emails:
+#       gpg --list-keys --with-colons <key>  -> parse uid lines, field 10 angle-bracket email
+# 3. If resign_email not in uid_emails -> raise a clear error naming both sides.
+# 4. Escape hatch: FLEET_SKIP_EMAIL_KEY_CHECK=1 bypasses the guard.
+```
+
+Note this UID check is **necessary but not sufficient**: a UID email that is a
+`+suffix` noreply variant passes the local UID check yet still fails GitHub
+verification (see the +suffix subsection above). Prefer validating against the
+key-owner's canonical `{id}+{username}@users.noreply.github.com` address.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -226,6 +313,10 @@ will sign correctly. Verify with the same `%G?` tripwire from step 11.
 | Attempt 6 | Checked PR mergeability without first verifying the diff was byte-identical to before the rebase | Risk: a poorly-configured rebase (e.g. rerere artifacts, autosquash side-effects, gitattribute clean filter changes) could silently rewrite content. If pushed, it would lose work | After any rewriting rebase, ALWAYS run `git diff <old-HEAD> <new-HEAD>` and confirm it is empty bytes before force-pushing |
 | Attempt 7 | Trusted `gh pr view --json commits --jq '.commits[].signature.state'` GraphQL output of `UNSIGNED` as authoritative and began remediation | GraphQL field lags 10+ min after push, even when commits ARE verified by GitHub. Verified via REST `/commits/<sha>` returning `verified=true reason=valid` while GraphQL still showed `null`/`UNSIGNED` for 31 commits across Argus #520, Scylla #1978, Agamemnon #382. ~30 min wasted on the 2026-05-16 sweep | Always poll REST `gh api repos/<O>/<R>/commits/<sha>` for signature state; treat GraphQL `signature.state` as advisory only. Cross-check one commit via REST before any remediation |
 | Attempt 8 | Re-sign commits by uploading the GPG key (again) to GitHub on the assumption it was missing | Existing key was already registered on the account; `gh gpg-key add` returned HTTP 422 "subkey already exists". Confirmed by `gh api user/gpg_keys` showing the key present and active. The underlying issue was GraphQL lag (Attempt 7), not key registration | Before re-uploading a GPG key, query REST commit verification on a single test commit; if `verified=true`, the issue is GraphQL lag (not key registration) and the correct action is to wait, not to re-upload |
+| Attempt 9 | Trusted `git log --show-signature` ("Good signature", `%G?`=`G`) as proof the commit would pass GitHub's `pr-policy` "every commit is signed" gate | GitHub returned `verification: {verified:false, reason:"no_user"}` and the gate FAILED at merge. `--show-signature` only checks cryptographic validity against the LOCAL keyring; it says nothing about whether the committer email maps to a verified email on the key-owner's GitHub account | `git log --show-signature` lies about merge-readiness. The authoritative check is `gh api repos/<O>/<R>/commits/<sha> --jq .commit.verification` expecting `{verified:true, reason:"valid"}`. Always verify server-side, never trust `--show-signature` alone |
+| Attempt 10 | Tried to fix `no_user` by adding the bot email (`<user>+bot@users.noreply.github.com`) as a new UID on the GPG key and re-uploading | GitHub will not let a `+suffix` noreply variant be added/verified as an account email (only `{id}+{username}@users.noreply.github.com` and real verified emails qualify), so GitHub kept returning `no_user` even with the UID present on the key | You cannot patch `no_user` at the key layer for a `+suffix` noreply email. Fix it at the identity layer: set the committer email to the key's registered `{id}+{username}@users.noreply.github.com` (or a real verified email) and re-sign |
+| Attempt 11 | Re-signed with a bare `git commit -S` (no explicit `user.signingkey`) | GPG fell back to a foreign default secret key GitHub did not know; `%G?` came back `E` ("No public key" / cannot be checked) instead of `G` | Always pin the subkey: `git -c user.signingkey=<signing-subkey> commit -S`. Never rely on the default-key fallback when multiple secret keys exist |
+| Attempt 12 | Amended a commit, saw `git log --show-signature` still showing the OLD identity/signature, and concluded the amend corrupted the repo | The amend had silently aborted because a pre-commit hook exited non-zero; HEAD never moved, so `git log` was just showing the unchanged previous commit. Not corruption — the commit simply did not happen | Capture the `git commit` exit code AND compare `git rev-parse HEAD` before/after. If HEAD is unchanged or rc≠0, the commit failed (fix the hook); never diagnose signatures off a HEAD that did not advance |
 
 ## Results & Parameters
 
@@ -346,3 +437,4 @@ git config --get user.email | xargs -I{} gpg --list-keys "$(git config --get use
 |---------|---------|---------|
 | ProjectKeystone | 2026-05-11 ecosystem-wide easy-issue sweep, PR #552 | Re-authored 7 commits with `--reset-author -S` rebase, byte-identical content diff confirmed (0 bytes), force-pushed; GitHub flipped all 7 commits from `verified: false reason: "no_user"` to `verified: true reason: "valid"`; `mergeStateStatus` flipped from `BLOCKED` to `CLEAN`; pre-armed auto-merge fired immediately |
 | ProjectArgus / ProjectScylla / ProjectAgamemnon | 2026-05-16 org-wide PR sweep — Argus #520, Scylla #1978, Agamemnon #382 | 31 commits across the three PRs showed `signature.state=null`/`UNSIGNED` via `gh pr view --json commits` (GraphQL) for 10+ minutes after push. REST `gh api repos/.../commits/<sha>` returned `verified=true reason=valid` for every commit immediately. Attempted `gh gpg-key add` returned HTTP 422 "subkey already exists" (key was already registered). Resolution: wait for GraphQL to catch up; no remediation needed. Lesson codified as Attempts 7 and 8 in this skill |
+| ProjectHephaestus | 2026-06-06, PRs #1021 / #1026 | Global `~/.gitconfig` `user.email` was a bot identity (`mvillmow+bot@users.noreply.github.com`) that hand-authored commits inherited; the GPG key `F0A2530669A31A2E` (signing subkey `7FD616C4744A8A7C`) was bound only to `4211002+mvillmow@users.noreply.github.com`. Commits showed `%G?`=`G` locally but GitHub returned `verified=false reason=no_user` and pr-policy "every commit is signed" FAILED at merge. Discovered the `+bot` noreply variant cannot be added as a verified GitHub email, so patching the key UID was a dead end (Attempt 10). Fixed by `git config user.email 4211002+mvillmow@users.noreply.github.com` + `git commit --amend --reset-author -S`; `gh api .../commits/<sha> --jq .commit.verification` then returned `{verified:true, reason:"valid"}` and pr-policy passed. Added a defensive guard in `fleet_sync.get_resign_email()` (PR #1026) validating the resign email against the key UID emails, with `FLEET_SKIP_EMAIL_KEY_CHECK=1` bypass. Also hit Attempts 11 (bare `git commit -S` picked a foreign key, `%G?`=`E`) and 12 (silent commit abort from a non-zero pre-commit hook left HEAD unchanged, masquerading as corruption) |
