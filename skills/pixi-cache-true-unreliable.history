@@ -1,0 +1,108 @@
+# pixi-cache-true-unreliable — History
+
+## v2.1.0 (2026-06-06)
+
+**Changed by:** ProjectHephaestus — pixi `.pixi` cache poisoning incident; PRs #1021 (setup-pixi-env composite + release.yml + pre-commit.yml) and #1026 (security.yml)
+**Verification:** verified-ci (dependency-scan went green after the fix — e.g. PR #1011 dependency-scan passed)
+
+### What changed
+
+- Added a major safety caveat: when `prefix-dev/setup-pixi` runs with `locked: true`,
+  a SECOND `actions/cache@v5` step over the `.pixi` path POISONS the freshly-installed
+  locked environment by restoring a stale `.pixi` over it (downgrading packages, e.g.
+  urllib3 2.7.0 -> 2.6.3), which then fails `pip-audit` / `dependency-scan`.
+- Documented the root-cause fix: with `locked: true`, rely on setup-pixi's built-in
+  exact-keyed `.pixi` cache and do NOT add a second `actions/cache` over `.pixi`.
+- Clarified that the v2.0.0 "add explicit actions/cache over .pixi" recommendation
+  applies to the NON-locked case; under `locked: true` it is harmful.
+- Added 3 new Failed Attempts rows, including the critical lesson that an exact-key-only
+  `.pixi` cache (no restore-keys) is STILL unsafe — it exact-hits a previously-poisoned
+  cache saved under the same lock hash.
+- Added a "When NOT to add a second cache" decision section and a diagnosis signature
+  for reading CI logs (install version vs pip-audit audited version).
+- Updated description triggers and bumped version 2.0.0 -> 2.1.0.
+
+### Why
+
+v2.0.0 universally recommended replacing `cache: true` with an explicit
+`actions/cache@v5` over `.pixi` (+ `~/.cache/rattler/cache`). That is correct for the
+unreliable internal-cache problem when NOT using `locked: true`. But with
+`prefix-dev/setup-pixi@v0.9.6` and `locked: true`, setup-pixi already installs the exact
+locked env AND maintains its own `.pixi` cache keyed on `pixi.lock`. Layering a second
+`actions/cache` over the same `.pixi` path causes the second restore (whichever runs
+last) to extract a stale archive over the fresh locked install, silently downgrading
+packages and breaking security scans on every PR even though `pixi.lock` is already
+patched. An initial fix only addressed workflows with loose `restore-keys:`; security.yml
+with an exact-key-only `.pixi` cache STILL failed because its exact key hit a
+previously-poisoned cache. The amendment records that ANY second cache over `.pixi` after
+a `--locked` setup-pixi is unsafe, regardless of restore-keys.
+
+### Previous version (v2.0.0) snapshot
+
+```markdown
+---
+name: pixi-cache-true-unreliable
+description: 'Fixes unreliable Pixi caching caused by setup-pixi''s built-in cache:
+  true option. Replace with explicit actions/cache@v5 caching both .pixi and ~/.cache/rattler/cache
+  keyed on pixi.lock. Use when: (1) CI logs show ''Saved cache with ID -1'', (2) cache
+  hits are inconsistent despite cache: true, (3) consolidating Pixi setup into a shared
+  composite action.'
+category: ci-cd
+date: 2026-03-08
+version: 2.0.0
+user-invocable: false
+---
+# Pixi cache: true Is Unreliable — Use Explicit actions/cache
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | 2026-03-08 |
+| Project | ProjectOdyssey |
+| Objective | Consolidate 14+ independent Pixi setup blocks into a single shared composite action with reliable caching |
+| Outcome | ✅ Success — 1 composite action, 0 inline `prefix-dev/setup-pixi` calls in workflows |
+| Impact | High — eliminates `Saved cache with ID -1` failures; single source of truth for caching |
+
+## When to Use
+
+- CI logs show `Saved cache with ID -1` after a `prefix-dev/setup-pixi` step with `cache: true`
+- CI logs show HTTP 400 errors during the `prefix-dev/setup-pixi` step with `cache: true`
+- Cache hits are inconsistent or never occur despite `cache: true` being set
+- Multiple workflows each independently set up Pixi (violating DRY)
+- Consolidating Pixi setup into a shared composite action (`.github/actions/setup-pixi/action.yml`)
+- Migrating from inline setup-pixi blocks to a composite action
+
+## Root Cause
+
+`prefix-dev/setup-pixi@v0.9.x` with `cache: true` uses an internal caching mechanism that
+can silently fail, logging `Saved cache with ID -1`. This means **the cache is never actually
+saved** and every CI run downloads the full Pixi environment from scratch.
+
+The reliable fix is to **disable `cache: true`** and add an explicit `actions/cache@v5` step
+that caches both paths that Pixi uses:
+
+- `.pixi` — the environment directory (packages installed for this project)
+- `~/.cache/rattler/cache` — the package download cache (avoids re-downloading)
+
+## Verified Workflow
+
+### 1. Audit workflows for inline Pixi setup
+
+(commands omitted in snapshot — see git history for full body)
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Keep `cache: true` | Used `prefix-dev/setup-pixi@v0.9.4` with `cache: true` enabled | Internally fails silently; logs "Saved cache with ID -1"; no cache ever saved | Never use `cache: true` — always use explicit `actions/cache` |
+| Cache only `.pixi` | Cached `.pixi` path only, skipped `~/.cache/rattler/cache` | Pixi re-downloads packages on every run even when `.pixi` hits | Must cache both paths or cache is incomplete |
+| Hash `pixi.toml` | Used `hashFiles('pixi.toml')` as cache key | `pixi.toml` doesn't encode exact resolved versions; false positives on cache hits | Use `pixi.lock` for precise cache invalidation |
+| Keeping unused `inputs:` block | Preserved `pixi-version` and `cache` inputs when no callers use `with:` blocks | Dead code; caused confusion and allowed accidental re-introduction of `cache: true` | Remove inputs when no callers pass `with:` blocks |
+```
+
+---
+
+## v2.0.0 (2026-03-08)
+
+**Initial version** (as recorded; consolidated from ProjectOdyssey work).
