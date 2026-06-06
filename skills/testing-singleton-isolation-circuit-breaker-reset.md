@@ -1,9 +1,9 @@
 ---
 name: testing-singleton-isolation-circuit-breaker-reset
-description: "Test isolation for module-level singleton instances (e.g., circuit breaker, cache, registry) requires calling .reset() on the held reference directly in a pytest autouse fixture, AND that fixture must live in conftest.py at the broadest scope covering any contaminating test — not in a single test file. Use when: (1) testing code with module-level singleton instances (breakers, caches, registries, contextvar defaults) that maintain internal state across test runs, (2) a test passes locally in isolation but fails in CI with cross-test contamination, (3) the same test fails identically on multiple Python versions in CI (3.10/3.11/3.12/3.13) — a fingerprint of order-dependent shared state, (4) deciding where to put a pytest autouse fixture: single test file vs package conftest.py."
+description: "Test isolation for module-level singleton instances (e.g., circuit breaker, cache, registry) requires calling .reset() on the held reference directly — in a pytest autouse fixture in conftest.py at the broadest scope, OR at the top of any new test that trips the singleton — not via a registry-clearing reset helper that orphans the import-time-bound instance. Use when: (1) adding tests that intentionally trigger failures/exceptions to a class whose code path goes through a module-level circuit breaker / rate limiter / retry primitive, (2) new tests pass in isolation but make UNRELATED sibling tests fail with a 'circuit breaker is open'/unavailable error when the whole class runs, (3) a reset helper clears a registry (`_registry.clear()`) rather than resetting the import-time-bound instance, (4) testing code with module-level singleton instances (breakers, caches, registries, contextvar defaults) that maintain internal state across test runs, (5) a test passes locally in isolation but fails in CI with cross-test contamination, (6) the same test fails identically on multiple Python versions in CI (3.10/3.11/3.12/3.13) — a fingerprint of order-dependent shared state, (7) deciding where to put a pytest autouse fixture: single test file vs package conftest.py, (8) extending a non-transient/fail-fast error classifier and verifying it, (9) deciding whether HTTP 422 or GraphQL schema errors should be retried (they should NOT — they are deterministic)."
 category: testing
-date: 2026-05-29
-version: "1.1.0"
+date: 2026-06-06
+version: "1.2.0"
 user-invocable: false
 history: testing-singleton-isolation-circuit-breaker-reset.history
 verification: verified-ci
@@ -11,12 +11,21 @@ tags:
   - test-isolation
   - singleton
   - circuit-breaker
+  - module-singleton
+  - test-pollution
+  - shared-state
   - pytest-fixture
   - autouse-fixture
   - conftest-scope
   - cross-test-contamination
   - ci-only-failure
   - stateful-objects
+  - fail-fast
+  - non-transient-retry
+  - registry-reset
+  - github-api
+  - 422
+  - graphql-schema-error
 ---
 
 # Testing: Singleton Isolation — Circuit Breaker Reset Pattern
@@ -25,10 +34,10 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-05-29 |
-| **Objective** | Ensure test isolation for module-level singleton instances by (a) resetting the held instance state, not just clearing registries, AND (b) putting the autouse reset fixture in `conftest.py` at the broadest scope covering any contaminating test |
-| **Outcome** | v1.0.0: 5 circuit breaker tests passing in `test_gh_call_circuit_breaker.py`. v1.1.0: cross-test contamination fixed in `tests/unit/automation/` after moving the fixture into a package-level conftest; 911 tests pass locally under the new scope. |
-| **Verification** | v1.0.0 verified-ci. v1.1.0 bug (cross-test contamination) was **verified-ci** (PR #707 failed identically on 4 Python versions); the fix was **verified-local** at /learn time (CI re-run pending). |
+| **Date** | 2026-06-06 |
+| **Objective** | Ensure test isolation for module-level singleton instances by (a) resetting the held instance state, not just clearing registries, (b) putting the autouse reset fixture in `conftest.py` at the broadest scope OR calling `module._BREAKER.reset()` at the top of any new failure-triggering test, and (c) ALWAYS running the full test class/module so shared-state pollution surfaces |
+| **Outcome** | v1.0.0: 5 circuit breaker tests passing in `test_gh_call_circuit_breaker.py`. v1.1.0: cross-test contamination fixed in `tests/unit/automation/` after moving the fixture into a package-level conftest. v1.2.0: adding 2 new fail-fast tests turned 5 unrelated sibling tests red (shared `_GH_BREAKER` pushed OPEN); fixed by `module._GH_BREAKER.reset()` at each new test's top. Bundled with the 422/GraphQL non-transient retry-classifier fix that motivated the new tests. |
+| **Verification** | v1.0.0 verified-ci. v1.1.0 verified-ci (bug) / verified-local (fix). v1.2.0 **verified-ci** — fix merged to ProjectHephaestus main (PR #1042, closes #1040). |
 
 ## When to Use
 
@@ -40,6 +49,11 @@ tags:
 - **A test passes locally in isolation but fails in CI** — classic order-dependent contamination signature
 - **The same test fails identically on multiple Python versions in CI (3.10/3.11/3.12/3.13)** — singleton state is a deterministic shared resource; parallel Python versions reproduce the same test order and therefore the same contamination
 - **Deciding the scope of an autouse reset fixture**: it MUST live in `conftest.py` at the broadest package scope where any contaminating test lives. Putting it in a single `test_*.py` file only protects that file
+- **Adding tests that intentionally trigger failures/exceptions** to a class whose code path goes through a module-level circuit breaker / rate limiter / retry primitive — each raised exception (even a deterministic fail-fast one) counts as a breaker failure and accumulates toward the OPEN threshold
+- **New tests pass in isolation but make UNRELATED sibling tests fail** with a "circuit breaker is open" / unavailable error when the WHOLE class runs in file order — the signature of shared-state pollution from a module-level singleton
+- **A reset helper clears a registry** (`reset_all_circuit_breakers()` → resets each breaker then `_registry.clear()`) rather than resetting the import-time-bound instance — the helper ORPHANS the import-time `_GH_BREAKER`, so it keeps accumulating state across tests
+- **Extending a non-transient / fail-fast error classifier and verifying it** — e.g. adding patterns to `_NON_TRANSIENT_PATTERNS`. The new failing-call tests you write to verify it are exactly the tests that trip the shared breaker
+- **Deciding whether HTTP 422 / "unprocessable entity" or GraphQL schema errors should be retried** — they should NOT. They are deterministic; retrying can never succeed and wastes ~31s/failure (5 attempts × `2**attempt` backoff)
 
 ## Verified Workflow
 
@@ -153,6 +167,74 @@ If both pass, the conftest scope is broad enough. If the second file still fails
 
 The cost of running the reset on a test that doesn't need it is negligible (a few attribute writes). The cost of a single order-dependent CI flake is hours of debugging. Default to the broader scope when in doubt.
 
+### Fail-Fast Test Pattern (v1.2.0) — reset the bound instance at the test top
+
+`setup_method` is not always enough. The automation test class calls
+`reset_all_circuit_breakers()` in `setup_method`, but that helper resets each
+registered breaker and then does `_registry.clear()`. The import-time-bound
+`_GH_BREAKER` singleton in `hephaestus/automation/github_api.py` is created at
+module import; once the registry is cleared, the helper no longer touches that
+orphaned instance. So `setup_method` gives a FALSE sense of isolation.
+
+The consequence: adding new tests that intentionally trigger a *fail-fast*
+(non-transient) error still raises an exception, and **every raised exception —
+even one that fails fast on the first attempt — counts as one breaker failure**.
+With `failure_threshold=5`, adding two new failure-triggering tests near the top
+of the class pushed `_GH_BREAKER` to 5 accumulated failures and OPEN. The next
+five sibling tests then failed with
+`GitHubUnavailableError: circuit breaker is open` — even though each new test
+caused only ONE failure on its own.
+
+The fix matches the file's existing `test_circuit_breaker_wraps_gh_call_impl`
+pattern: any new test that triggers a breaker failure must reset the bound
+instance DIRECTLY at the top, not rely on the registry-clearing helper.
+
+```python
+from hephaestus.automation import github_api as module
+
+def test_my_new_fail_fast_error(monkeypatch):
+    module._GH_BREAKER.reset()  # ← reset the bound instance, not the registry
+    # ... arrange a deterministic 422 / GraphQL-schema failure ...
+    with pytest.raises(SomeError):
+        module._gh_call([...])
+```
+
+#### Why setup_method's helper does not protect it
+
+```python
+# hephaestus/resilience/circuit_breaker.py  (sketch)
+def reset_all_circuit_breakers():
+    for breaker in _registry.values():
+        breaker.reset()
+    _registry.clear()          # ← orphans any import-time-bound reference
+```
+
+`_GH_BREAKER` is bound once at import time. After `_registry.clear()`, future
+calls to the helper iterate an empty registry and never touch `_GH_BREAKER`.
+The held module attribute keeps its accumulated `fail_counter` / OPEN state.
+
+#### The 422 / GraphQL-schema retry-classifier fix that motivated the new tests
+
+`_NON_TRANSIENT_PATTERNS` in `hephaestus/automation/github_api.py` classifies
+which `gh` failures are non-retryable so `_gh_call_impl` fails fast instead of
+retrying 5× with `2**attempt` backoff (~31s wasted per deterministic failure).
+It listed 403/404/400/401/invalid-argument/unknown-json-field/token-scope but
+OMITTED HTTP 422 ("unprocessable entity") AND GraphQL schema errors. Those are
+deterministic — retrying can never succeed. The fix adds three patterns:
+
+```python
+_NON_TRANSIENT_PATTERNS = [
+    # ... existing 403/404/400/401/invalid-argument/... patterns ...
+    r"(?:^|\s)422(?:\s|$)|unprocessable entity",
+    r"doesn't accept argument",
+    r"is declared by .* but not used",
+]
+```
+
+Verifying that fix required adding tests that assert these errors raise WITHOUT
+retrying — and those very tests are what tripped the shared breaker, which is
+how the test-pollution bug surfaced.
+
 ### Detailed Steps
 
 1. **Identify the module-level singleton instance**:
@@ -225,8 +307,37 @@ The cost of running the reset on a test that doesn't need it is negligible (a fe
 | 9 | Per-test `monkeypatch` on the singleton — `monkeypatch.setattr(github_api, "_GH_BREAKER", CircuitBreaker(...))` inside each test | Only patches the lookup `github_api._GH_BREAKER`, not the underlying held state in other modules that may have already imported the original. Also: the next test re-instantiates and the original singleton (if accessed via `import hephaestus.automation.github_api`) is still in OPEN state. | Reset the existing instance, do not replace it. `instance.reset()` is simpler, faster, and avoids reference-aliasing bugs. |
 | 10 | Per-test reset inside each test function body (no fixture) | DRY violation. Easy to forget on a new test. The forgotten test then becomes the contaminator for every test that runs after it in CI order. | Use `@pytest.fixture(autouse=True)` in `conftest.py`. Autouse means new tests added later are automatically protected. |
 | 11 | Module-level `setup_module` / `teardown_module` | Resets at module boundaries only. Tests within a module still share state with tests in OTHER modules that ran in the same pytest session. | Use a function-scoped autouse fixture in `conftest.py`, not a module-level hook. |
+| 12 | Relying on `reset_all_circuit_breakers()` in the class's `setup_method` to isolate new fail-fast tests | The helper resets each registered breaker then calls `_registry.clear()`, ORPHANING the import-time-bound `_GH_BREAKER`. After the first clear, the helper iterates an empty registry and never touches the singleton, which keeps accumulating `fail_counter`. Adding 2 fail-fast tests pushed it OPEN; 5 unrelated sibling tests then failed with `GitHubUnavailableError: circuit breaker is open`. | A registry-clearing reset helper does NOT protect import-time references. Reset the actual bound object: `module._GH_BREAKER.reset()` at the top of each failure-triggering test (matches the file's `test_circuit_breaker_wraps_gh_call_impl` pattern). |
+| 13 | Running only the new test in isolation to confirm it works | Each new fail-fast test PASSES alone — no prior test ran, so the shared breaker was clean. The pollution only manifests when the WHOLE class runs in file order: the new tests trip the breaker before later siblings execute. On pristine main all tests passed; adding 2 tests turned 5 siblings red. | ALWAYS run the full test class/module (not just your new test) to catch shared-state pollution. "Passes in isolation" is the trap, not the proof. |
+| 14 | Letting `_gh_call_impl` retry HTTP 422 / GraphQL-schema errors (no classifier entry) | 422 ("unprocessable entity") and GraphQL schema errors ("doesn't accept argument", "is declared by ... but not used") are deterministic — retrying can never succeed. `_gh_call_impl` retried them 5× with `2**attempt` backoff (~31s wasted per failure) before raising, AND each attempt is a breaker failure that worsens pollution. | Add deterministic failures to `_NON_TRANSIENT_PATTERNS` so they fail fast on attempt 1. Patterns added: `(?:^\|\s)422(?:\s\|$)\|unprocessable entity`, `doesn't accept argument`, `is declared by .* but not used`. |
 
 ## Results & Parameters
+
+### v1.2.0 — Fail-Fast Test Reset + Non-Transient Retry Patterns
+
+The one-line fix at the top of every new failure-triggering test:
+
+```python
+module._GH_BREAKER.reset()   # reset the BOUND instance, not the registry
+```
+
+The exact non-transient regex patterns added to `_NON_TRANSIENT_PATTERNS` in
+`hephaestus/automation/github_api.py` so 422 / GraphQL-schema errors fail fast
+(no retry, no extra breaker failures):
+
+```python
+r"(?:^|\s)422(?:\s|$)|unprocessable entity"
+r"doesn't accept argument"
+r"is declared by .* but not used"
+```
+
+| Parameter | Value | Why it matters |
+|-----------|-------|----------------|
+| `_GH_BREAKER` failure_threshold | 5 | Each raised exception (incl. fail-fast) = 1 failure; 5 across the class trips OPEN |
+| Wasted time per un-classified deterministic failure | ~31s | 5 retries × `2**attempt` backoff before raising |
+| Reset call | `module._GH_BREAKER.reset()` | Resets the import-time-bound instance directly |
+| Anti-pattern | `reset_all_circuit_breakers()` in `setup_method` | Clears registry → orphans the bound singleton |
+| Verification rule | run the WHOLE class/module | Pollution is invisible when the new test runs alone |
 
 ### Circuit Breaker Reset Fixture (Copy-Paste Ready)
 
@@ -410,3 +521,4 @@ The "passes locally" trap is real: running a single failing test in isolation al
 |---------|---------|---------|
 | ProjectHephaestus | PR #633 — CircuitBreaker testing (v1.0.0) | tests/unit/automation/test_gh_call_circuit_breaker.py; 5 tests all passing; no cross-test state leakage |
 | ProjectHephaestus | PR #707 — conftest scope fix (v1.1.0) | Cross-test contamination: `test_pr_reviewer_posting.py` failed identically on Python 3.10/3.11/3.12/3.13 in CI because the autouse breaker reset lived only in `test_github_api.py`. Fixed by moving the fixture into `tests/unit/automation/conftest.py` (commit `3e4bc10`). 911 tests pass locally under the new conftest scope; CI re-run pending at /learn time, hence v1.1.0 is **verified-local** for the fix, **verified-ci** for the bug. |
+| ProjectHephaestus | PR #1042 — fail-fast test pollution + 422/GraphQL classifier (v1.2.0) | Adding 2 new fail-fast tests to a class in `hephaestus/automation/github_api.py`'s test suite turned 5 unrelated sibling tests red (`GitHubUnavailableError: circuit breaker is open`) because `setup_method`'s `reset_all_circuit_breakers()` clears the registry and orphans the import-time `_GH_BREAKER`. Fixed by calling `module._GH_BREAKER.reset()` at each new test's top. Bundled with adding `422`/`unprocessable entity`, `doesn't accept argument`, and `is declared by .* but not used` to `_NON_TRANSIENT_PATTERNS`. **verified-ci** — merged to main (PR #1042, closes #1040). |

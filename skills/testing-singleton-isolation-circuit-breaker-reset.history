@@ -1,6 +1,29 @@
 <!-- markdownlint-disable MD024 -->
 # testing-singleton-isolation-circuit-breaker-reset — History
 
+## v1.2.0 (2026-06-06)
+
+**Changed by:** ProjectHephaestus PR #1042 (closes #1040) — merged to main
+**Verification:** verified-ci — fix merged to ProjectHephaestus main.
+
+### What changed
+
+- Added the **fail-fast-test pollution** dimension: adding new tests that intentionally trigger deterministic (non-transient) failures to a class whose code path goes through the module-level `_GH_BREAKER` singleton makes UNRELATED sibling tests fail with `GitHubUnavailableError: circuit breaker is open`. Each raised exception — even a fail-fast one — counts as one breaker failure; with `failure_threshold=5`, two new failure-triggering tests pushed the shared breaker OPEN and turned 5 later siblings red.
+- Documented why `setup_method`'s `reset_all_circuit_breakers()` does NOT protect against this: the helper resets each registered breaker then `_registry.clear()`, ORPHANING the import-time-bound `_GH_BREAKER`. The fix is `module._GH_BREAKER.reset()` at the top of each new failure-triggering test (matches the file's existing `test_circuit_breaker_wraps_gh_call_impl` pattern).
+- Added the PART-A motivating fix: `_NON_TRANSIENT_PATTERNS` in `hephaestus/automation/github_api.py` omitted HTTP 422 and GraphQL schema errors, so `_gh_call_impl` retried them 5× with `2**attempt` backoff (~31s wasted) even though they are deterministic. Added patterns `(?:^|\s)422(?:\s|$)|unprocessable entity`, `doesn't accept argument`, `is declared by .* but not used`.
+- Added new `When to Use` triggers (fail-fast tests, sibling-test failures, registry-clear-vs-reset, extending a non-transient classifier, 422/GraphQL retry decision).
+- Added `### Fail-Fast Test Pattern (v1.2.0)` workflow section.
+- Added three new `Failed Attempts` rows (12–14): relying on `reset_all_circuit_breakers()` in `setup_method`; running only the new test in isolation; retrying 422/GraphQL-schema errors.
+- Added `### v1.2.0 — Fail-Fast Test Reset + Non-Transient Retry Patterns` to Results & Parameters with the exact regex patterns and the one-line `module._GH_BREAKER.reset()` fix.
+- Added ProjectHephaestus PR #1042 to `Verified On`.
+- Bumped date to 2026-06-06, version to 1.2.0; expanded tags.
+
+### Why
+
+The v1.0.0/v1.1.0 versions covered "reset the held instance, not the registry" and "put the fixture in the right conftest scope." This amendment captures a third, distinct failure mode on the SAME `_GH_BREAKER` singleton: a class whose `setup_method` uses a registry-CLEARING reset helper (which orphans the bound singleton) silently accumulates breaker failures from any new failure-triggering tests, with the symptom appearing only when the whole class runs in file order. Same search surface ("my new fail-fast/error test broke sibling tests via the shared circuit breaker"), so it belongs in this skill rather than a duplicate.
+
+---
+
 ## v1.1.0 (2026-05-29)
 
 **Changed by:** ProjectHephaestus PR #707 — fixing a CI failure reproducing identically on Python 3.10/3.11/3.12/3.13 unit and integration jobs
