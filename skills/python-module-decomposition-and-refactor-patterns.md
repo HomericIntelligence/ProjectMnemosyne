@@ -11,8 +11,8 @@ description: >-
   (6) extracting a CLI entry point or main() out of a module while preserving
   existing patch-based tests without edits (reverse-delegation pattern).
 category: architecture
-date: 2026-05-28
-version: "1.1.0"
+date: 2026-06-05
+version: "1.2.0"
 user-invocable: false
 history: python-module-decomposition-and-refactor-patterns.history
 tags:
@@ -36,10 +36,10 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-05-28 |
+| **Date** | 2026-06-05 |
 | **Objective** | Decompose oversized Python modules/classes into focused, independently testable units using SRP, TDD, and DRY principles |
-| **Outcome** | Synthesized from 7 verified skills; covers function-level extraction, class-based extraction, circular import fixes, immutability refactoring, extensibility-driven decomposition, and CLI entry-point extraction with preserved patch routing |
-| **Trigger** | Files >800 lines, circular import errors, mixed-concern methods, C901 complexity, extensibility requirements, CLI main() extraction |
+| **Outcome** | Synthesized from 7 verified skills; covers function-level extraction, class-based extraction, circular import fixes, immutability refactoring, extensibility-driven decomposition, CLI entry-point extraction with preserved patch routing, and top-level symbol extraction to break sibling module cycles |
+| **Trigger** | Files >800 lines, circular import errors, mixed-concern methods, C901 complexity, extensibility requirements, CLI main() extraction, deferred imports inside function bodies preventing static analysis |
 
 ## When to Use
 
@@ -53,6 +53,7 @@ Apply this skill when any of the following is true:
 - `package/__init__.py` **eagerly re-exports CLI modules** that import back into the same package
 - A method **mutates `self.attribute` and also returns it**, breaking an otherwise immutable class API
 - You need to **prepare a codebase for a new pluggable feature** requiring protocol-based abstraction
+- Sibling modules (e.g., `implementer_cli`, `implementer_phase_runner`) have **deferred back-pointer imports inside function bodies** that mask circular dependencies from static analysis tools and complicate test patching
 
 ## Verified Workflow
 
@@ -65,10 +66,11 @@ Decision tree:
   >1000-line module with 4+ functions   → Module Decomposition (re-export or update import sites)
   Single complex method (C901, >100L)   → Single-Responsibility Extraction (collaborator)
   Circular ImportError on startup       → Symbol Extraction to leaf module
+  Deferred imports mask cycles          → Top-Level Symbol Extraction (Phase 12)
   Immutable API inconsistency           → Local-variable + early-return fix
   Extensibility blocked by coupling     → Extract-Parameterize-Protocol pattern
-  Extract CLI main() while keeping      → Reverse-Delegation Pattern (Phase 11)
-    existing patch.object tests intact    (new module calls collaborators THROUGH original)
+  Extract CLI main() while keeping      → Reverse-Delegation Pattern (Phase 11) OR
+    existing patch.object tests intact    Top-Level Extraction (Phase 12)
 
 Universal rule for mock patches after any move:
   Patch where the name is LOOKED UP at call time — not where it was defined.
@@ -450,6 +452,161 @@ pytest tests/ -q
 | ruff + mypy | clean (288 files) |
 | Verification level | verified-local |
 
+### Phase 12: Top-Level Symbol Extraction — Breaking Sibling-Module Cycles
+
+Use when two sibling modules (e.g., `implementer_cli.py`, `implementer_phase_runner.py`) have
+circular dependencies masked by **deferred back-pointer imports inside function bodies**.
+This pattern prevents static analysis tools (mypy, ruff, import-graph linters) from detecting
+the cycle, and complicates test patching by requiring patches on the wrong lookup site.
+
+**The problem**: Function-local imports like `from . import implementer` inside function bodies
+in sibling modules mask the cycle from static analysis:
+
+```python
+# implementer_phase_runner.py — BEFORE (deferred import)
+def _implement_issue(self):
+    from . import implementer as _impl  # ← deferred, inside function body
+    _impl.is_plan_review_go(...)        # ← patches must target implementer, not here
+```
+
+**Why this is problematic**:
+
+1. **Static analysis blind**: AST-based import graph tools don't see `from . import implementer`
+   because it's inside a function. The cycle remains invisible.
+2. **Test patching mismatch**: Tests must patch `implementer.is_plan_review_go()`, but the
+   call site is in `implementer_phase_runner.py`. This breaks encapsulation.
+3. **Brittle AST guards**: Regression tests must use AST walking + ID tracking to catch
+   future deferred imports, adding maintenance burden.
+
+**Solution: Extract patchable symbols to module-level imports with `# noqa: F401`**:
+
+Instead of deferring imports, import directly from the true source module at the top of the
+file. Use `# noqa: F401` for symbols that are imported purely for test patchability (not used
+in code):
+
+```python
+# implementer_phase_runner.py — AFTER (top-level extraction)
+from .review_state import is_plan_review_go  # ← top-level, visible to static analysis
+from .session_naming import (               # ← patchable in tests
+    AGENT_ADVISE,
+    AGENT_IMPLEMENTER,
+    current_trunk_githash,
+)  # noqa: F401  # ← used only in tests; re-export for patch routing
+
+# Later, inside _implement_issue:
+def _implement_issue(self):
+    if is_plan_review_go(...):  # ← direct import, clean code
+        ...
+```
+
+**Key decisions**:
+
+1. **Where to extract from**: Import from the **true source module** (`review_state.py`,
+   `session_naming.py`), not from an intermediate re-export.
+2. **Patching location**: Tests patch at `implementer_phase_runner.is_plan_review_go` because
+   that's where the name is **looked up at call time**.
+3. **noqa usage**: Use `# noqa: F401` only for symbols that are re-exported purely for test
+   patchability. If the symbol is used in the module, omit the noqa.
+
+**Implementation steps**:
+
+1. **Identify patchable symbols**: Grep test files for `patch("module.symbol")` to find what
+   needs to be patchable.
+2. **Extract to top-level imports**: Move deferred imports from function bodies to module-level.
+3. **Remove the `_impl_module` property** (if used): Dynamic lookup via `self._impl.symbol` is
+   no longer needed; use direct imports.
+4. **Add regression test with AST guards**: Create a test that verifies no runtime back-pointer
+   imports exist in sibling modules (prevents future deferred imports).
+5. **Retarget existing test patches**: Update any patches that target the old location.
+
+**Example: Full refactor (ProjectHephaestus #714)**:
+
+```python
+# BEFORE: implementer_phase_runner.py
+class ImplementationPhaseRunner:
+    def __init__(self, impl: IssueImplementer):
+        self._impl = impl
+    
+    @property
+    def _impl_module(self):
+        from . import implementer
+        return implementer
+    
+    def _implement_issue(self):
+        # Deferred import masks the cycle from static analysis
+        impl_mod = self._impl_module
+        if impl_mod.is_plan_review_go(...):
+            ...
+
+# AFTER: implementer_phase_runner.py
+from .review_state import is_plan_review_go  # ← top-level
+from ._review_utils import find_pr_for_issue  # noqa: F401
+
+def _implement_issue(self):
+    if is_plan_review_go(...):  # ← direct, clean
+        ...
+```
+
+**Regression test (AST-based guard)**:
+
+```python
+# test_implementer_no_cycle.py
+import ast
+from pathlib import Path
+
+def _is_backpointer_import(node: ast.AST) -> bool:
+    """Detect deferred imports that would re-introduce #714 cycle."""
+    if isinstance(node, ast.ImportFrom):
+        if node.module is None and node.level == 1:
+            return any(a.name == "implementer" for a in node.names)
+        if node.module == "implementer" and node.level == 1:
+            return True
+    return False
+
+def test_no_runtime_backpointer_to_implementer() -> None:
+    """Verify no deferred back-pointer imports inside function bodies."""
+    src = (Path(__file__).parent / "implementer_phase_runner.py").read_text()
+    tree = ast.parse(src)
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            for sub in ast.walk(node):
+                assert not _is_backpointer_import(sub), (
+                    f"Deferred import re-introduces #714 cycle"
+                )
+```
+
+**Comparison: Reverse-Delegation (Phase 11) vs. Top-Level Extraction (Phase 12)**
+
+| Aspect | Reverse-Delegation (Phase 11) | Top-Level Extraction (Phase 12) |
+|--------|-------------------------------|--------------------------------|
+| **Deferred imports** | Yes (`from . import X` in function body) | No (all imports at module-level) |
+| **Static analysis visibility** | No — cycle is hidden from AST tools | Yes — cycle visible, detectable |
+| **Test patching** | Patches on original module (preserved test compatibility) | Patches on runner module (cleaner separation) |
+| **Code readability** | Less clear: symbol resolution via `_impl.X` | More clear: direct `symbol` use |
+| **Maintenance burden** | Low (works for CLI extraction) | Low (top-level is standard Python) |
+| **Use case** | Extracting `main()` when tests already patch original | Breaking sibling-module cycles with function-local dispatch |
+| **Example** | `implementer_cli.main()` imports `implementer` to resolve helpers | `implementer_phase_runner` imports symbols directly from source modules |
+
+**When to choose Phase 12 over Phase 11**:
+
+- The cycle is between **sibling modules** (not parent→child as with CLI extraction)
+- Tests already patch the **runner/executor module**, not the original
+- **Static analysis** must detect the import graph (for linting, dependency audit)
+- You want to **eliminate function-local imports entirely** for clarity
+
+**Results (ProjectHephaestus PR #714)**:
+
+| Metric | Value |
+| -------- | ------- |
+| `implementer_phase_runner.py` deferred imports removed | 3 locations (lines ~843, ~1302, ~1576) |
+| Patchable symbols extracted to top-level | 9 symbols (is_plan_review_go, fetch_issue_info, invoke_claude_with_session, get_repo_slug, AGENT_ADVISE, AGENT_IMPLEMENTER, review_state, find_pr_for_issue, current_trunk_githash) |
+| `_impl_module` property removed | Yes |
+| Test patches retargeted | 6+ patches (from implementer.* to implementer_phase_runner.*) |
+| Regression test added | test_implementer_no_cycle.py with AST guards |
+| All automation tests pass | Yes (verified-ci) |
+| CI gates pass | Yes |
+| Verification level | verified-ci |
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -473,6 +630,7 @@ pytest tests/ -q
 | **Forgetting transitive symbol re-exports** | Moved `main` called `_impl.get_repo_root()` but `get_repo_root` was a plain `from .git_utils import get_repo_root` in original | mypy: `Module "implementer" does not explicitly export attribute "get_repo_root"` | Re-import every symbol the new module accesses via `_impl.X` with explicit `as X` alias in the original: `from .git_utils import get_repo_root as get_repo_root` |
 | **Missing coverage omit-allowlist update** | Added new `implementer_cli.py` orchestration module without updating pyproject omit list or guard tests | `test_omit_allowlist.py` and `test_orchestration_smoke.py` failed: counts mismatch + module not in expected list | Update the omit list in `pyproject.toml` AND both guard test files in the same PR as the new module |
 | **Using `Refs #N` only on partial-fix PR** | Opened PR for one CLI-extraction slice with `Refs #468` (umbrella) but no `Closes #N` | pr-policy CI gate hard-requires literal `Closes #N` line; PR was blocked | File a narrow sub-issue for the specific slice, put `Closes #<sub>` + `Refs #<umbrella>` in PR body — umbrella stays open, CI passes |
+| **Using reverse-delegation for sibling-module cycles** | Applied Phase 11 (lazy `from . import implementer as _impl` in function bodies) to break cycle between `implementer_phase_runner` and `implementer` | Deferred imports inside function bodies mask the cycle from static analysis tools (AST-based linters, import-graph audits); regression tests need fragile AST ID-tracking to detect reintroduction | For sibling-module cycles (not parent→child), use Phase 12 (top-level imports with `# noqa: F401`) instead; static analysis visibility + simpler code is worth retargeting a few test patches |
 
 ## Results & Parameters
 
@@ -557,3 +715,4 @@ def __init__(self, required: Path, optional: Path | None = None):
 | ProjectScylla | PR #1311 — `ResumeManager.handle_zombie` immutable refactor | Superseded `immutable-method-refactor` |
 | ProjectScylla | PRs #356–#361 — extensibility refactor (discovery lib, SubtestProvider, TestFixture) | Superseded `refactor-for-extensibility` |
 | ProjectHephaestus | PR #674 — `implementer.py` 872→702 lines; new `implementer_cli.py` (236 lines); reverse-delegation preserves 45 pre-existing tests unchanged; 780 automation tests pass; ruff+mypy clean (verified-local) | CLI entry-point extraction with preserved patch routing (Phase 11) |
+| ProjectHephaestus | PR #714 — `implementer_phase_runner.py` breaks cycle with top-level symbol extraction; 9 patchable symbols extracted; 3 deferred imports removed; regression test added (test_implementer_no_cycle.py with AST guards); all automation tests pass; CI gates pass (verified-ci) | Top-level symbol extraction for sibling-module cycles (Phase 12); comparison with reverse-delegation approach |

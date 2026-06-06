@@ -1,5 +1,70 @@
 # python-module-decomposition-and-refactor-patterns — History
 
+## v1.2.0 (2026-06-05)
+
+**Changed by:** Issue #714 implementation (ProjectHephaestus)
+**Verification:** verified-ci
+
+### What changed
+
+- Added Phase 12: Top-Level Symbol Extraction for breaking sibling-module cycles
+- Documented the alternative to Phase 11's reverse-delegation pattern
+- Added new Failed Attempt comparing Phase 11 vs. Phase 12 trade-offs
+- Added comparison table: Reverse-Delegation (Phase 11) vs. Top-Level Extraction (Phase 12)
+- Added new Verified On case: ProjectHephaestus PR #714 (top-level symbol extraction)
+- Updated description and trigger conditions to mention deferred imports and static analysis
+- Updated Quick Reference decision tree with Phase 12 guidance
+
+### Why
+
+Issue #714 in ProjectHephaestus demonstrated that sibling-module circular dependencies can be
+broken more cleanly using top-level imports with `# noqa: F401` directives rather than the
+reverse-delegation pattern (Phase 11). The Phase 11 approach (deferred imports in function bodies)
+works for CLI extraction but masks cycles from static analysis tools. Phase 12 (top-level imports)
+is simpler, more Pythonic, and allows AST-based linters to detect the import graph correctly.
+
+This skill amendment adds guidance to help practitioners choose between these two approaches:
+- Phase 11 for parent→child CLI extraction (preserves existing test patches)
+- Phase 12 for sibling→sibling cycles (cleaner code, static analysis visibility)
+
+### Previous version (v1.1.0) snapshot
+
+---
+name: python-module-decomposition-and-refactor-patterns
+description: >-
+  Use when: (1) a Python module or class exceeds 800–1000 lines and contains
+  identifiable method clusters with distinct responsibilities, (2) extracting
+  method groups into dedicated collaborator classes or sub-modules via TDD,
+  (3) fixing circular import errors caused by partially-initialized modules or
+  eager __init__.py re-exports, (4) refactoring class methods to purely
+  functional/immutable style, (5) preparing a codebase for extensibility
+  through extraction, parameterization, and protocol-based abstraction,
+  (6) extracting a CLI entry point or main() out of a module while preserving
+  existing patch-based tests without edits (reverse-delegation pattern).
+category: architecture
+date: 2026-05-28
+version: "1.1.0"
+user-invocable: false
+history: python-module-decomposition-and-refactor-patterns.history
+tags:
+  - python
+  - refactoring
+  - srp
+  - tdd
+  - dry
+  - circular-imports
+  - module-decomposition
+  - collaborator-extraction
+  - extensibility
+  - cli-extraction
+  - patch-routing
+  - entry-point
+---
+
+(v1.1.0 contained Phases 1-11 as documented; for full text see commit history)
+
+---
+
 ## Superseded from cluster-extraction-to-modules
 
 ---
