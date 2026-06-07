@@ -1,13 +1,13 @@
 ---
 name: ci-cd-homeric-intelligence-merge-gotchas
-description: "Recurring HomericIntelligence CI/merge traps that block PR auto-merge even when the code is correct. Use when: (1) pixi-check fails 'lock-file not up-to-date with the workspace' or Lint/Type-Check break after removing pypi-dependencies; (2) a Keystone-style lint job fails fast (~20s) at 'Install build dependencies (just + linters)'; (3) CodeQL cpp/unused-{local,static}-variable flags a genuinely-used C++ variadic template parameter pack; (4) a PR is MERGEABLE with all REQUIRED checks green but auto-merge won't fire; (5) you are driving a chain of dependency-gated PRs and need to auto-arm each downstream PR when its gate merges; (6) a PR is MERGEABLE with every REQUIRED status check green, but mergeStateStatus stays BLOCKED and auto-merge won't fire — the gate is `required_review_thread_resolution: true` plus unresolved CodeQL/github-advanced-security review threads; detect via GraphQL reviewThreads (the REST field is empty), assess each finding before resolving, document accept-rationale, then resolveReviewThread."
+description: "Recurring HomericIntelligence CI/merge traps that block PR auto-merge even when the code is correct. Use when: (1) pixi-check fails 'lock-file not up-to-date with the workspace' or Lint/Type-Check break after removing pypi-dependencies; (2) a Keystone-style lint job fails fast (~20s) at 'Install build dependencies (just + linters)'; (3) CodeQL cpp/unused-{local,static}-variable flags a genuinely-used C++ variadic template parameter pack; (4) a PR is MERGEABLE with all REQUIRED checks green but auto-merge won't fire; (5) you are driving a chain of dependency-gated PRs and need to auto-arm each downstream PR when its gate merges; (6) a PR is MERGEABLE with every REQUIRED status check green, but mergeStateStatus stays BLOCKED and auto-merge won't fire — the gate is `required_review_thread_resolution: true` plus unresolved CodeQL/github-advanced-security review threads; detect via GraphQL reviewThreads (the REST field is empty), assess each finding before resolving, document accept-rationale, then resolveReviewThread; (7) the pr-policy required gate fails 'Auto-merge is enabled before implementation review GO' — do not pre-arm auto-merge before the state:implementation-go label (the inverse 'PR has state:implementation-go but auto-merge is not enabled' also fails); disable premature auto-merge and let the label workflow arm it."
 category: ci-cd
-date: 2026-06-02
-version: "1.1.0"
+date: 2026-06-06
+version: "1.2.0"
 user-invocable: false
 verification: verified-ci
 history: ci-cd-homeric-intelligence-merge-gotchas.history
-tags: [pixi, pixi-lock, codeql, auto-merge, branch-protection, just-systems, keystone, agamemnon, dependency-gated-pr, review-thread-resolution, github-advanced-security]
+tags: [pixi, pixi-lock, codeql, auto-merge, branch-protection, just-systems, keystone, agamemnon, dependency-gated-pr, review-thread-resolution, github-advanced-security, pr-policy, implementation-go]
 ---
 
 # HomericIntelligence CI / Merge Gotchas
@@ -16,10 +16,10 @@ tags: [pixi, pixi-lock, codeql, auto-merge, branch-protection, just-systems, key
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-02 |
-| **Objective** | Unblock PR auto-merge across HomericIntelligence repos when the code is correct but CI/merge mechanics get in the way — pixi lock-format mismatch, just.systems install flakes, CodeQL variadic-pack false positives, auto-merge stalling on non-required checks, ordering of dependency-gated PR cascades, and `required_review_thread_resolution` blocking merge on unresolved CodeQL review threads even with all required checks green |
-| **Outcome** | Six distinct traps each have a verified, repeatable fix; established the diagnostic that distinguishes a real failure from infra flake (failing STEP NAME, not log), the correct CodeQL dismiss path (≤280-char comment + thread resolution), the required-contexts query, the action-monitor pattern that arms held downstream PRs only after their gates merge, and the GraphQL `reviewThreads` query that surfaces hidden unresolved-thread merge gates (the REST field is empty) plus the assess-then-`resolveReviewThread` discipline |
-| **Verification** | verified-ci — all six traps observed and fixed in live CI; traps 1–5 during the Keystone pure-transport refactor (Keystone #577–#581, Agamemnon #419–#421 merged 2026-05-31); trap 6 on ProjectNestor #101/#97, where resolving unresolved CodeQL review threads flipped BLOCKED→mergeable and both auto-merged to `main` (2026-06-02) |
+| **Date** | 2026-06-06 |
+| **Objective** | Unblock PR auto-merge across HomericIntelligence repos when the code is correct but CI/merge mechanics get in the way — pixi lock-format mismatch, just.systems install flakes, CodeQL variadic-pack false positives, auto-merge stalling on non-required checks, ordering of dependency-gated PR cascades, `required_review_thread_resolution` blocking merge on unresolved CodeQL review threads even with all required checks green, and the `pr-policy` gate failing when auto-merge is armed before the `state:implementation-go` label |
+| **Outcome** | Seven distinct traps each have a verified, repeatable fix; established the diagnostic that distinguishes a real failure from infra flake (failing STEP NAME, not log), the correct CodeQL dismiss path (≤280-char comment + thread resolution), the required-contexts query, the action-monitor pattern that arms held downstream PRs only after their gates merge, the GraphQL `reviewThreads` query that surfaces hidden unresolved-thread merge gates (the REST field is empty) plus the assess-then-`resolveReviewThread` discipline, and the rule that auto-merge must NOT be pre-armed before `state:implementation-go` (disable premature auto-merge + rerun the failed pr-policy check; let the label workflow arm it) |
+| **Verification** | verified-ci — all seven traps observed and fixed in live CI; traps 1–5 during the Keystone pure-transport refactor (Keystone #577–#581, Agamemnon #419–#421 merged 2026-05-31); trap 6 on ProjectNestor #101/#97, where resolving unresolved CodeQL review threads flipped BLOCKED→mergeable and both auto-merged to `main` (2026-06-02); trap 7 on ProjectHephaestus #1073/#1075/#1077, where pre-arming auto-merge failed the `pr-policy` gate's "Check 2" and disabling it flipped fail→pass (2026-06-06) |
 
 ## When to Use
 
@@ -29,10 +29,11 @@ tags: [pixi, pixi-lock, codeql, auto-merge, branch-protection, just-systems, key
 4. **Auto-merge won't fire.** A PR is `MERGEABLE` with every branch-protection-required context green, yet GitHub auto-merge does not merge because a NON-required check (Coverage, security/dependency-scan) is still red or pending.
 5. **Dependency-gated cascade.** You are driving a chain where a downstream PR must not merge until its gate PR(s) merge first (extraction-before-deletion), and you want each downstream PR auto-armed the moment its gates land.
 6. **Unresolved review threads block merge.** A PR is `MERGEABLE` with every REQUIRED status check green, yet `mergeStateStatus` stays `BLOCKED` and auto-merge will not fire — the gate is the HI ecosystem-standard branch-protection setting `required_review_thread_resolution: true` plus unresolved CodeQL / `github-advanced-security` review threads. Detect via the GraphQL `reviewThreads` query (the REST `reviewThreads` field is empty/unavailable), assess each finding before resolving, document the accept-rationale, then `resolveReviewThread`.
+7. **pr-policy fails on premature auto-merge.** The REQUIRED `pr-policy` gate fails with `::error::Auto-merge is enabled before implementation review GO.` because you ran `gh pr merge --auto --squash` on a fresh PR before it carried the `state:implementation-go` label. (The inverse — `::error::PR has state:implementation-go but auto-merge is not enabled.` — fails when the label is present but auto-merge is off.) Do NOT pre-arm auto-merge; `gh pr merge <N> --disable-auto`, rerun the failed pr-policy check, and let the review→`state:implementation-go` label workflow arm `--auto --squash`.
 
 ## Verified Workflow
 
-> **Verification level:** verified-ci — every trap below was hit and resolved in live CI; traps 1–5 during the Keystone pure-transport refactor (Keystone #577–#581, Agamemnon #419–#421 merged to `main` 2026-05-31); trap 6 on ProjectNestor #101/#97 (both auto-merged to `main` 2026-06-02 once the unresolved review threads were resolved).
+> **Verification level:** verified-ci — every trap below was hit and resolved in live CI; traps 1–5 during the Keystone pure-transport refactor (Keystone #577–#581, Agamemnon #419–#421 merged to `main` 2026-05-31); trap 6 on ProjectNestor #101/#97 (both auto-merged to `main` 2026-06-02 once the unresolved review threads were resolved); trap 7 on ProjectHephaestus #1073/#1075/#1077 (pre-armed auto-merge failed the `pr-policy` gate; disabling it flipped the check fail→pass 2026-06-06).
 
 ### 1. pixi lock-format version trap
 
@@ -113,6 +114,24 @@ A PR can be `MERGEABLE` with **every REQUIRED status check green** (build, integ
   - **Amending re-runs CodeQL.** A force-push amend re-runs CodeQL on the changed file and can post NEW review threads. After an amend, re-check the unresolved-thread count before assuming the PR will merge.
   - **Slow static-analysis ≠ failure.** `clang-tidy` and `CodeQL (cpp)` showing `in_progress` is why the required aggregate `All Static Analysis Checks` has not reported yet. A PR can sit `BLOCKED` purely waiting on these slow jobs even when build/test are already green — do not mistake it for a real failure.
 
+### 7. pr-policy fails when auto-merge is armed before implementation-go
+
+The REQUIRED `pr-policy` gate FAILS when auto-merge is enabled BEFORE the PR carries the `state:implementation-go` label. Following the generic "auto-merge is mandatory" guidance and running `gh pr merge <N> --auto --squash` on a freshly-opened PR is the trap: the gate's **"Check 2: auto-merge matches implementation-review state"** emits `::error::Auto-merge is enabled before implementation review GO.` and fails the run. The gate is symmetric — it also fails the inverse with `::error::PR has state:implementation-go but auto-merge is not enabled.` when the label IS present but auto-merge is off. In these repos auto-merge must NOT be enabled until a reviewer (or the in-loop implementation reviewer) applies `state:implementation-go`; a label-triggered workflow then arms `--auto --squash` automatically. This mirrors the in-code invariant `pr_manager.ensure_pr_auto_merge_deferred()`, which proactively DISABLES premature auto-merge.
+
+- **Distinct from Traps 4 & 6.** There a non-required check (Trap 4) or an unresolved review thread (Trap 6) gated an otherwise-green PR. Here the act of arming auto-merge too early IS itself the failing REQUIRED check.
+- **Diagnose by the failing CHECK + STEP.** The failing check is `pr-policy`; the failing step is "Check 2: auto-merge matches implementation-review state". Read the exact `::error::` line:
+  ```bash
+  gh run view <run-id> --log-failed | grep '::error::'
+  #   "::error::Auto-merge is enabled before implementation review GO."  -> pre-armed too early
+  #   "::error::PR has state:implementation-go but auto-merge is not enabled."  -> label present, arm it
+  ```
+- **Fix.** Do NOT pre-arm auto-merge on a fresh PR. If you already armed it, disable it and re-run the failed check — it flips fail→pass:
+  ```bash
+  gh pr merge <N> --disable-auto
+  gh run rerun <run-id> --failed
+  ```
+  Then let the review→`state:implementation-go` label workflow arm `--auto --squash` for you. (These repos are squash-only — the label workflow uses `--squash`; do not arm `--rebase`.)
+
 ### Quick Reference
 
 ```bash
@@ -145,6 +164,11 @@ gh api graphql -f query='{ repository(owner:"OWNER",name:"REPO"){ pullRequest(nu
 # Resolve a review thread (after reading + documenting accept-rationale)
 gh api graphql -f query='mutation($id:ID!){ resolveReviewThread(input:{threadId:$id}){ thread{ isResolved } } }' \
   -f id="<thread node id>"
+
+# pr-policy "Check 2" failure: read the exact error, then un-arm premature auto-merge
+gh run view <run-id> --log-failed | grep '::error::'
+gh pr merge <N> --disable-auto      # un-arm auto-merge enabled before state:implementation-go
+gh run rerun <run-id> --failed      # re-run pr-policy — flips fail->pass once auto-merge is off
 ```
 
 ## Failed Attempts
@@ -158,6 +182,7 @@ gh api graphql -f query='mutation($id:ID!){ resolveReviewThread(input:{threadId:
 | 5 | Assumed a `MERGEABLE` PR with all required checks green would auto-merge | Auto-merge stalled on a non-required red check (Coverage) — auto-merge is stricter than branch protection | Query `required_status_checks.contexts`; fix the non-required red (don't bypass) so all checks reach a clean terminal state |
 | 6 | Assumed a PR with all required checks green + MERGEABLE would auto-merge | `mergeStateStatus` stayed `BLOCKED` on `required_review_thread_resolution` — 6 unresolved CodeQL review threads gated it | Green required checks ≠ mergeable; query GraphQL `reviewThreads` for unresolved bot findings |
 | 7 | Planned to resolve all CodeQL threads in bulk to unblock | Some findings were genuine (env-var file path, stack-address escape); blanket-resolving would silently drop real security observations | Read each thread's `path:line`+body; classify false-positive vs real; document accept-rationale before resolving; escalate genuinely-ambiguous ones |
+| 8 | Ran `gh pr merge --auto --squash` on a fresh PR following the generic "auto-merge is mandatory" guidance | The REQUIRED `pr-policy` gate's "Check 2" fails `::error::Auto-merge is enabled before implementation review GO.` — auto-merge must not be armed before `state:implementation-go` | Don't pre-arm auto-merge; `gh pr merge <N> --disable-auto` + `gh run rerun <run-id> --failed`, then let the `state:implementation-go` label workflow arm `--auto --squash` |
 
 ## Results & Parameters
 
@@ -200,6 +225,16 @@ gh run rerun <runid> --repo <o>/<r> --failed
 gh pr merge <downstream> --auto --squash
 ```
 
+### Un-arm premature auto-merge to clear the pr-policy gate
+
+```bash
+gh run view <run-id> --log-failed | grep '::error::'
+#   "::error::Auto-merge is enabled before implementation review GO."
+gh pr merge <N> --disable-auto   # auto-merge was armed before state:implementation-go
+gh run rerun <run-id> --failed   # re-runs pr-policy "Check 2"; flips fail->pass
+# Then let the review -> state:implementation-go label workflow arm --auto --squash
+```
+
 ### pixi lock format check
 
 ```bash
@@ -218,6 +253,7 @@ pixi install --locked
 - A ~20s `lint` failure at "Install build dependencies (just + linters)" is the `just.systems` flake — rerun, do not edit code.
 - Auto-merge waits on ALL checks (required + non-required) reaching a clean terminal state; branch protection only gates the required ones.
 - Hold a dependency-gated downstream PR UNARMED until its gates merge; arm with `--auto --squash` from the action-monitor.
+- Do NOT pre-arm auto-merge before the PR has `state:implementation-go`, or the REQUIRED `pr-policy` gate's "Check 2" fails `Auto-merge is enabled before implementation review GO.`; un-arm with `gh pr merge <N> --disable-auto`, rerun the failed check, and let the label workflow arm `--auto --squash`.
 
 ### Verified On
 
@@ -226,6 +262,7 @@ pixi install --locked
 | ProjectKeystone | Keystone pure-transport refactor (traps 1–5) | #577, #578, #579, #580, #581 |
 | ProjectAgamemnon | Downstream consumers of the Keystone transport change (traps 1–5) | #419, #420, #421 |
 | ProjectNestor | Unresolved CodeQL review threads gating merge (trap 6); resolving threads flipped BLOCKED→mergeable, both auto-merged 2026-06-02 | #101, #97 |
+| ProjectHephaestus | pr-policy gate fails on auto-merge armed before `state:implementation-go` (trap 7); disabling auto-merge + rerunning flipped the failed check fail→pass (2026-06-06) | #1073, #1075, #1077 |
 
 ## Related Skills
 
