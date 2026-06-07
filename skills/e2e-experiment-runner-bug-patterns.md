@@ -1,9 +1,9 @@
 ---
 name: e2e-experiment-runner-bug-patterns
-description: "Canonical reference for bugs in the E2E evaluation pipeline covering manage_experiment.py / SubTestExecutor state machines, checkpoint/resume, judge logic, rate limits, path resolution, and rerun scripts. Use when: (1) retry logic conflates infra crashes with bad-grade terminal states, (2) checkpoint resume crashes with AssertionError or FileNotFoundError, (3) judge returns empty responses or prose instead of JSON, (4) --until stepping executes one extra transition or Ctrl+C has no effect, (5) T5 baseline inheritance fails despite parent tiers completing, (6) path resolution causes 100% silent agent failures, (7) rate limits hide inside stdout JSON instead of stderr, (8) rerun scripts crash with SubTestExecutor constructor errors or invalid checkpoint status, (9) judge validity checks are inconsistent across live/regeneration paths."
+description: "Canonical reference for bugs in the E2E evaluation pipeline covering manage_experiment.py / SubTestExecutor state machines, checkpoint/resume, judge logic, rate limits, path resolution, and rerun scripts. Use when: (1) retry logic conflates infra crashes with bad-grade terminal states, (2) checkpoint resume crashes with AssertionError or FileNotFoundError, (3) judge returns empty responses or prose instead of JSON, (4) --until stepping executes one extra transition or Ctrl+C has no effect, (5) T5 baseline inheritance fails despite parent tiers completing, (6) path resolution causes 100% silent agent failures, (7) rate limits hide inside stdout JSON instead of stderr, (8) rerun scripts crash with SubTestExecutor constructor errors or invalid checkpoint status, (9) judge validity checks are inconsistent across live/regeneration paths, (10) progressive Nth-resume failures (works first time, crashes on 3rd/4th resume), (11) RunContext not restored on mid-sequence --until resume."
 category: debugging
-date: 2026-05-19
-version: "1.0.0"
+date: 2026-06-07
+version: "1.1.0"
 user-invocable: false
 history: e2e-experiment-runner-bug-patterns.history
 tags:
@@ -22,6 +22,8 @@ tags:
   - until-stepping
   - json-parse
   - rerun
+  - progressive-resume
+  - restore-run-context
 ---
 
 # E2E Experiment Runner Bug Patterns
@@ -47,6 +49,9 @@ tags:
 8. Post-hoc diagnosis: experiment data shows a "cliff" — early tiers pass, later tiers all fail with zero tokens.
 9. Rerun script crashes with `SubTestExecutor.__init__() got an unexpected keyword argument` or `Invalid status: completed`.
 10. Judge validity checks diverge between live execution and `regenerate.py`, causing bimodal failure distributions.
+11. Progressive Nth-resume failures: experiment works first time but fails on 3rd or 4th resume with `FileNotFoundError: judgment.json` or similar; reports show `0.000` scores but `run_result.json` files have correct data.
+12. `"agent_result must be set before finalize_run"` or `"judgment must be set before finalize_run"` when resuming from `judge_complete` using `--until` stepping.
+13. `assert adapter_config is not None` when resuming from `replay_generated` in a `--until` sequence.
 
 ## Verified Workflow
 
@@ -63,6 +68,8 @@ Progressive resume| Works 1st time, crashes Nth resume         | _load_judge_res
 --until off-by-one| Agent runs when --until replay_generated   | advance_to_completion() — check post-advance state
 Signal handlers   | Ctrl+C has no effect                       | terminal_guard(request_shutdown) — pass shutdown fn
 TierState naming  | "No sub-test results to select from"        | reset to config_loaded, NOT subtests_running
+--until Bug 2     | Failed runs not retried after crash        | STEP 3 handler — also reset run_states="failed"
+--until Bug 3     | "agent_result must be set" on resume       | restore_run_context() call after RunContext construction
 T5 elif fallthrough| All required tiers failed despite complete  | elif → second if not best_subtest_id
 T5 partial failure| T5 ValueError on first missing parent       | warn+continue, raise only if ALL tiers fail
 Path resolution   | 100% failures, 0 tokens, "cd: not found"   | cwd=workspace.resolve() in subprocess calls
@@ -192,6 +199,13 @@ def _load_judge_result(judge_dir):
 
 Diagnostic: run experiment 4+ times; progressive failures indicate path mismatch, not state sync.
 
+**Progressive Resume Failures Debugging Methodology**:
+
+- **Phase 1 — Gather Evidence**: Run the failing scenario and capture the full traceback. Do not speculate; get the exact file path and line number.
+- **Phase 2 — Ask Clarifying Questions**: Ask "which files show zeros?" (console only / all report files / some files) and "do the `run_result.json` files have correct data?". If `run_result.json` is correct but reports show `0.000`, that is an aggregation bug or crash before report generation. If all files show zeros, that is a checkpoint/loading bug.
+- **Phase 3 — Trace File Path Mismatches**: Confirm that validation and loading use the same file path constant. File path bugs can masquerade as state sync issues.
+- **Phase 4 — Verify the Fix**: Run fresh experiment, resume 4+ times, verify no `FileNotFoundError`, verify reports show correct values.
+
 ### Bug Group 6 — `--until` Off-By-One and Signal Handlers
 
 **State naming**: state names represent what has **just been completed**. The action registered for a state runs WHILE IN that state to produce the NEXT state.
@@ -226,11 +240,24 @@ from scylla.e2e.runner import request_shutdown
 with terminal_guard(request_shutdown): ...
 ```
 
-### Bug Group 7 — TierState Naming Confusion (`--until` Stepping)
+### Bug Group 7 — TierState Naming Confusion and `--until` Stepping Bugs
 
 `TierState.SUBTESTS_RUNNING` does **NOT** mean "subtests are running." It means "subtests have finished, now select best." Actual subtest execution happens in the `CONFIG_LOADED → SUBTESTS_RUNNING` action.
 
-**Fix reset target** (`scylla/e2e/runner.py`):
+```
+CONFIG_LOADED     → SUBTESTS_RUNNING   # action: run_tier_subtests_parallel() ← actual execution here
+SUBTESTS_RUNNING  → SUBTESTS_COMPLETE  # action: select_best_subtest()
+```
+
+**Warning**: The linter has been observed reverting `config_loaded` back to `subtests_running` after this fix was committed. Always verify `runner.py` around the tier-reset logic after linter runs.
+
+There are three distinct `--until` stepping bugs; only Bug 1 involves TierState naming.
+
+**--until Bug 1: Tier Reset to Wrong State**
+
+**Symptom**: "No sub-test results to select from" on second `--until` invocation.
+
+**Fix reset target** (`scylla/e2e/runner.py` STEP 4):
 
 ```python
 # WRONG — subtests_running = "select best" action, not "run subtests"
@@ -240,7 +267,134 @@ self.checkpoint.tier_states[tier_id_str] = "subtests_running"
 self.checkpoint.tier_states[tier_id_str] = "config_loaded"
 ```
 
-Also add `"subtests_running"` to the set of states that get reset, and reset failed `run_states` (not just subtest/tier states) in the STEP 3 failed-experiment handler.
+Also add `"subtests_running"` to the set of states that get reset.
+
+**--until Bug 2: Failed Run States Not Reset on Crash**
+
+**Symptom**: After a crash leaves `run_states.T0.00.1=failed`, the next resume skips the run (it is terminal) and aggregates with zero results.
+
+**Root cause**: STEP 3 (experiment_state=failed handler) reset failed tiers to `pending` and failed subtests to `pending`, but did NOT reset failed run states.
+
+**Fix** (`scylla/e2e/runner.py`, add after subtest reset in STEP 3):
+
+```python
+for tier_id in self.checkpoint.run_states:
+    for subtest_id in self.checkpoint.run_states[tier_id]:
+        for run_id, run_state in self.checkpoint.run_states[tier_id][subtest_id].items():
+            if run_state == "failed":
+                self.checkpoint.run_states[tier_id][subtest_id][run_id] = "pending"
+```
+
+**--until Bug 3: RunContext Not Restored on Mid-Sequence Resume**
+
+**Symptom**: `"agent_result must be set before finalize_run"` or `"judgment must be set before finalize_run"` when resuming from `judge_complete`. Also: `assert adapter_config is not None` when resuming from `replay_generated`.
+
+**Fix 1** — lazy `adapter_config` reconstruction (`scylla/e2e/stages.py`):
+
+```python
+# In stage_execute_agent, replace assert with:
+if adapter_config is None:
+    from scylla.adapters.base import AdapterConfig
+    adapter_config = AdapterConfig(
+        model=ctx.config.models[0],
+        prompt_file=ctx.run_dir / "task_prompt.md",
+        workspace=ctx.workspace,
+        output_dir=agent_dir,
+        timeout=ctx.config.timeout_seconds,
+    )
+    ctx.adapter_config = adapter_config
+```
+
+**Fix 2** — `restore_run_context()` function (`scylla/e2e/stages.py`):
+
+```python
+def restore_run_context(ctx: RunContext, current_state: RunState) -> None:
+    """Load persisted agent_result and judgment from disk when resuming mid-sequence."""
+    from scylla.e2e.agent_runner import _has_valid_agent_result, _load_agent_result
+    from scylla.e2e.judge_runner import _load_judge_result
+
+    agent_dir = get_agent_dir(ctx.run_dir)
+    judge_dir = get_judge_dir(ctx.run_dir)
+
+    _NEEDS_AGENT_RESULT = {DIFF_CAPTURED, JUDGE_PIPELINE_RUN, JUDGE_PROMPT_BUILT,
+                           JUDGE_COMPLETE, RUN_FINALIZED, REPORT_WRITTEN,
+                           CHECKPOINTED, WORKTREE_CLEANED}
+    _NEEDS_JUDGMENT = {JUDGE_COMPLETE, RUN_FINALIZED, REPORT_WRITTEN,
+                       CHECKPOINTED, WORKTREE_CLEANED}
+
+    if ctx.agent_result is None and current_state in _NEEDS_AGENT_RESULT:
+        if _has_valid_agent_result(ctx.run_dir):
+            ctx.agent_result = _load_agent_result(agent_dir)
+            ctx.agent_ran = False
+
+    if ctx.judgment is None and current_state in _NEEDS_JUDGMENT:
+        judge_result_file = judge_dir / "result.json"
+        if judge_result_file.exists():
+            ctx.judgment = _load_judge_result(judge_dir)
+```
+
+**Fix 3** — call `restore_run_context` after RunContext construction (`scylla/e2e/subtest_executor.py`):
+
+```python
+# After ctx = RunContext(...), before build_actions_dict:
+from scylla.e2e.stages import restore_run_context
+from scylla.e2e.models import RunState as _RS
+if sm:
+    _current = sm.get_state(tier_id.value, subtest.id, run_num)
+    if _current != _RS.PENDING:
+        restore_run_context(ctx, _current)
+```
+
+**Live E2E `--until` Stepping Command Sequence**:
+
+```bash
+BASE="pixi run python scripts/manage_experiment.py run \
+  --config tests/fixtures/tests/test-NNN --runs 1 --max-subtests 1 \
+  --filter-subtest 00 --tiers T0 --results-dir /home/mvillmow/dryrun_step_testN \
+  --skip-judge-validation -v --threads 1 --model haiku --judge-model haiku"
+
+# Batch A: fresh start through all free pre-agent stages
+$BASE --fresh --until replay_generated
+
+# Step 7: agent execution (costs ~$0.01 haiku)
+$BASE --until agent_complete
+
+# Batch B: post-agent free stages through judge prompt
+$BASE --until judge_prompt_built
+
+# Step 11: judge execution (costs ~$0.01 haiku)
+$BASE --until judge_complete
+
+# Batch C: finalize, report, checkpoint, clean
+$BASE --until worktree_cleaned
+
+# Step 16: final completion (no --until)
+$BASE
+```
+
+**Expected State Progression for `--until` Stepping**:
+
+| Step | run_state | subtest_state | Notes |
+| ---- | --------- | ------------- | ----- |
+| Batch A | `replay_generated` | `runs_in_progress` | regression check |
+| Step 7 | `agent_complete` | `runs_in_progress` | regression check |
+| Batch B | `judge_prompt_built` | `runs_in_progress` | regression check |
+| Step 11 | `judge_complete` | `runs_in_progress` | regression check |
+| Batch C | `worktree_cleaned` | `aggregated` | terminal — subtest aggregates |
+| Step 16 | `worktree_cleaned` | `aggregated` | no-op, already complete |
+
+**Critical regression check**: subtest must stay `runs_in_progress` until `worktree_cleaned`.
+
+**Key files for `--until` debugging**:
+
+| File | Role |
+| ---- | ---- |
+| `scylla/e2e/runner.py` | STEP 3 (failed reset) and STEP 4 (incomplete run re-entry) |
+| `scylla/e2e/stages.py` | `stage_execute_agent`, `stage_finalize_run`, `restore_run_context()` |
+| `scylla/e2e/subtest_executor.py` | RunContext creation and `restore_run_context` call |
+| `scylla/e2e/tier_state_machine.py` | TierState enum and transition registry |
+| `scylla/e2e/state_machine.py` | RunState enum and `advance_to_completion()` |
+| `tests/unit/e2e/test_runner.py` | `TestInitializeOrResumeExperimentFailedReset` class |
 
 ### Bug Group 8 — T5 Baseline Inheritance Bugs
 
@@ -500,6 +654,8 @@ checkpoint.mark_run_completed(tier_id=..., subtest_id=..., run_number=..., statu
 | Checking `--until` state before `advance()` | Captured pre-advance state, called `advance()`, then checked | Check fires too late — the action for the next state already ran | Check post-advance state: `new_state = self.advance(); if new_state == until_state: break` |
 | `terminal_guard()` with no arguments | Called `with terminal_guard():` — handlers exist in code | `terminal_guard(shutdown_fn=None)` only installs handlers when `shutdown_fn is not None` | Pass the shutdown function explicitly: `terminal_guard(request_shutdown)` |
 | Resetting tier to `subtests_running` for re-execution | Reset incomplete tiers to `SUBTESTS_RUNNING` state | `SUBTESTS_RUNNING` maps to "select best subtest" action, not "run subtests"; `subtest_results` was empty | Always reset to `config_loaded`; the action for that state runs the subtests |
+| Not resetting run_states in STEP 3 failed handler | Reset failed tiers/subtests but not run_states | `run_states="failed"` is terminal; next resume skips those runs and aggregates with zero results | STEP 3 must also reset `run_states="failed"` to `"pending"` |
+| Asserting `adapter_config is not None` on mid-sequence resume | Hard assert in `stage_execute_agent` | On `--until` resume from `replay_generated`, `adapter_config` is not reconstructed | Replace assert with lazy reconstruction using saved `ctx` fields |
 | `elif` for best-subtest fallback | `if result_file.exists(): ... elif best_subtest_file.exists()` | `elif` never fires when `result.json` exists but `best_subtest` is null | Change `elif` to `if not best_subtest_id and best_subtest_file.exists()` |
 | Passing positional prompt arg after `--allowedTools` | `["claude", "--allowedTools", "", "prompt_content"]` | `--allowedTools` is variadic; consumes all subsequent non-flag args as tool names; prompt never delivered | Pipe prompt via `input=` to `subprocess.run()`, not as positional arg |
 | `detect_rate_limit(stderr) or detect_claude_usage_cap(stdout)` chaining | Chained detectors with `or` | Detector returning `0` (rate-limited, time unknown) treated as falsy; `0 or X == X` skips the sentinel | Use `is not None` comparison; `0` is a meaningful "rate-limited, retry in 5s" sentinel |
@@ -524,6 +680,46 @@ checkpoint.mark_run_completed(tier_id=..., subtest_id=..., run_number=..., statu
 | `completed_runs="failed"` | Bad grade (NOT a crash) | Valid result |
 | `completed_runs="agent_complete"` | Agent ran, judge skipped | In-progress |
 
+### Restore Coverage Matrix
+
+| Field | Loaded By | For States Past |
+| ----- | --------- | --------------- |
+| `ctx.agent_result` | `_restore_run_context()` | `AGENT_COMPLETE` |
+| `ctx.judge_prompt` | `_restore_run_context()` | `JUDGE_PROMPT_BUILT` |
+| `ctx.judgment` | `_restore_run_context()` (fix) | `JUDGE_COMPLETE` |
+| `ctx.run_result` | `_restore_run_context()` (fix) | `RUN_FINALIZED` |
+| `ctx.judgment` | `stage_capture_diff()` | `DIFF_CAPTURED` (replay only) |
+
+### Run State Machine (Judge Phase)
+
+```
+DIFF_CAPTURED → JUDGE_PIPELINE_RUN → JUDGE_PROMPT_BUILT → JUDGE_COMPLETE
+    → RUN_FINALIZED → REPORT_WRITTEN → CHECKPOINTED → WORKTREE_CLEANED
+```
+
+### Cleanup Script Pattern for Stale Phase 3 Data
+
+```python
+# Reset states past judge phase back to diff_captured
+JUDGE_AND_BEYOND = {"judge_pipeline_run", "judge_prompt_built", "judge_complete",
+                     "run_finalized", "report_written", "checkpointed", "worktree_cleaned"}
+
+# For each run in checkpoint:
+if state in JUDGE_AND_BEYOND or state == "failed":
+    runs[run_num_str] = "diff_captured"
+
+# Clear completed_runs (contains judge pass/fail status)
+cp["completed_runs"] = {}
+
+# Reset subtest/tier/experiment states
+# subtest: aggregated/failed → runs_in_progress
+# tier: complete/failed/etc → config_loaded
+# experiment: → tiers_running
+```
+
+**Cleanup deletes**: `judge/` dirs, `run_result.json`, `report.md`, `report.json` at run level,
+plus report files at subtest/tier/experiment levels.
+
 ### `--until` Semantics
 
 `--until <state>` has **inclusive** semantics: the action that transitions INTO `until_state` IS executed; no further transitions run; checkpoint is left at `until_state`.
@@ -536,14 +732,71 @@ checkpoint.mark_run_completed(tier_id=..., subtest_id=..., run_number=..., statu
 | `int > 0` | Reset epoch (Unix seconds) | Sleep until then, retry |
 | `0` | Rate-limited, time unknown | Sleep 5s, retry |
 
+### Pytest Fixture Patterns for Checkpoint/Resume Testing
+
+```python
+# tests/unit/e2e/test_resume.py — 6 test classes
+
+# Fixtures
+@pytest.fixture
+def experiment_config() -> ExperimentConfig: ...
+
+@pytest.fixture
+def tier_config() -> TierConfig: ...
+
+@pytest.fixture
+def checkpoint(tmp_path: Path) -> tuple[E2ECheckpoint, Path]:
+    """Create a checkpoint and its save path."""
+    checkpoint_path = tmp_path / "checkpoint.json"
+    checkpoint = E2ECheckpoint(
+        experiment_id="test-resume",
+        experiment_dir=str(tmp_path),
+        config_hash="test-hash",
+        completed_runs={},
+        started_at=datetime.now(UTC).isoformat(),
+        last_updated_at=datetime.now(UTC).isoformat(),
+        status="running",
+    )
+    save_checkpoint(checkpoint, checkpoint_path)
+    return checkpoint, checkpoint_path
+
+# Test Classes:
+# TestResumeAfterAgentCrash — 3 tests (skip completed, invalid triggers rerun, corrupted triggers rerun)
+# TestResumeAfterJudgeCrash — 3 tests (agent preserved, judge absent)
+# TestResumeAfterSignal — 2 tests (interrupted status, resume from interrupted)
+# TestResumePartialTier — 2 tests (skip completed subtests, resume partial)
+# TestResumeCompleteExperiment — 1 test (no-op on complete)
+# TestResumeConfigMismatch — 1 test (hash mismatch raises error)
+# TestCheckpointOperations — 3 tests
+```
+
+**Checkpoint data format**:
+
+```python
+# completed_runs
+{
+    "T0": {
+        "T0_00": {1: "passed", 2: "passed"},
+        "T0_01": {1: "failed"},
+    }
+}
+# Status values: "passed", "failed", "agent_complete"
+```
+
+**Required fields validation**:
+
+- Agent Result: `exit_code` (int), `token_stats` (dict), `cost_usd` (float)
+- Judge Result: `score` (float), `passed` (bool), `grade` (str), `reasoning` (str)
+
 ### Key File Index
 
 | File | Bugs covered |
 | ---- | ------------ |
 | `scripts/manage_experiment.py` | Retry flag removal, signal handlers |
 | `scylla/e2e/checkpoint.py` | Thread-safety race condition |
-| `scylla/e2e/runner.py` | Resume tier_config preload, `--until` reset target |
-| `scylla/e2e/subtest_executor.py` | `_restore_run_context()`, path resolution, rate-limit two-path detection |
+| `scylla/e2e/runner.py` | Resume tier_config preload, `--until` reset target, failed run_states reset |
+| `scylla/e2e/subtest_executor.py` | `_restore_run_context()`, path resolution, rate-limit two-path detection, `restore_run_context` call |
+| `scylla/e2e/stages.py` | `stage_execute_agent` lazy adapter_config, `restore_run_context()` function |
 | `scylla/e2e/state_machine.py` (×4) | `advance_to_completion()` off-by-one |
 | `scylla/e2e/tier_manager.py` | T5 `elif` fallthrough, partial failure graceful skip |
 | `scylla/e2e/llm_judge.py` | Haiku retry, code-block regex, `PYTHONPYCACHEPREFIX`, score field validation |
