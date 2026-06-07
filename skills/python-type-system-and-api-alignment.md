@@ -2,8 +2,8 @@
 name: python-type-system-and-api-alignment
 description: "Use when: (1) mypy with implicit_reexport=false raises 'does not explicitly export attribute X' after a module refactor or symbol move; (2) Pydantic base class hierarchy is incomplete — domain models inherit directly from BaseModel while siblings have dedicated *Base classes; (3) type aliases shadow explicit domain-specific names causing import ambiguity; (4) functions return bool redundantly when they raise on failure (POLA violation — return type should be None); (5) auditing or tightening broad except Exception clauses across Python files; (6) legacy model IDs in saved configs cause failures on experiment resume and need a Pydantic field_validator normalization chokepoint; (7) bulk-migrating @dataclass classes to Pydantic BaseModel; (8) enforcing frozen=True immutability consistency across sibling Pydantic base classes."
 category: architecture
-date: 2026-05-19
-version: "1.0.0"
+date: 2026-06-07
+version: "1.1.0"
 user-invocable: false
 history: python-type-system-and-api-alignment.history
 tags:
@@ -147,6 +147,11 @@ implicit_reexport = false
 ---
 
 ### Sub-workflow 3: Type Alias Consolidation
+
+**Note on scope**: This sub-workflow removes type aliases that *shadow* domain-specific names
+(`RunResult = DomainRunResult` — the generic alias hides which variant is really being used).
+For backward-compatible aliases created during a rename or move, see
+[Backward-Compatible Alias Patterns](#backward-compatible-alias-patterns) in Results & Parameters.
 
 #### Phase 1: Discovery
 
@@ -366,6 +371,59 @@ class RateLimitInfo(BaseModel):
         return self
 ```
 
+#### Pytest Fixture Migration
+
+Tests using positional dataclass arguments must update to keyword arguments when the class is
+migrated to Pydantic `BaseModel`. Additionally, fixtures that call `dataclasses.asdict()` to
+serialize instances must replace those calls with `.model_dump()`.
+
+---
+
+### Sub-workflow 9: Pydantic v2 `.to_dict()` → `.model_dump()` Audit
+
+Use when encountering `AttributeError: 'ModelName' object has no attribute 'to_dict'` after a
+Pydantic v1 → v2 migration.
+
+**Root cause**: Pydantic v2 removed `.dict()` and does not define `.to_dict()`. Any call to
+`.to_dict()` on a `BaseModel` instance crashes at runtime.
+
+**Audit workflow**:
+
+1. Find all `.to_dict()` calls:
+
+   ```bash
+   grep -r "\.to_dict()" src/
+   ```
+
+2. For each hit, check if the class inherits from `BaseModel`:
+
+   ```bash
+   grep -B 5 "class.*BaseModel" src/
+   ```
+
+3. Replace only Pydantic model calls; leave custom `.to_dict()` methods on dataclasses
+   untouched — those are valid custom serializers.
+
+**Fix pattern**:
+
+```python
+# Before (fails on Pydantic v2 BaseModel):
+result_data = {
+    "token_stats": result.token_stats.to_dict(),
+}
+
+# After:
+result_data = {
+    "token_stats": result.token_stats.model_dump(),
+}
+```
+
+**Key rules**:
+
+- Always use `.model_dump()` for Pydantic v2 `BaseModel` serialization.
+- Selective replacement only — custom `.to_dict()` on dataclasses remain valid.
+- Audit the whole codebase: one missed call causes a runtime crash.
+
 ---
 
 ## Failed Attempts
@@ -397,6 +455,74 @@ class RateLimitInfo(BaseModel):
    constants module + one Pydantic `field_validator`; don't scatter across call sites.
 5. **Bottom-up dependency order for alias removal**: domain modules → `__init__.py` → dependent
    modules → tests.
+
+### Backward-Compatible Alias Patterns
+
+Use these patterns when renaming or moving a type/function and you need to preserve existing
+import paths. This is distinct from shadowing aliases (Sub-workflow 3) which should be removed
+— these aliases exist to serve callers during a transition.
+
+**Type alias for renamed types:**
+
+```python
+# In the new location
+from scylla.metrics.statistics import Statistics
+
+# In the old location (backward compat)
+from scylla.metrics.statistics import Statistics
+AggregatedStats = Statistics  # Backward-compatible alias
+```
+
+**Function alias for moved functions:**
+
+```python
+from scylla.metrics.grading import assign_letter_grade
+assign_grade = assign_letter_grade  # Backward-compatible alias
+```
+
+**Cross-reference docstring for intentional variants:**
+
+```python
+class RunResult:
+    """Result for statistical aggregation.
+
+    This is a simplified result type used for aggregation.
+    For detailed execution results, see:
+    - executor/runner.py:RunResult (execution tracking)
+    - e2e/models.py:RunResult (E2E test results)
+    - reporting/result.py:RunResult (persistence)
+    """
+```
+
+### Standard Grading Thresholds
+
+```yaml
+grade_scale:
+  S: 1.00   # Amazing - exceptional
+  A: 0.80   # Excellent - production ready
+  B: 0.60   # Good - minor improvements
+  C: 0.40   # Acceptable - functional with issues
+  D: 0.20   # Marginal - significant issues
+  F: 0.00   # Failing
+```
+
+### Pricing Configuration Template
+
+```python
+class ModelPricing(BaseModel):
+    model_id: str
+    input_cost_per_million: float   # Always use per-million
+    output_cost_per_million: float
+    cached_cost_per_million: float = 0.0
+
+MODEL_PRICING: dict[str, ModelPricing] = {
+    "claude-sonnet-4-20250514": ModelPricing(
+        model_id="claude-sonnet-4-20250514",
+        input_cost_per_million=3.0,
+        output_cost_per_million=15.0,
+    ),
+}
+```
 
 ### Verification Commands
 

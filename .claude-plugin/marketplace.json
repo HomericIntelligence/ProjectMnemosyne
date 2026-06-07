@@ -18,7 +18,7 @@
     "tooling": 147,
     "training": 7
   },
-  "last_updated": "2026-06-07T14:43:48Z",
+  "last_updated": "2026-06-07T19:53:10Z",
   "plugins": [
     {
       "name": "agent-config-and-tier-architecture",
@@ -885,7 +885,7 @@
     {
       "name": "python-type-system-and-api-alignment",
       "description": "Use when: (1) mypy with implicit_reexport=false raises 'does not explicitly export attribute X' after a module refactor or symbol move; (2) Pydantic base class hierarchy is incomplete \u2014 domain models inherit directly from BaseModel while siblings have dedicated *Base classes; (3) type aliases shadow explicit domain-specific names causing import ambiguity; (4) functions return bool redundantly when they raise on failure (POLA violation \u2014 return type should be None); (5) auditing or tightening broad except Exception clauses across Python files; (6) legacy model IDs in saved configs cause failures on experiment resume and need a Pydantic field_validator normalization chokepoint; (7) bulk-migrating @dataclass classes to Pydantic BaseModel; (8) enforcing frozen=True immutability consistency across sibling Pydantic base classes.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "source": "./skills/python-type-system-and-api-alignment.md",
       "category": "architecture",
       "tags": [
