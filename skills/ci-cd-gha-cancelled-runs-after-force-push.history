@@ -1,0 +1,125 @@
+# ci-cd-gha-cancelled-runs-after-force-push -- History
+
+## v1.1.0 (2026-06-06)
+
+**Changed by:** ProjectHephaestus PR #1073 -- concurrency-supersession trigger added
+**Verification:** verified-ci (for the new supersession finding only; the original force-push finding remains verified-local)
+
+### What changed
+- Added a SECOND, distinct trigger for the same "cancelled runs read as failures" phenomenon: **GitHub Actions concurrency SUPERSESSION** (not force-push). Observed live on HomericIntelligence/ProjectHephaestus PR #1073.
+- Extended the `description` frontmatter to cover the supersession case: a rerun's jobs CANCELLED with the annotation `Canceling since a higher priority waiting request for required-Required Checks-<branch> exists`, `gh pr checks` summarizing "N fail" that are actually superseded/cancelled runs (not real failures), and concurrency-group supersession reading as failure.
+- Bumped `version` 1.0.0 -> 1.1.0 and `date` 2026-05-10 -> 2026-06-06.
+- Set frontmatter `verification: verified-ci` and explicitly stated in the Overview that the supersession trigger is verified-ci (2026-06-06) while the original force-push trigger remains verified-local (2026-05-10).
+- Added `history: ci-cd-gha-cancelled-runs-after-force-push.history` frontmatter field.
+- Added a "When to Use" bullet for the supersession case.
+- Added a new "Trigger 2: Concurrency Supersession (verified-ci)" section with the cancellation-reason grep string and the verify-against-latest-run recipe.
+- Added a Failed Attempts row: read `gh pr checks` "fail" as a real failure when it was a cancelled/superseded run.
+- Added a "Verified On" entry for ProjectHephaestus PR #1073.
+
+### Why
+The original v1.0.0 skill documented only the force-push trigger: post-rebase `git push --force-with-lease` causes GitHub Actions to CANCEL in-flight runs on the prior sha, and those CANCELLED entries clutter the PR status rollup looking like failures.
+
+This session (2026-06-06) hit the same surface symptom -- CANCELLED runs presenting as failures in the PR rollup -- but from a completely different cause: GitHub Actions **concurrency-group supersession**. After `gh run rerun <id> --failed` to clear a stale pr-policy failure, a higher-priority run for the same branch's Required Checks was queued; the in-flight rerun's jobs (unit-tests, integration-tests, pixi-check, shellcheck) were CANCELLED mid-execution with `Canceling since a higher priority waiting request for required-Required Checks-<branch> exists` / `The operation was canceled.` `gh pr checks` then summarized "4 fail" even though zero tests actually failed (the "Run unit tests" step was only ~4% through, last line PASSED, when cancelled; the actual latest run concluded success).
+
+Capturing this as the supersession sibling of the force-push trigger means the skill now covers both ways a CANCELLED run can masquerade as a failure, and gives the concrete grep string to distinguish them.
+
+### Previous version (v1.0.0) snapshot
+---
+name: ci-cd-gha-cancelled-runs-after-force-push
+description: "After git push --force-with-lease (e.g. post-rebase), GitHub Actions marks all in-flight runs on the prior sha as CANCELLED, and these CANCELLED entries appear in the PR's status-check rollup as failure indicators alongside the new sha's runs. PR looks broken even though the current tip's runs are healthy. Use when: (1) a PR shows 50+ failed checks but mergeStateStatus is BLOCKED with mergeable=MERGEABLE, (2) you need to distinguish real failures from rebase-orphaned cancelled runs, (3) deciding whether to manually relaunch or just wait."
+category: ci-cd
+date: 2026-05-10
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [github-actions, rebase, force-push, status-checks, mergeability, gh-cli]
+---
+
+# GHA Status Rollup After Force-Push: Distinguishing Real Failures from Cancelled-by-Rebase
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-10 |
+| **Objective** | After resolving conflicts on PR #5380 via rebase + `git push --force-with-lease`, the PR appeared to have 50+ failed checks. Diagnose whether these are real failures or stale entries from the prior sha. |
+| **Outcome** | All 50+ "failures" were CANCELLED runs from the rebased-out sha (`73691f415`). The current tip (`db8ee2a0f`) had zero `FAILURE` checks — only `success`, `queued`, and `in-progress`. PR was healthy; the GitHub UI's red indicator was misleading. |
+| **Verification** | verified-local |
+
+## When to Use
+
+- A PR's status-check page shows many red indicators after a recent rebase / force-push
+- `gh pr view <N> --json mergeStateStatus,mergeable` returns `BLOCKED` + `MERGEABLE` (not `DIRTY`)
+- You're tempted to "rerun failed jobs" but want to confirm there's anything actually failed first
+- You need to filter `gh pr view ... --json statusCheckRollup` to see only real `FAILURE` (excluding `CANCELLED`)
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Get the rollup, broken down by conclusion
+gh pr view <PR> --json statusCheckRollup --jq '
+  {
+    real_failures: [.statusCheckRollup[] | select(.conclusion == "FAILURE") | .name],
+    cancelled_count: ([.statusCheckRollup[] | select(.conclusion == "CANCELLED")] | length),
+    in_progress_count: ([.statusCheckRollup[] | select(.status != "COMPLETED" and (.conclusion // "") == "")] | length),
+    success_count: ([.statusCheckRollup[] | select(.conclusion == "SUCCESS")] | length)
+  }'
+
+# Tighter filter: only runs on the current PR tip sha
+TIP_SHA=$(gh pr view <PR> --json headRefOid --jq .headRefOid)
+gh run list --branch <branch> --limit 60 --json databaseId,name,conclusion,status,headSha \
+  | jq --arg sha "$TIP_SHA" '
+      [.[] | select(.headSha == $sha)]
+      | group_by(.conclusion // "queued")
+      | map({key: (.[0].conclusion // "queued"), count: length})
+    '
+```
+
+### Detailed Steps
+
+1. **Identify the current tip sha** of the PR with `gh pr view <PR> --json headRefOid`. Anything not on this sha is from a prior force-push and is irrelevant.
+2. **Filter the run list** to only entries on that sha. Counts of `success` / `queued` / `in_progress` / `failure` are the real story.
+3. **Distinguish "stuck queued" from "true bottleneck."** `gh run list ... --json createdAt` + current UTC time gives queue age. >30 min queued during heavy CI load = expected; >2 hr = stuck, file a runner-availability concern.
+4. **Decide action**:
+   - `failure` count == 0 + queued only → **wait**, do not rerun (per `feedback_no_ci_retries` in this org's memory).
+   - `failure` count > 0 → investigate the named jobs; rerun ONLY if reproducibly clean (gitleaks-flake-on-network class), otherwise root-cause the failure.
+   - Many CANCELLED on a sha that's no longer the tip → ignore; they're stale.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| 1 | Read the PR's UI showing "50+ failed checks" and assumed real test failures | Most of those entries had `conclusion: CANCELLED`, not `FAILURE`. They were from the previous sha that got force-pushed away. UI doesn't distinguish them visually from the current sha's entries. | The rollup mixes runs from ALL commits the PR has had, not just the tip. Filter by sha explicitly. |
+| 2 | `gh pr view <PR> --json statusCheckRollup --jq '.statusCheckRollup[] \| select(.conclusion != "SUCCESS")'` | Surfaces CANCELLED, FAILURE, AND in-progress runs as a single bucket — still misleading. | Filter by `conclusion == "FAILURE"` specifically; treat `CANCELLED` as a separate (mostly ignorable) category. |
+| 3 | Run `gh run rerun --failed <run_id>` on a workflow whose only failures were CANCELLED-by-rebase | The workflow was already in `queued` (the new sha had auto-triggered new runs). Rerun was a no-op or briefly contended with the auto-triggered run. | After force-push, GHA auto-schedules new workflow runs on the new sha. No manual rerun needed for the new sha. |
+
+## Results & Parameters
+
+```bash
+# Quick health check after a force-push
+PR=5380
+TIP=$(gh pr view $PR --json headRefOid --jq .headRefOid)
+gh pr view $PR --json statusCheckRollup,mergeable,mergeStateStatus --jq "{
+  mergeable, mergeState: .mergeStateStatus,
+  real_failures: [.statusCheckRollup[] | select(.conclusion == \"FAILURE\") | .name],
+  cancelled: [.statusCheckRollup[] | select(.conclusion == \"CANCELLED\")] | length
+}"
+# If real_failures: [] and mergeable: "MERGEABLE" -> PR is healthy, just wait.
+```
+
+Heuristic table:
+
+| Indicator | Meaning |
+|---|---|
+| `mergeable: MERGEABLE` + `mergeStateStatus: BLOCKED` + `real_failures: []` | Healthy, blocked only on in-progress / queued required checks |
+| `mergeable: CONFLICTING` + `mergeStateStatus: DIRTY` | Real conflict — rebase needed |
+| `mergeable: MERGEABLE` + `mergeStateStatus: BLOCKED` + `real_failures: [...]` | Real failures — investigate |
+| Many `CANCELLED` entries, all on the same non-tip sha | Stale from a force-push, ignore |
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectOdyssey | PR #5380 after rebase to resolve a conflict; appeared to have 50+ failures but all were CANCELLED from the prior sha | Distinguishing CANCELLED-by-rebase from real FAILURE saved a wasteful rerun cycle |
