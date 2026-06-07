@@ -601,7 +601,7 @@ def test_no_runtime_backpointer_to_implementer() -> None:
 | `implementer_phase_runner.py` deferred imports removed | 3 locations (lines ~843, ~1302, ~1576) |
 | Patchable symbols extracted to top-level | 9 symbols (is_plan_review_go, fetch_issue_info, invoke_claude_with_session, get_repo_slug, AGENT_ADVISE, AGENT_IMPLEMENTER, review_state, find_pr_for_issue, current_trunk_githash) |
 | `_impl_module` property removed | Yes |
-| Test patches retargeted | 6+ patches (from implementer.* to implementer_phase_runner.*) |
+| Test patches retargeted | 6+ patches (from implementer.*to implementer_phase_runner.*) |
 | Regression test added | test_implementer_no_cycle.py with AST guards |
 | All automation tests pass | Yes (verified-ci) |
 | CI gates pass | Yes |
