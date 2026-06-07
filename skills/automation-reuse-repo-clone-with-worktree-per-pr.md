@@ -128,9 +128,9 @@ that the gate decision depends on.
 - **Helpers (all idempotent):**
   - `ensure_repo_clone(repo, clone_dir)` — clone on first use; `fetch --prune origin` on reuse
     (checks `<repo>/.git` exists).
-  - `add_pr_worktree(repo_clone, work, branch, base)` — `fetch origin <branch>` + `fetch origin
-    <base>`, then `worktree add --force -B <branch> <work> origin/<branch>`; removes any stale
-    worktree at the path first.
+  - `add_pr_worktree(repo_clone, work, branch, base)` — runs `fetch origin <branch>` and
+    `fetch origin <base>`, then `worktree add --force -B <branch> <work> origin/<branch>`;
+    removes any stale worktree at the path first.
   - `remove_worktree(repo_clone, work)` — `worktree remove --force` in a `finally`; no-op if the
     path is absent.
 - **Testing (these PR-handling functions had NO direct tests before):** mock `_git` to record
