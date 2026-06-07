@@ -1,3 +1,35 @@
+## v1.1.0 (2026-06-05)
+
+**Changed by:** Issue #797 — Document run_command swallowed-exception contract
+
+**Verification:** verified-local (tests pass locally, PR awaiting CI)
+
+### What changed
+
+- Added new trigger #8 to "When to Use" section: documenting silent error-handling contracts in utility functions (POLA violations)
+- Added new subsection "Documenting Silent Error-Handling Contracts in Utility Functions" to Verified Workflow
+- Added 3 new Failed Attempts rows covering: (1) documenting only success return shape, (2) placing Note: after Returns:, (3) not verifying test coverage
+- Added copy-paste docstring template for utility functions with silent error-handling contracts
+- Updated frontmatter version from 1.0.0 to 1.1.0, date to 2026-06-05
+- Added tags: error-handling-contract, POLA, silent-error
+
+### Why
+
+Issue #797 identified that `run_command()` in `hephaestus/system/info.py` silently swallowed exceptions (TimeoutError, CalledProcessError, OSError) without documenting the contract. The return shape `(False, "")` on failure was implicit — callers couldn't tell if empty string meant stderr, no error, or an unhandled case. This violates POLA (Principle of Least Astonishment).
+
+Solution: docstring-first fix using an explicit `Note:` section (before `Args:`) documenting:
+1. Both success case `(True, stdout)` and failure cases `(False, "")`
+2. Which exceptions are swallowed and why
+3. Cross-references to helper functions that can avoid silent errors
+
+The pattern applies to any undocumented error-handling contract in utility functions, especially subprocess wrappers, file I/O helpers, and system utilities.
+
+### Previous version (v1.0.0) snapshot
+
+[See full v1.0.0 below in "Superseded from..." sections]
+
+---
+
 ## Superseded from backward-pass-catalog-module-authoring
 
 ---

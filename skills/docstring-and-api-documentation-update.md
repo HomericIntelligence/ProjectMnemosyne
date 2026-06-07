@@ -8,10 +8,12 @@ description: "Update, fix, and extend docstrings and API documentation in source
   \ doc (backward-pass-catalog.md, testing-strategy.md) needs a new module section,\
   \ formula, or gotcha subsection, (5) placeholder 'requires implementation' language\
   \ persists after tests are written, (6) module docstrings have orphaned lowercase\
-  \ continuation fragments, (7) a new dunder/trait method is undocumented."
+  \ continuation fragments, (7) a new dunder/trait method is undocumented, (8) a utility\
+  \ function has an undocumented error-handling contract (swallows exceptions silently,\
+  \ returns special error shapes on failure)."
 category: documentation
-date: 2026-05-19
-version: "1.0.0"
+date: 2026-06-05
+version: "1.1.0"
 user-invocable: false
 history: docstring-and-api-documentation-update.history
 tags:
@@ -24,6 +26,9 @@ tags:
   - re-export
   - float16
   - placeholder
+  - error-handling-contract
+  - POLA
+  - silent-error
 ---
 
 ## Overview
@@ -52,6 +57,10 @@ tags:
    (lines starting with `and`, `or`, etc. that do not form a grammatical continuation)
 7. A new trait-implementing dunder method (`__hash__`, `__eq__`, etc.) is absent from
    struct docstrings or the package `__init__` module listing
+8. A utility function (especially subprocess wrappers, file I/O helpers, system utilities)
+   has an undocumented error-handling contract: it silently swallows exceptions and returns
+   a special value (e.g., `(False, "")` on error, `(True, stdout)` on success) instead of raising,
+   violating the Principle of Least Astonishment (POLA)
 
 ## Verified Workflow
 
@@ -161,6 +170,63 @@ exceed the line-length limit if merged.
 4. Do **not** add dunder methods to the import list (they are trait implementations,
    not importable symbols).
 
+### Documenting Silent Error-Handling Contracts in Utility Functions
+
+Use this pattern when a utility function (subprocess wrapper, file I/O helper, system utility)
+silently swallows exceptions instead of raising, making its error contract implicit and
+violating POLA (Principle of Least Astonishment).
+
+**Symptom**: Function docstring shows success case but never documents what happens on error.
+Example: `run_command()` catches `TimeoutError`, `CalledProcessError`, and `OSError` but
+returns `(False, "")` instead of raising.
+
+**Fix**: Add an explicit `Note:` section in the docstring **before** the `Returns:` section,
+documenting:
+1. Both success case and failure cases as separate return shapes
+2. Which exceptions are swallowed and why (e.g., "to support scripts that require partial results")
+3. Cross-references to helper functions if applicable (e.g., `:func:\`get_command_path\``)
+
+**Pattern**:
+
+```python
+def run_command(cmd: str, timeout: int = 60) -> tuple[bool, str]:
+    """Run a command and return stdout if successful.
+
+    Note:
+        This function has a silent error-handling contract:
+        - On success (exit code 0): returns `(True, <stdout>)` with captured output
+        - On non-zero exit: returns `(False, "")` — empty string, NOT stderr
+        - On timeout: returns `(False, "")` — timeout treated same as non-zero exit
+        - On OSError (e.g., command not found): returns `(False, "")` — no exception raised
+
+        All exceptions (TimeoutError, CalledProcessError, OSError) are swallowed.
+        Use :func:`get_command_path` to verify command availability before calling
+        if early failure is preferred over silent `(False, "")` return.
+
+    Args:
+        cmd: Shell command to execute (must exist in PATH)
+        timeout: Execution timeout in seconds (default 60)
+
+    Returns:
+        Tuple `(success, output)`:
+        - `(True, stdout)` when exit code == 0
+        - `(False, "")` when exit code != 0, timeout, or OSError
+    """
+```
+
+**Key points**:
+- Place `Note:` section **immediately after** the docstring summary, **before** `Args:`
+- Explicitly document BOTH the success shape `(True, <stdout>)` AND all failure shapes `(False, "")`
+- Explain the semantic difference: which case gets stderr vs empty string vs timeout
+- If the function is a wrapper around an external tool, cross-reference utility helpers that
+  can avoid the silent error (e.g., `get_command_path()` to check existence first)
+- Use `:func:\`` cross-references for related functions in the same module
+- This pattern works for Python 3.10+ and Mojo docstrings
+
+**Verification**: After editing, check that existing test coverage confirms the documented
+behavior. Example: if docstring claims timeout returns `(False, "")`, ensure
+`test_run_command_timeout()` exists and asserts exactly that shape.
+
 ### Commit and PR Conventions
 
 ```bash
@@ -200,6 +266,9 @@ gh pr merge --auto --rebase <pr-number>
 | Using ` ```mojo ` for math derivation block | Typed the Kratzert formula as mojo code | Block looked odd; `text` is correct for mathematical formulas | Use ` ```text ` for mathematical formulas and pseudocode |
 | Using `just pre-commit-all` | Ran `just` command for pre-commit | `just` not in PATH on this system | Use `pixi run pre-commit run --all-files` instead |
 | Trying markdownlint-cli2 via `pixi run npx` | `pixi run npx markdownlint-cli2 ...` | `npx: command not found` in this environment | Rely on pre-commit hooks rather than running markdownlint manually |
+| Documenting only success return in Returns: | Wrote `Returns: (bool, str) tuple with stdout` without specifying both success and failure shapes | Callers unsure what `(False, "")` means — why empty string and not stderr? | Always document BOTH success case `(True, stdout)` AND all failure cases `(False, "")` in separate bullets within Returns: or Note: |
+| Placing Note: after Returns: section | Put error-handling contract in Note: at the end of docstring | Callers read Returns: first without seeing the critical exception-swallowing contract; POLA violation persists | Place Note: section **immediately after summary**, **before Args:** — makes silent error contract discoverable before callers see return types |
+| Assuming existing tests don't cover swallowed exceptions | Didn't verify test coverage for timeout / OSError paths | Could document a contract that tests don't actually exercise | Always read existing test file (e.g., `test_run_command.py`) and find TestRunCommand::test_timeout and TestRunCommand::test_failing_command to confirm contract is covered before finalizing docstring |
 
 ## Results & Parameters
 
@@ -309,6 +378,33 @@ Placeholder import tests in tests/shared/test_imports.mojo require implementatio
 
 # AFTER (accurate)
 Import tests in tests/shared/test_imports.mojo are implemented and passing.
+```
+
+**Utility function with silent error-handling contract** (Python/system utilities):
+
+```python
+def run_command(cmd: str, timeout: int = 60) -> tuple[bool, str]:
+    """Execute a shell command and return stdout if successful.
+
+    Note:
+        This function silently swallows all exceptions — it does not raise on error.
+        Instead, all error conditions return `(False, "")`:
+
+        - Exit code != 0: `(False, "")`  — use :func:`get_command_path` to check
+          command existence first if you prefer early failure
+        - Timeout exceeded: `(False, "")` — no exception raised
+        - Command not found (OSError): `(False, "")` — not raised, checked via return
+        - Any other subprocess error: `(False, "")` — errors suppressed
+
+    Args:
+        cmd: Shell command to execute (string, must exist in PATH)
+        timeout: Maximum execution time in seconds (default 60)
+
+    Returns:
+        Tuple `(success, output)`:
+        - `(True, stdout_str)` when command exits with code 0
+        - `(False, "")` when command exits non-zero, times out, or cannot be found
+    """
 ```
 
 ### Validation Commands
