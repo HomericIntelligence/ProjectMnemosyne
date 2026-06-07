@@ -2,8 +2,8 @@
 name: git-gpg-sign-email-mismatch-silent-unsigned-blocks-merge
 description: "Diagnose and fix silent GPG-signing failure modes that BLOCK PR merge under required_signatures / pr-policy 'every commit is signed' even with green CI. Covers: (a) commit.gpgsign=true plus author/committer email that does not match any UID on the GPG signing key producing commits GitHub reports verified=false reason=no_user (signs fine locally — %G?=G — but GitHub rejects); (b) GraphQL pullRequest.commits.signature.state lagging 10+ minutes behind reality so commits appear UNSIGNED in `gh pr view --json commits` while REST /commits/<sha> confirms verified=true; (c) sub-agent shells inheriting commit.gpgsign=true but silently failing to sign because gpg-agent was not pre-warmed (needs GPG_TTY + a priming gpg --batch call); (d) a GitHub +suffix noreply variant (e.g. user+bot@users.noreply.github.com) CANNOT be verified on a GitHub account so adding it as a key UID does NOT fix no_user — only {id}+{username}@users.noreply.github.com or a real verified email works; (e) bare `git commit -S` picking the wrong default signing key (%G?=E 'No public key') so pass `git -c user.signingkey=<subkey>`; (f) a commit that silently failed (pre-commit hook non-zero) leaves HEAD unchanged and `git log` shows the PREVIOUS commit's signature, masquerading as corruption. Use when: (1) PR shows mergeStateStatus BLOCKED with mergeable MERGEABLE and all CI green, (2) gh api .../commits returns verification.reason=no_user, (3) dispatching sub-agents that override user.email to a bot identity while keeping a personal GPG key, (4) auditing multi-repo sweeps for invisible signing failures, (5) `gh pr view --json commits` shows signature.state=null for newly-pushed commits, (6) sub-agent push produces unsigned commits despite global commit.gpgsign=true config, (7) global ~/.gitconfig sets a bot/automation email that hand-authored commits inherit and that fails verification, (8) building automated re-sign tooling that must validate the resign email against the signing key UIDs."
 category: ci-cd
-date: 2026-06-06
-version: "2.1.0"
+date: 2026-06-07
+version: "2.2.0"
 user-invocable: false
 verification: verified-ci
 history: git-gpg-sign-email-mismatch-silent-unsigned-blocks-merge.history
@@ -45,6 +45,7 @@ tags:
 - You are tempted to "fix" `no_user` by adding the bot email as a UID to the GPG key — STOP: a GitHub `+suffix` noreply variant cannot be verified on an account, so GitHub still returns `no_user` even after the UID is added (see the dedicated subsection below)
 - `git log --show-signature` shows a Good signature but the GitHub REST commit verification still says `verified=false reason=no_user` — `--show-signature` only checks cryptographic validity against your local keyring, NOT whether GitHub can attribute the email to a verified account
 - You are building automated re-sign tooling (fleet rebase, batch resign) that must NOT re-sign dozens of commits with an unverifiable identity — guard the resolved resign email against the signing key's UID emails first
+- Automation / fleet tooling rewrote a Dependabot or other-author PR and produced an UNSIGNED commit — a "bot" PR whose head commit shows YOUR local committer/author identity (and authored-time BEFORE committed-time) is an automation rewrite that stripped the bot's native web-flow signature; scope fleet discovery to `--author @me` so it never rewrites PRs it does not own, and re-sign the damaged PR in a worktree with a WARMED gpg-agent
 
 ## Verified Workflow
 
@@ -317,6 +318,8 @@ key-owner's canonical `{id}+{username}@users.noreply.github.com` address.
 | Attempt 10 | Tried to fix `no_user` by adding the bot email (`<user>+bot@users.noreply.github.com`) as a new UID on the GPG key and re-uploading | GitHub will not let a `+suffix` noreply variant be added/verified as an account email (only `{id}+{username}@users.noreply.github.com` and real verified emails qualify), so GitHub kept returning `no_user` even with the UID present on the key | You cannot patch `no_user` at the key layer for a `+suffix` noreply email. Fix it at the identity layer: set the committer email to the key's registered `{id}+{username}@users.noreply.github.com` (or a real verified email) and re-sign |
 | Attempt 11 | Re-signed with a bare `git commit -S` (no explicit `user.signingkey`) | GPG fell back to a foreign default secret key GitHub did not know; `%G?` came back `E` ("No public key" / cannot be checked) instead of `G` | Always pin the subkey: `git -c user.signingkey=<signing-subkey> commit -S`. Never rely on the default-key fallback when multiple secret keys exist |
 | Attempt 12 | Amended a commit, saw `git log --show-signature` still showing the OLD identity/signature, and concluded the amend corrupted the repo | The amend had silently aborted because a pre-commit hook exited non-zero; HEAD never moved, so `git log` was just showing the unchanged previous commit. Not corruption — the commit simply did not happen | Capture the `git commit` exit code AND compare `git rev-parse HEAD` before/after. If HEAD is unchanged or rc≠0, the commit failed (fix the hook); never diagnose signatures off a HEAD that did not advance |
+| Attempt 13 | Ran fleet re-sign automation whose `list_prs()` had NO author filter, so `rebase_and_resign()` (`git commit --amend --no-edit -S --reset-author` + force-push) rewrote EVERY open PR including Dependabot's | Rewriting a PR the current user did not author STRIPS GitHub's native web-flow signature and stamps the local identity. The Dependabot commit, previously `verified=true` (committer `web-flow`), came back UNSIGNED/`no_user` and `required_signatures` + pr-policy "every commit signed" BLOCKED it (confirmed against merged PRs #662/#365 which kept native signatures only because automation never touched them) | Automation that re-signs commits must NEVER rewrite PRs it does not own. Scope fleet discovery to the current user: add `--author @me` to the `gh pr list` argv (gh resolves `@me` server-side; same pattern as `loop_runner._gh_issue_numbers_for`). Bot and other-contributor PRs are then left untouched, preserving their native signatures |
+| Attempt 14 | Re-signed a damaged bot PR by running `git commit --amend -S` in a sub-shell, trusting `commit.gpgsign=true` to sign | The amend ran in a sub-shell with a COLD gpg-agent (GPG_TTY unset, no priming `gpg --batch` call), so `commit.gpgsign=true` was a no-op and the signature silently dropped — the commit landed with `verification.reason=unsigned`. Proof it was per-session not config: a sibling Dependabot PR rewritten in a session where signing worked came back `reason=valid` | Warm the gpg-agent before ANY amend: `export GPG_TTY=$(tty); echo warm \| gpg --batch --pinentry-mode loopback -u <KEY> --clearsign >/dev/null`, then `git rebase --exec 'git commit --amend --no-edit -S' origin/main`, force-push, and VERIFY via REST `gh api .../commits/<sha> --jq .commit.verification.reason` == `valid` (GraphQL `signature.state` lags ~10 min — trust REST) |
 
 ## Results & Parameters
 
@@ -337,6 +340,25 @@ PR not auto-merging?
       ├─ "unknown_key"  → key not registered as signing on GitHub; see SSH-signing skill
       └─ all "valid"    → not a signing problem; check missing required checks
 ```
+
+**Fleet re-sign scoping rule (`--author @me`):**
+
+Any automation that rebases/re-signs PRs in bulk MUST scope its PR discovery to the
+current user, or it will rewrite — and de-sign — PRs it does not own (Dependabot bumps,
+other contributors' branches). Filter the discovery query:
+
+```bash
+# In hephaestus/github/fleet_sync.list_prs (ProjectHephaestus, PR #1071):
+gh pr list --author @me --json number,headRefName,...   # gh resolves @me server-side
+# Same pattern as loop_runner._gh_issue_numbers_for.
+```
+
+Companion `pr-policy` carve-out (ProjectHephaestus `.github/workflows/_required.yml`):
+Check 1 (the `Closes #N` PR-body grep) is EXEMPTED for `dependabot[bot]` because
+auto-generated bot bodies structurally never carry `Closes #N`. Checks 2 (auto-merge
+armed) and 3 (every commit signed) STAY enforced for all authors. The PR-author login
+is passed into the step via `env:` (`github.event.pull_request.user.login`) and never
+interpolated into the `run:` script — workflow-injection safety.
 
 **One-shot fix script (parametric):**
 
@@ -438,3 +460,4 @@ git config --get user.email | xargs -I{} gpg --list-keys "$(git config --get use
 | ProjectKeystone | 2026-05-11 ecosystem-wide easy-issue sweep, PR #552 | Re-authored 7 commits with `--reset-author -S` rebase, byte-identical content diff confirmed (0 bytes), force-pushed; GitHub flipped all 7 commits from `verified: false reason: "no_user"` to `verified: true reason: "valid"`; `mergeStateStatus` flipped from `BLOCKED` to `CLEAN`; pre-armed auto-merge fired immediately |
 | ProjectArgus / ProjectScylla / ProjectAgamemnon | 2026-05-16 org-wide PR sweep — Argus #520, Scylla #1978, Agamemnon #382 | 31 commits across the three PRs showed `signature.state=null`/`UNSIGNED` via `gh pr view --json commits` (GraphQL) for 10+ minutes after push. REST `gh api repos/.../commits/<sha>` returned `verified=true reason=valid` for every commit immediately. Attempted `gh gpg-key add` returned HTTP 422 "subkey already exists" (key was already registered). Resolution: wait for GraphQL to catch up; no remediation needed. Lesson codified as Attempts 7 and 8 in this skill |
 | ProjectHephaestus | 2026-06-06, PRs #1021 / #1026 | Global `~/.gitconfig` `user.email` was a bot identity (`mvillmow+bot@users.noreply.github.com`) that hand-authored commits inherited; the GPG key `F0A2530669A31A2E` (signing subkey `7FD616C4744A8A7C`) was bound only to `4211002+mvillmow@users.noreply.github.com`. Commits showed `%G?`=`G` locally but GitHub returned `verified=false reason=no_user` and pr-policy "every commit is signed" FAILED at merge. Discovered the `+bot` noreply variant cannot be added as a verified GitHub email, so patching the key UID was a dead end (Attempt 10). Fixed by `git config user.email 4211002+mvillmow@users.noreply.github.com` + `git commit --amend --reset-author -S`; `gh api .../commits/<sha> --jq .commit.verification` then returned `{verified:true, reason:"valid"}` and pr-policy passed. Added a defensive guard in `fleet_sync.get_resign_email()` (PR #1026) validating the resign email against the key UID emails, with `FLEET_SKIP_EMAIL_KEY_CHECK=1` bypass. Also hit Attempts 11 (bare `git commit -S` picked a foreign key, `%G?`=`E`) and 12 (silent commit abort from a non-zero pre-commit hook left HEAD unchanged, masquerading as corruption) |
+| ProjectHephaestus | 2026-06-07, PR #1071 (issue #1070) | Fleet automation `hephaestus/github/fleet_sync.py` `list_prs()` listed EVERY open PR with no author filter, and `rebase_and_resign()` (`git commit --amend --no-edit -S --reset-author` + force-push) rewrote a Dependabot bump — STRIPPING GitHub's native web-flow signature and stamping the local identity (committer `Micah Villmow` / author `Claude Haiku 4.5`, authored-time BEFORE committed-time — the automation-rewrite tell). The amend ran in a sub-shell with a cold gpg-agent so the commit landed `verification.reason=unsigned` (a sibling Dependabot PR rewritten in a session where signing worked came back `reason=valid` — proving per-session, not config). Fixed by scoping discovery with `--author @me` so fleet automation never touches PRs it does not own (Attempt 13), warming gpg-agent before any re-sign amend (Attempt 14), and exempting `dependabot[bot]` from pr-policy Check 1 (`Closes #N` grep) while keeping Checks 2/3 enforced. Verified by REST `gh api .../commits/<sha> --jq .commit.verification.reason` == `valid` after re-sign; PR #1071 merged to ProjectHephaestus main |

@@ -1,5 +1,101 @@
 # git-gpg-sign-email-mismatch-silent-unsigned-blocks-merge — History
 
+## v2.2.0 (2026-06-07)
+
+**Changed by:** ProjectHephaestus fleet_sync author-scope fix (PR #1071, issue #1070)
+**Verification:** verified-ci
+
+### What changed
+
+- Added a new "When to Use" trigger for the case where automation / fleet tooling
+  rewrote a Dependabot or other-author PR and produced an UNSIGNED commit.
+- Added Failed Attempts 13 and 14:
+  - 13: `fleet_sync.list_prs()` had no author filter, so `rebase_and_resign()`
+    rewrote EVERY open PR including Dependabot's, stripping GitHub's native web-flow
+    signature → unsigned/blocked. FIX: scope discovery with `--author @me`.
+  - 14: the amend ran in a sub-shell with a cold gpg-agent → `commit.gpgsign=true`
+    but the signature silently dropped (`reason=unsigned`). FIX: warm the gpg-agent
+    (set `GPG_TTY` + a priming `gpg --batch` call) before any amend, then verify via
+    the REST commit-verification endpoint.
+- Added the `--author @me` fleet-scoping rule and the `pr-policy` Dependabot
+  `Closes #N` carve-out note (Check 1 exempted for `dependabot[bot]`; Checks 2 and 3
+  stay enforced; PR-author login passed via `env:`, never interpolated into the run
+  script) to Results & Parameters.
+- Added 2026-06-07 ProjectHephaestus PR #1071 entry to Verified On.
+- Bumped to v2.2.0.
+
+### Why
+
+ProjectHephaestus fleet automation (`hephaestus/github/fleet_sync.py`) `list_prs()`
+listed every open PR with NO author filter, and `rebase_and_resign()` ran
+`git commit --amend --no-edit -S --reset-author` then force-pushed each. Run against a
+PR the current user did NOT author — most often a Dependabot bump — this STRIPPED
+GitHub's native web-flow signature and stamped the local identity. When the amend ran
+in a sub-shell where gpg-agent was not warmed (GPG_TTY unset, no priming
+`gpg --batch` call), the commit silently landed UNSIGNED
+(`verification.reason=unsigned`), which `required_signatures` + the `pr-policy`
+"every commit signed" check then blocked.
+
+Diagnostic tells: a "Dependabot" PR whose head commit has committer `Micah Villmow` /
+author `Claude Haiku 4.5` (the local identity) with authored-time BEFORE committed-time
+is an automation rewrite, not a native bot commit. Native Dependabot commits keep
+committer `web-flow` / `noreply@github.com` and verify fine UNTIL automation rewrites
+them (confirmed against merged PRs #662/#365). Proof it is per-session not config: a
+sibling Dependabot PR rewritten in a session where signing worked came back
+`reason=valid`.
+
+THE GENERAL RULE: automation that re-signs commits must NEVER rewrite PRs it does not
+own — filter fleet discovery to `--author @me` (gh resolves it server-side; same pattern
+as `loop_runner._gh_issue_numbers_for`). Bot and other-contributor PRs are then left
+untouched, preserving their native signatures. Companion change: `pr-policy` Check 1
+(the `Closes #N` body grep in `.github/workflows/_required.yml`) was exempted for
+`dependabot[bot]` (auto-generated bodies structurally never carry `Closes #N`); Checks 2
+(auto-merge) and 3 (signing) stay enforced, and the PR-author login is passed via `env:`
+(`github.event.pull_request.user.login`) rather than interpolated into the run script
+(workflow-injection safety).
+
+To unblock an ALREADY-rewritten/unsigned bot PR: re-sign in a worktree with a WARMED
+gpg-agent (`export GPG_TTY=$(tty); echo warm | gpg --batch --pinentry-mode loopback -u
+<KEY> --clearsign >/dev/null`), then `git rebase --exec 'git commit --amend --no-edit
+-S' origin/main`, force-push, and VERIFY via REST `gh api .../commits/<sha> --jq
+.commit.verification.reason` == `valid` (GraphQL `signature.state` lags ~10 min — trust
+REST).
+
+This shares the same search surface as v2.1.0 (PR-merge blocked by signing) but adds a
+distinct root cause (cross-author automation rewrite) and fix (`--author @me` scoping +
+warm-agent re-sign), hence a minor bump.
+
+### Previous version (v2.1.0) snapshot
+
+```markdown
+---
+name: git-gpg-sign-email-mismatch-silent-unsigned-blocks-merge
+description: "Diagnose and fix silent GPG-signing failure modes that BLOCK PR merge under required_signatures / pr-policy 'every commit is signed' even with green CI. Covers: (a) commit.gpgsign=true plus author/committer email that does not match any UID on the GPG signing key producing commits GitHub reports verified=false reason=no_user (signs fine locally — %G?=G — but GitHub rejects); (b) GraphQL pullRequest.commits.signature.state lagging 10+ minutes behind reality so commits appear UNSIGNED in `gh pr view --json commits` while REST /commits/<sha> confirms verified=true; (c) sub-agent shells inheriting commit.gpgsign=true but silently failing to sign because gpg-agent was not pre-warmed (needs GPG_TTY + a priming gpg --batch call); (d) a GitHub +suffix noreply variant (e.g. user+bot@users.noreply.github.com) CANNOT be verified on a GitHub account so adding it as a key UID does NOT fix no_user — only {id}+{username}@users.noreply.github.com or a real verified email works; (e) bare `git commit -S` picking the wrong default signing key (%G?=E 'No public key') so pass `git -c user.signingkey=<subkey>`; (f) a commit that silently failed (pre-commit hook non-zero) leaves HEAD unchanged and `git log` shows the PREVIOUS commit's signature, masquerading as corruption. Use when: (1) PR shows mergeStateStatus BLOCKED with mergeable MERGEABLE and all CI green, (2) gh api .../commits returns verification.reason=no_user, (3) dispatching sub-agents that override user.email to a bot identity while keeping a personal GPG key, (4) auditing multi-repo sweeps for invisible signing failures, (5) `gh pr view --json commits` shows signature.state=null for newly-pushed commits, (6) sub-agent push produces unsigned commits despite global commit.gpgsign=true config, (7) global ~/.gitconfig sets a bot/automation email that hand-authored commits inherit and that fails verification, (8) building automated re-sign tooling that must validate the resign email against the signing key UIDs."
+category: ci-cd
+date: 2026-06-06
+version: "2.1.0"
+user-invocable: false
+verification: verified-ci
+history: git-gpg-sign-email-mismatch-silent-unsigned-blocks-merge.history
+tags:
+  - git
+  - gpg
+  - commit-signing
+  - required-signatures
+  - branch-protection
+  - pull-requests
+  - agent-dispatch
+  - silent-failure
+  - graphql-lag
+  - gpg-agent
+---
+
+(Full v2.1.0 body preserved in git history at commit prior to v2.2.0; the v2.1.0 .md
+added failure modes (d)-(f), Failed Attempts 9-12, the +suffix-noreply and
+explicit-signing-key subsections, and the defensive resign-email guard. See the
+v2.1.0 history entry below and `git show` of the pre-v2.2.0 commit for the verbatim text.)
+```
+
 ## v2.1.0 (2026-06-06)
 
 **Changed by:** ProjectHephaestus PRs #1021 / #1026 — pr-policy "every commit is signed" failed at merge despite locally-good signatures
