@@ -1,5 +1,24 @@
 # batch-pr-rebase-workflow — Version History
 
+## v2.20.0 (2026-06-07)
+
+**Changed by:** Shared-infra sync rebase of PR #2085 (skill/batch-rebase-shared-infra-sync)
+**Verification:** verified-local
+
+### What changed
+
+- Bumped version 2.19.0 → 2.20.0 (MINOR — appended new triggers + a workflow subsection, no behavioral change to existing guidance)
+- Rebased PR #2085 onto main (which had already advanced to v2.19.0 with triggers up to (65)); re-applied the PR's unique content on top.
+- Appended description items (66)-(69) (the PR's original (57)-(60), renumbered to follow main's sequence):
+  - (66) N sibling PRs auto-generated from one backlog all carry their OWN earlier commit touching a shared-infra file (script/config/workflow) that landed on main — every plain rebase conflicts on that file; overwrite with main's exact version after rebasing rather than relying on conflict-resolution
+  - (67) `git checkout --theirs <shared-file>` during a rebase produces a hybrid/stale tree — "take theirs" resolves to main-at-that-replay-step, not main's final HEAD; a PR's own later commit can re-introduce a stale assertion
+  - (68) a post-rebase CI check (e.g. branch-protection-drift) reporting `conclusion=failure` may be a REAL failure on a stale synced file — verify the file at the exact sha before assuming a transient/lagging read
+  - (69) a red non-required check (markdownlint, docker-build) can look like the merge blocker but isn't — compute the REAL required set as the UNION of the ruleset's required_status_checks AND the classic protection's contexts
+- Added workflow subsection **Phase 3.8: Syncing a Shared-Infra File Across Sibling PRs (the reliable shortcut)**.
+- Added 4 Failed Attempts rows covering the shared-infra sync failure modes.
+- Added the **Two-layer required-checks reframe** bullet under Branch Protection Gotchas.
+
+
 ## v2.19.0 (2026-06-02)
 
 **Changed by:** HomericIntelligence multi-repo ecosystem PR-drain session (Agamemnon, ProjectOdyssey, ProjectHephaestus, ProjectHermes, AchaeanFleet)
