@@ -18,7 +18,7 @@
     "tooling": 147,
     "training": 7
   },
-  "last_updated": "2026-06-07T14:43:48Z",
+  "last_updated": "2026-06-07T19:52:21Z",
   "plugins": [
     {
       "name": "agent-config-and-tier-architecture",
@@ -4450,7 +4450,7 @@
     {
       "name": "checkpoint-state-machine-test-fixtures",
       "description": "Use when: (1) writing integration or unit tests for ProjectScylla checkpoint-based state machines (StateMachine / SubtestStateMachine / TierStateMachine / ExperimentStateMachine), (2) debugging tests where checkpoint states are unexpectedly reset to pending, (3) adding orphan/integrity detectors to resume pipelines, (4) verifying additive/non-destructive resume behavior across sequential invocations, (5) testing zombie detection with real disk I/O, (6) verifying DataLoader reset behavior in Mojo training/validation loops, or (7) extracting shared pytest fixtures to eliminate per-test boilerplate.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "source": "./skills/checkpoint-state-machine-test-fixtures.md",
       "category": "testing",
       "tags": [

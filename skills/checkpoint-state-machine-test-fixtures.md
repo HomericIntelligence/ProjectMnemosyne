@@ -2,8 +2,8 @@
 name: checkpoint-state-machine-test-fixtures
 description: "Use when: (1) writing integration or unit tests for ProjectScylla checkpoint-based state machines (StateMachine / SubtestStateMachine / TierStateMachine / ExperimentStateMachine), (2) debugging tests where checkpoint states are unexpectedly reset to pending, (3) adding orphan/integrity detectors to resume pipelines, (4) verifying additive/non-destructive resume behavior across sequential invocations, (5) testing zombie detection with real disk I/O, (6) verifying DataLoader reset behavior in Mojo training/validation loops, or (7) extracting shared pytest fixtures to eliminate per-test boilerplate."
 category: testing
-date: '2026-05-19'
-version: "1.0.0"
+date: '2026-06-07'
+version: "1.1.0"
 user-invocable: false
 history: checkpoint-state-machine-test-fixtures.history
 tags:
@@ -138,7 +138,54 @@ Tests at the state machine level (not `E2ERunner.run()`) — no real API calls, 
 from scylla.e2e.state_machine import StateMachine
 from scylla.e2e.subtest_state_machine import SubtestStateMachine, UntilHaltError
 from scylla.e2e.tier_state_machine import TierStateMachine
+```
 
+**TierState sequence and terminal states**:
+
+```python
+_TIER_STATE_SEQUENCE = [
+    TierState.PENDING,
+    TierState.CONFIG_LOADED,
+    TierState.SUBTESTS_RUNNING,
+    TierState.SUBTESTS_COMPLETE,
+    TierState.BEST_SELECTED,
+    TierState.REPORTS_GENERATED,
+    TierState.COMPLETE,
+]
+_TIER_TERMINAL_STATES = frozenset([TierState.COMPLETE, TierState.FAILED])
+```
+
+**`_simulate_tier_subtests_at_state` — simulate runs halted at a specific state (mimics `--until` flag)**:
+
+```python
+def _simulate_tier_subtests_at_state(cp, cp_path, tier_id, subtest_ids, run_count, until_run_state):
+    for subtest_id in subtest_ids:
+        ssm = SubtestStateMachine(checkpoint=cp, checkpoint_path=cp_path)
+
+        def _pending_runs() -> None:
+            run_sm = StateMachine(checkpoint=cp, checkpoint_path=cp_path)
+            for run_num in range(1, run_count + 1):
+                run_sm.advance_to_completion(
+                    tier_id, subtest_id, run_num,
+                    make_noop_run_actions(),
+                    until_state=until_run_state,
+                )
+            raise UntilHaltError("all runs reached until_state")
+
+        subtest_actions: dict[SubtestState, Callable[[], None]] = cast(
+            dict[SubtestState, Callable[[], None]],
+            {
+                SubtestState.PENDING: _pending_runs,
+                SubtestState.RUNS_IN_PROGRESS: MagicMock(),
+                SubtestState.RUNS_COMPLETE: MagicMock(),
+            },
+        )
+        ssm.advance_to_completion(tier_id, subtest_id, subtest_actions)
+```
+
+**`_simulate_tier_to_complete` and `make_noop_tier_actions`**:
+
+```python
 def _simulate_tier_to_complete(cp, cp_path, tier_id, subtest_ids, run_count):
     """Run all subtests to WORKTREE_CLEANED, then advance TierStateMachine to COMPLETE."""
     _simulate_tier_subtests_full(cp, cp_path, tier_id, subtest_ids, run_count)
@@ -170,6 +217,28 @@ _simulate_tier_subtests_at_state(cp, cp_path, "T1", ["00"], 3, RunState.REPLAY_G
 cp_after = load_checkpoint(cp_path)
 assert cp_after.tier_states.get("T0") == TierState.COMPLETE.value  # preserved
 assert "T1" not in cp_after.tier_states                            # no phantom entry
+```
+
+**Monotonic State Advancement Check** — verify runs only move forward across a resume:
+
+```python
+def _run_state_index(state_str: str) -> int:
+    from scylla.e2e.state_machine import _RUN_STATE_SEQUENCE
+    for idx, state in enumerate(_RUN_STATE_SEQUENCE):
+        if state.value == state_str:
+            return idx
+    return -1  # Terminal states (failed, rate_limited)
+
+# Verify runs only move forward
+for tier_id, subtests in previous_cp.run_states.items():
+    for subtest_id, runs in subtests.items():
+        for run_key, old_state_str in runs.items():
+            new_state_str = cp.run_states.get(tier_id, {}).get(subtest_id, {}).get(run_key, old_state_str)
+            old_idx = _run_state_index(old_state_str)
+            new_idx = _run_state_index(new_state_str)
+            if old_idx == -1 and new_idx == -1:
+                continue  # Both terminal: OK
+            assert new_idx >= old_idx  # Monotonic
 ```
 
 ### 6. Config Hash Stability
@@ -336,6 +405,24 @@ _FRESH_HEARTBEAT_AGE = 10        # 10 seconds — well within 120s default timeo
 _RUNS = 3
 _EXPERIMENT_ID = "additive-resume-test"
 _FIXTURE_DIR = "<project-root>/tests/fixtures/tests/test-001"
+```
+
+### Minimal ExperimentConfig for Testing
+
+```python
+config = ExperimentConfig(
+    experiment_id="additive-resume-test",
+    task_repo="https://github.com/mvillmow/Hello-World",
+    task_commit="7fd1a60b01f91b314f59955a4e4d4e80d8edf11d",
+    task_prompt_file=Path("tests/fixtures/tests/test-001/prompt.md"),
+    language="python",
+    models=["claude-haiku-4-5-20251001"],
+    judge_models=["claude-haiku-4-5-20251001"],
+    runs_per_subtest=3,
+    tiers_to_run=[TierID("T0")],
+    max_subtests=1,
+    until_run_state=RunState.REPLAY_GENERATED,
+)
 ```
 
 ### `set_run_state` Auto-Sync Behavior
