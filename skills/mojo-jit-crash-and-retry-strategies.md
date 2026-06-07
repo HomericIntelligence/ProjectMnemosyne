@@ -2,8 +2,8 @@
 name: mojo-jit-crash-and-retry-strategies
 description: "HISTORICAL REFERENCE — most patterns OBSOLETE as of Mojo 1.0.0b2.dev2026052506 (modular/modular#6413 fixed upstream). Do NOT use the retry-wrapper, continue-on-error matrix, gdb-coredump-capture, or 4-hypothesis disproof patterns in NEW code. Use when: (1) reading historical PR/issue context that references these patterns, (2) needing the runtime-crash-bisection minimal-reproducer methodology (still useful for future Mojo bugs), (3) understanding the closed-source boundary for libKGEN/libAsyncRT/libMSupport debugging, (4) needing the AVX-512 wrong-ISA forensics for analogous CPU-feature bugs. NOT a guide for treating Mojo crashes as flakes — that posture was wrong and is now removed."
 category: ci-cd
-date: 2026-05-26
-version: "2.0.0"
+date: 2026-06-07
+version: "2.1.0"
 user-invocable: false
 verification: verified-ci
 history: mojo-jit-crash-and-retry-strategies.history
@@ -402,3 +402,248 @@ For stdlib bugs: clone `modular/modular`, edit `mojo/stdlib/`, build local packa
 | ProjectOdyssey | PR #3316 (issue #3074) — serialization CI crash | mojo-serialization-ci-crash |
 | ProjectOdyssey | PR #4776 / issue #3704 — runtime output pattern audit | mojo-runtime-output-pattern-audit |
 | ProjectOdyssey | modular/modular#6187 — heap corruption minimal reproducer | mojo-runtime-crash-bisection |
+
+## Restored Source-Code Bug Knowledge (Current — Not Historical)
+
+> **Note**: The OBSOLETE banner above applies specifically to the compiler-level AVX-512
+> mis-emission bug fixed in modular/modular#6413. The patterns in this section are
+> **source-code bugs** that are independent of #6413 and remain current guidance.
+> Absorbed from `mojo-jit-crash-retry` v3.9.0 (2026-04-14).
+
+### CRITICAL: Crashes ARE Real Bugs — Verify Root Causes First
+
+Before assuming JIT flakiness, look for these three verified non-compiler root causes.
+All three were found in ProjectOdyssey PR #5197–5204. Each manifested as non-deterministic
+`execution crashed` output indistinguishable from JIT flakiness on the surface.
+The non-determinism was explained by timing/allocation-layout variation, not compiler
+non-determinism. **Failed attempt: "Assumed crash = JIT flake — closed/retried. Reality:
+16 files had 3 concrete source bugs."**
+
+- **(a) Double-free from synthesized `__copyinit__`**: A struct marked `Copyable` with
+  `UnsafePointer` fields but no explicit `__copyinit__`, stored in a `List[T]` that
+  reallocates. Mojo synthesizes a shallow `__copyinit__`, duplicating the pointer. Both
+  copies call `__del__` → double-free.
+- **(b) Broken `fetch_add` mutex**: `SpinLock.lock()` implemented via `fetch_add` to
+  "claim" the lock. `fetch_add` returns the previous value and completes atomically, but
+  two threads can both see `0` and both proceed into the critical section because the add
+  and the conditional branch are not atomic together. A correct spinlock requires
+  compare-exchange (CAS / `compare_exchange_weak`) to atomically check-and-set.
+- **(c) Bitcast UAF from alias surviving ASAP destruction**: Writing to tensor data via
+  `tensor._data.bitcast[T]()[i] = val`. The `bitcast` creates a pointer alias. Mojo's ASAP
+  (As Soon As Possible) destruction may destroy `tensor` before all writes through the
+  bitcast pointer complete, leaving a dangling write.
+
+### ADR-009 Test File Splitting and fn main Deprecation
+
+Heap corruption threshold: **15 cumulative test function executions** within a single JIT
+process session. CI-only crashes that pass locally are characteristic because CI runs all
+integration tests sequentially.
+
+**ADR-009 splitting rules:**
+
+| Rule | Detail |
+| --- | --- |
+| Max functions per file | 10 |
+| Part file naming | `test_<base>_part1.mojo`, `test_<base>_part2.mojo`, ... |
+| Import block | Copy FULL import block verbatim to every part file |
+| main entrypoint | MUST use `def main() raises:` (not `fn main()`) for Mojo 0.26.3+ |
+| CI glob | Update to `test_*_part*.mojo` |
+
+**CRITICAL — `fn main` deprecation (Mojo 0.26.3+):** After splitting, every new part file
+must have `def main() raises:` not `fn main() raises:`. Mojo 0.26.3 deprecated `fn main()`
+and produces a parse error in CI.
+
+```bash
+# Fix: global replace in each new part file
+for f in $(find . -name "test_*_part*.mojo"); do
+  sed -i 's/fn main() raises:/def main() raises:/g' "$f"
+done
+```
+
+**Failed attempt:** `fn main() raises:` in split files — all new part files written with
+`fn main()`, Mojo 0.26.3 CI failed with parse error on every new file.
+
+### @always_inline Safety Rules
+
+Adding `@always_inline` to large branching methods DRAMATICALLY WORSENS Mojo JIT crashes.
+
+| Method Characteristics | @always_inline Safe? |
+| --- | --- |
+| Small body (1-3 lines), compile-time params | Yes |
+| Large body (10+ lines), runtime branching | NO |
+| Called in tight loops (100+ times) | Risky — test thoroughly |
+| Has 5+ if/elif branches | NO |
+
+**Impact (ProjectOdyssey PR #5099):** All six test groups (Models, Autograd, Core Utilities,
+Core Gradient, Core Activations, Gradient Checking) failed or worsened after `@always_inline`
+was applied to a function with a 15+ line body and 5+ runtime branches.
+
+If CI crashes get worse after a change, check git diff for `@always_inline` additions.
+
+### ASAP Destruction + Bitcast UAF in Perturbation Loops
+
+**Before-test-output crash** = JIT volume overflow (Crash 3 above).
+**After-test-output crash** = ASAP destruction UAF (this section).
+
+Mojo's ASAP destruction may destroy a temporary tensor returned by `forward_fn(x)` before
+all element reads in the loop body complete. Each `_get_float64(j)` call reads through a
+dangling pointer → heap corruption.
+
+**Fix: acquire `data_ptr[dtype]()` before the loop to keep source tensor alive:**
+
+```mojo
+# BEFORE (DANGEROUS — ASAP destruction UAF):
+var output_plus = forward_fn(input_copy_plus)
+var output_minus = forward_fn(input_copy_minus)
+for j in range(output_plus.numel()):
+    var diff = output_plus._get_float64(j) - output_minus._get_float64(j)
+    ...
+
+# AFTER (SAFE — data_ptr derivation keeps tensors alive):
+var output_plus = forward_fn(input_copy_plus)
+var output_minus = forward_fn(input_copy_minus)
+# Acquire typed pointers BEFORE the loop — deriving data_ptr keeps tensor alive
+var out_plus_ptr = output_plus.data_ptr[dtype]()
+var out_minus_ptr = output_minus.data_ptr[dtype]()
+for j in range(output_plus.numel()):
+    var diff = Float64(out_plus_ptr[j]) - Float64(out_minus_ptr[j])
+    ...
+```
+
+### Bitcast UAF Swarm Partition Workflow
+
+When grep returns 50+ files with `tensor._data.bitcast[T]()[i] = val` UAF write patterns,
+use a 5-agent Myrmidon swarm with parallel worktrees:
+
+```bash
+# Create isolated worktree for each batch (5 agents in parallel)
+git worktree add worktrees/fix-bitcast-batch-N -b fix/bitcast-writes-batch-N
+
+# Apply replacements via Python regex script (scripts/fix_bitcast_writes.py)
+# Replace: tensor._data.bitcast[T]()[i] = val
+# With:    tensor.set(i, T(val))
+python3 scripts/fix_bitcast_writes.py --files batch_N_files.txt
+
+# Commit and push
+git commit -m "fix(tensor): replace bitcast writes with safe set() in batch N"
+gh pr create --title "fix(tensor): eliminate bitcast UAF writes batch N/5" ...
+gh pr merge --auto --rebase
+```
+
+**Critical constraint:** assign non-overlapping file batches to prevent merge conflicts.
+PRs can merge in any order — non-overlapping files prevent rebase conflicts.
+
+**Python regex replacement script:**
+
+```python
+#!/usr/bin/env python3
+"""Replace tensor._data.bitcast[T]()[i] = val with tensor.set(i, T(val))."""
+import re
+import sys
+from pathlib import Path
+
+BITCAST_INDEXED = re.compile(
+    r'(\w+)\._data\.bitcast\[(\w+)\]\(\)\[([^\]]+)\]\s*=\s*(.+)'
+)
+
+def fix_line(line: str) -> str:
+    m = BITCAST_INDEXED.match(line.strip())
+    if not m:
+        return line
+    tensor, typ, idx, rhs = m.groups()
+    rhs = rhs.rstrip()
+    if rhs.startswith(f"{typ}(") and rhs.endswith(")"):
+        wrapped = rhs
+    else:
+        wrapped = f"{typ}({rhs})"
+    indent = len(line) - len(line.lstrip())
+    return " " * indent + f"{tensor}.set({idx}, {wrapped})\n"
+
+for path in sys.argv[1:]:
+    p = Path(path)
+    lines = p.read_text().splitlines(keepends=True)
+    new_lines = [fix_line(l) for l in lines]
+    p.write_text("".join(new_lines))
+    print(f"Fixed: {path}")
+```
+
+### When to Remove Retry Logic
+
+Remove retry wrappers from CI test runners when ANY of the following are true:
+
+1. **Crashes are being investigated** — retry masks reproduction rate and makes root cause
+   investigation harder. Fail fast, then diagnose.
+2. **A retry script exists** (`scripts/test-with-retry.sh` or equivalent) — these are
+   workarounds, not solutions. Delete them.
+3. **An ADR exists that justifies retry** (e.g. ADR-014) — mark it SUPERSEDED and remove
+   the machinery it justified.
+4. **You want to file an upstream issue** — you cannot confidently file a bug report for a
+   crash that only manifests after a retry. Make it fail deterministically first.
+
+**Note on `SKIP=mojo-format`:** When `mblack` has a broken `click.core` dependency
+(ImportError at pre-commit time), use `SKIP=mojo-format` to skip only that hook — not
+`--no-verify`. Document the skip reason in the commit message. Never use `--no-verify`.
+
+### Mojo Language Semantics Reference
+
+> Verified from docs.modular.com/mojo/manual — use when diagnosing UAF or double-free.
+
+| Fact | Details |
+| --- | --- |
+| **Default argument convention is `read`** | `fn foo(x: AnyTensor)` does NOT copy `x`. The default is an immutable borrow (reference). Only `owned` convention causes a copy/move. |
+| **`deinit` in `__moveinit__` suppresses destructor on source** | `fn __moveinit__(out self, deinit existing: Self)` — Mojo does NOT call `__del__` on `existing` after the function. Source is consumed, not destroyed separately. |
+| **ASAP destruction** | Mojo destroys values as soon as their last use is seen — potentially before end-of-scope. Pointer aliases (bitcast, raw UnsafePointer) may dangle if the owning value is destroyed early. |
+| **Synthesized `__copyinit__`** | If a struct is `Copyable` but defines no `__copyinit__`, Mojo synthesizes a field-by-field copy. For `UnsafePointer` fields this is a shallow copy — the pointer value is copied, not the heap data. |
+
+### Running Tests in Worktrees
+
+When running Mojo tests from a worktree (not the base repo checkout):
+
+```bash
+PIXI_PROJECT_MANIFEST=/path/to/worktree/pixi.toml pixi run mojo <test_file>.mojo
+```
+
+### Mojo 0.26.1: No mojo test Subcommand
+
+Mojo 0.26.1 has no `mojo test` subcommand. Use `pixi run mojo <file>` directly:
+
+```bash
+# CORRECT for Mojo 0.26.1
+pixi run mojo tests/path/to/test_file.mojo
+
+# WRONG — mojo test subcommand does not exist in 0.26.1
+mojo test tests/path/to/test_file.mojo
+```
+
+### Closure Escaping Annotation Requirement
+
+When un-skipping Mojo tests that use closures capturing outer variables, mark the closure
+`escaping`:
+
+```mojo
+# CORRECT when capturing outer variables
+fn forward_for_grad(inp: ExTensor) raises escaping -> ExTensor:
+    return multiply(inp, captured_grad_output)  # Captures grad_output
+```
+
+### batch_norm2d Pathological Test Case
+
+When `grad_output = ones_like(output)`, batch norm backward gives analytically-zero
+gradients. Float32 noise makes the numerical gradient non-zero (~0.009), causing a false
+~1000x mismatch. Use non-uniform `grad_output` that breaks symmetry:
+
+```mojo
+var grad_output = zeros_like(output)
+for i in range(numel):
+    var val = Float32(i % 4) * Float32(0.25) - Float32(0.3)
+    grad_output._data.bitcast[Float32]()[i] = val
+```
+
+### Additional Failed Attempts (Restored from v3.9.0)
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --- | --- | --- | --- |
+| Assume crash = JIT flake | Closed/retried without investigating root cause. 16 test files crashing. | 16 files had 3 concrete source-code bugs: double-free from synthesized `__copyinit__`, broken `fetch_add` mutex, bitcast UAF. | Check for double-free, broken locks, and bitcast UAF first before concluding JIT instability. |
+| Add retry logic to CI | Implemented `scripts/test-with-retry.sh` (88 lines) with `MAX_RETRIES=1` on `execution crashed` | Retry scripts hide real failures: a crash that is retried away cannot be filed upstream; prevents root cause investigation; masks reproducibility. | Delete retry scripts; use direct `pixi run mojo --Werror`; create minimal reproducers and file upstream. |
+| Increased `TEST_WITH_RETRY_MAX` to 2 | When required checks (`Core Types & Fuzz`, `Integration Tests`) fail non-deterministically, increased retry count to absorb double-crash scenarios. | Retry absorbs symptoms, not the cause; same crash will recur post-Mojo-upgrade; upstream can't reproduce the issue; RC/CA ADR cannot be written for a masked failure. | Do the import audit (targeted submodule imports) and write the RC/CA ADR instead. Retry is always the wrong answer. |
+| `fn main() raises:` in new split files | All split files written with `fn main()` after ADR-009 splitting. | Mojo 0.26.3 deprecated `fn main()`; CI failed with parse error on every new file. | After any file split in Mojo 0.26.3+, globally replace `fn main() raises:` with `def main() raises:`. |

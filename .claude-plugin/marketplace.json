@@ -18,7 +18,7 @@
     "tooling": 147,
     "training": 7
   },
-  "last_updated": "2026-06-07T14:43:48Z",
+  "last_updated": "2026-06-07T19:51:38Z",
   "plugins": [
     {
       "name": "agent-config-and-tier-architecture",
@@ -2499,7 +2499,7 @@
     {
       "name": "mojo-jit-crash-and-retry-strategies",
       "description": "HISTORICAL REFERENCE \u2014 most patterns OBSOLETE as of Mojo 1.0.0b2.dev2026052506 (modular/modular#6413 fixed upstream). Do NOT use the retry-wrapper, continue-on-error matrix, gdb-coredump-capture, or 4-hypothesis disproof patterns in NEW code. Use when: (1) reading historical PR/issue context that references these patterns, (2) needing the runtime-crash-bisection minimal-reproducer methodology (still useful for future Mojo bugs), (3) understanding the closed-source boundary for libKGEN/libAsyncRT/libMSupport debugging, (4) needing the AVX-512 wrong-ISA forensics for analogous CPU-feature bugs. NOT a guide for treating Mojo crashes as flakes \u2014 that posture was wrong and is now removed.",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "source": "./skills/mojo-jit-crash-and-retry-strategies.md",
       "category": "ci-cd",
       "tags": [
