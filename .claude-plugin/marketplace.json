@@ -18,7 +18,7 @@
     "tooling": 147,
     "training": 7
   },
-  "last_updated": "2026-06-07T14:43:48Z",
+  "last_updated": "2026-06-07T19:52:50Z",
   "plugins": [
     {
       "name": "agent-config-and-tier-architecture",
@@ -6197,7 +6197,7 @@
     {
       "name": "observability-logging-and-process-monitoring",
       "description": "Add structured observability to Python/shell pipelines. Use when: (1) adding JSON log formatting to a shared library for Loki/Promtail/ELK integration, (2) adding stage logging with timing to multi-stage pipeline workers, (3) implementing SIGINT/SIGTERM graceful shutdown with checkpoint save, (4) adding real-time progress indicators to parallel tier execution, (5) suppressing noisy ERROR logs for subprocess failures that callers intentionally catch, (6) adding a log level function to a shared bash logging library, (7) overwriting transient terminal status lines with carriage return, (8) extracting duplicate logger.info/warning blocks into a shared helper method.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "source": "./skills/observability-logging-and-process-monitoring.md",
       "category": "tooling",
       "tags": [

@@ -2,8 +2,8 @@
 name: observability-logging-and-process-monitoring
 description: "Add structured observability to Python/shell pipelines. Use when: (1) adding JSON log formatting to a shared library for Loki/Promtail/ELK integration, (2) adding stage logging with timing to multi-stage pipeline workers, (3) implementing SIGINT/SIGTERM graceful shutdown with checkpoint save, (4) adding real-time progress indicators to parallel tier execution, (5) suppressing noisy ERROR logs for subprocess failures that callers intentionally catch, (6) adding a log level function to a shared bash logging library, (7) overwriting transient terminal status lines with carriage return, (8) extracting duplicate logger.info/warning blocks into a shared helper method."
 category: tooling
-date: 2026-05-19
-version: "1.0.0"
+date: 2026-06-07
+version: "1.1.0"
 user-invocable: false
 history: observability-logging-and-process-monitoring.history
 tags:
@@ -289,6 +289,39 @@ assert mock_logger.info.call_count == 2
 - Use `default=str` in `json.dumps` for non-serializable values (datetimes, custom classes)
 - Apply `JsonFormatter` to **all** handlers — set formatter before adding handlers or loop over them
 - When `json_format=True`, the `format` string argument to `basicConfig` is effectively ignored
+
+#### Alternate Timestamp Format
+
+Some integrations prefer the `logging` default timestamp style instead of UTC isoformat. Use `self.formatTime()` to stay consistent with the configured `datefmt`:
+
+```python
+"timestamp": self.formatTime(record, self.datefmt),
+```
+
+This produces output like `"2026-03-25 14:30:00,123"` (respects `datefmt` when set, falls back to `logging` default otherwise). The canonical implementation uses UTC isoformat (`datetime.fromtimestamp(..., tz=timezone.utc).isoformat()`); choose based on your log aggregator's expectations.
+
+#### Exporting JsonFormatter from Subpackage
+
+To allow `from hephaestus import JsonFormatter` (or top-level `hephaestus.JsonFormatter` access):
+
+**Subpackage `__init__.py`** — add to `__all__` and import explicitly:
+
+```python
+from .utils import JsonFormatter
+
+__all__ = [..., "JsonFormatter"]
+```
+
+**Top-level lazy imports** — add to `_LAZY_IMPORTS` dict:
+
+```python
+_LAZY_IMPORTS = {
+    ...
+    "JsonFormatter": ("hephaestus.logging.utils", "JsonFormatter"),
+}
+```
+
+This pattern defers the import until first access, keeping top-level import time fast.
 
 #### Subprocess Log Suppression: Safety Guarantee
 
