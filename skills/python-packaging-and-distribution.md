@@ -1,9 +1,9 @@
 ---
 name: python-packaging-and-distribution
-description: "Canonical guide to Python packaging and distribution: wheel/sdist builds, hatchling/setuptools/hatch-vcs/conan integration, pixi.lock management, PyPI trusted-publishing, pip-audit CVE pinning and allowlists, cross-repo dependency hotfixes, pydantic-migration packaging, wheel-only builds. Use when: (1) shipping a Python package to PyPI, (2) regenerating or rebasing pixi.lock after a dep change, (3) handling a pip-audit CVE finding (override hard-pin / allowlist / migration), (4) configuring hatchling force-include for sdist/wheel parity, (5) packaging Conan-based C++ tooling for PyPI distribution, (6) CI fails with 'lock-file not up-to-date with the workspace', (7) pip-audit step flipped from advisory to fail-fast surfacing CVEs, (8) cross-repo shared lib not yet published to PyPI blocks consumer PRs, (9) hatch-vcs editable install makes pixi.lock perpetually stale, (10) migrating from FetchContent-only to hybrid Conan+CMake packaging."
+description: "Canonical guide to Python packaging and distribution: wheel/sdist builds, hatchling/setuptools/hatch-vcs/conan integration, pixi.lock management, PyPI trusted-publishing, pip-audit CVE pinning and allowlists, cross-repo dependency hotfixes, pydantic-migration packaging, wheel-only builds. Use when: (1) shipping a Python package to PyPI, (2) regenerating or rebasing pixi.lock after a dep change, (3) handling a pip-audit CVE finding (override hard-pin / allowlist / migration), (4) configuring hatchling force-include for sdist/wheel parity, (5) packaging Conan-based C++ tooling for PyPI distribution, (6) CI fails with 'lock-file not up-to-date with the workspace', (7) pip-audit step flipped from advisory to fail-fast surfacing CVEs, (8) cross-repo shared lib not yet published to PyPI blocks consumer PRs, (9) hatch-vcs editable install makes pixi.lock perpetually stale, (10) migrating from FetchContent-only to hybrid Conan+CMake packaging, (11) double-rebase pixi.lock commit conflict requiring --skip, (12) second commit in rebase chain patches migrated code, (13) dependency version-pin lock drift (Environment is not consistent with the lockfile), (14) Dependabot multi-PR sequential pixi.lock fixing."
 category: tooling
-date: 2026-05-18
-version: "1.0.0"
+date: 2026-06-07
+version: "1.1.0"
 user-invocable: false
 verification: verified-local
 history: python-packaging-and-distribution.history
@@ -38,6 +38,10 @@ tags: [merged, python-packaging, pypi, pixi, hatchling, conan, pip-audit, wheel,
 - `pixi: command not found` in a GitHub Actions workflow
 - Package appears in both `[dependencies]` and `[feature.dev.dependencies]` with conflicting constraints
 - Accidentally committed `.pixi/envs/` causing ruff F403 and pixi install failures
+- A branch rebased a second time conflicts on the prior pixi.lock-fix commit (use `--skip`)
+- Second commit in a rebase chain patches code migrated to an external package (functions no longer exist)
+- CI error `"Environment is not consistent with the lockfile"` (version-pin lock drift, distinct from `"lock-file not up-to-date"`)
+- Multiple Dependabot PRs need sequential pixi.lock fixes — never run in parallel
 
 **Sub-cluster C — Conan / C++ build-system packaging**
 - CMake configure fails with `Could not find toolchain file: build/*/conan_toolchain.cmake`
@@ -121,6 +125,25 @@ git ls-files '**/.pixi/' | head -5   # ANY output = bug found
 git rm -r --cached clients/python/.pixi
 echo '.pixi/' >> .gitignore && echo '.venv/' >> .gitignore
 git add .gitignore && git commit -S -m "fix(ci): untrack committed .pixi/envs/ venv"
+
+# ── B: Double-rebase pixi.lock conflict (Phase 3c) ─────────────────────────
+# When a branch with a prior pixi.lock-fix commit is rebased again and that commit conflicts:
+git rebase --skip      # skip the stale pixi.lock commit entirely
+pixi install           # regenerate fresh
+git add pixi.lock
+git commit -m "fix(deps): regenerate pixi.lock after rebase on main"
+git push --force-with-lease origin <branch>
+
+# ── B: Fix branch for lock drift — always base off origin/main ─────────────
+git checkout origin/main -b fix/<name>   # NOT local main (may be 33+ commits behind)
+
+# ── B: Amend pattern after conflict resolution ─────────────────────────────
+# When pixi.lock is untracked after conflict resolution, fold into current commit:
+git add pixi.lock
+git commit --amend --no-edit
+
+# ── B: Divergence check before rebasing ────────────────────────────────────
+git log --oneline origin/<branch>..HEAD    # commits local has that origin doesn't
 
 # ── C: Conan install in GitHub Actions ─────────────────────────────────────
 # Add before cmake configure step:
@@ -371,6 +394,142 @@ shellcheck = ">=0.10"
 jq = ">=1.7"
 ```
 
+#### B7. pixi.lock Rebase Edge Cases
+
+##### Phase 3c: Double-Rebase pixi.lock Commit Conflict
+
+When a branch already has a pixi.lock-fix commit (from a prior rebase) and is rebased again:
+
+```
+CONFLICT (content): Merge conflict in pixi.lock
+error: could not apply <sha>... fix(deps): regenerate pixi.lock after rebase
+```
+
+The prior pixi.lock-fix commit conflicts with the newly-rebased state. Resolution:
+
+```bash
+git rebase --skip      # skip the now-stale pixi.lock commit entirely
+# After rebase completes:
+pixi install           # regenerate fresh from the current state
+git add pixi.lock
+git commit -m "fix(deps): regenerate pixi.lock after rebase on main"
+git push --force-with-lease origin <branch>
+```
+
+**Why `--skip` and not `--continue`**: The pixi.lock-fix commit's entire purpose was to
+regenerate pixi.lock. After the new rebase, the lock needs to be regenerated fresh anyway —
+the old regeneration commit is entirely superseded. Skipping it is semantically correct.
+
+##### Phase 3d: Multi-Commit Rebase Where Second Commit Is Superseded
+
+When a branch has two commits — a structural change (Commit A) followed by a follow-on fix (Commit B)
+to local scripts that have since been migrated to an external package as thin wrapper stubs:
+
+```
+Commit A: chore(deps): separate dev from production dependencies in pixi.toml
+Commit B: fix(deps): fix pixi.lock and version-drift checkers for dev/prod split
+```
+
+Between branch creation and rebase, `main` rewrote the scripts Commit B patches as one-line wrappers:
+
+```python
+# New form on main — the functions Commit B patched no longer exist
+from hephaestus.config.dep_sync import *  # noqa: F401,F403
+```
+
+**Rebase flow:**
+
+```bash
+git fetch origin
+git rebase origin/main
+# Commit A applies cleanly → continue rebase
+
+# Commit B conflicts — the files it patches are now thin wrappers on main
+# Accept main's version of ALL conflicted files:
+git checkout HEAD -- scripts/check_dep_sync.py scripts/check_precommit_versions.py
+git checkout HEAD -- pixi.lock   # if pixi.lock is also conflicted
+
+# The commit is now empty — skip it entirely:
+git rebase --skip       # NOT --continue (which would create an empty commit)
+
+# After rebase completes: re-run pixi install for any new environments from Commit A
+pixi install
+git add pixi.lock
+git commit -m "fix(deps): regenerate pixi.lock after rebase on main"
+git push --force-with-lease origin <branch>
+gh pr merge <pr-number> --auto --rebase
+```
+
+**Key distinction**: Use `--skip` (not `--continue`) when ALL conflicts in a commit are resolved
+by accepting `HEAD`'s version — the commit becomes empty and must be dropped to avoid polluting
+history with a no-op commit.
+
+**Signal that this pattern applies:**
+
+- Commit B patches functions or logic that simply does not exist in the current files on main
+- After `git checkout HEAD -- <files>`, running `git diff --cached` shows zero staged changes
+- The commit message of Commit B references "fixing" or "patching" scripts that main now delegates to an external package
+
+##### Phase 3e: Dependency Version-Pin Lock Drift
+
+When `pixi.toml` pins a specific version (e.g., `shellcheck = "0.10.0.*"`) but `pixi.lock` still
+references the old version, CI reports `"Environment is not consistent with the lockfile"`.
+This is distinct from `"lock-file not up-to-date"` — it indicates version-constraint mismatch rather
+than hash mismatch.
+
+```bash
+# Fix: create branch off origin/main (not local main which may be stale)
+git checkout origin/main -b fix/pixi-lock-drift
+
+# Copy the file that needs updating if blocked by Safety Net:
+git show <source-branch>:<file> > <file>
+
+# Regenerate the lock
+pixi install
+
+# Commit and push
+git add pixi.lock pixi.toml  # include pixi.toml if it changed
+git commit -m "fix(deps): regenerate pixi.lock after dependency version pin"
+git push -u origin fix/pixi-lock-drift
+gh pr create ...
+```
+
+**Why base off `origin/main` not local `main`**: Local `main` may be 33+ commits behind if
+the local clone hasn't been synced recently. Basing off a stale local `main` causes push conflicts
+(`non-fast-forward`). Use `git checkout origin/main -b <branch>` to guarantee a fresh base.
+
+#### B8. Dependabot Multi-PR Sequential Fixing
+
+When fixing multiple Dependabot PRs in sequence, **always re-fetch between each PR** and run fixes
+**sequentially, not in parallel** — shared lock file state causes conflicts during resolution.
+
+```bash
+# Pattern for each PR in sequence (not in parallel):
+git fetch origin          # always re-fetch before each rebase
+git checkout <next-branch>
+git rebase origin/main
+pixi install
+git add pixi.lock
+git commit -m "chore: regenerate pixi.lock for updated dependencies"
+git push --force-with-lease origin <branch>
+gh pr merge <pr-number> --auto --rebase
+```
+
+**Divergence check before rebasing**: before each rebase, confirm local and remote are not diverged:
+
+```bash
+git log --oneline origin/<branch>..HEAD    # commits local has that origin doesn't
+git log --oneline HEAD..origin/<branch>    # commits origin has that local doesn't
+```
+
+**Amend pattern after conflict resolution**: when `pixi.lock` shows as untracked after conflict
+resolution (rebase deleted it, then `pixi install` regenerated it), fold it into the existing commit:
+
+```bash
+git add pixi.lock
+git commit --amend --no-edit    # fold regenerated pixi.lock into the rebase commit
+```
+
 ### Sub-cluster C: Conan / C++ Build-System Packaging
 
 #### C1. Add conan install step to GitHub Actions
@@ -590,6 +749,11 @@ grep -rn "old_name" src/ tests/ scripts/ --include="*.py"
 | hatch-vcs lock regeneration (not `locked: false`) | Regenerated pixi.lock to fix the staleness for one commit | Next commit produced a new SHA → new wheel hash → stale again immediately | `locked: false` on all setup-pixi steps is the only durable fix |
 | Allowlist committed without tracking issue | Added `--ignore-vuln` flags without opening a tracking issue | Six months later no one remembers why CVEs were ignored; list drifted permanent | Always open tracking issue first; set a review date; reference issue number in comment |
 | `pytest.mark.skipif(pytest.importorskip(...))` at class level | Applied `importorskip` decorator at class level | Raises `Skipped` at collection time — entire module skipped, 0 tests collected | Use `pytest.importorskip()` inside individual test methods only |
+| Parallel pixi install for Dependabot PRs | Ran `pixi install` across multiple worktrees simultaneously | Shared lock file state caused conflicts during resolution | Run Dependabot pixi.lock fixes sequentially per PR, not in parallel; always re-fetch between each PR |
+| `git rebase --continue` on double-rebase pixi.lock conflict | Tried to resolve conflict and continue after the prior pixi.lock-fix commit conflicted | The prior pixi.lock-fix commit is entirely stale; continuing produces a broken lock | Use `git rebase --skip` to discard the stale commit, then `pixi install` fresh |
+| `git rebase --continue` after resolving empty commit (migrated-code scenario) | After accepting `HEAD` for all conflicted files in Commit B, tried `git rebase --continue` | Creates an empty commit that pollutes history with a no-op; may also trigger pre-commit failure on zero-change commit | When all conflicts are resolved by accepting `HEAD`'s version entirely — the commit adds nothing — use `git rebase --skip` to drop it |
+| Creating fix branch off stale local `main` | Ran `git checkout -b fix/pixi-lock-drift main` when local main was 33 commits behind origin/main | Push rejected as non-fast-forward; had to delete branch and recreate | Always use `git checkout origin/main -b fix/<name>` — bypasses local branch staleness entirely |
+| Committing only `pixi.toml` without regenerating `pixi.lock` | Updated version pin in pixi.toml but forgot to run `pixi install` before committing | CI immediately fails with "Environment is not consistent with the lockfile" — the lockfile SHA doesn't match the new constraint | Always run `pixi install` and commit the updated `pixi.lock` alongside any `pixi.toml` change |
 
 ## Results & Parameters
 
