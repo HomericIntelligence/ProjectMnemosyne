@@ -1,12 +1,60 @@
+# tooling-hephaestus-automation-loop-drive-green-broken-design -- History
+
+## v2.0.0 (2026-06-06)
+
+**Changed by:** ProjectHephaestus PRs #1073/#1075/#1077/#1079 (issues #1072/#1074/#1076/#1078) -- existing-PR review-to-label deadlock fix
+**Verification:** verified-ci (all four PRs landed CI-green)
+
+### What changed
+- Added a NEW, distinct deadlock to the same subsystem (the automation loop's
+  per-issue lifecycle): **existing open PRs never get driven to mergeable**
+  because they were never reviewed, so they never received the
+  `state:implementation-go` label that drive-green requires before it will arm
+  auto-merge.
+- Documented the root cause chain: the label is added in exactly ONE place
+  (`implementer_phase_runner.py` `mark_pr_implementation_go`, after the in-loop
+  review loop returns GO), but `_implement_issue` hard-returned early at
+  `implementer_phase_runner.py:263-279` (the "skip existing PRs to avoid
+  clobbering in-flight work" shortcut) BEFORE the review loop ran. drive-green
+  (`ci_driver.py`) only READS the label (gates at :330/:627/:965) and never adds
+  it by design. Net: existing green PR -> implementer skips -> never labeled ->
+  drive-green refuses to merge -> green-but-unmergeable forever. Observed live:
+  9 green PRs blocked solely on the missing label.
+- Documented the SHIPPED four-PR fix (replace the early-return with a
+  review->address loop gated on the terminal label for idempotency; origin-sync
+  hard-reset as the anti-clobber mechanism that REPLACES the skip; review
+  validator sub-agent that re-raises unaddressed comments as NEW threads;
+  drive-green now replies-to + resolves bot-authored threads after a CI fix;
+  one-char `state-{n}.json` vs `issue-{n}.json` session-path fix).
+- Documented the design fact that implementer/ci-driver sessions resume by
+  DETERMINISTIC uuid5 of (repo, issue, agent) in `claude_invoke.py`, NOT by the
+  persisted `session_id` field; plan + plan-review come from GitHub issue
+  COMMENTS, not local files.
+- Added trigger phrases, a new "When to Use" trigger, a new Results section, and
+  new Failed Attempts rows for the existing-PR deadlock.
+- Bumped version 1.0.0 -> 2.0.0, date 2026-05-30 -> 2026-06-06,
+  verification verified-local -> verified-ci, added `history:` frontmatter field.
+
+### Why
+v1.0.0 documented the drive-green SKIP design bugs (issues #818-#821, NOT YET
+SHIPPED) -- a phase-model / discovery problem that prevents drive-green from even
+SEEING failing PRs. This session uncovered and FIXED a SEPARATE deadlock in the
+same per-issue lifecycle: PRs that ARE seen and ARE green still never merge
+because the implementer skipped reviewing them, so they never got the
+`state:implementation-go` label drive-green gates on. The two failure modes are
+complementary (discovery vs labeling) and both belong in the canonical
+"automation loop won't drive PRs to green" reference. The original drive-green
+SKIP design bugs (#818-#821) remain documented and remain UNshipped.
+
+### Previous version (v1.0.0) snapshot
 ---
 name: tooling-hephaestus-automation-loop-drive-green-broken-design
-description: "Two complementary deadlocks keep the hephaestus automation loop from driving PRs to green. (A) `--phases drive-green` skips every loop or every repo ('SKIP not final loop' / 'SKIP no open issues') and leaves failing PRs untouched -- FOUR layered loop-runner design bugs (issues #818-#821, NOT shipped); use the documented bypass. (B) SHIPPED FIX: an existing open PR never gets the `state:implementation-go` label because the implementer hard-returned early on PRs that already exist (the 'skip existing PRs' shortcut) before the in-loop review loop that adds the label -- so a green PR but auto-merge never arms, forever. Use when: (1) `--phases drive-green --loops N` SKIPs every iteration for N>1, (2) `--phases drive-green --loops 1` prints SKIP no open issues even though failing PRs exist, (3) an existing PR never gets state:implementation-go / green PR but auto-merge never arms, (4) implementer skips open PRs / drive-green refuses to merge unlabeled PR, (5) calling `drive_prs_green.py` directly errors on the `--issues required` argument or the HEPH_LOOP_INDEX gate, (6) ci_driver state-{n}.json vs issue-{n}.json session-path mismatch, (7) scoping audits for the loop-runner's phase model, PR-vs-issue discovery, or the implementer per-issue lifecycle."
+description: "When `pixi run hephaestus-automation-loop --phases drive-green` skips every loop or every repo ('SKIP not final loop' / 'SKIP no open issues') and leaves failing PRs untouched, the cause is FOUR layered design bugs in the loop runner, not operator error. Use issue-by-issue scoping (separate issues per bug) so the automation loop can fix them; use the documented bypass to drive PRs to green until then. Use when: (1) `--phases drive-green --loops N` SKIPs every iteration for N>1, (2) `--phases drive-green --loops 1` prints SKIP no open issues even though failing PRs exist, (3) operator asks 'how do I run drive-green only' or 'drive failing PRs to green ecosystem-wide', (4) calling `drive_prs_green.py` directly errors on the `--issues required` argument or the HEPH_LOOP_INDEX gate, (5) scoping audits for the loop-runner's phase model and PR-vs-issue discovery semantics."
 category: tooling
-date: 2026-06-06
-version: "2.0.0"
+date: 2026-05-30
+version: "1.0.0"
 user-invocable: false
-verification: verified-ci
-history: tooling-hephaestus-automation-loop-drive-green-broken-design.history
+verification: verified-local
 tags:
   - hephaestus-automation-loop
   - drive-prs-green
@@ -16,11 +64,6 @@ tags:
   - loop-runner
   - phase-model
   - pr-discovery
-  - implementation-go-label
-  - existing-pr-deadlock
-  - implementer-phase-runner
-  - review-loop
-  - session-resume-uuid5
 ---
 
 # hephaestus-automation-loop `--phases drive-green` Is Structurally Broken
@@ -29,10 +72,10 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-06 (v2.0.0); original 2026-05-30 (v1.0.0) |
-| **Objective** | Document the TWO complementary deadlocks that keep the hephaestus automation loop from driving PRs to green: **(A)** the FOUR layered drive-green *discovery* design bugs that make `--phases drive-green` unable to even SEE failing PRs (issues #818-#821, NOT shipped; bypass documented); and **(B, NEW in v2.0.0)** the existing-PR *labeling* deadlock where a green PR never gets `state:implementation-go` so auto-merge never arms -- now FIXED and shipped. |
-| **Outcome** | (A) `SKIP not final loop` / `SKIP no open issues` failure modes + the `drive_prs_green.py --force-run` bypass observed live 2026-05-30; redesign filed as #818-#821 (predecessor #817 superseded), NOT YET SHIPPED. (B) The existing-PR -> never-reviewed -> never-labeled -> never-merged deadlock (9 green PRs blocked live) was root-caused in HomericIntelligence/ProjectHephaestus and FIXED by four CI-green PRs: #1073/#1075/#1077/#1079 (issues #1072/#1074/#1076/#1078). |
-| **Verification** | verified-ci - the existing-PR labeling deadlock fix (B) shipped as four CI-green PRs. The drive-green discovery bugs (A) remain verified-local: failure mode + bypass observed live, redesign #818-#821 still open/unshipped. |
+| **Date** | 2026-05-30 |
+| **Objective** | Document the FOUR layered design bugs that make `pixi run hephaestus-automation-loop --phases drive-green` unable to drive failing PRs to green for a normal operator, and capture the working bypass plus the proposed redesign filed as four issues. |
+| **Outcome** | The failure modes (`SKIP not final loop`, `SKIP no open issues`) and the bypass via `drive_prs_green.py --force-run` were observed live on 2026-05-30. The redesign is filed as HomericIntelligence/ProjectHephaestus issues #818, #819, #820, #821; predecessor #817 closed as superseded. NOT YET SHIPPED. |
+| **Verification** | verified-local - failure mode + bypass observed live in this session. Proposed redesign is unverified (issues are open). |
 
 ## When to Use
 
@@ -47,12 +90,6 @@ Trigger phrases that should hit this skill:
 - "HEPH_LOOP_INDEX gate" / "HEPH_CI_DRIVER_FORCE=1"
 - "drive-green doesn't see PRs without Closes #N"
 - "drive-green doesn't see PRs assigned to someone else"
-- "existing PR never gets state:implementation-go"
-- "green PR but auto-merge never arms"
-- "implementer skips open PRs"
-- "drive-green refuses to merge unlabeled PR"
-- "ci_driver state-{n}.json vs issue-{n}.json"
-- "PR is green but won't merge / stuck green-but-unmergeable"
 
 Trigger situations:
 
@@ -60,8 +97,6 @@ Trigger situations:
 - Operator tries to invoke `scripts/drive_prs_green.py` directly and hits `error: the following arguments are required: --issues` or exit 1 from the `HEPH_LOOP_INDEX != HEPH_TOTAL_LOOPS` gate.
 - A `repo-analyze` or PR-review audit of `hephaestus/automation/loop_runner.py` or `hephaestus/automation/ci_driver.py` is in scope and the auditor needs the "this is broken; here are the four issues" canonical reference.
 - Planning or grooming work in `HomericIntelligence/ProjectHephaestus` related to the loop runner's phase model, PR-vs-issue discovery, the `HEPH_LOOP_INDEX` env gate, or the `@me`-scoped issue query.
-- An issue ALREADY has an open PR that is CI-green, but the PR never auto-merges and never gets the `state:implementation-go` label; `implementer_phase_runner.py` logs that it is skipping the existing PR. This is the existing-PR labeling deadlock (B) -- see "The existing-PR review->label deadlock (SHIPPED FIX)" section.
-- An audit or debugging session touches `implementer_phase_runner.py` (`_implement_issue`, `mark_pr_implementation_go`), `review_validator.py`, `claude_invoke.py` session resume, or the `state:implementation-go` gates in `ci_driver.py` (:330/:627/:965).
 
 ## Verified Workflow
 
@@ -160,57 +195,8 @@ done
 | `pixi run python scripts/drive_prs_green.py --issues 123` (no `--force-run`) | Called the underlying script directly, supplying the issue number, intending to skip the loop runner. | Bug 3: `ci_driver.py:984-990` keeps `--issues` `required=True` but ALSO enforces a defensive `HEPH_LOOP_INDEX == HEPH_TOTAL_LOOPS` env-var gate. Without those env vars set, the script exits 1 to prevent "running drive-green too early" - a check that exists only because the runner uses the same script for a partial phase. | Use `--force-run` (or `HEPH_CI_DRIVER_FORCE=1`) when invoking the script outside the loop runner. The env-var gate is a workaround for the loop runner's broken phase ordering, not an inherent script invariant. |
 | `gh pr list ... --repos R1,R2` then expect `drive_prs_green.py --repos` | Looked for a `--repos` or `--org` pass-through on the underlying script so the bypass could iterate without bash. | The script takes a single repo from `cwd` (assumes you `cd` first); there is no `--repos`/`--org`/`--cwd` flag today. Only the loop runner knows how to iterate repos. | Ecosystem-wide bypass requires a bash loop. Do not patch this into `drive_prs_green.py` ad-hoc; the structural fix is to let the loop runner call drive-green correctly (issue #818). |
 | Adding `Closes #<fake>` lines to PRs to make them discoverable | Considered editing PR bodies of the 7 untouched PRs to add Closes-references to keep the runner happy. | Bug 2 means even WITH `Closes #N`, the link is only honored if N is OPEN AND authored / assigned to `@me` (Bug 4). Fabricating links also pollutes the issue tracker and breaks audit. | Don't paper over the broken discovery model. The fix is PR-based discovery via `gh pr list ... statusCheckRollup` (issue #819), not editing PR bodies. |
-| (Deadlock B) "Skip existing PRs to avoid clobbering in-flight work" -- the original `_implement_issue` early-return at `implementer_phase_runner.py:263-279` | When an issue already had an open PR, hard-return BEFORE the in-loop review loop so the implementer never re-touches someone's in-flight branch. | The review loop is the ONLY place that calls `mark_pr_implementation_go` (adds `state:implementation-go`). Skipping it means the PR is never reviewed -> never labeled -> drive-green (`ci_driver.py` gates :330/:627/:965) refuses to arm auto-merge -> green-but-unmergeable forever. 9 green PRs observed blocked solely on the missing label. | Skipping existing PRs deadlocks them. REPLACE the skip with `sync_worktree_to_remote_branch` (hard-reset to `origin/<branch>`) as the anti-clobber mechanism and let existing PRs enter the review->address loop. Idempotency comes from gating on the terminal GO/NO-GO label, NOT from skipping. (PR #1073 / issue #1072.) |
-| (Deadlock B) Trusting a GO verdict means review comments were addressed | Assumed that once the in-loop review returns GO, all prior inline comments are resolved and the PR can be labeled and merged. | GitHub has no "unresolve" mutation and the unresolved-thread lister filters resolved threads out, so a stale GO can ship a PR whose comments were never actually addressed by the diff. | Add a read-only `review_validator.py` sub-agent that checks the diff actually addressed prior comments and RE-OPENS unaddressed ones as NEW inline threads (the only re-raise mechanism); a re-open OVERRIDES GO so the loop keeps addressing. Respect the #375 own-threads-only guarantee. (PR #1079 / issue #1078.) |
-| (Deadlock B) Resume the implementer/ci-driver agent via the persisted `session_id` field | Expected `ci_driver._load_impl_session_id` to read the implementer's saved session id from disk to continue the same agent session. | It read `state-{n}.json` while the implementer WRITES `issue-{n}.json` (same `build/.issue_implementer` dir) -> the lookup always missed and silently never resumed. Masked for Claude because sessions actually resume by DETERMINISTIC uuid5 of (repo, issue, agent) in `claude_invoke.py`, but it broke Codex session continuity. | Sessions resume by deterministic uuid5, NOT by the persisted `session_id`. Fix the path (`state-{n}` -> `issue-{n}`, one char) AND know that the uuid5 derivation is the real continuity mechanism. (PR #1075 / issue #1074.) |
-| (Deadlock B) Leave bot review threads open after a CI fix | After drive-green pushed a CI fix, left the bot-authored review threads unresolved, assuming a human would close them. | Stale open bot threads keep the PR looking unaddressed and clutter review; humans never sign off on bot chatter. | drive-green now REPLIES to + RESOLVES bot-authored threads after a successful CI fix (humans untouched); `gh_pr_list_unresolved_threads` GraphQL extended with `comment author{ login }` so bot vs human can be distinguished. (PR #1077 / issue #1076.) |
 
 ## Results & Parameters
-
-### Deadlock B -- the existing-PR review->label deadlock (SHIPPED FIX, verified-ci, 2026-06-06)
-
-This is a SEPARATE failure mode from the drive-green discovery bugs (A) above.
-Even when drive-green CAN see a PR and the PR is fully CI-green, it will refuse
-to merge it unless the PR carries the `state:implementation-go` label. That label
-is the only thing that arms auto-merge -- and it was never being applied to
-existing PRs.
-
-**Root cause chain (code-confirmed in HomericIntelligence/ProjectHephaestus):**
-
-1. The `state:implementation-go` label is added in EXACTLY ONE place:
-   `implementer_phase_runner.py` `mark_pr_implementation_go`, called only AFTER
-   the in-loop review loop returns verdict GO.
-2. But when an issue already had an open PR, the per-issue worker
-   `_implement_issue` HARD-RETURNED early at `implementer_phase_runner.py:263-279`
-   (the "skip existing PRs to avoid clobbering in-flight work" shortcut) BEFORE
-   the review loop ran. So existing PRs were never reviewed -> never labeled.
-3. `ci_driver.py` (the drive-green phase) ONLY READS the label (gates at
-   `:330`, `:627`, `:965`) and refuses to arm auto-merge without it. By design it
-   NEVER adds the label.
-4. Net deadlock: existing PR -> implementer skips it -> never labeled ->
-   drive-green refuses to merge -> green-but-unmergeable forever. **Observed live:
-   9 green PRs blocked solely on the missing label.**
-
-**The shipped fix -- four CI-green PRs (one issue each, do not collapse):**
-
-| PR | Closes | Module(s) | What it does |
-| ---- | ------ | --------- | ------------ |
-| #1073 | #1072 | `implementer_phase_runner.py` | Replace the early-return so existing PRs ENTER the review->address loop. Idempotency-gate on the TERMINAL label (GO/NO-GO already present -> short-circuit). `sync_worktree_to_remote_branch` (hard-reset to `origin/<branch>`) is the new anti-clobber mechanism that REPLACES the old skip. Remove the `session_id is None` break so the existing-PR path (no initial session) can still address -- the address step resumes the implementer session by deterministic uuid5 or starts fresh, bootstrapped with task + plan-review + diff via new optional `get_address_review_prompt` context params. |
-| #1079 | #1078 | new `review_validator.py` | A fresh read-only sub-agent validates that prior review comments were actually addressed by the diff, RE-OPENING unaddressed ones as NEW inline threads. (GitHub has no unresolve mutation, and the unresolved-thread lister filters resolved threads out, so a new thread is the only re-raise mechanism; respects the #375 own-threads-only guarantee.) A re-open OVERRIDES a GO verdict so the loop keeps addressing. |
-| #1077 | #1076 | `ci_driver.py`, GraphQL | drive-green now REPLIES to + RESOLVES BOT-authored review threads after a successful CI fix (humans untouched). `gh_pr_list_unresolved_threads` GraphQL extended with comment `author{ login }`. |
-| #1075 | #1074 | `ci_driver.py` | Latent bug: `ci_driver._load_impl_session_id` read `state-{n}.json` but the implementer writes `issue-{n}.json` (same `build/.issue_implementer` dir) -> the lookup ALWAYS missed, silently never resuming the implementer's session (masked for Claude by deterministic uuid5; broke Codex session continuity). One-char path fix. |
-
-**Design facts to remember (load-bearing for future work on this subsystem):**
-
-- Implementer / ci-driver sessions resume by a DETERMINISTIC `uuid5` of
-  `(repo, issue, agent)` in `claude_invoke.py`, NOT by the persisted
-  `session_id` field. This is why the `state-{n}.json` vs `issue-{n}.json` path
-  bug was invisible for Claude but broke Codex.
-- The plan and the plan-review come from GitHub issue COMMENTS, not from local
-  files. The address step bootstraps from task + plan-review + diff.
-- The ONLY way to re-raise a previously-resolved review thread is to open a NEW
-  inline thread; there is no GitHub "unresolve" mutation, and the resolved-thread
-  filter hides the old one.
 
 ### The four bugs (one issue each, do not collapse)
 
@@ -288,7 +274,6 @@ These phrases SHOULD route to this skill; if they don't, file a marketplace tag:
 | --------- | --------- | --------- |
 | ProjectHephaestus | Live session 2026-05-30: ran `pixi run hephaestus-automation-loop --phases drive-green --repos ProjectHephaestus,ProjectMnemosyne --loops 1` against 7 open PRs; observed `SKIP (no open issues)` from both repos and 0 PRs touched. | Issues #818, #819, #820, #821 (predecessor #817 closed superseded). |
 | ProjectHephaestus | Same session: verified bypass `pixi run python scripts/drive_prs_green.py --issues <N> --force-run` works by reading argparse + `HEPH_CI_DRIVER_FORCE` handling at `hephaestus/automation/ci_driver.py:983-990`. | Bypass is the only working path until #818-#821 land. |
-| ProjectHephaestus | Session 2026-06-06 (verified-ci): root-caused the existing-PR review->label deadlock (9 green PRs blocked solely on the missing `state:implementation-go` label, added only in `mark_pr_implementation_go` after a review loop the early-return at `implementer_phase_runner.py:263-279` skipped). Shipped the fix as four CI-green PRs. | PRs #1073/#1075/#1077/#1079 closing issues #1072/#1074/#1076/#1078. drive-green label gates confirmed at `ci_driver.py:330/627/965`. |
 
 ## References
 
@@ -296,10 +281,6 @@ These phrases SHOULD route to this skill; if they don't, file a marketplace tag:
 - [Issue #819 - drive-green PR-based discovery](https://github.com/HomericIntelligence/ProjectHephaestus/issues/819)
 - [Issue #820 - drive_prs_green.py optional --issues + drop HEPH_LOOP_INDEX gate](https://github.com/HomericIntelligence/ProjectHephaestus/issues/820)
 - [Issue #821 - drive-green --all opt-in for non-@me PRs](https://github.com/HomericIntelligence/ProjectHephaestus/issues/821)
-- [PR #1073 (closes #1072) - existing PRs enter review->address loop; origin-sync hard-reset replaces the skip](https://github.com/HomericIntelligence/ProjectHephaestus/pull/1073)
-- [PR #1079 (closes #1078) - review_validator.py re-raises unaddressed comments as new threads](https://github.com/HomericIntelligence/ProjectHephaestus/pull/1079)
-- [PR #1077 (closes #1076) - drive-green replies to + resolves bot review threads after CI fix](https://github.com/HomericIntelligence/ProjectHephaestus/pull/1077)
-- [PR #1075 (closes #1074) - ci_driver session-path fix (state-{n}.json -> issue-{n}.json)](https://github.com/HomericIntelligence/ProjectHephaestus/pull/1075)
 - [automation-loop-early-exit-zero-work-convergence](automation-loop-early-exit-zero-work-convergence.md) - the early-exit mechanism that interacts with Bug 1 to make `--phases drive-green --loops N>1` unreachable.
 - [phase-skip-semantics-already-done-success](phase-skip-semantics-already-done-success.md) - related orchestrator-vs-worker skip-semantics analysis for the same pipeline.
 - [gh-issue-author-or-assignee-union](gh-issue-author-or-assignee-union.md) - the `--author @me` + `--assignee @me` union pattern that Bug 4 misuses for PR discovery.
