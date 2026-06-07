@@ -3,7 +3,7 @@ name: automation-ci-driver-honest-success-path-no-silent-noop
 description: "When a CI driver (e.g. `drive_prs_green`) reports 'pushed CI fixes for PR #N' but the remote PR head SHA is unchanged, the driver is silently no-op'ing. Three compounding bugs cause this: (1) bare `git push origin HEAD` pushes to whatever branch HEAD switched to inside the agent session instead of the PR head, (2) worktree setup creates a NEW branch off `main` when the local branch ref doesn't exist instead of resetting to `origin/<pr-head>`, (3) per-issue 'success' is treated as 'repo done' even with open PRs still outstanding. Fix all three: pre-sync the worktree to `origin/<pr-head>`, snapshot HEAD before/after the agent and fail if unchanged, push with explicit refspec `HEAD:<pr-head-branch>`, and gate 'repo done' on `gh api /repos/.../pulls?state=open --paginate` returning 0. Use when: (1) automation driver logs success but remote PR tips are unchanged, (2) `git push --force-with-lease` exits 0 with no remote update, (3) agent session resumed an old transcript and returned in seconds without a commit, (4) multi-repo run script's success/failed buckets don't match GitHub reality, (5) reviewing a driver that pushes commits to many PR branches across many repos."
 category: ci-cd
 date: 2026-06-02
-version: "1.1.0"
+version: "1.2.0"
 user-invocable: false
 verification: verified-ci
 history: automation-ci-driver-honest-success-path-no-silent-noop.history
@@ -19,6 +19,10 @@ tags:
   - wait-for-merge
   - auto-merge-armed
   - dependabot-arming
+  - re-arm-after-fix
+  - session-id-collision
+  - dirty-merge-conflict
+  - markdownlint-blocker
   - homericintelligence
 ---
 
@@ -29,9 +33,9 @@ tags:
 | Field | Value |
 | ------- | ------- |
 | **Date** | 2026-06-02 |
-| **Objective** | Stop a multi-repo CI driver from reporting "pushed CI fixes for PR #N" while the remote PR branch sits unchanged. Make the driver fail loudly when no commit was produced, sync the worktree to the actual PR head before the agent runs, and gate "repo done" on `pulls?state=open --paginate` returning empty. **v1.1.0:** stop reporting armed-and-merging PRs as FAILED — WAIT for the real terminal outcome (merge/fail) and partition the exit gate honestly. |
-| **Outcome** | Three layered bugs fixed and merged to `HomericIntelligence/ProjectHephaestus` main: PR #833 closes #832 (worktree pre-sync + explicit push refspec), PR #837 closes #836 (no-commit guard between agent return and push), PR #839 closes #838 (repo done-state gated on `pulls?state=open` count == 0). **v1.1.0:** PR #876 added wait-for-merge (`_wait_for_pr_terminal`), robust Dependabot arming, an honest exit gate that partitions armed-pending vs needs-action open PRs, and a bounded no-commit retry. A real ecosystem run that had marked 7/15 repos FAILED dropped to genuine failures only. Driver went from "lies success" to "honest reporting" to "waits for the real outcome". |
-| **Verification** | verified-ci - v1.0.0's three PRs merged to main via the standard PR gate; v1.1.0's PR #876 merged and the new gate language appeared in production ecosystem-run logs (ProjectNestor flipped FAILED→complete; ProjectOdyssey waited 1743s then logged the armed-and-merging WARNING). |
+| **Objective** | Stop a multi-repo CI driver from reporting "pushed CI fixes for PR #N" while the remote PR branch sits unchanged. Make the driver fail loudly when no commit was produced, sync the worktree to the actual PR head before the agent runs, and gate "repo done" on `pulls?state=open --paginate` returning empty. **v1.1.0:** stop reporting armed-and-merging PRs as FAILED — WAIT for the real terminal outcome (merge/fail) and partition the exit gate honestly. **v1.2.0:** a SECOND ecosystem run (after the v1.1.0 fix, failures 7→4 repos) surfaced four more bugs — re-arm after a successful CI fix, session-id collision under concurrency, DIRTY (merge-conflict) PRs never resolved, and the agent's "document the blocker" commit introducing NEW lint failures. |
+| **Outcome** | Three layered bugs fixed and merged to `HomericIntelligence/ProjectHephaestus` main: PR #833 closes #832 (worktree pre-sync + explicit push refspec), PR #837 closes #836 (no-commit guard between agent return and push), PR #839 closes #838 (repo done-state gated on `pulls?state=open` count == 0). **v1.1.0:** PR #876 added wait-for-merge (`_wait_for_pr_terminal`), robust Dependabot arming, an honest exit gate that partitions armed-pending vs needs-action open PRs, and a bounded no-commit retry. **v1.2.0:** PR #879 (closes #878) added `_recheck_and_arm_after_fix` (re-poll + arm after a successful fix), a guarded session-id resume-then-fresh-uuid4 fallback, `mergeStateStatus`-aware `_wait_for_pr_terminal` returning `"DIRTY"` + `_resolve_dirty_pr`, and a force-engagement prompt that FORBIDS committing a blocker file and requires every edited file to pass the repo's own linters with NO rule disabled. A real second ecosystem run surfaced all four; full automation suite: 1011 passed, no hang. Driver went from "lies success" → "honest reporting" → "waits for the real outcome" → "re-arms, survives concurrency, resolves conflicts, never self-inflicts a lint failure". |
+| **Verification** | verified-ci - v1.0.0's three PRs merged to main via the standard PR gate; v1.1.0's PR #876 merged and the new gate language appeared in production ecosystem-run logs (ProjectNestor flipped FAILED→complete; ProjectOdyssey waited 1743s then logged the armed-and-merging WARNING); v1.2.0's PR #879 (closes #878) fixes merged/in-flight, all four bugs surfaced by a real second ecosystem run (ProjectHermes #645/#648 CLEAN+un-armed, #647 session-id collision; ProjectOdyssey #5487/#5485/#5471 DIRTY). Full automation suite: 1011 passed, no hang. |
 
 ## When to Use
 
@@ -54,6 +58,16 @@ Trigger phrases that should route to this skill:
 - "gh pr merge --auto --squash fails on repo that disallows squash"
 - "wait for PR terminal state merge or fail"
 - "armed PR with merge conflict DIRTY sits open forever"
+- "PR is CLEAN but auto-merge not armed, merges instantly when armed manually"
+- "driver walked away after a CI fix without re-arming auto-merge"
+- "re-arm auto-merge after a successful CI fix"
+- "Session ID is already in use claude --session-id collision"
+- "two parallel CI-fix workers race on the same session id"
+- "DIRTY merge-conflict PR never resolved, waits out the full timeout"
+- "agent CI_BLOCKER.md commit fails markdownlint MD013 MD032"
+- "blocker file turns one red check into two"
+- "committing to a Dependabot PR orphans it, dependabot refuses to rebase"
+- "@dependabot recreate after PR edited by someone other than Dependabot"
 
 Trigger situations:
 
@@ -335,6 +349,129 @@ any unit test that drives to green+arm without mocking `_wait_for_pr_terminal`
 MUST `patch.object(driver, "_wait_for_pr_terminal", return_value="MERGED")`
 (or set `HEPH_PR_MERGE_MAX_WAIT=0`).
 
+### v1.2.0 — Re-arm after a fix, survive session-id collisions, resolve DIRTY PRs, never self-inflict a lint failure
+
+> A SECOND `drive_prs_green` ecosystem run, on the v1.1.0 build, dropped
+> failures from 7 → 4 repos but surfaced **four new `ci_driver` bugs**. All four
+> are fixed in **ProjectHephaestus PR #879 (closes #878)**. A real run surfaced
+> every one — these are not hypotheticals.
+
+10. **Re-arm after a successful CI fix — `_recheck_and_arm_after_fix(issue, pr, slot)` (HIGH).**
+    `_attempt_ci_fixes` returned `WorkerResult(success=True)` the instant
+    `_run_ci_fix_session` returned `fixed=True` and NEVER re-polled CI or armed
+    auto-merge. The pushed fix re-triggers CI, the driver walks away, and the
+    now-green PR sits `mergeStateStatus=CLEAN` but **auto-merge NOT armed
+    forever** (observed: ProjectHermes #645, #648 — both CLEAN + un-armed,
+    merged instantly once manually armed). Fix: after a fix returns `fixed=True`,
+    re-enter the check→arm→wait flow ONCE via a bounded poll on `gh_pr_checks`:
+
+    ```python
+    def _recheck_and_arm_after_fix(self, issue: int, pr: int, slot) -> str | None:
+        """Re-poll CI once after a fix lands; arm + wait if green.
+
+        Returns the terminal outcome if it armed and waited, or None so a
+        LATER run picks the PR up (still pending / red is not terminal here).
+        """
+        checks = self._poll_pr_checks_bounded(pr)         # bounded on gh_pr_checks
+        if self._all_required_green(checks):
+            self._enable_auto_merge(pr, is_bot_pr=self._is_bot_pr(pr))
+            self._arm_drive_green(issue, pr, slot)
+            return self._wait_for_pr_terminal(issue, pr)
+        return None  # still pending/red → a later run arms it
+    ```
+
+    Wire it into **BOTH** the post-arm FAILING path and the failing-checks path
+    of `_drive_issue` — a fix can land on either path and both must re-arm.
+
+11. **Session-id "already in use" under concurrency — guarded resume + fresh-uuid4 fallback (HIGH).**
+    The Claude session id is a deterministic UUIDv5 of `(repo, issue, agent)`
+    (`session_naming.session_uuid`). With 3 parallel CI-fix workers, two race on
+    the same id **before the transcript JSONL is on disk**; the loser's `claude
+    --session-id` create fails `"already in use"`, and the existing resume
+    fallback in `claude_invoke.py` was **UNGUARDED** — if resume also failed
+    (sibling still initializing), the error propagated and killed the drive
+    (ProjectHermes #647: `Session ID … is already in use`). Fix: wrap the resume
+    fallback in try/except, retry resume up to 3× with backoff, then fall back to
+    a **FRESH `uuid4` session** so the worker decouples from the contended id
+    rather than aborting:
+
+    ```python
+    try:
+        return _claude_create(session_id=deterministic_id, ...)
+    except SessionIdInUse:
+        for attempt in range(3):
+            try:
+                return _claude_resume(session_id=deterministic_id, ...)
+            except (SessionIdInUse, ResumeFailed):
+                time.sleep(backoff(attempt))      # sibling may still be init'ing
+        # decouple from the contended id entirely
+        return _claude_create(session_id=str(uuid.uuid4()), ...)
+    ```
+
+12. **DIRTY (merge-conflict) PRs never resolved — `mergeStateStatus` + `_resolve_dirty_pr` (MEDIUM).**
+    `_gh_pr_state` fetched only `state,headRefOid,mergedAt` — **NOT
+    `mergeStateStatus`**. So `_wait_for_pr_terminal` could not tell a
+    genuinely-pending armed PR from an armed-but-DIRTY one (merge conflict), and
+    waited out the full `HEPH_PR_MERGE_MAX_WAIT` (1800s) every run forever
+    (ProjectOdyssey #5487/#5485/#5471). The mechanical rebase correctly defers
+    conflicts "to agent", but the agent path only fires on FAILING checks — a
+    DIRTY PR with GREEN checks has no failing checks and `_get_failing_ci_logs`
+    is empty, so the agent gets no conflict guidance. Fix:
+    - add `mergeStateStatus` to `_gh_pr_state`'s `--json`;
+    - `_wait_for_pr_terminal` returns a new `"DIRTY"` outcome when an OPEN PR is
+      `DIRTY`/`CONFLICTING`;
+    - new `_resolve_dirty_pr` tries a mechanical rebase, then hands the agent an
+      explicit conflict-resolution prompt via a new `extra_context` param on
+      `_attempt_ci_fixes`.
+
+    ```python
+    def _wait_for_pr_terminal(self, issue: int, pr: int) -> str:
+        ...
+        state, mss = self._gh_pr_state(pr)        # now returns mergeStateStatus too
+        if state == "OPEN" and mss in ("DIRTY", "CONFLICTING"):
+            return "DIRTY"
+        ...
+
+    # in _drive_issue, on "DIRTY":
+    if outcome == "DIRTY":
+        self._resolve_dirty_pr(issue, pr, slot)   # rebase → agent w/ conflict prompt
+    ```
+
+13. **The agent's "document the blocker" commit introduces NEW lint failures — fix the prompt, never disable the lint (HIGH).**
+    The force-engagement prompt told the agent: *"if no fix is possible, write a
+    commit that documents the blocker in the PR description."* The agent created
+    a `CI_BLOCKER.md` that itself **FAILS** the repo's markdownlint (MD013
+    line-length, MD032 blanks-around-lists), turning ONE red check into TWO and
+    blocking ~4 dependabot PRs. **Fix the ROOT CAUSE, never disable the lint
+    rule** (explicit user instruction). The prompt now:
+    - **FORBIDS** committing a blocker file — use the `BLOCKED:` line instead;
+    - requires **every added/edited file to pass the repo's own linters with NO
+      rule disabled**;
+    - names `CI_BLOCKER.md` as **forbidden** explicitly.
+
+    > **Cross-cutting (connects bug 13 to the dependabot drain): an agent
+    > committing ANYTHING to a Dependabot-authored PR orphans it.** Dependabot
+    > then refuses to rebase it (`"Looks like this PR has been edited by someone
+    > other than Dependabot"`); the only recovery is `@dependabot recreate`
+    > (rebuilds from clean main) or a manual rebase. **The driver should avoid
+    > committing to bot PRs where possible** — a self-inflicted blocker commit on
+    > a bot PR is doubly bad: it fails lint AND orphans the PR from its own
+    > auto-rebase.
+
+**Production / test verification (verified-ci).** All four fixes landed as
+ProjectHephaestus **PR #879 (closes #878)**; the second ecosystem run that
+surfaced them confirmed: ProjectHermes #645/#648 were CLEAN + un-armed (bug 10),
+PR #647 hit the session-id collision (bug 11), ProjectOdyssey #5487/#5485/#5471 were
+DIRTY (bug 12), and ~4 dependabot PRs were double-red from the `CI_BLOCKER.md`
+commit (bug 13). Full automation suite after the fix: **1011 passed, no hang**.
+
+**Test impact (v1.2.0).** Same hazard class as v1.1.0 (and
+`pytest-asyncio-hang-and-mock-hazards`): every green-path / `run()`-level unit
+test that drives `_drive_issue` to green+arm must now mock **both**
+`_wait_for_pr_terminal` AND the new `_recheck_and_arm_after_fix` — otherwise the
+re-arm path re-enters real `gh_pr_checks` + `_wait_for_pr_terminal` and hangs on
+real `gh`/`sleep`.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -348,6 +485,11 @@ MUST `patch.object(driver, "_wait_for_pr_terminal", return_value="MERGED")`
 | (v1.1.0) "Just exit 0 on any armed PR" as the fix | Proposed early-exit: treat `autoMergeRequest != null` as success and return rc=0 immediately. | User rejected it: an armed PR can still go red (CI flake, post-arm failure) or hit a merge conflict. Exiting 0 abandons the driver's ability to react. | WAIT for the terminal state with a bounded backoff loop; only then decide. Early-exit on the optimistic point is the same class of bug as v1.0.0's "claim success at an intermediate optimistic point". |
 | (v1.1.0) Wait out `TIMEOUT` for a DIRTY (conflicted) armed PR | `_wait_for_pr_terminal` polls an armed PR whose `mergeStateStatus == DIRTY` (merge conflict). | The PR sits OPEN forever; the wait loop returns `TIMEOUT` after the full `HEPH_PR_MERGE_MAX_WAIT` (1800s) and makes no progress — wasted 30 min per conflicted PR. | Known limitation. Detect `DIRTY` inside the wait loop and re-trigger a mechanical rebase instead of waiting out the timeout. Documented as a future enhancement. |
 | (v1.1.0) Add the blocking wait without mocking it in tests | Wired `_wait_for_pr_terminal` into `_drive_issue`'s green path, ran the unit suite. | Any test that drives to green+arm without a mock hit real `gh pr view` + real `time.sleep`, hanging the suite. | Every green-path / `run()`-level test MUST `patch.object(driver, "_wait_for_pr_terminal", return_value="MERGED")` or set `HEPH_PR_MERGE_MAX_WAIT=0`. A blocking wait inside a hot path is a test hazard — mock it at the seam. |
+| (v1.2.0) Return `success=True` the instant `_run_ci_fix_session` returns `fixed=True` | `_attempt_ci_fixes` treated a landed fix as terminal success and returned immediately, never re-polling CI or arming auto-merge. | The pushed fix re-triggers CI; the driver walks away; the now-green PR sits `mergeStateStatus=CLEAN` but auto-merge NOT armed forever (ProjectHermes #645, #648 — both CLEAN + un-armed, merged instantly once armed manually). A fix is not the end — it's the start of a fresh CI run that still needs arming. | Re-enter the check→arm→wait flow ONCE after a fix via `_recheck_and_arm_after_fix(issue, pr, slot)` (bounded poll on `gh_pr_checks`; green → `_enable_auto_merge` + `_arm_drive_green` + `_wait_for_pr_terminal`; still pending/red → return None so a later run arms it). Wire into BOTH the post-arm FAILING path and the failing-checks path of `_drive_issue`. |
+| (v1.2.0) Leave the `claude --session-id` resume fallback unguarded | The session id is a deterministic UUIDv5 of (repo, issue, agent); the existing fallback resumed on create-collision with no try/except. | With 3 parallel CI-fix workers, two race on the same id before the transcript JSONL is on disk; create fails "already in use" AND resume fails (sibling still initializing), so the error propagated and killed the drive (ProjectHermes #647). A deterministic id is a contended resource under concurrency. | Wrap the resume fallback in try/except, retry resume up to 3× with backoff, then fall back to a FRESH `uuid4` session so the worker DECOUPLES from the contended id instead of aborting. Never let a deterministic-id collision be terminal. |
+| (v1.2.0) Fetch only `state,headRefOid,mergedAt` in `_gh_pr_state` | `_wait_for_pr_terminal` polled PR state without `mergeStateStatus`. | It could not distinguish a genuinely-pending armed PR from an armed-but-DIRTY (merge-conflict) one, so it waited out the full `HEPH_PR_MERGE_MAX_WAIT` (1800s) every run forever (ProjectOdyssey #5487/#5485/#5471). The agent conflict path only fires on FAILING checks, but a DIRTY PR with GREEN checks has no failing checks and `_get_failing_ci_logs` is empty — the agent gets no conflict guidance. | Add `mergeStateStatus` to `_gh_pr_state`'s `--json`; return a new `"DIRTY"` outcome from `_wait_for_pr_terminal` on `DIRTY`/`CONFLICTING`; add `_resolve_dirty_pr` (mechanical rebase, then hand the agent an explicit conflict prompt via a new `extra_context` param on `_attempt_ci_fixes`). |
+| (v1.2.0) Tell the agent to "commit a file documenting the blocker" | The force-engagement prompt said: if no fix is possible, write a commit that documents the blocker in the PR description. | The agent created a `CI_BLOCKER.md` that itself FAILS the repo's markdownlint (MD013 line-length, MD032 blanks-around-lists), turning ONE red check into TWO and blocking ~4 dependabot PRs. Worse, committing to a Dependabot PR orphans it ("edited by someone other than Dependabot" → refuses to rebase; needs `@dependabot recreate`). | Fix the ROOT CAUSE, never disable the lint rule (explicit user instruction): the prompt now FORBIDS committing a blocker file (use a `BLOCKED:` line instead), requires every added/edited file to pass the repo's own linters with NO rule disabled, and names `CI_BLOCKER.md` as forbidden. The driver should avoid committing to bot PRs at all where possible. |
+| (v1.2.0) Mock only `_wait_for_pr_terminal` in green-path tests | After adding `_recheck_and_arm_after_fix`, kept the v1.1.0 test mock (only `_wait_for_pr_terminal`). | The re-arm path re-enters real `gh_pr_checks` + `_wait_for_pr_terminal`, so tests that drive `_drive_issue` to green+arm through a fix still hung on real `gh`/`sleep`. | Mock BOTH `_wait_for_pr_terminal` AND `_recheck_and_arm_after_fix` in every green-path / `run()`-level test. Same hazard class as `pytest-asyncio-hang-and-mock-hazards` — mock every new blocking seam, not just the first. Full suite after: 1011 passed, no hang. |
 
 ## Results & Parameters
 
@@ -359,6 +501,7 @@ MUST `patch.object(driver, "_wait_for_pr_terminal", return_value="MERGED")`
 | [#837](https://github.com/HomericIntelligence/ProjectHephaestus/pull/837) | #836 | Guard 2 | `hephaestus/automation/ci_driver.py`: snapshot `pre_agent_sha = git rev-parse HEAD` post-sync, compare `post_agent_sha = git rev-parse HEAD` post-agent. If equal, `logger.warning(...)` and `return False`. No push happens. |
 | [#839](https://github.com/HomericIntelligence/ProjectHephaestus/pull/839) | #838 | Guard 4 | Multi-repo run script: replaced "every issue returned success ⇒ repo done" with `gh api --paginate /repos/{owner}/{name}/pulls?state=open&per_page=100`. Non-empty list logs each open PR (number, title, head ref, auto-merge state) and folds into `rc=1`. |
 | [#876](https://github.com/HomericIntelligence/ProjectHephaestus/pull/876) | — | Wait-for-merge (v1.1.0) | `hephaestus/automation/ci_driver.py`: added `_wait_for_pr_terminal` (bounded exponential backoff, `HEPH_PR_MERGE_MAX_WAIT`, reacts to required-check failure post-arm); robust Dependabot arming in `_enable_auto_merge(is_bot_pr)` (retry `--auto` without `--squash`); honest exit gate `_evaluate_run_result()` partitioning `armed_pending` (WARNING) vs `needs_action` (rc=1); bounded no-commit retry `_retry_no_commit_once(max_retries=2)`. |
+| [#879](https://github.com/HomericIntelligence/ProjectHephaestus/pull/879) | #878 | Re-arm + concurrency + DIRTY + lint (v1.2.0) | `hephaestus/automation/ci_driver.py` + `claude_invoke.py`: `_recheck_and_arm_after_fix(issue, pr, slot)` re-enters check→arm→wait ONCE after a fix (wired into both FAILING paths of `_drive_issue`); guarded session-id resume (3× backoff) then fresh-`uuid4` fallback in `claude_invoke.py`; `mergeStateStatus` added to `_gh_pr_state`, new `"DIRTY"` outcome from `_wait_for_pr_terminal`, `_resolve_dirty_pr` (rebase → agent conflict prompt via `extra_context` on `_attempt_ci_fixes`); force-engagement prompt FORBIDS a blocker file (`BLOCKED:` line instead) and requires every edited file to pass the repo's linters with NO rule disabled. Suite: 1011 passed. |
 
 ### Verification command
 
@@ -429,6 +572,13 @@ Completed. rc=1
 - "dependabot PR stuck not armed squash disallowed"
 - "wait for pr terminal state"
 - "armed PR DIRTY merge conflict sits open"
+- "PR CLEAN but auto-merge not armed after a CI fix"
+- "re-arm auto-merge after a successful fix"
+- "session id already in use parallel workers"
+- "deterministic uuidv5 session id collision fresh uuid4"
+- "DIRTY conflict PR never resolved waits out timeout"
+- "agent CI_BLOCKER.md fails markdownlint MD013 MD032"
+- "committing to dependabot PR orphans it recreate"
 
 ## Verified On
 
@@ -438,6 +588,7 @@ Completed. rc=1
 | ProjectHephaestus | PR [#837](https://github.com/HomericIntelligence/ProjectHephaestus/pull/837) closes #836 - no-commit guard: `git rev-parse HEAD` before/after agent session, skip push and return False if unchanged. | Merged to main 2026-05-31. Fixes Guard 2. |
 | ProjectHephaestus | PR [#839](https://github.com/HomericIntelligence/ProjectHephaestus/pull/839) closes #838 - repo done-state gated on `gh api --paginate /repos/{owner}/{name}/pulls?state=open&per_page=100` returning empty; otherwise rc=1 with each open PR logged. | Merged to main 2026-05-31. Fixes Guard 4. |
 | ProjectHephaestus | PR [#876](https://github.com/HomericIntelligence/ProjectHephaestus/pull/876) - wait-for-merge (`_wait_for_pr_terminal`), robust Dependabot arming, honest exit-gate partition (`armed_pending` vs `needs_action`), bounded no-commit retry. | v1.1.0. Merged to main; production ecosystem run flipped ProjectNestor FAILED→complete, ProjectOdyssey waited 1743s and failed on only 1 genuine PR (was 4), no-commit retry landed fixes on 5 PRs. |
+| ProjectHephaestus | PR [#879](https://github.com/HomericIntelligence/ProjectHephaestus/pull/879) closes #878 - `_recheck_and_arm_after_fix` (re-arm after a fix), guarded session-id resume → fresh-`uuid4` fallback, `mergeStateStatus`-aware `_wait_for_pr_terminal` `"DIRTY"` + `_resolve_dirty_pr`, force-engagement prompt forbidding a blocker file and requiring lint-clean edits with no rule disabled. | v1.2.0. A second ecosystem run (failures 7→4 repos) surfaced all four: ProjectHermes #645/#648 CLEAN+un-armed (bug 10), #647 session-id collision (bug 11), ProjectOdyssey #5487/#5485/#5471 DIRTY (bug 12), ~4 dependabot PRs double-red from `CI_BLOCKER.md` (bug 13). Full automation suite: 1011 passed, no hang. |
 
 ## References
 
@@ -445,8 +596,11 @@ Completed. rc=1
 - [PR #837 - no-commit guard between agent return and push](https://github.com/HomericIntelligence/ProjectHephaestus/pull/837)
 - [PR #839 - repo done gated on open PR count == 0](https://github.com/HomericIntelligence/ProjectHephaestus/pull/839)
 - [PR #876 - wait-for-merge + honest gate partition + Dependabot arming (v1.1.0)](https://github.com/HomericIntelligence/ProjectHephaestus/pull/876)
+- [PR #879 - re-arm after fix + session-id collision + DIRTY resolution + lint-clean blocker prompt (v1.2.0)](https://github.com/HomericIntelligence/ProjectHephaestus/pull/879)
+- [Issue #878 - second ecosystem run: re-arm, session-id, DIRTY, blocker-file lint failures](https://github.com/HomericIntelligence/ProjectHephaestus/issues/878)
 - [Issue #832 - worktree did not sync to `origin/<pr-head>`](https://github.com/HomericIntelligence/ProjectHephaestus/issues/832)
 - [Issue #836 - driver pushed silently when agent produced no commit](https://github.com/HomericIntelligence/ProjectHephaestus/issues/836)
 - [Issue #838 - repo done evaluated per-issue, not per-repo](https://github.com/HomericIntelligence/ProjectHephaestus/issues/838)
 - [tooling-hephaestus-automation-loop-drive-green-broken-design](tooling-hephaestus-automation-loop-drive-green-broken-design.md) - related design-level bugs in the loop runner's phase model and PR discovery. Different layer; both skills apply when auditing `drive_prs_green`.
 - [tooling-gh-pr-list-limit-cap-use-api-paginate](tooling-gh-pr-list-limit-cap-use-api-paginate.md) - the `gh pr list --limit 100` silent cap that motivates the `gh api --paginate` substitution in Guard 4.
+- [pytest-asyncio-hang-and-mock-hazards](pytest-asyncio-hang-and-mock-hazards.md) - same hazard class as the v1.1.0/v1.2.0 test impact: a blocking wait inside a hot path (`_wait_for_pr_terminal`, `_recheck_and_arm_after_fix`) hangs any test that hits it without a mock at the seam.

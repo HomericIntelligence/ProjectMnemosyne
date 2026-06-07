@@ -1,5 +1,98 @@
 # automation-ci-driver-honest-success-path-no-silent-noop — History
 
+## v1.2.0 (2026-06-02) — Re-arm after fix, session-id collision, DIRTY resolution, lint-clean blocker prompt
+
+**Changed by:** ProjectMnemosyne `/learn` AMEND workflow
+**Verification:** verified-ci (ProjectHephaestus PR #879 closes #878, fixes
+merged/in-flight; a real SECOND ecosystem run surfaced all four bugs; full
+automation suite: 1011 passed, no hang)
+
+### What changed
+Amended the `drive_prs_green` CI-driver skill with the NEXT four fixes on the same
+driver. A SECOND ecosystem run on the v1.1.0 build dropped failures **7 → 4 repos**
+but surfaced four new `ci_driver` bugs, all fixed in ProjectHephaestus PR #879
+(closes #878):
+
+1. **Re-arm after a successful CI fix (HIGH).** `_attempt_ci_fixes` returned
+   `success=True` the instant `_run_ci_fix_session` returned `fixed=True` and never
+   re-polled CI or armed auto-merge — the now-green PR sat `CLEAN` but un-armed
+   forever (ProjectHermes #645, #648). Fix: `_recheck_and_arm_after_fix(issue, pr,
+   slot)` re-enters check→arm→wait ONCE after a fix (bounded poll on `gh_pr_checks`;
+   green → `_enable_auto_merge` + `_arm_drive_green` + `_wait_for_pr_terminal`; else
+   None so a later run arms it). Wired into BOTH the post-arm FAILING path and the
+   failing-checks path of `_drive_issue`.
+2. **Session-id "already in use" under concurrency (HIGH).** Deterministic UUIDv5 of
+   (repo, issue, agent); 3 parallel workers race before the transcript JSONL exists;
+   the unguarded resume fallback in `claude_invoke.py` propagated the error and
+   killed the drive (ProjectHermes #647). Fix: guard resume in try/except, retry 3×
+   with backoff, then fall back to a FRESH `uuid4` session.
+3. **DIRTY (merge-conflict) PRs never resolved (MEDIUM).** `_gh_pr_state` fetched only
+   `state,headRefOid,mergedAt` — not `mergeStateStatus` — so `_wait_for_pr_terminal`
+   waited out the full 1800s on conflicted PRs (ProjectOdyssey #5487/#5485/#5471).
+   The agent conflict path only fires on FAILING checks, but a DIRTY PR with green
+   checks has none. Fix: add `mergeStateStatus` to `--json`; new `"DIRTY"` outcome;
+   `_resolve_dirty_pr` (mechanical rebase → agent conflict prompt via new
+   `extra_context` param on `_attempt_ci_fixes`).
+4. **"Document the blocker" commit introduces NEW lint failures (HIGH).** The
+   force-engagement prompt told the agent to commit a blocker file; the agent's
+   `CI_BLOCKER.md` itself failed markdownlint (MD013, MD032), turning one red check
+   into two and blocking ~4 dependabot PRs. Fix the ROOT CAUSE, never disable the
+   lint rule (explicit user instruction): the prompt now FORBIDS committing a blocker
+   file (use a `BLOCKED:` line), requires every edited file to pass the repo's own
+   linters with NO rule disabled, and names `CI_BLOCKER.md` as forbidden.
+
+Also added the cross-cutting insight: **an agent committing ANYTHING to a
+Dependabot-authored PR orphans it** ("edited by someone other than Dependabot" →
+Dependabot refuses to rebase; recovery is `@dependabot recreate` or a manual
+rebase), so the driver should avoid committing to bot PRs where possible.
+
+Frontmatter: version `1.1.0` → `1.2.0`, date stays `2026-06-02`, verification stays
+verified-ci, history field present. Added tags `re-arm-after-fix`,
+`session-id-collision`, `dirty-merge-conflict`, `markdownlint-blocker`. Added a
+v1.2.0 sub-section to Verified Workflow (steps 10–13), five new Failed Attempts
+rows, PR #879 row + Verified-On + References, new trigger phrases, and a
+cross-reference to `pytest-asyncio-hang-and-mock-hazards`.
+
+### Why
+A real second ecosystem run proved the v1.1.0 wait-for-merge fix was necessary but
+not sufficient: waiting surfaces DIRTY PRs and post-arm failures, re-arming after a
+fix is required (a fix is the START of a fresh CI run, not the end), concurrency
+makes the deterministic session id a contended resource, and a force-engagement
+prompt that produces non-lint-clean commits self-inflicts new failures.
+
+### Testing note
+Every green-path / `run()`-level unit test that drives `_drive_issue` to green+arm
+must now mock BOTH `_wait_for_pr_terminal` AND the new `_recheck_and_arm_after_fix`
+(same hazard class as `pytest-asyncio-hang-and-mock-hazards`) or it hangs on real
+`gh`/`sleep`. Full automation suite after the fix: 1011 passed, no hang.
+
+### Prior version snapshot (frontmatter @ v1.1.0)
+
+```yaml
+name: automation-ci-driver-honest-success-path-no-silent-noop
+category: ci-cd
+date: 2026-06-02
+version: "1.1.0"
+user-invocable: false
+verification: verified-ci
+history: automation-ci-driver-honest-success-path-no-silent-noop.history
+tags:
+  - hephaestus-automation-loop
+  - drive-prs-green
+  - ci-driver
+  - silent-failure
+  - git-push-refspec
+  - worktree-sync
+  - honest-reporting
+  - repo-done-state
+  - wait-for-merge
+  - auto-merge-armed
+  - dependabot-arming
+  - homericintelligence
+```
+
+---
+
 ## v1.1.0 (2026-06-02) — Wait-for-merge + honest exit-gate partition
 
 **Changed by:** ProjectMnemosyne `/learn` AMEND workflow
