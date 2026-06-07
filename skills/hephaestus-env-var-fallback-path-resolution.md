@@ -112,27 +112,27 @@ SCRIPTS_DIR = scripts_dir()
    - `repo_root()`: env override → pyproject.toml walk-up → RuntimeError
    - `scripts_dir()`: env override → repo_root derivation → RuntimeError
    - Document that they may be called at module-import time
-   
+
 2. **Define module-level constants** with results:
    - `REPO_ROOT = repo_root()`
    - `SCRIPTS_DIR = scripts_dir()`
    - This allows both `from hephaestus.constants import REPO_ROOT` and `constants.REPO_ROOT` patterns
-   
+
 3. **Replace all 5 identical-pattern sites**:
    - **Production code**: `hephaestus/automation/loop_runner.py:763`
    - **Test code**: (scan all test files for `__file__.parents` patterns)
    - Use `grep -rn "__file__.*parents.*scripts\|loop_runner.__file__" tests/ hephaestus/` to verify zero hits post-migration
-   
+
 4. **Import placement (critical for ruff isort)**:
    - Place all imports at top of file: stdlib → third-party → local
    - Do NOT append imports after data constants (causes `I001` ruff error)
    - Run `pixi run ruff format` + `pixi run ruff check` to verify
-   
+
 5. **Test with both install modes**:
    - Editable install: `pixi run dev-install` (or `pip install -e .`)
    - Packaged CI mode: simulate with `HEPHAESTUS_REPO_ROOT=/some/path` override
    - Run full test suite: `pixi run pytest tests/unit -v` (expect 3175+ passes)
-   
+
 6. **Pre-merge audit** (CRITICAL — prevents bypass violations):
    ```bash
    grep -rn "__file__.*parents.*scripts\|loop_runner.__file__" tests/ hephaestus/
