@@ -281,4 +281,3 @@ def test_logs_info_not_warning(self, caplog):
 | --------- | ------- | --------- | --------- |
 | ProjectHephaestus | #789 | Downgrade in check_python_version_consistency.py | 34 tests pass, all CI pre-commit checks pass, merged |
 | ProjectHephaestus | #789 | TDD approach with capsys | Both happy-path tests added before downgrade (RED), then downgrade applied (GREEN) |
-
