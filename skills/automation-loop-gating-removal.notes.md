@@ -160,8 +160,8 @@ tests/unit/automation/test_loop_runner.py:456:    # Gate behavior relies on HEPH
 ### Post-Deletion: 0 Hits
 
 ```
-$ grep -r "HEPH_LOOP_INDEX" hephaestus/ scripts/ tests/
-$  (no output — complete removal verified)
+grep -r "HEPH_LOOP_INDEX" hephaestus/ scripts/ tests/
+# (no output — complete removal verified)
 ```
 
 ## Test Results
