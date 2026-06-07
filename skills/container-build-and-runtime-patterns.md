@@ -2,8 +2,8 @@
 name: container-build-and-runtime-patterns
 description: "Canonical guide to container build and runtime patterns spanning Docker, Podman, and rootless: multi-stage builds, multi-arch OCI, UID/GID mismatch fixes, layer caching strategies, entrypoint patterns, healthchecks, pixi-volume isolation, GHA cache extraction, Conan-in-Docker chains, dockerfile extras validation. Use when: (1) writing or refactoring a Dockerfile, (2) diagnosing a rootless Podman or UID mismatch crash, (3) extracting / sharing image cache between local and GHA, (4) integrating Conan profiles with a multistage build, (5) container-based E2E test infra."
 category: ci-cd
-date: 2026-06-02
-version: "1.1.0"
+date: 2026-06-07
+version: "1.2.0"
 user-invocable: false
 verification: verified-ci
 history: container-build-and-runtime-patterns.history
@@ -371,6 +371,66 @@ every `vessels/<x>` dir appears in the `test-smoke-vessels` CI matrix. Removing 
 from the matrix requires adding it to that test's `EXCLUDED_VESSELS` allowlist, or the
 drift test goes red.
 
+### Docker Compose v5 Healthcheck Array Serialization
+
+Docker Compose v5 (v2.39+) changed how it serializes the `test:` field when the value
+is a YAML sequence. It now passes each element of the YAML array as a separate exec
+argument rather than treating element [3] as a single shell string — a behavioral
+change from Docker Compose v2.x.
+
+**Root cause:** Any `test:` with a YAML array form is affected, including
+`["CMD-SHELL", "cmd"]`. Even `["CMD-SHELL", "wget -qO- http://localhost:8080/v1/health"]`
+splits to `["CMD-SHELL","wget","-qO-","http://..."]` under v5. Only the string form of
+`test:` is safe — Docker Compose has always serialized strings as `CMD-SHELL` with the
+entire string passed as a single argument.
+
+**BusyBox wget vs GNU wget:** Alpine-based images (`nats:alpine` and others) use BusyBox
+wget, which does NOT support the `-qO-` combined flag. GNU wget supports `-qO-`; BusyBox
+requires space-separated `-q -O /dev/stdout`. When switching from array to string form,
+also fix the flag style if the container is Alpine-based.
+
+```yaml
+# BROKEN on Docker Compose v5 (splits array elements):
+healthcheck:
+  test: ["CMD", "sh", "-c", "wget -qO- http://localhost:8080/v1/health 2>/dev/null || exit 1"]
+
+# ALSO BROKEN — CMD-SHELL array form is split too:
+healthcheck:
+  test: ["CMD-SHELL", "wget -qO- http://localhost:8080/v1/health 2>/dev/null || exit 1"]
+
+# CORRECT for non-Alpine images (GNU wget, combined -qO- flag is valid):
+healthcheck:
+  test: "wget -qO- http://localhost:8080/v1/health 2>/dev/null || exit 1"
+
+# CORRECT for Alpine-based images (BusyBox wget, must use -q -O /dev/stdout):
+healthcheck:
+  test: "wget -q -O /dev/stdout http://localhost:8222/healthz 2>/dev/null | grep -q ok"
+```
+
+**Architectural context:** `wget` was chosen because the original Python FastAPI stubs
+using `python3 urllib` were replaced with C++20 binaries that lack Python at runtime.
+C++ runtime images (based on `ubuntu:24.04` slim) required an explicit
+`apt-get install wget` in the runtime stage of the Dockerfile.
+
+**Diagnostic commands:**
+
+```bash
+# Check whether the array split occurred (v5 regression visible here):
+podman inspect <container> --format '{{json .Config.Healthcheck}}'
+
+# Check live healthcheck status:
+podman inspect <container> --format '{{json .State.Health}}'
+
+# View raw healthcheck output logs:
+podman inspect <container> --format '{{range .State.Health.Log}}{{.Output}}{{end}}'
+```
+
+**Expected verification output after fix** — single-element string form, not split words:
+
+```json
+{"Test":["CMD-SHELL","wget -q -O /dev/stdout http://localhost:8222/healthz 2>/dev/null | grep -q ok"],...}
+```
+
 ### Detailed Steps
 
 1. **Dockerfile authoring**: pin all base images with SHA256 digests; add `apt-get upgrade -y` for CVE defense; never put `#` comments after `\` in multi-line RUN blocks (Docker parses the token after `\` as a new instruction).
@@ -418,6 +478,8 @@ drift test goes red.
 | `driver: docker-container` to consume a `load:true` base via build-arg | Switched buildx to docker-container (someone's wrong attempted fix) | docker-container driver has an isolated image store; it can't see images loaded into the daemon and falls back to pulling from docker.io → `pull access denied ... insufficient_scope` | Use `driver: docker` (shares the daemon image store), matching the working build-vessels/smoke `load: true` pattern (AchaeanFleet #694) |
 | `cache-to: type=gha,mode=max` with `driver: docker` | Kept GHA cache export after switching to docker driver | Aborts the build with `Cache export is not supported for the docker driver` | Drop the GHA cache export when using `driver: docker` (AchaeanFleet #693) |
 | Removing a vessel from `test-smoke-vessels` matrix without updating the drift test | Dropped a vessel from the CI matrix | `test_smoke_matrix_drift.py` asserts every `vessels/<x>` dir is in the matrix → drift test goes red | Add the removed vessel to that test's `EXCLUDED_VESSELS` allowlist (AchaeanFleet #696) |
+| `["CMD-SHELL", "wget -qO- ..."]` CMD-SHELL array | Used `["CMD-SHELL", "wget -qO- http://localhost:8080/v1/health"]` single-element | Docker Compose v5 still splits this; `podman inspect .Config.Healthcheck` shows `["CMD-SHELL","wget","-qO-","http://..."]` | CMD-SHELL array form is also split in v5 — only the plain string form is safe |
+| `wget -qO-` in Alpine/BusyBox image | Used GNU wget combined flag in `nats:alpine` healthcheck | BusyBox wget rejects `-qO-` as an invalid combined flag | Alpine images use BusyBox wget; use `-q -O /dev/stdout` (space-separated, explicit path) |
 
 ## Results & Parameters
 
@@ -492,6 +554,7 @@ schedule_cron: '0 6 * * *'   # 06:00 UTC — off-peak
 | ProjectKeystone | PR — rootless Podman DNS, compose mount clone-aware | skills/container-build-and-runtime-patterns.history |
 | ProjectNestor | PR — C++ coverage container, clang-format pinning, Podman CI containerization | skills/container-build-and-runtime-patterns.history |
 | ProjectScylla | PR — E2E container testing, pixi container env isolation | skills/container-build-and-runtime-patterns.history |
+| Odysseus | E2E stack — Docker Compose v5.0.2 healthcheck array split, BusyBox wget flag differences, stub-to-C++ migration | skills/container-build-and-runtime-patterns.history |
 
 ## References
 

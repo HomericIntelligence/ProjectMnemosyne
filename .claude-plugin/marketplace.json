@@ -18,7 +18,7 @@
     "tooling": 147,
     "training": 7
   },
-  "last_updated": "2026-06-07T14:43:48Z",
+  "last_updated": "2026-06-07T19:52:12Z",
   "plugins": [
     {
       "name": "agent-config-and-tier-architecture",
@@ -1872,7 +1872,7 @@
     {
       "name": "container-build-and-runtime-patterns",
       "description": "Canonical guide to container build and runtime patterns spanning Docker, Podman, and rootless: multi-stage builds, multi-arch OCI, UID/GID mismatch fixes, layer caching strategies, entrypoint patterns, healthchecks, pixi-volume isolation, GHA cache extraction, Conan-in-Docker chains, dockerfile extras validation. Use when: (1) writing or refactoring a Dockerfile, (2) diagnosing a rootless Podman or UID mismatch crash, (3) extracting / sharing image cache between local and GHA, (4) integrating Conan profiles with a multistage build, (5) container-based E2E test infra.",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "source": "./skills/container-build-and-runtime-patterns.md",
       "category": "ci-cd",
       "tags": [
