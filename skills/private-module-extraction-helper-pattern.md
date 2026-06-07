@@ -438,4 +438,3 @@ G   # ← Must be 'G' (good), not 'N' (no signature) or 'B' (bad signature)
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | Issue #739, PR #900+ | Extracted duplicated `importlib.metadata.version()` into `_version_lookup.py` helper; refactored hephaestus/__init__.py and hephaestus/version/__init__.py; 467 tests pass; pr-policy gate confirmed cryptographic signatures |
-
