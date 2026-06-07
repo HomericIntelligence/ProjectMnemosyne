@@ -18,7 +18,7 @@
     "tooling": 147,
     "training": 7
   },
-  "last_updated": "2026-06-07T14:43:48Z",
+  "last_updated": "2026-06-07T19:52:30Z",
   "plugins": [
     {
       "name": "agent-config-and-tier-architecture",
@@ -3515,7 +3515,7 @@
     {
       "name": "tensor-numeric-correctness-bugs",
       "description": "Diagnose and fix silent correctness bugs in tensor/array numeric operations. Use when: (1) tensor ops produce wrong values for non-contiguous (strided/transposed) layouts, (2) a destructor frees an offset view pointer causing ASAN bad-free, (3) dtype mismatches silently corrupt values via bitcast (float bits read as int), (4) a missing dtype case (bfloat16) causes silent zero reads/writes, (5) multi-dim slice ignores step, returning all elements instead of strided subset, (6) IEEE 754 NaN bit patterns produce inconsistent hashes across runs, (7) a seed parameter is declared but never wired to the PRNG causing non-reproducible random tensors, (8) byte-pointer arithmetic on a `UnsafePointer[UInt8]` tensor buffer silently copies one byte per element regardless of dtype, leaving 3/4 of float32 storage uninitialized and quietly corrupting training data.",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "source": "./skills/tensor-numeric-correctness-bugs.md",
       "category": "debugging",
       "tags": [

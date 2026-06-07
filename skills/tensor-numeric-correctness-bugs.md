@@ -13,8 +13,8 @@ description: >-
   copies one byte per element regardless of dtype, leaving 3/4 of float32 storage
   uninitialized and quietly corrupting training data.
 category: debugging
-date: 2026-05-26
-version: "1.1.0"
+date: 2026-06-07
+version: "1.2.0"
 user-invocable: false
 history: tensor-numeric-correctness-bugs.history
 tags:
@@ -146,7 +146,7 @@ grep -n "_get_float64(i)\|_get_float64(src_idx)\|_get_float64(adjusted_idx)" \
 ```
 
 Functions to audit: `as_contiguous()`, `concatenate()`, `tile()`, `repeat()`,
-`broadcast_to()`, `permute()`, `reshape()`.
+`broadcast_to()`, `permute()`, `reshape()`, `stack()`.
 
 **Fix:** Replace with stride-based decomposition (see Quick Reference #1).
 Reference implementation lives in `ExTensor.slice()` (extensor.mojo:988-1002).
@@ -161,9 +161,19 @@ for i in range(t_numel):
     var dst_byte_offset = (result_elem_offset + i) * dtype_size
 ```
 
+**Concatenate scope warning:** The axis-0 fix above addresses only the `if actual_axis == 0`
+branch. The general-axis branch (non-zero `actual_axis`) still uses raw memcpy with flat
+offsets — a separate, unaddressed flat-offset bug scoped out by design in issue #4083.
+Do not present `concatenate()` as fully fixed for all axes.
+
 **Regression test:** Create `arange(0..12).reshape(3,4)`, transpose, call function,
 check all 12 element values against expected transpose. The existing test that only
 checks `is_contiguous()` and `_strides` will NOT catch this bug.
+
+**Test isolation via direct `_strides` mutation:** Override `_strides[0]=1`,
+`_strides[1]=2` directly on the test tensor to exercise the non-contiguous path
+without depending on `transpose_view()` correctness or availability. This avoids
+test-order dependencies when `transpose_view()` is under development or unfixed.
 
 ### Pattern 2: Slice View Bad-Free Destructor
 
