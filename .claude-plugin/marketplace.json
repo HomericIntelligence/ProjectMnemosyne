@@ -18,7 +18,7 @@
     "tooling": 147,
     "training": 7
   },
-  "last_updated": "2026-06-07T14:43:48Z",
+  "last_updated": "2026-06-07T19:53:15Z",
   "plugins": [
     {
       "name": "agent-config-and-tier-architecture",
@@ -4091,7 +4091,7 @@
     {
       "name": "stale-documentation-audits-and-sync",
       "description": "Canonical workflow for detecting and remediating stale documentation: doc-drift grep audits, stale-count fixes, metric discrepancy reconciliation, ecosystem-role drift detection, multi-file doc sync, README audit workflows, cross-doc citation drift defenses, doc-contradiction resolution. Use when: (1) running a doc-drift audit across a corpus, (2) reconciling docs to current implementation, (3) fixing stale agent/file/test counts in README, (4) catching cross-doc contradictions before publication, (5) syncing docs after a structural change.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "source": "./skills/stale-documentation-audits-and-sync.md",
       "category": "documentation",
       "tags": [

@@ -2,8 +2,8 @@
 name: stale-documentation-audits-and-sync
 description: "Canonical workflow for detecting and remediating stale documentation: doc-drift grep audits, stale-count fixes, metric discrepancy reconciliation, ecosystem-role drift detection, multi-file doc sync, README audit workflows, cross-doc citation drift defenses, doc-contradiction resolution. Use when: (1) running a doc-drift audit across a corpus, (2) reconciling docs to current implementation, (3) fixing stale agent/file/test counts in README, (4) catching cross-doc contradictions before publication, (5) syncing docs after a structural change."
 category: documentation
-date: 2026-05-18
-version: "1.0.0"
+date: 2026-06-07
+version: "1.1.0"
 user-invocable: false
 verification: verified-local
 history: stale-documentation-audits-and-sync.history
@@ -230,6 +230,40 @@ Add shell command in README so future readers can verify without trusting hardco
 `ls .github/workflows/*.yml | wc -l`
 ```
 
+#### Post-Migration README Cleanup
+
+Use when a prior consolidation pass migrated workflow steps to composite actions but left the
+README describing the old inline pattern. Effort: ~15 min, low-risk (documentation only).
+
+**Step 1 — Verify migration is complete before touching README:**
+
+```bash
+# Should return 0 results if migration is complete
+grep -rn "prefix-dev/setup-pixi" .github/workflows/*.yml | grep -v README | wc -l
+
+# Positive check — verifies new composite action pattern is present (not just absence-check)
+grep -rn "uses: ./.github/actions/setup-pixi" .github/workflows/*.yml | wc -l
+```
+
+If the inline pattern is still present in `.yml` files, do the workflow migration first.
+
+**Step 2 — Find all stale prose in the README:**
+
+```bash
+grep -n "inline\|Not Yet Migrated\|Remaining Duplication\|no composite action" .github/workflows/README.md
+```
+
+There are typically 6 stale locations in a post-migration README:
+
+1. Individual workflow description bullets — e.g. "Uses inline `prefix-dev/setup-pixi`"
+2. "Remaining Duplication" section — lists workflows as not-yet-migrated
+3. "Common Patterns > Composite Actions" — says no composite actions exist
+4. "Pixi-Based Environment Setup" examples — shows old inline YAML snippet
+5. "Adding New Workflows" checklist — tells contributors to add to the duplication table
+6. Audit quick-reference commands — grep command checks for inline usage count
+
+**Step 3 — Apply targeted edits using `replace_all: true`** for phrases that appear multiple times.
+
 #### Contradiction resolution
 
 Authority order: `CLAUDE.md` > `.claude/shared/pr-workflow.md` > `CONTRIBUTING.md`
@@ -299,6 +333,7 @@ gh pr merge --auto --squash
 | Skill invocation for commit | Used `Skill commit-commands:commit-push-pr` | Permission denied in don't-ask mode | Fall back to manual `git add && git commit && git push && gh pr create` |
 | Removing `--label` from CONTRIBUTING without checking `.claude/shared/` | Only grepped CONTRIBUTING.md | Third file (`.claude/shared/pr-workflow.md`) could also contain the contradiction | Always verify all related files before declaring fix complete |
 | Using `replace_all: false` for repeated phrases | First bullet tried individually | Context string not unique — edit tool reported string not found | When the same phrase appears multiple times, use `replace_all: true` |
+| Updating SHA-pinning documentation examples | Considered replacing `prefix-dev/setup-pixi@v0.9.3` in the SHA-pinning examples section | Those lines are intentional documentation of the pinning pattern, not actual workflow steps | Always check whether a reference is in a concept-explaining code example block vs. a step to be migrated |
 
 ## Results & Parameters
 
@@ -414,6 +449,10 @@ When reorganizing section numbering, produce this BEFORE renaming sections:
 10. **`--cov` path must match installed package name** — `--cov=scylla/scylla` is wrong
     when the package is installed as `scylla`; check `pyproject.toml` to confirm.
 
+11. **MD029 ordered lists reset per logical group** — markdownlint requires each new
+    independent numbered list to start at 1. Two separate lists (e.g., "PR/push jobs" and
+    "weekly jobs") each start at 1 independently; do not continue numbering across groups.
+
 ## Verified On
 
 | Project | Context | Details |
@@ -423,3 +462,4 @@ When reorganizing section numbering, produce this BEFORE renaming sections:
 | ProjectOdyssey | PR \#3320 (issue \#3145) | Stale agent count fix after agents converted to skills |
 | ProjectScylla | Issues \#753, \#758 | CLAUDE.md status fix, doc contradiction resolution |
 | mvillmow/Random | Predictive-Coding-in-Mojo Phase 0 | Cross-doc citation drift: 8 stale §-refs, 2 arXiv ID swaps caught |
+| ProjectOdyssey | Issue (post-migration), PR \#4847 | README-only sync after pixi composite action migration; 26 insertions, 45 deletions |
