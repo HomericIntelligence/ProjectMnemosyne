@@ -374,4 +374,3 @@ $ gh pr view 899 --json mergeStateStatus,statusCheckRollup
 - `git-gpg-sign-email-mismatch-silent-unsigned-blocks-merge.md` — Diagnose GPG signing failures when email doesn't match key UIDs
 - `dry-refactoring-workflow.md` — DRY extraction with cryptographic signing requirement
 - `hatch-vcs-pyproject-auto-versioning-setup.md` — Version resolution patterns in signed commits
-
