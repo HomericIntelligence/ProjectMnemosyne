@@ -51,7 +51,7 @@ def resilient_call(
     return func(*args, **kwargs)
 ```
 
-**Why this works**: 
+**Why this works**:
 - `Callable[..., R]` accepts any callable with any argument signature
 - `...` (Ellipsis) means "any arguments"
 - `R` is the return type, which is preserved

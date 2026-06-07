@@ -314,4 +314,3 @@ This skill documents the design decision and explains when/why to use this patte
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | Issue #757, PR #956 | hephaestus/resilience/subprocess_resilience.py: replaced type-erased `object` signature with `Callable[..., R] + TypeVar("R")` pattern. Full project mypy + 124 resilience/automation tests pass in CI. |
-
