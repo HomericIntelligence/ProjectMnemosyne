@@ -1,6 +1,10 @@
 <!-- markdownlint-disable MD024 -->
 # pytest-fixture-patterns-and-deduplication — History
 
+## v1.1.0 (2026-06-07)
+
+Restore `state_order` rank-table + config-hash nuance (nuance audit). Added to the checkpoint state-machine fixture subsection: (1) the silent advancement-deadlock failure mode when a `RunState` is missing from the `state_order` rank table (defaults to `rank=0`, `0 > 0 = False`, no error) plus an `inspect.getsource`-based regression-test guard; (2) config-hash stability — exclude ephemeral fields (`tiers_to_run`, `max_subtests`, `parallel_subtests`, `until_*`/`from_*`/`filter_*`) from the resume config hash so re-runs with different ephemeral flags still resume. Added two matching Failed Attempts rows.
+
 ## v1.0.0 (2026-06-07)
 
 Consolidated the following 9 skills into the canonical `pytest-fixture-patterns-and-deduplication`:

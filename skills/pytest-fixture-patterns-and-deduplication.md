@@ -3,7 +3,7 @@ name: pytest-fixture-patterns-and-deduplication
 description: "Use when: (1) pytest.mark.parametrize lists hardcode fixture filenames that must be manually updated when new fixtures are added — replace with glob-based auto-discovery; (2) test fixtures have duplicated YAML configs — find | md5sum shows 40+ duplicates and runtime block-based composition eliminates them; (3) duplicated test fixture configs should be migrated to a centralized shared location; (4) a schema validation test parametrizes over tier fixture files but only early tiers exist (e.g. t0/t1) and new tiers need coverage across the full range; (5) YAML fixture files and test parametrize lists must be expanded when new tiers are added to the tier registry; (6) a second division's fixture set is added to a flat tests/fixtures/ directory and capture-fixtures CLI needs named subdirs; (7) testing multi-level directory nesting in shutil.copytree migrations where deep paths must survive migration; (8) fixture and implementation symmetry must be validated — fixture YAML keys must match tested interface fields; (9) checkpoint state machine fixtures encode multi-state test scenarios and need refactoring for reuse; (10) an autouse fixture in conftest.py must reset module-level singleton state (asyncio objects, circuit breakers) at the broadest scope."
 category: testing
 date: 2026-06-07
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 history: pytest-fixture-patterns-and-deduplication.history
 tags:
@@ -341,6 +341,35 @@ def wired_runner(mock_config, mock_tier_manager, tmp_path):
 
 For zombie-detection tests use a guaranteed-dead PID (`_DEAD_PID = 999_999_999`) and real disk I/O instead of mocking `os.kill`. `is_zombie()` requires all three: `status=="running"` AND dead PID AND stale heartbeat.
 
+##### `state_order` rank-table sync + config-hash stability
+
+Two silent failure modes hit stateful checkpoint fixtures when the state machine advances runs:
+
+1. **`state_order` rank-table coverage.** Run advancement compares ranks (`inferred_rank > current_rank`). The rank comes from a `state_order` lookup table keyed by `RunState`. If a `RunState` value is **missing** from `state_order` it silently defaults to `rank=0`, so the check evaluates `0 > 0 = False` and the run **never advances** — with **NO error raised**. A fixture exercising a state added to the enum but not to `state_order` looks like a deadlock, not a crash. Guard it with an `inspect.getsource`-based regression test that asserts every enum member is covered:
+
+   ```python
+   def test_reconcile_state_order_covers_all_run_states():
+       src = inspect.getsource(_reconcile_run_state)  # or the module holding state_order
+       for state in RunState:
+           assert state.name in src, (
+               f"{state.name} missing from state_order rank table — "
+               f"runs in this state silently never advance (rank defaults to 0)"
+           )
+   ```
+
+2. **Config-hash stability across re-runs.** The resume config hash must **exclude ephemeral run-selection fields** so a re-run with different ephemeral flags still resumes the same experiment instead of starting fresh. Exclude `tiers_to_run`, `max_subtests`, `parallel_subtests`, and the `until_*` / `from_*` / `filter_*` families before hashing:
+
+   ```python
+   _EPHEMERAL = {"tiers_to_run", "max_subtests", "parallel_subtests"}
+   def _resume_config_hash(cfg: dict) -> str:
+       stable = {
+           k: v for k, v in cfg.items()
+           if k not in _EPHEMERAL
+           and not k.startswith(("until_", "from_", "filter_"))
+       }
+       return hashlib.sha256(json.dumps(stable, sort_keys=True).encode()).hexdigest()
+   ```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -352,6 +381,8 @@ For zombie-detection tests use a guaranteed-dead PID (`_DEAD_PID = 999_999_999`)
 | Mock-based DataLoader reset assertion (Mojo) | Wrap loader to count `reset()` calls | Mojo structs have no vtable-based mocking / spy trait | Use direct field mutation + observable side effects (finite loss proves reset ran) |
 | Parametrize over an unsorted `glob()` result | `Path.glob("t*.yaml")` without `sorted()` | Filesystem-dependent order made failures non-reproducible across platforms/CI | Always wrap glob results in `sorted()` and add `ids=` for readable test IDs |
 | Forget normalization guard for `_`-prefixed fixture names | `load_tier("_test-fixture")` without the guard | Became `t_test-fixture` after normalization; the `_test-fixture.yaml` file was never found | Check `tier.startswith("_")` before any normalization; the guard must come first |
+| Add a new `RunState` enum value but not to the `state_order` rank table | Fixture exercising the new state expected the run to advance | Missing state silently got `rank=0`, so `inferred_rank > current_rank` was `0 > 0 = False` — the run never advanced and NO error was raised (looked like a deadlock) | Add an `inspect.getsource`-based regression test (`test_reconcile_state_order_covers_all_run_states`) asserting every `RunState` member appears in `state_order` |
+| Hash the full config (incl. ephemeral flags) for resume detection | Re-ran with different `tiers_to_run` / `until_*` flags | Config hash changed, so resume failed and the experiment restarted from scratch instead of continuing | Exclude ephemeral fields (`tiers_to_run`, `max_subtests`, `parallel_subtests`, `until_*`/`from_*`/`filter_*`) from the resume config hash |
 
 ## Results & Parameters
 
