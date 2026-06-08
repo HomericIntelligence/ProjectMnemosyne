@@ -1,0 +1,58 @@
+# automation-session-naming-pr-scoped-not-commit-scoped — History
+
+## v1.1.0 (2026-06-08)
+
+**Changed by:** PR #1100 — advise session isolation bug-fix (ProjectHephaestus)
+**Verification:** verified-precommit
+
+### What changed
+- Added "cwd invariant" section to Verified Workflow: both turns of a multi-turn session MUST use the same `cwd` or the transcript lookup resolves to a different path and `should_resume` is False (silent create instead of resume)
+- Added new "Two-turn advise-as-implementer-turn" pattern: advise is now the first turn of `AGENT_IMPLEMENTER` session (`cwd=worktree_path`); implementation is turn 2 auto-resumed via `--resume`
+- Added marketplace-path relativization bug: `get_advise_prompt` must receive `repo_root=str(worktree_path)` when `cwd=worktree_path`, not `repo_root=str(repo_root)`, so `_relativize_path` falls back to the absolute path for files outside the worktree
+- Added Codex guard: `is_codex()` gate preserves old AGENT_ADVISE + text-injection path for Codex (no multi-turn session support)
+- Added 2 new Failed Attempts rows (wrong cwd on second turn; wrong repo_root for path relativization)
+- Added new Verified On entry (PR #1100)
+- Bumped version 1.0.0 → 1.1.0
+
+### Why
+The existing skill documented the id-scope cause of silent session recreation. A second independent
+cause was discovered: `invoke_claude_with_session` determines create-vs-resume by checking
+`transcript = session_jsonl_path(sid, cwd); should_resume = transcript.exists()`. If turn 1 uses
+`cwd=worktree_path` and turn 2 accidentally uses a different `cwd`, `session_jsonl_path` resolves
+to a different on-disk location that does not exist → `should_resume = False` → the second turn
+creates a new session and loses the advise context. Same symptom (agent starts fresh) as the
+id-scope bug, different root cause.
+
+### Previous version (v1.0.0) snapshot
+
+---
+name: automation-session-naming-pr-scoped-not-commit-scoped
+description: "When an automation loop drives a long-lived artifact (issue / PR) with short-lived Claude sessions via `claude --resume <session_id>`, the deterministic session id MUST be scoped to the artifact, not to the live trunk commit. Tuple-scoping the id as `(repo, issue, agent, githash)` produces a new UUID on every main-bump and silently fragments transcripts: `invoke_claude_with_session` cannot `--resume` an id it never minted, so it falls back to `--session-id` (create) and the agent starts from scratch every iteration. Fix: drop `githash` from the session-name and session-uuid tuples (`session_name(repo, issue, agent)`, `session_uuid(repo, issue, agent)`), drop the matching kwarg from `invoke_claude_with_session`, and walk EVERY caller (typical sites: planner, plan_reviewer, implementer, address_review, pr_reviewer, ci_driver — 8 in this repo). Pin the regression with a `**kwargs`-unpacked TypeError test so static analyzers (github-code-quality, mypy, ruff) don't flag the intentional bad kwarg. Use when: building automation that resumes Claude sessions across runs, session resume is silently failing because the deterministic id drifts, a long-lived artifact is being worked on by short-lived sessions, or pinning a removed-argument invariant against a static analyzer that resolves names."
+category: architecture
+date: 2026-05-31
+version: "1.0.0"
+user-invocable: false
+tags:
+  - automation
+  - claude-session
+  - session-resume
+  - session-id
+  - deterministic-uuid
+  - invoke-claude-with-session
+  - architecture
+  - regression-test
+  - static-analyzer
+  - github-code-quality
+  - kwargs-unpacking
+  - session-scope
+---
+
+# Automation Session Naming: Scope to the PR, Not the Commit
+
+[Full v1.0.0 content as archived above]
+
+---
+
+## v1.0.0 (2026-05-31)
+
+**Initial version.**
