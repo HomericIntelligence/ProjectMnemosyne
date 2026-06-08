@@ -4,6 +4,10 @@
 
 Changelog and superseded-skill archive for the merged canonical skill.
 
+## v1.1.0 (2026-06-07)
+
+restore core.hooksPath bootstrap failed-attempt (nuance audit pass 2)
+
 ## v1.0.0 (2026-06-07)
 
 Merged 3 skills into `pixi-env-task-config`:

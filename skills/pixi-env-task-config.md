@@ -3,7 +3,7 @@ name: pixi-env-task-config
 description: "Use when: (1) setting up a new Mojo/MAX/Python project with pixi.toml and choosing between nightly/stable channels, (2) wrapping pixi tasks with a justfile for cross-repo convention alignment, (3) eliminating DRY violations by using pixi feature composition (environments = {features = [shared, dev]}) to share dev tools across environments, (4) adding justfile delegation recipes to a meta-repo, (5) auditing pixi task definitions for consistency with CI workflows."
 category: tooling
 date: 2026-06-07
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 history: pixi-env-task-config.history
 tags:
@@ -223,6 +223,8 @@ check:
 
 Key decisions for library repos: configurable variables at top avoid path duplication; `bootstrap` combines install + pre-commit setup; `test *ARGS` forwards to pytest; `typecheck` calls `pixi run mypy` directly (no pixi task); `check` is a composite "is everything green?" recipe.
 
+**Bootstrap-in-worktree caveat**: `pixi run pre-commit install` (inside `bootstrap`) refuses to install hooks when git `core.hooksPath` is set — common in worktrees with a custom hook path. This is a git-config issue, not a justfile issue. Workaround: install hooks from the main checkout, or unset / repoint `core.hooksPath` first.
+
 **Template B: CI-Heavy Repo (e.g., Scylla)** — adds CI container recipes:
 
 ```just
@@ -342,6 +344,7 @@ When the same dev tools are declared in multiple `[feature.*]` blocks, use featu
 | --------- | ---------------- | --------------- | ---------------- |
 | Using `magic` for project setup | `magic init` / `magic add` | `magic` is deprecated; Pixi replaced it | Always use `pixi` — do not look for or use `magic` |
 | Heredocs in justfile recipes | Multi-line heredoc inside a `just` recipe | `just` mishandles heredocs | Use `printf` instead of heredocs in justfile recipes |
+| `bootstrap` in a git worktree | `pixi run pre-commit install` (via `just bootstrap`) inside a worktree with git `core.hooksPath` set | pre-commit refuses to install hooks when `core.hooksPath` is set; it's a git-config issue, not a justfile issue | Install hooks from the main checkout, or unset / repoint `core.hooksPath` first — `bootstrap` works fine in normal clones |
 | YAML anchors for tool sharing | `&common_tools` aliases to share tool blocks | pixi.toml is TOML, not YAML — no anchor/alias syntax | Feature composition is the correct pixi idiom, not YAML tricks |
 | Manual sync of versions across blocks | Kept six tools in both `[feature.dev]` and `[feature.lint]`, hand-syncing versions | Error-prone; versions drifted within weeks | Use feature composition to centralize the source of truth — DRY eliminates sync burden |
 | Single `[feature.all]` instead of `[feature.shared]` | Named the shared feature `[feature.all]` | Reviewers read "all tools" as all dev tools, not shared tools | Name shared features explicitly: `[feature.shared]`/`[feature.common]` |
