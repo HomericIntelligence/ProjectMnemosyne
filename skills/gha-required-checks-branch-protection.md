@@ -3,7 +3,7 @@ name: gha-required-checks-branch-protection
 description: "Use when: (1) PRs are permanently BLOCKED because a required status-check context is a job gated by if: github.event_name != 'pull_request' (skipped != satisfied), (2) consolidating duplicate CI jobs into a reusable workflow so _required.yml is a thin aggregator, (3) validating GitHub branch protection API responses and writing synthetic tests for bash enforcement scripts, (4) a summary aggregator job pattern is needed to replace N individual required contexts with one that handles skip semantics correctly."
 category: ci-cd
 date: 2026-06-07
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 history: gha-required-checks-branch-protection.history
 tags:
@@ -111,6 +111,8 @@ GitHub posts one status-check context per leaf job. A whole-job `if:` evaluating
 5. **Apply the workflow change AND the branch-protection update together.** The workflow edit alone is a no-op for protection — until the per-job contexts are removed, those `skipped` results still block. Remove them and keep only `summary` (Quick Reference #4).
 6. **Verify on a real PR:** per-job contexts still post `skipped` but are no longer required; `summary` posts `success`; the PR shows "All checks have passed".
 
+*Path-filter co-occurrence:* do not mistake this for a `paths:` problem. Broadening the `paths:` filter alone does NOT unblock the PR — it merely flips the failure mode from "context never posted" to "context posted as `skipped`", and **both stay BLOCKED**. When required contexts span both flavours, fix both: correct the `paths:` filter AND add the skip-tolerant aggregator. See the related skill `ci-cd-required-context-never-posts-pr-blocked`.
+
 *Lower-cost alternative:* demote the job-level `if:` to step-level and add a leading no-op step so the job exits `success` on PRs. This satisfies the existing contexts with no branch-protection edit, but every conditional job needs a no-op step and the aggregator scales better as the matrix grows (a new matrix entry adds a `needs:` line, not a new registered required context).
 
 #### B. Reusable workflow so `_required.yml` is a thin aggregator
@@ -166,6 +168,7 @@ When a `workflow-smoke-test.yml` gate exists for one workflow and others need pr
 | ------- | -------------- | ------------- | -------------- |
 | Counted on `skipped` to satisfy a required check | Assumed a whole-job `if:` skip posts `success` because the job "didn't fail" | GitHub posts `conclusion=skipped`; branch protection requires `success` — `skipped` is not in the satisfying set for job-level skips | Verified empirically (ProjectOdyssey PR #5406 was BLOCKED until the branch-protection update landed); use an `if: always()` aggregator that tolerates `skipped` |
 | Pushed the aggregator workflow but forgot the protection edit | Expected BLOCKED to clear once the `summary` job existed | The per-job contexts are still required and still `skipped`; the new aggregator is a no-op for protection | Aggregator workflow + branch-protection edit are a single logical fix — apply both together |
+| Treated a BLOCKED PR as purely a path-filter problem | Broadened the `paths:` filter alone, expecting the required context to start passing | Fixing `paths:` only flips the failure mode from "context never posted" to "context posted as `skipped`" — both stay BLOCKED | When required contexts span both flavours, fix both (`paths:` AND the skip-tolerant aggregator); see related skill `ci-cd-required-context-never-posts-pr-blocked` |
 | Used `workflow_run` / cross-file `needs:` to aggregate | `workflow_run` to depend on another workflow; `needs:` to reference a job in another file | `workflow_run` fires asynchronously with a different context-name format and does not reliably satisfy required checks; `needs:` only works within one file | Use `workflow_call` (reusable workflows) for required-checks aggregation |
 | No read-back after PUT to branch protection | Apply script called `gh api PUT` and exited 0 | API silently ignores unknown/misspelled fields and returns 200; live state unchanged | Always GET read-back immediately after PUT; compare live to expected with jq |
 | Exact equality for drift detection | Asserted `required_approving_review_count == 1` | Blocks a valid future tightening to 2 (drift check fails) | Use `>= min_threshold`, not `== exact_value` |

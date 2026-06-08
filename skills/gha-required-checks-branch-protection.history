@@ -2,6 +2,18 @@
 
 # gha-required-checks-branch-protection — History
 
+## v1.1.0 (2026-06-07)
+
+restore path-filter co-occurrence lesson (nuance audit pass 2)
+
+- Restored into section A Detailed Steps and the Failed Attempts table: fixing
+  `paths:` alone flips the failure mode from "context never posted" to `skipped`,
+  and BOTH stay BLOCKED — so you must fix both flavours (`paths:` AND the
+  skip-tolerant aggregator).
+- Restored the pointer to the related skill `ci-cd-required-context-never-posts-pr-blocked`.
+
+---
+
 ## v1.0.0 (2026-06-07)
 
 Original consolidated skill merging 5 prior skills:
