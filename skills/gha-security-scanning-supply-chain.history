@@ -2,6 +2,17 @@
 
 # History: gha-security-scanning-supply-chain
 
+## v1.1.0 (2026-06-07)
+
+restore version-bump test-constant + pin-discovery (nuance audit pass 2)
+
+- Added `### Detailed Steps: scanner version bumps and pin discovery` covering: bumping a pinned
+  scanner version (must also update `GITLEAKS_VERSION`, `GITLEAKS_TARBALL`, `EXPECTED_SHA256` in
+  `tests/workflows/test_security_workflow.py`, else tests point at the old hash) and discovering the
+  correct `--tag` pin via `git log --oneline --all -- Dockerfile` + `git show <commit>:Dockerfile | grep cargo`.
+- Added 2 Failed Attempts rows: workflow-only version bump leaving stale test constants; guessing the
+  `--tag` pin instead of recovering it from git history.
+
 ## v1.0.0 (2026-06-07)
 
 Merged 3 skills into this canonical:
