@@ -1,0 +1,2489 @@
+<!-- markdownlint-disable MD024 -->
+
+# History: pr-enumeration-discovery-idempotency
+
+This file preserves the full original content of every skill merged into the
+`pr-enumeration-discovery-idempotency` canonical.
+
+## v1.0.0 (2026-06-07)
+
+Initial merge consolidating 8 source skills:
+
+- `failing-pr-discovery-gh-enumeration`
+- `tooling-gh-pr-list-limit-cap-use-api-paginate`
+- `tooling-gh-label-list-default-limit-truncation`
+- `architecture-bot-pr-discovery-synthetic-issue-key`
+- `github-bulk-issue-and-pr-operations`
+- `automation-duplicate-pr-prevention-idempotency-guards`
+- `pr-merged-state-not-proof-of-remote-sync`
+- `tooling-bulk-pr-sync-statuscheck-504-stale-classify`
+
+
+## Superseded from failing-pr-discovery-gh-enumeration
+
+**Original date:** 2026-06-06
+
+**Original version:** "1.0.0"
+
+```yaml
+name: failing-pr-discovery-gh-enumeration
+description: "Discover failing open PRs via gh CLI using `gh pr list --json number,isDraft,statusCheckRollup,mergeStateStatus`. Filter by check conclusions (FAILURE/CANCELLED/TIMED_OUT) and mergeStateStatus==BLOCKED. Use synthetic-issue-key pattern (pr_num==issue_num) for consistency with issue-driven discovery. Use when: (1) automating PRs without relying on Closes #N issue mapping, (2) need to enumerate BLOCKED PRs from CI failures, (3) discovering work via PR-enumeration instead of issue-enumeration."
+category: ci-cd
+date: 2026-06-06
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - gh-pr-list
+  - statusCheckRollup
+  - mergeStateStatus
+  - pr-discovery
+  - check-failures
+  - BLOCKED-state
+  - synthetic-issue-key
+  - gh-json
+  - automation-loop
+  - drive-green-pattern
+```
+
+
+# Discover Failing Open PRs via gh pr list With Synthetic Issue Keys
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-06 |
+| **Objective** | Document the `gh pr list --json` pattern for discovering open PRs that are BLOCKED on failed CI checks, suitable for PR-driven automation loops that don't rely on issue→PR mapping. Use synthetic-issue-key pattern (pr_num==issue_num) for downstream consistency. |
+| **Outcome** | Shipped in ProjectHephaestus issue #819 / PR #852 (feat: Implement #819). All 1143 automation tests pass, including 25 new tests for `_discover_failing_prs` enumeration and synthetic-key handling. |
+| **Verification** | verified-ci (full automation test suite passes; deployed in drive-green-ecosystem loop) |
+| **History** | New skill — no amendments yet. |
+
+## When to Use
+
+- You are building an automation driver (CI driver, drive-green loop, batch-merge bot) that enumerates work by **PR**, not by issue.
+- You need to discover PRs that are BLOCKED on failed CI checks (FAILURE/CANCELLED/TIMED_OUT conclusions) to attempt automatic remediation.
+- Your driver does NOT rely on parsing `Closes #N` from PR bodies — it treats PR numbers as the primary work unit.
+- You want to filter open PRs by their merge state and check status, not by issue keywords or labels.
+- You need a consistent discovery pattern that works with bot PRs (which have no originating issue) and human PRs alike.
+- You are tempted to use `gh pr list --limit 100 --state OPEN` and want to know why `--json` with `statusCheckRollup` is the correct approach for failing PRs.
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Enumerate all open PRs with their check status and merge state
+gh pr list --limit 1000 --json number,isDraft,statusCheckRollup,mergeStateStatus
+
+# Filter by BLOCKED state and check failures (in Python)
+for pr in prs:
+    if pr["mergeStateStatus"] == "BLOCKED" and \
+       any(c.get("conclusion") in ("FAILURE", "CANCELLED", "TIMED_OUT")
+           for c in pr.get("statusCheckRollup", [])):
+        failing_prs[pr["number"]] = pr["number"]  # synthetic key: pr_num==pr_num
+```
+
+### Detailed Steps
+
+#### Why `gh pr list --json` is the right tool
+
+The `gh pr list` command with `--json` output is designed for filtering and enumeration:
+
+1. **Returns structured JSON** — each PR is a complete object with all fields needed for decision-making.
+2. **Honors `--limit` and pagination** — `--limit 1000` ensures you get all PRs up to 1000; for larger repos use `--paginate` to walk all pages.
+3. **Fields available**: `number`, `title`, `state`, `isDraft`, `statusCheckRollup`, `mergeStateStatus`, `author`, `labels`, `milestone`, `body` and more.
+4. **No silent truncation** — unlike `gh pr list` with text output (which caps at 30 items by default), `--json` respects `--limit`.
+
+#### The filter: `statusCheckRollup` and `mergeStateStatus`
+
+```python
+# REST shape (what gh pr list --json returns)
+{
+  "number": 852,
+  "title": "feat: Implement #819",
+  "isDraft": false,
+  "statusCheckRollup": [
+    {
+      "context": "test (unit)",
+      "description": "Tests passed",
+      "state": "SUCCESS",
+      "conclusion": "SUCCESS",
+      "url": "https://..."
+    },
+    {
+      "context": "lint",
+      "description": "Found 5 issues",
+      "state": "FAILURE",
+      "conclusion": "FAILURE",
+      "url": "https://..."
+    }
+  ],
+  "mergeStateStatus": "BLOCKED",
+  "author": {"login": "claude-haiku", "type": "Bot"}
+}
+```
+
+The two key fields:
+
+| Field | Meaning | Values | When to filter |
+|-------|---------|--------|-----------------|
+| **`mergeStateStatus`** | Can this PR be merged as-is? | BLOCKED, CLEAN, DIRTY, UNSTABLE, HAS_HOOKS, UNKNOWN | Filter by `== "BLOCKED"` to find PRs unable to merge due to required checks |
+| **`statusCheckRollup`** | List of all CI checks run on the PR | Array of check objects with `conclusion` | Filter each check's `conclusion` for FAILURE/CANCELLED/TIMED_OUT |
+
+A PR is "failing" if:
+- `mergeStateStatus == "BLOCKED"` (repo rules say it can't merge), AND
+- At least one check in `statusCheckRollup` has `conclusion` in {FAILURE, CANCELLED, TIMED_OUT}
+
+#### The synthetic-issue-key invariant: `pr_number == pr_number`
+
+The discovery pattern mirrors the synthetic-key approach from `architecture-bot-pr-discovery-synthetic-issue-key.md`:
+
+```python
+def _discover_failing_prs(self, repo_root: str) -> dict[int, int]:
+    """Discover all open BLOCKED PRs with failed checks.
+
+    Returns {pr_number: pr_number} — the synthetic-key invariant.
+    For consistency with downstream code expecting (issue_number, pr_number) pairs,
+    we use pr_number in both positions. This makes the code path identical whether
+    work came from an issue or a PR.
+    """
+    owner, repo = get_repo_info(repo_root)
+
+    # Fetch all open PRs with check status
+    result = _gh_call(
+        [
+            "pr", "list",
+            "--limit", "1000",
+            "--json", "number,isDraft,statusCheckRollup,mergeStateStatus"
+        ],
+        cwd=repo_root,
+        check=False,
+    )
+
+    if result.returncode != 0:
+        logger.error("Failed to list PRs: %s", result.stderr)
+        return {}
+
+    prs = json.loads(result.stdout or "[]")
+    failing_prs: dict[int, int] = {}
+
+    for pr in prs:
+        # Skip drafts (not ready for automation)
+        if pr.get("isDraft", False):
+            continue
+
+        # Check if PR is BLOCKED
+        if pr.get("mergeStateStatus") != "BLOCKED":
+            continue
+
+        # Check if any required check has failed
+        status_checks = pr.get("statusCheckRollup", [])
+        has_failure = any(
+            check.get("conclusion") in ("FAILURE", "CANCELLED", "TIMED_OUT")
+            for check in status_checks
+        )
+
+        if has_failure:
+            pr_num = pr.get("number")
+            if isinstance(pr_num, int):
+                failing_prs[pr_num] = pr_num  # synthetic-key invariant
+
+    return failing_prs
+```
+
+#### Why synthetic keys for PR-driven discovery
+
+When the driver uses PR enumeration as the primary discovery path (not issue enumeration), the code pipeline still expects `(issue_number, pr_number)` pairs downstream:
+
+- Existing patterns in automation loops assume: "for each (issue, pr) pair, attempt fixes"
+- Bot PRs have no issue, so `issue_number` would be None
+- Using `pr_number` in both positions — the synthetic key — keeps the code path identical
+- Downstream guards (like `_is_bot_pr_mode(issue_num, pr_num)` returning `True` when they're equal) work automatically
+
+Result: PR-driven discovery flows through the same pipeline as issue-driven discovery, with no special-case handling.
+
+#### Filtering out drafts
+
+Always skip `isDraft==True` PRs:
+
+```python
+if pr.get("isDraft", False):
+    continue
+```
+
+Draft PRs are:
+- Still under author development — operator hasn't explicitly opened them for review
+- Not intended for automation — the author may be force-pushing or rewriting history
+- Likely to have flaky CI results — not a stable target for fixes
+
+The only exception is if your automation is specifically designed for drafts (e.g., a bot that prepares drafts for human review). For general-purpose "find PRs to fix" discovery, skip drafts.
+
+#### The `--limit 1000` choice
+
+- `--limit 1000` covers repos up to 1000 open PRs, which is well beyond typical repos (the ecosystem's largest has ~16 open PRs).
+- For repos larger than 1000, use `gh pr list --paginate --json ...` to walk all pages.
+- Always use `--json` (not text output) — text output silently caps at 30 items.
+
+#### Cost: one `gh pr list` call per repo
+
+The cost of this discovery is exactly **one** `gh pr list --limit 1000 --json ...` call per repo per driver run. It is a single API call that returns all PRs with full metadata — no per-PR round-trips. For repos under 1000 PRs it is one HTTP round-trip; larger repos use `--paginate` for one continuous stream of paginated results.
+
+### Integrating with downstream automation
+
+After `_discover_failing_prs` returns a dict like `{852: 852, 857: 857}`, the automation loop processes each pair:
+
+```python
+# Example: attempt fixes for each discovered PR
+failing_prs = self._discover_failing_prs(repo_root)
+
+for issue_num, pr_num in failing_prs.items():
+    # For PR-driven discovery, issue_num == pr_num (synthetic key)
+
+    # Short-circuit steps that need a human issue body
+    if not self._is_bot_pr_mode(issue_num, pr_num):
+        advise_findings = self._run_advise(issue_num)  # has an issue to learn from
+        plan = self._run_planning(issue_num)  # has a body to decompose
+
+    # Always run the fixing step — it works on (issue, pr) regardless
+    self._attempt_ci_fixes(issue_num, pr_num)
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| `gh pr list --state OPEN` with text output | Default gh pr list without `--json` | Text output silently caps at 30 items (hardcoded `defaultPageSize`), regardless of `--limit` flag. A repo with 100 open PRs returns only 30. Same as the `gh pr list --limit silent-cap trap` documented in `tooling-gh-pr-list-limit-cap-use-api-paginate.md`. | Always use `--json` for `gh pr list` to bypass the output-format cap. Text output is for human terminals only — never for automation. |
+| Filter by `pr.state == "OPEN"` and check for status using `--jq` filter | Attempt to do filtering on the CLI side with `jq` | `statusCheckRollup` is a complex nested array — `jq` one-liners become unmaintainable. Also, `mergeStateStatus` information requires querying the PR after its checks run, which happens asynchronously. Filtering in-memory is cleaner and more resilient. | Fetch the full PR objects and filter in code — the JSON response is small enough that in-memory filtering is cleaner than shell piping. |
+| Use `gh pr list` without a limit | Assume the default behavior is "all PRs" | Default is 30 items. Without `--limit`, you only see the 30 most recent open PRs. For a repo with 100 open PRs, you miss 70. | Always explicitly set `--limit` (or use `--paginate` for unbounded enumeration). Never rely on default limits in automation. |
+| Use issue-driven discovery only: `gh issue list --state OPEN` | Assume issue enumeration works for PR work | (a) Issues and PRs are different entities — an issue without an associated PR is not actionable for "fix failing PR" workflows. (b) A PR without an originating issue (bot PRs) is invisible to issue-driven discovery. (c) A PR closed by a different unrelated issue still shows up in issue-driven results. | PR-driven discovery (`gh pr list`) is the correct primary source when work is scoped by PR, not by issue. Use issue-driven discovery for issue-workflow automation; use PR-driven discovery for PR-workflow automation. |
+
+## Results & Parameters
+
+### Discovery function (copy-paste ready)
+
+```python
+import json
+import logging
+from typing import Any
+
+logger = logging.getLogger(__name__)
+
+
+def _discover_failing_prs(repo_root: str) -> dict[int, int]:
+    """Discover all open BLOCKED PRs with failed CI checks.
+
+    Uses `gh pr list --limit 1000 --json` to enumerate PR state and check status.
+
+    Args:
+        repo_root: Path to the repo root (for cwd context of gh cli calls)
+
+    Returns:
+        dict[int, int]: Mapping of {pr_number: pr_number} (synthetic-key invariant).
+                        Ready to pass to downstream automation loops expecting
+                        (issue_number, pr_number) pairs.
+
+    Resilience: Returns {} (empty dict) on gh CLI failure, logs the error for the
+               operator. This allows the automation to gracefully degrade.
+    """
+    try:
+        result = _gh_call(
+            [
+                "pr", "list",
+                "--limit", "1000",
+                "--json", "number,isDraft,statusCheckRollup,mergeStateStatus"
+            ],
+            cwd=repo_root,
+            check=False,
+        )
+
+        if result.returncode != 0:
+            logger.error("Failed to enumerate PRs in %s: %s", repo_root, result.stderr)
+            return {}
+
+        prs: list[dict[str, Any]] = json.loads(result.stdout or "[]")
+    except (json.JSONDecodeError, subprocess.CalledProcessError) as exc:
+        logger.error("Error processing PR list for %s: %s", repo_root, exc)
+        return {}
+
+    failing_prs: dict[int, int] = {}
+
+    for pr in prs:
+        # Skip drafts — not ready for automation
+        if pr.get("isDraft", False):
+            continue
+
+        # Require BLOCKED merge state
+        if pr.get("mergeStateStatus") != "BLOCKED":
+            continue
+
+        # Require at least one failed check
+        status_checks = pr.get("statusCheckRollup", [])
+        has_failure = any(
+            check.get("conclusion") in ("FAILURE", "CANCELLED", "TIMED_OUT")
+            for check in status_checks
+        )
+
+        if not has_failure:
+            continue
+
+        pr_num = pr.get("number")
+        if isinstance(pr_num, int):
+            failing_prs[pr_num] = pr_num  # synthetic-key invariant
+
+    logger.info("Discovered %d failing PRs in %s", len(failing_prs), repo_root)
+    return failing_prs
+
+
+def _is_bot_pr_mode(issue_number: int, pr_number: int) -> bool:
+    """Detect synthetic-key PR-driven discovery: True iff issue_number == pr_number.
+
+    Use this guard before calling steps that need a human issue body:
+    - _run_advise(issue_number)
+    - _run_planning(issue_number)
+    - gh issue view <issue_number>
+    """
+    return issue_number == pr_number
+```
+
+### Raw `gh pr list --json` output shape
+
+```json
+[
+  {
+    "number": 852,
+    "title": "feat: Implement #819",
+    "isDraft": false,
+    "statusCheckRollup": [
+      {
+        "context": "test (unit)",
+        "description": "Tests passed",
+        "state": "SUCCESS",
+        "conclusion": "SUCCESS",
+        "startedAt": "2026-06-06T12:34:56Z",
+        "completedAt": "2026-06-06T12:45:30Z",
+        "url": "https://github.com/.../runs/12345"
+      },
+      {
+        "context": "pr-policy",
+        "description": "PR policy check failed",
+        "state": "FAILURE",
+        "conclusion": "FAILURE",
+        "startedAt": "2026-06-06T12:34:56Z",
+        "completedAt": "2026-06-06T12:37:15Z",
+        "url": "https://github.com/.../runs/12346"
+      }
+    ],
+    "mergeStateStatus": "BLOCKED"
+  },
+  {
+    "number": 857,
+    "title": "fix: Address review feedback",
+    "isDraft": false,
+    "statusCheckRollup": [
+      {
+        "context": "test (unit)",
+        "description": "Tests passed",
+        "state": "SUCCESS",
+        "conclusion": "SUCCESS",
+        "startedAt": "2026-06-06T12:00:00Z",
+        "completedAt": "2026-06-06T12:15:00Z",
+        "url": "https://github.com/.../runs/12340"
+      },
+      {
+        "context": "required-reviewer",
+        "description": "Awaiting review",
+        "state": "PENDING",
+        "conclusion": null,
+        "startedAt": "2026-06-06T12:00:00Z",
+        "completedAt": null,
+        "url": "https://github.com/.../pulls/857"
+      }
+    ],
+    "mergeStateStatus": "BLOCKED"
+  }
+]
+```
+
+### Verification evidence
+
+- **PR #852 in ProjectHephaestus** (issue #819): Implements this discovery pattern for the drive-green-ecosystem loop.
+- **Test coverage**: 25 new unit tests in `tests/unit/automation/test_drive_pr_discovery.py`:
+  - `TestDiscoverFailingPrs`: Proves the `gh pr list --json` shape, the filtering by `mergeStateStatus` and check conclusions, synthetic-key invariant
+  - `TestIsBotPrMode`: Proves the helper works for both human PRs and synthetic-key bot PRs
+  - Edge cases: drafts, repos with no failing PRs, gh CLI timeouts, malformed JSON
+- **Integration tests**: 6 bats tests verify the shell invocation shape and the output format
+- **CI result**: All 1143 automation tests pass
+
+### Related skills
+
+- `architecture-bot-pr-discovery-synthetic-issue-key.md` — the broader synthetic-key pattern when discovering bot PRs. This skill focuses on the gh CLI pattern for PR enumeration; that skill covers the downstream architectural usage (short-circuit guards, union with issue-driven discovery).
+- `tooling-gh-pr-list-limit-cap-use-api-paginate.md` — explains why `--json` is necessary and why `--limit` silent-cap is a pitfall. This skill builds on it.
+- `automation-loop-early-exit-zero-work-convergence.md` — when the loop's "zero-work convergence" reports no PRs to fix but failing PRs remain, suspect a discovery blind spot. This skill's pattern is the remedy.
+
+### Quick audit recipe — find reporters using the wrong discovery
+
+```bash
+# Find automation code that claims "no PRs to fix" but failing PRs exist
+gh pr list --state OPEN --json number,mergeStateStatus,statusCheckRollup | \
+  jq '[.[] | select(.mergeStateStatus == "BLOCKED" and
+       any(.statusCheckRollup[]; .conclusion == ("FAILURE", "CANCELLED", "TIMED_OUT")))] | length'
+
+# If that count > 0 but your automation reports 0, you're using the wrong discovery.
+```
+
+---
+
+## Superseded from tooling-gh-pr-list-limit-cap-use-api-paginate
+
+**Original date:** 2026-05-31
+
+**Original version:** "1.0.0"
+
+```yaml
+name: tooling-gh-pr-list-limit-cap-use-api-paginate
+description: "`gh pr list --limit N` (and `gh issue list`, `gh repo list`, etc.) is a hard cap, not a page size: pass `--limit 100` and you get at most 100 rows, period. A repo with 200 dependabot PRs silently passes a `gh pr list --limit 100 --json number | jq length == 0` 'no remaining PRs' check after looking at only the first 100. There is no `--no-limit` form, and `gh pr list` does NOT accept `--paginate` — only `gh api` does. The fix is to call the REST endpoint directly: `gh api --paginate /repos/<owner>/<name>/pulls?state=open&per_page=100`, which walks the `Link: rel=\"next\"` header and emits a single concatenated JSON array with NO upper bound. Same pattern works for issues, branches, releases, runs, etc. Note: REST responses use snake_case nested shapes (`head.ref`, `auto_merge`) while `gh pr list --json` returns camelCase flat fields (`headRefName`, `autoMergeRequest`) — normalise at the boundary so downstream consumers don't need to know which path produced the data. Use when: (1) building a 'repo is done / clean / quiescent' check that lists ALL remaining open PRs or issues, (2) a repo has hundreds of dependabot PRs and a `--limit 100` check would silently truncate, (3) you tried `--paginate` on `gh pr list` and got 'unknown flag', (4) you want a true 'enumerate every open PR' query for org-wide automation, (5) migrating from `gh pr list --json` to `gh api` and need the field-name mapping."
+category: tooling
+date: 2026-05-31
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - gh-cli
+  - gh-pr-list
+  - gh-api
+  - paginate
+  - pagination
+  - hard-cap
+  - silent-truncation
+  - rest-api
+  - dependabot-flood
+  - repo-done-check
+  - field-name-mapping
+  - snake-case
+  - camel-case
+```
+
+
+# `gh pr list --limit` Is a Hard Cap — Use `gh api --paginate` for True Enumeration
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-31 |
+| **Objective** | Stop silent truncation in "list ALL open PRs / issues / branches" scripts where `gh <noun> list --limit N` caps at exactly `N` rows. Prescribe `gh api --paginate /repos/.../pulls?state=open&per_page=100` as the only true unbounded enumeration. |
+| **Outcome** | Replaces `gh pr list --limit 100` (or any fixed cap) with `gh api --paginate` whenever the script's correctness depends on seeing _every_ row. Documents the REST snake_case ↔ gh-CLI camelCase field-name mapping so downstream consumers don't break. |
+| **Verification** | verified-ci — landed in ProjectHephaestus PR #839 (closes #838). The "repo is done" check that triggered this skill ran against a repo with 200+ open dependabot PRs and was silently passing while items remained; switching to `gh api --paginate` made the count correct. |
+
+## When to Use
+
+- Building a "repo is done / clean / quiescent" check whose correctness depends on enumerating EVERY open PR or issue (not just the first page).
+- The repo has, or could plausibly have, hundreds of open dependabot/security PRs that a fixed `--limit` would silently miss.
+- You tried `gh pr list --paginate` and got `unknown flag: --paginate` (only `gh api` accepts it; the noun-list subcommands do not).
+- You raised `--limit 100` to `--limit 10000` "just to be safe" and want to know why that is still wrong (it is — see Failed Attempts).
+- You are migrating from `gh pr list --json number,title,headRefName,autoMergeRequest` to `gh api /repos/.../pulls` and need the field-name mapping (REST snake_case nested vs. gh-CLI camelCase flat).
+- You are writing org-wide automation (Myrmidon swarm, CI gate, batch close, label sweep) that loops over every PR or issue and must not silently truncate.
+- A `wait until repo is empty` poll loop appears to converge but the repo never empties — suspect a silent cap on the listing query first.
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# WRONG — --limit is a hard cap, not a page size. Caps at exactly 100 rows, silently.
+gh pr list --state open --limit 100 --json number,title
+
+# WRONG — still a hard cap. Bigger number, same trap, plus a wasted round-trip if there really are >10000 PRs.
+gh pr list --state open --limit 10000 --json number,title
+
+# WRONG — `gh pr list` does NOT accept --paginate. Only `gh api` does.
+# Produces: "unknown flag: --paginate"
+gh pr list --state open --paginate
+
+# RIGHT — walks Link: rel="next" headers across all pages. NO upper bound.
+gh api --paginate /repos/OWNER/NAME/pulls?state=open&per_page=100
+gh api --paginate /repos/OWNER/NAME/issues?state=open&per_page=100
+gh api --paginate /repos/OWNER/NAME/branches?per_page=100
+gh api --paginate /repos/OWNER/NAME/releases?per_page=100
+```
+
+### Detailed Steps
+
+#### The trap, exactly as it surfaced
+
+A `_list_open_prs_remaining` helper was added to a "is this repo done?" check. First draft:
+
+```python
+def _list_open_prs_remaining(self) -> list[dict[str, Any]]:
+    result = _gh_call(
+        [
+            "pr", "list",
+            "--repo", f"{owner}/{repo}",
+            "--state", "open",
+            "--limit", "100",
+            "--json", "number,title,headRefName,autoMergeRequest",
+        ],
+        check=False,
+    )
+    return json.loads(result.stdout or "[]")
+```
+
+The user reviewed it and said, verbatim: **"don't limit PR's to 100, get all of them"**. The instinct to "just raise the limit" is wrong (see Failed Attempts row 2). The correct fix is to stop using `gh pr list` entirely and go straight to the REST endpoint with `--paginate`.
+
+#### Why `--limit` is the wrong tool for this job
+
+`--limit N` on `gh pr list` is documented as "maximum number of items to fetch" — it is a hard cap, not a page size. gh internally paginates the REST endpoint up to that many rows and then stops. There is:
+
+- No `--limit 0` "no cap" form.
+- No `--all` flag.
+- No `--paginate` flag (that is `gh api` only).
+
+The default is 30. The maximum the user can supply is whatever number they pick — but that number is always a cap. Pick too low and you silently truncate. Pick too high and you waste an HTTP round trip in the rare case the repo actually has that many rows; pick high enough to cover the worst case ever ("--limit 1000000") and you've turned the bug into a performance pessimisation while still depending on a magic number being above the unknowable max.
+
+#### The fix: `gh api --paginate`
+
+`gh api` is the only `gh` subcommand that exposes the REST `Link: rel="next"` walker. With `--paginate` it follows every next-page link and concatenates the JSON arrays into one stdout blob — no cap, no magic number, correct for any repo size:
+
+```python
+def _list_open_prs_remaining(self) -> list[dict[str, Any]]:
+    owner, repo = get_repo_info(self.repo_root)
+    try:
+        result = _gh_call(
+            [
+                "api",
+                "--paginate",
+                f"/repos/{owner}/{repo}/pulls?state=open&per_page=100",
+            ],
+            check=False,
+        )
+        raw_pulls: list[dict[str, Any]] = json.loads(result.stdout or "[]")
+    except (subprocess.CalledProcessError, json.JSONDecodeError) as exc:
+        # Conservative default: assume NOT done so operators investigate.
+        logger.error("Could not list open PRs: %s", exc)
+        return [{"number": -1, "title": "(unknown: gh api pulls failed)"}]
+
+    # Normalise REST snake_case shape → gh-CLI camelCase shape:
+    normalised: list[dict[str, Any]] = []
+    for pr in raw_pulls:
+        normalised.append({
+            "number": pr.get("number"),
+            "title": pr.get("title", ""),
+            "headRefName": (pr.get("head") or {}).get("ref", ""),
+            "autoMergeRequest": pr.get("auto_merge"),
+        })
+    return normalised
+```
+
+The `per_page=100` is the REST endpoint's per-request page size (100 is the GitHub REST API maximum). `--paginate` keeps fetching until `Link: rel="next"` is gone. There is no caller-visible cap.
+
+#### The field-name shape mismatch you MUST normalise
+
+This is the non-obvious second half of the migration. `gh pr list --json` and `gh api /repos/.../pulls` return DIFFERENT shapes for the same data:
+
+| Field meaning | `gh pr list --json` shape | `gh api /repos/.../pulls` shape |
+| --------------- | --------------------------- | --------------------------------- |
+| PR number | `number` (int, top-level) | `number` (int, top-level) — same |
+| PR title | `title` (str, top-level) | `title` (str, top-level) — same |
+| Head branch name | `headRefName` (str, top-level, camelCase, FLAT) | `head.ref` (str, NESTED under `head`, snake_case-y) |
+| Auto-merge request | `autoMergeRequest` (object or null, top-level, camelCase) | `auto_merge` (object or null, top-level, snake_case) |
+| Author login | `author.login` (object) | `user.login` (different key name!) |
+| Mergeable state | `mergeStateStatus` (str) | `mergeable_state` (str) |
+| Merge commit SHA | `mergeCommit.oid` | `merge_commit_sha` (flat snake_case) |
+| Body | `body` (str) | `body` (str) — same |
+| Draft? | `isDraft` (bool, camelCase) | `draft` (bool) — different name! |
+| Labels | `labels` (array of `{name}`) | `labels` (array of `{name}`) — same shape |
+
+If you swap `gh pr list --json` for `gh api /repos/.../pulls` without a normalisation layer, every downstream consumer that reads `pr["headRefName"]` or `pr["autoMergeRequest"]` will silently see `None` / `KeyError`. The fix is to normalise at the boundary (see the loop in the snippet above) so callers see the camelCase shape they already know.
+
+#### Why this fix is `verified-ci`
+
+PR #839 in ProjectHephaestus landed this change for the `automation.is_repo_done` workflow. The "is the repo done?" check is the gate that lets the automation loop exit. Before the fix, a repo with >100 open PRs would falsely report "done" and the loop would exit while items remained. After the fix, the count is correct for repos of any size, and CI on the PR validated the helper end-to-end. PR #839 closes #838.
+
+#### Generalising the pattern
+
+The same `--limit` hard-cap exists for every `gh <noun> list` subcommand. The same `gh api --paginate /repos/.../<resource>?state=...&per_page=100` fix works for:
+
+```bash
+gh api --paginate /repos/OWNER/NAME/issues?state=open&per_page=100
+gh api --paginate /repos/OWNER/NAME/branches?per_page=100
+gh api --paginate /repos/OWNER/NAME/releases?per_page=100
+gh api --paginate /repos/OWNER/NAME/labels?per_page=100
+gh api --paginate /repos/OWNER/NAME/actions/runs?status=in_progress&per_page=100
+gh api --paginate /orgs/ORGNAME/repos?per_page=100
+```
+
+Each of those returns a snake_case REST shape that may need normalisation if you previously consumed the corresponding `gh <noun> list --json` shape.
+
+#### When `gh pr list --limit N` is still fine
+
+Not every call needs `--paginate`. Use `gh pr list --limit N` when:
+
+- You explicitly want only the first N (e.g. "show me the 10 most recent merge attempts").
+- Interactive ad-hoc inspection where you'll notice truncation by eye.
+- The hard upper bound on items is provably small (e.g. release tags in a tiny repo).
+
+Use `gh api --paginate` when:
+
+- Correctness of a downstream check (gate, count comparison, idempotency assertion) depends on seeing every row.
+- The item count is unbounded or grows over time (dependabot PRs, issue backlog, branch list).
+- You're writing org-wide automation that runs across N repos with unknown sizes each.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| `gh pr list --limit 100 --json number,title` for a "no remaining PRs" check | Reasoned that 100 PRs would surely cover the worst case for a repo we own | The `--limit` flag is a hard cap, not a page size. A repo with 200 dependabot PRs returns exactly 100 rows and the `jq length == 0` check falsely reports "done" with 100+ items still open. No warning, no error, no truncation signal. | `--limit` answers "give me at most N rows", never "give me all rows". If your decision depends on counting all rows, the wrong tool was chosen. |
+| `gh pr list --limit 10000 --json number,title` "just to be safe" | Picked a number obviously above any realistic dependabot flood | Still a hard cap, just a bigger one. (a) For repos under the cap: one extra HTTP round trip wasted. (b) For repos at the cap: you've turned the silent-truncation bug into a magic-number game where you have to keep guessing higher than the unknowable max. (c) Code review will rightly object: "what happens when there are 10001 PRs?" | Raising a hard cap is never the right fix when the requirement is "enumerate everything". The fix is to stop using a capped API and use a paginated one. |
+| `gh pr list --paginate --json number,title` | Reasoned: "I know `gh api --paginate` exists, so the noun-list subcommands probably accept it too" | `gh pr list` returns `unknown flag: --paginate`. Only `gh api` supports `--paginate`. The noun-list subcommands (`gh pr list`, `gh issue list`, `gh repo list`, `gh release list`, etc.) do NOT — they only expose `--limit`. | `--paginate` is a property of the raw REST passthrough (`gh api`), not of the friendly noun-verb subcommands. To get unbounded enumeration, you must drop down to `gh api`. |
+
+## Results & Parameters
+
+### Decision table — which gh form to use
+
+| Goal | Use | Why |
+| ------ | ----- | ----- |
+| Show me the N most recent PRs (interactive) | `gh pr list --limit N` | `--limit` is exactly right when you want a bounded view |
+| Show me ALL open PRs (gated correctness) | `gh api --paginate /repos/.../pulls?state=open&per_page=100` | `--paginate` walks every page, no cap |
+| Show me all PRs matching a label, may be > 100 | `gh api --paginate /repos/.../pulls?state=open&per_page=100` then filter in `jq`; OR `gh search prs --owner X --label Y` (also caps but has its own search semantics) | Server-side label filter on the REST endpoint requires the search API; for simplicity, paginate-then-filter is robust |
+| Show me ALL open issues across an org | Loop repos via `gh api --paginate /orgs/X/repos`, then per-repo `gh api --paginate /repos/X/Y/issues?state=open&per_page=100` | Both layers need pagination |
+| Show me all dependabot PRs in this repo | `gh api --paginate /repos/.../pulls?state=open&per_page=100` then `jq 'map(select(.user.login == "dependabot[bot]"))'` | Same root call; `user.login` is REST shape (snake-ish nested) |
+
+### REST → gh-CLI field-name mapping (full)
+
+If you migrate from `gh pr list --json A,B,C` to `gh api /repos/.../pulls` and need to translate at the boundary, here is the mapping for fields that DIFFER:
+
+| `gh pr list --json` key | REST `/pulls` key | Type |
+| ----------------------- | ------------------ | ------ |
+| `headRefName` | `head.ref` | str (REST nested) |
+| `headRefOid` | `head.sha` | str (REST nested) |
+| `baseRefName` | `base.ref` | str (REST nested) |
+| `baseRefOid` | `base.sha` | str (REST nested) |
+| `autoMergeRequest` | `auto_merge` | object or null |
+| `mergeStateStatus` | `mergeable_state` | str |
+| `mergeCommit.oid` | `merge_commit_sha` | str |
+| `isDraft` | `draft` | bool |
+| `isCrossRepository` | `head.repo.id != base.repo.id` (derive) | bool (REST does not expose flag) |
+| `author.login` | `user.login` | str (different key name) |
+| `latestReviews` | (not in REST list; requires `/reviews` subresource) | — |
+| `closingIssuesReferences` | (not in REST list; requires GraphQL) | — |
+
+Fields that are the SAME in both shapes: `number`, `title`, `body`, `state`, `labels[*].name`, `assignees[*].login`, `requested_reviewers[*].login`, `created_at`, `updated_at`, `merged_at`, `closed_at`.
+
+### Sanity-check pattern for any unbounded enumeration
+
+```bash
+# If you have to enumerate without a cap, the pattern is always:
+#   gh api --paginate /repos/OWNER/NAME/<resource>?<filters>&per_page=100 | jq <work>
+# Assert that the count is plausible; if zero, the call probably failed (auth, repo name, filter typo).
+result=$(gh api --paginate /repos/OWNER/NAME/pulls?state=open&per_page=100)
+count=$(echo "$result" | jq length)
+if [ "$count" -eq 0 ]; then
+  # Confirm with an interactive sanity check
+  gh pr list --state open --limit 5  # if this shows PRs, your --paginate call has a bug
+fi
+```
+
+### Cost comparison
+
+| Approach | HTTP calls (200 PRs) | HTTP calls (10 PRs) | Silent-truncation risk |
+| ---------- | ---------------------- | --------------------- | ------------------------ |
+| `gh pr list --limit 30` (default) | 1 | 1 | HIGH — silently caps at 30 |
+| `gh pr list --limit 100` | 1 | 1 | HIGH — silently caps at 100 |
+| `gh pr list --limit 10000` | 2 (100 + 100) | 1 | LOW until count > 10000, then HIGH |
+| `gh api --paginate ...&per_page=100` | 2 (100 + 100) | 1 | NONE — correct for any size |
+
+`--paginate` has the same HTTP cost as a generous `--limit` when items exceed one page, and the same cost (one call) when they don't. The only reason to prefer `--limit` is interactive ergonomics.
+
+### Related skills
+
+- `tooling-gh-label-list-default-limit-truncation.md` — covers the default-30 truncation that bites `gh label list --json` and other noun-list subcommands when `--limit` is omitted entirely. This skill (`tooling-gh-pr-list-limit-cap-use-api-paginate`) is the next layer: even when you DO pass `--limit`, it is still a hard cap, and the only true fix is `gh api --paginate`.
+- `gh-create-pr-linked.md` — companion `gh` workflow skill.
+- `gh-check-ci-status.md` — companion `gh` workflow skill.
+
+---
+
+## Superseded from tooling-gh-label-list-default-limit-truncation
+
+**Original date:** 2026-05-29
+
+**Original version:** "1.0.0"
+
+```yaml
+name: tooling-gh-label-list-default-limit-truncation
+description: "`gh label list --json name` silently truncates to 30 rows by default. When the labels you're validating sort late alphabetically (e.g. `state:*`, `tier:*` in a repo with a rich audit/severity taxonomy), validation queries report 0 matches even when the labels exist — no error, no warning, no exit-code signal, just truncated JSON. The same default-30 pagination bites `gh issue list`, `gh pr list`, `gh release list`, and other `gh <noun> list` subcommands when used in scripts. Fix: always pass `--limit 200` (or higher) when reading list output in scripts. Use when: (1) `gh label list` returns 0 but labels exist when checked interactively, (2) a labels-provisioning script reports success but validation script says labels missing, (3) any `gh <noun> list --json` scripted usage that filters by name/state, (4) batching org-wide repo audits that read labels/issues/PRs across many repos, (5) `gh CLI default pagination 30` is suspected as a root cause, (6) validation script silently missing labels despite create commands succeeding, (7) scripting `gh issue/pr/label` inventory with `jq` filters, (8) writing a CI step that reads `gh` list output and gates on counts."
+category: tooling
+date: 2026-05-29
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - gh-cli
+  - gh-label-list
+  - gh-issue-list
+  - gh-pr-list
+  - pagination
+  - silent-truncation
+  - default-limit
+  - validation-script
+  - scripting
+  - jq
+  - org-wide-automation
+```
+
+
+# gh CLI List Subcommands: The Silent 30-Row Truncation Trap
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-29 |
+| **Objective** | Stop silent truncation in `gh label list` / `gh issue list` / `gh pr list` / other `gh <noun> list` scripted usage where the default 30-row pagination causes validation queries to return 0 matches even when the items exist. |
+| **Outcome** | Prescribes `--limit 200` (or higher) for any scripted `gh` list call; gives a comparison table of recommended limits per subcommand; documents the failed-attempt path of blaming the upstream provisioning script. |
+| **Verification** | verified-ci — observed end-to-end live during org-wide label provisioning across HomericIntelligence (15 repos, 2026-05-29). Failure mode AND the fix were both demonstrated in the same session: validation reported `0/3` for every repo, manual `--search` confirmed labels existed, adding `--limit 200` returned correct counts immediately. |
+
+## When to Use
+
+- A labels-provisioning (or issues/PRs/releases) script reports success but a follow-up validation script says items are missing.
+- `gh label list --repo X --json name -q '[.[].name] | map(select(...)) | length'` returns 0 but `gh label list --repo X --search foo` interactively shows the label exists.
+- You are scripting any `gh <noun> list` call that filters by name/state/label and counts matches with `jq`.
+- You are running an org-wide audit that reads labels, issues, PRs, or releases across many repos.
+- You suspect a silent default pagination cap is hiding rows you expect to see.
+- A validation step in CI is gating on counts of items returned by `gh` list output.
+- You are migrating from interactive `gh` use ("I just ran it and saw the label") to scripted use ("the JSON output says zero") and want to understand the gap.
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# WRONG — silently truncates at 30 rows (the gh CLI default)
+gh label list --repo "$repo" --json name
+
+# RIGHT — explicit cap above any reasonable repo's label count
+gh label list --repo "$repo" --limit 200 --json name
+
+# Same trap applies to other gh list subcommands; always pass --limit in scripts
+gh issue list   --repo "$repo" --limit 500 --json number,title,state
+gh pr list      --repo "$repo" --limit 500 --json number,title,mergeStateStatus
+gh release list --repo "$repo" --limit 200 --json tagName,name
+gh run list     --repo "$repo" --limit 200 --json databaseId,status,conclusion
+```
+
+### Detailed Steps
+
+#### The trap, exactly as it appeared
+
+A script provisioned a 42-label taxonomy across 14 repos in `HomericIntelligence/`. It reported:
+
+```text
+Ensured 42 label(s) across 14 repo(s)
+```
+
+A follow-up validation script ran, for each repo:
+
+```bash
+gh label list --repo "$repo" --json name -q \
+  '[.[].name]
+   | map(select(. == "state:needs-plan"
+              or . == "state:plan-no-go"
+              or . == "state:plan-go"))
+   | length'
+```
+
+Every repo returned `0`. Three `state:*` labels times 14 repos = 42 missing matches reported. Conclusion (wrong): "the provisioning script silently failed."
+
+#### Reproduction and the actual root cause
+
+1. Manual `gh label list --repo <repo> --search state` showed the labels existed.
+2. Re-running provisioning produced "labels already present" — confirming creation succeeded the first time.
+3. Reading the `gh label list` man page: the `--limit` flag exists and defaults to `30`.
+4. Many repos already had ~25+ pre-existing labels (audit:_, severity:_, principle:\* taxonomies). The `state:*` prefix sorts after most of those alphabetically — so the `state:*` rows fell off the default 30-row cap.
+5. Adding `--limit 200` to the validation query returned `3/3` for every repo.
+
+#### The fix (one flag)
+
+```bash
+# Validation query, fixed
+gh label list --repo "$repo" --limit 200 --json name -q \
+  '[.[].name]
+   | map(select(. == "state:needs-plan"
+              or . == "state:plan-no-go"
+              or . == "state:plan-go"))
+   | length'
+```
+
+The provisioning script that _created_ the labels did not need a change — `gh label create --force` is per-label and is not paginated. Only the _reader_ needed the flag.
+
+#### Why this is so easy to miss
+
+- No error, no warning, no stderr signal, no non-zero exit code — the JSON output looks valid and well-formed.
+- Interactive (no `--json`) output shows the truncation cue visually: 30 rows on one terminal screen, with a hint at the bottom or visible page break. Many users notice it interactively and never re-encounter it in scripts.
+- `--json` strips that visual cue. The pager logic that would otherwise re-prompt is bypassed.
+- The default exists for shell-pipe ergonomics: a one-screen preview is what most interactive users want. It is the wrong default for scripts.
+- Same pagination defaults apply to every `gh <noun> list` subcommand. The default is **30** everywhere. The bug surfaces the same way.
+- `--search <term>` server-side filtering hides the bug interactively: it returns the matching rows whether or not they would have fallen off page one. So a user who validates "by hand" with `--search` sees the labels exist, then writes a script using `--json` (which does not accept `--search`-style server filtering by name) and the truncation reappears.
+
+#### The defensive pattern
+
+For any `gh <noun> list` call inside a script, validation step, or CI job:
+
+1. Pass `--limit <N>` explicitly. Pick `N` comfortably above any reasonable count you expect.
+2. For labels: `--limit 200` (most repos have well under 100; 200 is plenty of headroom).
+3. For issues, PRs, runs, releases: `--limit 500` for active repos; `--limit 1000` for very large repos or org-wide aggregation.
+4. The cost of a too-high limit is one extra REST page or a slightly slower response. The cost of silent truncation in a validation script is hours of misdirected debugging.
+5. If the list might exceed your limit, add a length check: if `jq length` of the response equals the limit exactly, suspect truncation and raise the limit.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Blame the provisioning script | Re-ran the labels provisioner with `-v` to find the alleged silent failure; spent time reading creation logs | The provisioner was correct — every `gh label create --force` had returned 0 and the labels existed. The bug was the validation reader, not the writer. | When a writer reports success and a reader reports zero, suspect the reader before re-running the writer. |
+| `gh label list --json name \| jq length` to count instead of `select(...)` | Reasoned that counting all labels would expose the truncation | Still capped at 30 silently. `jq length` reports the length of the truncated JSON, not the underlying repo's label count. | `jq` operates on what `gh` returned, not on what `gh` should have returned. No `jq` filter rescues a truncated input. |
+| `gh label list --search state` to confirm labels exist | Used server-side search to verify | Worked — confirmed the labels existed — but `--search` semantics (server-side substring/field filter) is different from "show me all of them"; not a drop-in replacement in a script that needs to inspect the full set | `--search` is a one-off interactive validator, not a scripting primitive. Use `--limit <N>` plus `jq` for scripted inventory. |
+| Switch to the GraphQL API via `gh api graphql` | Considered rewriting validation to query labels through GraphQL with explicit pagination | More code (cursor-based pagination, query authoring) with no benefit over passing one extra flag to the existing REST-backed `gh label list` | Simplest fix wins. `--limit 200` is one flag; GraphQL refactor is dozens of lines and a new pagination loop. |
+| Trust the interactive sanity check | Ran `gh label list --repo <repo>` in the terminal, saw labels, concluded the script must be broken upstream | Interactive view does not match scripted `--json` view when the count crosses 30; interactive often shows 30 with no truncation banner; the `state:*` rows were on "page 2" and never appeared | Interactive and `--json` outputs do not share the same default pagination cue. Trust neither without `--limit` in scripts. |
+| Add a retry loop around the validation query | Reasoned that intermittent API issues might be hiding the rows | Truncation is deterministic at exactly 30 rows; retries returned the same wrong answer | Deterministic silent caps cannot be diagnosed by retry. Read the man page first when output is too short. |
+| Increase parallelism instead of investigating | Re-ran the org-wide validator across more repos in parallel to gather more evidence | All parallel workers produced the same wrong `0` answer; conclusion "every repo is broken the same way" deepened the misdiagnosis | More data points from the same buggy reader do not isolate the bug. Pick one repo and reproduce manually first. |
+
+## Results & Parameters
+
+### Recommended `--limit` per gh subcommand
+
+| Subcommand | Default | Recommended scripted limit | Reason |
+| ------------ | --------- | ---------------------------- | -------- |
+| `gh label list` | 30 | `--limit 200` | Most repos have < 100 labels; 200 gives generous headroom |
+| `gh issue list` | 30 | `--limit 500` | Active repos accumulate hundreds of issues; 500 covers most |
+| `gh pr list` | 30 | `--limit 500` | Same as issues; very active repos may need `--limit 1000` |
+| `gh release list` | 30 | `--limit 200` | Releases are rarer than issues; 200 is sufficient |
+| `gh run list` | 20 | `--limit 200` | Workflow runs accumulate fast; pair with `--branch` / `--workflow` to scope |
+| `gh repo list <org>` | 30 | `--limit 1000` | Large orgs can have hundreds of repos; pair with `--json name,isArchived` for filtering |
+| `gh secret list` | 30 | `--limit 200` | Secrets are typically < 50 but `--limit` is cheap insurance |
+| `gh workflow list` | 50 | `--limit 200` | Workflows per repo are usually < 50; flag still cheap |
+
+### Concrete observation (HomericIntelligence org-wide label provisioning, 2026-05-29)
+
+- Org: `HomericIntelligence`
+- Repos provisioned: 14 (plus 1 already-correct)
+- Labels per repo (post-provision): ~42 (the new taxonomy added to whatever pre-existed)
+- Pre-existing label count (e.g. audit:_, severity:_, principle:\*): ~25+ in most repos, sorting alphabetically before `state:*`
+- Validation query: `gh label list --repo "$repo" --json name -q '...select(state:* names)... | length'`
+- Result without `--limit`: `0` for every repo (silent truncation at 30; the `state:*` rows fell off page one)
+- Result with `--limit 200`: `3` for every repo (correct)
+- Time wasted before reading the man page: substantial; mistakenly re-ran the provisioning script before noticing the reader was at fault
+
+### Sanity-check pattern for any scripted gh list
+
+```bash
+# If you have to script a gh list, always do BOTH:
+#   1. pass --limit explicitly
+#   2. assert the count is NOT exactly the limit (which would imply more rows exist)
+limit=200
+rows=$(gh label list --repo "$repo" --limit "$limit" --json name | jq length)
+if [ "$rows" -eq "$limit" ]; then
+  echo "WARN: count equals --limit ($limit); raise --limit and re-check" >&2
+fi
+```
+
+### Related skills
+
+- `audit-driven-remediation-workflow.md` — references `gh label list --limit 100` for label validation; this skill explains _why_ the explicit `--limit` is mandatory
+- `ci-grep-deprecation-guard.md` — references `gh label list` for checking known labels before `gh pr create --label`
+- `batch-pr-rebase-workflow.md` — uses `gh pr list --limit 200` in scripted form; same default-30 trap would otherwise apply
+
+---
+
+## Superseded from architecture-bot-pr-discovery-synthetic-issue-key
+
+**Original date:** 2026-05-31
+
+**Original version:** "1.0.0"
+
+```yaml
+name: architecture-bot-pr-discovery-synthetic-issue-key
+description: "When an automation tool resolves work via the issue→PR direction ('for each open issue, find its closing PR'), Dependabot PRs and other bot-authored PRs are architecturally invisible — they have no `Closes #N` link, so the resolver returns nothing. The fix is to union the issue-driven set with every open `user.type == 'Bot'` PR from `gh api --paginate /repos/.../pulls`, using the PR number as a synthetic issue key (same int in both positions of the dedup map). Downstream code that would call `gh issue view <issue_number>` must then short-circuit: a tiny helper `_is_bot_pr_mode(issue_number, pr_number)` returns `True` iff `issue_number == pr_number`, which is the synthetic-key invariant. The discriminator is `user.type == 'Bot'` (REST snake_case), NOT the login string `app/dependabot` — new bot apps continually appear, and login-based detection ages out. Use when: (1) building a driver that enumerates work by issue and discovers PRs through `Closes #N` parsing, (2) Dependabot or Renovate PRs are open but the driver reports 'nothing to do', (3) an `--all` flag changes the AUTHOR filter but not the discovery DIRECTION and bot PRs are still missed, (4) you're tempted to pass PR numbers as `--issues <pr-number>` and the downstream `gh issue view` 404s on you, (5) you're tempted to add a second pass (`--bot-prs-only`) and want to know why a unioned single pass is cleaner, (6) reviewing automation that calls human-only steps (advise / planning / Mnemosyne lookup) and needs to short-circuit them for synthetic-key bot PRs."
+category: architecture
+date: 2026-05-31
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - dependabot
+  - bot-pr
+  - issue-driven-discovery
+  - synthetic-issue-key
+  - ci-driver
+  - automation-loop
+  - user-type-bot
+  - gh-api-paginate
+  - closes-link
+  - include-bot-prs
+  - short-circuit-guard
+  - hephaestus-automation
+```
+
+
+# Bot PRs Are Invisible to Issue-Driven Drivers — Union a `user.type=='Bot'` Sweep and Use the PR Number as a Synthetic Issue Key
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-31 |
+| **Objective** | Stop the silent blind spot where a driver that resolves work as "for each open issue, find its closing PR via `Closes #N`" never touches Dependabot/Renovate/Lychee PRs that have no originating issue. Prescribe the three-helper pattern: (a) `_discover_bot_prs()` enumerates every open `user.type=='Bot'` PR via `gh api --paginate`, (b) union it into the issue-driven dedup map using the PR number as both key AND value (the synthetic-key invariant), (c) `_is_bot_pr_mode(issue, pr)` short-circuits any downstream step that would call `gh issue view <issue>` and 404 on the synthetic key. |
+| **Outcome** | Replaces the issue→PR-only discovery in CI drivers with an issue-driven ∪ bot-driven union. Ship behind an `include_bot_prs` flag that defaults to `True`, with `--no-include-bot-prs` for the rare case the operator wants only human-authored work. Bot PRs flow through the rest of the driver with the synthetic-issue guard preventing 404s on advise / planning / Mnemosyne-lookup paths. |
+| **Verification** | verified-ci — landed in ProjectHephaestus PR #849 (closes #848). 25 new unit tests including `TestBotPrDiscovery` and `TestIsBotPrMode` prove the union, the `issue==pr` rule, the advise short-circuit, and the gh-failure resilience; plus 6 bats tests pin the shell-script paginate/bot-count invariants. 3017 unit pass + 47 shell pass. |
+| **History** | New skill — no amendments yet. |
+
+## When to Use
+
+- You are building or auditing an automation driver (CI driver, drive-green loop, batch-merge bot) that enumerates work by **issue** and then looks up the closing PR via `Closes #N` parsing of the PR body.
+- An ecosystem-wide run reports "Driven: N repos" but live `gh pr list` per repo shows open Dependabot/Renovate/Lychee PRs the driver never touched.
+- A repo has zero open human-filed issues, but multiple open bot-filed PRs — the driver reports "nothing to do" and silently exits clean.
+- You are tempted to "just pass the PR numbers as `--issues <pr-number>`" and the downstream `gh issue view <pr-number>` is 404-ing. (PR and issue numbers share GitHub's numbering space — a matching int does NOT mean the entities match.)
+- You are tempted to write a second invocation (`--bot-prs-only`) and want to know why a unioned single pass keeps the "is this repo done?" gate honest.
+- An `--all` flag exists on the driver and you noticed it changes the **author filter** but not the **discovery direction** — bot PRs are still missed.
+- Reviewing downstream automation steps (`advise`, `planning`, `Mnemosyne lookup`, `human reviewer ping`) and asking "what should this step do for a Dependabot PR?" — the answer is **short-circuit via `_is_bot_pr_mode`**, not "run anyway and let the 404 surface".
+- A new bot app appeared (e.g. `app/sweep`, `app/socket-security`, `app/whitesource`) and your login-string detection (`if author == "dependabot[bot]"`) stopped catching it. Switch to `user.type == "Bot"`.
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# 1. The bot-PR enumerator — single REST round-trip per repo via gh api --paginate.
+def _discover_bot_prs(self) -> dict[int, int]:
+    """Enumerate every open user.type=='Bot' PR on the repo.
+
+    Returns {pr_number: pr_number} — the synthetic-key invariant:
+    PR number is BOTH the dedup key AND the value.
+    """
+    owner, repo = get_repo_info(self.repo_root)
+    result = _gh_call(
+        ["api", "--paginate",
+         f"/repos/{owner}/{repo}/pulls?state=open&per_page=100"],
+        check=False,
+    )
+    raw_pulls = json.loads(result.stdout or "[]")
+    bot_prs: dict[int, int] = {}
+    for pr in raw_pulls:
+        user = pr.get("user") or {}
+        if user.get("type") != "Bot":  # REST snake_case, NOT login string
+            continue
+        number = pr.get("number")
+        if isinstance(number, int):
+            bot_prs[number] = number  # synthetic-key invariant
+    return bot_prs
+
+# 2. The downstream guard — one rule, used everywhere we'd call gh issue view.
+def _is_bot_pr_mode(self, issue_number: int, pr_number: int) -> bool:
+    """True iff issue == pr (the synthetic-key invariant from _discover_bot_prs)."""
+    return issue_number == pr_number
+
+# 3. The union — bolt onto the existing issue-driven dedup map.
+# In _discover_prs, AFTER the issue-driven dedup map is built:
+if self.options.include_bot_prs:
+    bot_prs = self._discover_bot_prs()
+    for pr_num in bot_prs:
+        if pr_num in deduped.values():
+            continue  # already covered via an issue Closes link — keep human path
+        deduped[pr_num] = pr_num
+        self.shared_pr_issues.setdefault(pr_num, [pr_num])
+
+# 4. Short-circuit every downstream step that needs a human issue body.
+# In _attempt_ci_fixes, before calling _run_advise (and planning, Mnemosyne, etc.):
+if self.options.enable_advise and not self._is_bot_pr_mode(issue_number, pr_number):
+    advise_findings = self._run_advise(issue_number)
+# else: skip advise — bot PRs have no human-authored issue body to learn from
+```
+
+### Detailed Steps
+
+#### The blind spot, exactly as it surfaced
+
+The audit that triggered this skill: run `20260531T190615Z` of `drive-prs-green-ecosystem.sh` reported **"Driven: 8 repos"**. Live `gh pr list` per repo showed 7 of those 8 had a combined **16+ open Dependabot PRs** the driver never touched. The breakdown:
+
+| Repo | Open Dependabot PRs the driver missed |
+| ------ | ------------------------------------- |
+| ProjectOdysseus | 5 |
+| ProjectAchaeanFleet | 11 |
+| ProjectAgamemnon | 1 |
+| ProjectProteus | 4 |
+| ProjectArgus | 3 |
+| ProjectCharybdis | 5 |
+| ProjectHermes | 5 |
+
+The driver's own header line 12 even acknowledged it: **"issue-driven discovery only: PRs without `Closes #<open-issue>` are invisible"**. The whole point of #848/#849 was making that statement false.
+
+#### Why "issue-driven" can't see bot PRs
+
+The driver's `_find_pr_for_issue(N)` works like:
+
+```python
+# For each open issue, look up its closing PR by scanning PR bodies for "Closes #N".
+prs_for_issue_N = gh_api(
+    f"/search/issues?q=is:pr+is:open+repo:{owner}/{repo}+'Closes #{N}'"
+)
+```
+
+This is the issue→PR direction. It cannot, by construction, see a PR that has no originating issue. Dependabot PRs are filed straight from the GitHub Actions/Dependabot machinery — there is **no issue body**, **no `Closes #N` line**, **no human author**. The same goes for Renovate, Lychee (link-checker bot), Sweep, Socket Security, WhiteSource, and any future bot app.
+
+You cannot fix this by raising a limit, changing a filter, or adding a `--bot-author` flag to the existing search. The discovery **direction** is wrong — you must add a complementary PR→PR enumeration that doesn't go through issues at all.
+
+#### The synthetic-key invariant: PR number is both key AND value
+
+The cleanest union strategy uses the **PR number as a synthetic issue key**. In Python:
+
+```python
+deduped: dict[int, int] = {}    # {issue_number_or_synthetic_key: pr_number}
+
+# Existing issue-driven pass — issue → its closing PR
+for issue_num in open_issues:
+    pr_num = self._find_pr_for_issue(issue_num)
+    if pr_num is not None:
+        deduped[issue_num] = pr_num    # issue 42 → PR 123
+
+# NEW union pass — bot PRs, using PR num as both sides of the map
+if self.options.include_bot_prs:
+    bot_prs = self._discover_bot_prs()       # {127: 127, 130: 130, ...}
+    for pr_num in bot_prs:
+        if pr_num in deduped.values():
+            continue                          # PR already covered via Closes link
+        deduped[pr_num] = pr_num              # synthetic key: PR 127 → PR 127
+        self.shared_pr_issues.setdefault(pr_num, [pr_num])
+```
+
+After this loop, `deduped` mixes two kinds of entries:
+
+| Entry | Meaning | `key == value`? |
+| ----- | ------- | --------------- |
+| `{42: 123}` | Issue 42, closed by PR 123 (human path) | No |
+| `{127: 127}` | Bot PR 127, no originating issue (synthetic key) | **Yes** |
+
+The downstream code consumes `(issue_number, pr_number)` pairs. The synthetic-key invariant — `issue_number == pr_number` — is what lets every downstream step detect bot-PR mode without a separate `is_bot` flag stored anywhere.
+
+#### The downstream guard: `_is_bot_pr_mode`
+
+Every step that would normally do something with the issue (read its body, post a comment on it, run `advise` on its description, look up its Mnemosyne history) needs a guard:
+
+```python
+def _is_bot_pr_mode(self, issue_number: int, pr_number: int) -> bool:
+    return issue_number == pr_number
+```
+
+Why this signature instead of `is_bot_pr(pr_number)`? Because the synthetic-key invariant is a property of the **pair**, not of the PR alone. A PR number `127` might be:
+
+- A human PR that closes issue `42` → pair `(42, 127)` → not bot mode.
+- A bot PR with no issue → pair `(127, 127)` → bot mode.
+
+The two-arg helper makes the rule self-documenting: **the issue field is synthetic iff it equals the PR field.**
+
+Call sites that must short-circuit:
+
+```python
+# advise (asks Mnemosyne for prior learnings about the issue's topic)
+if self.options.enable_advise and not self._is_bot_pr_mode(issue_number, pr_number):
+    advise_findings = self._run_advise(issue_number)
+
+# planning (decomposes the issue body into a task plan)
+if self.options.enable_planning and not self._is_bot_pr_mode(issue_number, pr_number):
+    plan = self._run_planning(issue_number)
+
+# learn-on-merge (writes a Mnemosyne skill referencing the closed issue)
+if not self._is_bot_pr_mode(issue_number, pr_number):
+    self._run_learn(issue_number, pr_number)
+
+# gh issue view (would 404 on synthetic key)
+if not self._is_bot_pr_mode(issue_number, pr_number):
+    body = subprocess.check_output(["gh", "issue", "view", str(issue_number), "--json", "body"])
+```
+
+If you forget one, the `gh issue view 127` call 404s on a synthetic-key PR — the error message is `not found` with no hint that the cause was a synthetic key. That is the failure-to-watch-for; add a unit test (`TestIsBotPrMode`) that covers every call site so a future refactor cannot drop the guard.
+
+#### Why `user.type == 'Bot'`, not `author == 'dependabot[bot]'`
+
+The REST `/pulls` response includes a `user` object per PR:
+
+```json
+{
+  "number": 127,
+  "title": "chore(deps): bump foo from 1.2.3 to 1.2.4",
+  "user": {
+    "login": "dependabot[bot]",
+    "type": "Bot",            ← THE DISCRIMINATOR
+    "site_admin": false
+  },
+  "body": "Bumps [foo] from 1.2.3 to 1.2.4."   ← no "Closes #N"
+}
+```
+
+The discriminator is `user.type == "Bot"`, not the login string `"dependabot[bot]"`. Reasons:
+
+1. **New bot apps continually appear.** Today it's `dependabot[bot]`, `renovate[bot]`, `lychee[bot]`. Tomorrow it's `sweep[bot]`, `socket-security[bot]`, `whitesource[bot]`. A login-string allowlist ages out the moment an org installs a new bot. `user.type == "Bot"` is set by GitHub at account-creation time for any app-backed account and catches all of them.
+2. **`user.type` is part of the public REST contract.** The login string is not stable (an org can rename or replace a bot account). The type is.
+3. **One-line check vs. growing allowlist.** Compare `if user.get("type") == "Bot"` against `if user.get("login") in {"dependabot[bot]", "renovate[bot]", "lychee[bot]", "sweep[bot]", ...}` — the second one is a maintenance burden every PR review must remember to update.
+
+If you need to **distinguish** bot apps (e.g. only Dependabot, not Renovate), filter on login AFTER the `type == 'Bot'` predicate, not as the primary discriminator.
+
+#### REST snake_case ↔ gh-CLI camelCase normalisation
+
+`gh api /repos/.../pulls` returns REST shape; `gh pr list --json` returns camelCase. This skill uses REST throughout because `--paginate` requires `gh api`. The fields that matter for this skill:
+
+| Concept | REST shape (`gh api`) | gh-CLI shape (`gh pr list --json`) |
+| ------- | --------------------- | ----------------------------------- |
+| PR number | `number` (int) | `number` (int) — same |
+| Author user object | `user` (object) | `author` (object) — different key name |
+| Author login | `user.login` (str) | `author.login` (str) |
+| **Author type discriminator** | **`user.type` (str: `"User"` or `"Bot"`)** | **`author.is_bot` (bool)** |
+| PR body (for `Closes #N` parsing) | `body` (str) | `body` (str) — same |
+
+If you ever rewrite to `gh pr list --json author,number,body`, the discriminator changes from `user.type == "Bot"` to `author.is_bot == True`. Same logic, different field name. Pick one path and normalise at the boundary; don't mix shapes in the same call site.
+
+#### Cost: one `gh api --paginate` call per repo
+
+The cost added by the bot-PR sweep is exactly **one** `gh api --paginate /repos/.../pulls?state=open&per_page=100` call per repo per driver run. For repos under 100 PRs that is a single HTTP round-trip; for the largest dependabot-flooded repos in this ecosystem (ProjectAchaeanFleet at 11 + the human-authored PRs) it is still one paginate sweep, identical in cost to the `gh api --paginate` call already used by `tooling-gh-pr-list-limit-cap-use-api-paginate.md`'s "is repo done?" check. There is no per-PR cost — the entire sweep is the existing paginate response, filtered in-memory.
+
+#### `include_bot_prs=True` default, with explicit opt-out
+
+The flag default matters. If the user has to remember to pass `--include-bot-prs`, the bug recurs (drivers shipped before the flag existed still miss bot PRs by default). Make it opt-OUT:
+
+```python
+@dataclass
+class CIDriverOptions:
+    include_bot_prs: bool = True   # opt-OUT, not opt-IN
+    # ... rest
+
+# argparse:
+parser.add_argument(
+    "--no-include-bot-prs",
+    dest="include_bot_prs",
+    action="store_false",
+    help="Skip bot-authored PRs (Dependabot, Renovate, etc.). "
+         "Default is to INCLUDE them via the user.type=='Bot' sweep.",
+)
+```
+
+Reasons to opt-out (`--no-include-bot-prs`) are narrow: an operator who explicitly wants to drive only human-authored work, e.g. for a release-candidate dry-run before bot churn lands. The default for every automation invocation is "see everything".
+
+#### Why a single union beats a second pass
+
+A reasonable-sounding alternative is "do two driver invocations per repo: one issue-driven, one bot-PR-only". That fails for three reasons:
+
+1. **Cold-start cost doubles.** Every driver invocation re-opens the gh CLI session, re-reads config, re-enumerates the repo. Two passes is two cold-starts per repo. Across 8 repos in the ecosystem that's 16 cold-starts instead of 8.
+2. **The done-gate fragments.** The "is this repo done?" gate consumes the deduped set after BOTH passes complete. With two invocations you have to externally sequence "driver-A done → driver-B done → check repo done", which is fragile (what if B fails after A succeeded?). Single union: one driver run, one gate evaluation.
+3. **Operator UX.** Two invocations means two log files per repo, two exit codes to interpret, two failure modes ("which one failed?"). One invocation with the union means one log, one exit code, one clear failure mode.
+
+The single-union pattern is also where the `_is_bot_pr_mode` short-circuit naturally lives — it's a method on the same driver class, called at every downstream branch.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Issue-driven only via `_find_pr_for_issue(N)` for every open issue | For each issue, search for a PR whose body has `Closes #N` | Dependabot PRs have NO `Closes #N` line — they're filed straight from the GitHub Actions / Dependabot machinery without an originating issue. Same for Renovate, Lychee, Sweep, Socket Security. The issue→PR direction cannot, by construction, see them. | The issue→PR direction CAN'T see PRs that have no issue. Add a complementary PR→PR enumeration; do not try to fix this in the search query. |
+| Stuff Dependabot PR numbers into `--issues <pr-number>` and hope downstream tolerates them | Pass PR numbers on the CLI as if they were issue numbers | The driver calls `gh issue view <pr-number>` during the advise step. That 404s on PR numbers because PRs and issues share the GitHub numbering space — a matching int does NOT mean the entities match. The error message is `not found` with no hint that the cause was a synthetic key, so the symptom looks like "the issue was deleted" rather than "this isn't an issue". | Synthetic keys require explicit downstream guards (`_is_bot_pr_mode`) everywhere `gh issue view`, `gh issue comment`, or any other `gh issue *` call appears. Don't rely on the int alone; check the invariant. |
+| Run with `--all` and assume it would broaden discovery | The driver had an `--all` flag; expectation was that it widened the search direction | `--all` toggles "include non-bot author PRs in issue-driven discovery" — it changes the AUTHOR FILTER, not the discovery DIRECTION. Issue-driven still misses bot PRs that have no Closes link. The flag was orthogonal to the actual blind spot. | The discovery DIRECTION must change, not the filter on top of an existing direction. If your `--all` flag still loses items, the data flow is the bug, not the filter. |
+| Write a separate `--bot-prs-only` second invocation per repo | Two passes per repo: pass A enumerates issue-driven, pass B enumerates bot-only | (a) Doubles cold-start cost (CLI re-init, config reload, gh session). (b) Requires external sequencing — what if A finishes and B fails? (c) Fragments the "is this repo done?" gate so it cannot be evaluated atomically. (d) Doubles log files and exit codes per repo, hurting operator UX. The same code path is cleaner. | A single discovery function that unions both streams keeps the done-gate honest, the operator UX clean, and the cold-start cost halved. Bolt the union onto the existing dedup map; don't fork the driver. |
+| Detect bots by login string allowlist: `if author.login in {"dependabot[bot]", "renovate[bot]"}` | Hard-code the known bot logins as a set | (a) Ages out the moment an org installs a new bot app. (b) Maintenance burden: every PR review must remember to update the set. (c) Login strings are not stable — an org can rename a bot account. (d) Misses `lychee[bot]` (link-checker), `sweep[bot]`, `socket-security[bot]`, `whitesource[bot]` and every future app. | Discriminate on `user.type == "Bot"` (REST contract field, set at account creation by GitHub). One-line check that catches every app-backed account, present and future. |
+| Use `gh pr list --author "app/dependabot" --json number` to enumerate bot PRs | Sub-bug of the login-string attempt: rely on `--author` filter | (a) Filter accepts only one author at a time; doesn't union across bots. (b) Repeats the `gh pr list --limit` silent-cap trap (see `tooling-gh-pr-list-limit-cap-use-api-paginate`) — a repo with 100+ Dependabot PRs is silently truncated. (c) Same login-ages-out problem. | Use `gh api --paginate /repos/.../pulls?state=open&per_page=100` for the sweep — one call, unbounded, type-filterable in-memory. |
+
+## Results & Parameters
+
+### The three-helper pattern (copy-paste ready)
+
+```python
+import json
+import logging
+from typing import Any
+
+logger = logging.getLogger(__name__)
+
+
+def _discover_bot_prs(self) -> dict[int, int]:
+    """Enumerate every open user.type=='Bot' PR on the repo.
+
+    Uses gh api --paginate to walk Link: rel="next" headers — no cap, no
+    silent truncation. Returns {pr_number: pr_number} (the synthetic-key
+    invariant: PR number is BOTH key AND value).
+
+    Conservative on failure: returns {} so the issue-driven pass remains
+    authoritative when gh is unavailable. Logs the error for the operator.
+    """
+    owner, repo = get_repo_info(self.repo_root)
+    try:
+        result = _gh_call(
+            [
+                "api",
+                "--paginate",
+                f"/repos/{owner}/{repo}/pulls?state=open&per_page=100",
+            ],
+            check=False,
+        )
+        raw_pulls: list[dict[str, Any]] = json.loads(result.stdout or "[]")
+    except (subprocess.CalledProcessError, json.JSONDecodeError) as exc:
+        logger.error("Could not enumerate bot PRs for %s/%s: %s", owner, repo, exc)
+        return {}
+
+    bot_prs: dict[int, int] = {}
+    for pr in raw_pulls:
+        user = pr.get("user") or {}
+        if user.get("type") != "Bot":   # REST snake_case discriminator
+            continue
+        number = pr.get("number")
+        if isinstance(number, int):
+            bot_prs[number] = number    # synthetic-key invariant
+    return bot_prs
+
+
+def _is_bot_pr_mode(self, issue_number: int, pr_number: int) -> bool:
+    """Single-rule detector: True iff issue == pr (the synthetic-key invariant).
+
+    Use this as a guard anywhere the driver would otherwise call:
+    - gh issue view <issue_number>   (would 404 on synthetic key)
+    - gh issue comment <issue_number>
+    - advise(issue_number)           (no human body to learn from)
+    - planning(issue_number)         (no body to decompose)
+    - learn(issue_number, pr_number) (Mnemosyne entry would reference a non-issue)
+    """
+    return issue_number == pr_number
+
+
+# Patch into the existing _discover_prs(self) AFTER the issue-driven dedup map
+# is built and BEFORE the function returns:
+def _discover_prs(self) -> dict[int, int]:
+    deduped: dict[int, int] = {}
+
+    # ... existing issue-driven discovery populates `deduped` ...
+
+    if self.options.include_bot_prs:
+        bot_prs = self._discover_bot_prs()
+        for pr_num in bot_prs:
+            if pr_num in deduped.values():
+                continue   # already covered via an issue Closes link
+            deduped[pr_num] = pr_num
+            self.shared_pr_issues.setdefault(pr_num, [pr_num])
+
+    return deduped
+```
+
+### REST `/pulls` shape — every field this skill touches
+
+```json
+{
+  "number": 127,
+  "title": "chore(deps): bump anthropic from 0.42.0 to 0.43.0",
+  "state": "open",
+  "user": {
+    "login": "dependabot[bot]",
+    "type": "Bot",
+    "id": 49699333,
+    "site_admin": false
+  },
+  "body": "Bumps [anthropic](https://github.com/anthropics/...) from 0.42.0 to 0.43.0.\n<details><summary>Release notes</summary>...",
+  "labels": [{"name": "dependencies"}, {"name": "python"}],
+  "head": {"ref": "dependabot/pip/anthropic-0.43.0", "sha": "abc..."},
+  "base": {"ref": "main", "sha": "def..."},
+  "auto_merge": null,
+  "draft": false
+}
+```
+
+The only field needed for the discovery decision is `user.type`. The PR number, title, head ref, etc. flow through the existing pipeline unchanged.
+
+### Configuration: `include_bot_prs` default and opt-out
+
+```python
+@dataclass
+class CIDriverOptions:
+    include_bot_prs: bool = True   # default ON — opt-out, not opt-in
+    enable_advise: bool = True
+    enable_planning: bool = True
+    # ...
+
+# CLI plumbing
+parser.add_argument(
+    "--no-include-bot-prs",
+    dest="include_bot_prs",
+    action="store_false",
+    help="Skip bot-authored PRs (Dependabot, Renovate, Lychee, etc.). "
+         "Default is to include them via the user.type=='Bot' sweep.",
+)
+```
+
+Default ON because: the silent-truncation failure mode (driver reports "done" while bot PRs remain) is far worse than the false-positive failure mode (driver does extra work on a bot PR). If you flip the default to OFF, every driver shipped before someone remembers `--include-bot-prs` reverts to the old blind spot.
+
+### Downstream short-circuit checklist
+
+Every call site that consumes the `(issue_number, pr_number)` pair MUST guard with `_is_bot_pr_mode`. Audit your driver for these patterns:
+
+| Pattern in code | Reason to guard | Guarded form |
+| --------------- | --------------- | ------------ |
+| `gh issue view <issue_number>` | Would 404 on synthetic key | `if not _is_bot_pr_mode(...): gh issue view ...` |
+| `gh issue comment <issue_number>` | Posts to a PR number's issue slot — may post to a real but unrelated issue! | `if not _is_bot_pr_mode(...): gh issue comment ...` |
+| `_run_advise(issue_number)` | No human body to learn from | `if not _is_bot_pr_mode(...): advise(...)` |
+| `_run_planning(issue_number)` | No body to decompose into tasks | `if not _is_bot_pr_mode(...): plan(...)` |
+| `_run_learn(issue_number, pr_number)` | Mnemosyne entry would reference a non-issue | `if not _is_bot_pr_mode(...): learn(...)` |
+| `mnemosyne.search(issue_topic)` | Topic is the dependency name, not a feature | Often safe to keep; verify your search treats bot PRs gracefully |
+
+Pin each call site with a unit test that asserts the short-circuit fires when `issue_number == pr_number`. A future refactor that adds a new downstream step but forgets the guard will be caught by the test suite, not by a 404 in production.
+
+### Verification evidence
+
+PR #849 in ProjectHephaestus landed this change. The test suite:
+
+- **`TestBotPrDiscovery`** (in `tests/unit/automation/test_ci_driver.py`): proves the `gh api --paginate` call shape, the `user.type == 'Bot'` filter, the synthetic-key invariant (`bot_prs[pr_num] == pr_num`), and resilience when gh returns non-zero or non-JSON.
+- **`TestIsBotPrMode`**: proves the `issue == pr` rule, the inequality cases (human PRs), and that the helper is used as a guard at every advise / planning / learn call site.
+- **Six bats tests** in `tests/integration/shell/test_drive_prs_green_bot_prs.bats`: pin the shell-script paginate path and the bot-count invariants visible to operators in the run log.
+- **3017 unit pass + 47 shell pass** in CI on the PR.
+
+The audit that triggered the work: run `20260531T190615Z` of `drive-prs-green-ecosystem.sh` reported "Driven: 8 repos" while 16+ Dependabot PRs were open across 7 of those 8 repos. After #849 lands, the same script enumerates those PRs in the next run.
+
+### Related skills
+
+- `tooling-gh-pr-list-limit-cap-use-api-paginate.md` — same "use `gh api --paginate` for unbounded enumeration" pattern at the gh-CLI level. This skill builds on it: the `_discover_bot_prs` helper uses exactly the paginate call documented there. If you find yourself reaching for `gh pr list --limit 100 --author dependabot[bot]`, read that skill first to learn why the limit cap silently truncates.
+- `tooling-hephaestus-automation-loop-drive-green-broken-design.md` — the broader audit of the drive-green loop's design bugs. The bot-PR blind spot documented in THIS skill is one of the four layered issues; the loop-drive-green skill covers the others (phase-model bugs, HEPH_LOOP_INDEX gate, `--issues required` argparse failure). Cross-reference when scoping fixes to the loop runner.
+- `automation-loop-early-exit-zero-work-convergence.md` — when the loop's "zero-work convergence" check appears to fire but failing PRs remain, suspect a discovery blind spot first. The bot-PR sweep documented here was the missing piece for that early-exit logic to be honest.
+- `workflow-github-issues-individual-per-fix-for-automation-loop.md` — companion skill on how to scope automation work as issues (not as PRs). The corollary documented here: when work CAN'T be scoped as an issue (bot PRs), you need the synthetic-key escape hatch instead of forcing the work into the issue model.
+
+### Quick audit recipe — find drivers in your ecosystem that have this blind spot
+
+```bash
+# Find every Python file that resolves PRs via _find_pr_for_issue or "Closes #N" parsing
+grep -rln "_find_pr_for_issue\|Closes #" --include="*.py" .
+
+# For each one, check whether _discover_bot_prs (or equivalent) exists alongside
+for f in $(grep -rln "_find_pr_for_issue" --include="*.py" .); do
+  if ! grep -q "user.type.*Bot\|_discover_bot_prs\|include_bot_prs" "$f"; then
+    echo "BLIND SPOT: $f resolves PRs via issues but has no bot-PR sweep"
+  fi
+done
+
+# Confirm on a known-flooded repo: how many bot PRs would the driver miss?
+gh api --paginate /repos/OWNER/REPO/pulls?state=open\&per_page=100 \
+  | jq '[.[] | select(.user.type == "Bot")] | length'
+```
+
+If the audit prints "BLIND SPOT" for a driver, apply the three-helper pattern from "Quick Reference" above.
+
+---
+
+## Superseded from github-bulk-issue-and-pr-operations
+
+**Original date:** 2026-06-07
+
+**Original version:** "1.1.0"
+
+```yaml
+name: github-bulk-issue-and-pr-operations
+description: "Canonical guide to bulk GitHub issue and PR operations via gh CLI / gh api / GraphQL: rate-limit recovery, batch-create/close/comment, parallel PR remediation waves, mass label edits, idempotent filing with duplicate detection. Use when: (1) creating or closing 20+ issues/PRs in one operation, (2) recovering from primary or secondary rate limits, (3) coordinating parallel-fix swarms via gh CLI, (4) GraphQL bulk operations that span multiple repos, (5) auto-merge / admin-merge mechanics for batches."
+category: tooling
+date: 2026-06-07
+version: "1.1.0"
+user-invocable: false
+verification: verified-local
+history: github-bulk-issue-and-pr-operations.history
+tags: [merged, gh-cli, github-api, bulk, graphql, rate-limit, parallel-pr]
+```
+
+
+# GitHub Bulk Issue and PR Operations
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-18 |
+| **Objective** | Canonical reference for all bulk GitHub operations: issue filing, closure, deduplication, PR auto-merge, rate-limit recovery, comment deduplication, and GraphQL patterns |
+| **Outcome** | Consolidated from 33 skills (M6 merge, Epic #1782). Verified patterns across HomericIntelligence ecosystem swarms. |
+| **Verification** | verified-local |
+| **History** | [changelog](./github-bulk-issue-and-pr-operations.history) |
+
+## When to Use
+
+- Creating or closing 20+ issues or PRs in a single session
+- Recovering from GitHub primary rate limits (`Limit reached … resets N:XXpm`) or secondary rate limits (403 BCE2 / `GraphQL: API rate limit already exceeded`)
+- Coordinating parallel fix-swarm waves using `gh` CLI with worktree-isolated agents
+- Performing GraphQL bulk operations (label edits, issue edits, PR status) across multiple repos
+- Arming auto-merge on PRs in HomericIntelligence repos (`--squash` required — rebase disabled org-wide)
+- Filing 200+ issues across 10+ repos idempotently without duplicates
+- Deduplicating issue backlogs (terminology migrations, stale trackers)
+- Implementing wave-based issue triage: ALREADY-DONE detection, DUPLICATE closure, EASY/MEDIUM/HARD classification
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# ── Auto-merge (HomericIntelligence org: always --squash) ──────────────────
+gh pr merge "$PR" --auto --squash --repo "HomericIntelligence/$REPO"
+
+# ── Portable fallback (non-HI repos) ──────────────────────────────────────
+out=$(gh pr merge "$PR" --auto --rebase 2>&1) || true
+if echo "$out" | grep -q "rebase merging is not allowed"; then
+  gh pr merge "$PR" --auto --squash
+fi
+
+# ── Unset shadowed token BEFORE every gh/git-push call ────────────────────
+unset GITHUB_TOKEN GH_TOKEN && gh pr create --repo "$ORG/$REPO" ...
+unset GITHUB_TOKEN GH_TOKEN && git push -u origin "$BRANCH"
+
+# ── Rate-limit org probe (before dispatching any batch) ────────────────────
+TEST=$(gh api repos/$ORG/$REPO/issues --method POST \
+  -f title="[TEST] probe" -f body="probe" 2>&1)
+echo "$TEST" | grep -q '"number"' && echo CLEAR || echo BLOCKED
+# Close the test issue immediately if CLEAR:
+NUM=$(echo "$TEST" | python3 -c "import sys,json;print(json.load(sys.stdin)['number'])")
+gh issue close "$NUM" --repo "$ORG/$REPO" --reason "not planned"
+
+# ── File issue with body-file (avoids heredoc quoting failures) ────────────
+echo "$BODY" > /tmp/issue_body.txt
+gh issue create --repo "$ORG/$REPO" \
+  --title "$TITLE" --label "$LABEL" --body-file /tmp/issue_body.txt
+sleep 3   # between issues; sleep 60 + retry on 403
+
+# ── Count issues without pagination truncation ────────────────────────────
+gh issue list --repo "$REPO" --label "$LABEL" \
+  --state open --json number --limit 200 --jq 'length'
+
+# ── Find exact-title duplicates ───────────────────────────────────────────
+gh issue list --repo "$REPO" --label "$LABEL" \
+  --state open --json number,title --limit 200 \
+  --jq 'group_by(.title)|map(select(length>1))|.[]|
+        "DUPE: #\([.[].number|tostring]|join(", #")) — \(.[0].title)"'
+
+# ── Close duplicate (keep lower-numbered) ────────────────────────────────
+gh issue close $DUPE --repo "$REPO" --reason "not planned" \
+  --comment "Duplicate of #$CANONICAL — closing"
+
+# ── Bulk-close already-resolved issues ────────────────────────────────────
+for N in 101 102 103; do
+  gh issue close $N --comment "Already resolved — verified in codebase."
+done
+
+# ── ALREADY-DONE grep (exclude worktrees) ────────────────────────────────
+grep -rn "pattern" /path/to/repo/ \
+  --include="*.py" --include="*.toml" \
+  --exclude-dir=".git" --exclude-dir=".worktrees" \
+  --exclude-dir=".issue_implementer" --exclude-dir=".claude"
+
+# ── Verify PR numbers after each wave ────────────────────────────────────
+gh pr list --author "@me" --state all --limit 50
+
+# ── Correct closing keyword format for bundle PRs ─────────────────────────
+# WRONG: "Closes #A, #B, #C"  (only closes #A)
+# RIGHT: "Closes #A. Closes #B. Closes #C."  (closes all three)
+
+# ── Edit issue body safely (no heredoc-in-$() quoting failures) ──────────
+TMPFILE=$(mktemp /tmp/issue-XXXXXX.md)
+cat > "$TMPFILE" << 'HEREDOC'
+<new body>
+HEREDOC
+gh issue edit $N --repo "$ORG/$REPO" --body "$(cat $TMPFILE)"
+rm "$TMPFILE"
+```
+
+### Phase 0: Pre-flight Checks (Required Before Any Swarm)
+
+Run once before dispatching any batch of agents:
+
+```bash
+# 1. Check auto-merge capability
+gh repo view --json autoMergeAllowed --jq '.autoMergeAllowed'
+
+# 2. Check for existing open PRs (prior swarm may have already created them)
+gh pr list --state open --json number,title,headRefName,mergeStateStatus
+
+# 3. Check pre-commit config exists
+ls .pre-commit-config.yaml 2>/dev/null || echo "ABSENT — remove pre-commit steps from agent prompts"
+
+# 4. Check lockfile type
+ls package-lock.json 2>/dev/null && echo "use npm ci" || echo "use npm install"
+ls pixi.lock 2>/dev/null && echo "pixi.lock present"
+
+# 5. Org API limit probe (see Quick Reference)
+
+# 6. Verify L0 is on main before dispatching worktree agents
+git branch --show-current  # Must be 'main'
+```
+
+### Phase 1: Issue Classification
+
+Fetch all open issues, then apply these pre-filters **in order** (each earlier filter reduces noise for the next):
+
+1. **DUPLICATE** — Same target file + similar description as another open issue → `gh issue close N --comment "Duplicate of #M"`
+2. **ALREADY-DONE** — Change already in codebase (grep with worktree exclusion) → close with verification comment
+3. **EASY** — Single-file, mechanical, < 20 lines, no logic change
+4. **MEDIUM/HARD** — Defer
+
+```bash
+# Fetch for classification
+gh issue list --state open --limit 200 --json number,title,labels,body
+
+# EASY signals: "Update", "Fix typo", "Add note", "Document", "Remove stale", "Pin", "Suppress"
+# MEDIUM/HARD signals: "evaluate", "investigate", "arm64", cross-repo references
+
+# ALREADY-DONE rate: ~12% of large backlogs; detect with worktree-excluded grep
+# EASY queue exhaustion: ~76% of infra-only repos; remaining = MEDIUM/HARD
+```
+
+### Phase 2: Wave Execution
+
+**Group issues before dispatching:**
+
+- Issues touching the **same file** → same agent or sequential waves
+- `ci.yml` / `CMakeLists.txt` / hot-file issues → **one agent per file per wave**
+- Wave size: ≤5 agents optimal for infra repos
+
+**Branch naming (include in every agent prompt as a command):**
+```bash
+git checkout -B <N>-auto-impl origin/main   # explicit base — never inherited
+```
+
+**Agent prompt mandatory elements:**
+1. Exact branch name as an imperative command
+2. `STOP and report ALREADY-DONE if the issue is already implemented`
+3. `STOP and report BLOCKED if the spec requires a design decision`
+4. Pre-commit step (only if `.pre-commit-config.yaml` exists)
+5. Correct auto-merge: `gh pr merge <PR> --auto --squash` (HomericIntelligence) or portable fallback
+
+**Post-wave ground truth:**
+```bash
+gh pr list --author "@me" --state all --limit 50   # Never trust agent-reported PR numbers
+```
+
+### Phase 3: Rate-Limit Recovery
+
+**Primary REST rate limit** (resets on a schedule):
+```bash
+# Pattern in stderr: "Limit reached … resets N:XXpm (America/Los_Angeles)"
+# Action: sleep until reset, then resume
+```
+
+**Secondary rate limit / GraphQL limit** (403 BCE2 or `GraphQL: API rate limit already exceeded`):
+```bash
+# gh exits non-zero with message on stderr — OR exits 0 with JSON errors array
+# Detect both:
+if echo "$STDERR" | grep -qE "GraphQL: API rate limit|rate limit already exceeded|BCE2"; then
+  sleep 60 && retry
+fi
+# Also check exit-0 JSON errors:
+echo "$STDOUT" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+if isinstance(d, dict) and any(e.get('type')=='RATE_LIMITED' for e in d.get('errors',[])):
+    sys.exit(1)
+"
+```
+
+**Proactive per-thread throttle** (Python, prevents hitting secondary limits):
+```python
+import os, threading, time
+_GH_THROTTLE = threading.local()
+
+def _gh_throttle_wait() -> None:
+    rate = float(os.environ.get("GH_RATE_LIMIT_PER_SEC", "5"))
+    if rate <= 0:
+        return
+    now = time.monotonic()
+    last = getattr(_GH_THROTTLE, "last_call", 0.0)
+    gap = 1.0 / rate
+    if (elapsed := now - last) < gap:
+        time.sleep(gap - elapsed)
+    _GH_THROTTLE.last_call = time.monotonic()
+
+# Call _gh_throttle_wait() at every gh CLI invocation chokepoint
+```
+
+### Phase 4: Auto-Merge Mechanics
+
+**HomericIntelligence org policy** (verified across 11 repos, 2026-05-11): `enablePullRequestAutoMerge` with rebase is disabled org-wide. Always use `--squash`.
+
+```bash
+# For HomericIntelligence (no round-trip needed):
+gh pr merge "$PR" --auto --squash --repo "HomericIntelligence/$REPO"
+
+# Verify armed:
+gh pr view "$PR" --repo "HomericIntelligence/$REPO" \
+  --json autoMergeRequest --jq '.autoMergeRequest.mergeMethod'
+# Expected: "SQUASH"
+
+# Admin merge when auto-merge is disabled on the repo:
+gh pr merge "$PR" --squash --repo "$ORG/$REPO"
+```
+
+Note: The web UI may allow manual rebase-merge even when `enablePullRequestAutoMerge` with rebase is disabled — this is a separate setting. Trust `--squash` over any `CLAUDE.md` prescribing `--rebase`.
+
+### Phase 5: Idempotent Issue Filing
+
+```bash
+# Sequential filing (never parallel per repo):
+for TITLE in "${TITLES[@]}"; do
+  BODY_FILE=$(mktemp /tmp/issue_XXXXXX.md)
+  echo "$BODY" > "$BODY_FILE"
+  gh issue create --repo "$ORG/$REPO" \
+    --title "$TITLE" --label "$LABEL" --body-file "$BODY_FILE"
+  rm "$BODY_FILE"
+  sleep 3
+done
+
+# Idempotency check before filing:
+COUNT=$(gh issue list --repo "$ORG/$REPO" --label "$LABEL" \
+  --state open --json number --limit 200 --jq 'length')
+[ "$COUNT" -ge "$EXPECTED" ] && echo "Already filed — skip" && exit 0
+```
+
+### Phase 6: Correct Closing Keywords for Bundle PRs
+
+GitHub closes issues only when each issue has its own keyword in the PR body or squash-commit message:
+
+```markdown
+# CORRECT (period-separated, one keyword per issue):
+**Closes:** Closes #97. Closes #106. Closes #114. Closes #N.
+
+---
+<rest of body>
+```
+
+Formats that **silently fail** (issues stay open after merge):
+- `Closes #A, #B, #C` — only closes #A
+- Markdown tables with issue numbers
+- Bullet lists: `- Closes #A`
+
+### Phase 7: Token Authentication in Sub-Agents
+
+Each Bash tool call runs in a fresh shell. Any `unset` at the top of a prompt does NOT persist.
+
+```bash
+# ALWAYS chain unset before every gh/git-push invocation:
+unset GITHUB_TOKEN GH_TOKEN && gh pr create ...
+unset GITHUB_TOKEN GH_TOKEN && git push -u origin "$BRANCH"
+
+# Also run once per agent to configure git to use keyring token:
+gh auth setup-git
+```
+
+Symptom: `Resource not accessible by personal access token` or `403 denied` in agents but not interactively — caused by ambient `GITHUB_TOKEN` (narrow-scope fine-grained PAT) shadowing the keyring `gho_*` OAuth token.
+
+### Phase 8: Idempotent Comment Posting (Dedup Across Restarts)
+
+```python
+# Hydrate comment-ID cache from GitHub API on first access per issue:
+import re, subprocess, json
+
+STAGE_RE = re.compile(r"## Stage: (\w+)(?:\s+\(iteration (\d+)\))?")
+_comment_ids: dict[str, int] = {}
+_loaded: set[int] = set()
+
+def _load_existing_comment_ids(issue_number: int) -> None:
+    if issue_number in _loaded:
+        return
+    page = 1
+    while True:
+        result = subprocess.run(
+            ["gh", "api", f"repos/{{owner}}/{{repo}}/issues/{issue_number}/comments",
+             "--paginate", "--jq", ".[] | {id,body: .body[:80]}"],
+            capture_output=True, text=True)
+        if not result.stdout.strip():
+            break
+        for line in result.stdout.splitlines():
+            item = json.loads(line)
+            m = STAGE_RE.search(item["body"])
+            if m:
+                key = f"{m.group(1)}-{m.group(2) or '0'}"
+                _comment_ids[key] = item["id"]
+        page += 1
+        break  # gh --paginate handles pages automatically
+    _loaded.add(issue_number)
+```
+
+## Pre-Work Preflight for Auto-Impl Worktrees
+
+This section covers a distinct case from the swarm-level preflight checks in Phase 0. It applies when an individual agent opens a pre-created worktree that may already have work completed by a prior session.
+
+### Triggers
+
+- `git log main..HEAD` returns no output — branch has NO commits ahead of main, meaning the fix was already merged by a prior PR. Distinct from bulk-operation triggers.
+- Pre-created worktrees in automated pipelines may have work already completed. The `.claude-prompt-NNNN.md` file provides agent context but does NOT indicate whether work is pending or done.
+
+### 2-Command Minimum Preflight (under 3 seconds)
+
+Run these two commands BEFORE reading any source files or planning implementation:
+
+```bash
+git log --oneline -10
+gh pr list --search "<issue-number>" --state all
+```
+
+- `git log` shows `Closes #N` or a commit referencing the issue → done; check PR state
+- `gh pr list` shows an open PR → confirm auto-merge status, report done
+- Neither → proceed with implementation
+
+### git diff Main Check
+
+```bash
+git diff main -- <target-file>
+```
+
+No output means the file is identical to main — it is already fixed.
+
+### Decision Matrix
+
+| git log has issue commit | git status clean | PR exists | Action |
+| -------------------------- | ----------------- | ----------- | -------- |
+| Yes | Yes | Yes | Verify PR state, confirm auto-merge, report done |
+| Yes | Yes | No | Create PR, enable auto-merge |
+| Yes | No | No | Commit uncommitted work, create PR |
+| No | Yes | No | Issue not yet implemented — proceed with implementation |
+| No | Any | Yes | Investigate PR content — unusual state |
+
+### Reporting Template (Already-Done Case)
+
+```
+Status: Already Done
+
+- Commit: <sha> <message>
+- PR: #<number> — <state>, auto-merge: <enabled/disabled>
+- Files changed: <list from git show --stat>
+
+No reimplementation needed.
+PR URL: <url>
+```
+
+### Key Lesson
+
+Clean `git status` does NOT mean implementation has not started. Prior commits may have done all the work. Always check `git log` too.
+
+### Why Pre-Created Worktrees Can Be Pre-Populated
+
+In automated pipelines (e.g., ProjectOdyssey), worktrees are created by orchestration agents that may also run an initial implementation pass. When a second agent session opens the same worktree, the work may already be complete. The `.claude-prompt-NNNN.md` file is dropped into the worktree for agent context but does not indicate whether implementation is pending or done.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| `gh pr merge --auto --rebase` on HomericIntelligence repos | Standard rebase auto-merge for all PRs | `enablePullRequestAutoMerge` with rebase is disabled org-wide; GraphQL error fires on every attempt | Use `--auto --squash` for all HomericIntelligence repos; portable fallback for cross-org scripts |
+| REST-only rate-limit regex | Detected `"Limit reached … resets"` only | GraphQL calls (gh issue list --json, gh issue view) emit `"GraphQL: API rate limit already exceeded for user ID NNNN"` on stderr, missed by REST regex | Add GraphQL regex; also check exit-0 stdout JSON for `errors[].type == "RATE_LIMITED"` |
+| Parallel filer agents per repo | Two agents filing issues to same repo concurrently | Created ~49 exact-title duplicates per repo | One filer agent per repo; use `group_by(.title)` dedup scan after any multi-wave session |
+| `gh issue list` without `--limit` | Used default limit for count verification | GitHub defaults to 30 results; repos with 31+ always showed as MISMATCH | Always pass `--limit 200` (or 500 for large repos) when counting |
+| `Closes #A, #B, #C` in PR body | Comma-separated closing keywords for bundle PRs | GitHub only closes the first issue in a comma list | Use `Closes #A. Closes #B. Closes #C.` — one keyword per issue |
+| Heredoc directly in `gh issue edit --body` | `gh issue edit --body "$(cat <<'HEREDOC'...HEREDOC)"` | Backticks inside code blocks in body break heredoc quoting | Write body to temp file; pass `--body "$(cat $TMPFILE)"` |
+| Single `unset GITHUB_TOKEN` at agent prompt top | Unset once, then ran multiple gh commands | Each Bash tool call is a fresh shell; the unset did not persist across calls | Chain `unset GITHUB_TOKEN GH_TOKEN &&` before every gh/git push invocation |
+| Parallel agents dispatched while L0 was on non-main branch | Worktree agents inherited L0's current branch as base | Agents silently picked up unrelated commits; GitHub refused rebase: "can't be rebased" | Verify L0 is on `main` before dispatching OR include `git checkout -B <N> origin/main` as step 1 in every agent prompt |
+| Grepping for ALREADY-DONE without worktree exclusion | Plain `grep -rn pattern /repo/` | Stale worktrees contain old branch state — false "still present" for issues already fixed in main | Always pass `--exclude-dir=.worktrees --exclude-dir=.issue_implementer --exclude-dir=.claude --exclude-dir=.git` |
+| Two agents dispatched to same file in same wave | ci.yml / CMakeLists.txt changes in parallel | Guaranteed merge conflict on same file | Batch ALL same-file issues into ONE agent per wave; use Sonnet for ci.yml / hot-file issues |
+| Closing lower-numbered duplicate unconditionally | Assumed lower issue number = canonical | Some child issues referenced the higher Epic number in "Part of #N" | Before closing, grep child bodies for "Part of #" to determine which issue number to keep |
+| Trusting agent-reported PR numbers | Accepted agent output ("PR #403") for wave reconciliation | Agents report stale in-flight views; 3/16 waves had wrong PR numbers | Always verify with `gh pr list --author "@me" --state all --limit 50` after every wave |
+| Haiku agents for 40+ issue filing batches | Haiku paces faster, sent more requests | Hit GitHub secondary rate limits (403 BCE2) faster than Sonnet | Use Sonnet for large filing batches; Sonnet's natural pace is more rate-limit resilient |
+| Two agents touching the same hot file in the same sub-wave | `scripts/apply.sh` modified by agents for issues #187 and #195 | Merge conflict on same function block | Hot-file serialization: at most one agent per hot file per sub-wave |
+| `gh search issues "term"` for body-text scanning | Used GitHub search API for issue body matching | Returns false positives from repo names and README text | Use `gh issue list --json body \| jq 'select(.body \| test("term"))'` per-repo instead |
+| Mechanical string replace for terminology migration | `sed 's/old-term/new-term/g'` across all issue bodies | Inverted-semantic flags (SKIP_VERIFY vs TLS_VERIFY) get wrong boolean values; context-specific class renames lost | Use Sonnet agents with explicit terminology mapping table; flag inverted-semantic pairs in mapping |
+| Skip PR creation because no changes needed | Considered not creating a PR when the fix was already in main | Issue stays open with no resolution linked to it | Even for already-done work, a PR is required to close the issue formally |
+| Assuming clean git status means fresh start | Relied on `git status` showing a clean working tree as proof no work had been done | Clean status just means nothing is unstaged — prior commits may have done all the work | `git status` clean does not equal implementation not started; always check `git log` too |
+| Assuming the worktree always has new work to do | Started planning implementation steps after opening a pre-created worktree | Wasted tool calls on work already complete; branch had commits ahead of main from a prior session | Worktrees created by automation may lag behind main or may already have all work committed |
+
+## Results & Parameters
+
+### Filing Parameters
+
+| Parameter | Value |
+| ----------- | ------- |
+| Sleep between issues | 3 seconds |
+| Sleep on 403 | 60 seconds, retry up to 3× |
+| `--limit` for `gh issue list` | 200 (never omit) |
+| Agents per repo | 1 (never concurrent) |
+| Preferred model for filing | Sonnet (rate-limit resilient) |
+| Body delivery | `--body-file /tmp/body.txt` |
+| Wave size | ≤5 agents optimal |
+| ALREADY-DONE rate | ~12% of large backlogs |
+| EASY queue exhaustion | ~76% of infra-only repos |
+
+### Issue Classification Heuristics
+
+```
+EASY if ALL of:
+  - Title has: "Update", "Document", "Fix typo", "Remove stale", "Add note", "Pin", "Suppress"
+  - Body has: single file target
+  - Expected diff: < 20 lines
+  - No logic/behavior change
+
+DUPLICATE if:
+  - Same target file AND same or nearly same description as another open issue
+  - Canonical = lowest issue number (preserves original context)
+
+ALREADY-DONE if:
+  - Issue says "remove X" → grep for X → not found in main tree (worktrees excluded)
+  - Issue says "add Y to Z" → grep for Y in Z → already present
+
+MEDIUM/HARD if:
+  - Requires "evaluate"/"investigate"/"design decision"
+  - Cross-repo coordination required
+  - "arm64", "Phase 6", multi-phase rollout
+```
+
+### Haiku Agent Prompt Template (validated at scale)
+
+```
+You are implementing GitHub issue #<N> in repo <ORG>/<REPO>.
+
+Issue: <title>
+Body: <body>
+
+Steps:
+1. Run: unset GITHUB_TOKEN GH_TOKEN && git checkout -B <N>-auto-impl origin/main
+2. [implementation steps]
+3. Run pre-commit (if .pre-commit-config.yaml exists) and fix any failures
+4. Commit: "type(scope): description\n\nCloses #<N>\n\nCo-Authored-By: Claude <noreply@anthropic.com>"
+5. Push: unset GITHUB_TOKEN GH_TOKEN && git push -u origin <N>-auto-impl
+6. PR: unset GITHUB_TOKEN GH_TOKEN && gh pr create --title "..." --body "Closes #<N>"
+7. Merge: unset GITHUB_TOKEN GH_TOKEN && gh pr merge <PR> --auto --squash
+
+STOP and report ALREADY-DONE if the change is already in the codebase.
+STOP and report BLOCKED if the spec is unclear or requires a design decision.
+```
+
+### Commit Message for Bundle PRs
+
+```
+type(scope): brief description
+
+Closes #A. Closes #B. Closes #C.
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+### Dedup Script Template (Python)
+
+```python
+import subprocess, json
+
+def find_dupes(org_repo: str, label: str) -> list[int]:
+    result = subprocess.run(
+        ["gh", "issue", "list", "--repo", org_repo, "--label", label,
+         "--state", "open", "--json", "number,title", "--limit", "200"],
+        capture_output=True, text=True)
+    issues = json.loads(result.stdout)
+    seen: dict[str, int] = {}
+    dupes: list[int] = []
+    for issue in sorted(issues, key=lambda x: x["number"]):
+        t = issue["title"]
+        if t in seen:
+            dupes.append(issue["number"])  # higher number = duplicate
+        else:
+            seen[t] = issue["number"]
+    return dupes
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| HomericIntelligence/AchaeanFleet | 235-issue myrmidon swarm, 24+ waves, 91 PRs merged (2026-04-23) | 202 issues closed; EASY queue exhausted at 76%; ci.yml conflict avoidance; Docker inline comment parse errors |
+| HomericIntelligence/ProjectKeystone | 180-issue C++20 swarm, 16 waves (2026-04-25) | 7 new failure modes; libssl-dev gap; TSan+concurrentqueue hard blocker; CMakeLists.txt double-agent |
+| HomericIntelligence/Myrmidons | shellcheck-warnings swarm ~25 issues (2026-04-24) | Hot-file serialization; 8 existing PRs discovered pre-swarm; all PRs merged CI-green |
+| HomericIntelligence/Odysseus | 35-issue triage, 19 resolved (2026-04-23) | Worktree timeout on symlink-heavy repo; Haiku branch naming drift |
+| HomericIntelligence (15 repos) | 680-finding audit issue filing (2026-04-28) | Org limit hit once; ~119 duplicates closed; `--limit 200` fix |
+| HomericIntelligence/{Argus,Agamemnon,Myrmidons,Hermes,Charybdis} | Ecosystem-wide 5-repo sweep (2026-05-12) | 717 classified, 51 PRs merged, 78 retired in <24h; urllib3 runner-image CVE; coverage delta regression |
+| HomericIntelligence (11 repos) | Auto-merge squash verification sweep (2026-05-11) | Rebase disabled org-wide; `--squash` accepted on all 11 repos |
+| HomericIntelligence/ProjectHephaestus | GraphQL rate-limit detection (PR #412, 2026-05-15) | Added GRAPHQL_RATE_LIMIT_RE; 2255 unit tests; proactive per-thread throttle PR #404 |
+
+## References
+
+- [gh CLI manual](https://cli.github.com/manual/gh_issue_create)
+- [GitHub closing keywords docs](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue)
+- [batch-low-difficulty-issue-impl history](./github-bulk-issue-and-pr-operations.history)
+
+---
+
+## Superseded from automation-duplicate-pr-prevention-idempotency-guards
+
+**Original date:** 2026-06-05
+
+**Original version:** "1.0.0"
+
+```yaml
+name: automation-duplicate-pr-prevention-idempotency-guards
+description: "Use when: (1) an automation pipeline creates duplicate PRs for one issue, (2) two PRs land on the same branch, (3) a worktree manager rebuilds a branch from base and discards remote history, (4) gh pr create runs unconditionally without checking for an existing PR, (5) making issue->branch->PR creation idempotent"
+category: tooling
+date: 2026-06-05
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [automation, duplicate-pr, idempotency, git-worktree, gh-pr-create, ls-remote, pr-creation]
+```
+
+
+# Automation Duplicate-PR Prevention via Idempotency Guards
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-06-05 |
+| **Objective** | Stop an issue-implementation pipeline from creating duplicate PRs for a single issue by adding idempotency guards at the worktree, PR-creation, and prompt boundaries |
+| **Outcome** | Success — three root causes fixed in PR HomericIntelligence/ProjectHephaestus#1022 (Closes #1018); full automation suite (1091 tests) green; dependency-scan passed after rebase |
+| **Category** | tooling |
+
+The real failure: ProjectHephaestus's issue-implementation pipeline created
+**three** PRs for issue #768 — #942 (CLOSED), #962 (MERGED), #967 (OPEN) — two of
+them on the **same branch** `768-auto-impl`, with divergent history. The pipeline
+had no idempotency at any of the three creation chokepoints.
+
+## When to Use
+
+Use this skill when:
+
+- An automation pipeline emits more than one PR for the same issue
+- Two PRs target the same head branch (often `<issue>-auto-impl`)
+- A worktree/branch manager rebuilds a branch from base and silently discards
+  commits that exist only on `origin`
+- `gh pr create` is called unconditionally with no "does a PR already exist?" check
+- You are making the `issue -> branch -> PR` flow idempotent so re-runs (including
+  re-runs from a different machine) converge instead of duplicating
+
+## Verified Workflow
+
+The minimal robust guard set installs an idempotency check at **each** of the three
+creation chokepoints. All three are needed — fixing only one leaves the others able
+to duplicate.
+
+### 1. Worktree manager: detect remote-only branches before rebuilding from base
+
+Root cause: `worktree_manager.create_worktree` checked branch existence
+**locally only** (`git rev-parse --verify <branch>`) and never consulted the
+remote. A remote-only `<issue>-auto-impl` branch (pushed by a prior loop on another
+machine) was rebuilt from BASE, **discarding the remote commits** → divergent
+branch → a second, divergent PR.
+
+Fix: add `_remote_branch_exists(branch)` using
+`git ls-remote --heads origin <branch>` and check for the `refs/heads/<branch>`
+substring. Be defensive: any failure (non-zero exit, parse error) → treat the
+branch as absent and fall back to base. When the branch is absent locally but
+present on origin, **extend** the remote history instead of overwriting it:
+
+```bash
+git fetch origin <branch>
+git worktree add <path> -b <branch> origin/<branch>
+```
+
+Extract `_add_worktree_for_branch` / `_local_branch_exists` helpers so
+`create_worktree` stays under the C901 complexity limit (≤10).
+
+### 2. gh_pr_create: check for an existing open PR at the single creation chokepoint
+
+Root cause: `github_api.gh_pr_create` ran `gh pr create` **unconditionally** — no
+existing-PR check at the one place every caller funnels through.
+
+Fix: add `_find_open_pr_for_head(branch)` that runs:
+
+```bash
+gh pr list --head <branch> --json number,state
+```
+
+Parse the JSON for **any** state, return the first OPEN PR number, and return
+`None` on parse failure. Call it right after the policy asserts; if an OPEN PR
+already exists, log it and **return that PR** instead of creating a duplicate.
+Because every caller routes through this one chokepoint, the guard protects them
+all at once.
+
+### 3. Implementation prompt: instruct the agent to reuse an existing PR
+
+Root cause: the implementation prompt's "Create a pull request" step gave **no**
+instruction to check for or reuse an existing PR.
+
+Fix: in `prompts/implementation.py`, instruct the agent to run
+`gh pr list --head <branch>` FIRST and reuse an existing open PR rather than
+opening a second one.
+
+### Quick Reference
+
+| Chokepoint | File | Guard added | Mechanism |
+| ----------- | ----- | ----------- | --------- |
+| Worktree creation | `worktree_manager.py` | `_remote_branch_exists` | `git ls-remote --heads origin <branch>`; extend via `git fetch` + `worktree add -b <branch> origin/<branch>` |
+| PR creation | `github_api.py` | `_find_open_pr_for_head` | `gh pr list --head <branch> --json number,state`; return OPEN PR instead of creating |
+| Agent prompt | `prompts/implementation.py` | reuse instruction | `gh pr list --head <branch>` first, reuse open PR |
+
+**Key design decision (KISS tradeoff):** keep `find_pr_for_issue` **OPEN-only**
+(`--state open`). Do NOT broaden it to skip on closed/merged PRs. A closed/merged
+prior PR legitimately means the issue may need fresh work; broadening adds a
+false-skip failure mode without fixing the confirmed bug (duplicate OPEN PRs +
+divergent branches), which guards (1) and (2) fully address.
+
+**Testing insight:** when you prepend a pre-flight subprocess call
+(`ls-remote`, or `pr list`) ahead of existing calls, existing tests that assert
+`mock.call_count == N` or use ordered `side_effect = [...]` BREAK — update the
+counts and prepend the new call's mocked result. Also, lazy attributes matter: in
+`WorktreeManager` the base-branch detection is lazy (only fires when
+`self.base_branch` is accessed), so the run-call ORDER differs per code path — the
+remote-extend path never accesses `base_branch`, so it never triggers a detect
+call. Tests must set `side_effect` in the exact order each path triggers.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Local-only branch existence check | `create_worktree` used `git rev-parse --verify <branch>` only | A remote-only `<issue>-auto-impl` branch (pushed by another machine's loop) was invisible, so the branch was rebuilt from BASE and the remote commits were discarded → divergent duplicate PR | Always consult `git ls-remote --heads origin <branch>` before rebuilding from base; extend remote history with `git fetch` + `worktree add -b <branch> origin/<branch>` |
+| Unconditional PR creation | `gh_pr_create` always ran `gh pr create` | A re-run opened a second PR on the same head branch | Guard the single creation chokepoint with `gh pr list --head <branch>` and return the existing OPEN PR |
+| Broaden `find_pr_for_issue` to skip on closed PRs | Make the existing issue->PR lookup also skip when a closed/merged PR exists | False skips when an issue legitimately needs fresh work after an abandoned PR; adds a new failure mode without fixing the duplicate-OPEN-PR + divergent-branch bug | Keep `find_pr_for_issue` OPEN-only; enforce idempotency at the creation/worktree boundaries instead |
+
+## Results & Parameters
+
+| Parameter | Value |
+| ----------- | ------- |
+| Source files changed | `hephaestus/automation/worktree_manager.py`, `hephaestus/automation/github_api.py`, `hephaestus/automation/prompts/implementation.py` |
+| Helpers added | `_remote_branch_exists`, `_find_open_pr_for_head`, `_add_worktree_for_branch`, `_local_branch_exists` |
+| Test files updated | `tests/.../test_worktree_manager.py`, `tests/.../test_github_api.py`, `tests/.../test_prompts.py` |
+| Verification | Full automation suite (1091 tests) green; dependency-scan passed after rebase |
+| PR | https://github.com/HomericIntelligence/ProjectHephaestus/pull/1022 |
+| Issue | #1018 (root duplicate-PR example: issue #768 → PRs #942 CLOSED, #962 MERGED, #967 OPEN) |
+
+## Key Insight
+
+Idempotency for an `issue -> branch -> PR` pipeline must be enforced at **every**
+creation chokepoint, not just one. Duplicate PRs arose from three independent gaps:
+a worktree manager blind to remote-only branches, an unconditional `gh pr create`,
+and a prompt that never told the agent to reuse an existing PR. Guard each boundary
+with a cheap pre-flight check (`git ls-remote`, `gh pr list --head`), and resist the
+temptation to "fix" it by broadening the open-PR lookup to also skip closed/merged
+PRs — that trades a duplicate bug for a false-skip bug. KISS: guard at the
+boundaries that actually create the duplicates.
+
+---
+
+## Superseded from pr-merged-state-not-proof-of-remote-sync
+
+**Original date:** 2026-05-29
+
+**Original version:** "1.1.0"
+
+```yaml
+name: pr-merged-state-not-proof-of-remote-sync
+description: "GitHub API state, your local `origin/<branch>` ref, and your working tree are three independent surfaces that diverge until `git fetch` runs — in BOTH the read direction (`gh pr view` says MERGED but refs are stale) and the write direction (a local branch and `origin/<same-name>` point at different commits because a parallel process pushed). A matching branch NAME does not imply matching CONTENT. Use when: (1) about to report `PR is merged` based on `gh pr view`, (2) auditing whether a file is present/absent in main after a deletion or rename PR, (3) spawning sub-agents that grep or scan the working tree expecting it matches main, (4) running deletion-validation or migration-completeness workflows, (5) reasoning about whether `origin/main` reflects the latest merges, (6) a sub-agent reports `feature X didn't execute / files missing / wave didn't run` immediately after PRs were marked merged, (7) about to push a local `<issue>-impl` / feature branch to update a PR when a parallel automation process may have pushed to the same branch name, (8) merging main into a local branch and pushing it to a PR branch you did not author end-to-end."
+category: ci-cd
+date: 2026-05-29
+version: "1.1.0"
+user-invocable: false
+verification: verified-local
+history: pr-merged-state-not-proof-of-remote-sync.history
+tags:
+  - gh-cli
+  - git-fetch
+  - audit
+  - sub-agents
+  - merge-verification
+  - working-tree
+  - branch-divergence
+  - parallel-automation
+  - fast-forward-gate
+  - rev-parse
+```
+
+
+# `gh pr view` MERGED Is Not Proof Of Local/Remote Sync
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-29 (v1.1.0) |
+| **Objective** | Stop trusting a local ref as the source of truth for a remote PR — in BOTH directions: (READ) reporting "PRs merged / files deleted from main" based on `gh pr view --json state` alone, and (WRITE) pushing a local branch to update a PR when a parallel process may have pushed a different commit to the same branch name. Require remote-ref verification before any claim or push, and pin audit sub-agents to a specific git ref |
+| **Outcome** | Successful — established that GitHub API state, local `origin/<branch>` refs (refresh only on `git fetch`), and the working tree (whatever branch is checked out) are three independent surfaces. v1.1.0 adds the write direction: a local `<issue>-impl` branch and `origin/<issue>-impl` can point at entirely different implementations when a parallel automation process pushes to the same name; gate pushes on a `merge-base --is-ancestor` fast-forward check |
+| **Verification** | verified-local — v1.0.0 (read direction) grounded in ProjectOdyssey PRs #5458/#5459/#5460 audit-swarm false positives; v1.1.0 (write direction) grounded in ProjectKeystone PR #571 / branch `512-impl`, where a parallel `.issue_implementer` automation pushed a different implementation to `origin/512-impl` than the local background-agent commit, caught before a clobbering push |
+| **History** | [changelog](./pr-merged-state-not-proof-of-remote-sync.history) |
+
+## When to Use
+
+- About to report **"PR is merged"** to the user based on `gh pr view --json state` or `mergedAt`
+- About to claim **"file X is gone from main"** or **"directory Y was deleted"** after a deletion PR
+- Spawning **audit sub-agents** that will grep, find, or scan the working tree expecting it reflects `main`
+- Running **deletion-validation**, **migration-completeness**, or **wave-execution-audit** workflows
+- Reasoning about whether `origin/main` reflects the latest merges (it doesn't, until you fetch)
+- A sub-agent reports "feature X didn't execute / files missing / wave didn't run" immediately after PRs were marked merged — likely a stale-ref or wrong-branch hallucination
+- Coordinating multiple stacked PRs and you need to confirm earlier ones landed in main before basing later work on that assumption
+- **(WRITE direction)** About to push a local `<issue>-impl` / feature branch to update an open PR, when a **parallel automation process** (e.g. `.issue_implementer`, an issue-backlog runner, or another agent) may have pushed to the **same branch name**
+- The local branch and `origin/<same-name>` were produced by **different processes** for the **same issue** — branch names collide but contents may differ
+- Merging `main` into a local branch and pushing it to a PR branch you **did not author end-to-end** — verify you are fast-forwarding the real PR head, not overwriting it
+
+## The Core Insight
+
+Three independent state surfaces diverge, and `git fetch` is the only thing that reconciles the local view:
+
+1. **GitHub API state** — what `gh pr view --json state,mergedAt,mergeCommit,headRefOid` returns. Authoritative for "did GitHub accept the merge" / "what commit backs the PR right now", lags ≤ seconds behind reality.
+2. **Local remote-tracking ref** — `origin/main`, `origin/<branch>`. Only updates when you run `git fetch origin`. Can be hours/days stale.
+3. **Working tree / local branch** — whatever branch is currently checked out, and whatever commit your **local** `<branch>` ref points at. Reflects that local commit's files, not the remote PR head's. Sub-agents that grep the working tree are auditing the checked-out branch, not main.
+
+**Read direction:** `gh pr view` returning MERGED only proves (1). Reporting "merged to main" or auditing "what's in main" requires verifying (2) and choosing the right ref for (3).
+
+**Write direction (the symmetric trap):** A local branch named `512-impl` proves nothing about what backs PR #571. If a parallel process pushed a different implementation to `origin/512-impl`, then your local `512-impl` (carrying your own agent's commit) is **stale relative to the real PR head**. A matching branch **NAME** does not imply matching **CONTENT**. Merging `main` into the local branch and pushing it would fast-forward-clobber the wrong implementation onto the PR. Before pushing to any PR branch you did not author end-to-end, re-derive your work from `origin/<pr-branch>` and gate the push on a `merge-base --is-ancestor` fast-forward check.
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Before reporting "PR is merged" or auditing main:
+git fetch origin --quiet
+git log origin/main --oneline -10                       # confirm merge commits present
+
+# For deletion audits (file should be GONE from main):
+git show origin/main:path/to/file 2>/dev/null && echo "STILL PRESENT" || echo "DELETED"
+
+# For presence audits (file should EXIST in main):
+git show origin/main:path/to/file >/dev/null 2>&1 && echo "PRESENT" || echo "MISSING"
+
+# For broad audits — use a fresh clone, never the working tree of a feature branch:
+REPO_URL=$(git remote get-url origin)
+REPO_NAME=$(basename "$REPO_URL" .git)
+rm -rf "/tmp/${REPO_NAME}-audit"
+git clone --depth 5 --branch main "$REPO_URL" "/tmp/${REPO_NAME}-audit"
+# Run audits inside /tmp/${REPO_NAME}-audit, not the working tree
+
+# For sub-agents — pin them to a specific ref in the prompt:
+# "Audit the state of origin/main (NOT the current working tree). Use
+#  `git show origin/main:<path>` or run inside /tmp/<repo>-audit. The working
+#  tree is on branch <X> which is NOT main."
+
+# === WRITE direction: before pushing a local branch to update a PR ===
+git fetch origin --quiet
+
+# 1. Divergence check — does your local branch match the remote PR head?
+git rev-parse HEAD                      # your local commit
+git rev-parse origin/<pr-branch>        # the commit backing the open PR
+# If these DIFFER, your local branch is NOT the PR head. STOP and investigate.
+
+# 2. Confirm by comparing commit subjects (different implementations look different)
+git log --oneline -3 HEAD
+git log --oneline -3 origin/<pr-branch>
+# e.g. "...automatic off-host forwarding" (yours) vs
+#      "...automatic off-host NATS promotion" (the parallel automation's) = DIVERGED
+
+# 3. Re-derive your work from the REAL remote PR head, not the local ref:
+git worktree add /tmp/sync-<branch> --detach origin/<pr-branch>   # --detach pins remote head
+cd /tmp/sync-<branch>
+git switch -c sync-<branch>
+git merge origin/main                   # do your update on top of the real PR head
+
+# 4. Fast-forward GATE — must be an ancestor or you'd overwrite someone else's PR:
+git merge-base --is-ancestor origin/<pr-branch> HEAD && echo "FF-safe" || \
+  { echo "NOT a fast-forward of the PR head — STOP, do not push"; exit 1; }
+
+# 5. Only now push (updates the PR by fast-forward, never clobbers):
+unset GH_TOKEN GITHUB_TOKEN; git push origin HEAD:<pr-branch>
+```
+
+### Detailed Steps
+
+1. **Fetch before trusting any local ref.** `git fetch origin --quiet` is cheap. Run it before any claim that touches "main".
+
+2. **Verify merge commits in `origin/main`'s log, not in `gh pr view` output.**
+
+   ```bash
+   gh pr view 5460 --json state,mergeCommit --jq '.mergeCommit.oid'   # e.g., abc123def
+   git log origin/main --oneline | grep abc123de                       # must return a line
+   ```
+
+   If the commit is not in `origin/main`'s log after a fetch, the merge has not propagated to the branch ref yet (rare, but possible during high-throughput auto-merge cascades) — wait and re-fetch.
+
+3. **For deletion audits, use `git show origin/main:<path>`.** Non-zero exit means the file is absent in main. Do NOT `ls`/`find` the working tree — that's the checked-out branch, not main.
+
+4. **For broad multi-file or directory audits, clone fresh.** A shallow clone to `/tmp/<repo>-audit --branch main` guarantees the audit surface is main and only main. Auditors cannot accidentally scan a feature branch.
+
+5. **Pin every audit sub-agent to a specific git ref.** In the sub-agent's prompt, explicitly state:
+   - Which branch/ref it must audit (e.g., `origin/main`)
+   - How to query that ref (`git show origin/main:<path>` or the fresh clone path)
+   - That the working tree is NOT main, with the actual branch name
+
+6. **For stacked PRs, verify the parent landed in `origin/main` before reporting the child is "ready to merge to main"** — auto-merge on a child whose parent has only the API-state of MERGED can race in obvious and non-obvious ways.
+
+### Pushing to a PR branch you do not own end-to-end (WRITE direction)
+
+When a **parallel automation process** (an issue-backlog runner like `.issue_implementer`,
+or another agent) targets the **same `<issue>-impl` branch names** as your own background
+agents, the local branch and the remote PR head can be **completely different
+implementations of the same feature**. The trap: your worktree's `512-impl` points at your
+background agent's commit (files in `core/`), while the OPEN PR #571 is backed by the
+automation's commit on `origin/512-impl` (files in `transport/`). The branch names match;
+the contents diverged.
+
+7. **Divergence check before any push to a PR branch.** Fetch, then compare:
+
+   ```bash
+   git fetch origin --quiet
+   git rev-parse HEAD                 # local commit
+   git rev-parse origin/512-impl      # commit backing PR #571
+   ```
+
+   If they differ, your local branch is **not** the PR head. Confirm with subjects —
+   different implementations have different commit messages:
+
+   ```bash
+   git log --oneline -3 HEAD              # "...automatic off-host forwarding"
+   git log --oneline -3 origin/512-impl   # "...automatic off-host NATS promotion"
+   ```
+
+   Different subject + different files = a parallel process owns the PR head. STOP.
+
+8. **Re-derive your work from the remote PR head, not the local ref.** A plain
+   `git worktree add <dir> <branch>` checks out the **local** branch ref (which has
+   diverged). Pin to the remote head explicitly with `--detach origin/<branch>`:
+
+   ```bash
+   git worktree add /tmp/sync-512-impl --detach origin/512-impl
+   cd /tmp/sync-512-impl
+   git switch -c sync-512-impl
+   git merge origin/main            # do the update on top of the REAL PR head
+   ```
+
+9. **Gate the push on a fast-forward check.** The remote PR head MUST be an ancestor of
+   what you are about to push, or you would rewrite/overwrite someone else's PR:
+
+   ```bash
+   git merge-base --is-ancestor origin/512-impl HEAD \
+     && echo "FF-safe — origin/512-impl is an ancestor of HEAD" \
+     || { echo "NOT a fast-forward — STOP, you'd clobber the PR"; exit 1; }
+   unset GH_TOKEN GITHUB_TOKEN; git push origin HEAD:512-impl
+   ```
+
+   If `--is-ancestor` returns non-zero, do not push. Investigate who owns the PR head and
+   reconcile, or open your own separate PR.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Trusted `gh pr view <N> --json state` returning MERGED as proof commits were in main | After arming auto-merge on PRs #5458/#5459/#5460, `gh pr view` returned MERGED within ~30s for all three. Reported "all merged" to the user without running `git fetch`. Subsequent audit sub-agents scanned the stale feature-branch working tree and reported "files not deleted" | API state and remote-ref state diverge: `gh pr view` queries GitHub directly; local refs (`origin/main`) only refresh on `git fetch`. Working-tree scans on feature branches show that branch's files, not main's | Always `git fetch origin && git log origin/main --oneline -10` before claiming a merge propagated. For deletion audits, use `git show origin/main:<path>` or a fresh shallow clone — never the working tree |
+| Spawned 4 audit sub-agents against the working tree without specifying which branch they should audit | 3 of 4 sub-agents reported "Wave 2 didn't execute" with 10+ false positives each. Working tree was checked out on branch `5452-autograd-phase2-substrate`, not main. Sub-agents trusted the working tree as ground truth for "what's in main" | Sub-agents default to scanning whatever the working tree shows. If the prompt doesn't pin them to a ref, they silently audit the wrong branch and produce confident, wrong answers | Pin every audit sub-agent to a specific git ref in the prompt: either `cd /tmp/<repo>-audit` (fresh clone of main), or instruct them to use `git show origin/main:<path>`. Tell them the actual current branch and that it is NOT main |
+| Trusted the local branch named `512-impl` as the PR's content and merged main into it | A parallel `.issue_implementer` automation and my own background agents both produced `512-impl` branches. My worktree's `512-impl` pointed at my agent's commit (files in `core/`); the OPEN PR #571 was backed by the automation's commit on `origin/512-impl` (files in `transport/`). I was about to `git merge origin/main` into the local branch and push to update the PR | It was a stale local commit, not the PR head. Pushing would have fast-forward-clobbered PR #571 with the wrong implementation. A matching branch **NAME** does not mean matching **CONTENT** when an external process pushes to the same name | Before pushing to a PR branch, `git fetch` then compare `git rev-parse HEAD` vs `git rev-parse origin/<branch>` and the `git log --oneline` subjects. If they differ, your local branch is not the PR head — re-derive from `origin/<branch>` |
+| Assumed `git worktree add <dir> <branch>` checks out the remote PR head | Ran `git worktree add /tmp/wt 512-impl` expecting it to give me the commit backing PR #571 | `git worktree add <dir> <branch>` checks out the **local** branch ref, which had diverged from `origin/512-impl`. I'd have continued working on the wrong (local) implementation | Use `git worktree add <dir> --detach origin/<branch>` to pin to the remote head explicitly, then `git switch -c sync-<branch>`. Gate the eventual push on `git merge-base --is-ancestor origin/<branch> HEAD` |
+
+## Results & Parameters
+
+**Verification one-liner** (before claiming "PR N merged to main"):
+
+```bash
+git fetch origin --quiet && \
+  COMMIT=$(gh pr view "$N" --json mergeCommit --jq '.mergeCommit.oid') && \
+  git log origin/main --oneline | grep -q "${COMMIT:0:8}" && \
+  echo "VERIFIED: $COMMIT is in origin/main" || \
+  echo "NOT YET IN origin/main — wait and re-fetch"
+```
+
+**Push-safety one-liner** (before pushing a local branch to update a PR you didn't author end-to-end):
+
+```bash
+# B = the PR branch name (e.g. 512-impl)
+git fetch origin --quiet && \
+  if [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/$B)" ]; then
+    echo "IN SYNC: local HEAD == origin/$B"
+  elif git merge-base --is-ancestor "origin/$B" HEAD; then
+    echo "FF-safe: origin/$B is an ancestor of HEAD — push is a fast-forward"
+  else
+    echo "DIVERGED: origin/$B is NOT an ancestor of HEAD — pushing would clobber the PR. STOP."
+  fi
+```
+
+**Re-derive-from-remote-head pattern** (when the divergence check says DIVERGED):
+
+```bash
+B=512-impl
+git fetch origin --quiet
+git worktree add "/tmp/sync-$B" --detach "origin/$B"   # --detach pins the REMOTE head
+( cd "/tmp/sync-$B" && git switch -c "sync-$B" && git merge origin/main )
+# then re-run the push-safety one-liner inside /tmp/sync-$B before pushing
+```
+
+**Fresh-clone audit pattern**:
+
+```bash
+audit_main_fresh() {
+  local repo_url="$1"            # e.g., https://github.com/HomericIntelligence/ProjectOdyssey
+  local repo_name
+  repo_name=$(basename "$repo_url" .git)
+  local audit_dir="/tmp/${repo_name}-audit"
+  rm -rf "$audit_dir"
+  git clone --depth 5 --branch main "$repo_url" "$audit_dir" --quiet
+  echo "$audit_dir"             # caller cd's into it
+}
+```
+
+**Sub-agent prompt template** (paste into any audit sub-agent task):
+
+```text
+AUDIT SCOPE: You are auditing the state of `origin/main` in <REPO>.
+The current working tree is on branch `<BRANCH_NAME>`, which is NOT main.
+Do NOT trust `ls`, `find`, or `grep` against the working tree as evidence
+about main.
+
+To inspect a single file in main:        git show origin/main:<path>
+To inspect a directory listing in main:  git ls-tree -r origin/main <path>
+To run broad audits against main only:   cd /tmp/<repo>-audit  (fresh shallow clone)
+
+Before starting, run: git fetch origin --quiet
+```
+
+**Real session evidence**: PRs #5458, #5459, #5460 on HomericIntelligence/ProjectOdyssey reported MERGED by `gh pr view` within ~30 seconds of `gh pr merge --auto` arming. A 4-agent audit swarm immediately afterward scanned the working tree (which was on branch `5452-autograd-phase2-substrate`) and 3 of 4 agents produced 10+ false positives each claiming "Wave 2 didn't execute" — they were grepping a feature branch's files, not main's, while local `origin/main` was also stale because no `git fetch` had run between the merges and the audit.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| HomericIntelligence/ProjectOdyssey | JIT demolition Wave 1.5 — PRs #5458/#5459/#5460 reported MERGED by `gh pr view`; audit swarm on stale feature-branch working tree hallucinated "Wave 2 didn't execute" with 10+ false positives per agent (2026-05-26 session) | Working tree branch: `5452-autograd-phase2-substrate`; local `origin/main` was stale because no `git fetch` ran between merge and audit |
+| ProjectKeystone | WRITE direction (2026-05-29) — parallel `.issue_implementer` automation + own background agents both produced `<issue>-impl` branches. Local `512-impl` pointed at the background agent's commit (files in `core/`); OPEN PR #571 was backed by the automation's commit on `origin/512-impl` (files in `transport/`). About to merge main + push, which would have clobbered #571 | Caught via `git rev-parse HEAD` ≠ `git rev-parse origin/512-impl` and divergent commit subjects ("off-host forwarding" vs "off-host NATS promotion"). Re-derived from `origin/512-impl` via `--detach`, merged main, confirmed `merge-base --is-ancestor` fast-forward, pushed safely |
+
+---
+
+## Superseded from tooling-bulk-pr-sync-statuscheck-504-stale-classify
+
+**Original date:** 2026-06-06
+
+**Original version:** "1.0.0"
+
+```yaml
+name: tooling-bulk-pr-sync-statuscheck-504-stale-classify
+description: "Three compounding bugs that stop a bulk PR-sync tool (e.g. hephaestus.github.fleet_sync) from rebasing a large PR queue after a fix lands on main. (1) statusCheckRollup 504: `gh pr list --json ...,statusCheckRollup --limit 100` returns HTTP 504 Gateway Timeout at ~50+ open PRs because the rollup aggregates every check on every PR; drop statusCheckRollup from the bulk list and fetch CI per-PR via `gh pr view <n> --json statusCheckRollup` (one PR per call does not 504), downgrading a flaky per-PR fetch to CI=UNKNOWN instead of aborting. (2) Silent no-op on list failure: code that catches the gh error and `return []` logs 'No open PRs' and exits SUCCESS while skipping the whole queue; distinguish 'no PRs' from 'list failed' and RAISE on a genuine list failure so the run's exit status reflects the unprocessed queue. (3) Stale-failing misclassification: marking ANY CI=FAILURE PR as FAILING (skip) strands the queue, because after a fix lands on main every BEHIND PR shows its OLD failing run; require mergeStateStatus==CLEAN for the FAILING classification — a BEHIND/BLOCKED+MERGEABLE red PR must classify as OUTDATED so it gets rebased (re-running CI fresh); CONFLICTING stays CONFLICTED. Use when: (1) building or debugging any tool that bulk-lists PRs via gh, (2) a gh pr list with statusCheckRollup times out / 504s at scale, (3) a fix landed on main and the whole PR queue needs rebasing, (4) a sync tool reports 'no PRs' or success but did nothing, (5) PRs show stale failing CI after a main fix and the tool skips them all, (6) a classifier needs to tell genuine PR-specific failures from stale red CI on behind branches."
+category: tooling
+date: 2026-06-06
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - fleet-sync
+  - gh-pr-list
+  - statusCheckRollup
+  - 504-gateway-timeout
+  - mergeStateStatus
+  - stale-ci
+  - silent-noop
+  - bulk-pr-sync
+  - pr-classification
+  - rebase-queue
+  - per-pr-ci-fetch
+```
+
+# Bulk PR-Sync Tooling: statusCheckRollup 504, Silent List No-op, and Stale-Failing Classification
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-06 |
+| **Objective** | Make a fleet/bulk PR-sync tool (`hephaestus.github.fleet_sync`) actually rebase a large PR queue after a fix lands on main |
+| **Outcome** | Fixed; the real run listed all 56 open PRs and rebased 49 of them (the remaining 7 were genuine merge conflicts) |
+| **Verification** | verified-ci — PRs #1028 and #1030 merged to main; the subsequent fleet-sync run listed 56 PRs and rebased 49 (ProjectHephaestus, 2026-06-06) |
+
+Three independent-but-compounding bugs each silently neutered the tool. Any one of
+them alone makes the tool "succeed" while rebasing nothing. They are documented
+together because they share one search surface: *a bulk PR-sync tool that runs but
+fails to drain the queue.*
+
+## When to Use
+
+- Building or debugging any tool that bulk-lists PRs via `gh` (especially `gh pr list --json ...`).
+- A `gh pr list` request that includes `statusCheckRollup` times out / returns HTTP 504 at scale (~50+ open PRs).
+- A fix landed on main and the whole PR queue needs rebasing, but the sync tool rebases nothing.
+- A sync tool reports "no PRs" / SUCCESS but did nothing (silent no-op masking the queue).
+- PRs show stale failing CI after a main fix and the tool skips all of them.
+- Writing or reviewing a PR classifier that must tell a genuine PR-specific failure from stale red CI on a behind branch.
+- See also the `batch-pr-rebase-workflow` skill (trigger 28: stale CI results need a rebase push to re-run fresh CI) for the rebase mechanics once classification is correct.
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Bulk list WITHOUT statusCheckRollup (does not 504 even at 56+ PRs):
+gh pr list --state open --limit 100 \
+  --json number,title,headRefName,baseRefName,headRefOid,mergeable,mergeStateStatus
+
+# 2. Fetch CI state PER-PR (one PR per call never 504s):
+gh pr view <n> --json statusCheckRollup
+#    A flaky/failed per-PR fetch => CI = UNKNOWN (fall through to rebase),
+#    NOT an abort of the whole run.
+
+# 3. List-failure is FATAL, not empty:
+#    "no open PRs"  => return []        (legitimate empty)
+#    gh call failed => raise            (caller counts it a failure, continues to next repo)
+```
+
+### Detailed Steps
+
+**Fix 1 — Don't fetch `statusCheckRollup` in the bulk list.**
+`statusCheckRollup` aggregates every check on every PR, so a single bulk
+`gh pr list --json ...,statusCheckRollup --limit 100` makes GitHub fan out across
+the whole queue and returns **HTTP 504 Gateway Timeout** once there are ~50+ open PRs.
+Request only the cheap fields in the bulk call
+(`number,title,headRefName,baseRefName,headRefOid,mergeable,mergeStateStatus`) and
+fetch CI state **per PR** with `gh pr view <n> --json statusCheckRollup`. One PR per
+call does not 504. If a per-PR fetch is flaky, downgrade *that* PR to `CI = UNKNOWN`
+(so it falls through to a rebase) rather than aborting the entire run.
+
+**Fix 2 — Distinguish "no PRs" from "list failed".**
+The original code caught the `gh` error and `return []`, so the tool logged
+"No open PRs" and exited SUCCESS while skipping the entire queue — a dangerous silent
+no-op that masks every PR. Make a genuine list failure **raise**; the caller counts it
+as a failure so the run's exit status reflects the unprocessed queue (and the run can
+still continue to other repos). Only a true empty result returns `[]`.
+
+**Fix 3 — Require `mergeStateStatus == CLEAN` for the FAILING classification.**
+The classifier marked ANY PR with `CI = FAILURE` as `FAILING` (skip), even when the red
+result was **stale** — the branch was `BEHIND`/`BLOCKED` and its checks ran against an
+OLD base (commonly a failure already fixed on main). After a fix lands on main, EVERY
+behind PR shows its old failing run, so the tool skips ALL of them and rebases nothing.
+Only a PR that is **up to date with its base yet still red** is a genuine PR-specific
+failure worth skipping, so gate `FAILING` on `mergeStateStatus == CLEAN`. A
+`BEHIND`/`BLOCKED` + `MERGEABLE` PR with stale red CI must classify as **OUTDATED** so it
+gets rebased (which re-runs CI fresh). `CONFLICTING` stays `CONFLICTED`.
+
+Classification table after the fix:
+
+| mergeable | mergeStateStatus | CI state | Classification | Action |
+|-----------|------------------|----------|----------------|--------|
+| MERGEABLE | CLEAN | FAILURE | FAILING | skip (genuine PR-specific failure) |
+| MERGEABLE | BEHIND / BLOCKED | FAILURE (stale) | OUTDATED | rebase (re-runs CI fresh) |
+| MERGEABLE | BEHIND / BLOCKED | SUCCESS / UNKNOWN | OUTDATED | rebase |
+| CONFLICTING | DIRTY | any | CONFLICTED | per-PR conflict resolution |
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| 1 | Bulk `gh pr list --json ...,statusCheckRollup --limit 100` | HTTP 504 Gateway Timeout once ~50+ PRs are open — the rollup aggregates every check on every PR in one request | Never request `statusCheckRollup` in a bulk list; fetch CI per-PR via `gh pr view <n>` |
+| 2 | Catch the `gh` list error and `return []` | Tool logged "No open PRs" and exited SUCCESS while silently skipping the whole queue | A list failure is fatal, not empty — raise so exit status reflects the unprocessed queue |
+| 3 | Dry-run after only fixing #1 + #2 | 55 of 56 PRs classified FAILING and skipped (Rebased: 1, Skipped: 55) — the classifier still skipped every behind PR's stale red CI | Classifying ANY `CI=FAILURE` as FAILING strands the queue after a main fix |
+| 4 | Abort the whole run when one per-PR `gh pr view` is flaky | One transient fetch error would block the entire queue | Downgrade the flaky PR to `CI=UNKNOWN` (falls through to rebase); don't abort the run |
+
+## Results & Parameters
+
+**Diagnosis sequence (ProjectHephaestus, 2026-06-06):**
+
+- Dry-run after Fix 1 + Fix 2 only: `Rebased: 1, Skipped: 55` (55/56 misclassified FAILING).
+- Dry-run after Fix 3 (classification): all 56 OUTDATED → `Rebased+re-signed: 56, Skipped: 0`.
+- Real run: rebased **49 / 56**. The 7 remaining were genuine merge CONFLICTS
+  (`DIRTY` + `CONFLICTING`) needing per-PR resolution; the conflict-resolution agent
+  process can time out (exit 143) on large/overlapping diffs.
+
+**Field set for the bulk list (cheap, no 504):**
+
+```text
+number,title,headRefName,baseRefName,headRefOid,mergeable,mergeStateStatus
+```
+
+**Per-PR CI fetch (one call per PR):**
+
+```bash
+gh pr view <n> --json statusCheckRollup
+```
+
+**Key invariants:**
+
+- `mergeStateStatus == CLEAN` is the *only* state in which a red PR is a genuine
+  PR-specific failure (skip). Every other red state on a `MERGEABLE` PR is stale → rebase.
+- A `gh` list failure must change the run's exit status; a true empty result must not.
+- A per-PR CI fetch failure affects only that PR (→ `UNKNOWN`), never the whole run.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | `hephaestus.github.fleet_sync`; fixes shipped as PRs #1028 and #1030; subsequent run listed 56 PRs, rebased 49 | 2026-06-06, verified-ci |
+
+---
