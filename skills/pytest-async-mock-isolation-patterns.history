@@ -1,0 +1,2655 @@
+<!-- markdownlint-disable MD024 -->
+# pytest-async-mock-isolation-patterns — History
+
+## v1.0.0 (2026-06-07)
+
+Initial canonical merge of 6 skills:
+
+1. pytest-asyncio-hang-and-mock-hazards
+2. testing-asyncio-fixture-state-reset
+3. testing-respx-async-mock-fixtures-with-stateful-faults
+4. testing-singleton-isolation-circuit-breaker-reset
+5. mock-and-test-isolation-patterns
+6. ci-tests-agent-subprocess-claude-absent
+
+---
+
+## Superseded from pytest-asyncio-hang-and-mock-hazards
+
+**Original date/version:** 2026-06-02 / v1.1.0
+
+```yaml
+name: pytest-asyncio-hang-and-mock-hazards
+description: "Diagnosing and fixing pytest tests that hang or produce false results due to asyncio event loops, sleep mocks, and coroutine patching. Use when: (1) pytest CI step times out without reporting a test failure — hang signature, (2) async daemon tests block in epoll.poll(-1) and pytest-timeout does not interrupt them, (3) a coroutine internally reassigns a global asyncio.Event making pre-set fixtures ineffective, (4) patch('module.time.sleep') causes OOM via runaway retry loops, (5) FastAPI Depends() ignores a patched get_settings because the function reference was captured at import time, (6) a code-quality bot flags `await <asyncio.Task>` as a no-effect statement."
+category: testing
+date: 2026-06-02
+version: "1.1.0"
+user-invocable: false
+verification: verified-ci
+history: pytest-asyncio-hang-and-mock-hazards.history
+tags:
+  - asyncio
+  - pytest
+  - hang
+  - timeout
+  - epoll
+  - AsyncMock
+  - coroutine
+  - patch
+  - time-sleep
+  - oom
+  - fastapi
+  - pydantic-settings
+  - event-loop
+  - python
+  - pytest-timeout
+  - false-positive
+  - unmocked-blocking-call
+  - subprocess-hang
+  - baseline-duration-diagnosis
+  - faulthandler
+```
+
+
+# Pytest Asyncio Hang and Mock Hazards
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-19 |
+| **Objective** | Consolidate recurring asyncio/pytest pitfalls: event-loop hangs, sleep-mock OOM, FastAPI DI isolation, and bot false positives |
+| **Outcome** | SUCCESS — seven skills merged; patterns verified across ProjectKeystone, ProjectHephaestus, ProjectScylla, ProjectHermes |
+| **Verification** | verified-ci (members individually verified) |
+
+## When to Use
+
+1. **CI job times out (no test failure output)** — tests hang in `epoll.poll(-1)` because an asyncio event never fires
+2. **`pytest-timeout` fires but the test keeps running** — default signal method cannot interrupt a blocked C-level syscall
+3. **Coroutine reassigns a global `asyncio.Event` internally** — pre-setting the module variable is silently overwritten
+4. **`patch("module.time.sleep")` causes OOM or runaway loops** — the patch leaks to all callers in the process
+5. **`patch("app.get_settings", return_value=mock)` has no effect** — `Depends()` captured the original function at import time
+6. **Bot flags `await <asyncio.Task>` as "Statement has no effect"** — static analyser false positive; do not remove the `await`
+7. **Wall-clock timing assertions are flaky** — replace with deterministic `time.sleep` mock assertions
+8. **A newly-added blocking call hangs the FULL suite but not the module's own tests** — a sibling `run()`-level test reaches the new call without mocking it; root-cause by baseline-duration comparison + faulthandler
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# --- Pattern A: Patch the COROUTINE FUNCTION, not its internals ---
+from unittest.mock import AsyncMock, patch
+
+@patch("mymodule.daemon.run", new_callable=AsyncMock, return_value=0)
+def test_main_starts(mock_run, caplog):
+    result = main(["--log-level", "INFO"])
+    assert result == 0
+    mock_run.assert_called_once()
+
+# For signal handlers: asyncio.run() registers SIGINT internally — use assert_any_call
+mock_signal.assert_any_call(signal.SIGTERM, ANY)
+
+
+# --- Pattern B: Patch asyncio.Event CONSTRUCTOR when coroutine reassigns the global ---
+mock_event = asyncio.Event()
+mock_event.set()  # pre-set so wait() returns immediately
+
+with patch("mymodule.daemon.asyncio.Event", return_value=mock_event):
+    result = await mymodule.daemon.run(settings)
+
+
+# --- Pattern C: pytest-timeout thread method (pyproject.toml) ---
+# [tool.pytest.ini_options]
+# addopts = "--timeout=30 --timeout-method=thread"
+
+
+# --- Pattern D: Patch the wait HELPER, not time.sleep ---
+with patch("mymodule.wait_until") as mock_wait:
+    _call_that_retries(max_retries=2)
+mock_wait.assert_called_once()
+
+# If you must patch time.sleep, use a deterministic mock assertion:
+with patch("mymodule.retry.time.sleep") as mock_sleep:
+    result = decorated()
+mock_sleep.assert_any_call(0.1)
+mock_sleep.assert_any_call(0.2)
+
+# Add a defensive iteration cap to any production while-True loop:
+iterations = 0
+while True:
+    time.sleep(1)
+    iterations += 1
+    if iterations >= 100_000:
+        logger.warning("iteration cap reached; bailing out")
+        return
+
+
+# --- Pattern E: FastAPI / pydantic-settings isolation ---
+import os
+from contextlib import contextmanager
+from fastapi.testclient import TestClient
+
+@contextmanager
+def _settings_client(overrides: dict):
+    from myapp.server import app
+    from myapp.config import get_settings
+
+    old_env = {k: os.environ.get(k) for k in overrides}
+    os.environ.update(overrides)
+    get_settings.cache_clear()
+    try:
+        yield TestClient(app)
+    finally:
+        get_settings.cache_clear()
+        for k, v in old_env.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+
+# SlowAPIMiddleware MUST be registered for rate-limit enforcement:
+app.add_middleware(SlowAPIMiddleware)
+
+# Use AsyncMock side_effect directly — do NOT patch asyncio.wait_for:
+mock_js.publish = AsyncMock(side_effect=asyncio.TimeoutError())
+
+
+# --- Pattern F: Bot false positive — do NOT remove await on asyncio.Task ---
+advance_task = asyncio.get_event_loop().create_task(some_coroutine())
+# ... assertions ...
+await advance_task   # correct cleanup; bot "Statement has no effect" is a false positive
+```
+
+### Detailed Steps
+
+#### A — Patch the Coroutine Function Itself
+
+1. **Trace the actual call chain from `main()`** — determine which function is directly invoked by `asyncio.run()`:
+
+   ```python
+   return asyncio.run(run(settings))   # run() is the coroutine to patch
+   ```
+
+2. **Patch `run` with `AsyncMock`**, not internal helpers that `main()` never calls directly:
+
+   ```python
+   # BEFORE (no-op — main() never calls run_routing_loop):
+   @patch("mymodule.daemon.run_routing_loop", return_value=None)
+
+   # AFTER (correct — asyncio.run() still executes but receives the fast AsyncMock):
+   @patch("mymodule.daemon.run", new_callable=AsyncMock, return_value=0)
+   ```
+
+3. **Audit log assertions** — remove assertions for logs emitted inside the mocked coroutine.
+
+4. **Switch `assert_called_once_with` to `assert_any_call`** on `signal.signal` — `asyncio.runners.Runner` registers SIGINT internally, making the total count 2.
+
+#### B — Patch asyncio.Event Constructor for Internal Reassignment
+
+1. **Identify the reassignment inside the coroutine**:
+
+   ```python
+   global _shutdown_event
+   _shutdown_event = asyncio.Event()   # new unset event every call
+   await _shutdown_event.wait()        # hangs in test context
+   ```
+
+2. **Pre-setting the module variable is ineffective** — the coroutine overwrites it immediately.
+
+3. **Patch the constructor in the module's namespace**:
+
+   ```python
+   mock_event = asyncio.Event()
+   mock_event.set()
+   with patch("mymodule.daemon.asyncio.Event", return_value=mock_event):
+       result = await mymodule.daemon.run(settings)
+   ```
+
+4. **Diagnose via timeout stack trace** — `epoll.poll(timeout=-1)` at the bottom confirms the event loop is blocked on an unset Event.
+
+#### C — Fix pytest-timeout Not Interrupting Epoll
+
+The default `--timeout-method=signal` delivers SIGALRM to the Python handler only when the blocked `epoll.poll(-1)` syscall returns — which never happens with no file descriptor events. The thread method uses `thread.interrupt_main()`, which delivers a `KeyboardInterrupt` into the main thread even while inside a C-level syscall.
+
+```toml
+# pyproject.toml
+[tool.pytest.ini_options]
+addopts = "--timeout=30 --timeout-method=thread"
+
+[project.optional-dependencies]
+dev = [
+    "pytest-timeout>=2.3,<3",
+]
+```
+
+Both flags **must be set together** — `--timeout=30` alone still uses signal method.
+
+#### D — time.sleep Mock Hazard and Flaky Timing Tests
+
+`patch("module.time.sleep")` replaces the `sleep` attribute on the **shared singleton `time` module object** — neutralising `time.sleep` for every caller in the process. If any background loop contains `while True: time.sleep(N)`, it spins at full CPU and can OOM the host.
+
+Safe alternatives:
+
+1. Patch the dedicated wait helper (`wait_until`, `poll_for`, etc.) instead of `time.sleep`.
+2. Patch probe functions at their **source namespace** (where defined), not via re-export.
+3. If mocking `time.sleep` directly, patch at the module's import path: `"mymodule.retry.time.sleep"` (not `"time.sleep"`).
+4. Add a defensive iteration cap to any `while True: time.sleep(N)` loop in production code.
+5. Replace wall-clock `assert elapsed >= N` assertions with mock call assertions (`mock_sleep.assert_any_call(N)`).
+
+```bash
+# Diagnose OOM test: high CPU + low I/O + growing captured-stdout buffer
+python -X tracemalloc=10 -m pytest tests/unit/test_suspect.py -v
+```
+
+#### E — FastAPI / pydantic-settings Test Isolation
+
+`Depends(get_settings)` captures the **function object** at import time. Patching the module-level name has no effect on what FastAPI's DI calls. Instead:
+
+1. **Set env vars** so the real `get_settings` returns the desired values.
+2. **Call `get_settings.cache_clear()`** before and after the test (required when decorated with `@lru_cache`).
+3. **Register `SlowAPIMiddleware`** on the app — `@limiter.limit()` alone does not enforce limits.
+4. **Use `AsyncMock(side_effect=asyncio.TimeoutError())`** instead of patching `asyncio.wait_for`.
+
+#### F — Bot False Positive: `await asyncio.Task`
+
+`await <asyncio.Task>` is required cleanup: it blocks until the task completes, propagates exceptions, and prevents `RuntimeWarning: Task was destroyed but it is pending!`. The GitHub code-quality bot incorrectly models `await expr` as a bare expression statement. No code change is needed — dismiss the bot comment.
+
+#### G — Newly-Added Blocking Call Hangs the Full Suite (Unmocked-Wait Hang)
+
+This is the **non-async sibling** of the epoll hang: same CI symptom (job stuck, no test-failure output), different root cause. You add a new method that loops over a **real `subprocess` call + real `time.sleep`** bounded by a long env timeout, wire it into a hot code path, and the module's *own* targeted tests still pass (they mock the new method) — but a **sibling test in the same directory** drives the changed code path without mocking the new call, so the worker blocks on the real wait for the full timeout.
+
+**Worked example.** A new `_wait_for_pr_terminal` loops calling `gh pr view` plus `time.sleep(min(2**n, 60))` bounded by an 1800 s env timeout, wired into the green/auto-merge-armed branch of `_drive_issue`. `test_ci_driver.py` passed in isolation (it mocked `_wait_for_pr_terminal`, and `gh` returned fast locally). But the full CI unit job (`pytest tests/unit`) hung for ~16 min vs a ~4 min baseline. Cause: two `run()`-level tests — `TestRunCleanup::test_cleanup_all_called_on_success` and `test_preserved_worktrees_are_logged` — drove `CIDriver.run()` to a green, auto-merge-armed PR with `_enable_auto_merge` mocked `True` but **did not patch `_wait_for_pr_terminal`**, so the worker blocked on the real `gh pr view` + real `time.sleep`.
+
+**Diagnosis technique (reusable):**
+
+1. **Compare elapsed time to the baseline of the same job on main** — variance is not 4×:
+
+   ```bash
+   gh run list --workflow=ci.yml --branch=main --json createdAt,updatedAt \
+     --jq '.[] | ((.updatedAt|fromdate) - (.createdAt|fromdate))'
+   # 16 min on the PR vs ~4 min baseline = real hang, not noise
+   ```
+
+2. **Confirm the CI command runs the WHOLE dir** (`pytest tests/unit`), not just the module you tested in isolation — the hang can hide in a *sibling* test that exercises the changed path.
+
+3. **Reproduce locally with the EXACT CI flags + faulthandler** so the hung thread stack dumps on SIGABRT:
+
+   ```bash
+   PYTHONFAULTHANDLER=1 timeout --signal=ABRT 120 \
+     python -X faulthandler -m pytest tests/unit -p no:cacheprovider
+   # faulthandler prints the blocked stack — e.g. time.sleep / subprocess.run inside _wait_for_pr_terminal
+   ```
+
+   `--timeout=<N>` requires the `pytest-timeout` plugin; if it is absent, use the `timeout`+faulthandler approach above.
+
+4. **Or find it by inspection** — audit every call site of the changed method for an unmocked path:
+
+   ```bash
+   grep -n "_drive_issue(\|\.run()" tests/unit/test_*.py
+   # then check which of those tests reach the new blocking call without patching it
+   ```
+
+**Fix (reusable rule):** when you add a blocking call to a hot code path, **every** test that reaches that path must mock the new call — mocking the *trigger* (`_enable_auto_merge`) is not enough; mock the *actual blocking call*:
+
+```python
+# In every green-path and run()-level test that reaches the new wait:
+patch.object(driver, "_wait_for_pr_terminal", return_value="MERGED")
+# ...or "TIMEOUT" where the test asserts the still-pending branch.
+# Alternatively, set the wait's timeout env to 0.
+```
+
+After patching, the full automation suite ran **1003 passed in 93 s** (no hang).
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Patch `run_routing_loop` | `@patch("mymodule.daemon.run_routing_loop", return_value=None)` | `main()` never calls that helper; patch is a silent no-op; real coroutine runs and hangs | Trace the actual call chain from the entry point before choosing a patch target |
+| Patch `asyncio.run` | `@patch("mymodule.daemon.asyncio.run", return_value=0)` | Prevents hang, but coroutine body never runs; log assertions inside the coroutine silently fail | Patching `asyncio.run` skips the entire coroutine — only safe when no assertions depend on coroutine-internal side effects |
+| `assert_called_once_with(signal.SIGTERM, ...)` | Exact-count assertion on `signal.signal` mock | `asyncio.runners.Runner` calls `signal.signal(SIGINT, ...)` internally; total count is 2 not 1 | Use `assert_any_call` for signal handlers when `asyncio.run()` is involved |
+| Pre-set module-level event variable | `mymodule._shutdown_event = asyncio.Event(); mymodule._shutdown_event.set()` before calling `run()` | `run()` immediately overwrites it with `_shutdown_event = asyncio.Event()`; the pre-set value is discarded | Setting a module variable before a coroutine that reassigns it is a no-op — patch the constructor instead |
+| `asyncio.create_task` concurrent setter | Spawned a task to set the event concurrently after `run()` started | Fragile scheduling — no guarantee the setter runs before `wait()` is reached; also flagged by CodeQL | Constructor patching is safer and deterministic |
+| Default `--timeout-method=signal` | `--timeout=30` only, relying on default SIGALRM | SIGALRM fires only when `epoll.poll(-1)` returns — which never happens with no events | Both `--timeout` and `--timeout-method=thread` are required |
+| `--timeout=30` without `--timeout-method` | Added `addopts = "--timeout=30"` only | Still defaults to signal method; CI still times out at job level | Always set `--timeout-method=thread` alongside `--timeout` |
+| `patch("module.time.sleep")` globally | Patched `time.sleep` to skip waits in retry test | Patch leaked to every other module sharing the same `time` singleton; runaway print loop OOMed WSL host | `patch("module.time.sleep")` is process-wide, not module-scoped |
+| Patch probe via re-export namespace | `patch("module_b.func")` when `module_a` is the actual call site | Lookup happens in `module_a`'s namespace; patch is a no-op; real function ran and triggered the OOM loop | Patch at the source namespace where the call site resolves the name |
+| Wall-clock timing assertion | `assert elapsed >= 0.3` after calling a function that sleeps internally | Flaky under CPU contention, OS scheduler jitter, and coverage overhead | Replace with `mock_sleep.assert_any_call(N)` — deterministic and verifies delay values |
+| `@pytest.mark.skipif(COVERAGE_RUN == "1")` workaround | Skipped timing-sensitive test under coverage | Masks flakiness; test still fails in full-suite non-coverage runs | Remove skip workarounds; refactor to use mocks instead |
+| `patch("hermes.server.get_settings", return_value=mock)` | Patched the module-level name bound by `Depends()` | `Depends()` captured the original function object at import time; module-name patch is ignored by FastAPI DI | Manipulate env vars and call `get_settings.cache_clear()` instead |
+| Assumed blank env state | Tests assumed no `.env` was present | `.env` at project root supplies real secrets locally but not in CI; tests passed in CI, failed locally | Always explicitly set or unset every env var a test depends on |
+| `@limiter.limit()` decorator only, no middleware | Added rate limit decorator without registering `SlowAPIMiddleware` | Requests returned 202; rate limit was never enforced | `SlowAPIMiddleware` is mandatory — the decorator alone registers the limit but does not evaluate it |
+| Patched `asyncio.wait_for` with real `async def` | `async def _timeout(): raise asyncio.TimeoutError()` + `patch("asyncio.wait_for", side_effect=_timeout)` | Produced `RuntimeWarning: coroutine '_timeout' was never awaited` | Use `AsyncMock(side_effect=asyncio.TimeoutError())` directly on the mock method |
+| Removed `await` on `asyncio.Task` | Removed `await advance_task` to silence bot | Causes `RuntimeWarning: Task was destroyed but it is pending!` and silently swallows background exceptions | Never remove task awaits to satisfy a static analysis bot |
+| `_ = await advance_task` assignment | Assigned result to `_` to suppress "no effect" warning | Bot flags the `await` expression itself, not the assignment | Dismiss the bot comment; the code is correct |
+| `# noqa` comment to suppress bot | Added inline suppression | GitHub code-quality bot does not respect Python `# noqa` directives | Bot suppression requires config-file exclusions; correct response is dismissal |
+| Module-only test run passed, declared done | Ran only `test_ci_driver.py` (mocked the new `_wait_for_pr_terminal`) and called it green | The hang lived in a sibling `run()`-level test the isolated run never covered; `gh` returned fast locally so it passed there | Always run the full dir the way CI does (`pytest tests/unit`) before claiming green |
+| Assumed slow = variance | Treated the 16-min job as a slow runner / noise | It was a real hang on a blocked `time.sleep`/`subprocess.run`, not jitter | Compare to the baseline job duration on main; 4× the baseline is a hang, not variance |
+| Mocked `_enable_auto_merge` but not the downstream wait | Patched the auto-merge trigger to `True` but left `_wait_for_pr_terminal` real | Mocking the trigger still let the green path reach the real `gh pr view` + `time.sleep` and block to the 1800 s timeout | Mock the actual blocking call (`patch.object(driver, "_wait_for_pr_terminal", ...)`), not just the trigger that precedes it |
+
+## Results & Parameters
+
+### pytest Configuration (copy-paste ready)
+
+```toml
+# pyproject.toml
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = "--cov=src/<package> --cov-report=term-missing --cov-report=xml --timeout=30 --timeout-method=thread"
+testpaths = ["tests"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3,<9",
+    "pytest-asyncio>=0.24,<1",
+    "pytest-cov>=6.0,<7",
+    "pytest-timeout>=2.3,<3",
+]
+```
+
+### Timeout Value Guidelines
+
+| Scenario | Recommended `--timeout` |
+| --------- | ------------------------ |
+| Unit tests only | 10–30 s |
+| Integration tests with I/O | 30–60 s |
+| Tests involving network calls | 60–120 s |
+| Full daemon startup tests | 30 s (with coroutine patching) |
+
+### Diagnostic Stack Trace (epoll hang signature)
+
+```
+File ".../asyncio/selector_events.py", line NNN, in _run_once
+    event_list = self._selector.select(timeout)
+File ".../selectors.py", line NNN, in select
+    fd_event_list = self._selector.poll(timeout, max_ev)
+```
+
+`timeout=-1` at the bottom means the event loop is waiting forever — signature of an unset `asyncio.Event`.
+
+### Full Async Daemon Test Pattern
+
+```python
+import signal
+import logging
+import asyncio
+from unittest.mock import AsyncMock, MagicMock, patch, ANY
+import pytest
+
+# Pattern A: patch coroutine function, use assert_any_call for signal
+class TestMain:
+    @patch("mymodule.daemon.run", new_callable=AsyncMock, return_value=0)
+    def test_main_returns_zero(self, mock_run, caplog):
+        with caplog.at_level(logging.INFO):
+            result = main(["--log-level", "INFO"])
+        assert result == 0
+        mock_run.assert_called_once()
+
+    @patch("mymodule.daemon.signal.signal")
+    @patch("mymodule.daemon.run", new_callable=AsyncMock, return_value=0)
+    def test_main_registers_sigterm(self, mock_run, mock_signal):
+        main(["--log-level", "INFO"])
+        mock_signal.assert_any_call(signal.SIGTERM, ANY)
+
+# Pattern B: patch asyncio.Event constructor
+def _make_run_mocks():
+    mock_event = asyncio.Event()
+    mock_event.set()  # pre-set — wait() returns immediately
+    return mock_event
+
+class TestRun:
+    async def test_run_returns_zero(self) -> None:
+        mock_event = _make_run_mocks()
+        with patch("mymodule.daemon.asyncio.Event", return_value=mock_event):
+            result = await mymodule.daemon.run(Settings(shutdown_timeout=0.1))
+        assert result == 0
+```
+
+### FastAPI / pydantic-settings Test Template
+
+```python
+import os
+from contextlib import contextmanager
+from fastapi.testclient import TestClient
+from slowapi.middleware import SlowAPIMiddleware
+
+_TEST_SECRET = "test-secret-value-that-is-at-least-32-chars"
+
+@contextmanager
+def _settings_client(overrides: dict):
+    from myapp.server import app
+    from myapp.config import get_settings
+
+    old_env = {k: os.environ.get(k) for k in overrides}
+    os.environ.update(overrides)
+    get_settings.cache_clear()
+    try:
+        yield TestClient(app)
+    finally:
+        get_settings.cache_clear()
+        for k, v in old_env.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+```
+
+### Bot False Positive Reference
+
+| Situation | Bot Correct? | Action |
+| ----------- | ------------- | -------- |
+| `await asyncio.Task` stored in local var | No — false positive | Dismiss, keep code |
+| `x` (bare expression, non-awaitable) | Yes — true positive | Remove dead statement |
+| `await coroutine_function()` (result unused) | Sometimes | Review intent |
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectKeystone | PR #451 — daemon coroutine patch | 9 hanging daemon tests fixed; CI green |
+| ProjectKeystone | PRs #535, #541 — asyncio.Event constructor patch + timeout-method | `--timeout-method=thread` revealed epoll stack trace; constructor patch fixed hang |
+| ProjectKeystone | PR #428 — bot false positive | `await advance_task` dismissed |
+| ProjectHephaestus | PR #412 — time.sleep OOM fix | 113 tests pass in 2.6 s after fix vs 30 s + OOM before |
+| ProjectScylla | PR #1217 — flaky sleep mock | 3257 tests pass; wall-clock assertion replaced with mock |
+| ProjectHermes | CI — FastAPI webhook rate-limit and timeout tests | All five isolation patterns confirmed |
+| HomericIntelligence | CI — `_wait_for_pr_terminal` unmocked-wait hang | Full `pytest tests/unit` hung ~16 min vs ~4 min baseline; sibling `run()`-level tests reached the new `gh pr view`+`time.sleep` unmocked; patched `_wait_for_pr_terminal` in all green-path tests → 1003 passed in 93 s, CI green |
+
+---
+
+## Superseded from testing-asyncio-fixture-state-reset
+
+**Original date/version:** 2026-06-04 / v1.0.0
+
+```yaml
+name: testing-asyncio-fixture-state-reset
+description: "Reset asyncio objects (Lock, Event) in autouse fixtures with lazy imports for test isolation. Use when: (1) tests depend on fresh asyncio state per test, (2) manual per-test initialization is fragile and error-prone, (3) asyncio.Lock or asyncio.Event instance must be reset both before (setup) and after (teardown) each test, (4) import-order coupling or circular dependencies complicate fixture setup."
+category: testing
+date: 2026-06-04
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - asyncio
+  - pytest-fixture
+  - autouse-fixture
+  - test-isolation
+  - asyncio-lock
+  - asyncio-event
+  - lazy-import
+  - conftest
+  - state-reset
+```
+
+
+# Testing: Asyncio Fixture State Reset Pattern
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-04 |
+| **Objective** | Enable test isolation for asyncio objects (Lock, Event) by resetting them symmetrically in autouse fixtures with lazy imports to avoid import-order coupling |
+| **Outcome** | SUCCESS — 541 tests pass with 97.84% coverage; zero regression; pattern verified on FastAPI+asyncio application (ProjectHermes) |
+| **Verification** | verified-local (all 541 tests pass; CI validation pending) |
+
+## When to Use
+
+- **Tests depend on fresh asyncio objects** — Each test requires a clean `asyncio.Lock` or `asyncio.Event` with no prior state
+- **Manual per-test initialization is fragile** — Tests forget to initialize, leading to `AttributeError` when the lock/event is accessed
+- **Stale async object state causes test cross-contamination** — One test modifies the state, next test inherits the dirty state
+- **Import-order coupling complicates fixtures** — Direct imports in fixture setup cause circular dependencies or module-load-order issues
+- **You need symmetric setup/teardown** — Reset must happen both before test (clean start) and after test (no carry-over)
+- **The async object is a module-level instance or held in `app.state`** — Not created fresh per test, but shared across tests
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# Module under test: hermes/server.py
+_shutdown_event = None
+_inflight_lock = None
+
+async def lifespan(app):
+    global _shutdown_event, _inflight_lock
+    _shutdown_event = asyncio.Event()
+    _inflight_lock = asyncio.Lock()
+    # ... app startup ...
+    yield
+    # ... app shutdown ...
+
+# Test file: tests/conftest.py
+import pytest
+
+@pytest.fixture(autouse=True)
+def reset_server_state():
+    """Reset asyncio objects in app state for test isolation.
+
+    Uses lazy import (inside fixture body) to avoid import-order
+    coupling and module initialization issues.
+
+    Pattern: [setup] -> yield [test body] -> [teardown]
+    Both sides of yield reset the async state.
+    """
+    # Lazy import inside fixture (avoids import-order coupling)
+    from hermes.server import app
+
+    # Setup: clean state before test
+    app.state.shutdown_event = asyncio.Event()
+    app.state.inflight_lock = asyncio.Lock()
+
+    yield
+
+    # Teardown: clean state after test
+    # Ensures next test doesn't inherit this test's state
+    app.state.shutdown_event = asyncio.Event()
+    app.state.inflight_lock = asyncio.Lock()
+```
+
+### Detailed Steps
+
+#### 1. Identify Asyncio Objects That Require Fresh State Per Test
+
+Scan your module-level or `app.state` for asyncio instances:
+
+```python
+# ❌ Pattern that NEEDS this fix:
+_shutdown_event = asyncio.Event()  # Created once at module import time
+_inflight_lock = asyncio.Lock()     # Persists across all tests
+
+async def lifespan(app):
+    global _shutdown_event, _inflight_lock
+    # These are created fresh, but tests that use old references see stale state
+    _shutdown_event = asyncio.Event()
+    _inflight_lock = asyncio.Lock()
+```
+
+Any asyncio object that:
+- Is created at module or app-state scope (not inside a test)
+- Is accessed by multiple tests in sequence
+- Holds state (lock contention, event set/unset status)
+- Can be dirty if a prior test crashed or modified it
+
+#### 2. Use Lazy Import Inside Fixture to Avoid Import Coupling
+
+**Why lazy import?** Direct imports in fixture setup cause:
+
+```python
+# ❌ FRAGILE: top-level import in fixture can cause circular dependencies
+import hermes.server  # If server imports conftest or test helpers — circular!
+
+@pytest.fixture(autouse=True)
+def reset_server_state():
+    # ...
+```
+
+**Solution: import inside the fixture function**:
+
+```python
+# ✅ ROBUST: lazy import inside fixture body
+@pytest.fixture(autouse=True)
+def reset_server_state():
+    from hermes.server import app  # Imported here, not at module scope
+
+    # Now reset the app.state asyncio objects
+    app.state.shutdown_event = asyncio.Event()
+    app.state.inflight_lock = asyncio.Lock()
+
+    yield
+
+    # Teardown: reset again
+    app.state.shutdown_event = asyncio.Event()
+    app.state.inflight_lock = asyncio.Lock()
+```
+
+#### 3. Reset Symmetrically: Before (Setup) and After (Teardown)
+
+The fixture must use the **`yield` pattern** to wrap the test:
+
+```python
+@pytest.fixture(autouse=True)
+def reset_server_state():
+    # === SETUP (before test) ===
+    from hermes.server import app
+
+    app.state.shutdown_event = asyncio.Event()
+    app.state.inflight_lock = asyncio.Lock()
+
+    # Control passes to test here
+    yield
+
+    # === TEARDOWN (after test) ===
+    # Reset again, even if test crashed or was interrupted
+    app.state.shutdown_event = asyncio.Event()
+    app.state.inflight_lock = asyncio.Lock()
+```
+
+**Why both sides?**
+- **Setup reset**: Ensures test starts clean, even if previous test crashed mid-execution
+- **Teardown reset**: Ensures the next test doesn't inherit this test's modified state (e.g., Lock held, Event set)
+
+#### 4. Use autouse=True to Protect All Tests Without Duplication
+
+```python
+# Put this in tests/conftest.py (top-level or package-scoped)
+@pytest.fixture(autouse=True)  # ← Every test uses this automatically
+def reset_server_state():
+    from hermes.server import app
+
+    app.state.shutdown_event = asyncio.Event()
+    app.state.inflight_lock = asyncio.Lock()
+    yield
+    app.state.shutdown_event = asyncio.Event()
+    app.state.inflight_lock = asyncio.Lock()
+
+# No need to add to every test — autouse handles it
+class TestShutdownHandler:
+    def test_shutdown_event_signaled(self):
+        # fixture automatically ran before this test
+        assert not app.state.shutdown_event.is_set()
+        # test body ...
+        # fixture automatically runs after this test
+```
+
+#### 5. Place the Fixture at the Right Scope
+
+| Where tests live | Where to put fixture |
+|------------------|----------------------|
+| Multiple files in `tests/` | `tests/conftest.py` (top-level) |
+| Multiple files in `tests/unit/` | `tests/unit/conftest.py` (package-scoped) |
+| Single test file only | Can go in same file (rare) |
+
+**Rule of thumb**: Place the fixture at the **broadest scope** covering any test that uses the asyncio objects. This ensures all tests get reset, regardless of run order.
+
+#### 6. Verify Isolation With a Parametrized Test
+
+```python
+import asyncio
+import pytest
+
+class TestLockIsolation:
+    @pytest.mark.parametrize("iteration", [0, 1, 2])
+    async def test_lock_is_fresh_per_test(self, iteration):
+        """Verify lock starts unheld every iteration."""
+        from hermes.server import app
+
+        # Lock should be unheld at start of every test
+        assert not app.state.inflight_lock.locked()
+
+        async with app.state.inflight_lock:
+            # Do work with lock held
+            await asyncio.sleep(0.01)
+
+        # Verify lock is released by end of test
+        assert not app.state.inflight_lock.locked()
+```
+
+Run this with `pytest -v`:
+
+```
+test_lock_is_fresh_per_test[iteration0] PASSED
+test_lock_is_fresh_per_test[iteration1] PASSED
+test_lock_is_fresh_per_test[iteration2] PASSED
+```
+
+If even one iteration fails with "lock is already held", the fixture scope is too narrow or the reset is missing.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Manual per-test lock initialization | Each test calls `app.state.inflight_lock = asyncio.Lock()` inside test body | Works for that one test, but easy to forget on new tests. Forgotten tests inherit dirty lock state. DRY violation. | Use `@pytest.fixture(autouse=True)` — automatic on all tests, no forgetting |
+| Top-level import in fixture | `from hermes.server import app` at module scope of conftest.py | Can cause circular import if server imports test utilities or depends on conftest symbols. Module load order becomes fragile. | Move import inside fixture function body (lazy import) |
+| Fixture resets only in setup, not teardown | Fixture only resets before test, not after | If test crashes or is interrupted, teardown doesn't run, leaving dirty state for the next test. Order-dependent flakiness. | Always reset in both setup and teardown (`yield` pattern ensures both) |
+| Clearing the lock instead of replacing it | `app.state.inflight_lock.clear()` (if such a method exists) | asyncio.Lock has no `clear()` method. The only way to "reset" is to create a new instance and replace the reference. | `app.state.inflight_lock = asyncio.Lock()` — replacement, not mutation |
+| Assuming pytest automatically resets asyncio objects | No fixture, relying on pytest's cleanup | asyncio objects persist in `app.state` for the lifetime of the Python process. No automatic reset. | Fixture must explicitly reset state each test |
+| Using module-scope fixture | `@pytest.fixture(scope="module")` | Multiple tests in one module share the same fixture run. Lock held by test 1 is still held when test 2 runs. | Use default `scope="function"` (resets per test) with `autouse=True` |
+| Fixture resets a copy, not the real instance | `mock_lock = asyncio.Lock(); app.state.inflight_lock = mock_lock` but later code accesses a different reference to the original | If other modules imported the original lock directly (e.g., `from hermes.server import app`), they see the old reference. | Fixture must reset the **held reference in app.state**, not a copy. If code imports the lock directly, that's a separate code smell. |
+| Relying on monkeypatch for all resets | `monkeypatch.setattr(app.state, "inflight_lock", asyncio.Lock())` | Works, but verbose and slower than direct assignment. Mixes monkeypatch and real state management. | Direct assignment is simpler: `app.state.inflight_lock = asyncio.Lock()` |
+
+## Results & Parameters
+
+### Fixture Template (Copy-Paste Ready)
+
+```python
+# tests/conftest.py
+
+import asyncio
+import pytest
+
+@pytest.fixture(autouse=True)
+def reset_server_state():
+    """Reset asyncio objects in app.state for test isolation.
+
+    Why this pattern?
+    1. Lazy import inside fixture body avoids import-order coupling
+    2. Symmetric setup/teardown (yield pattern) ensures clean state
+       even if test crashes or is interrupted
+    3. autouse=True protects all tests without duplication
+    4. Each test starts with a fresh Lock and Event instance
+
+    The asyncio objects (Lock, Event, Condition, etc.) maintain
+    internal state that persists across test boundaries unless
+    explicitly reset. This fixture ensures isolation.
+    """
+    # Lazy import: defer until fixture runs (avoids circular imports)
+    from hermes.server import app
+
+    # Setup: create fresh instances before test
+    app.state.shutdown_event = asyncio.Event()
+    app.state.inflight_lock = asyncio.Lock()
+
+    yield  # Test runs here
+
+    # Teardown: create fresh instances after test
+    # Prevents next test from inheriting this test's state
+    app.state.shutdown_event = asyncio.Event()
+    app.state.inflight_lock = asyncio.Lock()
+```
+
+### Multi-Object Async State Reset
+
+```python
+# tests/conftest.py
+
+import asyncio
+import pytest
+
+@pytest.fixture(autouse=True)
+def reset_async_state():
+    """Reset multiple asyncio objects for comprehensive test isolation."""
+    from hermes.server import app
+
+    # Setup
+    app.state.shutdown_event = asyncio.Event()
+    app.state.startup_event = asyncio.Event()
+    app.state.inflight_lock = asyncio.Lock()
+    app.state.message_queue = asyncio.Queue()
+    app.state.semaphore = asyncio.Semaphore(5)
+
+    yield
+
+    # Teardown
+    app.state.shutdown_event = asyncio.Event()
+    app.state.startup_event = asyncio.Event()
+    app.state.inflight_lock = asyncio.Lock()
+    app.state.message_queue = asyncio.Queue()
+    app.state.semaphore = asyncio.Semaphore(5)
+```
+
+### Asyncio Object State Reference
+
+| Object | Internal State | Why It Matters | Reset Method |
+|--------|----------------|----------------|--------------|
+| `asyncio.Event()` | `_flag: bool` (set/unset) | Tests that wait on event see stale set/unset state | Create new instance |
+| `asyncio.Lock()` | `_locked: bool`, waiters queue | Tests that acquire lock may deadlock if already held | Create new instance |
+| `asyncio.Condition()` | Lock + event + waiters | Threads waiting on condition from prior test interfere | Create new instance |
+| `asyncio.Semaphore(n)` | `_value: int`, waiters | Permits claimed in prior test reduce available permits | Create new instance |
+| `asyncio.Queue()` | Internal deque + locks | Items left in queue from prior test corrupt next test | Create new instance |
+
+### Expected Behavior After Fixture Applies
+
+```python
+# Before fixture (manual per-test init):
+class TestWithoutFixture:
+    def test_1(self):
+        app.state.lock = asyncio.Lock()  # Must remember!
+        # ...
+
+    def test_2(self):
+        # Bug: forgot to reset; inherits lock from test_1
+        # app.state.lock.locked() may return True
+
+# After fixture (autouse reset):
+class TestWithFixture:
+    def test_1(self):
+        # Fixture ran: fresh lock before test
+        assert not app.state.lock.locked()
+        # ...
+
+    def test_2(self):
+        # Fixture ran again: fresh lock before test
+        # No carry-over from test_1
+        assert not app.state.lock.locked()
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHermes | tests/conftest.py `reset_server_state` fixture | 541 tests pass; 97.84% coverage; zero regression; handles asyncio.Lock + asyncio.Event reset for FastAPI+NATS application (PR #X) |
+
+---
+
+## Superseded from testing-respx-async-mock-fixtures-with-stateful-faults
+
+**Original date/version:** 2026-06-03 / v1.0.0
+
+```yaml
+name: testing-respx-async-mock-fixtures-with-stateful-faults
+description: "Use when: (1) writing integration tests for asyncio code that calls httpx.AsyncClient (REST API clients, etc.), (2) testing error scenarios (500, 409, 503, timeouts) via HTTP mocking without nested contexts or async/sync boundary issues, (3) needing stateful fault injection (permanent status override, task status queue, exception flags) without redefining the mock for each test, (4) validating HTTP request payloads with assertions that survive schema evolution, (5) using respx 0.21+ with route names for call inspection, (6) pytest-asyncio with auto mode where fixture and test both run in same event loop."
+category: testing
+date: 2026-06-03
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - respx
+  - httpx
+  - async
+  - asyncio
+  - pytest-asyncio
+  - fixture
+  - mock
+  - http
+  - fault-injection
+  - integration-test
+  - state-machine
+  - payload-validation
+  - rest-api
+  - python
+```
+
+
+# Testing respx Async Mock Fixtures with Stateful Faults
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-03 |
+| **Objective** | Document patterns for using respx to mock httpx.AsyncClient in pytest fixtures without nested context managers or async/sync boundary issues; enable stateful fault injection via MockAgamemnonState flags |
+| **Outcome** | SUCCESS — 9 integration tests implemented for ProjectTelemachy issue #48; all 57 tests pass (48 unit + 9 integration); zero fixture lifecycle issues; no nested context conflicts |
+| **Verification** | verified-ci (full suite passes; integration tests specifically target workflow executor against mock Agamemnon REST API) |
+
+## When to Use
+
+1. **async pytest with httpx.AsyncClient mocking** — tests call real async client against mocked HTTP endpoints
+2. **Stateful mock behavior** — different test calls need different response status/payload; fault injection flags determine runtime behavior
+3. **Integration tests with error scenarios** — 5xx errors, 409 conflicts, task status timeouts, exception propagation
+4. **Payload validation resistant to schema evolution** — dict-subset matching instead of string-contains or full equality
+5. **respx 0.21+ API** — explicit route names for `router["route_name"].calls` inspection
+6. **pytest-asyncio auto mode** — all tests and fixtures run in same event loop; `respx.mock()` must open/close in same scope
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# conftest.py — Single @pytest_asyncio.fixture with respx + async client
+import asyncio
+import pytest
+import pytest_asyncio
+import respx
+from httpx import AsyncClient
+
+class MockAgamemnonState:
+    """Stateful fault injection flags (no nested contexts needed)."""
+    def __init__(self):
+        self.permanent_status = None  # "running" or "failed"
+        self.status_queue = []  # ordered terminal statuses
+        self.task_status_script = []  # per-task status sequence
+        self.exception_on_create_agent = False
+        self.exception_on_create_team = False
+
+@pytest_asyncio.fixture
+async def mock_agamemnon():
+    """
+    Single fixture: open respx.mock() + register routes + enter async client,
+    all in same scope. Yields state, router, client.
+    """
+    state = MockAgamemnonState()
+
+    with respx.mock(base_url="http://localhost:8080") as router:
+        # Register routes with explicit name= for call inspection
+        router.post("/v1/agents", name="create_agent").mock(
+            side_effect=lambda r: _handle_create_agent(r, state)
+        )
+        router.post("/v1/agents/{id}/start", name="start_agent").mock(
+            side_effect=lambda r: _handle_start_agent(r, state)
+        )
+        router.post("/v1/teams", name="create_team").mock(
+            side_effect=lambda r: _handle_create_team(r, state)
+        )
+        router.get("/v1/teams/{id}/status", name="get_team_status").mock(
+            side_effect=lambda r: _handle_get_team_status(r, state)
+        )
+        router.post("/v1/teams/{id}/tasks", name="create_task").mock(
+            side_effect=lambda r: _handle_create_task(r, state)
+        )
+        router.get("/v1/teams/{id}/tasks/{task_id}/status", name="get_task_status").mock(
+            side_effect=lambda r: _handle_get_task_status(r, state)
+        )
+        router.delete("/v1/agents/{id}", name="delete_agent").mock(
+            side_effect=lambda r: _handle_delete_agent(r, state)
+        )
+
+        # Create async client INSIDE the respx context
+        async with AsyncClient(base_url="http://localhost:8080") as client:
+            yield state, router, client
+
+# --- Route handlers read fault flags on each call ---
+def _handle_create_agent(request, state):
+    if state.exception_on_create_agent:
+        return Response(status_code=500, json={"error": "internal error"})
+    payload = request.json()
+    return Response(status_code=201, json={"id": f"agent-{payload['name']}"})
+
+def _handle_get_team_status(request, state):
+    # Permanent override takes precedence
+    if state.permanent_status:
+        return Response(status_code=200, json={"status": state.permanent_status})
+    # Otherwise dequeue the next status
+    if state.status_queue:
+        status = state.status_queue.pop(0)
+        return Response(status_code=200, json={"status": status})
+    # Default: pending
+    return Response(status_code=200, json={"status": "pending"})
+
+# --- Dict-subset matching for payload assertions ---
+def payload_contains(actual: dict, expected: dict) -> bool:
+    """Return True iff all keys in expected are present in actual with == value."""
+    for key, val in expected.items():
+        if key not in actual or actual[key] != val:
+            return False
+    return True
+
+# --- In a test ---
+async def test_workflow_executes_with_docker_agent(mock_agamemnon):
+    state, router, client = mock_agamemnon
+
+    # Explicit POLA: agent starts pending, must enqueue terminal status
+    state.status_queue = ["completed"]
+
+    executor = WorkflowExecutor(client=client)
+    result = await executor.run(spec)
+
+    assert result.success
+
+    # Route inspection with explicit names
+    create_calls = router["create_agent"].calls
+    assert len(create_calls) == 1
+    assert payload_contains(create_calls[0].request.json(), {
+        "name": "agent1",
+        "runtime": "docker",
+        "docker_image": "my-image:latest"
+    })
+```
+
+### Detailed Pattern Description
+
+#### 1. Single @pytest_asyncio.fixture Pattern
+
+**Key principle:** `respx.mock(...)` **must** be a **sync context manager** inside an **async** fixture.
+
+```python
+@pytest_asyncio.fixture
+async def mock_agamemnon():
+    state = MockAgamemnonState()
+
+    # Sync context manager opens/closes within async scope
+    with respx.mock(base_url="http://localhost:8080") as router:
+        # Register routes here
+        router.post(...).mock(side_effect=...)
+
+        # Async client enters INSIDE respx context
+        async with AsyncClient(...) as client:
+            # Everything in this scope shares the same event loop
+            yield state, router, client
+            # On fixture exit: client closes, respx mocks uninstall
+```
+
+**Why this works:**
+- `respx.mock()` as a sync context manager patches `httpx.AsyncClient` before entry
+- Async client instantiation happens **after** patching is active
+- Both fixture and test run on same event loop (pytest-asyncio auto mode)
+- On fixture exit: client cleanup, then respx patches are removed
+
+**Anti-pattern:** Nested `respx.mock()` calls or sync fixtures wrapping respx for async tests → async/sync boundary issues, context collision.
+
+#### 2. Stateful Fault Injection via MockAgamemnonState
+
+Instead of creating a new mock for each test, hold mutable state in a class and read flags on each HTTP call.
+
+```python
+class MockAgamemnonState:
+    def __init__(self):
+        self.permanent_status = None
+        self.status_queue = []
+        self.task_status_script = []  # {task_id: [status, status, ...]}
+        self.exception_on_create_agent = False
+        self.exception_on_create_team = False
+        self.exception_on_get_team_status = False
+
+# Handler reads flags at call time
+def _handle_create_agent(request, state):
+    if state.exception_on_create_agent:
+        return Response(status_code=500)
+    # ... normal path
+```
+
+**In tests:**
+```python
+async def test_agent_creation_fails(mock_agamemnon):
+    state, router, client = mock_agamemnon
+
+    # Enable fault before calling
+    state.exception_on_create_agent = True
+
+    executor = WorkflowExecutor(client=client)
+    with pytest.raises(AgamemnonError):
+        await executor.run(spec)
+```
+
+**Advantages:**
+- One fixture setup for all error scenarios
+- Flags describe intent clearly
+- No nested contexts in test body
+- Eliminates fixture redefinition boilerplate
+
+#### 3. POLA for Mock Task Status
+
+**Principle:** Default to "pending" (loud failure if not advanced), never default to terminal status.
+
+```python
+# Correct: default pending, test enqueues terminal
+async def test_workflow_completes(mock_agamemnon):
+    state, router, client = mock_agamemnon
+    state.status_queue = ["completed"]  # Explicit enqueue
+
+    result = await executor.run(spec)
+    assert result.success
+```
+
+```python
+# Anti-pattern: default completed, test "passes" silently
+# If monitor never runs, default "completed" hides the bug
+```
+
+**Rationale:** If the test fails to enqueue a terminal status and the monitor never reaches the team-status endpoint, a "pending" default causes the test to hang (loud failure). A "completed" default causes silent success (false positive). Loud failure is better.
+
+#### 4. Dict-Subset Payload Assertions
+
+Instead of string-contains or full equality, match expected keys/values in actual payload.
+
+```python
+def payload_contains(actual: dict, expected: dict) -> bool:
+    """Return True iff every key in expected is present in actual with == value."""
+    for key, val in expected.items():
+        if key not in actual or actual[key] != val:
+            return False
+    return True
+
+# In test
+assert payload_contains(create_calls[0].request.json(), {
+    "name": "agent1",
+    "runtime": "docker",
+    "docker_image": "my-image:latest"
+    # Other keys in actual payload (e.g. cpus, memory) are ignored
+})
+```
+
+**Advantages:**
+- Assertion survives schema evolution (new optional fields don't break test)
+- Focuses assertion on what matters (name, runtime type, image)
+- Decouples test from full schema
+
+#### 5. Route Registration with Explicit name= Kwarg
+
+```python
+# Respx 0.21+ API: register routes with name parameter
+router.post("/v1/agents", name="create_agent").mock(side_effect=...)
+router.post("/v1/agents/{id}/start", name="start_agent").mock(side_effect=...)
+
+# Later: inspect calls via name
+create_calls = router["create_agent"].calls
+assert len(create_calls) == 1
+assert create_calls[0].request.method == "POST"
+```
+
+**Documented API:** See respx 0.21 changelog for route name syntax.
+
+#### 6. Pytest Marker Registration Without Duplicating asyncio_mode
+
+Add integration test markers to existing `[tool.pytest.ini_options]` **without duplicating `asyncio_mode`**.
+
+```toml
+# pyproject.toml
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = "..."
+markers = [
+    "integration: integration tests with respx mock HTTP server",
+    "asyncio: async tests",
+]
+testpaths = ["tests"]
+```
+
+In test file:
+```python
+import pytest
+
+pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
+
+async def test_workflow_completes(mock_agamemnon):
+    ...
+```
+
+**Single source of truth:** `asyncio_mode = "auto"` is set once; markers are added without duplication.
+
+#### 7. CI Auto-Detection — No CI Changes Needed
+
+The pixi-based CI in ProjectTelemachy runs:
+```bash
+pixi run pytest --tb=short
+```
+
+This command:
+- Collects all tests under `tests/` by default
+- Has no `-m` filter → all markers included
+- Automatically picks up new integration tests under `tests/integration/`
+
+**No CI YAML changes required.** New tests are discovered and run in standard CI flow.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|-----------------|
+| Nested `respx.mock()` in test body | Outer fixture opens respx; test opens a second respx.mock() context | Respx patches are already active from fixture; nested open/close causes registration conflicts and double-patching | Always open respx exactly once at fixture scope; test bodies should read state flags, not create new contexts |
+| Sync `@pytest.fixture` wrapping respx for async tests | `@pytest.fixture` def mock(): with respx.mock(...): yield client` called from async test | Sync fixture runs on main thread before test event loop starts; client enters async context after loop is up; boundary mismatch causes `RuntimeError: cannot enter context — no running event loop` or `no current event loop` | Use `@pytest_asyncio.fixture` with `async def`; respx.mock opens as sync context **inside** async scope |
+| String-contains assertions on JSON | `assert '\"status\":\"pending\"' in str(request.json())` | String format can change without logic change; extra spaces, key ordering, nested objects all break brittle assertions | Use dict-subset matching: extract request.json(), compare dicts via `payload_contains()` |
+| Default mock task status = "completed" | Tests assumed monitor would fetch status; if monitor never runs, default "completed" silently passes | False positive: bug hidden by default assumption; test claims success without exercising the code path | Always default to "pending" (or missing queue); force test to **explicitly** enqueue terminal status; loud hang is better than silent skip |
+| Sync `time.sleep` mock in async test | `with patch("module.time.sleep"):` inside async test | Patches the sync module; async test's `await asyncio.sleep()` is not affected; real sleep still blocks test | For async code, mock `asyncio.sleep()` or use pytest-asyncio fixtures that advance time; for REST mocking specifically, respx eliminates the need to mock timing |
+| Bare `@pytest.mark.integration` without marker registration | Added pytest marker in test file but did not register in pyproject.toml | pytest warns "unknown marker"; CI may fail if run with `pytest -m integration` | Always register custom markers in `[tool.pytest.ini_options]` markers list |
+| Multiple `[tool.pytest.ini_options]` tables | Added markers in a second `[tool.pytest.ini_options]` table in pyproject.toml | TOML does not allow duplicate keys; second table overwrites first | Single source of truth: one `[tool.pytest.ini_options]` table with all keys (asyncio_mode, markers, addopts, etc.) |
+| Duplicating `asyncio_mode` on each test class | Each test class added `pytestmark = [pytest.mark.asyncio]` AND some added `asyncio_mode = "auto"` comment | Redundant; can conflict if different classes set different modes; confusing maintenance | Set `asyncio_mode` once in pyproject.toml; use `pytest.mark.asyncio` on each async test/class for clarity |
+| CI filter `pytest -m "not integration"` to run unit tests only | Tried to exclude integration tests from unit-test job | CI command in ProjectTelemachy is `pixi run pytest --tb=short` with no `-m` filter; tests mixed in one run | New tests are collected and run; no need for separate jobs (though they could be added later if needed) |
+| Await asyncio.Event in fixture setup | `await asyncio.Event()` thinking it advances the event loop | `asyncio.Event()` is a sync call; `await` on a non-awaitable is a syntax error | Never `await` a constructor or sync operation; use `event.set()` and `event.wait()` inside async context |
+| Monkeypatch asyncio.sleep in async test scope | `monkeypatch.setattr("asyncio.sleep", MagicMock())` to avoid real sleep | For REST code, the executor doesn't sleep internally; respx mocking handles all I/O; patching sleep is unnecessary | Rely on respx to mock HTTP roundtrips; no sleep mocking needed for REST clients |
+| HTTP timeout via real delay + fixture sleep | Handler sleeps to simulate timeout: `time.sleep(30)` in route handler | Makes tests slow; doesn't actually test timeout behavior; respx can trigger timeout via exception | Mock handlers can raise `httpx.ConnectTimeout` or `httpx.ReadTimeout` directly; no real delay needed |
+
+## Results & Parameters
+
+### Integration Test Structure (ProjectTelemachy)
+
+```
+tests/
+├── __init__.py
+├── unit/
+│   ├── __init__.py
+│   ├── test_models.py         (Pydantic schema validation)
+│   ├── test_executor.py       (executor logic with mocked AgamemnonClient)
+│   └── test_cli.py            (CLI argument parsing)
+├── integration/
+│   ├── __init__.py
+│   ├── conftest.py            (mock_agamemnon fixture)
+│   └── test_workflow_lifecycle.py  (workflow against respx mock server)
+```
+
+### conftest.py — Full Fixture Implementation
+
+```python
+# tests/integration/conftest.py
+import asyncio
+import json
+import pytest
+import pytest_asyncio
+import respx
+from httpx import AsyncClient, Response
+from typing import Dict, List, Any
+
+class MockAgamemnonState:
+    """Stateful fault injection for integration tests."""
+
+    def __init__(self):
+        self.permanent_status: str | None = None
+        self.status_queue: List[str] = []
+        self.task_status_script: Dict[str, List[str]] = {}
+        self.exception_on_create_agent = False
+        self.exception_on_create_team = False
+        self.exception_on_get_team_status = False
+        self.exception_on_start_agent = False
+
+    def reset(self):
+        """Reset all flags for clean test state."""
+        self.__init__()
+
+@pytest_asyncio.fixture
+async def mock_agamemnon():
+    """
+    Integration fixture: mock Agamemnon REST API.
+
+    Yields: (state, router, client) tuple
+    - state: MockAgamemnonState for fault injection
+    - router: respx router for call inspection
+    - client: AsyncClient connected to mock
+    """
+    state = MockAgamemnonState()
+
+    with respx.mock(base_url="http://localhost:8080") as router:
+        # Create agent
+        router.post("/v1/agents", name="create_agent").mock(
+            side_effect=lambda r: _handle_create_agent(r, state)
+        )
+
+        # Start agent
+        router.post("/v1/agents/{id}/start", name="start_agent").mock(
+            side_effect=lambda r: _handle_start_agent(r, state)
+        )
+
+        # Create team
+        router.post("/v1/teams", name="create_team").mock(
+            side_effect=lambda r: _handle_create_team(r, state)
+        )
+
+        # Get team status (polls for task completion)
+        router.get("/v1/teams/{id}/status", name="get_team_status").mock(
+            side_effect=lambda r: _handle_get_team_status(r, state)
+        )
+
+        # Create task
+        router.post("/v1/teams/{id}/tasks", name="create_task").mock(
+            side_effect=lambda r: _handle_create_task(r, state)
+        )
+
+        # Get task status
+        router.get("/v1/teams/{id}/tasks/{task_id}/status", name="get_task_status").mock(
+            side_effect=lambda r: _handle_get_task_status(r, state)
+        )
+
+        # Delete agent (cleanup)
+        router.delete("/v1/agents/{id}", name="delete_agent").mock(
+            side_effect=lambda r: _handle_delete_agent(r, state)
+        )
+
+        # Enter async client inside respx context
+        async with AsyncClient(base_url="http://localhost:8080") as client:
+            yield state, router, client
+
+def _handle_create_agent(request, state: MockAgamemnonState) -> Response:
+    if state.exception_on_create_agent:
+        return Response(status_code=500, json={"error": "internal error"})
+
+    payload = request.json()
+    agent_id = f"agent-{payload.get('name', 'unknown')}"
+    return Response(status_code=201, json={"id": agent_id})
+
+def _handle_start_agent(request, state: MockAgamemnonState) -> Response:
+    if state.exception_on_start_agent:
+        return Response(status_code=500, json={"error": "failed to start"})
+    return Response(status_code=200, json={"status": "running"})
+
+def _handle_create_team(request, state: MockAgamemnonState) -> Response:
+    if state.exception_on_create_team:
+        return Response(status_code=400, json={"error": "invalid team spec"})
+
+    payload = request.json()
+    team_id = f"team-{payload.get('name', 'unknown')}"
+    return Response(status_code=201, json={"id": team_id})
+
+def _handle_get_team_status(request, state: MockAgamemnonState) -> Response:
+    if state.exception_on_get_team_status:
+        return Response(status_code=503, json={"error": "service unavailable"})
+
+    # Permanent override takes precedence
+    if state.permanent_status:
+        return Response(status_code=200, json={"status": state.permanent_status})
+
+    # Dequeue next status from ordered list
+    if state.status_queue:
+        status = state.status_queue.pop(0)
+        return Response(status_code=200, json={"status": status})
+
+    # Default: pending (POLA — tests must enqueue terminal)
+    return Response(status_code=200, json={"status": "pending"})
+
+def _handle_create_task(request, state: MockAgamemnonState) -> Response:
+    payload = request.json()
+    task_id = f"task-{payload.get('subject', 'unknown').replace(' ', '-')}"
+    return Response(status_code=201, json={"id": task_id})
+
+def _handle_get_task_status(request, state: MockAgamemnonState) -> Response:
+    # Lookup script for this task if present
+    # For simplicity, default to pending or completed from script
+    task_id = request.path_params.get("task_id", "unknown")
+
+    if task_id in state.task_status_script:
+        statuses = state.task_status_script[task_id]
+        if statuses:
+            status = statuses.pop(0)
+            return Response(status_code=200, json={"status": status})
+
+    return Response(status_code=200, json={"status": "pending"})
+
+def _handle_delete_agent(request, state: MockAgamemnonState) -> Response:
+    return Response(status_code=204)
+
+def payload_contains(actual: dict, expected: dict) -> bool:
+    """
+    Return True iff all keys in expected are present in actual with == value.
+
+    Ignores extra keys in actual; allows schema evolution without test breakage.
+    """
+    for key, val in expected.items():
+        if key not in actual or actual[key] != val:
+            return False
+    return True
+```
+
+### Test File — Complete Example
+
+```python
+# tests/integration/test_workflow_lifecycle.py
+import pytest
+import pytest_asyncio
+from telemachy.executor import WorkflowExecutor
+from telemachy.models import AgentSpec, TeamSpec, TaskSpec, WorkflowSpec
+
+pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
+
+async def test_workflow_completes_with_all_agents(mock_agamemnon):
+    """Full workflow: agents created, started, team formed, tasks assigned."""
+    state, router, client = mock_agamemnon
+
+    # Explicit POLA: must enqueue terminal status
+    state.status_queue = ["completed"]
+
+    spec = WorkflowSpec(
+        metadata={"name": "test-workflow"},
+        agents=[
+            AgentSpec(name="agent1", program="claude-code"),
+            AgentSpec(name="agent2", program="claude-code"),
+        ],
+        teams=[
+            TeamSpec(
+                name="team1",
+                agents=["agent1", "agent2"],
+                tasks=[
+                    TaskSpec(subject="task1", description="do work", assign_to="agent1"),
+                    TaskSpec(subject="task2", description="do more", assign_to="agent2"),
+                ],
+            )
+        ],
+        teardown="on_completion",
+    )
+
+    executor = WorkflowExecutor(client=client)
+    result = await executor.run(spec)
+
+    assert result.success
+    assert len(router["create_agent"].calls) == 2
+    assert len(router["create_task"].calls) == 2
+
+async def test_workflow_handles_agent_creation_failure(mock_agamemnon):
+    """Fault injection: agent creation 500 → workflow fails."""
+    state, router, client = mock_agamemnon
+    state.exception_on_create_agent = True
+
+    spec = WorkflowSpec(
+        metadata={"name": "test-workflow"},
+        agents=[AgentSpec(name="agent1", program="claude-code")],
+        teams=[],
+        teardown="never",
+    )
+
+    executor = WorkflowExecutor(client=client)
+    result = await executor.run(spec)
+
+    assert not result.success
+    assert "500" in str(result.error) or "create_agent" in str(result.error)
+
+async def test_workflow_monitors_until_completion(mock_agamemnon):
+    """Monitor polls team status until completion."""
+    state, router, client = mock_agamemnon
+
+    # Enqueue sequence: pending, pending, completed
+    state.status_queue = ["pending", "pending", "completed"]
+
+    spec = WorkflowSpec(
+        metadata={"name": "test-workflow"},
+        agents=[AgentSpec(name="agent1", program="claude-code")],
+        teams=[
+            TeamSpec(
+                name="team1",
+                agents=["agent1"],
+                tasks=[TaskSpec(subject="task1", description="work", assign_to="agent1")],
+            )
+        ],
+        teardown="on_completion",
+    )
+
+    executor = WorkflowExecutor(client=client)
+    result = await executor.run(spec)
+
+    assert result.success
+    # Should have polled status multiple times
+    assert len(router["get_team_status"].calls) >= 3
+```
+
+### pytest Configuration (copy-paste ready)
+
+```toml
+# pyproject.toml
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = [
+    "integration: integration tests with respx mock Agamemnon server",
+    "asyncio: async tests",
+]
+addopts = "--cov=src/telemachy --cov-report=term-missing --cov-report=xml --tb=short"
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectTelemachy | Issue #48 — integration test infrastructure | 9 integration tests added under `tests/integration/`; fixture pattern avoids nested contexts; stateful mock state eliminates per-test fixture redefinition; all 57 tests pass (48 unit + 9 integration) |
+| ProjectTelemachy CI | GitHub Actions pytest step | `pixi run pytest --tb=short` auto-discovers integration tests; no CI YAML changes needed; all tests collected and run in standard flow |
+| ProjectTelemachy | 5 error scenarios | 500, 409, 503, timeout, invalid payload — all tested via state flags without nested mocks |
+| ProjectTelemachy | Payload validation | 3 payload types (agent, docker agent, task) validated with `payload_contains()` dict-subset matching; assertions survived minor schema drift during refactoring |
+
+---
+
+## Superseded from testing-singleton-isolation-circuit-breaker-reset
+
+**Original date/version:** 2026-06-07 / v1.3.0
+
+```yaml
+name: testing-singleton-isolation-circuit-breaker-reset
+description: "Test isolation for module-level singleton instances (e.g., circuit breaker, cache, registry) requires calling .reset() on the held reference directly — in a pytest autouse fixture in conftest.py at the broadest scope, OR at the top of any new test that trips the singleton — not via a registry-clearing reset helper that orphans the import-time-bound instance; AND you must run the FULL test suite (not just the changed subdirectory) before declaring green, because the breaker cascade only surfaces at full scope. Use when: (1) adding tests that intentionally trigger failures/exceptions to a class whose code path goes through a module-level circuit breaker / rate limiter / retry primitive, (2) new tests pass in isolation but make UNRELATED sibling tests fail with a 'circuit breaker is open'/unavailable error when the whole class runs, (3) a reset helper clears a registry (`_registry.clear()`) rather than resetting the import-time-bound instance, (4) testing code with module-level singleton instances (breakers, caches, registries, contextvar defaults) that maintain internal state across test runs, (5) a test passes locally in isolation but fails in CI with cross-test contamination, (6) the same test fails identically on multiple Python versions in CI (3.10/3.11/3.12/3.13) — a fingerprint of order-dependent shared state, (7) deciding where to put a pytest autouse fixture: single test file vs package conftest.py, (8) extending a non-transient/fail-fast error classifier and verifying it, (9) deciding whether HTTP 422 or GraphQL schema errors should be retried (they should NOT — they are deterministic), (10) you added a NEW side-effecting call (a gh/network/db call) inside a function existing tests already exercise and ran only the touched subdirectory's tests — audit every existing caller's test and mock the new call, then run the FULL suite, (11) CI shows a cascade of CircuitBreakerOpenError across many unrelated tests — treat it as a symptom and find the EARLIEST non-breaker failure (the real root cause that tripped the breaker)."
+category: testing
+date: 2026-06-07
+version: "1.3.0"
+user-invocable: false
+history: testing-singleton-isolation-circuit-breaker-reset.history
+verification: verified-ci
+tags:
+  - test-isolation
+  - singleton
+  - circuit-breaker
+  - module-singleton
+  - test-pollution
+  - shared-state
+  - pytest-fixture
+  - autouse-fixture
+  - conftest-scope
+  - cross-test-contamination
+  - ci-only-failure
+  - stateful-objects
+  - fail-fast
+  - non-transient-retry
+  - registry-reset
+  - github-api
+  - "422"
+  - graphql-schema-error
+  - full-suite-before-green
+  - run-all-tests
+  - test-subset-trap
+  - new-side-effecting-call
+  - mock-every-caller
+  - cascade-symptom
+  - earliest-failure
+```
+
+
+# Testing: Singleton Isolation — Circuit Breaker Reset Pattern
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-07 |
+| **Objective** | Ensure test isolation for module-level singleton instances by (a) resetting the held instance state, not just clearing registries, (b) putting the autouse reset fixture in `conftest.py` at the broadest scope OR calling `module._BREAKER.reset()` at the top of any new failure-triggering test, (c) ALWAYS running the FULL unit suite (not just the changed subdirectory) so shared-state pollution surfaces, and (d) mocking EVERY new side-effecting collaborator in EVERY existing test that reaches it |
+| **Outcome** | v1.0.0: 5 circuit breaker tests passing in `test_gh_call_circuit_breaker.py`. v1.1.0: cross-test contamination fixed in `tests/unit/automation/` after moving the fixture into a package-level conftest. v1.2.0: adding 2 new fail-fast tests turned 5 unrelated sibling tests red (shared `_GH_BREAKER` pushed OPEN); fixed by `module._GH_BREAKER.reset()` at each new test's top. v1.3.0: a NEW `gh_pr_resolve_thread` call was added inside a function existing tests already exercised; 2 tests left it unmocked, made real `gh` calls that fail in CI's no-network sandbox, tripped the shared `github-api` breaker, and cascaded `CircuitBreakerOpenError` into many unrelated tests. Running only `tests/unit/automation` (1174 passed) hid it; the full `tests/unit` (3391 tests) in CI exposed it. Fixed by mocking the new call in every reaching test, then running the full suite. |
+| **Verification** | v1.0.0 verified-ci. v1.1.0 verified-ci (bug) / verified-local (fix). v1.2.0 verified-ci (PR #1042, closes #1040). v1.3.0 **verified-ci** — CI failure confirmed the cascade and the mock-everywhere fix made CI pass (ProjectHephaestus PR #1084, closes #1083, fix commit `83d5aaf`). |
+
+## When to Use
+
+- Testing code with module-level singleton instances (circuit breaker, cache, connection pool, registry, contextvar default, env-var snapshot)
+- Singleton maintains internal state (failure counter, open/closed state, reset timer) across test runs
+- Simply clearing a registry does not reset the held instance
+- Tests must be independent and repeatably pass in any order
+- Fixture must reset state both before AND after each test (setup + teardown)
+- **A test passes locally in isolation but fails in CI** — classic order-dependent contamination signature
+- **The same test fails identically on multiple Python versions in CI (3.10/3.11/3.12/3.13)** — singleton state is a deterministic shared resource; parallel Python versions reproduce the same test order and therefore the same contamination
+- **Deciding the scope of an autouse reset fixture**: it MUST live in `conftest.py` at the broadest package scope where any contaminating test lives. Putting it in a single `test_*.py` file only protects that file
+- **Adding tests that intentionally trigger failures/exceptions** to a class whose code path goes through a module-level circuit breaker / rate limiter / retry primitive — each raised exception (even a deterministic fail-fast one) counts as a breaker failure and accumulates toward the OPEN threshold
+- **New tests pass in isolation but make UNRELATED sibling tests fail** with a "circuit breaker is open" / unavailable error when the WHOLE class runs in file order — the signature of shared-state pollution from a module-level singleton
+- **A reset helper clears a registry** (`reset_all_circuit_breakers()` → resets each breaker then `_registry.clear()`) rather than resetting the import-time-bound instance — the helper ORPHANS the import-time `_GH_BREAKER`, so it keeps accumulating state across tests
+- **Extending a non-transient / fail-fast error classifier and verifying it** — e.g. adding patterns to `_NON_TRANSIENT_PATTERNS`. The new failing-call tests you write to verify it are exactly the tests that trip the shared breaker
+- **Deciding whether HTTP 422 / "unprocessable entity" or GraphQL schema errors should be retried** — they should NOT. They are deterministic; retrying can never succeed and wastes ~31s/failure (5 attempts × `2**attempt` backoff)
+- **You added a NEW side-effecting call** (a `gh`/network/db/subprocess call) inside a function that EXISTING tests already exercise — every prior caller's test that does not mock the new call will now make a real call, which fails in CI's no-network sandbox and (if the call goes through a shared breaker) trips the cascade. Audit all callers' tests and add the mock (`patch.object(module, "gh_pr_resolve_thread")`) before claiming green
+- **You ran only the touched subdirectory's tests** (e.g. `pixi run pytest tests/unit/automation`, saw 1174 passed) and want to declare green — DON'T. Stateful singletons (circuit breakers, caches, rate limiters) make a passing subset misleading because the breaker's failure threshold is only crossed at full scope. Run the FULL suite (`pixi run pytest tests/unit`)
+- **CI output shows a cascade of `CircuitBreakerOpenError` across many unrelated tests** — treat it as a SYMPTOM, not the root cause. The first real failure(s) that tripped the breaker are the cause; find the EARLIEST non-breaker failure in the run, not the dozens of downstream breaker-open errors
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# Module under test: hephaestus/automation/github_api.py
+_GH_BREAKER = CircuitBreaker(fail_max=5, reset_timeout=60)
+
+def _gh_call(cmd):
+    try:
+        return _GH_BREAKER.call(_gh_subprocess_call, cmd=cmd)
+    except CircuitBreakerOpenError as exc:
+        raise GitHubUnavailableError(...) from exc
+
+# Test file: tests/unit/automation/test_gh_call_circuit_breaker.py
+import pytest
+from hephaestus.automation import github_api
+from hephaestus.resilience.circuit_breaker import reset_all_circuit_breakers
+
+@pytest.fixture(autouse=True)
+def _reset_breaker():
+    """Reset circuit breaker before and after each test."""
+    # IMPORTANT: Reset the held instance directly, not just registry
+    github_api._GH_BREAKER.reset()
+    yield
+    github_api._GH_BREAKER.reset()
+
+def test_breaker_opens_after_5_failures(monkeypatch):
+    """Breaker opens after fail_max consecutive failures."""
+    # Test runs with clean breaker state
+    # No carry-over from previous tests
+    ...
+
+def test_breaker_closes_after_reset_timeout(monkeypatch):
+    """Breaker transitions to half-open after reset_timeout."""
+    # Again, clean breaker state from fixture
+    ...
+```
+
+### Conftest Scope Pattern (v1.1.0)
+
+The fixture above is correct, but its LOCATION matters as much as its content. If it lives only inside `test_gh_call_circuit_breaker.py`, sibling tests in the same package — e.g. `test_pr_reviewer_posting.py` — do NOT get reset. They will inherit the OPEN-breaker state from any earlier test that tripped it.
+
+The fix: lift the autouse fixture into the package-level `conftest.py`.
+
+```text
+tests/unit/automation/
+├── conftest.py                       # ← autouse fixture LIVES HERE
+├── test_github_api.py                # ← no longer needs its own copy
+├── test_gh_call_circuit_breaker.py   # ← no longer needs its own copy
+├── test_pr_reviewer_posting.py       # ← now protected (was contaminated)
+└── ... every other test_*.py in the subtree is automatically protected
+```
+
+```python
+# tests/unit/automation/conftest.py
+"""Package-level fixtures for automation tests.
+
+Lives at the broadest scope covering any test that mutates the
+GitHub circuit breaker singleton, so EVERY test in this subtree
+runs with a clean breaker. Do not duplicate this fixture inside
+individual test_*.py files.
+"""
+
+import pytest
+from hephaestus.automation import github_api
+
+
+@pytest.fixture(autouse=True)
+def _reset_circuit_breakers():
+    """Reset the GitHub circuit breaker before and after each test.
+
+    Why here, not in a single test file?
+
+    The `_GH_BREAKER` singleton lives at module scope in
+    `hephaestus.automation.github_api`. Any test in this package
+    that exercises a failure path can trip it. Once tripped, the
+    OPEN state persists across test files in the same pytest
+    session. Tests later in the run order then see a generic
+    "circuit breaker is open" message instead of the domain
+    error they were asserting on, and they fail in CI even though
+    they pass locally in isolation.
+    """
+    github_api._GH_BREAKER.reset()
+    yield
+    github_api._GH_BREAKER.reset()
+```
+
+#### How to verify the scope is right
+
+Replicate CI's order-dependent contamination in one local pytest invocation by running the contaminating file FIRST, then the previously-failing file:
+
+```bash
+pixi run pytest \
+    tests/unit/automation/test_github_api.py \
+    tests/unit/automation/test_pr_reviewer_posting.py \
+    -v
+```
+
+If both pass, the conftest scope is broad enough. If the second file still fails with the breaker-open error, the conftest needs to be lifted higher (e.g. `tests/unit/conftest.py` or `tests/conftest.py`).
+
+#### Choosing the right conftest level
+
+| Where the singleton is tripped | Where the autouse reset belongs |
+|--------------------------------|---------------------------------|
+| One test file only             | That file (rare — usually wrong) |
+| Multiple files in one package  | `tests/<package>/conftest.py`   |
+| Multiple packages              | `tests/conftest.py` (top-level) |
+| Across unit + integration      | `tests/conftest.py` (top-level) |
+
+The cost of running the reset on a test that doesn't need it is negligible (a few attribute writes). The cost of a single order-dependent CI flake is hours of debugging. Default to the broader scope when in doubt.
+
+### Fail-Fast Test Pattern (v1.2.0) — reset the bound instance at the test top
+
+`setup_method` is not always enough. The automation test class calls
+`reset_all_circuit_breakers()` in `setup_method`, but that helper resets each
+registered breaker and then does `_registry.clear()`. The import-time-bound
+`_GH_BREAKER` singleton in `hephaestus/automation/github_api.py` is created at
+module import; once the registry is cleared, the helper no longer touches that
+orphaned instance. So `setup_method` gives a FALSE sense of isolation.
+
+The consequence: adding new tests that intentionally trigger a *fail-fast*
+(non-transient) error still raises an exception, and **every raised exception —
+even one that fails fast on the first attempt — counts as one breaker failure**.
+With `failure_threshold=5`, adding two new failure-triggering tests near the top
+of the class pushed `_GH_BREAKER` to 5 accumulated failures and OPEN. The next
+five sibling tests then failed with
+`GitHubUnavailableError: circuit breaker is open` — even though each new test
+caused only ONE failure on its own.
+
+The fix matches the file's existing `test_circuit_breaker_wraps_gh_call_impl`
+pattern: any new test that triggers a breaker failure must reset the bound
+instance DIRECTLY at the top, not rely on the registry-clearing helper.
+
+```python
+from hephaestus.automation import github_api as module
+
+def test_my_new_fail_fast_error(monkeypatch):
+    module._GH_BREAKER.reset()  # ← reset the bound instance, not the registry
+    # ... arrange a deterministic 422 / GraphQL-schema failure ...
+    with pytest.raises(SomeError):
+        module._gh_call([...])
+```
+
+#### Why setup_method's helper does not protect it
+
+```python
+# hephaestus/resilience/circuit_breaker.py  (sketch)
+def reset_all_circuit_breakers():
+    for breaker in _registry.values():
+        breaker.reset()
+    _registry.clear()          # ← orphans any import-time-bound reference
+```
+
+`_GH_BREAKER` is bound once at import time. After `_registry.clear()`, future
+calls to the helper iterate an empty registry and never touch `_GH_BREAKER`.
+The held module attribute keeps its accumulated `fail_counter` / OPEN state.
+
+#### The 422 / GraphQL-schema retry-classifier fix that motivated the new tests
+
+`_NON_TRANSIENT_PATTERNS` in `hephaestus/automation/github_api.py` classifies
+which `gh` failures are non-retryable so `_gh_call_impl` fails fast instead of
+retrying 5× with `2**attempt` backoff (~31s wasted per deterministic failure).
+It listed 403/404/400/401/invalid-argument/unknown-json-field/token-scope but
+OMITTED HTTP 422 ("unprocessable entity") AND GraphQL schema errors. Those are
+deterministic — retrying can never succeed. The fix adds three patterns:
+
+```python
+_NON_TRANSIENT_PATTERNS = [
+    # ... existing 403/404/400/401/invalid-argument/... patterns ...
+    r"(?:^|\s)422(?:\s|$)|unprocessable entity",
+    r"doesn't accept argument",
+    r"is declared by .* but not used",
+]
+```
+
+Verifying that fix required adding tests that assert these errors raise WITHOUT
+retrying — and those very tests are what tripped the shared breaker, which is
+how the test-pollution bug surfaced.
+
+### Run the FULL Suite Before Green (v1.3.0) — new side-effecting calls + the subset trap
+
+This dimension is about a NEW failure mode that produced the SAME cascade
+through a different door. A change added a NEW side-effecting collaborator — a
+`gh_pr_resolve_thread` GitHub API call — INSIDE a validator function that
+existing tests already exercised. Two of those existing tests did not mock the
+new call, so when they ran they made REAL `gh` calls. In CI's no-network
+sandbox those calls fail, and each failure increments the shared `github-api`
+circuit breaker. After the threshold the breaker OPENED, and every SUBSEQUENT
+test that touched `github_api` then failed with `CircuitBreakerOpenError` —
+including many tests entirely unrelated to the change.
+
+Why it was invisible locally: running only the touched subdirectory
+(`pixi run pytest tests/unit/automation`) reported `1174 passed`. That subset
+never crossed the breaker's failure threshold (or the two real-call failures
+were too few to trip it within that scope), so the bug stayed hidden. CI runs
+the FULL `tests/unit` (3391 tests); at full scope the failures accumulated past
+the threshold and the cascade appeared.
+
+```bash
+# ❌ The trap — only the changed subdirectory; subset never trips the breaker
+pixi run pytest tests/unit/automation        # "1174 passed" — misleading green
+
+# ✅ Before declaring green — the FULL unit suite (what CI runs)
+pixi run pytest tests/unit                    # surfaces the breaker cascade
+```
+
+**The fix:** when a function under test gains a new side-effecting call, audit
+EVERY existing test that reaches the enclosing function and add the mock —
+then run the full suite.
+
+```python
+from hephaestus.automation import some_module
+
+# Mock the NEW side-effecting collaborator in EVERY test that reaches it
+with patch.object(some_module, "gh_pr_resolve_thread") as mock_resolve:
+    mock_resolve.return_value = None
+    some_module.validate_and_resolve(...)
+```
+
+**Reading a `CircuitBreakerOpenError` cascade:** the breaker turns a couple of
+unmocked-call failures into dozens of downstream failures. Do not chase the
+`CircuitBreakerOpenError`s — scroll to the EARLIEST non-breaker failure in the
+CI log; that first real failure is what tripped the breaker and is the actual
+root cause.
+
+**Under time pressure:** background a long full-suite run (`run_in_background`)
+rather than skipping it. A backgrounded `pixi run pytest tests/unit` finishing
+in the next turn is far cheaper than a CI-only breaker cascade.
+
+#### Prevention checklist (v1.3.0)
+
+1. After adding a side-effecting call to shared code, grep for ALL tests that
+   invoke the enclosing function and confirm each mocks the new call.
+2. Run the FULL unit suite locally before declaring green — never just the
+   changed subdirectory. Stateful singletons make a passing subset misleading.
+3. Treat a `CircuitBreakerOpenError` in test output as a SYMPTOM: the first real
+   failure(s) that tripped the breaker are the root cause — find the earliest
+   non-breaker failure, not the cascade.
+4. Background long full-suite runs rather than skipping them under time pressure.
+
+### Detailed Steps
+
+1. **Identify the module-level singleton instance**:
+   ```python
+   # In hephaestus/automation/github_api.py (module level)
+   _GH_BREAKER = CircuitBreaker(fail_max=5, reset_timeout=60)
+   ```
+
+2. **Understand what state the singleton holds**:
+   - Circuit breaker: fail_counter, state (CLOSED/OPEN/HALF_OPEN), last_failure_time
+   - Cache: entries, hit/miss counts
+   - Connection pool: active connections, pending queue
+   - Any instance variable that persists across calls
+
+3. **Create a pytest fixture with autouse=True**:
+   ```python
+   @pytest.fixture(autouse=True)
+   def _reset_breaker():
+       """Reset circuit breaker state for test isolation."""
+       # Setup: reset before test
+       github_api._GH_BREAKER.reset()
+       yield
+       # Teardown: reset after test
+       github_api._GH_BREAKER.reset()
+   ```
+
+4. **Import the module containing the singleton**:
+   ```python
+   import hephaestus.automation.github_api as github_api
+
+   # Directly access the module-level instance
+   github_api._GH_BREAKER.reset()
+   ```
+
+5. **DO NOT rely on clearing a registry alone**:
+   ```python
+   # ❌ WRONG: This does not reset the held instance
+   reset_all_circuit_breakers()  # clears registry only
+   # _GH_BREAKER is still in memory with old state
+
+   # ✅ CORRECT: Reset the held instance directly
+   github_api._GH_BREAKER.reset()
+   ```
+
+6. **Reset both before and after (setup + teardown)**:
+   - Before: ensure test starts clean even if previous test crashed
+   - After: ensure next test doesn't inherit this test's state
+
+7. **Verify isolation with parametrized tests**:
+   ```python
+   @pytest.mark.parametrize("test_order", [0, 1, 2])
+   def test_order_independent(test_order):
+       """Tests should pass in any order."""
+       # If isolation works, passing test_order=2 first gives same result as 0,1,2 sequence
+       ...
+   ```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| 1 | Clearing the circuit breaker registry in conftest.py: `reset_all_circuit_breakers()` | Registry was cleared, but the module-level _GH_BREAKER instance still held old state (fail_counter=5, OPEN). Subsequent tests saw breaker still open. | Clearing a registry is not the same as resetting an instance. The held reference _GH_BREAKER is a separate object that must be reset directly. |
+| 2 | Assuming pytest automatically resets module-level instances between tests | No such mechanism exists. Module-level instances persist in memory for the lifetime of the Python process. Tests inherit the previous test's state. | Fixture must explicitly reset state. No automatic cleanup without code. |
+| 3 | Using `pytest.monkeypatch` to replace the breaker with a fresh one: `monkeypatch.setattr(github_api, "_GH_BREAKER", CircuitBreaker(...))` | Works, but requires instantiating a new CircuitBreaker per test (expensive). Also fragile: if later code imports _GH_BREAKER directly, monkeypatch won't affect it. | Just call reset() on the existing instance — simpler, faster, less fragile. |
+| 4 | Resetting the breaker only in fixture setup, not teardown | If a test crashed or was interrupted, subsequent tests started with dirty state. Isolation was conditional on test success. | Always reset in both setup and teardown (yield pattern). Ensures clean state even if previous test failed. |
+| 5 | Using module-scope fixture instead of function-scope | Multiple tests in one module share the same fixture run. Cross-test pollution still happened. | Use `@pytest.fixture(autouse=True)` with default function scope (resets for each test). |
+| 6 | Trying to patch CircuitBreaker.reset() method | Would break actual reset calls in production code; confusing test vs. production behavior. | Don't patch the reset method; just call it normally. |
+| 7 | Putting the autouse reset fixture in a single test file (`test_github_api.py`) instead of `conftest.py` | Only protected `test_github_api.py`. Sibling files in the same package (e.g. `test_pr_reviewer_posting.py`) still inherited the OPEN-breaker state. CI failed identically on Python 3.10/3.11/3.12/3.13 — the deterministic test order tripped the breaker before the affected test ran. (ProjectHephaestus PR #707, fixed in commit `3e4bc10`.) | The autouse reset fixture belongs in `conftest.py` at the broadest scope covering any contaminating test, not in a single test file. |
+| 8 | Widening the failing assertion to tolerate the breaker-open message (e.g. `assert '#0' in err or 'circuit breaker' in err`) | Papered over the contamination. The domain-specific `#0` diagnostic (issue-not-found) was the whole point of the test; allowing the generic breaker message meant any real regression of that diagnostic would silently slip through. | Fix the isolation, do not widen the assertion. If your test "fails" because the wrong error appeared, the wrong error is the bug, not the assertion. |
+| 9 | Per-test `monkeypatch` on the singleton — `monkeypatch.setattr(github_api, "_GH_BREAKER", CircuitBreaker(...))` inside each test | Only patches the lookup `github_api._GH_BREAKER`, not the underlying held state in other modules that may have already imported the original. Also: the next test re-instantiates and the original singleton (if accessed via `import hephaestus.automation.github_api`) is still in OPEN state. | Reset the existing instance, do not replace it. `instance.reset()` is simpler, faster, and avoids reference-aliasing bugs. |
+| 10 | Per-test reset inside each test function body (no fixture) | DRY violation. Easy to forget on a new test. The forgotten test then becomes the contaminator for every test that runs after it in CI order. | Use `@pytest.fixture(autouse=True)` in `conftest.py`. Autouse means new tests added later are automatically protected. |
+| 11 | Module-level `setup_module` / `teardown_module` | Resets at module boundaries only. Tests within a module still share state with tests in OTHER modules that ran in the same pytest session. | Use a function-scoped autouse fixture in `conftest.py`, not a module-level hook. |
+| 12 | Relying on `reset_all_circuit_breakers()` in the class's `setup_method` to isolate new fail-fast tests | The helper resets each registered breaker then calls `_registry.clear()`, ORPHANING the import-time-bound `_GH_BREAKER`. After the first clear, the helper iterates an empty registry and never touches the singleton, which keeps accumulating `fail_counter`. Adding 2 fail-fast tests pushed it OPEN; 5 unrelated sibling tests then failed with `GitHubUnavailableError: circuit breaker is open`. | A registry-clearing reset helper does NOT protect import-time references. Reset the actual bound object: `module._GH_BREAKER.reset()` at the top of each failure-triggering test (matches the file's `test_circuit_breaker_wraps_gh_call_impl` pattern). |
+| 13 | Running only the new test in isolation to confirm it works | Each new fail-fast test PASSES alone — no prior test ran, so the shared breaker was clean. The pollution only manifests when the WHOLE class runs in file order: the new tests trip the breaker before later siblings execute. On pristine main all tests passed; adding 2 tests turned 5 siblings red. | ALWAYS run the full test class/module (not just your new test) to catch shared-state pollution. "Passes in isolation" is the trap, not the proof. |
+| 14 | Letting `_gh_call_impl` retry HTTP 422 / GraphQL-schema errors (no classifier entry) | 422 ("unprocessable entity") and GraphQL schema errors ("doesn't accept argument", "is declared by ... but not used") are deterministic — retrying can never succeed. `_gh_call_impl` retried them 5× with `2**attempt` backoff (~31s wasted per failure) before raising, AND each attempt is a breaker failure that worsens pollution. | Add deterministic failures to `_NON_TRANSIENT_PATTERNS` so they fail fast on attempt 1. Patterns added: `(?:^\|\s)422(?:\s\|$)\|unprocessable entity`, `doesn't accept argument`, `is declared by .* but not used`. |
+| 15 | Ran only `tests/unit/automation` locally after adding a new `gh_pr_resolve_thread` call to a validator (saw `1174 passed`), declared green | CI runs the full `tests/unit` (3391 tests). At full scope the unmocked real `gh` calls (which fail in CI's no-network sandbox) accumulate past the shared `github-api` breaker's failure threshold, OPEN it, and cascade `CircuitBreakerOpenError` into many unrelated tests. The automation subset never crossed the threshold, so the same tests "passed" locally and hid the problem. | Run the FULL unit suite (`pixi run pytest tests/unit`) before claiming green — never just the changed subdirectory. Stateful singletons (circuit breakers, caches, rate limiters) make a passing subset misleading. (ProjectHephaestus PR #1084, closes #1083, fix commit `83d5aaf`.) |
+| 16 | Added a new side-effecting `gh_pr_resolve_thread` call inside a function existing tests already exercised, but left it unmocked in 2 of those existing validator tests | Those 2 tests made REAL `gh` calls that fail in CI's no-network sandbox; each failure incremented the shared `github-api` circuit breaker until it OPENED, after which every subsequent test touching `github_api` failed with `CircuitBreakerOpenError`. Chasing the dozens of breaker-open errors wasted time — they were a cascade symptom, not the cause. | When a function under test gains a new side-effecting (gh/network/db) call, audit EVERY existing test that reaches the enclosing function and add the mock (`patch.object(module, "gh_pr_resolve_thread")`). Treat any `CircuitBreakerOpenError` as a symptom and find the EARLIEST non-breaker failure that tripped the breaker. |
+
+## Results & Parameters
+
+### v1.3.0 — Full Suite Before Green + Mock Every New Side-Effecting Call
+
+```bash
+# The one rule: run the FULL unit suite, not the changed subdirectory.
+pixi run pytest tests/unit           # ✅ what CI runs (3391 tests)
+# NOT:
+pixi run pytest tests/unit/automation  # ❌ subset (1174) hides the breaker cascade
+```
+
+```python
+# When a function gains a new side-effecting call, mock it in EVERY reaching test:
+with patch.object(module, "gh_pr_resolve_thread") as mock_resolve:
+    mock_resolve.return_value = None
+    module.validate_and_resolve(...)
+```
+
+| Parameter / Rule | Value | Why it matters |
+|------------------|-------|----------------|
+| Full suite command | `pixi run pytest tests/unit` | The breaker threshold is only crossed at full scope; the subdirectory subset passes misleadingly |
+| Changed-subdir trap | `pixi run pytest tests/unit/automation` → `1174 passed` | False green; CI's full `tests/unit` (3391) exposed the cascade |
+| New side-effecting call | `gh_pr_resolve_thread` (a GitHub API call) | Added inside a function existing tests already exercised; unmocked real calls fail in CI sandbox |
+| Mock target | `patch.object(module, "gh_pr_resolve_thread")` | Mock the new collaborator in EVERY existing caller's test |
+| Cascade symptom | `CircuitBreakerOpenError` across unrelated tests | Find the EARLIEST non-breaker failure — that is the root cause that tripped the breaker |
+| Time-pressure rule | background the full-suite run | A backgrounded full run is cheaper than a CI-only cascade |
+
+### v1.2.0 — Fail-Fast Test Reset + Non-Transient Retry Patterns
+
+The one-line fix at the top of every new failure-triggering test:
+
+```python
+module._GH_BREAKER.reset()   # reset the BOUND instance, not the registry
+```
+
+The exact non-transient regex patterns added to `_NON_TRANSIENT_PATTERNS` in
+`hephaestus/automation/github_api.py` so 422 / GraphQL-schema errors fail fast
+(no retry, no extra breaker failures):
+
+```python
+r"(?:^|\s)422(?:\s|$)|unprocessable entity"
+r"doesn't accept argument"
+r"is declared by .* but not used"
+```
+
+| Parameter | Value | Why it matters |
+|-----------|-------|----------------|
+| `_GH_BREAKER` failure_threshold | 5 | Each raised exception (incl. fail-fast) = 1 failure; 5 across the class trips OPEN |
+| Wasted time per un-classified deterministic failure | ~31s | 5 retries × `2**attempt` backoff before raising |
+| Reset call | `module._GH_BREAKER.reset()` | Resets the import-time-bound instance directly |
+| Anti-pattern | `reset_all_circuit_breakers()` in `setup_method` | Clears registry → orphans the bound singleton |
+| Verification rule | run the WHOLE class/module | Pollution is invisible when the new test runs alone |
+
+### Circuit Breaker Reset Fixture (Copy-Paste Ready)
+
+```python
+# tests/unit/automation/test_gh_call_circuit_breaker.py
+
+import pytest
+from unittest.mock import patch, MagicMock
+
+from hephaestus.automation.github_api import _gh_call, GitHubUnavailableError
+from hephaestus.automation import github_api
+
+@pytest.fixture(autouse=True)
+def _reset_breaker():
+    """Reset circuit breaker before and after each test for isolation.
+
+    CRITICAL: This fixture resets the module-level _GH_BREAKER instance
+    directly. Do not rely on registry cleanup alone.
+    """
+    # Setup: clean state before test
+    github_api._GH_BREAKER.reset()
+    yield
+    # Teardown: clean state after test
+    github_api._GH_BREAKER.reset()
+```
+
+### Full Test Suite Example
+
+```python
+# tests/unit/automation/test_gh_call_circuit_breaker.py
+
+import pytest
+from unittest.mock import patch
+from subprocess import CalledProcessError
+
+from hephaestus.automation.github_api import _gh_call, GitHubUnavailableError
+from hephaestus.automation import github_api
+
+@pytest.fixture(autouse=True)
+def _reset_breaker():
+    """Reset circuit breaker for test isolation."""
+    github_api._GH_BREAKER.reset()
+    yield
+    github_api._GH_BREAKER.reset()
+
+class TestCircuitBreakerIntegration:
+    """Test circuit breaker integration in _gh_call()."""
+
+    def test_breaker_opens_after_5_failures(self, monkeypatch):
+        """Breaker opens (raises GitHubUnavailableError) after 5 failures."""
+        call_count = 0
+
+        def mock_subprocess_call(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            raise CalledProcessError(1, "gh")
+
+        monkeypatch.setattr(
+            "hephaestus.automation.github_api._gh_subprocess_call",
+            mock_subprocess_call,
+        )
+
+        # Fail 5 times (triggers breaker)
+        for i in range(5):
+            with pytest.raises(CalledProcessError):
+                _gh_call(["pr", "view", "123"])
+
+        # 6th call should raise GitHubUnavailableError (breaker open)
+        with pytest.raises(GitHubUnavailableError, match="circuit open"):
+            _gh_call(["pr", "view", "123"])
+
+        # Verify subprocess was called exactly 5 times (not 6)
+        assert call_count == 5
+
+    def test_breaker_allows_calls_when_closed(self, monkeypatch):
+        """Breaker allows calls when closed (success case)."""
+        monkeypatch.setattr(
+            "hephaestus.automation.github_api._gh_subprocess_call",
+            lambda **kwargs: '{"state": "OPEN"}',
+        )
+
+        # Should succeed without raising
+        result = _gh_call(["pr", "view", "123", "--json=state"])
+        assert result == '{"state": "OPEN"}'
+
+    def test_breaker_half_open_succeeds_closes_breaker(self, monkeypatch):
+        """Breaker transitions to closed after successful call in half-open state."""
+        call_sequence = [
+            ("fail1", True),
+            ("fail2", True),
+            ("fail3", True),
+            ("fail4", True),
+            ("fail5", True),
+            ("success", False),  # This succeeds, breaker closes
+        ]
+
+        call_index = [0]  # mutable counter
+
+        def mock_subprocess_call(**kwargs):
+            idx = call_index[0]
+            call_index[0] += 1
+            label, should_fail = call_sequence[idx]
+
+            if should_fail:
+                raise CalledProcessError(1, "gh")
+            return f'{{"status": "{label}"}}'
+
+        monkeypatch.setattr(
+            "hephaestus.automation.github_api._gh_subprocess_call",
+            mock_subprocess_call,
+        )
+
+        # Fail 5 times (breaker opens)
+        for _ in range(5):
+            with pytest.raises(CalledProcessError):
+                _gh_call(["pr", "view", "123"])
+
+        # Fast-forward reset_timeout
+        github_api._GH_BREAKER.opened_at = 0
+
+        # Next call succeeds, breaker closes
+        result = _gh_call(["pr", "view", "123"])
+        assert "success" in result
+
+    def test_isolation_order_independent(self):
+        """Tests can run in any order with proper fixture isolation."""
+        # If this test runs after test_breaker_opens_after_5_failures,
+        # _GH_BREAKER was reset by fixture, so it's still CLOSED
+        assert github_api._GH_BREAKER.state == "closed"
+```
+
+### CircuitBreaker.reset() Method Location
+
+The reset() method typically appears in the breaker implementation:
+
+```python
+# hephaestus/resilience/circuit_breaker.py
+
+class CircuitBreaker:
+    def reset(self):
+        """Reset breaker state to CLOSED and clear failure counter.
+
+        Used for test isolation and manual recovery.
+        """
+        self.fail_counter = 0
+        self.opened_at = None
+        self.state = "closed"  # or "CLOSED" depending on implementation
+```
+
+### General Pattern: Package-Shared Singletons That Need This Treatment
+
+The circuit breaker is one example of a broader class. Any of these singletons benefits from a package-scoped autouse reset in `conftest.py`:
+
+| Singleton family | Concrete example | Reset method |
+|------------------|-----------------|--------------|
+| Circuit breakers | `_GH_BREAKER`, `_NATS_BREAKER` | `.reset()` |
+| In-memory caches | `@lru_cache`, custom dict caches, `functools.cache` | `cache.cache_clear()` or `dict.clear()` |
+| Registry singletons | Plugin registries, agent registries, route maps | re-register from scratch, or `.clear()` |
+| `contextvars` defaults | Trace-context, request-context | `var.set(default)` |
+| Env-var snapshots | A module that captures `os.environ[...]` at import | re-read env, or `monkeypatch.setenv` + reload |
+| Connection pools | DB connection pools, HTTP session singletons | `.close()` + new instance |
+| Time / clock state | Frozen-time monkeypatches | restore wall-clock in teardown |
+
+Rule of thumb: if reading a module attribute at test start ever shows a value that depends on what other tests did, that attribute needs a conftest-level autouse reset.
+
+#### Why this bites only in CI
+
+| Symptom | Why CI shows it but local does not |
+|---------|------------------------------------|
+| Test passes locally in isolation | Single-test run never executes the contaminator |
+| Test passes in `pytest <one_file>` locally | Other files in the package are not collected; the contaminator never runs |
+| Test passes locally on full suite | Local file iteration order may differ from CI (alphabetical, but filesystem-dependent) |
+| Test fails identically on Python 3.10/3.11/3.12/3.13 in CI | Each Python version runs the same deterministic test order; the singleton is process-local but test-order-deterministic |
+| Test passes under `pytest-xdist` workers | Each worker has its own process; the singleton is per-worker, hiding cross-file contamination unless both files land on the same worker |
+
+The "passes locally" trap is real: running a single failing test in isolation always passes because no prior test has run.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | PR #633 — CircuitBreaker testing (v1.0.0) | tests/unit/automation/test_gh_call_circuit_breaker.py; 5 tests all passing; no cross-test state leakage |
+| ProjectHephaestus | PR #707 — conftest scope fix (v1.1.0) | Cross-test contamination: `test_pr_reviewer_posting.py` failed identically on Python 3.10/3.11/3.12/3.13 in CI because the autouse breaker reset lived only in `test_github_api.py`. Fixed by moving the fixture into `tests/unit/automation/conftest.py` (commit `3e4bc10`). 911 tests pass locally under the new conftest scope; CI re-run pending at /learn time, hence v1.1.0 is **verified-local** for the fix, **verified-ci** for the bug. |
+| ProjectHephaestus | PR #1042 — fail-fast test pollution + 422/GraphQL classifier (v1.2.0) | Adding 2 new fail-fast tests to a class in `hephaestus/automation/github_api.py`'s test suite turned 5 unrelated sibling tests red (`GitHubUnavailableError: circuit breaker is open`) because `setup_method`'s `reset_all_circuit_breakers()` clears the registry and orphans the import-time `_GH_BREAKER`. Fixed by calling `module._GH_BREAKER.reset()` at each new test's top. Bundled with adding `422`/`unprocessable entity`, `doesn't accept argument`, and `is declared by .* but not used` to `_NON_TRANSIENT_PATTERNS`. **verified-ci** — merged to main (PR #1042, closes #1040). |
+| ProjectHephaestus | PR #1084 (closes #1083) — full-suite-before-green + new-side-effecting-call mocking (v1.3.0) | A new `gh_pr_resolve_thread` GitHub API call was added inside a validator function existing tests already exercised. Two tests left it unmocked → real `gh` calls fail in CI's no-network sandbox → shared `github-api` circuit breaker tripped OPEN → `CircuitBreakerOpenError` cascaded into many unrelated tests. Running only `tests/unit/automation` (`1174 passed`) hid it; CI's full `tests/unit` (3391 tests) exposed it. Fixed by mocking the new call in every reaching test, then running the full suite. **verified-ci** — the CI failure confirmed the cascade and the fix made CI pass (fix commit `83d5aaf`). |
+
+---
+
+## Superseded from mock-and-test-isolation-patterns
+
+**Original date/version:** 2026-05-28 / v1.1.0
+
+```yaml
+name: mock-and-test-isolation-patterns
+description: "Use when: (1) writing chaos/fault injection tests where a mock service must simulate latency, kill, or queue-starvation side effects — not just record the fault command, (2) a FastAPI/Pydantic endpoint test expects a specific HTTP status code (e.g. 503) but receives 500 because MagicMock attributes fail Pydantic response serialization, (3) tests pass individually but fail together due to mock pollution across test files and real file I/O with tmp_path is a cleaner alternative, (4) a test name says 'and' but only one side is asserted — a patch.object is missing 'as mock_X' and assert_called_once(), (5) a test bypasses the runner entry point and calls an internal delegate directly, leaving the full path untested, (6) adding unit tests for a class that constructs collaborators internally — patch the instance attribute after construction, (7) testing RuntimeError precondition guards (if-None, subprocess returncode, or _is_setup state) with parametrize or side_effect lists, (8) testing closure guards inside action-builder methods without a full state machine, (9) tests pass in isolation but fail when run after a test that calls importlib.reload() — patch.object on a module-imported object becomes stale after reload; use patch() string form instead."
+category: testing
+date: 2026-05-28
+version: "1.1.0"
+user-invocable: false
+history: mock-and-test-isolation-patterns.history
+tags:
+  - mock
+  - test-isolation
+  - pydantic
+  - magicmock
+  - fastapi
+  - chaos-testing
+  - fault-injection
+  - tmp-path
+  - patch-object
+  - runtime-error
+  - guard-tests
+  - instance-attribute-patching
+  - subprocess
+  - importlib-reload
+  - stale-reference
+  - string-patch
+```
+
+
+# Mock and Test Isolation Patterns
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-19 |
+| **Objective** | Canonical collection of correct mock usage and test isolation patterns for Python unit tests |
+| **Outcome** | Merged from 9 skills covering mock fidelity, Pydantic serialization, file I/O vs mocks, missing assertions, entry-point coverage, instance attribute patching, and RuntimeError guard testing |
+| **Verification** | verified-ci |
+
+## When to Use
+
+Use this skill when any of the following apply:
+
+1. **Chaos/fault injection mocks** — mock service has `/inject_fault` or `/v1/chaos/*` but tests only assert the inject call returns 200, not that later endpoints show chaotic behavior.
+2. **Pydantic + MagicMock 500 errors** — endpoint test expects a specific error code (e.g. 503) but gets 500; server logs show `ValidationError` during response serialization.
+3. **Mock pollution between test files** — tests pass individually but fail together; `clear_patches` autouse fixture does not fully prevent cross-module leakage; real file I/O with `tmp_path` is cleaner.
+4. **Missing mock assertion** — test name contains "and" but only one branch is asserted; a `patch.object` call has `return_value=X` but no `as mock_X` handle.
+5. **Runner entry point untested** — test calls an internal delegate directly (e.g. `ResumeManager.handle_zombie()`) instead of the parent runner method.
+6. **Instance attribute patching** — class constructor builds collaborator internally (`self.x = SomeClass(arg)`); passing a `MagicMock()` as the constructor arg creates a real collaborator, not a mock.
+7. **RuntimeError precondition guards** — testing `if x is None: raise RuntimeError(...)`, `result.returncode != 0`, or `_is_setup` state guards; multi-guard functions with sequential `subprocess.run` calls.
+8. **Closure guards in action builders** — guards inside closures returned from `_build_experiment_actions` or `TierActionBuilder.build()` cannot be tested through the state machine; call the builder, get the closure dict, invoke the key directly.
+9. **Stale logger/object after importlib.reload** — tests use `patch.object(imported_logger, "error")` but a different test file called `importlib.reload(module)`, replacing the module-level logger with a new instance; the patch targets the old object while the code uses the new one; mock.called stays False even though the log appears in captured output.
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# --- Pattern 1: Chaos mock — simulate side effects, not just record ---
+def _apply_fault_effects(state):
+    if (f := state.active_faults.get("latency")):
+        time.sleep(f.get("delay_ms", 0) / 1000)
+
+@app.get("/v1/health")
+def health():
+    if state.active_faults.get("kill"):
+        return Response(status_code=503, content=b'{"status":"degraded"}',
+                        media_type="application/json")
+    _apply_fault_effects(state)
+    return {"status": "ok"}
+
+# --- Pattern 2: Pydantic + MagicMock — set typed attributes explicitly ---
+mock_publisher = MagicMock()
+mock_publisher.reconnect_count = 0   # int, not MagicMock
+mock_publisher.last_error = ""       # str, not MagicMock
+mock_publisher.is_connected = False  # bool, not MagicMock
+
+# --- Pattern 3: Real file I/O instead of mock ---
+def test_fig01(sample_runs_df, tmp_path):
+    fig01_score_variance_by_tier(sample_runs_df, tmp_path, render=False)
+    assert (tmp_path / "fig01_score_variance_by_tier.vl.json").exists()
+    assert (tmp_path / "fig01_score_variance_by_tier.csv").exists()
+
+# --- Pattern 4: Capture ALL mock handles ---
+with (
+    patch.object(runner, "_setup_workspace_and_scheduler",
+                 return_value=mock_scheduler) as mock_setup,
+    patch.object(runner, "_capture_experiment_baseline") as mock_baseline,
+):
+    runner._action_exp_dir_created(scheduler_ref)
+mock_setup.assert_called_once()
+mock_baseline.assert_called_once()
+
+# --- Pattern 5: Instance attribute patching after construction ---
+runner = E2ERunner(mock_config, MagicMock(), Path("/tmp"))
+mock_tier_manager = MagicMock()
+runner.tier_manager = mock_tier_manager  # override the real one
+
+# --- Pattern 6: RuntimeError guard — parametrized multi-guard ---
+@pytest.mark.parametrize("field,expected_match", [
+    ("agent_result", r"agent_result"),
+    ("judgment", r"judgment"),
+])
+def test_raises_when_field_is_none(self, stage_context, field, expected_match):
+    # Set all fields valid first, then null the one under test
+    stage_context.agent_result = AdapterResult(exit_code=0, ...)
+    stage_context.judgment = {"score": 0.9, ...}
+    setattr(stage_context, field, None)
+    with pytest.raises(RuntimeError, match=expected_match):
+        stage_finalize_run(stage_context)
+
+# --- Pattern 7: Sequential subprocess guard ---
+with patch("subprocess.run", side_effect=[fetch_ok, checkout_fail]):
+    with pytest.raises(RuntimeError, match="Failed to checkout commit abc123"):
+        manager._checkout_commit()
+
+# --- Pattern 8: Closure guard in action builder ---
+actions = runner._build_experiment_actions(
+    tier_groups=[[TierID.T0]], scheduler=None,
+    tier_results={}, start_time=datetime.now(timezone.utc),
+)
+with pytest.raises(RuntimeError, match="experiment_dir must be set"):
+    actions[ExperimentState.TIERS_COMPLETE]()
+
+# --- Pattern 9: Stale logger after importlib.reload — use string patch form ---
+# WRONG: patch.object resolves the object at import time; reload replaces it
+with patch.object(imported_logger, "error") as mock_err:
+    run_subprocess(["false"])
+    # mock_err.called == False even though log appears in captured output!
+
+# CORRECT: string form resolves module-level logger at patch time (runtime)
+with patch("hephaestus.utils.helpers.logger.error") as mock_err:
+    run_subprocess(["false"])
+    assert mock_err.called  # Works even after importlib.reload(helpers)
+```
+
+### Pattern 1: Chaos Mock — Simulate Side Effects
+
+Chaos tests must verify that the system *observes* a fault, not just that the fault was recorded.
+
+1. Implement `/v1/chaos/inject` to store fault config in `state.active_faults[fault_id]`.
+2. Define `_apply_fault_effects()` that reads `state.active_faults` and performs the side effect (sleep, status code change, skip queue advancement).
+3. Call `_apply_fault_effects()` at the **top** of every response handler (cross-cutting faults like latency).
+4. For targeted faults (kill, queue-starve), add conditional branches inside the specific affected endpoints.
+5. Implement `/v1/chaos/reset` to clear `state.active_faults`.
+6. Each chaos test: (1) POST to inject, (2) call a **different** endpoint, (3) assert that endpoint shows the chaos effect.
+
+| Fault | Affected Endpoint | Simulation |
+|-------|-------------------|------------|
+| `latency` | All | `time.sleep(delay_ms / 1000)` at handler start |
+| `kill` / `unavailable` | Health/readiness | Return 503 + `{"status": "degraded"}` |
+| `queue-starve` | Task dequeue | Skip the queue advancement step |
+| `error-rate` | All responses | Return 500 with probability `p` |
+| `clock-skew` | Timestamp endpoints | Add fixed offset to `now()` |
+
+### Pattern 2: Pydantic Response Model + MagicMock
+
+When an endpoint uses a Pydantic response model and you mock the object whose attributes populate the model:
+
+1. Identify which Pydantic model is used (`response_model=` decorator or explicit `return MyModel(...)`).
+2. List every field and its type annotation.
+3. For each field populated from a mock attribute, **explicitly set** a concrete value of the correct Python type on the mock before the test call.
+4. Use `TestClient(app, raise_server_exceptions=False)` to get the actual HTTP status code rather than a re-raised exception.
+
+Root cause: `MagicMock()` auto-attributes return `MagicMock` instances. Pydantic v2 rejects `MagicMock` for `int`, `str`, `bool` fields, raising `ValidationError` at serialization time — which the framework catches and returns as 500, masking the intended status code.
+
+### Pattern 3: Real File I/O Instead of Mocks
+
+Prefer `tmp_path` over mocking `save_figure` or similar I/O functions when:
+- Tests pass individually but fail together (mock pollution)
+- Content verification is needed (reading CSV is simpler than `mock.call_args[0][3]`)
+
+Conversion steps:
+1. Replace `mock_save_figure` parameter with `tmp_path`.
+2. Remove `with patch()` blocks entirely.
+3. Replace `assert mock.called` with `assert (tmp_path / "filename.ext").exists()`.
+4. For content verification: `pd.read_csv(tmp_path / "filename.csv")` instead of `mock.call_args`.
+5. Remove `mock_save_figure` and `clear_patches` fixtures from `conftest.py`.
+6. Remove `from unittest.mock import patch` imports from test files.
+
+### Pattern 4: Capture All Mock Handles (Missing Assertion Fix)
+
+Detection heuristic:
+
+```bash
+grep -A 20 "def test_calls_.*_and_" tests/ -r | grep "assert_called_once"
+# If count of "and" clauses > count of assert_called_once → missing assertion
+```
+
+Fix: add `as mock_X` to every `patch.object` call that needs to be asserted, then add `mock_X.assert_called_once()` after the context.
+
+### Pattern 5: Runner Entry Point Testing
+
+When an issue requirement says "calls `runner.X()`", tests that call an internal delegate directly leave the discovery/wiring chain untested. Always add a runner-level test that:
+
+1. Creates the minimal filesystem fixture required by the discovery methods.
+2. Instantiates the runner and calls the entry-point method directly.
+3. Asserts on the runner state after the call.
+
+### Pattern 6: Instance Attribute Patching After Construction
+
+When a class constructs a collaborator in `__init__` from a primitive (e.g. `tiers_dir: Path`):
+
+```python
+# Passing MagicMock() as tiers_dir satisfies the constructor but runner.tier_manager
+# is still a real TierManager. Always reassign after construction:
+runner = E2ERunner(mock_config, MagicMock(), Path("/tmp"))
+runner.tier_manager = MagicMock()
+runner.experiment_dir = Path("/results/exp")  # plain attrs: assign directly
+```
+
+- Direct attribute assignment is simpler than `patch.object(runner, "attr", ...)` as a context manager for instance attributes.
+- Use `==` for Pydantic model equality; use `is` only when verifying the exact same object reference.
+
+### Pattern 9: Stale Module Reference After importlib.reload
+
+**Symptom:** `mock_error.called` is `False` but the log message appears in `Captured stdout`. Tests pass when run alone but fail in the full suite.
+
+**Root cause:** Another test file calls `importlib.reload(module)` to test env-var overrides. After reload, `module.logger` is a new object. The test file imported `logger` at module load time, so `patch.object(logger, "error")` patches the **old** object. The production code uses the **new** `module.logger` — the mock is invisible to it.
+
+**Diagnosis:** Run the failing test in isolation (passes) vs. after the reload test (fails). Check for `importlib.reload` calls in other test files that reload the same module.
+
+**Fix:** Replace `patch.object(imported_obj, "attr")` with `patch("package.module.obj.attr")`. The string form looks up `module.obj` at patch execution time (runtime), not import time, so it always targets the current object regardless of any intervening reloads.
+
+```python
+# Wrong — imports logger once at module load; stale after reload
+from hephaestus.utils.helpers import logger
+with patch.object(logger, "error") as mock_err: ...
+
+# Correct — resolves hephaestus.utils.helpers.logger at test runtime
+with patch("hephaestus.utils.helpers.logger.error") as mock_err: ...
+```
+
+**Alternative (if you must use patch.object):** Use `importlib.import_module` inside the test to get the current module reference:
+
+```python
+import importlib
+helpers = importlib.import_module("hephaestus.utils.helpers")
+with patch.object(helpers.logger, "error") as mock_err: ...
+```
+
+### Pattern 7: RuntimeError Guard Tests
+
+**Single guard (simple form):**
+
+```python
+def test_raises_when_field_is_none(self, my_fixture):
+    my_fixture.field = None
+    with pytest.raises(RuntimeError, match=r"field"):
+        my_function(my_fixture)
+```
+
+**Multi-guard (parametrize):** Set all fields to valid values first, then null out only the field under test. This ensures the specific guard fires, not an earlier one.
+
+**Runner-level guard:** Patch the side-effect method that normally sets the field as a no-op, then call the method and let the guard fire.
+
+**Subprocess failure guard:** Use `side_effect=[ok_result, fail_result]` to simulate sequential `subprocess.run` calls where the second fails.
+
+**State guard (`_is_setup`):** The default value is `False` — no mock needed. For later guards behind the state check, set `manager._is_setup = True` to bypass the first guard.
+
+**Local-import patch target rule:**
+
+```python
+# runner.py uses: from scylla.e2e.health import HeartbeatThread (inside run())
+# WRONG: patch("scylla.e2e.runner.HeartbeatThread", ...)  # AttributeError
+# CORRECT: patch("scylla.e2e.health.HeartbeatThread", ...)
+```
+
+Always patch `defining_module.ClassName`, not `caller_module.ClassName` for local imports.
+
+**Closure guard (action builder):** Call the builder method to get the closure dict, null the required attribute, then invoke `actions[StateKey]()` directly — no state machine required.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| 1 | Chaos mock records fault via `/inject`, returns 200. No side effects on subsequent requests. | Tests asserted on observed chaos (slow responses, 503 health, stalled queue). Mock never produced those effects, so chaos tests failed despite inject returning 200. | Recording the intent of a fault is not the same as simulating its effects. The mock must change behavior of OTHER endpoints based on active faults. |
+| 2 | Implement only the latency chaos fault, skip kill and queue-starve. | Tests for health degradation and queue stall still failed. Each fault type has its own simulation. | Each fault type needs its own side-effect simulation — there is no generic fault effect. |
+| 3 | Apply cross-cutting fault effects (latency) only to designated "chaos endpoints". | Some tests asserted ALL endpoints slow down. Restricted effects gave false greens in isolation but wrong results in the full suite. | Cross-cutting fault effects must be applied via a shared helper called at the top of every handler. |
+| 4 | Assumed a 500 response came from `connect.side_effect = OSError(...)` in application logic. | The OSError was handled — the 500 came from Pydantic `ValidationError` at serialization time, not from the connect call. | Always check where in the request lifecycle a 500 originates: application logic errors vs. response serialization errors are distinct failure points. |
+| 5 | Used `clear_patches` autouse fixture in `conftest.py` to prevent mock leakage between test files. | `patch.stopall()` does not prevent cross-module pollution when the same module is imported and mocked in multiple test files. | Complete removal of mocks and switching to real I/O with `tmp_path` is easier and more reliable than partial isolation fixes. |
+| 6 | Passed `MagicMock()` as the `tiers_dir` constructor argument to avoid instantiating a real `TierManager`. | The constructor accepts it without crashing, but `runner.tier_manager` is still a real `TierManager` — not a mock. Method calls on it fail or produce unexpected results. | Always reassign `runner.tier_manager` (and similar constructed collaborators) directly on the instance after construction. |
+| 7 | Patched `scylla.e2e.runner.HeartbeatThread` to control the heartbeat in `run()`. | `runner.py` uses a local import (`from scylla.e2e.health import HeartbeatThread` inside `run()`), so `scylla.e2e.runner` has no `HeartbeatThread` attribute — patch raises `AttributeError`. | For local imports inside function bodies, patch the defining module (`scylla.e2e.health.HeartbeatThread`), not the caller's namespace. |
+| 8 | Tested closure guard by setting up the full state machine and driving it to the target state. | State machine setup was complex and fragile; intermediate states required many mocks. | Call the action-builder method directly to get the closure dict, set the attribute to `None`, and invoke the closure key — no state machine needed. |
+| 9 | Used `patch.object(imported_logger, "error")` to assert that `run_subprocess` logs errors; tests passed in isolation but all 3 mock assertions failed when the full suite ran. | A sibling test file calls `importlib.reload(helpers)` to test env-var timeout overrides. Reload replaces `helpers.logger` with a new `ContextLogger` instance. The imported `logger` reference is stale; `run_subprocess` uses the new instance, so the patch is invisible. The log message still appears in captured stdout (confirming the code ran) but `mock_err.called` stays `False`. | Use the string form `patch("package.module.obj.attr")` which resolves the module attribute at patch time rather than at import time. Always suspect stale references when a mock's `called` is `False` but the side-effect (log line, file write) visibly occurred. |
+
+## Results & Parameters
+
+### Chaos Mock Full Skeleton
+
+```python
+import time
+from dataclasses import dataclass, field
+from typing import Any, Dict
+from fastapi import FastAPI, Response
+
+app = FastAPI()
+
+@dataclass
+class MockState:
+    active_faults: Dict[str, Any] = field(default_factory=dict)
+    tasks: list = field(default_factory=list)
+
+state = MockState()
+
+def _apply_fault_effects():
+    if (f := state.active_faults.get("latency")):
+        time.sleep(f.get("delay_ms", 0) / 1000)
+
+@app.post("/v1/chaos/inject")
+def inject(req: dict):
+    state.active_faults[req["id"]] = req
+    return {"status": "ok"}
+
+@app.post("/v1/chaos/reset")
+def reset():
+    state.active_faults.clear()
+    return {"status": "ok"}
+
+@app.get("/v1/health")
+def health():
+    if state.active_faults.get("kill"):
+        return Response(status_code=503, content=b'{"status":"degraded"}',
+                        media_type="application/json")
+    _apply_fault_effects()
+    return {"status": "ok"}
+
+@app.get("/v1/tasks")
+def tasks():
+    _apply_fault_effects()
+    if not state.active_faults.get("queue-starve"):
+        _advance_queue()
+    return {"tasks": state.tasks}
+```
+
+### Mock Conversion Table (file I/O)
+
+| Pattern | Before | After |
+|---------|--------|-------|
+| Fixture | `mock_save_figure` | `tmp_path` |
+| Path arg | `Path("/tmp")` | `tmp_path` |
+| Assert | `assert mock.called` | `assert (tmp_path / "file.vl.json").exists()` |
+| Content check | `mock.call_args[0][3]` | `pd.read_csv(tmp_path / "file.csv")` |
+| Import | `from unittest.mock import patch` | (remove) |
+
+### Guard Match Pattern Convention
+
+Guards follow `raise RuntimeError(f"{field_name} must be set before {function_name}")`,
+so `match=r"field_name"` always matches. For f-string guards with runtime values,
+include a unique fragment: `match="Failed to checkout commit abc123"`.
+
+### Pydantic Response Model — Field Typing Checklist
+
+When mocking objects whose attributes populate a Pydantic response model:
+- `int` fields → set to `0` or a concrete integer
+- `str` fields → set to `""` or a concrete string
+- `bool` fields → set to `True` or `False`
+- Use `TestClient(app, raise_server_exceptions=False)` to capture actual HTTP status codes
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectCharybdis | PR #88 — chaos integration tests with NATS + mock Agamemnon | Chaos tests R02/R03/R04/R05 all green after adding side-effect simulation |
+| ProjectHermes | PR #300 — NATS publisher health endpoint test | `test_lifespan_degraded_health_returns_503` fixed by typing mock attributes |
+| ProjectScylla | PR #353 — analysis figure test mock removal | 332 tests passing after switching to `tmp_path` real I/O |
+| ProjectScylla | PR #1313 — review feedback, missing assertion | 18 tests pass after adding `mock_setup.assert_called_once()` |
+| ProjectScylla | PR #1312 — review feedback, runner path untested | Runner-level zombie test added, 12 tests pass |
+| ProjectScylla | PR #819 — internal method unit tests (issue #773) | 3 tests added for `_select_best_baseline_from_group`, all 2208 pass |
+| ProjectScylla | PR #1210 — RuntimeError guard tests (issue #1144) | 8 new guard tests, 3265 passed, 78.42% coverage |
+| ProjectScylla | PR #1310 — WorkspaceManager guard tests (issue #1215) | 3 new guard tests, 25 module tests pass |
+| ProjectHephaestus | PR #644 — timeout= on subprocess calls; test_constants.py reload poisoned test_general_utils.py logger mocks | 2601 unit tests pass after switching to `patch("hephaestus.utils.helpers.logger.error")` |
+
+---
+
+## Superseded from ci-tests-agent-subprocess-claude-absent
+
+**Original date/version:** 2026-05-28 / v1.0.0
+
+```yaml
+name: ci-tests-agent-subprocess-claude-absent
+description: "Automation/agent-orchestration unit tests pass locally but fail in CI because the dev machine has the `claude` CLI on PATH and CI does not — an unpatched agent call (invoke_claude_with_session / _run_advise / _run_learn) spawns a REAL claude subprocess. Use when: (1) you add an agent-invoking method to code under test, (2) a unit test reaches an invoke_claude_with_session / _run_advise / _run_learn call, (3) automation/orchestration tests are green locally but red in CI, (4) you are auditing fixtures that do not disable agent gates. Fix: default agent gates OFF in shared fixtures + reproduce CI locally by hiding ~/.local/bin (where claude lives) from PATH while keeping pixi + gh."
+category: testing
+date: 2026-05-28
+version: "1.0.0"
+user-invocable: false
+tags:
+  - testing
+  - ci-cd
+  - test-isolation
+  - claude-cli
+  - agent-orchestration
+  - automation
+  - subprocess
+  - mock
+  - fixtures
+  - path
+  - pixi
+  - invoke-claude-with-session
+  - flaky-ci
+  - local-green-ci-red
+```
+
+
+# CI Tests: Agent Subprocess When `claude` Is Absent
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-28 |
+| **Objective** | Stop automation/agent unit tests that pass locally from failing in CI because an unpatched agent call spawns a real `claude` subprocess that exists locally but not in CI |
+| **Outcome** | Success — gated the new agent call OFF in the shared fixture, patched every agent-invoking method, added gated-behavior coverage; full automation suite passes with `claude` hidden from PATH (845 passed) and the PR cleared CI |
+| **Verification** | verified-ci |
+
+## When to Use
+
+Use this skill when any of the following apply:
+
+- You are **adding an agent-invoking method** (e.g. `_run_advise`, `_run_learn`, anything wrapping `invoke_claude_with_session`) to code that has unit tests.
+- A unit test path **reaches** an `invoke_claude_with_session` / `_run_advise` / `_run_learn` call — confirm it is patched, or it will shell out to a real `claude`.
+- Automation/orchestration tests are **"green locally but red in CI"** and the diff touched an agent/orchestration code path.
+- You are **auditing test fixtures** that construct options/config and notice an agent gate (`enable_advise`, `enable_learn`, etc.) is not defaulted to `False`.
+- A failing CI assertion is a downstream `assert_called_once()` (e.g. `mock_fix.assert_called_once()`) that never fires — an upstream agent call short-circuited before reaching the mocked step.
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Reproduce the CI sandbox locally: hide ~/.local/bin (where `claude` lives)
+# from PATH while KEEPING pixi's dir + gh on PATH.
+
+# Build a PATH that has pixi + standard dirs but NOT ~/.local/bin:
+CLEAN_PATH="$(dirname "$(which pixi)"):/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+# Confirm claude is hidden (this is the whole point):
+PATH="$CLEAN_PATH" which claude || echo "claude hidden (good)"
+
+# Run the suite exactly as CI would see it:
+PATH="$CLEAN_PATH" pixi run pytest tests/unit/automation/ -q --no-cov
+```
+
+If the suite passes with `claude` hidden, it will pass in CI. **Do NOT blank out PATH
+entirely** — that breaks `pixi` itself (pixi can live at `/tmp/pixi-.../bin/pixi`). Keep
+pixi's directory on PATH and only drop `~/.local/bin`.
+
+### Detailed Steps
+
+1. **Recognize the failure mode.** The symptom is a test that is green on your machine
+   and red in CI, on automation/orchestration code. The root cause is environmental, not
+   logical: locally `claude` resolves (typically `~/.local/bin/claude`), so an unpatched
+   agent call "succeeds enough" to pass; in CI `claude` is absent, so the same call
+   errors / hangs / short-circuits and the test fails. Diagnose from the CI log — a
+   downstream `mock.assert_called_once()` that never fired means an upstream agent call
+   returned early before reaching the mocked step.
+
+2. **Find every agent-invoking call on the test's path.** Grep the code under test for
+   `invoke_claude_with_session`, `_run_advise`, `_run_learn`, or any helper that builds a
+   `claude` subprocess. Every such call reached by a test must either be (a) behind a gate
+   that the fixture defaults OFF, or (b) explicitly patched in the test.
+
+3. **Default the new agent gate OFF in the shared fixture.** When you add a gate such as
+   `enable_advise`, set it to `False` in the shared options/config fixture
+   (`CIDriverOptions(..., enable_advise=False)`). The project's other fixtures (planner
+   `_make_options`, etc.) already default `enable_*` gates to `False` for exactly this
+   reason — follow suit for any new agent-invoking gate so existing tests never reach the
+   new subprocess.
+
+4. **Patch every agent-invoking method in tests that exercise that path.** A fix-path test
+   that patches `_get_failing_ci_logs` and `_run_ci_fix_session` but NOT a newly-added
+   `_run_advise` will hit a real `claude`. Patch the new method too.
+
+5. **Add explicit coverage for the gated behavior.** Add tests proving:
+   - When the gate is **enabled**, the agent method runs **once** and its findings reach
+     the downstream call.
+   - When the gate is **disabled**, the agent method is **skipped** and findings are empty.
+
+6. **Reproduce CI locally before pushing** using the Quick Reference snippet — run the
+   automation suite with `claude` hidden from PATH. Only push once it is green under those
+   conditions.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| 1 | Trusted the local green run for agent-invoking tests and pushed. | The local `claude` on PATH (`~/.local/bin/claude`) masked the missing-binary CI behavior — the call "succeeded enough" locally but errored/short-circuited in CI. | Re-run the suite with `claude` hidden from PATH before pushing; a local pass is not a CI pass for agent code. |
+| 2 | Patched only the obvious downstream calls in a fix-path test (`_get_failing_ci_logs`, `_run_ci_fix_session`). | A newly-added upstream agent call (`_run_advise`) was left unpatched and hit a real `claude` subprocess; the downstream `mock_fix.assert_called_once()` never fired because advise short-circuited first. | Default agent gates OFF in shared fixtures AND patch every agent-invoking method on the test's path — not just the ones you remembered to add. |
+| 3 | Blanked out PATH entirely (`PATH=""` / `PATH=/usr/bin`) to simulate "no claude". | `pixi` itself disappeared (it lived at `/tmp/pixi-.../bin/pixi`), so the suite could not even start — a false failure unrelated to the bug. | Keep pixi's directory (and `gh`) on PATH; only drop `~/.local/bin` where `claude` lives. |
+| 4 | Added the new `enable_advise` gate but left it defaulting to `True` in the shared fixture. | Every pre-existing fix-session test suddenly reached the new agent call and went red in CI. | New agent-invoking gates default to `False` in the shared fixture; only the tests that specifically exercise the gate flip it on and patch the method. |
+
+## Results & Parameters
+
+### CLEAN_PATH reproduction recipe (copy-paste ready)
+
+```bash
+# Hide ~/.local/bin (claude) but keep pixi's dir + standard system dirs.
+CLEAN_PATH="$(dirname "$(which pixi)"):/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+# Sanity check: claude must NOT resolve; pixi MUST resolve.
+PATH="$CLEAN_PATH" which claude || echo "claude hidden (good)"
+PATH="$CLEAN_PATH" which pixi   # must print pixi's path
+
+# Run the automation suite the way CI sees it (no real claude available):
+PATH="$CLEAN_PATH" pixi run pytest tests/unit/automation/ -q --no-cov
+# Green here  ⇒  green in CI.
+```
+
+### Fixture pattern: default agent gates OFF
+
+```python
+# Shared fixture for CI-driver tests — agent gate defaults OFF so existing
+# tests never reach a real `claude` subprocess.
+def _make_ci_driver_options(**overrides):
+    defaults = dict(
+        # ... other options ...
+        enable_advise=False,   # gate the agent call OFF by default
+    )
+    defaults.update(overrides)
+    return CIDriverOptions(**defaults)
+```
+
+```python
+# A test that specifically exercises advise flips the gate ON *and* patches
+# every agent-invoking method on the path.
+def test_advise_runs_once_and_findings_reach_fix(monkeypatch):
+    opts = _make_ci_driver_options(enable_advise=True)
+    driver = CIDriver(opts)
+    with (
+        patch.object(driver, "_run_advise", return_value="FINDINGS") as mock_advise,
+        patch.object(driver, "_get_failing_ci_logs", return_value="logs"),
+        patch.object(driver, "_run_ci_fix_session") as mock_fix,
+    ):
+        driver.run_fix_session()
+    mock_advise.assert_called_once()           # advise ran exactly once
+    assert "FINDINGS" in mock_fix.call_args.args  # its output reached the fix step
+
+def test_advise_skipped_when_disabled():
+    opts = _make_ci_driver_options(enable_advise=False)
+    driver = CIDriver(opts)
+    with (
+        patch.object(driver, "_run_advise") as mock_advise,
+        patch.object(driver, "_get_failing_ci_logs", return_value="logs"),
+        patch.object(driver, "_run_ci_fix_session") as mock_fix,
+    ):
+        driver.run_fix_session()
+    mock_advise.assert_not_called()            # gate OFF ⇒ no agent call
+    # findings empty ⇒ downstream sees no advise output
+    assert mock_fix.called
+```
+
+### Why "green locally / red in CI" happens here
+
+| Dimension | Local default | CI default | Effect on an unpatched agent call |
+| ----------- | -------------- | ------------ | ---------------------------------- |
+| `claude` on PATH | Yes (`~/.local/bin/claude`) | No (binary absent) | Local: call resolves, test passes. CI: call fails/hangs/short-circuits, test fails. |
+| `pixi` on PATH | Yes | Yes | Must stay on PATH locally too — do not blank PATH. |
+| `gh` on PATH | Yes | Yes | Keep available when reproducing. |
+| Agent gate (`enable_advise`) | Should default `False` in fixture | Same | If left `True`, every test reaches the subprocess. |
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectHephaestus | GO/NOGO + advise-first work on the CI driver (PR #679; earlier #677) | Adding `_run_advise` to the fix path broke two `test_ci_driver.py` fix-session tests in CI but not locally; gating `enable_advise=False` in the shared fixture + patching `_run_advise` + adding gated-behavior coverage fixed it. 845 automation tests pass with `claude` hidden from PATH; the PR cleared CI. |
+
+---
