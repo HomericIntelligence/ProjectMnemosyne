@@ -13,6 +13,10 @@ Initial consolidation. Merged the following 3 skills:
 - delegates-to-file-existence-check
 - fix-stale-agent-crossrefs
 
+## v1.1.0 (2026-06-07)
+
+restore resource-prompt + httpx/Pydantic how-tos (nuance audit pass 2)
+
 ## Superseded from agent-config-and-tier-architecture
 
 **Original date:** 2026-05-19

@@ -3,7 +3,7 @@ name: agent-config-validation-and-integrity
 description: "Design, validate, and maintain agent configuration integrity in the HomericIntelligence agentic hierarchy. Use when: (1) consolidating redundant junior/senior agent tiers or multiple specialist agents into a parent tier with overlapping scope, (2) adding CI validation that delegates_to frontmatter fields map to real .md files (referential integrity), (3) fixing stale cross-references in agent configs or docs after specialist consolidation deletes agent files, (4) validating YAML frontmatter correctness before committing agent configuration changes, (5) routing pipeline phases to the correct Claude model tier via centralized module with env-var overrides."
 category: architecture
 date: 2026-06-07
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 history: agent-config-validation-and-integrity.history
 tags:
@@ -230,6 +230,66 @@ def test_all_agent_delegates_to_references_exist(self) -> None:
    `grep -r "deleted-agent-name" --include="*.md"` to confirm zero remaining references.
 7. **Commit** referencing the consolidation issue.
 
+#### D. Resource-Prompt Consistency Fix
+
+Ensure all root-level config fields are mapped into the `resources` dict
+(`src/<pkg>/e2e/tier_manager.py`) and that prompt messages use count-aware wording:
+
+```python
+# Map root-level fields (mirror existing mcp_servers handling)
+for field in ("tools", "agents", "skills"):
+    value = config_data.get(field, {})
+    if value:
+        resources[field] = value
+
+# Prompt wording — count-aware (singular vs plural)
+if len(resource_names) > 1:
+    prefix = "Maximize usage of the following [type]s to complete this task:"
+else:
+    prefix = "Use the following [type] to complete this task:"
+
+# tools: {enabled: all} suffix logic
+if tools_spec.get("enabled") == "all":
+    suffixes.append("Maximize usage of all available tools to complete this task.")
+```
+
+Resource-prompt output reference:
+
+| Configuration | Prompt output |
+| --------------- | -------- |
+| `tools: {enabled: all}` | "Maximize usage of all available tools to complete this task." |
+| `tools: {names: [Read, Write]}` | "Maximize usage of the following tools to complete this task:\n- Read\n- Write" |
+| `tools: {names: [Read]}` | "Use the following tool to complete this task:\n- Read" |
+| `mcp_servers: [fs, git]` | "Maximize usage of the following MCP servers to complete this task:\n- fs\n- git" |
+| No resources | "Complete this task using available tools and your best judgment." |
+
+#### E. REST API + Pydantic Config Integration (httpx)
+
+1. Add `httpx>=0.27,<1` to **both** `pixi.toml` and `pyproject.toml`.
+2. Create the module in this order: `errors.py` → `models.py` → `client.py` → `__init__.py`.
+3. `client.py`: context manager, central `_request()` helper; health-check returns `None`
+   on failure while other operations raise.
+4. Use the `import X as X` pattern in `__init__.py` and config re-exports when
+   `implicit_reexport=false` in mypy (a plain `from module import X` is NOT re-exported).
+5. Wire the optional field into the config hierarchy:
+   `maestro: MaestroConfig | None = Field(default=None)`.
+6. Mock `httpx.Client` in tests via `unittest.mock.patch`.
+
+httpx module layout:
+
+```text
+<pkg>/<module>/
+  __init__.py    # Public API re-exports (import X as X pattern)
+  errors.py      # BaseError, ConnectionError, APIError(status_code, response_body)
+  models.py      # Config(enabled: bool = False), request/response models
+  client.py      # Client with context manager + central _request() helper
+
+tests/unit/<module>/
+  conftest.py    # Shared fixtures
+  test_client.py
+  test_models.py
+```
+
 ### Config Validation Checklist
 
 Required YAML frontmatter fields for agent configs:
@@ -278,6 +338,8 @@ correct directory structure.
 | Running pipeline with no `--model` flag | Every `claude` invocation inherited terminal default (Opus) | One tier's quota exhausted; all phases died HTTP 429 | Always pass `--model` explicitly at session-creating sites |
 | Passing `--model` at `--resume` sites for symmetry | Passed `--model` uniformly at all invocations | CLI locks model to the originating session | Resume sites must NOT pass `--model`; document as invariant |
 | Placing model helper between import groups | Put tier constants + helper mid-file | `ruff` raised E402 (import not at top) | Helpers go BELOW all imports — non-negotiable with E402 |
+| `type: ignore[arg-type]` on valid Pydantic int fields | Added ignores to test calls like `MaestroConfig(timeout_seconds=0)` | Mypy flagged `unused-ignore` — Pydantic validates at runtime, not type level | Don't add `type: ignore` for Pydantic runtime validators on correctly-typed fields |
+| Plain import for re-export in strict-mypy project | `from module import MaestroConfig` in `config/models.py` | `implicit_reexport=false` means plain imports are not re-exported | Use `import X as X` when a symbol must be importable from the importing module |
 
 ## Results & Parameters
 
