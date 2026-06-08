@@ -1,0 +1,1051 @@
+<!-- markdownlint-disable MD024 -->
+
+# gha-required-checks-branch-protection — History
+
+## v1.0.0 (2026-06-07)
+
+Original consolidated skill merging 5 prior skills:
+
+1. ci-cd-reusable-workflow-required-checks-aggregator
+2. ci-cd-summary-aggregator-job-skip-required-context
+3. github-branch-protection-api-validation
+4. extend-workflow-smoke-tests
+5. ci-validate-coverage-steps-fallback
+
+---
+
+## Superseded from ci-cd-reusable-workflow-required-checks-aggregator
+
+**Original date:** 2026-05-02
+**Original version:** 1.0.0
+
+```yaml
+name: ci-cd-reusable-workflow-required-checks-aggregator
+description: "Consolidate duplicate GitHub Actions jobs into a reusable workflow so `_required.yml` is a thin aggregator. Use when: (1) two or more workflow files define the same jobs (lint, test, build), causing every PR to run them twice; (2) you want `_required.yml` to depend on existing CI jobs rather than redefine them; (3) a fat required-checks workflow is drifting out of sync with other workflow files."
+category: ci-cd
+date: 2026-05-02
+version: "1.0.0"
+user-invocable: false
+verification: verified-precommit
+tags: [github-actions, reusable-workflow, workflow-call, required-checks, dry, aggregator]
+```
+
+
+# CI/CD Reusable Workflow Required-Checks Aggregator
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-02 |
+| **Objective** | Refactor a monolithic `_required.yml` (~280 lines) that duplicated jobs from `validate-plugins.yml` into a thin aggregator that delegates to a single reusable `_checks.yml` via `workflow_call` |
+| **Outcome** | Proposed workflow — yamllint passed locally; CI not yet run |
+
+## When to Use
+
+- Two or more workflow files define the same jobs (e.g., `lint`, `unit-tests`, `build`), causing every PR to run them twice
+- `_required.yml` or an equivalent required-checks orchestrator is a 200+ line monolith that duplicates job definitions already maintained elsewhere
+- The required-checks workflow is drifting out of sync with other workflow files because changes must be applied in two places
+- You need a thin orchestrator for branch ruleset enforcement without rewriting all job logic
+
+## Verified Workflow
+
+> **Verification level:** Pre-commit — `yamllint` passed locally. CI has not yet run at the time of skill creation.
+
+### Quick Reference
+
+```bash
+# 1. Create the reusable workflow file
+touch .github/workflows/_checks.yml   # all job definitions here
+
+# 2. Rewrite the required-checks orchestrator to ~20 lines
+# _required.yml just calls _checks.yml via uses:
+
+# 3. Delete the duplicate workflow file
+rm .github/workflows/validate-plugins.yml
+
+# 4. Validate YAML locally
+yamllint .github/workflows/_checks.yml .github/workflows/_required.yml
+
+# 5. Verify check context names match ruleset (bare names, no prefix)
+gh api repos/<org>/<repo>/check-runs \
+  --jq '.check_runs[] | .name' | sort -u
+```
+
+### Detailed Steps
+
+1. **Audit the duplication**: Identify which jobs appear in both `_required.yml` and another workflow file. List each job ID and confirm they are truly identical (same steps, same runners).
+
+2. **Check the branch ruleset required check names**: Run `gh api repos/<org>/<repo>/rulesets --jq '.[].conditions'` and cross-reference with `gh api repos/<org>/<repo>/check-runs` on a recent PR to find the exact context names that must pass. These are bare job names (e.g., `lint`, `unit-tests`) — NOT prefixed with the calling workflow name.
+
+3. **Create `.github/workflows/_checks.yml`** as a reusable workflow:
+
+   ```yaml
+   name: Checks
+   on:
+     workflow_call: {}   # no inputs needed for most cases
+
+   jobs:
+     lint:
+       runs-on: ubuntu-latest
+       steps:
+         - uses: actions/checkout@<sha>
+         - run: ruff check .
+
+     unit-tests:
+       runs-on: ubuntu-latest
+       steps:
+         - uses: actions/checkout@<sha>
+         - run: pytest tests/unit
+
+     # ... all other job definitions
+   ```
+
+4. **Rewrite `.github/workflows/_required.yml`** to ~20 lines:
+
+   ```yaml
+   name: Required Checks
+   on:
+     pull_request:
+       branches: [main]
+     push:
+       branches: [main]
+
+   jobs:
+     checks:
+       uses: ./.github/workflows/_checks.yml
+       permissions:
+         contents: read
+         # re-declare any permissions the callee jobs need
+   ```
+
+5. **Delete the now-redundant workflow file** (e.g., `validate-plugins.yml`) — absorb any unique steps (e.g., `ruff check`) into `_checks.yml` first.
+
+6. **Validate locally**:
+
+   ```bash
+   yamllint .github/workflows/_checks.yml
+   yamllint .github/workflows/_required.yml
+   ```
+
+7. **Open a PR** — both `_checks.yml` and the new `_required.yml` land in the same PR. GitHub resolves `uses: ./.github/workflows/_checks.yml` against the PR head branch, so the PR sees its own version of `_checks.yml` immediately.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| ------- | -------------- | ------------- | -------------- |
+| Attempt 1 | Used `workflow_run` trigger to have `_required.yml` depend on `validate-plugins.yml` completing | Fires asynchronously after the triggering workflow completes; check contexts are prefixed differently and don't satisfy branch ruleset required checks reliably | Use `workflow_call` (reusable workflows), not `workflow_run`, for required-checks aggregation |
+| Attempt 2 | Used `needs:` to reference a job from a different workflow file | Not supported — `needs:` only works within the same workflow file | Cross-workflow job dependencies require `workflow_call` to extract jobs into a shared callable workflow |
+| Attempt 3 | Deleted `validate-plugins.yml` and kept the fat `_required.yml` unchanged | Makes `_required.yml` the single source but leaves it as a ~280-line monolith, not a thin aggregator; drift problem remains | The reusable workflow split is the only way to achieve both DRY and a thin orchestrator |
+
+## Results & Parameters
+
+### Final File Structure
+
+```
+.github/workflows/
+  _checks.yml          # ~279 lines — all job definitions, on: workflow_call only
+  _required.yml        # ~20 lines  — thin caller, on: pull_request + push
+  # validate-plugins.yml deleted — its unique steps absorbed into _checks.yml
+```
+
+### Critical Behavior Notes
+
+**Check context name behavior with `workflow_call`**
+
+When a job is defined inside a `workflow_call` callee (`_checks.yml`) and called from a parent workflow (`_required.yml`), GitHub Actions emits check context names as the **bare job name** (e.g., `lint`), NOT prefixed with the calling workflow name (e.g., NOT `Required Checks / lint`). This means branch ruleset entries require **no updates** when adopting this pattern.
+
+**Path resolution for `uses: ./.github/workflows/_checks.yml`**
+
+The relative path `uses: ./.github/workflows/_checks.yml` resolves against the **PR head branch**, not the base branch. Landing both `_checks.yml` and the new `_required.yml` in the same PR is safe — the PR immediately sees its own version of `_checks.yml`.
+
+**Permission propagation**
+
+Top-level `permissions:` on the caller workflow (`_required.yml`) does NOT automatically propagate to `workflow_call` jobs. Re-declare `permissions:` explicitly in the caller's job block:
+
+```yaml
+# _required.yml
+jobs:
+  checks:
+    uses: ./.github/workflows/_checks.yml
+    permissions:
+      contents: read
+      checks: write
+      # add whatever the callee jobs need
+```
+
+**`workflow_run` is NOT a substitute**
+
+`workflow_run` triggers asynchronously (after the triggering workflow finishes) and emits check context names with a different format. It does not reliably satisfy branch ruleset required checks. Use `workflow_call` exclusively for required-checks aggregation.
+
+### Expected Outcome After Merge
+
+- Every PR runs each CI job exactly once (no duplicates)
+- `_required.yml` remains ~20 lines — easy to audit and maintain
+- All job definitions live in `_checks.yml` — single source of truth
+- Ruleset required check names continue to match without any ruleset edits
+- `yamllint` passes locally on both workflow files
+
+## Verified On
+
+| Project | Context | Details |
+| ------- | ------- | ------- |
+| ProjectMnemosyne | Local branch — yamllint passed, awaiting CI | Pre-commit verification only |
+
+## References
+
+- [GitHub Actions: Reusing workflows](https://docs.github.com/en/actions/using-workflows/reusing-workflows)
+- [GitHub Actions: `workflow_call` trigger](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_call)
+- [GitHub Actions: `workflow_run` trigger](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_run)
+- [GitHub: Branch rulesets and required checks](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets)
+- [skip-reusable-workflow-jobs-in-checkout-validator.md](skip-reusable-workflow-jobs-in-checkout-validator.md)
+
+---
+
+## Superseded from ci-cd-summary-aggregator-job-skip-required-context
+
+**Original date:** 2026-05-15
+**Original version:** 1.0.0
+
+```yaml
+name: ci-cd-summary-aggregator-job-skip-required-context
+description: "Fix PRs permanently BLOCKED because a required status-check context is a job gated `if: github.event_name != 'pull_request'`: a whole-job skip does NOT satisfy a required check. Replace per-job required contexts with a single `summary` aggregator job (`if: always()`) that asserts `needs.X.result == 'success'` for must-run jobs and `success|skipped` for jobs designed to skip on PRs; then remove the per-job contexts from branch protection. Use when: (1) branch protection requires a context that the workflow legitimately skips on `pull_request`, (2) PRs are BLOCKED with `skipped` (not failing) required checks, (3) extending a CI workflow with registry/secret-dependent jobs that must skip on forked PRs."
+category: ci-cd
+date: 2026-05-15
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - github-actions
+  - branch-protection
+  - required-status-checks
+  - aggregator
+  - if-always
+  - job-skip
+  - skipped-conclusion
+  - summary-job
+```
+
+
+# CI/CD Summary Aggregator for Job-Skip Required Contexts
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-15 |
+| **Objective** | Unblock PRs where a required status-check context is a job that whole-job-skips on `pull_request` events. A `skipped` job conclusion does NOT satisfy a required check in branch protection, so the PR stays BLOCKED indefinitely. |
+| **Outcome** | Added a `summary` aggregator job (`if: always()`) that tolerates `skipped` for registry/secret-dependent jobs and asserts `success` for must-run jobs; updated branch protection to require only `summary`. |
+| **Verification** | verified-ci — landed in HomericIntelligence/ProjectOdyssey PR #5406, merged commit `da1b3f7e` (2026-05-15). The PR itself was BLOCKED before the branch-protection update and unblocked after. |
+
+## When to Use
+
+- Branch protection requires a context that the workflow legitimately skips on `pull_request` (e.g., image push, SBOM upload, secret-scoped security scan).
+- PRs are BLOCKED with required checks reported as `skipped` (not failing) and no path-filter mismatch is at fault.
+- You are extending a CI workflow with registry-dependent or secret-dependent jobs that must skip on forked PRs.
+- You want one stable required-check name (`summary`) that doesn't grow with the matrix.
+
+## Verified Workflow
+
+> **Verification level:** verified-ci — landed in ProjectOdyssey PR #5406 (merged 2026-05-15). The aggregator + branch-protection update together unblocked the PR.
+
+### Quick Reference
+
+Add a `summary` job to the workflow:
+
+```yaml
+  summary:
+    needs: [build-and-push, test-images, security-scan]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Assert needs results (aggregator gate)
+        env:
+          BUILD_RESULT: ${{ needs.build-and-push.result }}
+          TEST_IMAGES_RESULT: ${{ needs.test-images.result }}
+          SECURITY_SCAN_RESULT: ${{ needs.security-scan.result }}
+        run: |
+          fail=0
+          echo "build-and-push   = $BUILD_RESULT"
+          echo "test-images      = $TEST_IMAGES_RESULT"
+          echo "security-scan    = $SECURITY_SCAN_RESULT"
+          if [[ "$BUILD_RESULT" != "success" ]]; then
+            echo "::error::build-and-push must be 'success' (got: $BUILD_RESULT)"
+            fail=1
+          fi
+          case "$TEST_IMAGES_RESULT" in
+            success|skipped) ;;
+            *) echo "::error::test-images must be 'success' or 'skipped' (got: $TEST_IMAGES_RESULT)"; fail=1 ;;
+          esac
+          case "$SECURITY_SCAN_RESULT" in
+            success|skipped) ;;
+            *) echo "::error::security-scan must be 'success' or 'skipped' (got: $SECURITY_SCAN_RESULT)"; fail=1 ;;
+          esac
+          exit "$fail"
+```
+
+Then update branch protection to require only `summary`:
+
+```bash
+ORG=HomericIntelligence; REPO=ProjectOdyssey
+gh api repos/$ORG/$REPO/branches/main/protection/required_status_checks --jq '.checks' > /tmp/cur.json
+jq '[.[] | select(.context as $c | ["test-images","security-scan","build-and-push (ci)","build-and-push (production)","build-and-push (runtime)"] | index($c) | not)]' /tmp/cur.json > /tmp/new.json
+jq -n --slurpfile checks /tmp/new.json '{strict: false, checks: $checks[0]}' > /tmp/patch.json
+gh api -X PATCH repos/$ORG/$REPO/branches/main/protection/required_status_checks --input /tmp/patch.json
+```
+
+### Detailed Steps
+
+1. **Identify the problem.** Open a BLOCKED PR. In the "Some checks haven't completed yet" / "Required" section, look for contexts marked `Skipped` rather than `Failed`. Confirm those jobs are gated whole-job by `if: github.event_name != 'pull_request'` (or similar conditional excluding the current event).
+
+2. **List the per-job required contexts in branch protection.**
+
+   ```bash
+   gh api repos/$ORG/$REPO/branches/main/protection/required_status_checks --jq '.checks[].context'
+   ```
+
+3. **Decide must-run vs may-skip for each job.** Jobs that always run on PRs go in the strict (`== 'success'`) set. Jobs that skip on PRs (registry push, SBOM, secret-bearing scans) go in the tolerant (`success|skipped`) set.
+
+4. **Add the aggregator job** (see Quick Reference). Use `if: always()` so it runs even when upstream jobs fail or skip. Use `needs:` to depend on every job whose status must be checked. Assert results explicitly in a `bash` step.
+
+5. **Push the workflow change AND update branch protection in the same logical operation.** The workflow change alone is a no-op for branch protection — until you remove the per-job contexts, those `skipped` results are still blocking.
+
+6. **Verify on a real PR.** Open or push to a PR. Confirm: (a) per-job contexts still post `skipped` but are no longer required, (b) `summary` posts `success` because its assertion gate passed, (c) the PR shows "All checks have passed".
+
+### Why this works (mechanics)
+
+GitHub posts one status-check context per leaf job. A whole-job `if:` evaluating false produces `conclusion=skipped`. Branch protection requires `success` (or, for some neutral conclusions, equivalent) — **`skipped` is not in that satisfying set for job-level skips**. The `summary` aggregator with `if: always()` runs on every event; tolerating `skipped` in its assertion gate makes the aggregator pass on PRs (where registry jobs skip) and push/schedule events (where they run for real). One stable context replaces N brittle ones.
+
+### Alternative (Option A, lower change-cost): demote job-level `if:` to step-level
+
+Remove the job-level `if:` and push the conditional down to the *steps* that need registry access. Add a leading no-op step (`echo "no-op on PR"`) so the job exits `success` on PRs. This satisfies the existing required contexts without a branch-protection edit. PR #5406 chose the aggregator instead because it scales: each new matrix entry adds a `needs:` line, not a new required context to register.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --- | --- | --- | --- |
+| Counted on `skipped` to satisfy required check | Assumed a whole-job skip via `if:` would post `success` (because the job "didn't fail") | GitHub posts `conclusion=skipped`; branch protection requires `success` (or specific neutral semantics — `skipped` is not in that set for job-level skips) | Verified empirically: ProjectOdyssey PR #5406 itself was BLOCKED before the branch-protection update landed, even though `test-images`/`security-scan` posted `skipped` cleanly |
+| Added the aggregator step but forgot the branch-protection update | Pushed the workflow change first, expecting BLOCKED to clear automatically | Without removing the per-job contexts from required-checks, the new aggregator is a no-op for branch-protection purposes — the per-job contexts are still required and still skipped | Aggregator workflow + branch-protection update are a *single logical fix* — apply both in the same operation (the workflow change is no-op pollution otherwise) |
+| Treated this as a path-filter problem | Assumed broadening `paths:` would unblock the PR | Filter fix alone changes the missing-check failure mode from "context never posted" to "context posted as skipped" — both BLOCKED | When required contexts span both flavours, fix both (paths AND aggregator); see companion skill `ci-cd-required-context-never-posts-pr-blocked` |
+| Confused with `ci-cd-reusable-workflow-required-checks-aggregator` | Read the existing skill and tried to apply DRY workflow consolidation | That skill is about consolidating duplicate jobs across files; this learning is about the `success`-vs-`skipped` semantics for required contexts | Two aggregator patterns exist: DRY consolidation (reusable `workflow_call`) vs. result-tolerance gate (single workflow). This skill covers the latter |
+
+## Results & Parameters
+
+### Full container-publish summary job (as merged)
+
+```yaml
+  summary:
+    needs: [build-and-push, test-images, security-scan]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Write step summary
+        run: |
+          {
+            echo "## Container Publish Summary"
+            echo ""
+            echo "| Job | Result |"
+            echo "| --- | --- |"
+            echo "| build-and-push | ${{ needs.build-and-push.result }} |"
+            echo "| test-images    | ${{ needs.test-images.result }} |"
+            echo "| security-scan  | ${{ needs.security-scan.result }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Assert needs results (aggregator gate)
+        env:
+          BUILD_RESULT: ${{ needs.build-and-push.result }}
+          TEST_IMAGES_RESULT: ${{ needs.test-images.result }}
+          SECURITY_SCAN_RESULT: ${{ needs.security-scan.result }}
+        run: |
+          fail=0
+          echo "build-and-push   = $BUILD_RESULT"
+          echo "test-images      = $TEST_IMAGES_RESULT"
+          echo "security-scan    = $SECURITY_SCAN_RESULT"
+          if [[ "$BUILD_RESULT" != "success" ]]; then
+            echo "::error::build-and-push must be 'success' (got: $BUILD_RESULT)"
+            fail=1
+          fi
+          case "$TEST_IMAGES_RESULT" in
+            success|skipped) ;;
+            *) echo "::error::test-images must be 'success' or 'skipped' (got: $TEST_IMAGES_RESULT)"; fail=1 ;;
+          esac
+          case "$SECURITY_SCAN_RESULT" in
+            success|skipped) ;;
+            *) echo "::error::security-scan must be 'success' or 'skipped' (got: $SECURITY_SCAN_RESULT)"; fail=1 ;;
+          esac
+          exit "$fail"
+```
+
+### Full branch-protection PATCH script
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+ORG=HomericIntelligence
+REPO=ProjectOdyssey
+
+# 1. Snapshot current required checks
+gh api repos/$ORG/$REPO/branches/main/protection/required_status_checks \
+  --jq '.checks' > /tmp/cur.json
+
+# 2. Drop the per-job contexts (keep everything else including 'summary')
+jq '[
+  .[] | select(
+    .context as $c |
+    [
+      "test-images",
+      "security-scan",
+      "build-and-push (ci)",
+      "build-and-push (production)",
+      "build-and-push (runtime)"
+    ] | index($c) | not
+  )
+]' /tmp/cur.json > /tmp/new.json
+
+# 3. Build PATCH body
+jq -n --slurpfile checks /tmp/new.json \
+  '{strict: false, checks: $checks[0]}' > /tmp/patch.json
+
+# 4. Apply
+gh api -X PATCH \
+  repos/$ORG/$REPO/branches/main/protection/required_status_checks \
+  --input /tmp/patch.json
+
+# 5. Verify 'summary' is still required
+gh api repos/$ORG/$REPO/branches/main/protection/required_status_checks \
+  --jq '.checks[].context' | grep -x summary
+```
+
+### Trade-offs
+
+- **Aggregator (chosen for PR #5406):** scales with matrix size; one required context regardless of job count. Cost: workflow edit + branch-protection edit.
+- **Step-level `if:` (Option A):** no branch-protection edit needed. Cost: every conditional job must add a no-op success step; less obvious why the job exists at all on PRs.
+
+## Verified On
+
+- **Repo:** HomericIntelligence/ProjectOdyssey
+- **PR:** [#5406](https://github.com/HomericIntelligence/ProjectOdyssey/pull/5406)
+- **Merged commit:** `da1b3f7e`
+- **Date:** 2026-05-15
+- **Workflow:** `.github/workflows/container-publish.yml`
+- **Branch protection target:** `main` required status checks (`test-images`, `security-scan`, `build-and-push (*)` removed; `summary` retained)
+
+---
+
+## Superseded from github-branch-protection-api-validation
+
+**Original date:** 2026-06-03
+**Original version:** 1.0.0
+
+```yaml
+name: github-branch-protection-api-validation
+description: "GitHub branch protection API enforcement with response validation and synthetic testing. Use when: (1) implementing new branch protection rules, (2) adding API PUT calls that need validation, (3) testing bash scripts with environment fixtures."
+category: ci-cd
+date: 2026-06-03
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [github, branch-protection, api, bash-testing, validation]
+```
+
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-03 |
+| **Objective** | Enforce GitHub branch protection rules with response validation to detect silent API failures, and enable synthetic testing of branch protection scripts |
+| **Outcome** | Successfully implemented for ProjectNestor main branch; all verification criteria passed |
+| **Verification** | verified-ci (PR #108 CI checks passed) |
+
+## When to Use
+
+- Implementing new GitHub branch protection rules via API
+- Adding PUT/PATCH calls to `repos/{owner}/{repo}/branches/{branch}/protection` endpoint
+- Detecting silent failures when API ignores PUT fields (API field names differ from request payload keys)
+- Testing bash governance scripts without hitting live GitHub API
+- Need to allow future tightening of branch protection settings (e.g., 1→2 required reviews) without breaking drift detection
+
+## Verified Workflow
+
+### Quick Reference
+
+**1. Minimize API payload to single field change:**
+```json
+{
+  "required_pull_request_reviews": {
+    "required_approving_review_count": 1
+  }
+}
+```
+
+**2. Apply with read-back validation:**
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+REPO="HomericIntelligence/ProjectNestor"
+CONFIG=".github/branch-protection/main.json"
+
+expected_count=$(jq -r '.required_pull_request_reviews.required_approving_review_count' "$CONFIG")
+
+echo "Applying branch protection..."
+gh api --method PUT "repos/${REPO}/branches/main/protection" --input "$CONFIG" >/dev/null
+
+# READ-BACK: Verify the live state matches expected
+live_count=$(gh api "repos/${REPO}/branches/main/protection" \
+  --jq '.required_pull_request_reviews.required_approving_review_count // 0')
+
+if [ "$live_count" != "$expected_count" ]; then
+  echo "ERROR: PUT ignored field; live=$live_count, expected=$expected_count" >&2
+  exit 1
+fi
+echo "OK: live setting = ${live_count}"
+```
+
+**3. Support synthetic testing via environment variable hook:**
+```bash
+#!/usr/bin/env bash
+# In your verification script
+fetch_rules() {
+  if [ -n "${VERIFY_RULES_FIXTURE:-}" ]; then
+    cat "$VERIFY_RULES_FIXTURE"  # Test mode: use injected fixture
+  else
+    gh api "repos/${REPO}/rules/branches/main"  # Production: call API
+  fi
+}
+rules=$(fetch_rules)
+```
+
+**4. Use >= comparisons for forward-compatible drift detection:**
+```bash
+# Allows 1→2→3 tightening without breaking drift checks
+if ! jq -e '.required_approving_review_count >= 1' <<<"$pr_params" >/dev/null 2>&1; then
+  echo "ERROR: required_approving_review_count must be >= 1"
+  exit 1
+fi
+```
+
+### Detailed Steps
+
+1. **Scope API changes narrowly**: Only change field whose semantics are verified by existing code or prior testing. Defer unverified fields (e.g., `require_last_push_approval`) to separate PR with dedicated API validation.
+
+2. **Add GET read-back after PUT**: On same endpoint (`repos/{owner}/{repo}/branches/{branch}/protection`), immediately after PUT, call GET and compare live value to expected config using jq.
+
+3. **Use defensive jq syntax**: Include fallback operator (`// 0` or `// "default"`) to handle missing fields gracefully.
+
+4. **Extract rules-fetch into overridable function**: For bash governance scripts, expose the API call as a function that can be injected via env variable, enabling synthetic testing without network.
+
+5. **Create synthetic test fixtures**: Use `jq -n` to generate test payloads matching the API response format. Example: `[{type:"pull_request",parameters:{required_approving_review_count:1}}]`
+
+6. **Test both pass and fail paths**: Verify script exits 0 with valid payload, exits non-zero with invalid payload.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| No read-back after PUT | Apply script called gh api PUT and exited | Silent failures: API ignores unknown/misspelled fields, script exits 0 but live state unchanged | Always read-back immediately after PUT to detect silent failures |
+| Direct jq assertions in CI | Verified workflow used bare `jq ... < output.json` expression | Doesn't exercise full script logic; synthetic test wasn't executing the actual code path | Extract API calls into overridable functions; inject fixtures via env hooks |
+| Bundled unverified fields | Tried to tighten both `required_approving_review_count` and `require_last_push_approval` in one JSON change | API field name mapping unknown for `require_last_push_approval`; risk of silent failure | Single-field changes only; defer unverified fields to separate PR with explicit API validation |
+| Exact equality for drift detection | Used `required_approving_review_count == 1` assertion | Blocks future tightening to 2 (drift check would fail on valid tightening) | Use `>= min_threshold` instead of `== exact_value` to allow forward evolution |
+
+## Results & Parameters
+
+**Example JSON config** (`.github/branch-protection/main.json`):
+```json
+{
+  "required_pull_request_reviews": {
+    "dismiss_stale_reviews": false,
+    "require_code_owner_reviews": false,
+    "required_approving_review_count": 1,
+    "require_last_push_approval": false
+  },
+  "required_status_checks": {
+    "strict": false,
+    "contexts": ["All Build/Test Checks", "branch-protection-drift"]
+  },
+  "enforce_admins": false,
+  "required_conversation_resolution": true,
+  "required_linear_history": true
+}
+```
+
+**Synthetic test fixture** (pass case):
+```bash
+fixture=$(mktemp)
+jq -n '[{type:"pull_request",parameters:{required_approving_review_count:1,required_review_thread_resolution:true}},{type:"required_status_checks",parameters:{required_status_checks:[{context:"x"}]}}]' > "$fixture"
+VERIFY_RULES_FIXTURE="$fixture" bash scripts/verify-branch-protection.sh
+# Expected: exit 0
+```
+
+**Synthetic test fixture** (fail case):
+```bash
+fixture=$(mktemp)
+jq -n '[{type:"pull_request",parameters:{required_approving_review_count:0}}]' > "$fixture"
+VERIFY_RULES_FIXTURE="$fixture" bash scripts/verify-branch-protection.sh
+# Expected: exit 1, error message about count < 1
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectNestor | Issue #54: Required approving review count | Implemented main branch protection fix; verified with 4 synthesis criteria; PR #108 CI passed |
+
+---
+
+## Superseded from extend-workflow-smoke-tests
+
+**Original date:** 2026-03-15
+**Original version:** 1.0.0
+
+```yaml
+name: extend-workflow-smoke-tests
+description: 'Extend an existing workflow-smoke-test CI workflow to cover additional
+  GitHub Actions workflows. Use when: (1) smoke tests exist for one workflow and need
+  expansion, (2) pre-commit/test-matrix/config-validation workflows need regression
+  protection, (3) a second CI job should verify properties of multiple workflow files.'
+category: ci-cd
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+```
+
+# Extend Workflow Smoke Tests
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | 2026-03-15 |
+| Objective | Extend `workflow-smoke-test.yml` to protect `pre-commit.yml`, `comprehensive-tests.yml`, and `validate-configs.yml` |
+| Outcome | Operational — applied in ProjectOdyssey PR #4838 (issue #3948) |
+
+The original `workflow-smoke-tests` skill covers creating smoke tests for a *single* workflow
+(typically `security.yml`). This skill covers the follow-up: extending that CI gate to protect
+additional critical workflows, each with their own test class and fast-fail grep checks.
+
+## When to Use
+
+- An existing `workflow-smoke-test.yml` only covers one workflow file and more need protection
+- `pre-commit.yml` properties need regression protection (trigger, advisory flags, enforcement steps)
+- `comprehensive-tests.yml` matrix coverage needs a guard (fail-fast, test groups, job dependencies)
+- `validate-configs.yml` validation steps need a guard (trigger, yamllint, required file checks)
+- A second CI job (`smoke-test-other-workflows`) should run fast-fail grep checks + pytest
+
+## Verified Workflow
+
+### Quick Reference
+
+| Workflow | Key Properties to Test |
+| ---------- | ------------------------ |
+| `pre-commit.yml` | `pull_request` trigger, mojo-format `continue-on-error: true`, `SKIP=mojo-format`, `__matmul__` enforcement is blocking (no `continue-on-error`) |
+| `comprehensive-tests.yml` | `pull_request` trigger, `fail-fast: false`, Core Tensors/Core Gradient/Models groups present, `test-mojo-comprehensive` needs `mojo-compilation` + `validate-test-coverage` |
+| `validate-configs.yml` | `pull_request` trigger, `yamllint` present, required defaults check present |
+
+### Step 1: Read each target workflow before writing tests
+
+Read the actual workflow files first to understand exactly what properties are present and
+what names/patterns are used:
+
+```bash
+cat .github/workflows/pre-commit.yml
+cat .github/workflows/comprehensive-tests.yml
+cat .github/workflows/validate-configs.yml
+```
+
+This prevents writing tests that immediately fail due to mismatched step names or patterns.
+
+### Step 2: Create one test file per workflow
+
+Follow the existing `test_security_workflow_properties.py` pattern exactly:
+
+```python
+#!/usr/bin/env python3
+"""Smoke tests for <workflow> properties.
+
+Validates that .github/workflows/<workflow>.yml has correct trigger coverage and
+<key properties>, preventing regression of:
+  1. pull_request trigger is present
+  2. <property 2>
+  3. <property 3>
+"""
+
+import re
+from pathlib import Path
+import pytest
+
+REPO_ROOT = Path(__file__).parent.parent.parent
+WORKFLOW = REPO_ROOT / ".github" / "workflows" / "<workflow>.yml"
+
+
+@pytest.fixture(scope="module")
+def workflow_content() -> str:
+    """Read the workflow file once for all tests in this module."""
+    assert WORKFLOW.exists(), f"<workflow>.yml not found at {WORKFLOW}"
+    return WORKFLOW.read_text(encoding="utf-8")
+
+
+class TestTriggers:
+    def test_pull_request_trigger_present(self, workflow_content: str) -> None:
+        """<workflow>.yml must trigger on pull_request events."""
+        assert re.search(r"^\s+pull_request\b", workflow_content, re.MULTILINE), (
+            "<workflow>.yml is missing a pull_request trigger."
+        )
+```
+
+Group tests by concern (triggers, specific steps, job dependencies). Use `re.DOTALL` when
+extracting multi-line step blocks.
+
+### Step 3: Write meaningful assertion messages
+
+Each assertion message should explain:
+1. What is missing/wrong
+2. **Why it matters** (what breaks without it)
+3. How to fix it
+
+```python
+assert re.search(r"fail-fast:\s*false", workflow_content), (
+    "comprehensive-tests.yml is missing 'fail-fast: false' in the matrix strategy. "
+    "Without this, a single failing test group will cancel all other groups, "
+    "hiding which tests pass and making failures harder to diagnose."
+)
+```
+
+### Step 4: For multi-line step blocks, use DOTALL with a step boundary lookahead
+
+```python
+step_pattern = re.compile(
+    r"-\s+name:\s+<Step Name>.*?(?=\n\s*-\s+name:|\Z)",
+    re.DOTALL,
+)
+match = step_pattern.search(workflow_content)
+assert match is not None, "Could not find '<Step Name>' step"
+step_block = match.group(0)
+assert "continue-on-error: true" in step_block, "..."
+```
+
+This correctly scopes assertions to the target step, not the whole file.
+
+### Step 5: Extend workflow-smoke-test.yml paths: trigger
+
+Add all new workflow and test files to the `paths:` filter under the `push:` trigger:
+
+```yaml
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/security.yml'
+      - 'tests/smoke/test_security_workflow_properties.py'
+      - '.github/workflows/pre-commit.yml'              # NEW
+      - 'tests/smoke/test_pre_commit_workflow_properties.py'  # NEW
+      - '.github/workflows/comprehensive-tests.yml'     # NEW
+      - 'tests/smoke/test_comprehensive_tests_workflow_properties.py'  # NEW
+      - '.github/workflows/validate-configs.yml'        # NEW
+      - 'tests/smoke/test_validate_configs_workflow_properties.py'    # NEW
+  workflow_dispatch:
+```
+
+### Step 6: Add a second CI job with fast-fail grep checks + pytest
+
+Add `smoke-test-other-workflows` as a separate job (not combined with the security job)
+so failures are isolated and diagnosable:
+
+```yaml
+  smoke-test-other-workflows:
+    name: Other Workflow Property Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@<pinned-sha>
+
+      # Fast grep checks BEFORE pixi setup (fail in 30s instead of 3 min)
+      - name: Check pre-commit pull_request trigger present
+        run: |
+          if ! grep -qP '^\s+pull_request\b' .github/workflows/pre-commit.yml; then
+            echo "ERROR: pre-commit.yml is missing pull_request trigger"
+            exit 1
+          fi
+          echo "OK: pull_request trigger present in pre-commit.yml"
+
+      - name: Check comprehensive-tests fail-fast is false
+        run: |
+          if ! grep -q 'fail-fast: false' .github/workflows/comprehensive-tests.yml; then
+            echo "ERROR: comprehensive-tests.yml is missing fail-fast: false"
+            exit 1
+          fi
+          echo "OK: fail-fast: false present in comprehensive-tests.yml"
+
+      - name: Check validate-configs uses yamllint
+        run: |
+          if ! grep -q 'yamllint' .github/workflows/validate-configs.yml; then
+            echo "ERROR: validate-configs.yml does not use yamllint"
+            exit 1
+          fi
+          echo "OK: yamllint present in validate-configs.yml"
+
+      # Full pytest run for comprehensive assertions
+      - name: Set up Pixi
+        uses: ./.github/actions/setup-pixi
+
+      - name: Run other workflow smoke tests
+        run: |
+          pixi run python -m pytest \
+            tests/smoke/test_pre_commit_workflow_properties.py \
+            tests/smoke/test_comprehensive_tests_workflow_properties.py \
+            tests/smoke/test_validate_configs_workflow_properties.py \
+            -v
+```
+
+### Step 7: Run tests locally before committing
+
+```bash
+pixi run python -m pytest tests/smoke/ -v
+```
+
+All tests should pass before committing. The full suite runs in under 1 second.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Writing tests without reading the workflow first | Assumed step names from memory | Step was named "Run mojo format (advisory - non-blocking)" not "Run mojo format" — regex didn't match | Always read the actual workflow file before writing tests; don't assume names |
+| Single combined CI job for all workflows | Considered merging security and other checks into one job | Would make it harder to diagnose which workflow has a regression when the job fails | Keep separate jobs per concern area: `smoke-test-security-workflows` + `smoke-test-other-workflows` |
+| Testing `continue-on-error` absence on `__matmul__` step globally | Checked the whole file for `continue-on-error: true` absence | The mojo-format step legitimately has `continue-on-error: true`, so the global check would always fail | Scope `continue-on-error` assertions to the specific step block using DOTALL regex |
+
+## Results & Parameters
+
+Applied to ProjectOdyssey issue #3948, PR #4838:
+
+- `tests/smoke/test_pre_commit_workflow_properties.py`: 6 assertions in 3 test classes
+- `tests/smoke/test_comprehensive_tests_workflow_properties.py`: 8 assertions in 3 test classes
+- `tests/smoke/test_validate_configs_workflow_properties.py`: 4 assertions in 2 test classes
+- `.github/workflows/workflow-smoke-test.yml`: 8 new path entries + new `smoke-test-other-workflows` job
+- All 26 smoke tests pass in ~0.08s total
+
+**Test run command**:
+
+```bash
+pixi run python -m pytest tests/smoke/ -v
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | PR #4838, issue #3948, follow-up to #3318 | [notes.md](../references/notes.md) |
+
+---
+
+## Superseded from ci-validate-coverage-steps-fallback
+
+**Original date:** 2026-05-04
+**Original version:** 1.0.0
+
+```yaml
+name: ci-validate-coverage-steps-fallback
+description: "Use when: (1) a GitHub Actions CI job has been migrated from a matrix (strategy.matrix.test-group) to sequential named steps and the pre-commit validate-test-coverage hook now reports all test files as uncovered (0 covered groups), (2) validate_test_coverage.py parse_ci_matrix() returns an empty dict after removing strategy.matrix from a workflow, (3) adding support for both matrix-style and sequential-steps-style test group definitions in the same validation script."
+category: ci-cd
+date: 2026-05-04
+version: "1.0.0"
+user-invocable: false
+verification: verified-precommit
+tags:
+  - ci-cd
+  - github-actions
+  - validate-test-coverage
+  - sequential-steps
+  - matrix-migration
+  - pre-commit
+  - parse_ci_matrix
+```
+
+
+# CI Validate Coverage Steps Fallback
+
+> **WARNING**: Verification level is `verified-precommit`. The pre-commit hook passes locally.
+> Full CI verification is pending. Treat workflow steps as guidance, not guaranteed-correct.
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-04 |
+| **Objective** | Fix `validate_test_coverage.py` so it correctly parses test groups from sequential workflow steps after a matrix-to-steps migration |
+| **Outcome** | Pre-commit `validate-test-coverage` hook passes after migration; 0 false "uncovered" reports |
+| **Verification** | verified-precommit |
+
+## When to Use
+
+- The `pre-commit` hook `validate-test-coverage` reports 200+ uncovered test files that were
+  previously covered by a CI matrix
+- You just migrated a GHA job from `strategy.matrix.test-group` entries to individual named steps
+  each running `just test-group "<path>" "<pattern>"`
+- `python3 scripts/validate_test_coverage.py` shows 0 covered groups despite the workflow
+  having many `just test-group` steps
+- You need `parse_ci_matrix()` to handle both matrix format and sequential-steps format
+
+## Verified Workflow
+
+> Note: Verification level is `verified-precommit` — pre-commit hook passes locally, full CI is pending.
+
+### Quick Reference
+
+```bash
+# Diagnose: confirm 0 groups found after migration
+python3 scripts/validate_test_coverage.py
+
+# After applying the fix, verify it passes:
+python3 scripts/validate_test_coverage.py
+
+# Run the pre-commit hook specifically
+pixi run pre-commit run validate-test-coverage --all-files
+```
+
+### Detailed Steps
+
+1. **Confirm the symptom** — run `python3 scripts/validate_test_coverage.py` and observe output
+   like "253 uncovered test files" or "0 CI test groups found".
+
+2. **Confirm the root cause** — open the workflow file and verify `strategy.matrix` is absent:
+
+   ```bash
+   grep -n "strategy\|matrix\|test-group" .github/workflows/comprehensive-tests.yml | head -20
+   ```
+
+3. **Locate `parse_ci_matrix()` in `scripts/validate_test_coverage.py`** — find the section
+   that loops over `test_job.get("strategy", {}).get("matrix", {}).get("test-group", [])`.
+
+4. **Add the sequential-steps fallback** after the existing matrix loop. Insert this block
+   immediately after the `for entry in ...` matrix loop closes but before the `return groups`
+   statement:
+
+   ```python
+   # In parse_ci_matrix(), after the existing matrix loop:
+   if not groups:
+       # No matrix — parse sequential steps directly (post-matrix migration format)
+       steps = test_job.get("steps", [])
+       for step in steps:
+           run_cmd = step.get("run", "")
+           if "test-group" not in run_cmd:
+               continue
+           step_name = step.get("name", "unknown")
+           # Collapse backslash-newline YAML multi-line continuations.
+           # yaml.safe_load() preserves literal "\\\n" in multi-line run: values.
+           collapsed = run_cmd.replace("\\\n", " ")
+           collapsed = " ".join(line.strip() for line in collapsed.splitlines())
+           import re as _re
+           m = _re.search(
+               r'just\s+test-group\s+"?([^\s"]+)"?\s+"?(.+?)(?:"?\s*$|$)',
+               collapsed
+           )
+           if m:
+               path = m.group(1)
+               pattern_raw = m.group(2)
+           else:
+               parts = collapsed.split()
+               try:
+                   tg_idx = parts.index("test-group")
+                   path = parts[tg_idx + 1].strip('"')
+                   pattern_raw = " ".join(parts[tg_idx + 2:])
+               except (ValueError, IndexError):
+                   continue
+           # Strip quotes and YAML multi-line backslash artifacts ("\\ " from folding)
+           pattern_raw = pattern_raw.replace("\\ ", " ").replace("\\", " ")
+           pattern_raw = pattern_raw.strip('"').strip("'").strip()
+           key = f"{step_name}::{path}"
+           groups[key] = {"path": path, "pattern": pattern_raw}
+   ```
+
+5. **Verify the fix**:
+
+   ```bash
+   python3 scripts/validate_test_coverage.py
+   # Should print 0 uncovered files and exit 0
+   ```
+
+6. **Run pre-commit** to confirm the hook passes:
+
+   ```bash
+   pixi run pre-commit run validate-test-coverage --all-files
+   ```
+
+7. **Commit and create PR** via the standard workflow.
+
+### Key Implementation Details
+
+- **YAML multi-line `run:` values**: After `yaml.safe_load()`, a `run:` block with backslash
+  continuations (`\` at end of line) comes through as literal `"\\\n"` (two chars: backslash
+  and newline). Must collapse with `.replace("\\\n", " ")`.
+- **Residual `\\"` artifacts**: After collapsing, individual lines may still contain `\\`
+  prefixes from YAML folding. Strip with `.replace("\\ ", " ")`.
+- **Group key format**: Use `f"{step_name}::{path}"` to allow multiple steps covering the same
+  path (e.g., different test patterns in the same directory).
+- **Guard condition `if not groups:`**: Only activate the fallback when the matrix loop found
+  nothing. This preserves backward compatibility with matrix-format workflows.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Leaving script unchanged after matrix migration | Migrated GHA job to sequential steps without updating `validate_test_coverage.py` | `parse_ci_matrix()` navigated to `strategy.matrix.test-group` which no longer exists; found 0 groups; reported 253 uncovered files | Always update `validate_test_coverage.py` when changing GHA test job structure |
+| Simple string split on `run:` values | Used `run_cmd.split()` to extract `just test-group` args | Multi-line YAML `run:` values contain literal `"\\\n"` after `yaml.safe_load()`; `split()` treated them as single tokens | Must collapse `"\\\n"` continuations before parsing |
+| Regex without collapsing first | Applied regex directly to raw `run_cmd` | `"\\\n"` in the middle of the command broke every regex match | Collapse multi-line continuations before applying regex |
+| Using step index as group key | `groups[str(i)] = ...` | Opaque keys made debugging impossible; also collided if multiple steps covered the same index conceptually | Use `f"{step_name}::{path}"` for readable, unique keys |
+
+## Results & Parameters
+
+### Expected output after fix
+
+```text
+Checking CI test coverage...
+Found N CI test groups
+All test files are covered by CI
+```
+
+`validate_test_coverage.py` exits 0 with no uncovered files reported.
+
+### Files changed
+
+| File | Change |
+| ------ | -------- |
+| `scripts/validate_test_coverage.py` | Added sequential-steps fallback in `parse_ci_matrix()` |
+
+### Workflow file structure this targets
+
+```yaml
+jobs:
+  test-mojo-comprehensive:
+    steps:
+      - name: "Run Core Tests"
+        run: |
+          just test-group "tests/shared/core" "test_*.mojo"
+      - name: "Run Data Tests"
+        run: |
+          just test-group "tests/shared/data" "test_*.mojo"
+```
+
+### Prior matrix structure (now replaced)
+
+```yaml
+jobs:
+  test-mojo-comprehensive:
+    strategy:
+      matrix:
+        test-group:
+          - name: "Core Tests"
+            path: "tests/shared/core"
+            pattern: "test_*.mojo"
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | fix/pixi-env-isolation-signed branch | Pre-commit hook passes after matrix-to-steps migration; CI pending |
+
+---
