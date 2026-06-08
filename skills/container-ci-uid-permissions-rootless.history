@@ -1,0 +1,1377 @@
+<!-- markdownlint-disable MD024 -->
+
+# container-ci-uid-permissions-rootless — History
+
+## v1.0.0 (2026-06-07)
+
+Initial consolidation merging 5 container/CI UID-permission skills into one canonical:
+
+- ci-cd-podman-host-container-build-dir-permissions
+- fix-podman-rootless-ci
+- container-build-and-runtime-patterns
+- docker-multistage-build
+- docker-ci-dead-step-cleanup
+
+---
+
+## Superseded from ci-cd-podman-host-container-build-dir-permissions
+
+**Original date/version:** 2026-05-19 / 1.0.0
+
+```yaml
+name: ci-cd-podman-host-container-build-dir-permissions
+description: "Fix 'mkdir: Permission denied' / PermissionError [Errno 13] when a justfile recipe runs ON THE HOST but writes into build/ or dist/ that a prior rootless-Podman container recipe populated as a subuid-mapped uid. Use when: (1) a just recipe fails writing to build/ or dist/ after another recipe ran in-container, (2) rootless Podman left files owned by a high subuid (e.g. 524288) the host user cannot write, (3) 'pixi: not found' on a CI runner because a recipe ran host-side instead of in-container, (4) chmod -R fails with EPERM on foreign-owned sibling files in a shared dir, (5) deciding whether a justfile recipe belongs host-side or in the container _run wrapper."
+category: ci-cd
+date: 2026-05-19
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [podman, rootless, subuid, justfile, permissions, build-dir, dist, container-host-boundary, chmod, pixi]
+```
+
+# Podman Host/Container build/ Directory Permission Mismatches in justfile Recipes
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-19 |
+| **Objective** | Fix the repeating bug class where a justfile recipe runs on the HOST but writes into `build/` or `dist/` that a prior rootless-Podman container recipe populated as a subuid-mapped uid the host user cannot write |
+| **Outcome** | Successful — all 4 occurrences in ProjectOdyssey's packaging pipeline fixed (PRs #5422, #5424, #5425, #5426), each with green CI |
+| **Verification** | verified-ci — all 4 permission fixes merged with passing CI; the packaging pipeline ran end-to-end |
+| **History** | n/a (initial version) |
+
+## When to Use
+
+- A `just` recipe fails with `mkdir: Permission denied` or `PermissionError: [Errno 13] Permission denied`
+  when writing into `build/` (or `dist/`)
+- The failing recipe runs **on the host**, and a *different* recipe previously populated that directory
+  **inside a rootless Podman container**
+- `ls -ln build/` shows files owned by a very high uid (e.g. `524288`, `100000+`) — a subuid mapping,
+  not your host uid
+- A CI runner fails with `pixi: not found` because a recipe that needs the pixi environment ran
+  host-side instead of through the container
+- `chmod -R …` fails with `Operation not permitted` (EPERM) on files inside a shared directory that
+  the recipe did not create itself
+- You are deciding whether a new justfile recipe should run host-side or be wrapped in the `_run`
+  container wrapper
+
+## Why This Happens
+
+ProjectOdyssey uses **rootless Podman**. When a recipe runs inside the container (e.g.
+`just package-release` populating `build/release/`), files written from inside the container land on
+the host bind mount owned by the container user's **subuid-mapped uid** — a number far outside the
+host's normal range (the kernel maps container uid → host subuid via `/etc/subuid`). The host user
+cannot write (or even `chmod`) those files: `chmod` on a file you do not own is `EPERM`, full stop.
+
+So any justfile recipe that **runs on the host** and then writes into `build/` or `dist/` will hit
+`Permission denied` the moment a prior in-container recipe touched the same tree. This bug class hit
+**four times** in one packaging session.
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# FIX A — recipe must run in the container: wrap it in the _run wrapper
+# Before (runs host-side, hits Permission denied + 'pixi: not found' on CI):
+build-recipe:
+    pixi exec --spec rattler-build -- rattler-build build --recipe conda.recipe/recipe.yaml
+# After (runs inside the container where pixi exists and uids are consistent):
+build-recipe:
+    @just _run "pixi exec --spec rattler-build -- rattler-build build --recipe conda.recipe/recipe.yaml"
+
+# FIX B — host creates a dir that an in-container recipe will write into: chmod 777 it first
+mkdir -p dist
+chmod 777 dist          # do this on the side that OWNS the dir, BEFORE the other side writes
+just wheel              # in-container recipe can now write into dist/
+
+# FIX C — an in-container recipe must chmod only the files IT created (never -R over the tree)
+# Before (fails — recurses over host-owned sibling files the recipe does not own):
+chmod -R o+rX dist
+# After (narrow to exactly the artifacts this recipe produced):
+chmod o+rX dist/projectodyssey-*.whl
+
+# FIX D — reclaim a stale build dir from a prior run with a different uid mapping
+# Host can mv a dir within a writable PARENT even if it cannot write the dir's CONTENTS:
+mv build build.stale.$(date +%s)   # move the foreign-owned tree aside
+mkdir build                         # recreate fresh, host-owned
+```
+
+### Detailed Steps
+
+1. **Diagnose ownership.** `ls -ln build/` — if files are owned by a uid like `524288` or `100000+`,
+   that is a Podman subuid mapping and the host user cannot write them.
+
+2. **Decide where the recipe belongs.**
+   - Needs the pixi environment, or writes into a tree the container also writes → **wrap in `_run`**
+     so it runs in-container. This also fixes `pixi: not found` on CI runners.
+   - Genuinely host-only → ensure it never writes into a container-shared directory.
+
+3. **Apply Fix A — wrap host-only recipes in `_run`.** A recipe like `build-recipe` (rattler-build)
+   or `wheel` that needs pixi and writes build artifacts must run in the container. Wrapping it also
+   resolves `pixi: not found`, because the CI runner host has no pixi but the container does.
+
+4. **Apply Fix B — `chmod 777` a shared dir on the owning side, before the other side writes.**
+   When a host step creates `dist/` and then hands off to an in-container `just wheel`, the host must
+   `chmod 777 dist` immediately after `mkdir dist` so the container user can write into it.
+
+5. **Apply Fix C — narrow `chmod` to only the files the recipe created.** An in-container recipe
+   doing `chmod -R o+rX dist` fails with `EPERM` because the recursion walks **foreign-owned sibling
+   files** (host-created) that the recipe does not own. `chmod` on a file you do not own is always
+   `EPERM`. Replace the `-R` tree walk with an explicit glob of just this recipe's own artifacts
+   (`chmod o+rX dist/projectodyssey-*.whl`).
+
+6. **Apply Fix D — reclaim a stale build dir via `mv`, not `chmod`.** A leftover `build/` from a
+   prior run with a *different* uid mapping cannot be written or `chmod`'d by the host. But the host
+   **can `mv` the whole directory aside** as long as it can write the *parent* — moving a directory
+   only needs write permission on the parent, not on the directory's contents. Move it aside (or
+   reclaim it) and recreate a fresh host-owned `build/`.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| `just build-recipe` run host-side | The rattler-build recipe ran directly on the host | The host user cannot write into `build/` once an in-container recipe owns it (subuid mapping); also `pixi: not found` on CI runners which have no host pixi | Wrap recipes that need pixi or write build artifacts in the `_run` container wrapper (PR #5422) |
+| `just wheel` run host-side | The wheel-build recipe ran on the host | Same `build/`/`dist/` permission failure plus `pixi: not found` on the CI runner | Wrap `wheel` in `_run` so it runs in-container where pixi exists and uids are consistent (PR #5424) |
+| Host creates `dist/`, in-container `just wheel` writes into it | `release.yml` did `mkdir dist` host-side, then invoked the in-container `just wheel` | The host-created `dist/` is owned by the host uid; the container user (subuid-mapped) cannot write into it | After `mkdir dist`, `chmod 777 dist` on the host side BEFORE the in-container recipe writes (PR #5425) |
+| `chmod -R o+rX dist` inside the in-container recipe | The recipe tried to make its output world-readable with a recursive chmod | `-R` recursed onto host-owned sibling files the recipe did not own → `chmod` on a non-owned file is `EPERM` → recipe failed | Never `chmod -R` over a tree that may contain foreign-owned siblings; narrow the chmod to only the specific files the recipe itself created (PR #5426) |
+
+## Results & Parameters
+
+### Decision rule: host-side vs `_run`
+
+```text
+Does the recipe need pixi / the Mojo toolchain?            → _run (in-container)
+Does the recipe write into build/ or dist/?                → _run, OR chmod 777 the dir first
+Is it pure host shell (git, gh, file moves outside build/) → host-side is fine
+```
+
+### chmod ownership rule
+
+```text
+chmod on a file you OWN          → OK
+chmod on a file you do NOT own   → EPERM (always — even +r, even as the same group)
+mv a directory                   → needs write on the PARENT only, not on the dir's contents
+```
+
+So: to make foreign-owned artifacts readable, do the `chmod` on the side that **created** them; to
+get rid of a foreign-owned directory, `mv` it aside from a writable parent.
+
+### ProjectOdyssey packaging session — the 4 fixes
+
+| PR | Recipe | Problem | Fix |
+|----|--------|---------|-----|
+| #5422 | `build-recipe` (rattler-build) | ran host-side → Permission denied + `pixi: not found` | wrapped in `_run` |
+| #5424 | `wheel` | ran host-side → Permission denied + `pixi: not found` | wrapped in `_run` |
+| #5425 | `release.yml` → `dist/` | host created `dist/`, in-container `just wheel` could not write | `chmod 777 dist` after `mkdir` |
+| #5426 | in-container wheel recipe | `chmod -R o+rX dist` hit EPERM on host-owned siblings | narrowed to `chmod o+rX dist/projectodyssey-*.whl` |
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectOdyssey | Issue #5413 packaging verification session — rootless Podman, host/container `build/` and `dist/` boundary | PRs #5422, #5424, #5425, #5426 — all merged with green CI |
+
+## See Also
+
+- `docker-mojo-uid-mismatch-crash-fix` — a *different* uid-mismatch failure (a deterministic `mojo run` crash, exit 134, `filesystem_error` on `$HOME/.modular`); this skill is about justfile-recipe `build/`/`dist/` write permissions, a distinct search surface
+- `ci-cd-verify-merged-prs-end-to-end` — this permission class was 4 of the 12 defects that pass surfaced
+- `tooling-justfile-pixi-ecosystem-wrapping` — broader justfile/pixi wrapping patterns
+
+---
+
+## Superseded from fix-podman-rootless-ci
+
+**Original date/version:** 2026-03-20 / 1.0.0
+
+```yaml
+name: fix-podman-rootless-ci
+description: 'Fix rootless Podman CI failures: Dockerfile ARG scoping, workspace UID
+  mapping, compose provider compatibility. Use when: container builds fail with empty
+  ARG values across FROM boundaries, bind-mounted files have Permission denied, or
+  docker-compose doesn''t support Podman extensions.'
+category: ci-cd
+date: 2026-03-20
+version: 1.0.0
+user-invocable: false
+```
+
+# Fix Podman Rootless CI
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Problem** | Rootless Podman on GitHub Actions introduces multiple failure modes not seen with Docker or rootful Podman |
+| **Scope** | Multi-stage Dockerfiles, docker-compose.yml, CI composite actions, justfile build recipes |
+| **Environment** | GitHub Actions `ubuntu-latest` runners with rootless Podman + docker-compose CLI plugin |
+| **Impact** | All container-dependent CI jobs fail (builds, tests, SBOM generation) |
+
+## When to Use
+
+- Container builds fail with `can't find uid for user :` or empty `${VAR}` in COPY --chown
+- `Permission denied` when creating files/dirs inside bind-mounted workspace in CI containers
+- `podman compose` delegates to docker-compose CLI plugin and Podman-specific compose options are ignored
+- SBOM tools (Syft/anchore) fail to authenticate to GHCR to scan pushed images
+- Justfile recipes create directories on the host that are then non-writable inside the container
+
+## Verified Workflow
+
+### Quick Reference
+
+| Issue | Root Cause | Fix |
+| ------- | ----------- | ----- |
+| `can't find uid for user :` | Docker ARGs don't persist across FROM | Re-declare `ARG` in each stage |
+| `Permission denied` on workspace files | Rootless Podman UID namespace mapping | `chmod -R a+rwX .` on host before container use |
+| docker-compose ignores `userns_mode` | docker-compose CLI plugin, not Podman compose | Don't use Podman-specific compose extensions |
+| SBOM scan auth failure | Syft can't authenticate to GHCR | Export image to tarball, scan locally |
+| Build mode always "debug" | Justfile `$1` vs `{{mode}}` parameter | Use `{{mode}}` template substitution |
+| Host-created dirs non-writable in container | `_ensure_build_dir` runs on host, not in container | Remove host-side mkdir; inner recipes already do it |
+
+### Step 1: Dockerfile ARG Scoping
+
+Docker/Podman `ARG` declarations are scoped to a single build stage. They do NOT persist across `FROM` boundaries.
+
+**Symptom**: `COPY --chown=${USER_NAME}:${USER_NAME}` fails with `can't find uid for user :`
+
+**Fix**: Re-declare the ARG in every stage that uses it:
+
+```dockerfile
+# Stage 1
+FROM ubuntu:24.04 AS base
+ARG USER_NAME=dev
+# ... uses USER_NAME ...
+
+# Stage 2 - MUST re-declare
+FROM base AS development
+ARG USER_NAME=dev          # <-- Required! Without this, USER_NAME is empty
+USER ${USER_NAME}
+COPY --chown=${USER_NAME}:${USER_NAME} . .
+
+# Stage 3 inheriting from development - ARG inherited
+FROM development AS ci
+# USER_NAME is available (inherited from development)
+
+# Stage 4 - from base, MUST re-declare
+FROM base AS production
+ARG USER_NAME=dev          # <-- Required again
+COPY --from=development /home/${USER_NAME}/.pixi /home/${USER_NAME}/.pixi
+```
+
+### Step 2: Rootless Podman Workspace Permissions
+
+In rootless Podman, the user namespace maps UIDs:
+- Container UID 0 (root) -> Host user (e.g., UID 1001)
+- Container UID 1001 -> Host subuid range (e.g., 101001)
+
+Bind-mounted host files (owned by host UID 1001) appear as owned by container root (UID 0). The container application user (UID 1001) cannot write to them.
+
+**Fix**: Make the workspace world-writable on the host before the container uses it:
+
+```yaml
+# In CI composite action, after starting container:
+- name: Fix workspace permissions
+  shell: bash
+  run: |
+    chmod -R a+rwX . || true
+```
+
+This is safe because CI runners are ephemeral single-use VMs.
+
+**Do NOT try**:
+- `userns_mode: keep-id` in docker-compose.yml (docker-compose CLI plugin ignores it)
+- `PODMAN_USERNS=keep-id` env var (unreliable through docker-compose API)
+- `chown` inside the container (overcomplicated and may not work with UID mapping)
+
+### Step 3: SBOM Generation Without Registry Auth
+
+SBOM tools like Syft/anchore need to read the container image. If the image was pushed to GHCR, Syft may not inherit Podman login credentials.
+
+**Fix**: Export the image to a tarball and scan locally:
+
+```yaml
+- name: Export image for SBOM
+  run: |
+    podman save -o /tmp/image.tar "$REGISTRY/$IMAGE:$TAG"
+
+- name: Generate SBOM
+  uses: anchore/sbom-action@v0
+  with:
+    image: /tmp/image.tar
+```
+
+### Step 4: Justfile Parameter Passing
+
+In justfile, recipe parameters are template-substituted with `{{param}}`. They are NOT passed as bash positional parameters (`$1`, `$2`).
+
+```just
+# WRONG - $1 is always empty in justfile bash blocks
+_build-inner mode="debug":
+    #!/usr/bin/env bash
+    MODE="${1:-debug}"    # Always "debug"!
+
+# CORRECT - use just template substitution
+_build-inner mode="debug":
+    #!/usr/bin/env bash
+    MODE="{{mode}}"       # Correctly receives the argument
+```
+
+### Step 5: Host vs Container Directory Creation
+
+When using `podman compose exec` to run builds inside a container with bind-mounted workspace:
+
+- Directories created on the **host** (before exec) are owned by the host user
+- In rootless Podman, these appear as root-owned inside the container
+- The container application user cannot write to them
+
+**Fix**: Don't create build output directories on the host. Let the inner build script create them inside the container where the user has appropriate permissions.
+
+### Step 6: Podman Socket on GitHub Actions
+
+GitHub Actions `ubuntu-latest` runners have Podman installed but the socket is not activated by default. `podman compose` delegates to docker-compose which needs the socket.
+
+```yaml
+- name: Start Podman socket
+  shell: bash
+  run: |
+    systemctl --user start podman.socket || true
+    echo "DOCKER_HOST=unix:///run/user/$(id -u)/podman/podman.sock" >> "$GITHUB_ENV"
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| `userns_mode: keep-id` in docker-compose.yml | Add Podman-specific user namespace mapping to compose file | `podman compose` on GH Actions delegates to `docker-compose` CLI plugin, which doesn't understand Podman extensions | Check what compose provider is actually used (`/usr/libexec/docker/cli-plugins/docker-compose`) before using Podman-specific features |
+| `PODMAN_USERNS=keep-id` env var | Set env var so Podman applies keep-id to all containers | Unreliable when containers are created through the Docker API by docker-compose, not directly by Podman CLI | Podman CLI env vars may not be honored when docker-compose creates containers via the API |
+| `chown` inside container as root | Run `podman compose exec -u 0 -T` to chown workspace to container user | Overcomplicated; in rootless Podman, root inside container IS the host user, but chown to non-root UID involves subuid mapping complexities | Prefer simpler host-side solutions (`chmod`) over in-container ownership changes |
+| Initial plan missing Dockerfile ARG issue | Original CI fix plan addressed 3 issues but missed the ARG scoping bug | The Dockerfile's `USER_NAME` ARG was only declared in the `base` stage; development/production stages silently used empty string | Always check `ARG` declarations across ALL stages in multi-stage Dockerfiles — empty ARGs cause silent failures, not build errors |
+| Assuming CI test failures were new regressions | 4 test groups failed after container fixes | These tests were previously **skipped** because the container build itself failed; fixing infrastructure made pre-existing test bugs visible | When fixing infrastructure, expect to uncover pre-existing failures that were hidden by earlier-stage breaks |
+
+## Results & Parameters
+
+### Configuration
+
+```yaml
+# GitHub Actions runner
+runner: ubuntu-latest (Ubuntu 24.04, GLIBC 2.39)
+podman_version: rootless (default on ubuntu-latest)
+compose_provider: /usr/libexec/docker/cli-plugins/docker-compose
+container_user: dev (UID 1001)
+runner_user: runner (UID 1001)
+
+# Key files modified
+files:
+  - Dockerfile                                    # ARG re-declaration
+  - .github/actions/setup-container/action.yml    # Socket + chmod
+  - .github/workflows/container-publish.yml       # SBOM tarball
+  - justfile                                      # {{mode}} fix
+  - pixi.lock                                     # Channel regeneration
+```
+
+### Verification Commands
+
+```bash
+# Check Podman compose provider
+podman compose version
+
+# Check if rootless
+podman info --format '{{.Host.Security.Rootless}}'
+
+# Test bind-mount permissions
+podman compose exec -T service ls -la /workspace
+
+# Verify ARG values in build
+podman build --build-arg USER_NAME=dev -f Dockerfile --target development . 2>&1 | grep "STEP.*COPY.*chown"
+```
+
+---
+
+## Superseded from container-build-and-runtime-patterns
+
+**Original date/version:** 2026-06-07 / 1.2.0
+
+```yaml
+name: container-build-and-runtime-patterns
+description: "Canonical guide to container build and runtime patterns spanning Docker, Podman, and rootless: multi-stage builds, multi-arch OCI, UID/GID mismatch fixes, layer caching strategies, entrypoint patterns, healthchecks, pixi-volume isolation, GHA cache extraction, Conan-in-Docker chains, dockerfile extras validation. Use when: (1) writing or refactoring a Dockerfile, (2) diagnosing a rootless Podman or UID mismatch crash, (3) extracting / sharing image cache between local and GHA, (4) integrating Conan profiles with a multistage build, (5) container-based E2E test infra."
+category: ci-cd
+date: 2026-06-07
+version: "1.2.0"
+user-invocable: false
+verification: verified-ci
+history: container-build-and-runtime-patterns.history
+tags: [merged, docker, podman, container, dockerfile, multistage, rootless, hadolint, buildx-driver, gha-cache, load-true]
+```
+
+# Container Build and Runtime Patterns
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-18 |
+| **Objective** | Canonical guide consolidating 41 container/Docker/Podman skills into one reference |
+| **Outcome** | Successful — covers multi-stage builds, rootless Podman, layer caching, healthchecks, pixi isolation, GHA cache, Conan chains |
+
+## When to Use
+
+- Writing or refactoring a Dockerfile or Containerfile
+- Diagnosing rootless Podman UID/GID permission crashes inside containers
+- Chaining multi-arch OCI builds in GitHub Actions
+- Extracting a GHA-cached image tar for local forensic reproduction
+- Integrating Conan 2 profiles with a Docker multistage C++ build
+- Adding healthchecks to distroless or scratch-based images
+- Containerizing E2E tests or pixi-based CI pipelines
+- Migrating from Docker to Podman (removing `NATIVE=1` escape hatches)
+- Debugging Docker Hub rate limit failures in CI
+- Setting up pre-commit hooks inside bind-mounted dev containers
+
+## Verified Workflow
+
+### Quick Reference
+
+**Multi-stage build skeleton:**
+
+```dockerfile
+FROM python:3.12-slim@sha256:<DIGEST> AS builder
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential \
+    && rm -rf /var/lib/apt/lists/*
+COPY pyproject.toml /app/
+RUN pip install --user --no-cache-dir -e /app
+COPY . /app
+
+FROM python:3.12-slim@sha256:<DIGEST> AS runtime
+COPY --from=builder /root/.local /root/.local
+ENV PATH=/root/.local/bin:$PATH
+ENTRYPOINT ["python", "-m", "myapp"]
+```
+
+**Rootless Podman — UID mismatch fixes:**
+
+```dockerfile
+# Make home dir traversable by other UIDs
+RUN chmod 755 /home/${USER_NAME}
+# Do NOT over-restrict pixi dirs:
+# REMOVE: RUN chmod -R 700 $PIXI_HOME $PIXI_CACHE_DIR
+```
+
+**entrypoint.sh — redirect HOME if needed:**
+
+```bash
+if [ ! -d "${HOME}/.modular" ]; then
+    mkdir -p "${HOME}/.modular" 2>/dev/null || {
+        export HOME="/tmp/mojo-home-$(id -u)"
+        mkdir -p "${HOME}/.modular"
+        export PIXI_HOME="${HOME}/.pixi"
+    }
+fi
+exec "$@"
+```
+
+**Pre-commit in bind-mounted container — install at startup, not image build:**
+
+```bash
+# entrypoint.sh
+if [ -d ".git" ] && [ ! -f ".git/hooks/pre-commit" ]; then
+    pixi run pre-commit install
+fi
+```
+
+**Multi-arch OCI layout (QEMU must come first):**
+
+```yaml
+- uses: docker/setup-qemu-action@v3
+- uses: docker/setup-buildx-action@v3
+- name: Build base
+  uses: docker/build-push-action@v6
+  with:
+    platforms: linux/amd64,linux/arm64
+    outputs: type=oci,dest=/tmp/base-minimal   # NO .tar — saves as directory
+- name: Build downstream
+  uses: docker/build-push-action@v6
+  with:
+    build-contexts: base:latest=oci-layout:///tmp/base-minimal
+```
+
+**pixi volume isolation (detached-environments):**
+
+```toml
+# .pixi/config.toml — commit to repo
+[detached-environments]
+detached-environments = true
+```
+
+```yaml
+# docker-compose.yml — remove workspace-pixi named volume
+services:
+  dev:
+    volumes:
+      - .:/workspace:Z
+      - pixi-cache:/home/dev/.cache/pixi   # cache only, NOT shadow the binary
+volumes:
+  pixi-cache:
+```
+
+**GHA cache extraction (local forensic repro):**
+
+```bash
+gh workflow run extract-cached-image.yml --ref <branch>
+RUN_ID=$(gh run list --workflow=extract-cached-image.yml --limit=1 --json databaseId --jq '.[0].databaseId')
+gh run download "$RUN_ID"
+podman load -i container-image-*/dev.tar
+podman run --rm -it <loaded-image-tag> bash
+```
+
+**Distroless / scratch healthcheck workaround:**
+
+```yaml
+# docker-compose / podman-compose — use string form, NOT array form
+healthcheck:
+  test: "wget -qO- http://localhost:8080/health 2>/dev/null || exit 1"
+  interval: 10s
+  timeout: 5s
+  retries: 5
+  start_period: 30s
+```
+
+**ENTRYPOINT block for multi-base images (run as root, switch to user):**
+
+```dockerfile
+COPY bases/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+# ... remaining root instructions ...
+USER agent
+ENTRYPOINT ["/entrypoint.sh"]
+```
+
+**Dockerfile ARG scoping across multi-stage:**
+
+```dockerfile
+FROM ubuntu:24.04 AS base
+ARG USER_NAME=dev
+
+FROM base AS development
+ARG USER_NAME=dev   # MUST re-declare — ARG does not cross FROM boundaries
+USER ${USER_NAME}
+```
+
+**Conan 2 profile fix:**
+
+```bash
+# Stage 1: use --profile:all= (sets host AND build profile)
+conan install . --profile:all=conan/profiles/default --build=missing
+# Stage 2: if GCC version mismatch, downgrade compiler.version in profile to match distro default
+```
+
+**Docker Hub rate limit — switch to MCR mirror:**
+
+```dockerfile
+FROM mcr.microsoft.com/mirror/docker/library/ubuntu:24.04
+```
+
+**Container image security patching:**
+
+```dockerfile
+FROM python:3.12-slim@sha256:<DIGEST>
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
+    git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+```
+
+**Podman to Docker migration key differences:**
+
+```bash
+# Podman build (must use --format docker for GHCR push)
+podman build --format docker -f Containerfile --target <target> -t <tag> .
+# Cache: use actions/cache on ~/.local/share/containers, NOT type=gha
+# Volume mount: use :Z instead of :delegated
+```
+
+**Throttle container-publish with paths-filter:**
+
+```yaml
+on:
+  schedule:
+    - cron: '0 6 * * *'   # 06:00 UTC — off-peak
+  workflow_dispatch:
+  push:
+    paths:
+      - 'Dockerfile*'
+      - 'docker-compose.yml'
+      - '<dep-manifest>'
+      - '.github/workflows/container-publish.yml'
+    tags:
+      - 'v*'
+```
+
+**Podman compose clone-aware restart:**
+
+```bash
+podman compose down && podman compose up -d
+```
+
+**Podman rootless DNS fix:**
+
+```bash
+# Ensure aardvark-dns is installed and containers share the same compose network
+podman network ls   # verify network exists
+podman inspect <container> | jq '.[0].NetworkSettings.Networks'
+```
+
+**SBOM image-not-known fix — broaden event guard:**
+
+```yaml
+# Emit branch tag on push, schedule, AND workflow_dispatch
+if: >-
+  (github.event_name == 'push' ||
+   github.event_name == 'schedule' ||
+   github.event_name == 'workflow_dispatch') &&
+  startsWith(github.ref, 'refs/heads/')
+```
+
+**Dockerfile layer cache ordering (ARG before RUN):**
+
+```dockerfile
+# ARG declarations must appear BEFORE RUN commands that consume them
+ARG EXTRAS=""
+ARG BUILD_TYPE=release
+RUN echo "Building $BUILD_TYPE with extras: $EXTRAS"
+```
+
+**Optional-dep layer caching with tomllib:**
+
+```dockerfile
+ARG EXTRAS=""
+COPY pyproject.toml /opt/app/
+RUN pip install --user --no-cache-dir \
+    $(python3 -c "
+import tomllib, os
+data = tomllib.load(open('/opt/app/pyproject.toml', 'rb'))
+deps = list(data['project']['dependencies'])
+opt = data['project'].get('optional-dependencies', {})
+for group in [g.strip() for g in os.environ.get('EXTRAS', '').split(',') if g.strip()]:
+    deps.extend(opt.get(group, []))
+print(' '.join(deps))
+" EXTRAS="$EXTRAS")
+```
+
+**Dockerfile version guard patterns:**
+
+```dockerfile
+# Pin installer versions via ENV for reproducibility
+ENV PIXI_VERSION=0.63.2
+RUN curl -fsSL https://pixi.sh/install.sh | bash -s -- --version $PIXI_VERSION
+```
+
+**Forbid remote ops in E2E containers:**
+
+```python
+# pytest conftest.py — block git fetch/clone inside container tests
+import subprocess
+original_run = subprocess.run
+def guarded_run(args, **kwargs):
+    if isinstance(args, list) and args[0] == 'git' and args[1] in ('fetch', 'clone'):
+        raise RuntimeError("Remote git ops forbidden in E2E container tests")
+    return original_run(args, **kwargs)
+subprocess.run = guarded_run
+```
+
+**Docker Compose v5 healthcheck (string form, not array):**
+
+```yaml
+# Docker Compose v5 (v2.39+) splits array healthchecks on spaces
+# WRONG (array — gets split): test: ["CMD-SHELL", "wget -qO- http://..."]
+# CORRECT (string form):
+healthcheck:
+  test: "wget -q -O /dev/stdout http://localhost:8080/health | grep -q ok || exit 1"
+```
+
+### Docker CI lint/build gotchas
+
+**hadolint `.hadolint.yaml` suppression key is `ignored:` NOT `ignore:`:**
+
+```yaml
+# .hadolint.yaml
+# WRONG — silently dropped by hadolint >= 2.x; every suppression is voided:
+# ignore:
+#   - DL3008
+# CORRECT:
+ignored:
+  - DL3008
+  - DL3015
+  - DL3059
+  - DL3016
+  - DL3013
+  - DL3006
+  - DL4006
+  - SC2312
+  - SC2015
+failure-threshold: error
+```
+
+The misspelled `ignore:` key is silently dropped — every documented suppression is
+voided and all those accepted findings leak into CI. Subtlety: hadolint ITSELF exits 0
+(those findings are warning/info, below `failure-threshold: error`), but the
+**hadolint-action** surfaces every finding as a `::error::` annotation and fails the
+step. Verify locally — the ignored rules should disappear from the JSON:
+
+```bash
+hadolint -c .hadolint.yaml -f json Dockerfile
+```
+
+Findings NOT in the suppression list are genuinely enforced — fix the Dockerfile rather
+than adding new suppressions:
+
+```dockerfile
+# DL3046: useradd without -l bloats /var/log/lastlog for high UIDs
+RUN useradd -l -m -u 1000 agent
+# DL3042: pip without --no-cache-dir leaves cache in the layer
+RUN pip install --no-cache-dir <pkg>
+```
+
+**buildx driver MUST be `docker` (not `docker-container`) when a later build consumes a
+locally `load:true`-built image via build-arg:**
+
+```yaml
+# Step 1: build base with load: true into the Docker daemon
+- uses: docker/setup-buildx-action@v3
+  with:
+    driver: docker   # shares the daemon's image store — NOT docker-container
+- uses: docker/build-push-action@v6
+  with:
+    tags: achaean-base-node:latest
+    load: true
+# Step 2: consume it by name via build-arg
+- uses: docker/build-push-action@v6
+  with:
+    build-args: |
+      BASE_IMAGE=achaean-base-node:latest
+    # NOTE: no cache-to: type=gha — incompatible with driver: docker (see below)
+```
+
+The `docker-container` buildx driver has an ISOLATED image store and cannot see images
+loaded into the Docker daemon via `load: true`, so it falls back to PULLING the base
+from docker.io and fails with `failed to resolve source metadata ... pull access
+denied ... insufficient_scope`. Use `driver: docker`, matching the working
+build-vessels/smoke matrix that uses the identical two-step `load: true` pattern.
+
+**`cache-to: type=gha,mode=max` is INCOMPATIBLE with `driver: docker`** — it aborts the
+build with `Cache export is not supported for the docker driver`. With the docker
+driver, drop the GHA cache export entirely.
+
+**Smoke-matrix drift guard (`test_smoke_matrix_drift.py`):** the drift test asserts
+every `vessels/<x>` dir appears in the `test-smoke-vessels` CI matrix. Removing a vessel
+from the matrix requires adding it to that test's `EXCLUDED_VESSELS` allowlist, or the
+drift test goes red.
+
+### Docker Compose v5 Healthcheck Array Serialization
+
+Docker Compose v5 (v2.39+) changed how it serializes the `test:` field when the value
+is a YAML sequence. It now passes each element of the YAML array as a separate exec
+argument rather than treating element [3] as a single shell string — a behavioral
+change from Docker Compose v2.x.
+
+**Root cause:** Any `test:` with a YAML array form is affected, including
+`["CMD-SHELL", "cmd"]`. Even `["CMD-SHELL", "wget -qO- http://localhost:8080/v1/health"]`
+splits to `["CMD-SHELL","wget","-qO-","http://..."]` under v5. Only the string form of
+`test:` is safe — Docker Compose has always serialized strings as `CMD-SHELL` with the
+entire string passed as a single argument.
+
+**BusyBox wget vs GNU wget:** Alpine-based images (`nats:alpine` and others) use BusyBox
+wget, which does NOT support the `-qO-` combined flag. GNU wget supports `-qO-`; BusyBox
+requires space-separated `-q -O /dev/stdout`. When switching from array to string form,
+also fix the flag style if the container is Alpine-based.
+
+```yaml
+# BROKEN on Docker Compose v5 (splits array elements):
+healthcheck:
+  test: ["CMD", "sh", "-c", "wget -qO- http://localhost:8080/v1/health 2>/dev/null || exit 1"]
+
+# ALSO BROKEN — CMD-SHELL array form is split too:
+healthcheck:
+  test: ["CMD-SHELL", "wget -qO- http://localhost:8080/v1/health 2>/dev/null || exit 1"]
+
+# CORRECT for non-Alpine images (GNU wget, combined -qO- flag is valid):
+healthcheck:
+  test: "wget -qO- http://localhost:8080/v1/health 2>/dev/null || exit 1"
+
+# CORRECT for Alpine-based images (BusyBox wget, must use -q -O /dev/stdout):
+healthcheck:
+  test: "wget -q -O /dev/stdout http://localhost:8222/healthz 2>/dev/null | grep -q ok"
+```
+
+**Architectural context:** `wget` was chosen because the original Python FastAPI stubs
+using `python3 urllib` were replaced with C++20 binaries that lack Python at runtime.
+C++ runtime images (based on `ubuntu:24.04` slim) required an explicit
+`apt-get install wget` in the runtime stage of the Dockerfile.
+
+**Diagnostic commands:**
+
+```bash
+# Check whether the array split occurred (v5 regression visible here):
+podman inspect <container> --format '{{json .Config.Healthcheck}}'
+
+# Check live healthcheck status:
+podman inspect <container> --format '{{json .State.Health}}'
+
+# View raw healthcheck output logs:
+podman inspect <container> --format '{{range .State.Health.Log}}{{.Output}}{{end}}'
+```
+
+**Expected verification output after fix** — single-element string form, not split words:
+
+```json
+{"Test":["CMD-SHELL","wget -q -O /dev/stdout http://localhost:8222/healthz 2>/dev/null | grep -q ok"],...}
+```
+
+### Detailed Steps
+
+1. **Dockerfile authoring**: pin all base images with SHA256 digests; add `apt-get upgrade -y` for CVE defense; never put `#` comments after `\` in multi-line RUN blocks (Docker parses the token after `\` as a new instruction).
+2. **Layer caching**: copy dependency manifests (`pyproject.toml`, `pixi.toml`) before source; declare `ARG` before the `RUN` that consumes it.
+3. **Rootless Podman**: re-declare `ARG` in every `FROM` stage; `chmod 755` home dir; use `:Z` not `:delegated`; create output dirs inside the container exec, not on the host.
+4. **Multi-arch**: always run `docker/setup-qemu-action` BEFORE `docker/setup-buildx-action`; use `type=oci,dest=/tmp/foo` (no `.tar`) for OCI layout directories; `type=docker` does not support multi-platform.
+5. **pixi isolation**: set `detached-environments = true` in `.pixi/config.toml`; mount `pixi-cache` to `~/.cache/pixi`, NOT `~/.pixi` (which shadows the binary).
+6. **Healthchecks on distroless/scratch**: use string form in docker-compose; use a Go/Rust compiled binary or TCP check via `nc` if no shell available.
+7. **Conan 2 + Docker**: use `--profile:all=` (not `--profile=`); match `compiler.version` to distro GCC (Ubuntu 24.04 ships gcc-13, not gcc-14).
+8. **GHA image cache extraction**: reconstruct the exact cache key string; export via `podman save`; download artifact with `gh run download`.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Fix all PRs before fixing root cause on main | Rebased individual PR branches | CI kept failing because root bugs were on main; each rebase pulled broken main back | Fix root-cause bugs on main FIRST, then rebase PRs |
+| Inline `#` comment after `\` in Dockerfile RUN | `apt-get install curl \ # comment` | Docker parser treats the token after `\` as a new instruction, not a comment | Never put `#` comments after `\` in multi-line RUN blocks |
+| `RUN pre-commit install` in Dockerfile | Install at image build time | Workspace bind-mount not active at build time; installed hooks get shadowed at runtime | Install pre-commit hooks in `entrypoint.sh` (container startup), not Dockerfile |
+| `type=oci,dest=/tmp/foo.tar` for OCI layout | Added `.tar` extension to OCI dest path | `oci-layout://` requires a directory; `.tar` creates a single archive — fails with "not a directory" | Omit `.tar` extension; buildx saves an OCI layout directory |
+| Multi-arch build without QEMU | `docker buildx build --platform linux/amd64,linux/arm64` without QEMU setup | Fails with exec format error for non-native arch | Always run `docker/setup-qemu-action` before `docker/setup-buildx-action` |
+| `load: true` for multi-arch base image | Push base into Docker daemon, reference by name in downstream | `docker-container` driver builds in an isolated container that does NOT share host daemon image store | Use OCI layout directory via `/tmp` for same-job chaining |
+| `type=docker` output for multi-platform build | Set output type to docker for multi-arch | `type=docker` does not support multiple platforms | Use `type=oci` for multi-arch; `type=docker` is single-platform only |
+| `docker/login-action` with Podman | Used Docker-specific GHA actions with Podman | These actions assume Docker daemon is running | Use raw `podman login` via `run:` steps instead |
+| `type=gha` Docker buildx cache with Podman | Docker GHA cache strategy | Podman does not support buildx or GHA cache type | Use `actions/cache` on `~/.local/share/containers` keyed by Dockerfile hash |
+| Keeping `:delegated` volume mount with Podman | Docker-only volume consistency option | Podman ignores `:delegated` and may warn | Use `:Z` for SELinux label compatibility |
+| `chmod -R 700 $PIXI_HOME $PIXI_CACHE_DIR` in Dockerfile | Restrict pixi dirs for security | Breaks pixi when container runs as different UID (rootless remapping) | Remove overly-restrictive chmod on pixi dirs |
+| `workspace-pixi` named volume at `.pixi/` | Shadow host `.pixi/` with Docker volume | Shadows pixi binary itself when `~/.pixi/bin` is inside the mount path | Use `detached-environments = true` and mount only cache, not the entire `.pixi/` |
+| `["CMD-SHELL", "wget -qO- ..."]` healthcheck array | Docker Compose v5 healthcheck array | Compose v5 (v2.39+) splits healthcheck arrays on spaces — each flag becomes a separate arg | Use string form: `test: "wget -qO- http://... \|\| exit 1"` |
+| `apt-get install gcc-14 && update-alternatives` for Conan GCC | Set gcc-14 via alternatives for Conan 2 sub-shell | Conan 2 sub-shells don't inherit alternatives; `CMAKE_C_COMPILER` stays empty | Downgrade `compiler.version` in Conan profile to match distro default, or pass `tools.build:compiler_executables` explicitly |
+| Bare `--profile=conan/profiles/default` in Conan 2 | Conan 1 invocation style | Conan 2 requires BOTH host and build profiles; bare `--profile=` only sets host profile | Use `--profile:all=` for in-repo profile files |
+| Authenticating to Docker Hub for rate limits | Added Docker Hub credentials | Adds secret management overhead; MCR mirror is simpler and free | Use `mcr.microsoft.com/mirror/docker/library/` — no auth, no rate limits |
+| `mkdir -p benchmark-results` on host before `podman compose exec` | Create output dir on host runner | Container process (different UID, rootless remapping) cannot write host-created dirs | Create output dirs inside the container exec command, not on the host |
+| `RUN nomad job validate` on all `.hcl` files | `for f in *.hcl; do nomad job validate "$f"; done` | vault-policy.hcl has no `job` stanza; nomad errors on non-job HCL | Guard with `grep -q '^job '` before calling nomad job validate |
+| Hardcoded service count in compose validation | `[ "$ACTUAL" -eq 12 ]` | Adding new services breaks the hardcoded count silently | Use `docker compose config --services \| wc -l` dynamically |
+| `type=docker` for OCI layout artifact pipeline | `docker save` for OCI layout pipeline | `oci-layout://` requires uncompressed directory tree, not a tarball | Use `docker buildx build --output type=oci,dest=<dir>` for OCI layout |
+| Broad paths filter (`**/*.toml`) for throttle | Used glob to catch all TOML files | Unrelated `.toml` files (Rust crates, tooling configs) triggered rebuilds | Be specific: use literal filenames, not broad globs |
+| Cron at `'0 0 * * *'` (UTC midnight) | Scheduled container builds at midnight UTC | Coincides with GHA queue surge; builds queued 30+ min | Pick off-peak: `0 6 * * *` was empirically uncontended |
+| Forgot `tags: ['v*']` in push trigger when adding paths | Release tag pushes after adding `paths:` filter | Tags don't modify filtered paths, so tag pushes no longer triggered builds | Keep tags as a separate trigger entry without `paths:` |
+| Only bumping primary base image digest for CVEs | Updated Python base image SHA only | npm CVEs from `node:20-slim` remained | Bump ALL pinned image digests, not just the primary base |
+| `\|\| true` on binary version check in multi-arch | `RUN goose --version \|\| true` without QEMU | Without QEMU, arm64 invocations fail silently when guarded by `\|\| true` | Remove `\|\| true` from sanity checks after confirming QEMU is set up |
+| `git config core.hooksPath .git/hooks` before pre-commit install | Set hooks path explicitly | If `core.hooksPath` is set, pre-commit refuses to install | Do not set `core.hooksPath` unless intentional; unset before `pre-commit install` |
+| Separate `helpers.py` for test utilities | Created `tests/foundation/helpers.py` | `conftest.py` is already the shared utilities file; extra file adds indirection | Put plain helper functions directly in `conftest.py` |
+| Using symlink `Dockerfile` → `Containerfile` during Docker-to-Podman migration | Kept `Dockerfile` symlink for compatibility | Unnecessary complexity | Rename directly to `Containerfile`; Podman finds it first |
+| `ignore:` key in `.hadolint.yaml` | Suppression list under `ignore:` | hadolint >= 2.x reads `ignored:`; the misspelled key is silently dropped, voiding every suppression so all accepted findings leak as `::error::` annotations (hadolint exits 0 but the action fails) | Use `ignored:`; verify with `hadolint -c .hadolint.yaml -f json <file>` — ignored rules should vanish from the JSON |
+| `driver: docker-container` to consume a `load:true` base via build-arg | Switched buildx to docker-container (someone's wrong attempted fix) | docker-container driver has an isolated image store; it can't see images loaded into the daemon and falls back to pulling from docker.io → `pull access denied ... insufficient_scope` | Use `driver: docker` (shares the daemon image store), matching the working build-vessels/smoke `load: true` pattern (AchaeanFleet #694) |
+| `cache-to: type=gha,mode=max` with `driver: docker` | Kept GHA cache export after switching to docker driver | Aborts the build with `Cache export is not supported for the docker driver` | Drop the GHA cache export when using `driver: docker` (AchaeanFleet #693) |
+| Removing a vessel from `test-smoke-vessels` matrix without updating the drift test | Dropped a vessel from the CI matrix | `test_smoke_matrix_drift.py` asserts every `vessels/<x>` dir is in the matrix → drift test goes red | Add the removed vessel to that test's `EXCLUDED_VESSELS` allowlist (AchaeanFleet #696) |
+| `["CMD-SHELL", "wget -qO- ..."]` CMD-SHELL array | Used `["CMD-SHELL", "wget -qO- http://localhost:8080/v1/health"]` single-element | Docker Compose v5 still splits this; `podman inspect .Config.Healthcheck` shows `["CMD-SHELL","wget","-qO-","http://..."]` | CMD-SHELL array form is also split in v5 — only the plain string form is safe |
+| `wget -qO-` in Alpine/BusyBox image | Used GNU wget combined flag in `nats:alpine` healthcheck | BusyBox wget rejects `-qO-` as an invalid combined flag | Alpine images use BusyBox wget; use `-q -O /dev/stdout` (space-separated, explicit path) |
+
+## Results & Parameters
+
+### Security Patching Cadence
+
+| Step | Command |
+| ------ | ------- |
+| Bump pinned digest | Update all `FROM image@sha256:...` lines |
+| OS CVE patches | `apt-get update && apt-get upgrade -y` in first RUN |
+| npm audit | `npm audit fix` in Node stages |
+| Trivy scan | Add `aquasecurity/trivy-action` to CI workflow |
+
+### Podman CI Key Parameters
+
+```yaml
+# Build for GHCR
+podman build --format docker -f Containerfile --target <target> -t <tag> .
+
+# GHA cache (not Docker buildx GHA cache)
+- uses: actions/cache@v4
+  with:
+    path: ~/.local/share/containers
+    key: container-image-uid${{ steps.uid.outputs.user_id }}-${{ hashFiles('Dockerfile', 'pixi.toml', 'pixi.lock') }}
+```
+
+### OCI Layout: Directory vs Tarball
+
+| `dest=` value | Result on disk | `oci-layout://` compatible? |
+| --------------- | ---------------- | ------------------------------ |
+| `/tmp/foo.tar` | Single `.tar` archive file | No — fails with "not a directory" |
+| `/tmp/foo` | OCI layout directory (`index.json`, `blobs/`, `oci-layout`) | Yes |
+
+### Rootless Podman UID Quick-Fix Table
+
+| Issue | Root Cause | Fix |
+| ------- | ----------- | ----- |
+| `can't find uid for user :` | Docker ARGs don't persist across `FROM` | Re-declare `ARG` in each stage |
+| `Permission denied` on workspace files | Rootless Podman UID namespace mapping | `chmod -R a+rwX .` on host before container use |
+| `docker-compose` ignores `userns_mode` | docker-compose CLI plugin, not Podman compose | Don't use Podman-specific compose extensions in docker-compose |
+| SBOM scan auth failure | Syft can't authenticate to GHCR | Export image to tarball, scan locally |
+
+### Healthcheck: Distroless / Scratch
+
+```dockerfile
+# Option A: compiled binary probe (copy nc or a Go binary into the image)
+HEALTHCHECK --interval=10s --timeout=5s CMD ["/usr/bin/nc", "-z", "localhost", "8080"]
+
+# Option B: TCP check via shell (only if shell is available)
+HEALTHCHECK CMD sh -c "wget -qO- http://localhost:8080/health | grep -q ok || exit 1"
+```
+
+### Dockerfile Version Pin Pattern
+
+```dockerfile
+ENV PIXI_VERSION=0.63.2
+RUN curl -fsSL https://pixi.sh/install.sh | bash -s -- --version $PIXI_VERSION
+```
+
+### Container-Throttle Schedule (Empirically Good)
+
+```yaml
+schedule_cron: '0 6 * * *'   # 06:00 UTC — off-peak
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | Multiple PRs — Docker-to-Podman migration, pixi isolation, UID mismatch | skills/docker-to-podman-migration.history |
+| AchaeanFleet | PR #219 — multi-arch OCI, Conan 2 profile chain, ENTRYPOINT enforcement | skills/container-build-and-runtime-patterns.history |
+| AchaeanFleet | PRs #693/#694/#695/#696 — hadolint `ignored:` key, buildx `driver: docker` for `load:true` build-arg, GHA cache + docker driver incompatibility, smoke-matrix drift guard (verified-ci: post-merge "Build All Agent Images" on main HEAD green) | skills/container-build-and-runtime-patterns.history |
+| ProjectKeystone | PR — rootless Podman DNS, compose mount clone-aware | skills/container-build-and-runtime-patterns.history |
+| ProjectNestor | PR — C++ coverage container, clang-format pinning, Podman CI containerization | skills/container-build-and-runtime-patterns.history |
+| ProjectScylla | PR — E2E container testing, pixi container env isolation | skills/container-build-and-runtime-patterns.history |
+| Odysseus | E2E stack — Docker Compose v5.0.2 healthcheck array split, BusyBox wget flag differences, stub-to-C++ migration | skills/container-build-and-runtime-patterns.history |
+
+## References
+
+- [docker-mojo-uid-mismatch-crash-fix.md](docker-mojo-uid-mismatch-crash-fix.md) — detailed Mojo UID mismatch fixes (keep-as-example)
+- [docker-multistage-build.md](docker-multistage-build.md) — full multistage build walkthrough (keep-as-example)
+- [fix-podman-rootless-ci.md](fix-podman-rootless-ci.md) — rootless Podman CI setup (keep-as-example)
+- [podman-from-source-install.md](podman-from-source-install.md) — install Podman from source (keep-as-example)
+- [docker-entrypoint-bats.md](docker-entrypoint-bats.md) — BATS testing for entrypoints (keep-as-example)
+- [Podman rootless documentation](https://github.com/containers/podman/blob/main/docs/tutorials/rootless_tutorial.md)
+- [Docker multi-stage builds](https://docs.docker.com/build/building/multi-stage/)
+- [OCI image spec](https://github.com/opencontainers/image-spec)
+
+---
+
+## Superseded from docker-multistage-build
+
+**Original date/version:** 2026-02-14 / 1.0.0
+
+```yaml
+name: docker-multistage-build
+description: Implement multi-stage Docker builds to reduce production image size by
+  separating build-time and runtime dependencies
+category: ci-cd
+date: 2026-02-14
+version: 1.0.0
+user-invocable: false
+```
+
+# Docker Multi-Stage Build Implementation
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-02-14 |
+| **Issue** | #601 |
+| **PR** | #649 |
+| **Objective** | Reduce Docker production image size by separating build-time and runtime dependencies |
+| **Outcome** | ✅ **246MB reduction (30%)**: 818MB → 572MB |
+| **Status** | Completed and merged |
+
+## When to Use This Skill
+
+Apply this pattern when:
+
+1. **Large Docker images** with build tools in production (gcc, g++, build-essential, make)
+2. **Python projects** requiring compiled C extensions (cryptography, pillow, numpy, pandas)
+3. **Security concerns** about unnecessary tooling in production images
+4. **Deployment optimization** needed for faster pulls and container startup
+5. **Clear separation** between build-time and runtime dependencies exists
+
+**Do NOT use** when:
+
+- Image is already minimal (<100MB)
+- No compiled dependencies exist (pure Python)
+- Build tools are required at runtime (dynamic compilation use cases)
+
+## Verified Workflow
+
+### 1. Analyze Current Image
+
+```bash
+# Build current single-stage image
+docker build -f docker/Dockerfile -t app:current .
+
+# Check image size
+docker images app:current
+
+# Verify which packages are installed
+docker run --rm app:current dpkg -l | grep -E "gcc|g\+\+|build-essential|make"
+```
+
+**Expected findings:**
+
+- Build tools present in production image
+- Larger image size (>500MB for Python apps with dependencies)
+- Attack surface includes unnecessary packages
+
+### 2. Design Multi-Stage Dockerfile
+
+**Pattern:**
+
+```dockerfile
+# ============================================================================
+# Stage 1: Builder - Install Python packages with build dependencies
+# ============================================================================
+FROM python:3.10-slim AS builder
+
+# Set build environment variables
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install build dependencies (will NOT be in final image)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python build tools
+RUN pip install --no-cache-dir hatchling
+
+# Copy project files
+COPY pyproject.toml /opt/app/
+COPY README.md /opt/app/
+COPY src/ /opt/app/src/
+
+# Install to /usr/local for global access (alternative: --user flag with /root/.local)
+RUN pip install --no-cache-dir /opt/app/
+
+# ============================================================================
+# Stage 2: Runtime - Minimal production image
+# ============================================================================
+FROM python:3.10-slim
+
+# Copy Python packages from builder stage
+COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Set runtime environment variables
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Install ONLY runtime dependencies (no build tools)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Rest of runtime configuration...
+WORKDIR /workspace
+CMD ["python", "-m", "app"]
+```
+
+**Key decisions:**
+
+- **Global install vs user install:** Use global (`/usr/local`) for multi-user containers, user (`/root/.local`) for single-user
+- **Base image version:** Pin to specific minor version (e.g., `python:3.10.12-slim`) for reproducibility
+- **Layer order:** Put least-changing layers first for better Docker cache utilization
+
+### 3. Update Build Context (if needed)
+
+If Dockerfile copies files from repository root:
+
+```yaml
+# docker-compose.yml
+services:
+  app:
+    build:
+      context: ..           # Changed from '.' to parent directory
+      dockerfile: docker/Dockerfile
+```
+
+### 4. Build and Verify
+
+```bash
+# Build multi-stage image
+docker build -f docker/Dockerfile -t app:multi-stage .
+
+# Compare sizes
+docker images app
+
+# Verify build tools NOT present (should fail)
+docker run --rm app:multi-stage gcc --version
+# Expected: "gcc: not found"
+
+# Verify runtime functionality works
+docker run --rm app:multi-stage python --version
+docker run --rm app:multi-stage python -c "import myapp; print('OK')"
+```
+
+### 5. Test All Functionality
+
+```bash
+# Test docker-compose profiles
+docker compose -f docker/docker-compose.yml build
+docker compose -f docker/docker-compose.yml --profile test run test
+docker compose -f docker/docker-compose.yml --profile dev run shell
+
+# Test entrypoint
+docker run --rm app:multi-stage --help
+docker run --rm app:multi-stage --version
+
+# Test with mounted volumes
+docker run --rm -v $(pwd):/workspace app:multi-stage pytest
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Image Size Comparison
+
+| Version | Size | Reduction |
+| --------- | ------ | ----------- |
+| Original (single-stage) | 818MB | --- |
+| Multi-stage | 572MB | **-246MB (-30%)** |
+
+### Build Time Impact
+
+- **Initial build:** +12 seconds (due to two stages)
+- **Cached build:** No difference (Docker layer caching works for both stages)
+- **CI/CD impact:** Faster pulls outweigh slightly slower builds
+
+### Files Modified
+
+1. **docker/Dockerfile** - Split into builder and runtime stages
+2. **docker/docker-compose.yml** - Updated build context from `docker/` to repository root
+
+### Verification Commands
+
+```bash
+# Size reduction
+docker images scylla-runner --format "{{.Repository}}:{{.Tag}} - {{.Size}}"
+
+# Build tools absent
+docker run --rm scylla-runner:multi-stage gcc --version      # ❌ not found
+docker run --rm scylla-runner:multi-stage g++ --version      # ❌ not found
+docker run --rm scylla-runner:multi-stage make --version     # ❌ not found
+
+# Runtime functionality present
+docker run --rm scylla-runner:multi-stage python --version   # ✅ Python 3.14.2
+docker run --rm scylla-runner:multi-stage git --version      # ✅ git 2.43.0
+docker run --rm scylla-runner:multi-stage claude --help      # ✅ Claude CLI v2.1.42
+docker run --rm scylla-runner:multi-stage python -c "import scylla; print('OK')"  # ✅ OK
+```
+
+## Implementation Checklist
+
+When implementing multi-stage builds, verify:
+
+- [ ] Builder stage installs all build dependencies (gcc, g++, build-essential)
+- [ ] Builder stage compiles Python packages with C extensions
+- [ ] Runtime stage copies compiled packages from builder
+- [ ] Runtime stage does NOT install build tools
+- [ ] PATH includes binary directories if using --user install
+- [ ] Build context in docker-compose.yml points to correct directory
+- [ ] Image size is measured before and after (document reduction)
+- [ ] All functionality tests pass in new image
+- [ ] docker-compose profiles still work
+- [ ] CI/CD pipelines updated if needed
+
+## Related Skills
+
+- **containerize-e2e-experiments** - Docker architecture patterns and layer optimization
+- **fix-docker-platform** - Platform-specific build considerations
+- **build-run-local** - Build verification and testing workflows
+
+## References
+
+- Issue #601: <https://github.com/HomericIntelligence/ProjectScylla/issues/601>
+- PR #649: <https://github.com/HomericIntelligence/ProjectScylla/pull/649>
+- Docker Multi-Stage Builds: <https://docs.docker.com/build/building/multi-stage/>
+- Python Docker Best Practices: <https://docs.docker.com/language/python/>
+
+## Team Knowledge
+
+**Key Learning:** When separating build and runtime stages, always verify that:
+
+1. Python packages are in the correct site-packages directory
+2. Binary entry points are in PATH
+3. Build context includes all files referenced in COPY statements
+
+**Common Pitfall:** Forgetting to copy `/root/.local/bin` or update PATH when using `pip install --user`.
+
+**Best Practice:** Pin base image to specific minor version (e.g., `python:3.10.12-slim`) for reproducibility, but avoid SHA256 digests unless regulatory compliance requires it.
+
+---
+
+## Superseded from docker-ci-dead-step-cleanup
+
+**Original date/version:** 2026-02-27 / 1.0.0
+
+```yaml
+name: docker-ci-dead-step-cleanup
+description: Resolve CI workflows referencing non-existent test directories by removing
+  dead steps and documenting deferred testing decisions
+category: ci-cd
+date: 2026-02-27
+version: 1.0.0
+user-invocable: false
+```
+
+# Skill: Resolving Dead CI Workflow Steps
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-02-27 |
+| **Issue** | #1114 |
+| **PR** | #1157 |
+| **Objective** | Remove CI workflow step referencing non-existent tests/docker/ |
+| **Outcome** | Success — PR #1157 merged, all 3185 tests passed |
+| **Category** | ci-cd |
+| **Project** | ProjectScylla |
+
+## When to Use This Skill
+
+Apply this pattern when:
+
+- A CI workflow references a test directory that does not exist
+- A CI job runs but tests nothing meaningful (empty test suite)
+- You need to decide between implementing missing tests vs. removing dead CI
+- A workflow name does not accurately reflect what it does
+
+## Decision Criteria: Implement vs. Remove
+
+| Implement Tests (Option A) | Remove Dead Step (Option B) |
+| --------------------------- | ---------------------------- |
+| Tests are feasible in CI (no secret requirements) | Tests require secrets (API keys, credentials) not available in CI |
+| Test gap is actively causing quality issues | Test gap is tracked elsewhere (another issue/ADR) |
+| Tests can run quickly (<5 min) | Shell scripts better tested with BATS in tests/shell/ |
+| Clear scope for what to test | Docker integration = heavyweight, not suitable for PR CI |
+
+## Verified Workflow
+
+### Option B: Remove Dead Step
+
+1. **Read the workflow file** to understand what the dead step does
+2. **Check if the referenced directory exists**: `ls tests/docker/`
+3. **Remove only the dead steps** — keep any genuine validation steps
+4. **Rename the workflow** if its name implies more than it does
+5. **Create an ADR** documenting the decision:
+   - `docs/dev/adr/<name>.md`
+   - Include: context, decision, reasons, consequences
+6. **Check README.md** for CI badge references that would break
+7. **Commit and PR** with `Closes #<issue>` in body
+
+### ADR Template for Deferred Testing
+
+```markdown
+# ADR: <Feature> Testing Deferred
+
+**Date**: YYYY-MM-DD
+**Status**: Accepted
+**Issue**: [#N](url)
+
+## Context
+<Why the dead step existed and what problem it created>
+
+## Decision
+<What was removed/kept and why>
+
+## Reasons
+- <Reason 1: e.g., requires secrets not available in CI>
+- <Reason 2: e.g., better tested with different tooling>
+- <Reason 3: e.g., tracked in issue #N>
+
+## Consequences
+- <What is now absent>
+- <Where the gap is tracked>
+- <How to implement later if needed>
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Workflow Before/After
+
+**Before** (dead steps removed):
+
+```yaml
+- name: Install pixi
+  uses: prefix-dev/setup-pixi@v0.9.4
+  with:
+    pixi-version: v0.62.2
+    cache: true
+
+- name: Run Docker tests
+  run: |
+    pixi run pip install -e .
+    pixi run pytest tests/docker/ -v --no-cov
+```
+
+**After** (replaced with a comment):
+
+```yaml
+# Docker integration tests are deferred — see docs/dev/adr/docker-testing-deferred.md
+# Entrypoint script testing is tracked in GitHub issue #1113
+```
+
+### CI Impact
+
+- Before: workflow would fail if `tests/docker/` was created but empty
+- After: workflow only runs Dockerfile syntax check + compose config validation
+- Coverage: 78.36% (above 75% threshold), 3185 tests passing
+
+### Lessons for Non-Interactive Sessions
+
+When running in automated/non-interactive sessions (don't-ask permission mode):
+
+- Skill tools may be denied — always have the manual Bash fallback ready
+- Security hooks on CI workflow files are informational, not blockers, but tool calls may still be denied
+- Use `Bash` with heredoc writes for GitHub Actions YAML files
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectScylla | Issue #1114, PR #1157 | [notes.md](../references/notes.md) |
+
+## Related Skills
+
+- **validate-workflow** — Verifying GitHub Actions workflow syntax
+- **docker-multistage-build** — Docker build optimization patterns
+- **fix-docker-shell-tty** — Docker shell and TTY configuration
+
+## References
+
+- Issue #1114: <https://github.com/HomericIntelligence/ProjectScylla/issues/1114>
+- PR #1157: <https://github.com/HomericIntelligence/ProjectScylla/pull/1157>
+- Issue #1113 (BATS shell testing): <https://github.com/HomericIntelligence/ProjectScylla/issues/1113>
+- ADR: `docs/dev/adr/docker-testing-deferred.md` in ProjectScylla
+
+---
