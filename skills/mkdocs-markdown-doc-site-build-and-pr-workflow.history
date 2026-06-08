@@ -1,0 +1,1600 @@
+<!-- markdownlint-disable MD024 -->
+
+# History: mkdocs-markdown-doc-site-build-and-pr-workflow
+
+Consolidation changelog and verbatim archive of absorbed skills.
+
+## v1.0.0 (2026-06-07)
+
+Consolidated 4 skills into this general canonical:
+
+- `mkdocs-nav-cleanup` (was ci-cd, v1.2.0, 2026-05-25)
+- `markdown-linting-and-build-fixes` (was documentation, v1.2.0, 2026-05-29)
+- `doc-config-drift-check` (was ci-cd, v2.0.0, 2026-02-28)
+- `documentation-workflow-meta-patterns` (was documentation, v1.0.0, 2026-05-19)
+
+Specific cases retained as examples in the canonical; full originals preserved verbatim below.
+
+## Superseded from mkdocs-nav-cleanup
+
+**Original date/version**: 2026-05-25 / v1.2.0
+
+```yaml
+name: mkdocs-nav-cleanup
+description: 'Fix and PREVENT MkDocs build failures from nav or cross-references pointing
+  at deleted files. Use when: (1) about to push a PR that deletes documentation/ADR/repro
+  files (run pre-deletion audit first), (2) CI ''Deploy Documentation'' job fails after
+  deleting doc stubs, (3) mkdocs build --strict reports missing files, (4) PR deletes
+  placeholder docs but mkdocs.yml nav still references them, (5) --strict rejects a
+  relative link like ../../docs/dev/file.md that escapes the docs/ root.'
+category: ci-cd
+date: 2026-05-25
+version: 1.2.0
+user-invocable: false
+verification: verified-ci
+history: mkdocs-nav-cleanup.history
+tags: []
+```
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Skill** | mkdocs-nav-cleanup |
+| **Category** | ci-cd |
+| **Trigger** | PR about to delete (or has deleted) documentation files referenced by `mkdocs.yml` or by other surviving docs |
+| **Scope** | mkdocs.yml nav section + every surviving markdown file under `docs/` |
+| **Verification** | verified-ci |
+| **History** | [changelog](./mkdocs-nav-cleanup.history) |
+
+## When to Use
+
+- **Preferred (preventive):** A PR is about to delete one or more `.md` files (docs, ADRs,
+  reproductions, workflow stubs). Run the Pre-Deletion Audit before pushing.
+- A PR deletes placeholder/stub documentation files and CI "Deploy Documentation" fails
+- `mkdocs build --strict` reports "Documentation file 'X.md' specified in nav is not found"
+- A remaining markdown file contains a relative link to a now-deleted file
+- Pre-existing link-check failures (root-relative paths) conflated with PR-caused failures
+- A relative link uses `../../docs/dev/` from inside `docs/adr/` — escaping the mkdocs
+  `docs/` root under `--strict`
+- A surviving doc enumerates inventory (e.g. `"ADR-001 through ADR-XYZ"` in
+  `docs/README.md`) that becomes stale when entries are removed — mkdocs does not catch
+  this; the basename audit does
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Pre-deletion audit — run BEFORE pushing any documentation deletion PR
+FILES_TO_DELETE="docs/adr/ADR-014-foo.md docs/dev/mojo-jit-crash-workaround.md"
+PATTERN=$(echo "$FILES_TO_DELETE" | tr ' ' '\n' | xargs -n1 basename | sed 's/\.md$//' | paste -sd'|')
+grep -rn -E "$PATTERN" docs/ mkdocs.yml --exclude-dir=.git
+# Any hits MUST be fixed in the same commit as the deletion.
+```
+
+### Pre-Deletion Audit (preferred path)
+
+`mkdocs --strict` catches broken links INSIDE the doc tree at build time, but there is
+no `mkdocs check-links --dry-run` to warn you BEFORE the deletion lands. Without an
+upfront audit, each CI run only surfaces the first batch of broken links it encounters —
+a deletion PR with cross-references in N surviving docs typically takes N red CI runs
+to fix incrementally. Run this audit in the deletion PR's branch before pushing:
+
+1. **Enumerate the deletion set** — list every `.md` file the PR removes:
+
+   ```bash
+   FILES_TO_DELETE=$(git diff --name-only --diff-filter=D origin/main...HEAD -- '*.md')
+   echo "$FILES_TO_DELETE"
+   ```
+
+2. **Build a basename grep pattern** — basenames catch relative links, absolute links,
+   and bare filename mentions in prose (e.g. enumeration lists):
+
+   ```bash
+   PATTERN=$(echo "$FILES_TO_DELETE" | xargs -n1 basename | sed 's/\.md$//' | paste -sd'|')
+   ```
+
+3. **Grep surviving docs + mkdocs.yml** for any reference to the to-be-deleted files:
+
+   ```bash
+   grep -rn -E "$PATTERN" docs/ mkdocs.yml --exclude-dir=.git
+   ```
+
+4. **Fix every hit in the same commit as the deletion.** Options per hit:
+   - Surviving doc links to deleted file → remove or repoint the link
+   - `mkdocs.yml` nav entry → remove the entry (and the parent section if empty)
+   - Inventory enumeration (`ADR-001 through ADR-XYZ`) → update the range
+   - Surviving doc has an unavoidable external reason to keep its reference → repoint to
+     an archive URL or footnote the deletion; never leave the bare link
+
+5. **Re-run the grep — must return empty** before committing.
+
+6. **(Optional, when available locally) run `mkdocs build --strict`** to double-check.
+
+### Post-Hoc Cleanup (fallback when CI has already failed)
+
+If the deletion PR already shipped and CI is red, the original v1.1.0 workflow still
+applies — fix the next batch and re-run the audit grep before re-pushing to avoid
+another red iteration:
+
+1. **Identify deleted files** — check the PR diff for removed `.md` files
+2. **Audit mkdocs.yml nav** — find all nav entries referencing the deleted files
+3. **Audit remaining docs for cross-links** using the Pre-Deletion Audit grep above —
+   do this in one pass; do NOT push partial fixes
+4. **Remove nav entries** from `mkdocs.yml` (and parent sections if empty)
+5. **Remove or repoint broken cross-links** in surviving docs
+6. **Verify with the grep — must return empty**
+7. **Run pre-commit on changed files**:
+
+   ```bash
+   pre-commit run --files mkdocs.yml docs/path/to/changed.md
+   ```
+
+8. **Commit and push**
+
+### Relative Link Escaping the docs/ Root
+
+`mkdocs --strict` rejects relative links that resolve outside the `docs/` directory:
+
+```markdown
+# WRONG — from docs/adr/ADR-014.md, this goes to repo-root then docs/dev/
+[link](../../docs/dev/mojo-jit-crash-workaround.md)
+
+# CORRECT — from docs/adr/, ../dev/ stays within docs/
+[link](../dev/mojo-jit-crash-workaround.md)
+```
+
+**Rule**: Count `../` hops from the file location. From `docs/adr/file.md`:
+
+- `../` goes to `docs/` (safe)
+- `../../` goes to repo root (escapes docs/, rejected by --strict)
+
+**Diagnosis**: `mkdocs build --strict` error:
+`"path '../../docs/dev/...' is not within the documentation directory"`
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Removing entire section blocks at once | Used Edit to replace multi-line nav blocks covering Core + Advanced + Development | Initially included a surviving file in the removal | Always check which files in a nav section still exist before removing the whole block |
+| Treating link-check failures as in-scope | Considered fixing 20 root-relative path errors in unrelated files | These were pre-existing on main, unrelated to the PR | Verify pre-existing CI failures with `gh run list --branch main --workflow "Check Markdown Links"` before scoping fixes |
+| Push deletion PR with no upfront cross-reference audit (iteration 1) | Scorched-earth deletion PR (~32 files) pushed; mkdocs `--strict` failed on two surviving dev docs both linking to a just-deleted JIT-crash workaround page | mkdocs only reports broken links at build time and stops on the first batch it finds; without a basename grep beforehand, the first red CI run only surfaces the most prominent hits | Run the Pre-Deletion Audit grep in the same commit as the deletion — do not rely on CI to enumerate broken links |
+| Fix the CI-reported links and re-push (iteration 2) | After fixing the two dev docs, pushed again; mkdocs `--strict` failed AGAIN on a surviving ADR (kept due to external references) that linked to a different deleted ADR and to the same deleted JIT workaround | Incremental fixing addresses only what the previous CI run surfaced, not the full deletion fallout; partial fixes guarantee at least one more red iteration per missed referrer | After ANY CI failure caused by a deletion, immediately run the full basename audit grep against the deletion set before pushing the next fix — never patch only the file CI named |
+| Rely on mkdocs to catch stale inventory enumerations (iteration 3, quieter case) | A surviving `docs/README.md` enumerated `"ADR-001 through ADR-008, ADR-010, ADR-012–ADR-015"`; two of those ADRs were deleted but mkdocs ignored the prose mention because it was not a markdown link | mkdocs `--strict` only validates parsable link targets, not bare filename or ID mentions in prose | Include basename grep (not just link-target grep) in the Pre-Deletion Audit so inventory lists, footnotes, and prose references to deleted artifacts are caught alongside real links |
+
+## Results & Parameters
+
+**Recommended pre-deletion audit (copy-paste):**
+
+```bash
+# Inside a feature branch with deletions staged or already committed
+FILES_TO_DELETE=$(git diff --name-only --diff-filter=D origin/main...HEAD -- '*.md')
+if [ -z "$FILES_TO_DELETE" ]; then
+  echo "No .md deletions detected."
+else
+  PATTERN=$(echo "$FILES_TO_DELETE" | xargs -n1 basename | sed 's/\.md$//' | paste -sd'|')
+  echo "Auditing for references to: $PATTERN"
+  grep -rn -E "$PATTERN" docs/ mkdocs.yml --exclude-dir=.git || echo "Clean — safe to push."
+fi
+```
+
+**Expected output when clean:** the literal string `Clean — safe to push.` (or empty grep
+output). Any other output is a list of `file:line:match` triples that MUST be addressed
+before the deletion commit is pushed.
+
+**Key distinction — two independent CI failure types:**
+
+1. **In-scope**: `build-docs` fails because nav references deleted files → fix
+   `mkdocs.yml` and cross-links (and prevent next time with the Pre-Deletion Audit)
+2. **Out-of-scope (pre-existing)**: `link-check` fails on root-relative paths (e.g.
+   `/.claude/shared/`) → do not fix in this PR; confirm with
+   `gh run list --branch main --workflow "..."` that it was already failing before the PR
+
+**Empirical result of the pre-deletion audit:** running the basename grep post-hoc
+against the deletion set after the third fix landed returned a clean result — confirming
+that a single up-front audit pass would have surfaced all three iterations' worth of
+broken references in one commit.
+
+### Notes: mkdocs-nav-cleanup.notes.md
+
+# Session Notes: mkdocs-nav-cleanup
+
+## Context
+
+- **Date**: 2026-03-05
+- **PR**: #3308 (issue #3142), branch `3142-auto-impl`
+- **Repo**: HomericIntelligence/ProjectOdyssey
+- **Task**: Fix CI failures after deleting 17 empty placeholder documentation stubs
+
+## What Was Done
+
+The PR deleted 17 placeholder `.md` files across `docs/core/`, `docs/advanced/`, and `docs/dev/`.
+CI "Deploy Documentation" failed because `mkdocs.yml` still listed all 17 files in its `nav` section.
+Additionally, `docs/advanced/benchmarking.md:666` had a relative link `[SIMD Integration Guide](integration.md)`
+pointing to the deleted `docs/advanced/integration.md`.
+
+### Files Changed
+
+- `mkdocs.yml`: Removed Core section (8 nav entries), 6 Advanced entries, 3 Development entries
+- `docs/advanced/benchmarking.md`: Removed broken relative link at line 666
+
+### Files NOT Changed (pre-existing failures)
+
+- `CLAUDE.md`, `docs/adr/ADR-005-...`, `docs/adr/README.md`, `notebooks/README.md`:
+  20 root-relative path errors in `link-check` workflow — pre-existing on main, out of scope.
+
+## Commands Used
+
+```bash
+# Verify no remaining references
+grep -r "core/project-structure|core/workflow|..." docs/ mkdocs.yml
+
+# Pre-commit on changed files only
+pre-commit run --files mkdocs.yml docs/advanced/benchmarking.md
+
+# Commit
+git add mkdocs.yml docs/advanced/benchmarking.md
+git commit -m "fix: Address review feedback for PR #3308\n\nCloses #3142"
+```
+
+## Key Insight
+
+When a PR deletes placeholder docs, there are always two separate concerns:
+1. `mkdocs.yml` nav entries (always need updating)
+2. Cross-references in remaining docs (grep to find, then remove/update)
+
+A third concern — pre-existing link-check failures from root-relative paths — looks related
+but is not caused by the PR and should not be fixed in the same PR.
+
+---
+## Superseded from markdown-linting-and-build-fixes
+
+**Original date/version**: 2026-05-29 / v1.2.0
+
+```yaml
+name: markdown-linting-and-build-fixes
+description: "Use when: (1) markdownlint CI reports MD056/table-column-count errors from
+  pipes inside backtick code spans in table cells, (2) mkdocs --strict build fails with
+  out-of-tree relative links pointing outside docs/, (3) CLAUDE.md exceeds a line/token
+  budget and needs trimming without losing critical rules, (4) shared documentation files
+  are missing link-backs in an index/root markdown file, (5) an entire PR queue is red on
+  the same markdownlint check pointing to the same file:line — systemic main-branch
+  regression needing fix + bulk queue recovery"
+category: documentation
+date: 2026-05-29
+version: "1.2.0"
+verification: verified-ci
+user-invocable: false
+history: markdown-linting-and-build-fixes.history
+tags:
+  - markdownlint
+  - MD056
+  - MD060
+  - tables
+  - pipe-escape
+  - mkdocs
+  - strict-mode
+  - claude-md
+  - token-budget
+  - ci-unblocking
+  - queue-unblock
+  - admin-merge
+  - MD033
+  - MD018
+  - MD059
+  - false-positives
+```
+
+# Markdown Linting and Documentation Build Fixes
+
+## Overview
+
+| Field | Value |
+| ----- | ----- |
+| **Goal** | Fix documentation toolchain failures: markdownlint errors, mkdocs --strict build failures, CLAUDE.md token bloat, and shared-link drift |
+| **Trigger** | CI red on markdownlint or mkdocs; CLAUDE.md over budget; shared docs missing from index |
+| **Output** | Passing markdownlint + mkdocs build + trimmed CLAUDE.md + linked shared docs |
+| **Risk** | Low — mechanical escapes, link rewrites, and structural edits only |
+
+## When to Use
+
+- **MD056 pipe escape**: markdownlint reports `Expected: N; Actual: N+K` on a table row
+  containing `|` or `||` inside backtick code spans (GitHub Actions expressions, shell pipes)
+- **Systemic queue block**: every open PR fails the same required markdownlint check on the
+  same `file:line` — the bug lives in `main`, not in any PR
+- **mkdocs --strict failure**: "Deploy Documentation" CI aborts with
+  `Aborted with N warnings in strict mode` caused by relative links escaping the `docs/` tree
+- **CLAUDE.md token budget**: file exceeds a line budget (e.g., >1,200 lines), sections
+  duplicate content in `.claude/shared/`, or MD060 table-column-style errors need fixing
+- **Shared-link drift**: `.claude/shared/` files exist on disk but are absent from a root
+  file's Quick Links section; pre-commit hook needed to prevent future drift
+- **MD033 false-positive on placeholders**: angle-bracket placeholders in prose like
+  `` `<version>` ``, `` `<dep>` ``, `` `<thing>` `` trigger `MD033/no-inline-html` even
+  though they are documentation prose, not HTML tags
+- **MD018 false-positive on `#NNN` at column 1**: a line beginning with an issue
+  reference like `\#5453.` triggers `MD018/no-missing-space-atx` (the `#` is misread as
+  a malformed heading)
+- **MD059 false-positive on link text**: link text like `[link](url)`, `[here](url)`,
+  `[click](url)` triggers `MD059/descriptive-link-text`
+- **MD056 in non-table cells**: pipe-containing syntax examples like
+  `{dry-run\|smoke\|full}` or nested markdown-table examples inside a cell, not just
+  GitHub Actions expressions
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# --- MD056 pipe escape ---
+# Escape every | inside backticks in a table cell as \|
+# Before: | `${{ a && '1' || '0' }}` |
+# After:  | `${{ a && '1' \|\| '0' }}` |
+# Before: | `pip list | grep hephaestus`           |
+# After:  | `pip list \| grep hephaestus`          |
+# Before: | `[.comments[]|select(.body|test(...))]` |
+# After:  | `[.comments[]\|select(.body\|test(...))]` |
+
+# --- Detect the pattern across a file ---
+grep -nE '\|.*`[^`]*\|[^`]*`' <file>
+# Finds backtick code spans containing internal pipes in table-line-ish content.
+
+# --- Validate markdownlint ---
+npx --yes markdownlint-cli2 "skills/<name>.md"
+# MUST be "Summary: 0 error(s)" before commit/push
+
+# --- mkdocs strict local test ---
+pixi run mkdocs build --strict
+# Must complete with no WARNING lines
+
+# --- CLAUDE.md audit ---
+grep -n "^##\|^###\|^####" CLAUDE.md
+wc -l CLAUDE.md
+pixi run npx markdownlint-cli2 CLAUDE.md   # baseline before editing
+
+# --- Shared-link audit ---
+grep -n "shared/" CLAUDE.md | head -30
+ls .claude/shared/
+python scripts/audit_shared_links.py
+```
+
+### Step 1 — Identify the failure type
+
+Read the CI error output to classify:
+
+| CI Error Pattern | Failure Type | Go to Step |
+| ---------------- | ------------ | ---------- |
+| `MD056 ... Too many cells` on a row with backtick `\|` | Pipe escape | Step 2 |
+| Same `file:line` failing across all open PRs | Systemic queue block | Step 3 |
+| `Aborted with N warnings in strict mode` in mkdocs job | mkdocs out-of-tree link | Step 4 |
+| CLAUDE.md over line budget or MD060 errors | Token trim | Step 5 |
+| `.claude/shared/` file missing from Quick Links | Shared-link audit | Step 6 |
+| MD033 on `<version>`/`<placeholder>` in prose | Placeholder false-positive | Step 7 |
+| MD018 on line starting with `#NNN` | Issue-ref false-positive | Step 7 |
+| MD059 on `[link]`/`[here]`/`[click]` text | Non-descriptive link | Step 7 |
+| MD056 on `{a\|b\|c}` syntax inside a cell | Non-GHA pipe in cell | Step 7 |
+
+### Step 2 — Fix MD056: escape pipes inside backticks in table cells
+
+**Diagnosis:** `M - N` in the MD056 error equals the count of literal `|` chars inside
+backticks on that row (each `|` adds one phantom cell; `||` adds two).
+
+```bash
+gh run view <RUN_ID> --log-failed | grep MD056
+```
+
+**Column-number triage recipe.** When markdownlint reports
+`Expected: N; Actual: N+K` at `line:col`:
+
+1. Open the file at the cited `line:col`. The column number points at where the
+   surplus `|` lives — not at the row's start.
+2. Check whether that `|` sits inside backticks. If yes, this exact bug pattern —
+   escape with `\|` inside the code span. The rendered output still shows `|`
+   (CommonMark/GitHub renders `\|` as `|`).
+3. If no, the table itself is structurally wrong (added/missing cells) — restructure
+   the table, do NOT escape.
+
+**Common offender content (NOT just GitHub Actions expressions):**
+
+- Shell pipelines: `` `pip list | grep hephaestus` ``, `` `cat foo | head` ``
+- jq filters with multiple `|` operators: `` `[.comments[]|select(.body|test(...))]` ``
+- GitHub Actions expressions: `` `${{ a && '1' || '0' }}` ``
+- CLI option syntax: `` `{dry-run|smoke|full}` ``
+- Regex alternations: `` `(foo|bar|baz)` ``
+
+The triage technique is identical regardless of content type — count literal `|`
+chars inside backticks per cell.
+
+**What does NOT fix it:**
+
+- Adding columns to the table header — breaks the table's semantics.
+- Removing the pipe from the code example — destroys the documented behavior.
+- HTML entity `&#124;` inside backticks — renders as literal entity text in code spans.
+
+**Fix:** inside any inline code span between backticks inside a table cell, replace every
+`|` with `\|`. Leave structural pipe cell-separators alone.
+
+```markdown
+<!-- BEFORE (MD056 fires: 4-column table, row has 6 cells) -->
+| Attempt | Tried | Why Failed | Lesson |
+| ------- | ----- | ---------- | ------ |
+| GHA expr | Used `${{ inputs.x && '1' || '0' }}` | n/a | n/a |
+
+<!-- AFTER (passes MD056) -->
+| Attempt | Tried | Why Failed | Lesson |
+| ------- | ----- | ---------- | ------ |
+| GHA expr | Used `${{ inputs.x && '1' \|\| '0' }}` | n/a | n/a |
+```
+
+Note: `&#124;` also works outside backticks but renders as the literal entity inside code
+spans — use `\|` for table cells with inline code.
+
+Apply this escape to BOTH the `.md` skill file AND any `.history` snapshot file — absorbed
+content in `.history` frequently inherits unescaped pipes from original files' Failed
+Attempts tables, and `.history` files ARE linted by CI.
+
+Additional escape rules to apply in the same pass:
+
+- Line-starting PR references like `#1234` at the start of a paragraph: escape as `\#1234`
+  (prevents MD018)
+- Avoid blank lines inside blockquotes (prevents MD028)
+
+### Step 3 — Systemic queue block: one bad row in main blocks every PR
+
+**Mechanism:** Required-check CI runs markdownlint over the merge-base snapshot (PR HEAD
+merged into base). If the bad file lives in `main`, every open PR's merge-snapshot inherits
+it and becomes un-mergeable — even PRs that never touched the file.
+
+**Diagnostic giveaway:** failing `file:line` is identical across unrelated PRs.
+
+**Safety gate — verify uniform failure mode before any bulk action:**
+
+```bash
+for pr in <list-of-pr-numbers>; do
+  echo -n "PR #$pr: "
+  gh pr view $pr --json statusCheckRollup \
+    | python3 -c "import json,sys; d=json.load(sys.stdin); \
+        print(','.join(c['name'] for c in d['statusCheckRollup'] \
+              if c.get('conclusion') in ('FAILURE','CANCELLED','TIMED_OUT')))"
+done
+```
+
+Expected: every line ends in just `markdownlint`. If any line lists additional failures,
+investigate that PR individually — do not bulk admin-merge a queue with mixed failure modes.
+
+**Two-track recovery (run both in parallel):**
+
+- **Track A — land the fix:** branch from `main`, apply the escape (Step 2), push, open
+  fix PR, admin-merge it (it will also fail markdownlint since its merge-base still has the
+  bad file — that is expected).
+- **Track B — drain the stuck queue:** admin-merge each verified-uniform PR
+  **sequentially, not in parallel** (parallel admin-merges cause base-branch races; see
+  `tooling-gh-pr-merge-admin-parallel-base-branch-race`).
+
+Observed total recovery: **~2 minutes** for 17 stuck PRs.
+
+### Step 4 — Fix mkdocs --strict out-of-tree links
+
+mkdocs `--strict` rejects ANY relative link whose resolved target is outside `docs/`,
+regardless of `../` depth.
+
+**Reproduce locally:**
+
+```bash
+pixi run mkdocs build --strict
+# Warning format: Doc file 'X.md' contains a link 'Y', but the target 'Z' is not found
+```
+
+**Fix:** rewrite each offending relative link as an absolute GitHub blob URL:
+
+```markdown
+<!-- WRONG (mkdocs --strict aborts) -->
+See [wrapper](../../scripts/mojo-under-gdb.sh).
+
+<!-- CORRECT -->
+See [wrapper](https://github.com/<org>/<repo>/blob/main/scripts/mojo-under-gdb.sh).
+```
+
+**Decision rule for links from `docs/`:**
+
+| Target location | Link format |
+| --------------- | ----------- |
+| Inside `docs/` | Relative link within `docs/` — count `../` carefully to stay inside `docs/` |
+| Outside `docs/` (repo root, scripts/, .github/) | Absolute GitHub URL: `https://github.com/<org>/<repo>/blob/main/<path>` |
+| External site | Absolute `https://...` URL |
+
+**Re-verify:**
+
+```bash
+pixi run mkdocs build --strict
+# Must complete: "Documentation built in N.NN seconds" — no WARNING lines
+# INFO lines are tolerated; only WARNING-level entries abort --strict
+```
+
+### Step 5 — Trim CLAUDE.md token budget
+
+**Baseline before touching anything:**
+
+```bash
+wc -l CLAUDE.md
+pixi run npx markdownlint-cli2 CLAUDE.md 2>&1 | tee /tmp/baseline-lint.txt
+git stash && pixi run npx markdownlint-cli2 CLAUDE.md 2>&1 > /tmp/before.txt
+git stash pop && pixi run npx markdownlint-cli2 CLAUDE.md 2>&1 > /tmp/after.txt
+diff /tmp/before.txt /tmp/after.txt   # distinguish pre-existing vs. introduced errors
+```
+
+**Classify each section:**
+
+- **Keep full:** CRITICAL RULES, decision trees, quick-ref tables, any section with no link destination
+- **Trim examples:** remove code-block examples illustrating points already stated in bullets
+- **Move + link:** pure reference content that belongs in `.claude/shared/`
+
+**Never trim:** `## ⚠️ CRITICAL RULES`, Mojo critical patterns, Pre-Commit Hook Policy,
+Git workflow with concrete `gh pr create` examples, any section prefixed with `⚠️`.
+
+**Fix MD060 table style errors** (compact `|---|` → spaced `| --- |`):
+
+```markdown
+<!-- BEFORE (triggers MD060) -->
+| Task | Budget | Examples |
+|------|--------|----------|
+
+<!-- AFTER (passes MD060) -->
+| Task | Budget | Examples |
+| ---- | ------ | -------- |
+```
+
+**Validate and commit:**
+
+```bash
+wc -l CLAUDE.md
+pixi run npx markdownlint-cli2 CLAUDE.md 2>&1   # must be 0 errors
+git add CLAUDE.md
+git commit -m "docs(claude-md): trim CLAUDE.md from X to Y lines"
+```
+
+**Note on pre-commit:** if `mojo-format` fails due to GLIBC incompatibility and no `.mojo`
+files were changed, skip it: `SKIP=mojo-format pre-commit run --all-files`. All other hooks
+(markdownlint, trailing-whitespace, check-yaml) must pass.
+
+### Step 6 — Audit shared-link drift
+
+**Manual audit:**
+
+```bash
+grep -n "shared/" CLAUDE.md | head -30
+ls .claude/shared/
+python scripts/audit_shared_links.py   # exit 0 = all linked; exit 1 = missing files
+```
+
+**Add missing entries** to the Quick Links / Core Guidelines section:
+
+```markdown
+- [Git Commit Policy](/.claude/shared/git-commit-policy.md)
+- [Output Style Guidelines](/.claude/shared/output-style-guidelines.md)
+```
+
+**Regex for link extraction** (handles absolute, relative, anchors):
+
+```python
+re.compile(r"\(/?\.claude/shared/([^)#\s]+)(?:#[^)]*)?\)")
+```
+
+**Wire pre-commit hook** to prevent future drift:
+
+```yaml
+- repo: local
+  hooks:
+    - id: audit-shared-links
+      name: Audit shared/ links in CLAUDE.md
+      entry: python scripts/audit_shared_links.py
+      language: system
+      files: ^(CLAUDE\.md|\.claude/shared/.*)$
+      pass_filenames: false
+```
+
+### Step 7 — False-positive escape catalog (MD033, MD018, MD059, MD056-non-GHA)
+
+These four rules routinely misfire on ordinary documentation prose. Each has a
+character-level escape recipe — DO NOT reword the prose.
+
+#### MD033/no-inline-html on `<placeholder>` in prose
+
+**Trigger:** angle-bracket placeholders like `<version>`, `<dep>`, `<thing>` appearing
+in prose. The linter parses them as HTML tags.
+
+**Fix:** backtick-wrap the placeholder so it renders as code.
+
+```markdown
+<!-- BEFORE (MD033 fires) -->
+Upgrade <dep> to <version> before running migrations.
+
+<!-- AFTER (passes MD033, renders as code in marketplace UI) -->
+Upgrade `<dep>` to `<version>` before running migrations.
+```
+
+DO NOT use HTML entities (`&lt;version&gt;`) — they render as literal entities in the
+marketplace UI. DO NOT remove the angle brackets — they convey "this is a substitution
+slot" semantically.
+
+#### MD018/no-missing-space-atx on line-start `#NNN`
+
+**Trigger:** any line beginning at column 1 with `#` followed by digits, e.g.,
+`#5453 fixed the issue.` — the linter reads `#5453` as a malformed ATX heading.
+
+**Fix (preferred):** reflow the preceding paragraph so `#NNN` is no longer at column 1.
+
+```markdown
+<!-- BEFORE (MD018 fires) -->
+See the following PR for details.
+#5453 introduced the regression.
+
+<!-- AFTER (preferred — reflow) -->
+See the following PR for details. #5453 introduced
+the regression.
+```
+
+**Fix (escape):** if reflow is awkward, backslash-escape the `#`.
+
+```markdown
+\#5453 introduced the regression.
+```
+
+#### MD059/descriptive-link-text
+
+**Trigger:** generic link text — `[link]`, `[here]`, `[click]`, `[this]`, `[more]`.
+
+**Fix:** rewrite using the actual subject as link text. Rewording to another generic
+word (e.g., `[see here]`) does NOT fix it — "here" is also on the non-descriptive list.
+
+```markdown
+<!-- BEFORE (MD059 fires) -->
+See PR #5453 ([link](https://github.com/org/repo/pull/5453)) for context.
+
+<!-- AFTER (descriptive — passes MD059) -->
+See [PR #5453](https://github.com/org/repo/pull/5453) for context.
+```
+
+#### MD056 on non-GHA pipes inside table cells
+
+**Trigger:** any literal `|` inside a table cell (not just GHA expressions). Common
+offenders: CLI option syntax `{dry-run|smoke|full}`, regex alternations `(a|b|c)`,
+nested markdown-table example fragments `|---|---|---|`.
+
+**Fix:** backslash-escape every literal `\|` inside the cell, exactly as for GHA
+expressions (Step 2).
+
+```markdown
+<!-- BEFORE (MD056 fires: cell adds 2 phantom columns) -->
+| Flag | Values |
+| ---- | ------ |
+| --mode | `{dry-run|smoke|full}` |
+
+<!-- AFTER (passes MD056) -->
+| Flag | Values |
+| ---- | ------ |
+| --mode | `{dry-run\|smoke\|full}` |
+```
+
+**Validate the file:**
+
+```bash
+npx --yes markdownlint-cli2 "skills/<name>.md"
+# Must be "Summary: 0 error(s)"
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| ------- | -------------- | ------------- | -------------- |
+| Wrapped GHA expression in HTML code tags | Used `<code>...</code>` instead of backticks hoping HTML would protect pipes | MD056 tokenizes the row on `\|` before HTML parsing — bare pipes inside HTML code tags are still counted as cell separators | Tag substitution does not help; backslash-escape each pipe individually |
+| Used HTML entity `&#124;` for pipe inside backticks | Replaced `\|` with `&#124;` inside backtick code spans | Backticks render the entity verbatim — readers see literal entity text instead of a pipe | Use `&#124;` only outside backticks; inside inline code, use `\|` backslash-escape |
+| Tried `--fix` on markdownlint-cli2 | Ran `markdownlint-cli2 --fix '**/*.md'` hoping autofix would handle MD056 | MD056 has no autofix implementation — reports 0 modifications and the error persists | Manual escape required; do not waste time on autofix for MD056 |
+| Assumed PR-introduced regression | Saw multiple PRs failing markdownlint on the same file; planned to rebase each | The failing file was untouched by every PR — the bug had been merged to main earlier | Always `gh pr diff <num> -- <file>` to confirm a PR changed the failing file before blaming/rebasing |
+| Parallel admin-merge of 17 stuck PRs | Ran `gh pr merge --admin` against all 17 PRs concurrently | Only 4 succeeded; 13 hit "base branch was modified" race conditions | Admin-merge stuck queues sequentially, one at a time |
+| Bulk admin-merge without per-PR check audit | Trusted uniform "all red on markdownlint" surface signal | Risk: admin-merge bypasses required checks — a PR with hidden real failures could land broken code | Always run the Step 3 per-PR `statusCheckRollup` loop before bulk admin-merge |
+| Trusted `.history` snapshots to be markdownlint-safe | Snapshotted existing skill files into `.history` without pre-flight lint | Original skill files often contain unescaped pipes in code spans in their Failed Attempts tables; `.history` IS linted by CI | Pre-flight markdownlint on BOTH the `.md` AND `.history` file before pushing |
+| Assumed a Wave 1 queue-block fix would last | Fixed shared markdownlint errors that blocked Wave 1 and assumed the next wave would be clean | Each new wave of merge PRs re-introduces both error classes (MD056 from new canonicals, MD018 from `\#N` references) | Bake the markdownlint gate into the merge-agent prompt template so prevention is per-agent |
+| Adding more `../` hops to relative links | Bumped `../../scripts/foo.sh` to `../../../scripts/foo.sh` | Still escapes the `docs/` tree; mkdocs only resolves links to files it knows about | mkdocs `--strict` rejects ANY relative link whose target is outside `docs/`, regardless of depth |
+| HTML anchor with relative href for mkdocs | Replaced `[text](../../scripts/foo.sh)` with `<a href="../../scripts/foo.sh">text</a>` | mkdocs still parses HTML anchors and runs the same target resolution | Cannot smuggle relative out-of-tree links past `--strict` with HTML |
+| Symlink `docs/scripts -> ../scripts` | Created symlink inside `docs/` to expose repo-root scripts as docs files | mkdocs tries to render `.sh` files as docs; build polluted and brittle on Windows | Link to non-doc files on GitHub instead |
+| Running `just pre-commit-all` as validation | Used `just pre-commit-all` as the validation step for CLAUDE.md edits | Fails with unrelated pixi "Text file busy" errors — exit 1 even when all hooks pass | Run `pixi run npx markdownlint-cli2 CLAUDE.md` directly |
+| Editing main repo instead of worktree | Made CLAUDE.md edits to the main repo path instead of the active worktree | Worktree on a feature branch tracks a different commit | Edit the worktree directly or `cp` changes from main repo to the worktree path |
+| Regex `[^)#\s]+` as full shared-link pattern | Pattern stopped capture at `#` but required `)` immediately after | Links with anchors like `foo.md#section` never matched | Use `([^)#\s]+)(?:#[^)]*)?` — optional non-capturing group consumes the anchor before `)` |
+| HTML-entity escape for MD033 placeholders | Replaced `<version>` with `&lt;version&gt;` to silence MD033 | Renders as literal HTML entities in the marketplace UI — readers see `&lt;version&gt;` text instead of `<version>` | Backtick-wrap (`` `<version>` ``) is both lint-clean AND renders correctly as code |
+| Removed angle brackets to dodge MD033 | Replaced `<placeholder>` with `placeholder` to avoid the rule entirely | Lost semantic meaning — readers cannot tell it is a substitution slot vs. a literal word | Backtick-wrap preserves both lint-cleanness and substitution-slot semantics |
+| Reworded link text from `[link]` to `[here]` for MD059 | Assumed any non-`link` word would satisfy descriptive-link-text | Still fires — `here`, `click`, `this`, `more` are all on the rule's non-descriptive blocklist | Use the actual subject as link text (e.g., `[PR #5453](url)`), not another generic word |
+| Adding a leading space to dodge MD018 on `#NNN` | Indented `#5453.` by one space hoping to escape the ATX-heading parser | Linter still treats it as malformed heading after stripping leading whitespace | Reflow the preceding line so `#NNN` is mid-sentence, OR backslash-escape as `\#NNN` |
+| Assuming MD056 only fires on GitHub Actions expressions | Searched only for `${{` patterns when triaging MD056 errors | Missed CLI syntax cells like `{dry-run\|smoke\|full}` and regex-alternation cells — same root cause, different content | Triage by counting literal `\|` inside backticks per cell; the content type does not matter |
+| Trusted "backticks delimit a code span" intuition | Assumed `\|` inside `` `pip list \| grep x` `` was treated as code, not a column separator | markdownlint's table parser counts unescaped `\|` BEFORE applying any code-span semantics — so the row gains a phantom cell anyway | Backslash-escape every internal pipe with `\|` regardless of backtick context |
+| Adding columns to the table header to match cell count | Saw a 2-column header become a 3-cell row and tried to bump header to 3 columns | Destroyed the table's semantics — the new column had no meaning, and authors hit the same bug on the next row | Never change table arity to absorb phantom cells; escape the pipe in the offending code span |
+| Removing the pipe from the code example | Rewrote `` `pip list \| grep hephaestus` `` to `` `pip list` (then grep ...) `` | Lost the documented behavior — the example no longer showed the working command | Preserve the example verbatim; escape with `\|` and let CommonMark render it back to `\|` |
+| Searching for MD056 by line number alone | Read the cited line but missed which cell contained the surplus pipe | The MD056 error reports a column number that points directly at the surplus `\|` — using only the line wastes a search | Open at `line:col` from the error; the column lands on the offending character |
+| Treating jq filters as a structural error | Saw a 4-column table report 6 cells and assumed two cells got merged or split | The two `\|` operators inside the jq code span `` `[.comments[]\|select(.body\|test(...))]` `` each added one phantom cell | Run the file through a grep that matches backtick code spans containing internal pipes |
+
+## Results & Parameters
+
+### MD056 reproducer
+
+```markdown
+| A | B | C | D |
+| - | - | - | - |
+| x | y | `cmd \|\| other` | z |
+```
+
+`markdownlint-cli2 --config .markdownlint.yaml file.md` → exit 0. Without the
+backslashes: `MD056 Expected: 4; Actual: 6`.
+
+### Tooling versions verified
+
+| Tool | Version | Result |
+| ---- | ------- | ------ |
+| markdownlint-cli2 | 0.20.0 (local) | 0 errors after escape |
+| markdownlint-cli2 | 0.22.1 (CI) | green after pipe-escape fix |
+| markdownlint | 0.40.0 (CI underlying) | green |
+
+### Queue-recovery telemetry
+
+| Metric | Value |
+| ------ | ----- |
+| PRs blocked on the same MD056 line | 17 (\#1724, \#1751–\#1767) |
+| Fix PR | \#1756 |
+| Track-A admin-merge wall time | ~30 s |
+| Track-B sequential admin-merge of remaining 16 | ~90 s |
+| Total queue recovery | ~2 minutes |
+
+### CLAUDE.md trim results
+
+| Session | Before | After | Reduction | Technique |
+| ------- | ------ | ----- | --------- | --------- |
+| 2026-03-15 (markdownlint + MD060) | 1,257 lines | 1,012 lines | 19% | Remove duplicate sections, fix MD060 in 3 tables |
+| 2026-03-05 (move+link) | 1,786 lines | 1,199 lines | 33% | Move reference sections to `.claude/shared/` |
+
+### Shared-link audit script exit codes
+
+- `0` — all `.claude/shared/*.md` files linked in Quick Links
+- `1` — one or more files missing, or CLAUDE.md / shared-dir not found
+
+## Verified On
+
+| Project | Context | Details |
+| ------- | ------- | ------- |
+| ProjectMnemosyne | PR \#1755 — `fix/markdownlint-table-pipe-escape` unblocks 5 PRs | File: `skills/ci-cd-gated-debug-instrumentation-workflow-dispatch.md` line 107 |
+| ProjectMnemosyne | PR \#1756 — same root cause across 17 PRs; two-track recovery in ~2 minutes | Diagnostic: `gh run view --log-failed \| grep MD056` |
+| ProjectMnemosyne | 2026-05-18 skill-corpus consolidation (\#1813); Wave 2 hit CI 100% clean after pre-flight discipline added | self |
+| ProjectOdyssey | PR \#5381 (commit 63b9db7f9) — mkdocs --strict out-of-tree links fixed in `docs/dev/mojo-jit-crash-capture-core.md` | Replaced `../../scripts/` and `../../.github/` style links with absolute GitHub URLs |
+| ProjectOdyssey | PR \#4763 — CLAUDE.md trim from 1,257 to 1,012 lines; MD060 fixed in 3 tables | Issue \#3158: reduce token consumption |
+| ProjectOdyssey | PR \#4024 — shared-link audit script + pre-commit hook | Issue \#3366: 3 missing `.claude/shared/` entries; 20 pytest tests all passed |
+| ProjectMnemosyne | PR \#1937 (`65fa3558`) — MD033 placeholder backtick-wrap | 5-PR parallel swarm false-positive fix wave |
+| ProjectMnemosyne | PR \#1959 (`3fa354e1`) — MD059 descriptive link text rewrite | 5-PR parallel swarm false-positive fix wave |
+| ProjectMnemosyne | PR \#1960 (`f2aa0aaa`) — MD018 line-start `\#NNN` reflow | 5-PR parallel swarm false-positive fix wave |
+| ProjectMnemosyne | PR \#1965 — MD056 non-GHA pipe escape in cells | 5-PR parallel swarm false-positive fix wave |
+| ProjectMnemosyne | PR \#1978 (`b2a3150d`) — combined false-positive catalog fixes | 5-PR parallel swarm false-positive fix wave |
+| ProjectMnemosyne | PR \#2046 (`821a217`) — MD056 fix for `` `pip list \| grep hephaestus` `` in 2-col table line 217 | 10-PR queue triage 2026-05-29 |
+| ProjectMnemosyne | PR \#2049 (`0bb8e69`) — MD056 fix for jq `` `[.comments[]\|select(.body\|test(...))]` `` in 4-col table line 133 | 10-PR queue triage 2026-05-29 |
+| ProjectMnemosyne | PR \#2030 (`99b8026`) — MD056 fix for jq pipe filters in 4-col table lines 153-154 | 10-PR queue triage 2026-05-29 |
+
+---
+## Superseded from doc-config-drift-check
+
+**Original date/version**: 2026-02-28 / v2.0.0
+
+```yaml
+name: doc-config-drift-check
+description: Add a lightweight CI pre-commit script to detect drift between documented
+  metric values (CLAUDE.md, README.md) and authoritative pyproject.toml config sources,
+  including coverage threshold, --cov path, and README test count claims.
+category: ci-cd
+date: 2026-02-28
+version: 2.0.0
+user-invocable: false
+```
+
+# Skill: doc-config-drift-check
+
+## Overview
+
+| Field | Value |
+| ----------- | ------- |
+| Date | 2026-02-28 |
+| Issue | #1151 |
+| PR | #1225 |
+| Objective | Add a pre-commit gate that detects when documented metric values (coverage %, --cov path) diverge from the authoritative values in `pyproject.toml` |
+| Outcome | Success — `scripts/check_doc_config_consistency.py` with 26 unit tests; wired as pre-commit hook |
+
+## When to Use
+
+- You have numeric thresholds or config paths documented in markdown files (CLAUDE.md, README.md) that must stay in sync with authoritative config (pyproject.toml)
+- A manual audit has already caught documentation staleness at least once and you want to automate detection
+- You want a hard gate (exit 1) rather than a warning for doc/config drift
+- The project follows the `scripts/check_*.py` + pre-commit hook pattern already established in the codebase
+- README.md contains test count badges/mentions that may drift as tests are added
+
+## Root Cause Pattern
+
+Documentation values (e.g., "75%+ test coverage") drift from the authoritative source (pyproject.toml `fail_under = 75`) silently over time. Manual audits catch these only periodically. A lightweight grep-based script that reads the authoritative value and asserts the docs match provides a continuous enforcement gate.
+
+## Verified Workflow
+
+### 1. Identify the drift candidates
+
+```bash
+# Find authoritative value in pyproject.toml
+grep -n "fail_under\|addopts\|cov" pyproject.toml
+
+# Find documented values in CLAUDE.md
+grep -n "coverage\|test coverage" CLAUDE.md
+
+# Find --cov= references in README.md
+grep -n "\-\-cov" README.md
+```
+
+### 2. Create the enforcement script
+
+Place at `scripts/check_doc_config_consistency.py`:
+
+```python
+#!/usr/bin/env python3
+"""Enforce consistency between documentation metric values and authoritative config sources."""
+
+import argparse
+import re
+import sys
+import tomllib
+from pathlib import Path
+
+_REPO_ROOT = Path(__file__).parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+
+def load_pyproject_coverage_threshold(repo_root: Path) -> int:
+    """Read fail_under from [tool.coverage.report] in pyproject.toml."""
+    pyproject = repo_root / "pyproject.toml"
+    with open(pyproject, "rb") as f:
+        data = tomllib.load(f)
+    return int(data["tool"]["coverage"]["report"]["fail_under"])
+
+
+def extract_cov_path_from_pyproject(repo_root: Path) -> str:
+    """Read --cov=<path> value from [tool.pytest.ini_options].addopts."""
+    pyproject = repo_root / "pyproject.toml"
+    with open(pyproject, "rb") as f:
+        data = tomllib.load(f)
+    addopts = data["tool"]["pytest"]["ini_options"]["addopts"]
+    if isinstance(addopts, str):
+        addopts = addopts.split()
+    for item in addopts:
+        m = re.match(r"^--cov=(.+)$", item)
+        if m:
+            return m.group(1)
+    sys.exit(1)
+
+
+def check_claude_md_threshold(repo_root: Path, expected_threshold: int) -> list[str]:
+    """Check that CLAUDE.md documents the correct coverage threshold."""
+    text = (repo_root / "CLAUDE.md").read_text(encoding="utf-8")
+    matches = re.findall(r"(\d+)%\+?\s+test coverage", text)
+    errors = []
+    for raw in matches:
+        if int(raw) != expected_threshold:
+            errors.append(f"CLAUDE.md: {raw}% != {expected_threshold}% (pyproject.toml)")
+    return errors
+
+
+def check_readme_cov_path(repo_root: Path, expected_path: str) -> list[str]:
+    """Check that all --cov=<path> occurrences in README.md match expected_path."""
+    text = (repo_root / "README.md").read_text(encoding="utf-8")
+    errors = []
+    for path in re.findall(r"--cov=(\S+)", text):
+        if path != expected_path:
+            errors.append(f"README.md: --cov={path} != --cov={expected_path} (pyproject.toml)")
+    return errors
+
+
+def collect_actual_test_count(repo_root: Path) -> int | None:
+    """Run pytest --collect-only -q and return the number of collected tests."""
+    import subprocess
+    try:
+        result = subprocess.run(
+            [sys.executable, "-m", "pytest", "--collect-only", "-q", "tests/"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+        )
+    except (FileNotFoundError, OSError):
+        return None
+
+    output = result.stdout + result.stderr
+    # Match "N selected" or "N tests collected" or "N test collected"
+    m = re.search(r"(\d+)\s+(?:tests?\s+)?(?:selected|collected)", output)
+    if m:
+        return int(m.group(1))
+    return None
+
+
+def check_readme_test_count(
+    repo_root: Path, actual_count: int, tolerance: float = 0.10
+) -> list[str]:
+    """Check that test count claims in README.md are within tolerance of actual_count."""
+    readme = repo_root / "README.md"
+    if not readme.exists():
+        return [f"README.md not found at {readme}"]
+
+    text = readme.read_text(encoding="utf-8")
+    raw_matches = re.findall(r"(\d[\d,]*)\+?\s+tests?", text, re.IGNORECASE)
+
+    if not raw_matches:
+        return ["README.md: No test count mention found (expected pattern: '<N> tests')"]
+
+    errors: list[str] = []
+    for raw in raw_matches:
+        doc_count = int(raw.replace(",", ""))
+        if abs(doc_count - actual_count) / actual_count > tolerance:
+            errors.append(
+                f"README.md: Test count mismatch — "
+                f"README.md says {doc_count}, actual pytest count is {actual_count} "
+                f"(tolerance: {int(tolerance * 100)}%)"
+            )
+    return errors
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--repo-root", type=Path, default=_REPO_ROOT)
+    parser.add_argument("--verbose", action="store_true")
+    args = parser.parse_args()
+    repo_root = args.repo_root
+
+    errors = []
+
+    # Check 1: CLAUDE.md coverage threshold
+    threshold = load_pyproject_coverage_threshold(repo_root)
+    errors.extend(check_claude_md_threshold(repo_root, threshold))
+
+    # Check 2: README.md --cov path
+    cov_path = extract_cov_path_from_pyproject(repo_root)
+    errors.extend(check_readme_cov_path(repo_root, cov_path))
+
+    # Check 4: README.md test count
+    actual_count = collect_actual_test_count(repo_root)
+    if actual_count is None:
+        if args.verbose:
+            print("SKIP: Could not collect actual test count (pytest unavailable)")
+    else:
+        count_errors = check_readme_test_count(repo_root, actual_count)
+        if count_errors:
+            errors.extend(count_errors)
+        elif args.verbose:
+            print(f"PASS: README.md test count is within 10% of actual ({actual_count})")
+
+    if errors:
+        for e in errors:
+            print(e, file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+```
+
+### 3. Write unit tests
+
+Place at `tests/unit/scripts/test_check_doc_config_consistency.py`.
+
+Key test patterns:
+- Use `tmp_path` fixture to write synthetic `pyproject.toml`, `CLAUDE.md`, `README.md`
+- Test happy path, each mismatch variant, missing files, missing keys
+- For `main()` integration tests: mutate `sys.argv` and call `main()` directly — it returns `int`, so `assert result == 0/1` (do NOT use `pytest.raises(SystemExit)` unless `main()` calls `sys.exit()` internally)
+
+```python
+def test_all_matching_exits_zero(self, tmp_path: Path) -> None:
+    from scripts.check_doc_config_consistency import main
+    import sys
+    repo = self._make_repo(tmp_path)
+    original_argv = sys.argv
+    sys.argv = ["check_doc_config_consistency.py", "--repo-root", str(repo)]
+    try:
+        result = main()
+        assert result == 0
+    finally:
+        sys.argv = original_argv
+```
+
+#### TestCollectActualTestCount patterns
+
+```python
+from unittest.mock import MagicMock, patch
+
+class TestCollectActualTestCount:
+    def test_parses_n_tests_collected_line(self, tmp_path):
+        mock_result = MagicMock()
+        mock_result.stdout = "100 tests collected\n"
+        mock_result.stderr = ""
+        with patch(
+            "scripts.check_doc_config_consistency.subprocess.run",
+            return_value=mock_result,
+        ):
+            assert collect_actual_test_count(tmp_path) == 100
+
+    def test_returns_none_on_subprocess_failure(self, tmp_path):
+        with patch(
+            "scripts.check_doc_config_consistency.subprocess.run",
+            side_effect=FileNotFoundError,
+        ):
+            assert collect_actual_test_count(tmp_path) is None
+```
+
+**Key design decision**: Patch `subprocess.run` in the script's own module namespace
+(`scripts.check_doc_config_consistency.subprocess.run`), not `subprocess.run` globally.
+
+#### TestCheckReadmeTestCount patterns
+
+```python
+class TestCheckReadmeTestCount:
+    def test_within_tolerance_no_errors(self, tmp_path):
+        # README says 3500, actual is 3507 → within 10%
+        ...
+
+    def test_outside_tolerance_returns_error(self, tmp_path):
+        # README says 2000, actual is 3500 → >10%, error returned
+        ...
+```
+
+#### Mock pattern for integration tests
+
+When adding Check 4 to `main()`, all existing integration tests that call `main()` will
+now run Check 4. Mock `collect_actual_test_count` so they don't spawn real pytest:
+
+```python
+with patch(
+    "scripts.check_doc_config_consistency.collect_actual_test_count",
+    return_value=3507,
+):
+    result = main()
+    assert result == 0
+```
+
+Also update `_make_repo()` to accept `readme_test_count: int | None = 3500` so the
+generated README contains a test count mention.
+
+### 4. Wire pre-commit hook
+
+In `.pre-commit-config.yaml` (after `audit-doc-policy`):
+
+```yaml
+- id: check-doc-config-consistency
+  name: Check Doc/Config Metric Consistency
+  description: Fails if coverage threshold in CLAUDE.md or README.md --cov path diverges from pyproject.toml
+  entry: pixi run python scripts/check_doc_config_consistency.py
+  language: system
+  files: ^(CLAUDE\.md|README\.md|pyproject\.toml)$
+  pass_filenames: false
+```
+
+### 5. Verify
+
+```bash
+# Run unit tests only
+pixi run python -m pytest tests/unit/scripts/test_check_doc_config_consistency.py -v --no-cov
+
+# Run script directly against real repo
+pixi run python scripts/check_doc_config_consistency.py --verbose
+
+# Run full suite
+pixi run python -m pytest tests/ -v
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A (Checks 1-3) | Direct approach worked | N/A | Solution was straightforward |
+| Patch `subprocess.run` globally | `patch("subprocess.run", ...)` in test for `collect_actual_test_count` | Script already imported `subprocess`; patching the stdlib location has no effect on the already-imported reference | Always patch in the module's own namespace: `scripts.check_doc_config_consistency.subprocess.run` |
+
+## Results & Parameters
+
+| Parameter | Value |
+| ----------- | ------- |
+| Script location | `scripts/check_doc_config_consistency.py` |
+| Test location | `tests/unit/scripts/test_check_doc_config_consistency.py` |
+| Test count (after Check 4) | 53 (26 original + 20 new + updates) |
+| Hook ID | `check-doc-config-consistency` |
+| Hook trigger | `^(CLAUDE\.md\|README\.md\|pyproject\.toml)$` |
+| stdlib used | `tomllib` (Python 3.11+), `re`, `argparse`, `subprocess` |
+| Exit codes | 0 = all pass, 1 = any violation |
+| Pattern matched in CLAUDE.md | `(\d+)%\+?\s+test coverage` |
+| Pattern matched in README.md (cov) | `--cov=(\S+)` |
+| Pattern matched in README.md (test count) | `(\d[\d,]*)\+?\s+tests?` |
+| Test count tolerance | 10% |
+
+### Files Modified
+
+| File | Changes |
+| ------ | --------- |
+| `scripts/check_doc_config_consistency.py` | Original 3 checks (Issue #1151 / PR #1225) |
+| `scripts/check_doc_config_consistency.py` | Added `import subprocess`, `collect_actual_test_count()`, `check_readme_test_count()`, Check 4 in `main()` (Issue #1226 / PR #1315) |
+| `tests/unit/scripts/test_check_doc_config_consistency.py` | Added `TestCollectActualTestCount` (6 tests), `TestCheckReadmeTestCount` (8 tests), updated 5 integration tests to mock `collect_actual_test_count`, added 2 new integration tests |
+
+### Tolerance Rationale
+
+10% tolerance (`tolerance=0.10`) balances:
+- **Too strict (0%)**: Every test addition breaks CI immediately
+- **Too loose (50%)**: Allows numbers to drift significantly before catching
+- **10%**: ~350 test gap on a 3500-test suite — roughly a sprint's worth of new tests
+
+### Regex Pattern Breakdown (test count)
+
+```python
+r"(\d[\d,]*)\+?\s+tests?"
+```
+
+| Component | Matches |
+| ----------- | --------- |
+| `(\d[\d,]*)` | `3172`, `3,500`, `1` (commas allowed after first digit) |
+| `\+?` | Optional `+` suffix (e.g. `3,500+`) |
+| `\s+` | One or more spaces |
+| `tests?` | `tests` or `test` (singular/plural) |
+
+## Key Insights
+
+1. **tomllib is stdlib from Python 3.11+** — use it directly without adding a dependency. For Python 3.10 projects that have `tomllib` available via pixi environment, it still imports fine.
+
+2. **`main()` should return int, not call `sys.exit()`** — the `if __name__ == "__main__"` block handles `sys.exit(main())`. This makes unit-testing `main()` straightforward: call it directly and assert the return value.
+
+3. **`README.md` with no `--cov=` occurrences is a pass** — absence of a claim is not a violation. Only validate what is explicitly stated.
+
+4. **Pre-commit hook file scope** — use `^(CLAUDE\.md|README\.md|pyproject\.toml)$` as the `files:` pattern so the hook only fires when these specific files change, not on every commit.
+
+5. **The "sys.argv mutation" pattern for integration tests** — save `sys.argv`, mutate it to pass `--repo-root`, call `main()`, restore in `finally`. This avoids subprocess overhead while still testing the argument-parsing path.
+
+6. **`collect_actual_test_count` returns `int | None`** — `None` means skip (no hard failure for pytest being unavailable). Only fail when pytest is reachable and the documented count is out of range.
+
+7. **Merges stdout + stderr before parsing** — pytest may write the summary line to either stream depending on version and verbosity settings.
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectScylla | Issue #1151, PR #1225 — Checks 1-3 (coverage threshold + cov path) | [notes.md](../../references/notes.md) |
+| ProjectScylla | Issue #1226, PR #1315 — Check 4 (test count validation) | [notes.md](../../references/notes.md) |
+
+### Notes: doc-config-drift-check.notes.md
+
+# Raw Notes: doc-config-drift-check
+
+## Session Details
+
+- **Date**: 2026-02-28
+- **Project**: ProjectScylla
+- **Issue**: #1151 — Add CI check to prevent doc/config metric drift
+- **PR**: #1225
+- **Branch**: `1151-auto-impl`
+
+## Problem Statement
+
+During the audit for #1112, discrepancies between CLAUDE.md and pyproject.toml (coverage threshold)
+and README.md (test counts, --cov path) were only caught manually. The issue requested a lightweight
+CI script to automatically detect future drift.
+
+## Implementation
+
+### Files Created
+
+1. `scripts/check_doc_config_consistency.py` — 236 lines
+   - `load_pyproject_coverage_threshold(repo_root)` — reads `fail_under` via `tomllib`
+   - `extract_cov_path_from_pyproject(repo_root)` — reads `--cov=<path>` from `addopts`
+   - `check_claude_md_threshold(repo_root, expected)` — greps CLAUDE.md for `(\d+)%\+?\s+test coverage`
+   - `check_readme_cov_path(repo_root, expected)` — greps README.md for `--cov=(\S+)`
+   - `main()` — runs both checks, returns int (0 or 1)
+
+2. `tests/unit/scripts/test_check_doc_config_consistency.py` — 350 lines, 26 tests
+   - `TestLoadPyprojectCoverageThreshold` — 5 tests
+   - `TestExtractCovPathFromPyproject` — 5 tests
+   - `TestCheckClaudeMdThreshold` — 7 tests
+   - `TestCheckReadmeCovPath` — 6 tests
+   - `TestMainIntegration` — 3 tests
+
+3. `.pre-commit-config.yaml` — added `check-doc-config-consistency` hook
+
+### Actual Values in ProjectScylla
+
+| Source | Key | Value |
+| -------- | ----- | ------- |
+| `pyproject.toml` | `[tool.coverage.report].fail_under` | 75 |
+| `pyproject.toml` | `[tool.pytest.ini_options].addopts` | includes `--cov=scylla` |
+| `CLAUDE.md` | Coverage mention | `75%+ test coverage enforced in CI` |
+| `README.md` | `--cov=` usage | `--cov=scylla` |
+| All pass? | Yes | Script exits 0 against real repo |
+
+## Key Bug Encountered
+
+**Integration test failure**: Initial `TestMainIntegration` tests used `pytest.raises(SystemExit)`
+expecting `main()` to call `sys.exit()`. But `main()` returns `int` and only the `__main__` block
+calls `sys.exit(main())`. Fix: changed tests to `result = main(); assert result == 0/1`.
+
+## Pre-commit Verification
+
+```bash
+pre-commit run ruff-format-python --files scripts/check_doc_config_consistency.py tests/...
+# Passed
+
+pre-commit run ruff-check-python --files scripts/check_doc_config_consistency.py tests/...
+# Passed
+
+pre-commit run mypy-check-python --files scripts/check_doc_config_consistency.py tests/...
+# Passed
+```
+
+## Test Results
+
+- New tests: 26 passed
+- Full suite: 3283 passed
+- Coverage: 78.31% (above 75% threshold)
+
+---
+## Superseded from documentation-workflow-meta-patterns
+
+**Original date/version**: 2026-05-19 / v1.0.0
+
+```yaml
+name: documentation-workflow-meta-patterns
+description: 'Meta-patterns for documentation-only PR workflows. Use when: (1) starting
+  any documentation task and needing to detect already-done work before beginning,
+  (2) handling a review fix plan that concludes no changes are needed, (3) triaging
+  a security review on a docs-only PR, (4) implementing a small targeted doc edit,
+  (5) merging two overlapping markdown docs into one canonical source, (6) documenting
+  a pre-commit hook incompatibility in CONTRIBUTING.md, or (7) expanding bare NOTE/TODO
+  markers with structured deferred-item format.'
+category: documentation
+date: 2026-05-19
+version: 1.0.0
+user-invocable: false
+history: documentation-workflow-meta-patterns.history
+tags:
+  - documentation
+  - workflow
+  - preflight
+  - no-op
+  - review
+  - security
+  - pre-commit
+  - deferred-items
+  - duplicate-detection
+```
+
+# Documentation Workflow Meta-Patterns
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-05-19 |
+| Category | documentation |
+| Objective | Canonical reference for workflow patterns surrounding documentation changes |
+| Outcome | Merged from 9 member skills (M48 epic #1854) |
+| Theme | Detecting duplicate work, handling no-op reviews, triaging docs-only security reviews, small targeted edits, merging overlapping docs, hook incompatibility docs |
+
+## When to Use
+
+Use this skill before starting **any documentation task** to pick the right sub-workflow:
+
+| Situation | Sub-Workflow |
+| --------- | ------------ |
+| Branch already has a commit matching the issue; PR may exist | Already-committed detection (Steps 1-A) |
+| `.claude-review-fix-*.md` says "no fixes required" | No-op review confirmation (Steps 1-B) |
+| Security review triggered on a docs-only PR | Docs-only security triage (Steps 1-C) |
+| Issue specifies exact insert location; single targeted edit | Small doc edit (Steps 1-D) |
+| Two markdown files cover the same topic (DRY violation) | Merge duplicate docs (Steps 1-E) |
+| Pre-commit hook skips on some hosts; no CONTRIBUTING.md entry | Document hook incompatibility (Steps 1-F) |
+| Issue has bare NOTE/TODO; documentation-only cleanup issue | Expand NOTE markers (Steps 1-G) |
+
+**Hard rule**: Always run the orientation check (git log + PR check) before touching any file.
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Orientation — run first for any doc task
+git log --oneline -5
+git status
+gh pr list --head "$(git branch --show-current)"
+
+# Pre-commit (preferred over `just`)
+pixi run pre-commit run --all-files
+
+# Commit on GLIBC-incompatible host
+SKIP=mojo-format git commit -m "docs(<scope>): <summary>"
+
+# PR creation + auto-merge
+gh pr create --title "docs(<scope>): <summary>" --body "$(cat <<'EOF'
+## Summary
+- <bullet>
+
+Closes #<number>
+EOF
+)"
+gh pr merge --auto --rebase <pr-number>
+```
+
+### Steps 1-A: Already-Committed Detection
+
+Trigger when: branch named `<N>-auto-impl`, git status is clean, git log shows commit matching issue title.
+
+1. `git log --oneline -3` + `git status` — if clean with matching commit, work is done.
+2. **Read target files** to confirm expected content is present (do not trust commit message alone).
+3. `gh pr list --head <branch>` — if open PR exists, retrieve PR number.
+4. `gh pr view <pr-number>` — confirm auto-merge enabled and `Closes #<N>` in body.
+5. **Stop and report**. Do NOT create a duplicate commit, push again, or open a second PR.
+
+**Key decision point** (auto-impl with plan): Compare missing items against **Success Criteria**, not plan notes. If a file is only in plan notes but absent from Success Criteria, the PR is complete.
+
+```bash
+# Check PR linkage
+gh pr view <pr-number> --json body -q '.body'
+
+# Add Closes if missing
+gh pr edit <pr-number> --body "$(gh pr view <pr-number> --json body -q '.body')
+
+Closes #<number>"
+```
+
+### Steps 1-B: No-Op Review Confirmation
+
+Trigger when: `.claude-review-fix-*.md` plan states "No fixes required" or "PR is ready to merge as-is".
+
+1. **Read the fix plan** — confirm the "no fixes" conclusion is explicit.
+2. **Verify CI failures are pre-existing** — check that failures exist on `main` before this PR.
+3. `git status` — confirm clean working tree (only review instructions file untracked).
+4. `git log --oneline -5` — confirm correct commit is on branch.
+5. **Report** — explain PR is correct as-is. Do NOT create an empty commit or push.
+
+```bash
+git status
+git log --oneline -5
+```
+
+### Steps 1-C: Docs-Only Security Triage
+
+Trigger when: security review requested; all changed files are `.md`, static `.json`, `.txt`, or `.rst`.
+
+1. **Classify all changed files** — list every path; check against attack surface criteria.
+2. If ALL are docs/metadata → no attack surface → skip to Step 3.
+3. If any file is executable code or a GitHub Actions workflow → perform full security review.
+4. **Apply hard exclusion policy**: documentation files (`.md`) are categorically excluded.
+5. **Issue clean no-findings report** (copy-paste template):
+
+```text
+No security vulnerabilities were identified in this PR.
+
+The changes consist entirely of documentation files (markdown skill documentation,
+plugin metadata JSON, and session notes). Per the hard exclusion rules, insecure
+documentation findings are excluded, and these files contain no executable code,
+user input handling, authentication logic, cryptographic operations, or other
+attack surfaces.
+```
+
+**File-type attack surface reference**:
+
+| File Type | Has Attack Surface? | Action |
+| ---------- | ------------------- | ------ |
+| `.md` markdown | No | Classify as docs-only |
+| `plugin.json` (static metadata) | No | Classify as docs-only |
+| `references/notes.md` | No | Classify as docs-only |
+| `.py`, `.js`, `.ts`, `.sh` | Possibly | Full security review |
+| `.yml` GitHub Actions workflow | Possibly (injection) | Check untrusted input in `run:` steps |
+
+### Steps 1-D: Small Doc Edit
+
+Trigger when: issue specifies exact insert location; single additive markdown change.
+
+1. **Read the prompt/issue** — parse deliverable and exact insertion anchor.
+2. **Read the target file** — confirm line numbers and surrounding context.
+3. **Apply Edit** — anchor `old_string` to the line before AND after the insertion point.
+4. `pixi run pre-commit run --all-files` — verify markdownlint and other hooks.
+5. **Commit** — stage only the modified file; use conventional commit with `Closes #<N>`.
+6. `git push -u origin <branch>` then `gh pr create`.
+7. `gh pr merge --auto --rebase <pr-number>`.
+
+```python
+# Key Edit pattern — include surrounding context for uniqueness
+old_string = "Line before insertion.\n\n---"
+new_string = """Line before insertion.
+
+**Output**: Added clarification here.
+
+---"""
+```
+
+**Pre-commit caveat**: `mojo format` hook may print GLIBC errors but exits 0 — non-fatal.
+
+### Steps 1-E: Merge Duplicate Docs
+
+Trigger when: two markdown files document the same concept (DRY violation).
+
+1. **Read both files in parallel** — identify shared vs. unique content.
+2. **Find all cross-references**: `grep -rn "old-filename\.md" --include="*.md" .`
+3. **Fix broken syntax** in the canonical file (fenced block closings, long lines, self-links).
+4. **Append unique content** from the duplicate into the canonical file in logical order.
+5. **Delete the duplicate**: `git rm <duplicate-file.md>`
+6. **Update all cross-references** found in Step 2.
+7. `SKIP=mojo-format pixi run pre-commit run markdownlint-cli2 --all-files` — fix MD013/MD032.
+8. `git add <all modified files>` + commit + PR.
+
+**Common markdownlint fixes after merge**:
+
+- Close fenced code blocks with plain ` ``` ` (never ` ```text ` as a closing tag).
+- Wrap long lines (>120 chars) at natural phrase boundaries.
+- Add blank lines before/after lists (MD032).
+- Remove self-referential links in "See Also" pointing to the deleted file.
+
+### Steps 1-F: Document Hook Incompatibility
+
+Trigger when: pre-commit hook auto-skips on some hosts; no CONTRIBUTING.md entry explains it.
+
+1. **Read the issue** — `gh issue view <N> --comments` for scope.
+2. **Audit existing state** before writing anything:
+   - `.pre-commit-config.yaml` for inline comments
+   - `docs/dev/` for existing compatibility docs
+   - `CONTRIBUTING.md` for existing mentions: `grep -n "GLIBC\|glibc\|SKIP="`
+3. **Determine the actual gap** — often only CONTRIBUTING.md is missing; the config and docs/dev already have content.
+4. **Add a `####` subsection** to CONTRIBUTING.md under the relevant policy section.
+   Include: affected OS/glibc range, exact warning text, what hook does automatically, CI guarantee, Docker workaround, link to full compat doc.
+5. `SKIP=mojo-format pixi run pre-commit run markdownlint-cli2 --all-files` — validate.
+6. `SKIP=mojo-format git commit -m "docs(contributing): document <hook> incompatibility"`.
+7. Push, create PR, enable auto-merge.
+
+**Template for CONTRIBUTING.md subsection**:
+
+```markdown
+#### Known Hook Incompatibility: <hook-name> on <OS> / <library> < <version>
+
+The `<hook>` hook requires **<library> <version>+** (<distro> or newer).
+On <older-distro>, the hook automatically detects the incompatibility and
+**skips with a warning** instead of failing your commit.
+
+You will see output like:
+
+\`\`\`text
+WARNING: <hook> skipped: host <library> is incompatible with <binary>.
+\`\`\`
+
+CI always runs on <ci-distro> and enforces <check> before merge.
+See [docs/dev/<compat-doc>.md](docs/dev/<compat-doc>.md) for full details.
+```
+
+### Steps 1-G: Expand NOTE/TODO Markers
+
+Trigger when: cleanup issue has bare NOTE/FIXME/TODO; documentation-only; no code implementation needed.
+
+1. **Read the issue plan** — `gh issue view <N> --comments` for prescribed structured format.
+2. **Read the target file** around the NOTE marker — note exact indentation and context.
+3. **Read the README** fully — find best insertion point (before "Contributing" or after "References").
+4. **Expand the inline comment**:
+
+```text
+# NOTE: <original one-liner>
+# Status: Deferred (not implemented in <language>)
+# Why deferred: <reason — missing stdlib feature, external blocker, etc.>
+# Workaround: <brief description>. See <path/to/README.md>.
+# Acceptance criteria: When <condition that resolves the deferral>
+# Tracked in: GitHub issue #<number> (part of #<parent>)
+```
+
+5. **Add README `## <Feature> Limitations` section** with: one-paragraph description, `### Workaround` subsection with copy-paste snippet, `### Future Support` subsection linking to tracking issue.
+6. `pixi run pre-commit run --all-files` — markdownlint and general hooks only.
+7. `SKIP=mojo-format git commit -m "docs(...): ..."` if on incompatible host.
+8. Push, create PR (`--label "cleanup"`), enable auto-merge.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| ------- | -------------- | ------------- | -------------- |
+| Creating empty commit on no-op review | Committing `.claude-review-fix-*.md` or a dummy change | Adds noise to git history with no value | Only commit when there are real implementation changes |
+| Running full test suite for docs-only PR | Running `pixi run python -m pytest tests/ -v` | Tests unrelated to docs-only PR; CI failures were pre-existing | Skip test runs for docs-only PRs when fix plan confirms no changes needed |
+| Pushing unchanged branch after no-op review | Pushing origin even with no new commits | Script handles pushing; redundant no-op push | Trust the automation script's push step; only commit if there are changes |
+| Re-committing in already-done worktree | Staging `.claude-prompt-*.md` or re-editing target files to "have something to commit" | Creates noise commit with unrelated files or duplicate changes | Never commit prompt files; verify file content before touching anything |
+| Creating duplicate PR | Running `gh pr create` without checking `gh pr list --head <branch>` | Creates a second open PR for the same branch, causing CI confusion | Always check for existing PRs before creating one |
+| Trusting commit message alone | Skipping file verification in already-done detection | Commit could exist but be partial | Always read target files to confirm expected content is present |
+| Running `just pre-commit-all` | Used `just` command runner | `just` not on PATH in this environment | Fall back to `pixi run pre-commit run --all-files` directly |
+| Committing without SKIP on incompatible host | Ran full pre-commit including mojo-format | mojo-format fails with GLIBC_2.32\|2.33\|2.34 not found on Debian Buster | Use `SKIP=mojo-format git commit` — known env constraint, not a code issue |
+| Inserting README section after "References" | Tried appending after references section | "Contributing" section existed; insertion point was between References and Contributing | Use Edit with "Contributing" header as anchor to insert before it |
+| Performing full multi-phase security review on docs-only PR | Running Phase 1 + Phase 2 + Phase 3 review on a PR with only `.md` and `plugin.json` files | Wastes time; all findings excluded by hard exclusion rule for documentation files | Classify file types first; if all are docs/metadata, issue no-findings report immediately |
+| Flagging YAML examples in SKILL.md as injection risks | SKILL.md contained example GitHub Actions YAML with expression patterns | YAML is inside a markdown code block — documentation of a pattern, not an executable workflow | Code blocks inside `.md` files are documentation; apply the same hard exclusion |
+| Closing code blocks with backtick-backtick-backtick-text | Original file used ` ```text ` to close fenced blocks | markdownlint treats it as opening a new block, not closing | Always close fenced code blocks with plain backtick-backtick-backtick |
+| Adding merged content without checking line lengths | Pasted detailed spec content directly after merge | Lines from the source file were 150-241 chars, failing MD013 (120 char limit) | After merging content, always run markdownlint to catch line-length violations |
+| Keeping self-referential "See Also" link | Canonical file had a link to the deleted file in its See Also section | Creates a broken link after deletion | When merging, remove all references to the deleted file from the canonical file itself |
+| Changing `.pre-commit-config.yaml` for hook incompatibility | Plan included adding GLIBC comment to config | File already had a full comment block from a prior PR | Always read files before editing; audit existing state first |
+| Running markdownlint via `pixi run npx markdownlint-cli2` | Called `pixi run npx markdownlint-cli2 FILE.md` | `npx` not in PATH on this host | Use `pixi run pre-commit run markdownlint-cli2 --all-files` instead |
+| Checking only `git status` for completeness check | Looking at untracked/modified files | Clean status does not prove issue is done | Must check log AND files AND PR existence |
+
+## Results & Parameters
+
+### Commit Message Formats
+
+```text
+# Small doc edit
+docs(<scope>): <what was added>
+
+<One sentence why>
+
+Closes #<issue-number>
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+
+# Hook incompatibility doc
+docs(contributing): document <hook-name> <library> incompatibility
+
+Add named subsection under "<Section>" in CONTRIBUTING.md explaining
+the <hook> < <version> limitation on <distro> hosts.
+
+Closes #<issue-number>
+
+# Cleanup/NOTE expansion
+docs(<scope>): expand NOTE marker and add Limitations section
+
+Closes #<issue-number>
+Part of #<parent>
+```
+
+### PR Body Template
+
+```markdown
+## Summary
+- <bullet 1>
+- <bullet 2>
+
+## Changes
+- `<path/file>`: <description>
+
+## Verification
+- [x] `pixi run pre-commit run --all-files` passes (markdownlint, trailing-whitespace, etc.)
+- [x] Documentation-only — no language tests required
+
+Closes #<issue-number>
+```
+
+### Key Decision Signals
+
+| Signal | Command |
+| ------ | ------- |
+| Commit message matches issue title | `git log --oneline -5` |
+| PR already exists on branch | `gh pr list --head <branch>` |
+| Target files contain expected changes | Read each file with line range |
+| Working tree is clean | `git status` |
+| CI failures pre-exist on main | Check main branch CI status |
+
+### Pre-commit Invocation Reference
+
+```bash
+# Full run (preferred — not `just pre-commit-all`)
+pixi run pre-commit run --all-files
+
+# Markdownlint only
+SKIP=mojo-format pixi run pre-commit run markdownlint-cli2 --all-files
+
+# Commit on GLIBC-incompatible host
+SKIP=mojo-format git commit -m "docs(<scope>): <summary>"
+```
+
+### Docs-Only Security Review Decision Tree
+
+```text
+PR changed files → all .md / static .json?
+├── YES → No attack surface → issue clean no-findings report
+└── NO  → At least one executable/config file?
+    ├── GitHub Actions .yml → check for untrusted input in run: steps
+    ├── Python/JS/TS/Shell  → full security review
+    └── Config with user input → full security review
+```
+
+## Verified On
+
+| Project | Context | Details |
+| ------- | ------- | ------- |
+| ProjectOdyssey | Issues #3087, #3089, #3150, #3253 (auto-impl, preflight, review-fix, hook-doc) | Member skills |
+| ProjectMnemosyne | PR security reviews, skill cleanup issues | Member skills |
+
+---
