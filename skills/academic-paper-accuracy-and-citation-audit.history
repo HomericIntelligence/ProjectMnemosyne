@@ -3,6 +3,10 @@
 
 This file preserves the full original content of the skills merged into this canonical.
 
+## v1.1.0 (2026-06-07)
+
+Restore variable-criteria-count + wrong-count-from-misread patterns (nuance audit pass 2). Re-added Pattern 6 (Variable Criteria Counts) and Pattern 7 (Wrong Count from Misread Data) into the bug-pattern table and `## Failed Attempts` of the canonical body.
+
 ## v1.0.0 (2026-06-07)
 
 Merged 5 skills into `academic-paper-accuracy-and-citation-audit`:

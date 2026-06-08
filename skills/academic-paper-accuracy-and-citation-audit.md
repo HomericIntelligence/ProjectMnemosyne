@@ -3,7 +3,7 @@ name: academic-paper-accuracy-and-citation-audit
 description: "Use when: (1) performing a multi-pass LaTeX paper audit covering data consistency, cross-references, scientific rigor, and writing quality before submission; (2) verifying every numerical claim in a research paper against source data files (CSV, JSON) with parallel agents and fixing errors; (3) finding academic citations for unsupported claims via parallel web searches and filling citation gaps with real published papers including full BibTeX metadata; (4) verifying every numeric claim in a corpus citation against the cited paper's arXiv abstract via parallel WebFetch agents — distinguishing fabricated papers from misquoted real ones; (5) fixing LaTeX build errors from unescaped underscores in table cells (Missing $ inserted)."
 category: documentation
 date: 2026-06-07
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 history: academic-paper-accuracy-and-citation-audit.history
 tags: [latex, audit, paper, academic, citation, bibtex, arxiv, data-consistency, cross-reference, numerical-accuracy, parallel-agents, scientific-rigor, writing-quality, fabrication-detection, webfetch, web-search, pandas, pivot-table, idxmax, underscore-escape, missing-dollar]
@@ -134,8 +134,14 @@ These survive multiple narrative-only passes; at least one agent must recompute 
 | Residual old-narrative + causal language | grep old framing ("degradation", "harm", "caused", "led to") near null results | Replace with neutral/associative framing |
 | Precision inconsistency (body vs appendix) | Same statistic at different decimals (H=4.0 vs 4.00; p=0.202 vs 0.2015) | Standardize: 2dp test stats, 3-4dp p-values |
 | Consensus vs per-judge level | "only one >1.0" may be true at one level, false at another | Qualify "at the consensus level" |
+| Variable criteria counts (LLM-judge rubrics vary wildly, e.g. 1-12 per experiment) | Query `criteria.csv` for distinct criteria counts per experiment (uniform 5 vs 4-12 domain-specific vs collapsed-to-1) | Add a disclosure paragraph describing the variation and its implications |
+| Wrong count from misread data ("30 missing across 10 runs" vs "30 runs each missing 1") | Recompute counts independently from raw data; misreading grouped data as aggregated (or vice versa) is common (snippet below) | Report the correctly-grouped count |
 
 ```python
+# Wrong-count-from-misread-data — count missing judges PER RUN, not total missing
+missing_per_run = df.groupby('run_id')['judge_id'].count()
+runs_with_missing = (missing_per_run < expected_judges).sum()
+
 # idxmax() tiebreaker
 max_val = tier_stats['pass_rate'].max()
 tied = tier_stats[tier_stats['pass_rate'] == max_val]
@@ -227,6 +233,8 @@ No text pattern can catch a fabricated range or a real-paper misquote — only d
 | Verify full bibliography per file | One agent verified 30+ citations incl. foundational papers | Exhausted 30-WebFetch budget before reaching high-risk body claims | Focus on body numeric claims; skip well-known pre-2024 foundational papers |
 | Rely on the `Missing $` error message alone | Read the error header without the line context | Header never mentions underscores or "subscript" | Always inspect the `l.NN ...` line context to find the offending char |
 | `vl2png` with default npx invocation | `npx vl2png` to render VL specs | Missing packages; default 207×369 too small | Use `npx -p vega-lite -p vega-cli -p canvas vl2png` + explicit width/height + scale 3 |
+| Assume uniform rubric structure across experiments | Reported "5 criteria per subtest" as a global fact | LLM-judge-generated rubrics varied wildly (1-12 criteria per experiment); the single count was wrong for most experiments | Query `criteria.csv` for distinct counts per experiment; add a disclosure paragraph on the variation |
+| Read "30 missing" as total across all runs | Took the aggregate "30 missing" at face value | It was actually 30 runs each missing 1 judge, not 30 missing across 10 runs — grouped vs aggregated misread | Recompute per-run with `groupby('run_id')` before stating any "N missing" count |
 
 ## Results & Parameters
 
