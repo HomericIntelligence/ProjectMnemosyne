@@ -1,3 +1,27 @@
+<!-- markdownlint-disable MD024 -->
+# mojo-package-build-and-distribution — History
+
+## v1.0.0 (2026-06-07)
+
+Initial canonical skill, merged from 3 source skills:
+
+- `architecture-shipping-mojo-package-prefix-dev` (architecture, v2.0.0)
+- `phase-package` (tooling, v1.0.0)
+- `ci-package-workflow` (ci-cd, v2.0.0)
+
+The merged skill consolidates Mojo library packaging (`.mojopkg` build, idiomatic
+`src/<pkg>/` layout), conda-channel distribution via rattler-build + modular-community
+org-fork PR workflow, the Python wheel options, the distribution-channel decision matrix,
+and GitHub Actions automation for building and releasing `.mojopkg` artifacts.
+
+---
+
+## Superseded from architecture-shipping-mojo-package-prefix-dev
+
+**Original date:** 2026-05-19
+**Original version:** 2.0.0
+
+```yaml
 ---
 name: architecture-shipping-mojo-package-prefix-dev
 description: "End-to-end pattern for making a Mojo library installable via `pixi add <pkg>` from the modular-community channel: idiomatic `src/<package_name>/` layout, `conda.recipe/recipe.yaml` (rattler-build), PR to `modular/modular-community`, and optional Python wheel that bundles the `.mojopkg`. Use when: (1) planning to publish a Mojo library, (2) converting an in-tree `shared/` directory into a distributable package, (3) replacing fictional `mojo install`/`mojo publish` CLI references in docs, (4) deciding between conda channel vs Python wheel vs git dependency for distribution."
@@ -9,6 +33,7 @@ verification: verified-local
 history: architecture-shipping-mojo-package-prefix-dev.history
 tags: [mojo-packaging, prefix-dev, modular-community, rattler-build, mojopkg, python-wheel, conda, org-fork, upstream-pr]
 ---
+```
 
 # Shipping a Mojo Package via prefix.dev (modular-community)
 
@@ -312,3 +337,335 @@ channels = [
 
 - `mojo-build-package` — covers the lower-level `mojo package` CLI mechanics that this skill builds on top of
 - `tooling-modular-project-setup-wizard` — covers initial project scaffolding (pixi/uv/channels) for *new* projects, complementary to this skill's *publishing* focus
+
+---
+
+## Superseded from phase-package
+
+**Original date:** 2026-03-19
+**Original version:** 1.0.0
+
+```yaml
+---
+name: phase-package
+description: Create distributable packages including .mojopkg files and archives.
+  Use during package phase to prepare components for distribution.
+category: tooling
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+phase: Package
+---
+```
+
+# Package Phase Coordination Skill
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Create distributable packages including Mojo packages (.mojopkg), archives, and installation procedures. |
+| Outcome | Operational |
+
+Create distributable packages including Mojo packages (.mojopkg), archives, and installation procedures.
+
+## When to Use
+
+- Starting package phase (after Plan completes)
+- Running in parallel with Test and Implementation phases
+- Preparing components for distribution and reuse
+- Creating installable packages or release artifacts
+
+### Quick Reference
+
+```bash
+# Build Mojo package
+pixi run mojo build -o packages/module.mojopkg shared/module/
+
+# Create distribution archive
+tar -czf dist/ProjectOdyssey-v0.1.0.tar.gz packages/ examples/ README.md
+
+# Test installation
+pixi run mojo run -I packages test_import.mojo
+```
+
+## Verified Workflow
+
+1. **Build packages** - Compile Mojo modules to `.mojopkg` files
+2. **Create archives** - Package distributions (tar.gz, zip)
+3. **Write installation docs** - Document setup procedures
+4. **Test installation** - Verify in clean environment
+5. **Create CI workflow** - Automate packaging in GitHub Actions
+6. **Generate metadata** - Version info, dependencies, etc.
+
+## Package Structure
+
+**Input (module source)**:
+
+```text
+shared/tensor/
+├── __init__.mojo
+├── ops.mojo
+└── types.mojo
+```
+
+**Output (packaged module)**:
+
+```text
+packages/
+├── tensor.mojopkg
+├── nn.mojopkg
+└── utils.mojopkg
+```
+
+**Distribution archive**:
+
+```text
+ProjectOdyssey-v0.1.0/
+├── packages/
+├── examples/
+├── docs/
+├── README.md
+├── LICENSE
+└── INSTALL.md
+```
+
+## Build Configuration
+
+**Mojo package build**:
+
+```bash
+# Single module
+mojo build -o packages/tensor.mojopkg shared/tensor/
+
+# All modules (in loop or script)
+for module in shared/*/; do
+    mojo build -o packages/$(basename $module).mojopkg "$module"
+done
+```
+
+**Archive creation**:
+
+```bash
+# Tar.gz (Linux/Mac)
+tar -czf dist/ProjectOdyssey-v0.1.0.tar.gz packages/ examples/ docs/
+
+# Zip (cross-platform)
+zip -r dist/ProjectOdyssey-v0.1.0.zip packages/ examples/ docs/
+```
+
+## Quality Checklist
+
+Before marking package complete:
+
+- [ ] All modules compile without warnings
+- [ ] Package can be imported in test script
+- [ ] Examples run correctly
+- [ ] README and INSTALL.md included
+- [ ] LICENSE file present
+- [ ] Version tagged correctly
+- [ ] No compilation warnings
+- [ ] Dependencies documented
+
+## Phase Dependencies
+
+- **Input from**: Plan phase (deliverables and success criteria)
+- **Parallel with**: Test phase (TDD) and Implementation phase
+- **Precedes**: Cleanup phase (after parallel phases complete)
+
+## Output Location
+
+- **Packages**: `/packages/<module>.mojopkg`
+- **Archives**: `/dist/<version>.tar.gz`, `.zip`
+- **Documentation**: GitHub issue comments
+- **Release artifacts**: GitHub releases section (after cleanup)
+
+## Error Handling
+
+| Error | Fix |
+| ------- | ----- |
+| Build fails | Check syntax, verify all files in module |
+| Import fails | Verify `__init__.mojo` exports, check paths |
+| Archive corrupted | Recreate archive, verify contents |
+| Installation fails | Check permissions, test script paths |
+| Missing files | Verify all deliverables before packaging |
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
+
+## References
+
+- `CLAUDE.md` - "Package Phase" in 5-phase workflow
+- `.github/workflows/` - Example CI workflows
+- `pixi.toml` - Build configuration and tasks
+
+---
+
+**Key Principle**: Package only what's been tested and approved. No untested code in releases.
+
+---
+
+## Superseded from ci-package-workflow
+
+**Original date:** 2026-03-25
+**Original version:** 2.0.0
+
+```yaml
+---
+name: ci-package-workflow
+description: Create GitHub Actions workflows for automated package building and distribution. Use in package phase to automate .mojopkg building and release creation.
+category: ci-cd
+date: 2026-03-25
+version: 2.0.0
+user-invocable: "false"
+tags: [ci-cd, github-actions, packaging, release]
+---
+```
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Date** | 2026-03-25 |
+| **Objective** | Create GitHub Actions workflows for automated packaging |
+| **Outcome** | Operational |
+
+## When to Use
+
+- Package phase of development
+- Automating release process
+- Building distributable packages
+- Creating GitHub releases
+
+## Verified Workflow
+
+### Quick Reference
+
+```yaml
+name: Build Packages
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Packages
+        run: ./scripts/build_all_packages.sh
+      - uses: softprops/action-gh-release@v1
+        with:
+          files: packages/*.mojopkg
+```
+
+## Workflow Structure
+
+### Triggers
+
+```yaml
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Semantic versioning
+  workflow_dispatch:    # Manual trigger
+```
+
+### Jobs
+
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Mojo
+        run: # Install Mojo environment
+      - name: Build Packages
+        run: ./scripts/build_all_packages.sh
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+```
+
+## Workflow Types
+
+### 1. Build on Tag Release
+
+Automatically build when version tag created:
+
+```yaml
+on:
+  push:
+    tags:
+      - 'v*'
+```
+
+### 2. Build on PR
+
+Validate packaging on pull requests:
+
+```yaml
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'scripts/build_*.sh'
+```
+
+### 3. Manual Trigger
+
+Allow on-demand builds with parameters:
+
+```yaml
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build'
+        required: true
+```
+
+## Best Practices
+
+- Cache dependencies between runs
+- Upload artifacts for inspection
+- Create GitHub releases with notes
+- Test installation in clean environment
+- Tag releases with semantic versioning
+- Document build requirements
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
+
+## Error Handling
+
+| Error | Fix |
+| ------- | ----- |
+| Action version invalid | Use latest stable version (v4, not @main) |
+| Missing environment | Add setup step before build |
+| Build script not found | Verify script path and permissions |
+| Artifact not uploaded | Check build produces expected files |
+
+## References
+
+- Related skill: `validate-workflow` for syntax validation
+- Workflow examples: `.github/workflows/`
+- GitHub Actions docs: <https://docs.github.com/en/actions>
+
+---
