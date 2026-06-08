@@ -1,9 +1,11 @@
 ---
 name: tooling-hephaestus-implementer-no-changes-state-skip
+aliases:
+  - automation-implementer-no-changes-state-skip
 description: "When hephaestus implementer_phase_runner raises RuntimeError('No changes produced...') from pr_manager because a branch has 0 commits vs main (work already merged), detect this specific case and apply state:skip + return WorkerResult(success=True) instead of failing. Use when: (1) an automation loop inflates rc=1 for issues whose work already landed via a prior merged PR, (2) diagnosing why drive-green stays suppressed after implementation loops 1-4 even though the actual code change is already merged, (3) implementing or reviewing error handling in _implement_issue in implementer_phase_runner.py."
 category: tooling
 date: 2026-06-07
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 verification: verified-ci
 tags:
