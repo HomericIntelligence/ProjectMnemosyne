@@ -1,0 +1,925 @@
+<!-- markdownlint-disable MD024 -->
+# pixi-runtime-env-gotchas — History
+
+## v1.0.0 (2026-06-07)
+
+Initial consolidation. Merged 4 pixi runtime-environment skills into one canonical:
+
+- pixi-env-resolve-drops-editable-install (env re-solve wipes editable install in swarm worktrees)
+- pixi-cache-true-unreliable (GHA cache: true unreliable; locked-env .pixi cache poisoning)
+- pixi-precommit-hook-binary-resolution (pre-commit resolves to wrong pixi env binary)
+- pixi-openssl-sysroot-glibc-private (GLIBC_PRIVATE linker errors with system OpenSSL)
+
+## Superseded from pixi-env-resolve-drops-editable-install
+
+**Original date/version:** 2026-05-31 / 1.0.0
+
+```yaml
+name: pixi-env-resolve-drops-editable-install
+description: "Pixi silently re-solves the shared `.pixi/envs/default` and wipes the `pip install -e .` editable install whenever a worktree edit to `pyproject.toml` (especially `[project.scripts]`, `[project.dependencies]`, or `[project.optional-dependencies]`) is followed by a `pixi run` invocation. Long-running automation that imports the package then fails with `ModuleNotFoundError: No module named '<pkg>'` starting at the exact env-resolve timestamp. Use when: (1) `ModuleNotFoundError: No module named 'hephaestus'` (or your package) starts mid-run, (2) every repo started AFTER a specific UTC timestamp fails identically while every repo started BEFORE it succeeded, (3) a swarm/parallel agent run touched `pyproject.toml` in any worktree sharing `.pixi/envs/default`, (4) `stat -c '%Y' .pixi/envs/default/conda-meta` is newer than the last `pixi run dev-install`."
+category: tooling
+date: 2026-05-31
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - pixi
+  - editable-install
+  - pip-install-e
+  - dev-install
+  - site-packages
+  - env-resolve
+  - module-not-found
+  - pyproject
+  - project-scripts
+  - swarm-worktree
+  - long-running-driver
+  - shared-pixi-env
+```
+
+
+# Pixi Env Re-Solve in a Swarm Worktree Silently Drops the Editable Install
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-31 |
+| **Objective** | Document the failure mode where a worktree edit to `pyproject.toml` triggers a `pixi` env re-solve that wipes the `pip install -e .` editable install from `.pixi/envs/default/lib/.../site-packages/`, causing any subsequent process that imports the package to die with `ModuleNotFoundError` |
+| **Outcome** | Diagnosed live during a 10-PR myrmidon swarm run: env mtime jumped from session start (23:04Z) to mid-run (23:59Z), and every repo started after that timestamp died on import. `pixi run dev-install` restored. A permanent pixi-native editable fix is documented but NOT yet validated. |
+| **Verification** | verified-local — root cause and `pixi run dev-install` recovery confirmed from a live ecosystem-driver log; the permanent fix (`[pypi-dependencies] hephaestus = { path = ".", editable = true }`) is documented as a hypothesis only and conflicts with [`tooling-pixi-lockfile-churn-self-reference`](tooling-pixi-lockfile-churn-self-reference.md). |
+| **History** | First version. |
+
+## When to Use
+
+- A long-running driver (ecosystem driver, automation loop, `scripts/drive_prs_green.py`, watcher) that worked at startup begins emitting `ModuleNotFoundError: No module named '<your-pkg>'` mid-run.
+- Every repo / job that started **after** a specific UTC timestamp fails identically; every repo / job that started **before** it succeeded normally. The cliff is sharp — no gradual degradation.
+- A myrmidon / parallel-agent swarm is editing `pyproject.toml` inside one or more worktrees that share `.pixi/envs/default` with the driver's parent checkout.
+- `stat -c '%Y %n' .pixi/envs/default/conda-meta` shows a timestamp newer than the last time you ran `pixi run dev-install` (or `pip install -e .`).
+- A swarm agent recently added a new `[project.scripts]` entry — even with no functional code change, pixi treats this as a manifest change and re-solves.
+- `pixi run python -c "import <pkg>"` fails from the parent worktree even though `python -c "import <pkg>"` from outside `pixi run` may or may not work depending on PATH.
+- You see two different repo runs in the same session log: earlier runs report `Successfully installed <Pkg>-X.Y.Z.devN+g<sha>` at startup, later runs report `ModuleNotFoundError` — and there is no explicit "uninstall" anywhere in between.
+
+Do NOT use this skill when:
+
+- The package was never installed editable in the first place (run `pixi run dev-install` once and verify; no env-resolve happened).
+- The error is `command not found: <pkg>-<cli>` (console-script stale-entry-points instead of full uninstall — see [`tooling-pyproject-scripts-dev-install-after-merge`](tooling-pyproject-scripts-dev-install-after-merge.md)).
+- The lockfile is the symptom, not import failure — see [`tooling-pixi-lockfile-churn-self-reference`](tooling-pixi-lockfile-churn-self-reference.md).
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. CONFIRM env was re-solved during the run:
+stat -c '%Y %n' .pixi/envs/default/conda-meta
+# Compare against the timestamp where ModuleNotFoundError began.
+
+# 2. CONFIRM the editable install is now missing:
+pixi run python -c "import hephaestus; print(hephaestus.__version__)"
+# ModuleNotFoundError: No module named 'hephaestus'
+
+# 3. RESTORE immediately (run from the parent worktree, NOT from a swarm worktree):
+pixi run dev-install
+pixi run python -c "import hephaestus; print(hephaestus.__version__)"
+# 0.9.4.dev14+g3fcc2f0fb   (or similar — the SHA from your current HEAD)
+
+# 4. RESTART any long-running drivers that were holding the dead env state.
+```
+
+### Detailed Steps
+
+**Why this happens.** ProjectHephaestus (and any pixi project using the
+`Approach A` pattern from [`tooling-pixi-lockfile-churn-self-reference`](tooling-pixi-lockfile-churn-self-reference.md))
+configures pixi so the package is NOT in `[pypi-dependencies]`. Instead, an
+explicit `pixi run dev-install` task runs `pip install -e . --no-deps`, dropping
+`<pkg>.egg-link` / `<pkg>.pth` files into `.pixi/envs/default/lib/python3.X/site-packages/`.
+
+This editable install is invisible to pixi's solver. The moment pixi decides it
+needs to re-create `.pixi/envs/default` (because `pyproject.toml` was touched in
+a way it deems significant), it nukes the env and rebuilds it from
+`pixi.lock` — and the editable install is gone, because it was never in the
+lockfile.
+
+Concretely, `pixi run` will re-solve when any of these happen in `pyproject.toml`:
+
+- `[project.scripts]` add / remove / rename
+- `[project.dependencies]` change
+- `[project.optional-dependencies]` change
+- `[build-system]` change
+- `[tool.hatch.version]` change
+
+Worktrees inherit the parent checkout's `.pixi/envs/default` because the pixi env
+directory is determined by the workspace path **as resolved by `pixi`** — when a
+worktree's `pixi.toml` points at the same workspace (or is identical), the same
+`.pixi/envs/default` is used. One worktree mutating `pyproject.toml` then
+invoking `pixi run` re-solves the env that ALL worktrees (and the parent) share.
+
+**Step 1 — Detect the failure cliff in your log.**
+
+```bash
+# Grep your driver log for the boundary:
+grep -E "ModuleNotFoundError: No module named '<pkg>'|Successfully installed <Pkg>-" driver.log | head
+```
+
+You should see a clean before/after split — the last `Successfully installed`
+line marks the last good install; every subsequent run that needs to import the
+package will fail.
+
+**Step 2 — Confirm pixi re-solved the env.**
+
+```bash
+# The conda-meta mtime is the fingerprint of the last env-resolve.
+stat -c '%Y %n' .pixi/envs/default/conda-meta
+# Convert to UTC if needed:
+date -u -d @"$(stat -c '%Y' .pixi/envs/default/conda-meta)"
+```
+
+If that timestamp lies between your last successful run and the first
+`ModuleNotFoundError`, the env was re-solved mid-session.
+
+**Step 3 — Identify the trigger.**
+
+```bash
+# Check every worktree for recent pyproject.toml writes:
+for wt in $(git worktree list --porcelain | awk '/^worktree /{print $2}'); do
+  echo "=== $wt ==="
+  stat -c '%y %n' "$wt/pyproject.toml" 2>/dev/null
+done
+```
+
+The most-recently-modified `pyproject.toml` is your trigger. Inspect the diff —
+if it contains anything in the bullet list above (especially `[project.scripts]`),
+you've found the cause.
+
+**Step 4 — Restore the editable install from the parent worktree.**
+
+```bash
+# From the parent / main checkout (NOT from a swarm worktree):
+pixi run dev-install
+```
+
+This re-runs `pip install -e . --no-deps` and re-creates the `.pth` /
+`.egg-link` entry in the freshly-solved env. The command is idempotent and
+fast.
+
+**Step 5 — Verify with the version-string evidence pattern.**
+
+```bash
+pixi run python -c "import hephaestus; print(hephaestus.__version__)"
+# Before:  ModuleNotFoundError: No module named 'hephaestus'
+# After:   0.9.4.dev14+g3fcc2f0fb
+```
+
+The version string for hatch-vcs projects is `<base>.devN+g<sha>` — if the SHA
+matches your current `git rev-parse --short HEAD`, the install is current.
+
+**Step 6 — Restart any long-running drivers** that were started before the
+re-solve. They almost certainly cached a now-stale `sys.path` or process
+environment.
+
+**Step 7 (recommended) — Add a pre-flight check to long-running drivers.**
+
+Make your ecosystem driver assert importability at the top of each repo loop:
+
+```python
+import importlib
+
+def _assert_editable_install_present():
+    try:
+        importlib.import_module("hephaestus")
+    except ModuleNotFoundError as exc:
+        raise SystemExit(
+            "FATAL: hephaestus is not importable. The pixi env was likely "
+            "re-solved by a worktree edit. Run `pixi run dev-install` from "
+            "the parent worktree and restart the driver."
+        ) from exc
+
+# Call this at the top of every loop iteration:
+_assert_editable_install_present()
+```
+
+This converts a silent mid-run `ModuleNotFoundError` into a loud, single,
+actionable message.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| 1 | Continue the swarm run after the first `ModuleNotFoundError`, assuming it was a flaky import | Every repo started after the env-resolve timestamp failed identically; the loss compounded | A sharp before/after cliff at one timestamp is structural, not flaky — stop and investigate the env state |
+| 2 | Re-run `pixi install` alone | `pixi install` reads `pixi.lock` and builds the env, but does NOT run the `dev-install` task; the editable install stays missing | `pixi install` and `pixi run dev-install` are different operations; you need the latter after any env-resolve event |
+| 3 | Run `pixi run dev-install` from inside a swarm worktree | The worktree's `pyproject.toml` was the trigger — running install from there can re-trigger another re-solve | Always run `pixi run dev-install` from the parent / clean worktree |
+| 4 | Tail-grep `pip install` lines in the log to look for an explicit uninstall | There was no explicit uninstall — pixi's env-resolve wipes the whole `.pixi/envs/default` and rebuilds; uninstall is implicit | The fingerprint is `stat .pixi/envs/default/conda-meta` mtime, not an `Uninstalled` log line. Pixi doesn't announce that it nuked the env |
+| 5 | Add `pip install -e .` to a CI / pre-commit hook to "guarantee" it's always installed | Helps for fresh checkouts, but doesn't help long-running drivers that started BEFORE the re-solve; the in-memory process is already dead | The reactive fix is `pixi run dev-install`; the preventive fix is the structural one (Step 7 pre-flight check + the deferred permanent fix below) |
+| 6 | Switch immediately to `[pypi-dependencies] hephaestus = { path = ".", editable = true }` as the "obvious" permanent fix | This is exactly the configuration that [`tooling-pixi-lockfile-churn-self-reference`](tooling-pixi-lockfile-churn-self-reference.md) Approach A removed because it caused perpetual lockfile churn. Re-adding it without first migrating to pixi lockfile v7 (Approach B) will re-introduce the churn | Permanent fix requires lockfile v7 (Pixi >=0.68.0) in place first — see the Permanent Fix section below |
+
+## Results & Parameters
+
+### Failure-Cliff Detection Pattern
+
+The diagnostic evidence from the live failure (extracted from the user's
+ecosystem driver log):
+
+```text
+23:04:26Z  ecosystem driver starts; "Successfully installed Pkg-0.9.4.dev14+g3fcc2f0fb"
+23:59:47Z  .pixi/envs/default/conda-meta mtime — env re-solved
+           (verified via `stat -c '%Y' .pixi/envs/default/conda-meta`)
+23:59:48Z  6 repos that begin their work loop fail with
+           "ModuleNotFoundError: No module named 'hephaestus'"
+```
+
+The two timestamps you correlate are:
+
+1. **Driver-log "Successfully installed"** — last known good editable install.
+2. **`stat -c '%Y' .pixi/envs/default/conda-meta`** — last env-resolve.
+
+If (2) > (1) and any process started before (2) tried to import after (2), the
+process is now running in a dead env.
+
+### Immediate Recovery (Verified)
+
+```bash
+# From the parent worktree, NOT from a swarm worktree:
+pixi run dev-install
+
+# Verify:
+pixi run python -c "import hephaestus; print(hephaestus.__version__)"
+```
+
+Recovery is O(seconds) — pip re-uses cached wheel data and only writes the
+`.pth` / `.egg-link`.
+
+### Permanent Fix (Proposed — NOT yet validated)
+
+Switch from `pip install -e . --no-deps` (as a task) to a pixi-native editable
+declaration:
+
+```toml
+# pixi.toml
+[pypi-dependencies]
+hephaestus = { path = ".", editable = true }
+```
+
+This puts the editable install into `pixi.lock`, so every env-resolve preserves
+it. **However**, this conflicts with the historical reason this entry was
+removed: [`tooling-pixi-lockfile-churn-self-reference`](tooling-pixi-lockfile-churn-self-reference.md)
+Approach A removed exactly this entry because it caused perpetual `pixi.lock`
+churn when combined with `hatch-vcs` dynamic versioning.
+
+**The combined permanent fix is therefore:**
+
+1. First ensure the project is on **pixi lockfile v7** (Pixi >=0.68.0) — see
+   Approach B of [`tooling-pixi-lockfile-churn-self-reference`](tooling-pixi-lockfile-churn-self-reference.md).
+   Lockfile v7 removes the source-dependency input hashes that caused the
+   churn, so the self-reference can safely return.
+2. Then re-add the self-reference under `[pypi-dependencies]`.
+3. Drop the `[tasks] dev-install = "pip install -e . --no-deps"` line.
+4. Verify on a clean tree: `pixi install && git diff --exit-code pixi.lock`
+   must exit 0; and `pixi run python -c "import <pkg>"` must succeed without
+   any preceding `dev-install`.
+
+Until this combined migration is validated end-to-end, the recommended posture
+is: **keep the `dev-install` task AND add the Step 7 pre-flight check**.
+
+### Reproduction Recipe (Worth Running Once)
+
+```bash
+# Prereqs: pixi project using `pip install -e .` pattern (NOT pypi-deps self-ref).
+
+# 1. Set up a worktree:
+git worktree add /tmp/repro-wt -b repro-branch HEAD
+
+# 2. Confirm editable install works from the parent:
+pixi run python -c "import hephaestus; print('ok')"
+# ok
+
+# 3. Capture the env mtime:
+T0=$(stat -c '%Y' .pixi/envs/default/conda-meta)
+
+# 4. In the worktree, edit pyproject.toml to add a new [project.scripts] entry:
+cd /tmp/repro-wt
+python -c "
+import tomli, tomli_w
+p = tomli.load(open('pyproject.toml','rb'))
+p.setdefault('project',{}).setdefault('scripts',{})['hephaestus-repro-script'] = 'hephaestus.__init__:__name__'
+tomli_w.dump(p, open('pyproject.toml','wb'))
+"
+
+# 5. Invoke pixi run from the worktree (this triggers the re-solve):
+pixi run python -c "print('hi')"
+
+# 6. Capture the new env mtime:
+T1=$(stat -c '%Y' .pixi/envs/default/conda-meta)
+echo "Before: $T0 / After: $T1"
+# T1 > T0 confirms re-solve.
+
+# 7. From the parent, confirm import now fails:
+cd -
+pixi run python -c "import hephaestus; print('still works')"
+# ModuleNotFoundError: No module named 'hephaestus'
+
+# 8. Restore:
+pixi run dev-install
+```
+
+### Detection Heuristic
+
+| Signal | Means |
+|--------|-------|
+| `ModuleNotFoundError: No module named '<pkg>'` mid-run | Editable install lost — start investigating env-resolve |
+| Sharp before/after cliff in driver log at ONE timestamp | Structural, not flaky |
+| `stat -c '%Y' .pixi/envs/default/conda-meta` > last `dev-install` time | Env was re-solved |
+| Any worktree's `pyproject.toml` mtime > last `dev-install` time | Likely trigger |
+| `pixi run python -c "import <pkg>"` fails but `python -c "import <pkg>"` from outside pixi works | The site-packages of the pixi env was wiped; the system Python may have its own copy |
+| `pixi run pip show <pkg>` returns nothing (`Package(s) not found`) | Editable install is gone — re-run `pixi run dev-install` |
+
+### Why this Bug Is a CLASS, Not a One-Off
+
+Any long-running process that depends on the package being importable will
+fail silently mid-run if a swarm worktree touches `pyproject.toml` in any way
+pixi considers re-solve-worthy. This includes:
+
+- The ecosystem driver (`scripts/drive_prs_green.py`)
+- Automation loops (`scripts/loop_runner.py` / `hephaestus-automation-loop`)
+- Long-running myrmidon swarm coordinators
+- Local watchers (`watchdog` / `pytest-watch`) inside `pixi run`
+- Any `pixi run` task that is itself a long-running daemon
+
+If your project has ANY of the above AND uses the `dev-install` task pattern
+AND runs swarm agents in worktrees, you are exposed.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | 2026-05-31 — 10-PR myrmidon swarm run | Ecosystem driver started 23:04:26Z with `Successfully installed HomericIntelligence-Hephaestus-0.9.4.dev14+g3fcc2f0fb`. At 23:59:47Z `.pixi/envs/default/conda-meta` mtime jumped (env re-solved). From 23:59:48Z onwards, 6 separate repo runs of `scripts/drive_prs_green.py` failed with `ModuleNotFoundError: No module named 'hephaestus'`. Trigger: one swarm worktree had added a new entry to `[project.scripts]` (`hephaestus-check-skill-catalog`) and then invoked `pixi run pytest`. Recovery via `pixi run dev-install` from the parent worktree restored importability immediately. The pixi-native editable self-reference (`[pypi-dependencies] hephaestus = { path = ".", editable = true }`) is documented as the proposed permanent fix but not yet validated; it must be combined with lockfile v7 migration to avoid re-introducing the churn that PR #675 removed. |
+
+## References
+
+- [`tooling-pixi-lockfile-churn-self-reference`](tooling-pixi-lockfile-churn-self-reference.md) — companion skill; explains why the self-reference was removed and the v7 lockfile migration that would let it return safely
+- [`tooling-pyproject-scripts-dev-install-after-merge`](tooling-pyproject-scripts-dev-install-after-merge.md) — related but DIFFERENT failure mode (stale console-script entries after `git pull`, not a full env-resolve wipe)
+- [`dependency-consolidation-pixi-single-source`](dependency-consolidation-pixi-single-source.md) — single-source-of-truth pattern that this skill's env-resolve fingerprint relies on
+- [Pixi `[pypi-dependencies]` docs](https://pixi.sh/latest/reference/project_configuration/#the-pypi-dependencies-table)
+- [pip editable install reference](https://pip.pypa.io/en/stable/cli/pip_install/#editable-installs)
+
+---
+
+## Superseded from pixi-cache-true-unreliable
+
+**Original date/version:** 2026-06-06 / 2.1.0
+
+```yaml
+name: pixi-cache-true-unreliable
+description: 'Fixes unreliable Pixi caching from setup-pixi''s built-in cache: true,
+  AND warns that under locked: true a SECOND actions/cache over .pixi poisons the locked
+  env (downgrades packages, fails pip-audit/dependency-scan). Replace cache: true with
+  explicit actions/cache (non-locked); with locked: true rely ONLY on setup-pixi''s
+  built-in cache. Use when: (1) CI logs show ''Saved cache with ID -1'', (2) cache hits
+  inconsistent despite cache: true, (3) consolidating Pixi setup into a composite action,
+  (4) dependency-scan/pip-audit fails on an already-patched pixi.lock, (5) setup-pixi
+  installs a newer version than pip-audit then audits.'
+category: ci-cd
+date: 2026-06-06
+version: 2.1.0
+user-invocable: false
+verification: verified-ci
+history: pixi-cache-true-unreliable.history
+```
+
+# Pixi cache: true Is Unreliable — Use Explicit actions/cache
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | 2026-03-08 |
+| Project | ProjectOdyssey |
+| Objective | Consolidate 14+ independent Pixi setup blocks into a single shared composite action with reliable caching |
+| Outcome | ✅ Success — 1 composite action, 0 inline `prefix-dev/setup-pixi` calls in workflows |
+| Impact | High — eliminates `Saved cache with ID -1` failures; single source of truth for caching |
+| Verification | verified-ci |
+| History | [changelog](./pixi-cache-true-unreliable.history) |
+
+> **CRITICAL caveat (v2.1.0):** The "add an explicit `actions/cache` over `.pixi`"
+> recommendation below is for the **non-`locked`** case. If `prefix-dev/setup-pixi` runs
+> with `locked: true`, do **NOT** add a second `actions/cache` over `.pixi` — it poisons
+> the freshly-installed locked environment. See
+> [Locked Mode: Do Not Add a Second .pixi Cache](#locked-mode-do-not-add-a-second-pixi-cache).
+
+## When to Use
+
+- CI logs show `Saved cache with ID -1` after a `prefix-dev/setup-pixi` step with `cache: true`
+- CI logs show HTTP 400 errors during the `prefix-dev/setup-pixi` step with `cache: true`
+- Cache hits are inconsistent or never occur despite `cache: true` being set
+- Multiple workflows each independently set up Pixi (violating DRY)
+- Consolidating Pixi setup into a shared composite action (`.github/actions/setup-pixi/action.yml`)
+- Migrating from inline setup-pixi blocks to a composite action
+- `security`/`dependency-scan` (pip-audit) fails on EVERY PR even though `pixi.lock` is
+  already patched to the fixed version
+- CI logs show setup-pixi installing a fixed version (e.g. urllib3 2.7.0) but pip-audit
+  then reports a vulnerability against an OLDER version (e.g. 2.6.3)
+
+## Root Cause
+
+`prefix-dev/setup-pixi@v0.9.x` with `cache: true` uses an internal caching mechanism that
+can silently fail, logging `Saved cache with ID -1`. This means **the cache is never actually
+saved** and every CI run downloads the full Pixi environment from scratch.
+
+The reliable fix is to **disable `cache: true`** and add an explicit `actions/cache@v5` step
+that caches both paths that Pixi uses:
+
+- `.pixi` — the environment directory (packages installed for this project)
+- `~/.cache/rattler/cache` — the package download cache (avoids re-downloading)
+
+## Locked Mode: Do NOT Add a Second .pixi Cache
+
+> **This is the most important caveat in this skill. It contradicts the
+> general recommendation above for the `locked: true` case.**
+
+When a workflow uses `prefix-dev/setup-pixi@v0.9.x` with `locked: true` (e.g.
+`pixi install -e <env> --locked`), setup-pixi **already** caches `.pixi` keyed exactly on
+the `pixi.lock` hash AND installs the correct locked environment. Adding a **second**
+`actions/cache@v5` step that caches/restores the same `.pixi` directory **POISONS** the
+environment:
+
+1. setup-pixi runs `pixi install -e <env> --locked` → installs the CORRECT locked
+   versions (e.g. urllib3 `2.7.0`).
+2. A later `actions/cache` restore step extracts a STALE `.pixi` archive **over** that
+   fresh install — `actions/cache` restore extracts on top of existing paths, and
+   **whichever cache restores LAST wins** — silently downgrading packages
+   (urllib3 `2.7.0` → `2.6.3`).
+3. `pip-audit` then audits the **downgraded** env and reports vulnerabilities
+   (e.g. `PYSEC-2026-141` / `PYSEC-2026-142`), **failing `security` / `dependency-scan`
+   on every PR — even though `pixi.lock` is already patched.**
+
+### Two poisoning variants — BOTH are dangerous
+
+| Variant | Cache key config | How it poisons |
+| ------- | ---------------- | -------------- |
+| Loose `restore-keys:` | e.g. `pixi-lint-${{ runner.os }}-` | On an exact-key miss, falls back to ANY prior lock's cache (stale) |
+| Exact-key only (NO `restore-keys`) | `pixi-...-${{ hashFiles('pixi.lock') }}` only | A cache a PREVIOUS poisoned run saved under that exact key gets an exact hit and is restored — the same lock hash keeps restoring the poison |
+
+**Key lesson:** "No `restore-keys` = safe" is **WRONG**. An exact-key-only `.pixi` cache
+still poisons because it exact-hits a previously-poisoned cache stored under the same
+`pixi.lock` hash. **ANY** second `actions/cache` over `.pixi` after a `--locked`
+setup-pixi is unsafe, regardless of `restore-keys`.
+
+### Diagnosis signature (read `gh run view --log`)
+
+```text
+# setup-pixi step
+... pixi install -e lint --locked ... urllib3-2.7.0   <- CORRECT version installed
+# later
+Cache restored from key: pixi-lint-...                 <- stale .pixi restored over it
+# pip-audit step
+Found vulnerability in urllib3 2.6.3 (PYSEC-2026-141)   <- OLD version audited
+```
+
+If the version setup-pixi installs differs from the version pip-audit audits, you have
+cache poisoning. Confirm with:
+
+```bash
+gh run view <run-id> --log | grep -iE "pixi install .*--locked|Cache restored from key|vulnerab|urllib3"
+```
+
+### Root-cause fix
+
+**Remove the redundant second `actions/cache` step over `.pixi`** and rely on
+`prefix-dev/setup-pixi`'s built-in caching (exact-keyed on `pixi.lock`, never clobbers
+the install). Do this across **ALL** workflows that have the pattern — composite actions,
+`release.yml`, `pre-commit.yml`, `security.yml`. A workflow whose `.pixi` cache has NO
+`restore-keys` must be fixed too, not just the ones with loose `restore-keys`.
+
+```bash
+# Find every actions/cache that touches .pixi after a setup-pixi/--locked step
+grep -rn -B2 -A8 "actions/cache" .github/workflows/ .github/actions/ | grep -E "\.pixi|actions/cache|locked"
+
+# After removing the redundant cache steps, confirm none remain over .pixi
+grep -rn -A8 "actions/cache" .github/workflows/ .github/actions/ | grep -n "\.pixi"
+```
+
+### Decision: should you add an explicit `actions/cache` over `.pixi`?
+
+```text
+Does the workflow use prefix-dev/setup-pixi with locked: true (or pixi install --locked)?
+├─ YES → DO NOT add a second actions/cache over .pixi.
+│        Rely on setup-pixi's built-in lock-keyed cache. Remove any existing one.
+└─ NO  → cache: true is unreliable → use ONE explicit actions/cache over
+         .pixi + ~/.cache/rattler/cache keyed on pixi.lock (see Verified Workflow below).
+```
+
+## Verified Workflow
+
+### 1. Audit workflows for inline Pixi setup
+
+```bash
+# Find all direct prefix-dev/setup-pixi calls in workflows
+grep -rn "prefix-dev/setup-pixi" .github/workflows/
+
+# Find all cache: true patterns
+grep -rn "cache: true" .github/workflows/
+
+# Count workflows already using composite action
+grep -rn "\.github/actions/setup-pixi" .github/workflows/*.yml | wc -l
+```
+
+### 2. Check Callers for `with:` Blocks Before Rewriting
+
+Before removing inputs from the composite action, verify no workflows pass `with:` inputs to it:
+
+```bash
+grep -rn -A3 "uses: ./.github/actions/setup-pixi" .github/workflows/ | grep -E "pixi-version|cache:"
+```
+
+If no output: safe to remove inputs entirely. If output: preserve the `inputs:` block and only fix the cache step.
+
+### 3. Create (or update) the composite action
+
+Create `.github/actions/setup-pixi/action.yml`:
+
+```yaml
+name: Set Up Pixi Environment
+description: Install Pixi and restore the cached environment.
+
+inputs:
+  pixi-version:
+    description: Pixi version to install
+    required: false
+    default: latest
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Pixi
+      uses: prefix-dev/setup-pixi@v0.9.4
+      with:
+        pixi-version: ${{ inputs.pixi-version }}
+
+    - name: Cache Pixi environments
+      uses: actions/cache@v5
+      with:
+        path: |
+          .pixi
+          ~/.cache/rattler/cache
+        key: pixi-${{ runner.os }}-${{ hashFiles('pixi.lock') }}
+        restore-keys: |
+          pixi-${{ runner.os }}-
+```
+
+Key decisions:
+- **No `cache: true`** — omit it entirely; it's unreliable
+- **Hash `pixi.lock` not `pixi.toml`** — lock file is more precise (exact resolved versions)
+- **Cache both paths** — `.pixi` (env) AND `~/.cache/rattler/cache` (downloads)
+- **Match `actions/cache` version** to what the repo already uses (check with `grep -r "actions/cache@" .github/workflows/`)
+
+### 4. Update all workflows to use the composite action
+
+Each inline block:
+
+```yaml
+# BEFORE — inline, unreliable
+- name: Set up Pixi
+  uses: prefix-dev/setup-pixi@v0.9.4
+  with:
+    pixi-version: latest
+    cache: true
+```
+
+Becomes:
+
+```yaml
+# AFTER — composite action, reliable
+- name: Set up Pixi
+  uses: ./.github/actions/setup-pixi
+```
+
+### 5. Verify consolidation
+
+```bash
+# Should return nothing (no inline calls remain)
+grep -rn "prefix-dev/setup-pixi" .github/workflows/*.yml
+
+# Should return nothing (no cache: true in actions)
+grep -rn "cache: true" .github/actions/
+
+# Count composite action uses
+grep -rn "\.github/actions/setup-pixi" .github/workflows/*.yml | wc -l
+```
+
+### 6. Validate YAML
+
+```bash
+python3 -c "import yaml; yaml.safe_load(open('.github/actions/setup-pixi/action.yml')); print('OK')"
+```
+
+### 7. Commit and PR
+
+```bash
+git add .github/actions/setup-pixi/action.yml
+git commit -m "fix(ci): replace cache: true with explicit actions/cache in setup-pixi composite action"
+gh pr create --title "fix(ci): replace cache: true with explicit actions/cache" --body "Closes #<issue>"
+gh pr merge --auto --rebase
+```
+
+## Results & Parameters
+
+| Parameter | Value | Notes |
+| ----------- | ------- | ------- |
+| `actions/cache` version | `@v5` | Match what other workflows use |
+| Cache path 1 | `.pixi` | Project environment directory |
+| Cache path 2 | `~/.cache/rattler/cache` | Package download cache — must include both |
+| Cache key hash source | `pixi.lock` | More precise than `pixi.toml` |
+| Restore key prefix | `pixi-${{ runner.os }}-` | Falls back to any OS-matching cache (**only when NOT using `locked: true`**) |
+| `cache: true` | **omit** | Unreliable — causes "Saved cache with ID -1" |
+| Second `actions/cache` over `.pixi` under `locked: true` | **remove** | Poisons the locked install; downgrades packages; fails pip-audit |
+| Locked-mode caching | rely on built-in setup-pixi cache | setup-pixi exact-keys `.pixi` on `pixi.lock` and never clobbers the install |
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Keep `cache: true` | Used `prefix-dev/setup-pixi@v0.9.4` with `cache: true` enabled | Internally fails silently; logs "Saved cache with ID -1"; no cache ever saved | Never use `cache: true` — always use explicit `actions/cache` |
+| Cache only `.pixi` | Cached `.pixi` path only, skipped `~/.cache/rattler/cache` | Pixi re-downloads packages on every run even when `.pixi` hits | Must cache both paths or cache is incomplete |
+| Hash `pixi.toml` | Used `hashFiles('pixi.toml')` as cache key | `pixi.toml` doesn't encode exact resolved versions; false positives on cache hits | Use `pixi.lock` for precise cache invalidation |
+| Keeping unused `inputs:` block | Preserved `pixi-version` and `cache` inputs when no callers use `with:` blocks | Dead code; caused confusion and allowed accidental re-introduction of `cache: true` via the `${{ inputs.cache }}` passthrough | Remove inputs when no callers pass `with:` blocks; verify first with `grep -rn -A3 "uses: ./.github/actions/setup-pixi" .github/workflows/` |
+| Second `actions/cache` over `.pixi` with `locked: true` | Kept setup-pixi's built-in `.pixi` cache AND added an explicit `actions/cache@v5` over the same `.pixi` path | The second restore extracts a STALE `.pixi` over the fresh `--locked` install (last restore wins), downgrading urllib3 2.7.0 → 2.6.3; pip-audit then audits the downgraded env and fails `dependency-scan` on every PR | With `locked: true`, never layer a second cache over `.pixi` — rely solely on setup-pixi's built-in lock-keyed cache |
+| "No `restore-keys` = safe" assumption | Fixed only the workflows with loose `restore-keys:` (setup-pixi-env, release.yml, pre-commit.yml); left security.yml's exact-key-only `.pixi` cache in place | security.yml STILL failed `dependency-scan`: its exact key (`hashFiles('pixi.lock')`) hit a `.pixi` cache that a PREVIOUS poisoned run had saved under the same hash — exact-key hit restored the poison | An exact-key-only `.pixi` cache is NOT safe; ANY second `actions/cache` over `.pixi` after a `--locked` setup-pixi is unsafe, regardless of `restore-keys` |
+| Bumping `pixi.lock` to patched version alone | Updated `pixi.lock` so the locked env had urllib3 2.7.0 | dependency-scan still failed because the poisoning cache restored 2.6.3 over the patched install; the lock fix was correct but invisible to pip-audit | Patching the lock is necessary but not sufficient when a second `.pixi` cache poisons the env — you must also remove the redundant cache |
+
+## Verified On
+
+| Project | Context | Details |
+| ------- | ------- | ------- |
+| ProjectOdyssey | Consolidate 14+ Pixi setup blocks into a composite action (v2.0.0) | Eliminated `Saved cache with ID -1` |
+| ProjectHephaestus | `.pixi` cache poisoning under `locked: true` — PR #1021 fixed setup-pixi-env composite + release.yml + pre-commit.yml; PR #1026 fixed security.yml (exact-key-only cache) | verified-ci: dependency-scan green on rebased PRs after the fix (e.g. PR #1011 passed) |
+
+---
+
+## Superseded from pixi-precommit-hook-binary-resolution
+
+**Original date/version:** 2026-05-28 / 1.0.0
+
+```yaml
+name: pixi-precommit-hook-binary-resolution
+description: "Pre-commit hooks that invoke 'pixi run <hephaestus-command>' appear to fail with the system-installed binary (newer version with stricter checks) when the project's own pixi env hasn't been populated via 'pixi run dev-install'. Use when: (1) pre-commit check-dep-sync fails locally with 'pyproject.toml contains [project.optional-dependencies] — remove it' but the same check passes in CI, (2) 'which hephaestus-*' inside 'pixi run' returns the system ~/.local/bin path instead of .pixi/envs/default/bin, (3) a pre-commit hook that invokes a console-script via 'pixi run' is using a newer/older version of that script than the one in the current repo, (4) CI pre-commit job runs 'pixi run dev-install' before running hooks but local dev environment does not."
+category: ci-cd
+date: 2026-05-28
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [pixi, pre-commit, dev-install, binary-resolution, hephaestus, console-scripts]
+```
+
+
+# Pixi Pre-Commit Hook Binary Resolution
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-28 |
+| **Objective** | Understand why pre-commit hooks invoking `pixi run <hephaestus-command>` use a different binary version than expected |
+| **Outcome** | Root cause identified: before `pixi run dev-install`, the system-installed binary is used; after, the project's own binary takes precedence |
+| **Verification** | verified-local |
+
+## When to Use
+
+- A pre-commit hook invoking `pixi run hephaestus-*` fails with an error that refers to content in `pyproject.toml` or `pixi.toml` that also exists in `origin/main` (which CI passes)
+- `which hephaestus-check-dep-sync` inside `pixi run --environment default` returns `~/.local/bin/hephaestus-check-dep-sync` instead of `.pixi/envs/default/bin/...`
+- CI pre-commit job passes but local pre-commit run fails for the same hook with a different error message
+- You suspect a version mismatch between the project's code and the pre-commit hook's behavior
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Fix: run dev-install to populate the pixi env with the project's own console scripts
+cd <repo-root>
+pixi run dev-install
+
+# Verify the right binary is now used
+pixi run --environment default which hephaestus-check-dep-sync
+# Should print: <repo-root>/.pixi/envs/default/bin/hephaestus-check-dep-sync
+# NOT: /home/<user>/.local/bin/hephaestus-check-dep-sync
+
+# Re-run the pre-commit hook
+pre-commit run check-dep-sync
+# OR re-run all hooks
+pre-commit run --all-files
+```
+
+### Root Cause Explanation
+
+When `pixi run hephaestus-check-dep-sync` is invoked (directly or via a pre-commit hook),
+pixi resolves the binary in this order:
+
+1. **Pixi env bin** (`.pixi/envs/default/bin/`) — only populated AFTER `pixi run dev-install`
+2. **System PATH fallback** — picks up `~/.local/bin/hephaestus-*` if (1) is empty
+
+`pixi run dev-install` runs `pip install -e . --no-deps` which installs the project's console
+scripts into `.pixi/envs/default/bin/`. Without this step, `pixi run` falls through to the
+globally-installed hephaestus binary which may be a different version with stricter or
+different checks.
+
+### CI vs Local Discrepancy
+
+The CI pre-commit job runs `pixi run dev-install` before `pre-commit run --all-files`:
+
+```yaml
+# .github/workflows/pre-commit.yml
+- name: Run pre-commit
+  run: |
+    pixi install --environment lint
+    pixi install --environment default
+    pixi run dev-install            # ← This populates .pixi/envs/default/bin
+    pixi run --environment lint pre-commit run --all-files --show-diff-on-failure
+```
+
+Local dev environments that skip `pixi run dev-install` will use the system binary.
+
+### Diagnosing Version Mismatch
+
+```bash
+# Check which binary pixi resolves
+pixi run --environment default which hephaestus-check-dep-sync
+
+# Compare the two versions
+hephaestus-check-dep-sync --version 2>/dev/null || true
+pixi run --environment default hephaestus-check-dep-sync --version 2>/dev/null || true
+
+# Check if the system binary has a newer check that the project's code lacks
+grep "optional-dependencies\|pyproject.*contains" ~/.local/lib/python*/site-packages/hephaestus/config/dep_sync.py 2>/dev/null
+grep "optional-dependencies\|pyproject.*contains" hephaestus/config/dep_sync.py
+```
+
+### When This Produces False Positives
+
+The system-installed binary may have stricter checks than the in-repo version. Example:
+- System binary v0.9.5 has `check_pyproject_no_deps()` which flags `[project.optional-dependencies]`
+- In-repo code at v0.9.3 does NOT have this check
+- Pre-commit picks up system binary → false positive failure that CI doesn't reproduce
+
+**Resolution**: Always `pixi run dev-install` before running pre-commit locally. The CI job
+always does this step; match that locally.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Removing `[project.optional-dependencies]` from pyproject.toml | The check reported the section as forbidden — tried to remove it to "fix" the hook | The section IS legitimately needed; removing it would break PyPI packaging | Never remove pyproject.toml sections to satisfy a pre-commit hook without first verifying the hook is using the correct binary version |
+| Checking pixi.toml for the binary location | Looked in pixi.toml tasks for the hephaestus binary definition | The binary is registered as a console_script in pyproject.toml, not directly in pixi.toml | Console scripts from a `pip install -e .` editable install go into the pixi env's bin directory |
+| Assuming the hook failure was a real issue | Spent time analyzing pyproject.toml for the optional-dependencies section | CI passes main with the same section present | Always verify: does the same check pass on `origin/main`? If yes, it's a local environment issue |
+
+## Results & Parameters
+
+### Key commands
+
+```bash
+# One-time setup after cloning or after pixi.lock changes:
+pixi install
+pixi run dev-install
+
+# Verify binary resolution
+pixi run --environment default which hephaestus-check-dep-sync
+# Expected: <repo>/.pixi/envs/default/bin/hephaestus-check-dep-sync
+
+# Run dep-sync check manually with explicit repo-root
+pixi run hephaestus-check-dep-sync --repo-root .
+```
+
+### CI workflow pattern (the reference)
+
+```yaml
+- name: Run pre-commit
+  run: |
+    pixi install --environment lint
+    pixi install --environment default
+    pixi run dev-install  # CRITICAL: populates .pixi/envs/default/bin
+    pixi run --environment lint pre-commit run --all-files
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | PR #633 rebase — check-dep-sync pre-commit false positive | Local binary was v0.9.5 system install; project was v0.9.3; after dev-install the correct binary was used |
+
+---
+
+## Superseded from pixi-openssl-sysroot-glibc-private
+
+**Original date/version:** 2026-03-31 / 1.0.0
+
+```yaml
+name: pixi-openssl-sysroot-glibc-private
+description: "Fix GLIBC_PRIVATE linker errors when using system OpenSSL with pixi conda-forge compiler. Use when: (1) seeing __libc_siglongjmp@GLIBC_PRIVATE or _dl_sym@GLIBC_PRIVATE errors, (2) linking a C library that depends on OpenSSL in a pixi environment, (3) Conan profile GCC version mismatch with pixi."
+category: debugging
+date: 2026-03-31
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - pixi
+  - openssl
+  - glibc
+  - linker
+  - conda-forge
+  - sysroot
+```
+
+
+# Fix pixi + System OpenSSL GLIBC_PRIVATE Linker Errors
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-31 |
+| **Objective** | Fix undefined reference to GLIBC_PRIVATE symbols when linking OpenSSL in a pixi/conda-forge C++ environment |
+| **Outcome** | Solved — adding `openssl >= 3` to pixi.toml provides conda-forge-compatible OpenSSL |
+| **Verification** | verified-local |
+
+## When to Use
+
+- Linker errors containing `GLIBC_PRIVATE` symbols: `__libc_siglongjmp`, `_dl_sym`, `__libc_thread_freeres`, `__libc_pthread_init`, `_dl_make_stack_executable`
+- Using pixi with `cxx-compiler` from conda-forge and linking against system OpenSSL (`/usr/lib/x86_64-linux-gnu/libssl.so`)
+- A C library fetched via FetchContent (e.g., nats.c) depends on OpenSSL and fails to link
+- Conan profile says `compiler.version=13` but pixi ships GCC 14
+
+## Verified Workflow
+
+### Quick Reference
+
+```toml
+# pixi.toml — add openssl from conda-forge
+[dependencies]
+cxx-compiler = ">=1.7"
+openssl = ">=3"           # CRITICAL: must come from conda-forge
+```
+
+```bash
+# After adding openssl to pixi.toml
+pixi install              # Pulls conda-forge OpenSSL
+rm -rf build/debug        # MUST clean — stale cache has system OpenSSL paths
+cmake --preset debug      # Now finds conda-forge OpenSSL
+cmake --build --preset debug
+```
+
+### Root Cause
+
+The pixi conda-forge `cxx-compiler` uses its own sysroot (`~/.pixi/envs/default/x86_64-conda-linux-gnu/sysroot/`). When `find_package(OpenSSL)` resolves to the **system** OpenSSL at `/usr/lib/x86_64-linux-gnu/libssl.so`, the system libraries reference GLIBC symbols from `/lib/x86_64-linux-gnu/libc.so.6` — but the conda-forge linker expects its sysroot's libc, which doesn't export the `@GLIBC_PRIVATE` symbols.
+
+**Fix:** Provide OpenSSL through conda-forge (`pixi.toml` dependency) so it's built against the same sysroot as the compiler.
+
+### Also: Match Conan Profile GCC Version
+
+```bash
+# Check actual pixi GCC version
+pixi run g++ --version
+# Output: g++ (conda-forge gcc 14.3.0-18) 14.3.0
+```
+
+```ini
+# conan/profiles/debug — must match!
+[settings]
+compiler=gcc
+compiler.version=14    # NOT 13
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| System OpenSSL with pixi linker | `find_package(OpenSSL)` found `/usr/lib/x86_64-linux-gnu/libssl.so` | pixi's conda linker uses different sysroot — GLIBC_PRIVATE symbols undefined | Add `openssl >= 3` to pixi.toml so OpenSSL comes from conda-forge |
+| Conan profile `compiler.version=13` | Assumed GCC 13 was standard | pixi conda-forge ships GCC 14.3.0 — version mismatch causes Conan package hash errors | Always run `pixi run g++ --version` and match the Conan profile |
+| Rebuild without cleaning CMakeCache | Added OpenSSL to pixi.toml and re-ran cmake | CMakeCache.txt cached the system OpenSSL path from the previous configure | Always delete build directory when changing how OpenSSL is provided |
+
+## Results & Parameters
+
+```yaml
+# Error signature (look for these in linker output)
+error_patterns:
+  - "undefined reference to `__libc_siglongjmp@GLIBC_PRIVATE'"
+  - "undefined reference to `_dl_sym@GLIBC_PRIVATE'"
+  - "undefined reference to `__libc_thread_freeres@GLIBC_PRIVATE'"
+  - "undefined reference to `__libc_pthread_init@GLIBC_PRIVATE'"
+
+# Fix
+pixi_dep: "openssl >= 3"
+clean_required: true  # Must delete build/ after adding
+
+# Also needed in CMakeLists.txt when statically linking nats.c
+cmake_additions:
+  - "find_package(OpenSSL REQUIRED)"
+  - "target_link_libraries(... OpenSSL::SSL OpenSSL::Crypto)"
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectNestor | nats.c static link failed with GLIBC_PRIVATE errors | Fixed by adding `openssl >= 3` to pixi.toml + cleaning build dir |
+| ProjectAgamemnon | Same nats.c + OpenSSL pattern | Same fix applied preventatively |
+
+---
