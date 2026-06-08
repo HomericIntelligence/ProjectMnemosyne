@@ -3,7 +3,7 @@ name: tdd-workflow-and-test-coverage-expansion
 description: "Use when: (1) creating tests before implementation or during a TDD phase — generate test files, coordinate red-green-refactor loops, close CLI command-handler test gaps; (2) a Python script in scripts/ has zero test coverage and needs tests added — audit existing tests before writing new ones to avoid duplication; (3) a unit test exposes a latent parsing bug where single-line vs multi-line input shapes behave differently — test-driven bug discovery; (4) a hephaestus/ module has no tests or low coverage and uses subprocess.run or shutil.which — add mock-based unit tests to reach >85% coverage without real command execution; (5) tests fail after a config refactor — fixtures and mocks need updating to match the new config surface; (6) enforcing import layer boundaries using AST-level CI tests to prevent circular import regressions — catch both direct and lazy/function-local imports that violate architecture; (7) annotating hundreds of unannotated test functions in tests/unit/ to satisfy mypy disallow_untyped_defs; (8) running a coverage swarm with one PR per source file or test shard; (9) new tests must be documented and added to CI workflows that enumerate files manually; (10) writing tests that expose latent bugs in text-processing or subprocess-output parsing functions."
 category: testing
 date: 2026-06-07
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 history: tdd-workflow-and-test-coverage-expansion.history
 tags:
@@ -136,6 +136,28 @@ Build a coverage matrix before writing:
 | Missing file | no | — | — |
 | Empty input | no | — | — |
 
+**Rank by Testability × Impact (for bulk expansion).** Score each untested script and test the highest-ROI targets first:
+
+| Axis | High (3) | Medium (2) | Low (1) |
+| ------ | ---------- | ----------- | --------- |
+| **Testability** | Pure functions, no subprocess | Some mocking needed | Subprocess-heavy, no helpers |
+| **Impact** | Entry point / pre-commit hook | Frequently invoked | Rarely used utility |
+
+Add the two axis scores; highest sums get tested first. **Minimum viable target = half the total scripts** — when a coverage audit covers a large `scripts/` folder, reaching 50% of scripts is the floor to clear before declaring the session done.
+
+**All-covered audit path (write NO new tests).** A "test coverage audit" issue often resolves to *nothing to write* — the audit shows every required case already exists. Do not invent redundant tests to justify the issue. Instead, add a coverage-mapping comment block that links each requirement to the test that already proves it, then close the issue with **zero new tests**:
+
+```python
+# ============================================================================
+# Test __hash__
+# Coverage (issue #NNNN):
+#   (1) identical tensors produce equal hashes      -> test_hash_immutable
+#   (2) different shape produces different hash     -> test_hash_different_shapes_differ
+# ============================================================================
+```
+
+The "add any missing cases" wording in an audit issue *implies audit first*; trusting the title and writing blind would duplicate existing tests.
+
 #### Step 3: Set Up Imports
 
 If `pyproject.toml` has `[tool.pytest.ini_options]` with `pythonpath = [".", "scripts"]`, import directly: `from generate_changelog import parse_commit`. Otherwise add `sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts"))` at the top of the test file.
@@ -181,6 +203,29 @@ Standard test-file header: `from __future__ import annotations` first; one class
 #### Step 5: CLI Handler Gap Pattern (cmd_run / cmd_repair)
 
 When an existing file tests the parser but not the handlers: patch at the **definition site** matching the handler's `from ... import` (e.g. `patch("scylla.e2e.runner.run_experiment")`), capture the config via a closure to assert on it, use flags like `--skip-judge-validation` to drop extra mocks, and test the exception-continue path with invalid JSON (`assert result == 0`, must not crash).
+
+**Curses / thread-timing already-running state.** When a `main()` runs a curses UI on a background thread, a mocked `curses.wrapper` returns instantly, so the worker thread finishes and `ui.running` flips back to `False` before your assertion runs. Calling `ui.start()` twice and asserting the second call is a no-op then fails because no thread is actually alive. Do **not** rely on the real timing — manually simulate the already-running state instead:
+
+```python
+def test_start_is_idempotent(self) -> None:
+    ui = CursesUI()
+    ui.running = True                # simulate "already running"
+    ui.thread = MagicMock(is_alive=lambda: True)
+    ui.start()                       # second start must be a no-op
+    # assert no new thread spawned / wrapper not re-invoked
+```
+
+#### Step 5a: Agent Subdirectory Scripts
+
+If the repo has `scripts/agents/*.py`, mirror that layout under tests with a **parallel subdirectory**:
+
+```text
+tests/unit/scripts/agents/__init__.py            # REQUIRED for pytest discovery
+tests/unit/scripts/agents/test_agent_utils.py
+tests/unit/scripts/agents/test_validate_agents.py
+```
+
+The `__init__.py` is required — without it pytest will not discover tests in the nested `agents/` package and the agent scripts silently stay uncovered.
 
 #### Step 6: Test-Driven Bug Discovery (parsing edge cases)
 
@@ -300,6 +345,10 @@ Iterate with `python3 -m pytest <file> -v` (fast), validate the full suite with 
 | Testing one import order | `import github, automation` only | Order-dependent cycles pass when the lower layer loads first | Test both A→B and B→A orderings |
 | `importlib.import_module` inside the test process | Re-imported in-process instead of subprocess | Cached partial module in `sys.modules` made re-import succeed silently | Use `subprocess.run([sys.executable, "-c", ...])` for a clean `sys.modules` |
 | AST walk at top-level only | `for node in tree.body` | Missed function-local/class-body imports | Use `ast.walk(tree)` to catch imports at any depth |
+| Thread-timing test without state setup | Called `ui.start()` twice expecting the second to be a no-op | Mocked `curses.wrapper` returned instantly, so the worker thread finished and `ui.running` flipped back to `False` before the assertion | Manually set `ui.running = True` and `ui.thread` to simulate the already-running state; don't depend on real thread timing |
+| Trusting the issue title on a coverage audit | Assumed "add tests" meant tests were missing and started writing | All required cases already existed; new tests would duplicate them | "Add any missing cases" implies audit first — when all-covered, write zero tests and add a `# Coverage (issue #NNNN)` requirement->test comment block, then close the issue |
+| Flat agent-script tests without a package dir | Dropped `test_agent_*.py` straight in `tests/unit/scripts/` for `scripts/agents/*.py` | pytest did not discover the nested package; agent scripts stayed uncovered | Mirror `scripts/agents/` with `tests/unit/scripts/agents/` and add the required `__init__.py` for discovery |
+| Testing every untested script in arbitrary order | Worked scripts top-to-bottom with no prioritization | Burned time on subprocess-heavy, rarely-used utilities while high-value pure functions stayed uncovered | Rank by Testability × Impact (High=3/Med=2/Low=1) and clear at least half the scripts as the minimum viable target |
 
 ## Results & Parameters
 

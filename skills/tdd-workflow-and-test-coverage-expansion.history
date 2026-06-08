@@ -1,6 +1,15 @@
 <!-- markdownlint-disable MD024 -->
 # tdd-workflow-and-test-coverage-expansion — History
 
+## v1.1.0 (2026-06-07)
+
+restore testability-matrix/agent-subdir/curses-timing/coverage-comment nuance (nuance audit pass 2)
+
+- Testability × Impact ranking matrix (High=3/Med=2/Low=1; minimum viable target = half the scripts) in Step 2.
+- Agent-subdirectory rule: `scripts/agents/*.py` -> parallel `tests/unit/scripts/agents/` requiring `__init__.py` for pytest discovery (Step 5a).
+- Curses/thread-timing failure mode: mocked `curses.wrapper` returns instantly so `running` flips False before assertions -> manually set `ui.running=True` / `ui.thread` (Step 5 + Failed Attempts row).
+- Test-coverage-audit all-covered path: write NO new tests; add a `# Coverage (issue #NNNN)` requirement->test comment block and close with zero new tests (Step 2 + Failed Attempts row).
+
 ## v1.0.0 (2026-06-07)
 
 Initial canonical merge (cluster PT05) consolidating 7 skills:
