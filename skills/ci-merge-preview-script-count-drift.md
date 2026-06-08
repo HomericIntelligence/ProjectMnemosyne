@@ -1,0 +1,163 @@
+---
+name: ci-merge-preview-script-count-drift
+description: "Use when: (1) CI fails with 'prose says N console scripts but pyproject.toml [project.scripts] has N+1 entries', (2) pre-commit fails with '[missing-from-docs] hephaestus-<script> is in [project.scripts] but has no row in COMPATIBILITY.md', (3) a branch cut before parallel PRs landed now has stale script counts in README/docs/COMPATIBILITY.md on the merge-preview SHA, (4) updating prose counts in README.md or docs/index.md that reference the number of console scripts."
+category: ci-cd
+date: 2026-06-07
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - ci-cd
+  - merge-preview
+  - console-scripts
+  - pyproject-toml
+  - compatibility-md
+  - prose-count
+  - branch-drift
+  - pre-commit
+  - hephaestus
+---
+
+# CI Merge-Preview Script Count Drift
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-07 |
+| **Objective** | Diagnose and fix CI failures caused by `[project.scripts]` count drift between a feature branch and main's merge-preview SHA |
+| **Outcome** | Successfully applied to 8 PRs in one session — all passed CI after the fix |
+| **Verification** | verified-ci |
+
+## When to Use
+
+- CI fails with: `ERROR: Prose counts disagree with pyproject.toml [project.scripts]: README.md: prose says 'N console scripts' but pyproject.toml [project.scripts] has N+1 entries`
+- Pre-commit fails with: `FAIL: 1 tier-doc violation(s): [missing-from-docs] hephaestus-<script> is in pyproject.toml [project.scripts] but has no row in COMPATIBILITY.md`
+- The failure appears on the **merge-preview SHA** (e.g., `refs/pull/<N>/merge`), not the branch's own HEAD
+- A branch was cut before parallel PRs merged new console scripts into main
+- Updating documentation that includes a prose count of console scripts
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Find the current script count on main (what the merge-preview will see)
+git fetch origin main
+git show origin/main:pyproject.toml | grep -c "hephaestus-"
+
+# 2. Find scripts missing from COMPATIBILITY.md
+diff \
+  <(git show origin/main:pyproject.toml | grep "hephaestus-" | sed 's/ = .*//' | sort) \
+  <(grep "^| \`hephaestus-" COMPATIBILITY.md | sed "s/^| \`//;s/\` |.*//" | sort)
+
+# 3. Update prose counts in README.md and docs/index.md
+#    (replace the N in "N console scripts" with the count from step 1)
+
+# 4. Add missing scripts to COMPATIBILITY.md Console-Script Stability Tiers table
+```
+
+### Detailed Steps
+
+#### Step 1 — Understand the merge-preview mechanism
+
+GitHub CI runs tests against the **merge-preview commit** (`refs/pull/<N>/merge`) — the result
+of merging the PR branch into current `main`. This means:
+
+- `pyproject.toml [project.scripts]` in the merge-preview comes from **main** (no conflict), so the installed package has ALL console scripts from main.
+- Prose counts in `README.md` / `docs/index.md` come from the **PR branch** (if the branch didn't update them).
+- `COMPATIBILITY.md` comes from the **PR branch** (if the branch didn't update it).
+
+When parallel PRs merge new scripts into main after a branch is cut, that branch's docs become stale **only on the merge-preview SHA**, not on the branch's own HEAD.
+
+#### Step 2 — Find the authoritative count
+
+```bash
+# Count how many scripts main's pyproject.toml declares
+git fetch origin main
+MAIN_COUNT=$(git show origin/main:pyproject.toml | grep -c "hephaestus-")
+echo "Main has $MAIN_COUNT console scripts"
+
+# List all script names from main
+git show origin/main:pyproject.toml | grep "hephaestus-" | sed 's/ = .*//'
+```
+
+#### Step 3 — Fix prose counts in README.md and docs/index.md
+
+```bash
+# Find the current prose reference
+grep -n "console script" README.md docs/index.md 2>/dev/null
+
+# Update the count to match main's pyproject.toml
+# Example: change "45 console scripts" to "46 console scripts"
+sed -i "s/45 console scripts/$MAIN_COUNT console scripts/" README.md docs/index.md
+```
+
+#### Step 4 — Fix COMPATIBILITY.md missing rows
+
+```bash
+# Identify which scripts are in pyproject.toml but missing from COMPATIBILITY.md
+diff \
+  <(git show origin/main:pyproject.toml | grep "hephaestus-" | sed 's/ = .*//' | sort) \
+  <(grep "^| \`hephaestus-" COMPATIBILITY.md | sed "s/^| \`//;s/\` |.*//" | sort)
+
+# For each missing script, add a row to the appropriate tier in COMPATIBILITY.md
+# Format: | `hephaestus-<name>` | `hephaestus.<module>:<function>` | <tier> | <since-version> |
+```
+
+#### Step 5 — Verify locally before pushing
+
+```bash
+# Confirm the count now matches
+COMPAT_COUNT=$(grep -c "^| \`hephaestus-" COMPATIBILITY.md)
+echo "COMPATIBILITY.md rows: $COMPAT_COUNT, main scripts: $MAIN_COUNT"
+[ "$COMPAT_COUNT" -eq "$MAIN_COUNT" ] && echo "MATCH" || echo "MISMATCH — fix COMPATIBILITY.md"
+
+# Verify README count
+grep "console script" README.md
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Attempt 1 | Checked branch HEAD's `pyproject.toml` to find the script count | Branch HEAD has N-2 scripts (pre-parallel-PR state); the merge-preview has N from main. Fixing to N-2 breaks the merge-preview | Always use `git show origin/main:pyproject.toml` to get the authoritative count, not the branch's local file |
+| Attempt 2 | Ran pre-commit locally on branch HEAD and saw no failures | The check compares installed package scripts (branch) vs. docs (branch) — they agree locally. The discrepancy only appears when CI installs from the merge-preview's merged `pyproject.toml` | Local pre-commit green ≠ CI green when the failure is a merge-preview artifact |
+| Attempt 3 | Updated README prose count but not `docs/index.md` | The `hephaestus-check-cli-tier-docs` hook scans BOTH files; partial fix still fails | Always grep for ALL prose count references: `grep -rn "console script" README.md docs/index.md` |
+| Attempt 4 | Updated prose counts but forgot to add the missing script to COMPATIBILITY.md | Two separate checks run: (a) prose count vs. `[project.scripts]`, (b) `[project.scripts]` entries vs. COMPATIBILITY.md rows. Both must pass | Fix both the prose count and the COMPATIBILITY.md row in the same commit |
+
+## Results & Parameters
+
+**Root cause pattern:** Branch cut before PR N-1 and PR N-2 merged into main. Those PRs each added one new `hephaestus-*` console script. The branch's `pyproject.toml` has N-2 scripts; after merge-preview, `pyproject.toml` has N scripts from main. The branch's `README.md`, `docs/index.md`, and `COMPATIBILITY.md` still reference N-2.
+
+**Affected files (always three):**
+
+| File | What to Fix |
+|------|------------|
+| `README.md` | Prose count: `"N console scripts"` → `"(N+K) console scripts"` |
+| `docs/index.md` | Same prose count reference |
+| `COMPATIBILITY.md` | Add missing row(s) to Console-Script Stability Tiers table |
+
+**Diagnostic commands:**
+
+```bash
+# Count scripts on main
+git show origin/main:pyproject.toml | grep -c "hephaestus-"
+
+# List script names (sorted for diff)
+git show origin/main:pyproject.toml | grep "hephaestus-" | sed 's/ = .*//' | sort
+
+# List scripts already in COMPATIBILITY.md (sorted for diff)
+grep "^| \`hephaestus-" COMPATIBILITY.md | sed "s/^| \`//;s/\` |.*//" | sort
+
+# Find prose count references
+grep -n "console script" README.md docs/index.md
+```
+
+**Session results:** Applied fix to 8 PRs in one session (2026-06-07). All 8 passed CI after updating prose counts + COMPATIBILITY.md rows. The failure was caused by two parallel PRs (#1046 adding `hephaestus-check-cli-tier-docs` and #1067 adding `hephaestus-audit-prs`) merging into main after the affected branches were cut.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | 8 PRs in session 2026-06-07 | Merge-preview SHA showed N+2 scripts from main vs. N in branch docs; fixed by updating README.md, docs/index.md, COMPATIBILITY.md |
