@@ -3,7 +3,7 @@ name: pytest-async-mock-isolation-patterns
 description: "Use when: (1) pytest CI step times out or hangs due to asyncio event loops, epoll blocking, or runaway retry loops caused by sleep mocks; (2) an asyncio coroutine internally reassigns a global Event making pre-set fixtures ineffective; (3) writing integration tests for asyncio code that calls httpx.AsyncClient and need stateful fault injection (500/503/timeouts) via respx without nested context issues; (4) tests pass individually but fail together due to module-level singleton state (circuit breaker, cache, registry) not reset between tests; (5) a class-level patch.object becomes stale after importlib.reload() — use patch() string form; (6) FastAPI Depends() ignores a patched get_settings because the function reference was captured at import time; (7) an automation/agent-orchestration unit test reaches an invoke_claude subprocess gate that is absent in CI; (8) tests pass in isolation but fail when run after a test that mutates shared asyncio objects; (9) a mock service must simulate latency, kill, or queue-starvation side effects — not just record the fault command; (10) a test name says 'and' but only one assertion is made and a mock assertion is missing; (11) a ThreadPoolExecutor in one test spawns worker threads that outlive that test and open _GH_BREAKER after the next test's conftest autouse reset has already run — conftest reset is necessary but NOT sufficient against background threads."
 category: testing
 date: 2026-06-07
-version: "1.1.0"
+version: "1.2.0"
 user-invocable: false
 history: pytest-async-mock-isolation-patterns.history
 tags:
@@ -41,6 +41,15 @@ tags:
   - threadpool
   - background-threads
   - ThreadPoolExecutor
+  - guard-tests
+  - runtime-error
+  - precondition-guard
+  - parametrize
+  - side-effect
+  - closure-guard
+  - action-builder
+  - runner-entry-point
+  - is-setup-state-guard
 ---
 
 # Pytest Async, Mock, and Test Isolation Patterns
@@ -69,6 +78,7 @@ tags:
 11. **A test name says "and" but only one assertion is made** — a `patch.object` is missing `as mock_X` and `assert_called_once()`
 12. **The same test fails identically on multiple Python versions in CI (3.10–3.13)** — a fingerprint of order-dependent shared state
 13. **`GitHubUnavailableError: GitHub API circuit breaker is open` in test B, but test B never calls a real `gh`** — test A's `ThreadPoolExecutor` workers are still running and open the breaker after the conftest autouse reset for test B has already fired
+14. **Testing a `RuntimeError`/precondition guard** (`if x is None: raise`, `result.returncode != 0`, `_is_setup` state) — nulling one field trips an *earlier* guard, or a closure guard inside an action-builder is unreachable through the state machine, or a test calls the internal delegate instead of the runner entry point
 
 ## Verified Workflow
 
@@ -298,6 +308,52 @@ Do NOT blank PATH entirely — pixi itself may live under `/tmp/pixi-.../bin` an
 - **Instance attribute patching after construction:** passing `MagicMock()` as a constructor primitive still builds a real collaborator; reassign `runner.tier_manager = MagicMock()` after construction.
 - **Local-import patch target:** patch `defining_module.ClassName`, not `caller_module.ClassName`, for imports done inside a function body.
 
+#### L — Guard / Precondition Test Recipes
+
+Testing `RuntimeError` precondition guards (`if x is None: raise`, `result.returncode != 0`, `_is_setup` state checks) and closure guards inside action-builder methods. Each guard needs a deterministic way to make exactly *that* guard fire — not an earlier one.
+
+1. **Parametrized multi-guard test — set ALL fields valid, then null only the one under test.** When a function has several `if x is None: raise` guards in sequence, a test that nulls one field may instead trip an earlier guard. Set every required field to a valid value first, then `setattr(ctx, field, None)` for the field under test so the *intended* guard is the one that raises:
+
+   ```python
+   @pytest.mark.parametrize("field,expected_match", [
+       ("agent_result", r"agent_result"),
+       ("judgment", r"judgment"),
+   ])
+   def test_raises_when_field_is_none(self, stage_context, field, expected_match):
+       stage_context.agent_result = AdapterResult(exit_code=0, ...)   # all valid first
+       stage_context.judgment = {"score": 0.9, ...}
+       setattr(stage_context, field, None)                            # null only this one
+       with pytest.raises(RuntimeError, match=expected_match):
+           stage_finalize_run(stage_context)
+   ```
+
+2. **Sequential `subprocess.run` guard — `side_effect=[ok_result, fail_result]`.** When a function makes several `subprocess.run` calls and a later one fails, drive the sequence with a `side_effect` list so the first call succeeds and the second returns the failing result:
+
+   ```python
+   with patch("subprocess.run", side_effect=[fetch_ok, checkout_fail]):
+       with pytest.raises(RuntimeError, match="Failed to checkout commit abc123"):
+           manager._checkout_commit()
+   ```
+
+   For f-string guards with runtime values, match a unique fragment (`match="Failed to checkout commit abc123"`).
+
+3. **State guard (`_is_setup` / `returncode`).** A `_is_setup`-style boolean defaults to `False` — the first-guard test needs **no** mock at all (just call and assert it raises). To reach a *later* guard behind the state check, set `manager._is_setup = True` to bypass the first one. For `returncode` guards, build a mock result with a concrete non-zero `returncode` rather than a bare `MagicMock` (whose auto-attribute is truthy/non-comparable).
+
+4. **Closure guard via the action builder — invoke `actions[StateKey]()` directly, do NOT drive the state machine.** Guards living inside closures returned from `_build_experiment_actions` / `TierActionBuilder.build()` are unreachable through the full state machine without fragile multi-state setup. Call the builder to get the closure dict, null the required attribute, then invoke the key directly:
+
+   ```python
+   actions = runner._build_experiment_actions(
+       tier_groups=[[TierID.T0]], scheduler=None,
+       tier_results={}, start_time=datetime.now(timezone.utc),
+   )
+   with pytest.raises(RuntimeError, match="experiment_dir must be set"):
+       actions[ExperimentState.TIERS_COMPLETE]()   # invoke closure directly
+   ```
+
+5. **Runner entry-point rule — add a runner-level test, don't only test the internal delegate.** When a requirement says "calls `runner.X()`", a test that calls the internal delegate directly (e.g. `ResumeManager.handle_zombie()`) leaves the discovery/wiring chain untested. Add a runner-level test that builds the minimal filesystem fixture the discovery methods need, instantiates the runner, calls the *entry-point* method, and asserts on runner state after the call. Patch the side-effect method that normally sets the guarded field as a no-op so the guard itself fires at runner scope.
+
+6. **Local-import patch target for guard tests.** A guard test that patches a class used via a local import must patch the **defining** module: `patch("scylla.e2e.health.HeartbeatThread")`, not `patch("scylla.e2e.runner.HeartbeatThread")` (the caller's namespace has no such attribute → `AttributeError`).
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -336,6 +392,12 @@ Do NOT blank PATH entirely — pixi itself may live under `/tmp/pixi-.../bin` an
 | Chaos mock records fault, no side effects | `/inject` returns 200, no behavior change | Tests asserting observed chaos (slow responses, 503) failed | Simulate effects on OTHER endpoints, not just record the fault |
 | Passed `MagicMock()` as constructor primitive | `E2ERunner(cfg, MagicMock(), path)` | `runner.tier_manager` is still a real collaborator | Reassign the attribute after construction |
 | `clear_patches` autouse fixture for leakage | `patch.stopall()` across files | Does not prevent cross-module pollution | Switch to real `tmp_path` I/O |
+| Null one field to test a later precondition guard | Set only the field under test to `None`, left earlier fields unset | An earlier `if x is None: raise` fired first; the test matched the wrong guard message | Parametrize: set ALL fields valid first, then null only the one under test |
+| Mock a multi-call subprocess with a single return value | `patch("subprocess.run", return_value=ok)` for a function with sequential calls | The later failing call also returned `ok`; the failure guard never fired | Use `side_effect=[ok_result, fail_result]` to drive sequential `subprocess.run` calls |
+| Bare `MagicMock` for a `returncode` guard | Passed a plain `MagicMock()` result into a `returncode != 0` check | Auto-attribute is a truthy `MagicMock`, not comparable to `0`; guard logic was wrong/ambiguous | Build a result with a concrete non-zero `returncode`; for `_is_setup` first-guard the default `False` needs no mock |
+| Drove the full state machine to test a closure guard | Built intermediate states + mocks to reach the guarded closure | State-machine setup was fragile and required many mocks | Call the action builder, null the attr, invoke `actions[StateKey]()` directly — no state machine |
+| Tested only the internal delegate, declared the path covered | Called `ResumeManager.handle_zombie()` directly instead of `runner.X()` | The discovery/wiring chain the requirement named (`runner.X()`) stayed untested | Add a runner-level test at the entry point; patch the field-setting side effect so the guard fires at runner scope |
+| `patch("caller_module.ClassName")` for a locally-imported class in a guard test | Patched the caller's namespace for `from x.health import HeartbeatThread` (imported inside the function) | Caller module has no such attribute → `AttributeError` | Patch the defining module (`patch("scylla.e2e.health.HeartbeatThread")`) |
 
 ## Results & Parameters
 
@@ -464,3 +526,4 @@ PATH="$CLEAN_PATH" pixi run pytest tests/unit/automation/ -q --no-cov
 | ProjectCharybdis | PR #88 — chaos integration tests (NATS + mock Agamemnon) | Chaos tests R02–R05 green after adding side-effect simulation |
 | HomericIntelligence | CI — `_wait_for_pr_terminal` unmocked-wait hang | Full `pytest tests/unit` hung ~16 min vs ~4 min baseline; patched the wait in all green-path tests → 1003 passed in 93 s |
 | ProjectHephaestus | PR #1060, commit 4ac2263 — ThreadPoolExecutor worker lifetime crosses test boundary; `_drive_issue` must be mocked when testing `CIDriver.run()` | `test_run_gate_does_not_abort_with_prs` was opening `_GH_BREAKER` in sibling tests via executor workers; mocking `_drive_issue` eliminated the threads; verified-ci |
+| ProjectScylla | PRs #1210/#1310/#819/#1312/#1313 — RuntimeError/precondition guard tests, runner entry-point coverage, closure-guard via action builder | Parametrized multi-guard (all-valid-then-null), `side_effect=[ok, fail]` subprocess guards, `_is_setup` state guard, `actions[StateKey]()` closure invocation, runner-level zombie test; 3265 pass at 78.42% coverage |

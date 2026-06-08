@@ -1,6 +1,35 @@
 <!-- markdownlint-disable MD024 -->
 # pytest-async-mock-isolation-patterns — History
 
+## v1.2.0 (2026-06-07)
+
+**Changed by:** Nuance audit pass 2 — restore guard-test recipes (nuance audit pass 2)
+**Verification:** verified-ci (source PRs ProjectScylla #1210/#1310/#819/#1312/#1313)
+
+### What changed
+
+- Added new Detailed Steps subsection **"L — Guard / Precondition Test Recipes"** restoring the recipes lost when `mock-and-test-isolation-patterns` was superseded:
+  - Parametrized multi-guard test — set ALL fields valid first, then null only the one under test (so the *intended* guard fires, not an earlier one)
+  - `side_effect=[ok_result, fail_result]` for sequential `subprocess.run` guards
+  - The `_is_setup` / `returncode` state-guard pattern (default `False` needs no mock; set `_is_setup = True` to reach later guards; concrete non-zero `returncode`)
+  - Closure-guard-via-action-builder — invoke `actions[StateKey]()` directly without driving the state machine
+  - Runner entry-point rule — add a runner-level test, don't only test the internal delegate
+  - Local-import patch target for guard tests (defining module, not caller namespace)
+- Added When-to-Use trigger (14): testing a RuntimeError/precondition guard where nulling one field trips an earlier guard, a closure guard is unreachable via the state machine, or a test calls the delegate instead of the runner entry point
+- Added 7 Failed Attempts rows covering wrong-guard nulling, single-return subprocess mock, bare-MagicMock returncode, full-state-machine closure setup, delegate-only coverage, and caller-namespace patch target
+- Added tags: `guard-tests`, `runtime-error`, `precondition-guard`, `parametrize`, `side-effect`, `closure-guard`, `action-builder`, `runner-entry-point`, `is-setup-state-guard`
+- Added Verified On row: ProjectScylla PRs #1210/#1310/#819/#1312/#1313
+
+### Why
+
+The guard-test recipes were verbatim content in the superseded `mock-and-test-isolation-patterns` skill but were not carried into the v1.0.0 canonical merge — section K mentioned missing-assertion and local-import patterns but dropped the concrete RuntimeError/precondition guard recipes. A nuance audit flagged the loss. These recipes are the only documented way to make a *specific* sequential guard fire deterministically (parametrized all-valid-then-null, `side_effect` lists) and to test closures and runner entry points without fragile state-machine setup.
+
+### Previous version (v1.1.0) snapshot
+
+Detailed Steps ended at section **K — Mock Fidelity and Missing-Assertion Patterns** (last bullet: local-import patch target). No section L existed; the description had 13 When-to-Use triggers and no guard-test tags.
+
+---
+
 ## v1.1.0 (2026-06-07)
 
 **Changed by:** Session learning — PR #1060, commit 4ac2263 (`tests/unit/automation/test_ci_driver_prs_mode.py`)
