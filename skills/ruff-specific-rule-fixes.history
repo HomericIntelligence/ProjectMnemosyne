@@ -1,0 +1,873 @@
+<!-- markdownlint-disable MD024 -->
+# ruff-specific-rule-fixes — History
+
+## v1.0.0 (2026-06-07)
+
+Consolidated 4 overlapping skills into the general canonical `ruff-specific-rule-fixes`:
+
+1. `assert-to-runtime-error-migration` (testing, v1.0.0, 2026-02-27) — S101 assert→RuntimeError, follow-up batch of 4 remaining sites.
+2. `fix-s101-assert-to-runtimeerror` (debugging, v1.0.0, 2026-02-27) — S101 assert→RuntimeError, original 16-site batch.
+3. `ci-complexity-extract-method-fix` (ci-cd, v1.1.0, 2026-06-06) — C901 cyclomatic-complexity extract-method fixes.
+4. `linter-as-root-cause-of-repeated-policy-violations` (debugging, v1.0.0, 2026-05-31) — systemic principle: recurring policy violations are a linter-config bug.
+
+Specific cases retained as examples in the canonical; full original bodies preserved verbatim below.
+
+## Superseded from assert-to-runtime-error-migration
+
+**Original date:** 2026-02-27 &nbsp;&nbsp; **Original version:** 1.0.0
+
+```yaml
+name: assert-to-runtime-error-migration
+description: 'Skill: assert-to-runtime-error-migration. Use when replacing assert
+  guards in production code with explicit RuntimeError raises to eliminate Ruff S101
+  suppressions.'
+category: testing
+date: 2026-02-27
+version: 1.0.0
+user-invocable: false
+```
+
+# Assert-to-RuntimeError Migration Skill
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-02-27 |
+| **Issue** | #1143 — Replace assert guards with RuntimeError in workspace_manager.py, llm_judge.py, and executor/runner.py |
+| **Objective** | Replace 4 remaining `assert x is not None  # noqa: S101` suppressions in production code with explicit `if x is None: raise RuntimeError(...)` guards, eliminating all S101 suppressions from production source files |
+| **Outcome** | ✅ Success — all 4 sites converted, 4 regression tests added, 3261 tests pass, 78.39% coverage, zero S101 suppressions remain in `scylla/` |
+
+## When to Use
+
+Use this skill when:
+
+- A codebase has `assert x is not None  # noqa: S101` patterns in production source files
+- Ruff S101 rule is enforced and you want to eliminate all suppressions from production code (tests may keep `# noqa: S101`)
+- Following up a bulk ruff rule expansion (e.g., after enabling S-rules) to clean up remaining suppressed assertions
+- Converting defensive invariant checks from `assert` to explicit `RuntimeError` for production-safety guarantees
+
+## Verified Workflow
+
+### 1. Discovery — Find All Remaining S101 Suppressions
+
+```bash
+# Find all S101 suppressions in production code (not tests)
+grep -rn "noqa: S101" scylla/ scripts/
+
+# For full picture including tests
+grep -rn "noqa: S101" scylla/ scripts/ tests/
+```
+
+Review each hit carefully — some may be in test files where assertions are legitimate.
+
+### 2. Classify Each Site
+
+For each `assert` site, determine the correct replacement pattern:
+
+| Assert pattern | Correct replacement |
+| --------------- | --------------------- |
+| `assert x is not None` | `if x is None: raise RuntimeError("x must be set before calling method_name")` |
+| `assert x is not None` before `raise x` | `if x is None: raise RuntimeError("invariant message"); raise x` |
+| `assert condition` guarding logic | `if not condition: raise RuntimeError("condition description")` |
+
+**Special case — for-else guard** (`llm_judge.py` pattern):
+```python
+# BEFORE:
+for _attempt in range(max_attempts):
+    try:
+        result = parse(response)
+        break
+    except ValueError as e:
+        last_parse_error = e
+else:
+    assert last_parse_error is not None  # noqa: S101
+    raise last_parse_error
+
+# AFTER:
+else:
+    if last_parse_error is None:
+        raise RuntimeError("Retry loop exhausted but last_parse_error is None")
+    raise last_parse_error
+```
+
+This is a defensive invariant: the `else` clause can only fire if all attempts failed to parse (each caught a `ValueError`), so `last_parse_error` is logically never `None` here. The `RuntimeError` guard protects against future code changes that might break this invariant.
+
+### 3. Apply the Minimum Targeted Edit
+
+Use the established pattern — no surrounding refactoring:
+
+```python
+# BEFORE:
+assert self.commit is not None  # noqa: S101
+# ... uses self.commit ...
+
+# AFTER:
+if self.commit is None:
+    raise RuntimeError("commit must be set before calling _checkout_commit")
+# ... uses self.commit ...
+```
+
+**Message format**: `"<attribute> must be set before calling <method_name>"` or equivalent description of invariant.
+
+### 4. Add Regression Tests
+
+For each converted site, add one test to the existing test class (no new test files):
+
+**Pattern for `x is None` guard tests:**
+```python
+def test_method_raises_if_x_none(self, tmp_path: Path) -> None:
+    """<method> raises RuntimeError when <attr> is None."""
+    obj = MyClass(attr=None, ...)
+    with pytest.raises(RuntimeError, match="attr must be set before calling method"):
+        obj.method()
+```
+
+**Pattern for the for-else defensive guard (`last_parse_error is None`):**
+Since the guard is logically unreachable in normal operation, test the adjacent behavior that confirms `last_parse_error` is always set when the `else` fires:
+```python
+def test_raises_value_error_not_runtime_error_when_parse_fails(self, tmp_path: Path) -> None:
+    """When all retry attempts fail with ValueError, ValueError is re-raised (not RuntimeError).
+
+    Confirms last_parse_error is always set before the else clause fires, so the
+    RuntimeError guard is never triggered in normal operation.
+    """
+    bad = "Not valid JSON at all"
+    with pytest.raises(ValueError):
+        self._run_with_call_side_effects(tmp_path, [(bad, "", bad)] * 3)
+```
+
+**Pattern for `_state is None` guard in `_finalize_test_summary`:**
+```python
+def test_raises_runtime_error_when_state_is_none_and_state_file_configured(
+    self, tmp_path: Path
+) -> None:
+    """_finalize_test_summary raises RuntimeError when _state is None but state_file is set."""
+    config = RunnerConfig(state_file=tmp_path / "state.json")
+    runner = EvalRunner(mock_docker, mock_tier_loader, config)
+    assert runner._state is None
+
+    summary = EvalSummary(test_id="test-001", started_at="2026-01-01T00:00:00+00:00")
+    with pytest.raises(RuntimeError, match="_state must be initialized before finalizing"):
+        runner._finalize_test_summary(summary)
+```
+
+### 5. Verify No S101 Suppressions Remain
+
+```bash
+# Must return empty (no output)
+grep -rn "noqa: S101" scylla/
+
+# Run full test suite
+pixi run python -m pytest tests/ -q
+
+# Run pre-commit
+pre-commit run --all-files
+```
+
+### 6. Commit with Conventional Format
+
+```bash
+git add <modified files>
+git commit -m "fix(e2e): replace assert guards with RuntimeError in <module1>, <module2>
+
+Replace N remaining \`assert x is not None  # noqa: S101\` suppressions in
+production code with explicit \`if x is None: raise RuntimeError(...)\` guards.
+Eliminates all Ruff S101 suppressions from production source files.
+
+Closes #<issue>
+"
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Conversion Table (Issue #1143)
+
+| File | Line | Method | Guard Message |
+| ------ | ------ | -------- | --------------- |
+| `scylla/e2e/workspace_manager.py` | 198 | `_checkout_commit()` | `"commit must be set before calling _checkout_commit"` |
+| `scylla/e2e/workspace_manager.py` | 244 | `_ensure_commit_available()` | `"commit must be set before calling _ensure_commit_available"` |
+| `scylla/e2e/llm_judge.py` | 930 | retry loop `else` | `"Judge retry loop exhausted but last_parse_error is None"` |
+| `scylla/executor/runner.py` | 486 | `_finalize_test_summary()` | `"_state must be initialized before finalizing test summary"` |
+
+### Test Results
+
+```
+3261 passed, 9 warnings in 43.50s
+Coverage: 78.39% (threshold: 75%)
+Pre-commit: All hooks passed
+S101 suppressions in scylla/: 0 (eliminated)
+```
+
+### Related Issues
+
+- #1066: Original bulk S101 elimination (the predecessor)
+- #1143: This follow-up for the remaining 4 sites
+- PR #1211: Implementation PR
+
+## Key Takeaways
+
+1. **Follow the established pattern**: When a project has already done a bulk assert-to-RuntimeError migration, there is always a pattern to follow. Grep for `# noqa: S101` in the same codebase to see prior conversions, then match the message style.
+2. **Defensive invariant guards (for-else)**: The `assert last_parse_error is not None` in a `for...else` clause is a common Python idiom. Replace with `if x is None: raise RuntimeError(...)` before re-raising, NOT by removing the check entirely.
+3. **Test the observable behavior, not the guard path**: For logically-unreachable guards, test adjacent behavior (the normal retry path with exhausted attempts) rather than trying to contrive a path into the guard itself.
+4. **Always check imports when adding tests**: When new test classes reference symbols used only in their tests, add them to the import block.
+5. **Ruff formatter runs after edits**: Pre-commit's `ruff-format-python` hook may reformat code after your edits. Always run `pre-commit run --all-files` twice — once to apply formatting, once to confirm all hooks pass clean.
+6. **Scope discipline**: The issue says "4 sites" — do not touch other assertions or refactor surrounding code. Minimal targeted edits only.
+
+---
+
+## Superseded from fix-s101-assert-to-runtimeerror
+
+**Original date:** 2026-02-27 &nbsp;&nbsp; **Original version:** 1.0.0
+
+```yaml
+name: fix-s101-assert-to-runtimeerror
+description: 'Skill: fix-s101-assert-to-runtimeerror. Use when fixing Ruff S101 violations
+  in production code by replacing bare assert guards with RuntimeError raises.'
+category: debugging
+date: 2026-02-27
+version: 1.0.0
+user-invocable: false
+```
+
+# Fix S101: Replace Assert Guards with RuntimeError
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-02-27 |
+| **Issue** | #1066 — fix(e2e): replace bare assert guards in runner.py and stages.py with proper RuntimeError raises |
+| **Objective** | Replace all `assert x is not None  # noqa: S101` precondition guards in production code with explicit `if x is None: raise RuntimeError(...)` patterns |
+| **Outcome** | ✅ Success — 16 asserts replaced across 2 files, all noqa suppressions removed, 3185 tests pass |
+| **PR** | #1142 |
+
+## When to Use
+
+Use this skill when:
+
+- Ruff reports S101 violations (`use of assert`) in production code (not test files)
+- You see `assert x is not None  # noqa: S101` suppressions in source files
+- Production code uses `assert` for precondition/guard checks that must always run
+- An issue asks to "replace bare assert guards with RuntimeError raises"
+
+**Key insight**: `assert` is inappropriate in production code because Python's `-O` (optimize)
+flag disables all `assert` statements. Legitimate runtime guards must use explicit `raise`.
+
+## Verified Workflow
+
+### 1. Find All S101 Violations
+
+```bash
+# Find all assert + noqa:S101 patterns in target files
+grep -n "assert.*noqa.*S101\|assert.*is not None" scylla/e2e/runner.py scylla/e2e/stages.py
+```
+
+The grep reveals the actual current line numbers, which may differ from the issue description
+(code evolves, issue line numbers can be stale).
+
+### 2. Read Context Around Each Assert
+
+Before replacing, read a few lines of context around each assert to write a meaningful error message:
+
+```python
+# Pattern: assert self.experiment_dir is not None  # noqa: S101
+# → used immediately before: self.experiment_dir / "checkpoint.json"
+# → good message: "experiment_dir must be set before getting checkpoint path"
+```
+
+The error message should describe **what operation is blocked** by the missing value, not just
+restate the condition.
+
+### 3. Replace Each Assert
+
+```python
+# BEFORE
+assert self.experiment_dir is not None  # noqa: S101
+return self.experiment_dir / "checkpoint.json"
+
+# AFTER
+if self.experiment_dir is None:
+    raise RuntimeError("experiment_dir must be set before getting checkpoint path")
+return self.experiment_dir / "checkpoint.json"
+```
+
+For asserts with existing messages (stages.py pattern):
+
+```python
+# BEFORE
+assert ctx.agent_result is not None, "agent_result must be set before finalize_run"  # noqa: S101
+
+# AFTER
+if ctx.agent_result is None:
+    raise RuntimeError("agent_result must be set before finalize_run")
+```
+
+The message from the original assert becomes the RuntimeError message directly.
+
+### 4. Verify No S101 Remains
+
+```bash
+grep -n "noqa.*S101\|assert.*is not None" scylla/e2e/runner.py scylla/e2e/stages.py
+# Expected: No matches found
+```
+
+### 5. Run Pre-commit (Ruff Will Reformat)
+
+```bash
+pre-commit run --all-files
+```
+
+**Important**: Ruff format may reformat long lines introduced by the `if ... raise` pattern.
+Run pre-commit **twice** — first run reformats, second run should fully pass:
+
+```bash
+pre-commit run --all-files  # may show "Ruff Format Python: Failed (files were modified)"
+pre-commit run --all-files  # should show all Passed
+```
+
+### 6. Run Tests
+
+```bash
+pixi run python -m pytest tests/ -v
+```
+
+No test changes are needed — replacing asserts with RuntimeError does not break existing tests
+because the tests either don't exercise failure paths, or the failure behavior is equivalent.
+
+### 7. Commit and PR
+
+```bash
+git add scylla/e2e/runner.py scylla/e2e/stages.py
+git commit -m "fix(e2e): replace bare assert guards with RuntimeError raises
+
+Closes #<issue-number>"
+git push -u origin <branch>
+gh pr create --title "fix(e2e): replace bare assert guards with RuntimeError raises" \
+  --body "Closes #<issue-number>"
+gh pr merge --auto --rebase
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+```
+Files modified: 2 (scylla/e2e/runner.py, scylla/e2e/stages.py)
+Asserts replaced: 16 total (10 in runner.py, 6 in stages.py)
+noqa suppressions removed: 16
+Tests: 3185 passed, 78.09% coverage (≥75% threshold)
+Pre-commit: all hooks pass (Ruff format reformatted runner.py on first run)
+Python: 3.14.3 (pixi env)
+```
+
+### Replacement Pattern Reference
+
+| Location | Variable | Error Message |
+| ---------- | ---------- | --------------- |
+| `runner.py:_log_checkpoint_resume` | `self.checkpoint` | "checkpoint must be set before logging resume status" |
+| `runner.py:_get_checkpoint_path` | `self.experiment_dir` | "experiment_dir must be set before getting checkpoint path" |
+| `runner.py:_setup_workspace` | `self.experiment_dir` | "experiment_dir must be set before initializing workspace manager" |
+| `runner.py:_get_baseline_for_previous_tier` | `self.experiment_dir` | "experiment_dir must be set before getting baseline for previous tier" |
+| `runner.py:action_tiers_complete` | `self.experiment_dir` | "experiment_dir must be set before aggregating tier results" |
+| `runner.py:_start_heartbeat` | `self.checkpoint` | "checkpoint must be set before starting heartbeat thread" |
+| `runner.py:_run_experiment` | `self.checkpoint` | "checkpoint must be set before creating experiment state machine" |
+| `runner.py:action_config_loaded (tier_dir)` | `self.experiment_dir` | "experiment_dir must be set before loading tier config" |
+| `runner.py:action_config_loaded (tier_config)` | `tier_ctx.tier_config` | "tier_config must be set before running subtests" |
+| `runner.py:action_config_loaded (tier_dir)` | `tier_ctx.tier_dir` | "tier_dir must be set before running subtests" |
+| `runner.py:action_config_loaded (exp_dir)` | `self.experiment_dir` | "experiment_dir must be set before running subtests" |
+| `runner.py:action_subtests_running` | `tier_ctx.tier_dir` | "tier_dir must be set before selecting best subtest" |
+| `runner.py:action_subtests_complete` | `tier_ctx.selection` | "selection must be set before aggregating subtest results" |
+| `runner.py:action_best_selected` | `tier_ctx.tier_result` | "tier_result must be set before saving reports" |
+| `stages.py:write_replay_script` | `adapter_config` | "adapter_config must be set before writing replay script" |
+| `stages.py:finalize_run (agent_result)` | `ctx.agent_result` | "agent_result must be set before finalize_run" |
+| `stages.py:finalize_run (judgment)` | `ctx.judgment` | "judgment must be set before finalize_run" |
+| `stages.py:write_report (run_result)` | `ctx.run_result` | "run_result must be set before write_report" |
+| `stages.py:write_report (agent_result)` | `ctx.agent_result` | "agent_result must be set before write_report" |
+| `stages.py:write_report (judgment)` | `ctx.judgment` | "judgment must be set before write_report" |
+
+---
+
+## Superseded from ci-complexity-extract-method-fix
+
+**Original date:** 2026-06-06 &nbsp;&nbsp; **Original version:** 1.1.0
+
+```yaml
+name: ci-complexity-extract-method-fix
+description: "Fix C901 cyclomatic complexity CI failures by extracting helper functions. Use when: (1) pre-commit or CI fails with 'is too complex (N > 10)', (2) adding conditional blocks to an existing function pushes it over the CC limit, (3) multiple rendering/processing passes can be isolated."
+category: ci-cd
+date: 2026-06-06
+version: "1.1.0"
+user-invocable: false
+tags:
+  - pre-commit
+  - complexity
+  - refactoring
+  - ruff
+  - C901
+  - method-extraction
+  - rendering-passes
+```
+
+
+# Fix C901 Cyclomatic Complexity CI Failures
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-25 |
+| **Objective** | Fix CI pre-commit failure where adding new conditional blocks to `_restore_run_context()` pushed cyclomatic complexity from ~8 to 11, exceeding the C901 limit of 10 |
+| **Outcome** | Successful — extracted two helper functions, CC dropped below 10, all CI checks pass |
+
+## When to Use
+
+- CI fails with `C901 _function_name is too complex (N > 10)`
+- Adding new `if`/`else` blocks to an existing function that is near the complexity limit
+- Pre-commit hook "Check Cyclomatic Complexity" fails
+- Ruff reports C901 violations
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# BEFORE: All logic inline (CC=11)
+def _restore_run_context(ctx, current_state):
+    # ... agent restore (CC +3) ...
+    # ... judge_prompt restore (CC +2) ...
+    # ... judgment restore (CC +3) ...    <-- NEW
+    # ... run_result restore (CC +3) ...   <-- NEW
+
+# AFTER: Extract new blocks into helpers (CC=7)
+def _restore_run_context(ctx, current_state):
+    # ... agent restore (CC +3) ...
+    # ... judge_prompt restore (CC +2) ...
+    if condition:
+        _restore_judgment(ctx)       # CC counted in helper
+    if condition:
+        _restore_run_result(ctx)     # CC counted in helper
+
+def _restore_judgment(ctx):          # CC=3 (separate function)
+    ...
+
+def _restore_run_result(ctx, state): # CC=2 (separate function)
+    ...
+```
+
+### Detailed Steps
+
+1. **Identify the violation**: CI error shows function name and CC score (e.g., `_restore_run_context is too complex (11 > 10)`)
+
+2. **Count branches**: Each `if`, `elif`, `else`, `for`, `while`, `except`, `and`, `or` adds +1 CC. The function starts at CC=1.
+
+3. **Extract self-contained blocks**: Look for conditional blocks that:
+   - Have their own imports
+   - Operate on a clear subset of parameters
+   - Don't share mutable state with surrounding code beyond `ctx`
+
+4. **Create module-level helpers**: Place extracted functions near the original, with clear docstrings. Keep the same parameters — don't over-abstract.
+
+5. **Verify locally**:
+   ```bash
+   pre-commit run --all-files  # Check both ruff C901 and custom CC hook
+   pixi run python -m pytest tests/unit/e2e/ -x -q  # Ensure no regressions
+   ```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Inline all restore logic in one function | Added judgment + run_result restore as new `if` blocks in `_restore_run_context()` | CC went from ~8 to 11, exceeding C901 limit of 10 | Always check CC budget before adding conditional blocks to existing functions near the limit |
+| Using `# noqa: C901` suppression | Considered suppressing the warning | ProjectScylla prohibits `--no-verify` and suppression of lint rules | Extract-method is the correct fix, not suppression |
+
+## Results & Parameters
+
+### CC Budget Rule of Thumb
+
+| CC Score | Status | Action |
+| ---------- | -------- | -------- |
+| 1-7 | Safe | Can add 1-3 branches freely |
+| 8-9 | Warning zone | One more `if/else` block hits the limit |
+| 10 | At limit | Any new branch will fail CI |
+| 11+ | CI failure | Must extract helpers |
+
+### ProjectScylla CC Configuration
+
+- **Ruff C901**: `max-complexity = 10` (in `pyproject.toml` or `.pre-commit-config.yaml`)
+- **Custom hook**: `Check Cyclomatic Complexity` — runs separately from ruff, same threshold
+- Both must pass for CI green
+
+### Extract-Method Pattern
+
+```python
+# Pattern: delegate to helper, keep guard clause in parent
+if is_at_or_past_state(run_state, RunState.JUDGE_COMPLETE) and ctx.judgment is None:
+    _restore_judgment(ctx)  # All branching logic moves here
+
+# Helper gets its own CC budget (starts at 1)
+def _restore_judgment(ctx: Any) -> None:
+    """Restore ctx.judgment from on-disk judge result."""
+    from scylla.e2e.judge_runner import _has_valid_judge_result, _load_judge_result
+    judge_dir = get_judge_dir(ctx.run_dir)
+    if _has_valid_judge_result(ctx.run_dir):
+        ctx.judgment = _load_judge_result(judge_dir)
+        # ... timing loading ...
+```
+
+## Multi-Pass Rendering Pattern (ProjectHephaestus Issue #804)
+
+**New Pattern**: Extract multiple sequential rendering/processing passes into instance methods with **return-value threading** to avoid mutable state.
+
+### When This Pattern Applies
+
+- Method has multiple sequential rendering passes (workers → separator → logs)
+- Each pass computes state (e.g., row offsets) that feeds the next pass
+- Method exceeds CC limit due to pass complexity + conditional branches
+
+### Quick Reference
+
+```python
+# BEFORE: All 69 lines inline (CC too high, noqa: C901)
+def _refresh_display(self, screen, height, width):
+    """Monolithic display refresh with three rendering passes."""
+    # ... workers rendering (5-7 branches) ...
+    # ... separator rendering (3-4 branches) ...
+    ... logs rendering (4-5 branches) ...
+
+# AFTER: Extract passes as instance methods (each ~20-25 lines, CC <10)
+def _refresh_display(self, screen, height, width):
+    """Orchestrate three rendering passes."""
+    start_row = 0
+    start_row = self._draw_workers(start_row, height, width)
+    start_row = self._draw_separator(start_row, height, width)
+    start_row = self._draw_logs(start_row, height, width)
+
+def _draw_workers(self, start_row: int, height: int, width: int) -> int:
+    """Render worker status. Returns next free row."""
+    # ... worker logic ...
+    return next_row
+
+def _draw_separator(self, start_row: int, height: int, width: int) -> int:
+    """Render separator line. Returns next free row."""
+    # ... separator logic ...
+    return next_row
+
+def _draw_logs(self, start_row: int, height: int, width: int) -> int:
+    """Render log output. Returns next free row."""
+    # ... logs logic ...
+    return next_row
+```
+
+### Key Principles
+
+1. **Return-value threading**: Each helper takes `(start_row, height, width)` and returns the next free row
+2. **No mutable state**: Helpers don't modify shared state beyond their immediate scope
+3. **Instance methods**: Use `self` to access class state (e.g., workers, logs buffers)
+4. **Single responsibility**: Each method owns one rendering pass
+5. **Test independently**: Unit test each helper for boundary handling and return values
+
+### Test Structure
+
+```python
+def test_draw_workers_returns_next_row(self):
+    """Test return value threading."""
+    rows = self.display._draw_workers(start_row=0, height=10, width=80)
+    assert rows > 0
+    assert rows < 10  # Must not overflow
+
+def test_draw_separator_at_boundary(self):
+    """Test boundary handling."""
+    rows = self.display._draw_separator(start_row=8, height=10, width=80)
+    assert rows == 9  # Separator is 1 line
+    assert rows <= 10  # Must fit in height
+
+def test_draw_logs_truncates_long_lines(self):
+    """Test text truncation."""
+    long_log = "x" * 120
+    self.display.logs.append(long_log)
+    rows = self.display._draw_logs(start_row=0, height=5, width=80)
+    assert rows <= 5  # Must not overflow height
+```
+
+### Verified On
+
+| Project | PR | Details |
+| --------- | --------- | --------- |
+| ProjectScylla | #1546 | Extracted `_restore_judgment()` and `_restore_run_result()` from `_restore_run_context()`, CC 11 -> ~7 |
+| ProjectHephaestus | #1050 | Extracted `_draw_workers()`, `_draw_separator()`, `_draw_logs()` from `_refresh_display()`, 69 lines → 3 methods, 8 tests → 23 tests, removed `# noqa: C901` |
+
+---
+
+## Superseded from linter-as-root-cause-of-repeated-policy-violations
+
+**Original date:** 2026-05-31 &nbsp;&nbsp; **Original version:** 1.0.0
+
+```yaml
+name: linter-as-root-cause-of-repeated-policy-violations
+description: "When two or more separate documents/skills/configs violate the same stated policy in the same way, the linter/validator that enforces that policy is the FIRST suspect — fix the linter before fixing the dependent files, or the new fixes will fail CI and downstream files will re-introduce the violation. Use when: (1) an audit flags the same policy violation in multiple files, (2) you are tempted to open N parallel PRs to fix N violating files, (3) a CLAUDE.md/CONTRIBUTING.md rule is repeatedly violated despite contributors knowing the rule, (4) a wrong-direction validator silently rejects the correct fix and accepts the wrong one."
+category: debugging
+date: 2026-05-31
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [linter, validator, policy-enforcement, wrong-direction-rule, root-cause, audit-remediation, repeated-violations, ci-policy, doc-policy, meta-debugging]
+```
+
+
+# Linter As Root Cause Of Repeated Policy Violations
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-31 |
+| **Objective** | Diagnose the case where multiple unrelated documents/skills/configs violate the same stated policy in the same way, and avoid the trap of fixing the dependent files first |
+| **Outcome** | Verified-CI: 4 PRs landed in correct order (linter fix first, then dependent docs) |
+| **Verification** | verified-ci |
+| **Source** | ProjectHephaestus 2026-05-31 strict audit: `--rebase` vs `--squash` merge-strategy policy |
+
+## When to Use
+
+- An audit (strict-mode, repo-analyze-strict, manual review) flags the SAME policy violation in 2+ separate files.
+- You are tempted to open N parallel PRs to fix N violating files independently.
+- A CLAUDE.md, CONTRIBUTING.md, or README policy is repeatedly violated despite contributors clearly knowing the rule.
+- Recently-added documentation re-introduces a violation that you "already fixed" in older files — strong signal that the linter is wrong-direction.
+- A PR that "fixes" a policy violation fails CI on a rule whose error message references the EXACT change you just made.
+- The validator's rule definition has not been read against the META source of the policy (CLAUDE.md / CONTRIBUTING.md) in the current diagnostic session.
+- You are running an audit-driven remediation epic and Phase 1 triage shows multiple files in different subdirectories all violating Rule X.
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. When you see ≥2 files violating Rule X in an audit:
+#    PAUSE. Do not open per-file fix PRs yet.
+
+# 2. Find the linter that enforces Rule X
+grep -rn "<rule-keyword>" hephaestus/validation/ tests/unit/validation/ scripts/audit_*.py
+# Or whichever validation module the repo uses:
+grep -rn "<rule-keyword>" <validation-module-path>/ <validation-tests-path>/
+
+# 3. Find the META source of the policy
+grep -n "<rule-keyword>" CLAUDE.md CONTRIBUTING.md README.md docs/
+
+# 4. Diff the linter's assertion against the META source
+#    If they DIFFER → the linter is the root cause.
+
+# 5. Fix the linter FIRST (PR1), flip the test assertions, land it.
+# 6. Fix the dependent docs (PR2..N) AFTER the linter PR has merged.
+```
+
+### Detailed Steps
+
+#### Step 1 — Observe the pattern: "same rule violated in N separate files"
+
+After running an audit (`/hephaestus:repo-analyze-strict`, `audit_doc_examples.py`, etc.), tally each finding by rule ID:
+
+```bash
+# If audit output is JSON:
+audit_output.json | jq -r '.findings[].rule' | sort | uniq -c | sort -rn
+
+# If audit output is text:
+grep -oP 'Rule:\s*\K\S+' audit_report.md | sort | uniq -c | sort -rn
+```
+
+If any rule appears in ≥2 separate files in unrelated directories, treat the linter as a suspect. The threshold is the file-count, not the line-count — two violations in one file are likely a localized bug; two violations in two unrelated files are likely a systemic bug.
+
+#### Step 2 — Locate the linter's rule definition
+
+The linter that flagged the violations is the one whose assertion encodes the policy. Find it:
+
+```bash
+# Most repos use one of these locations:
+grep -rn "<rule-keyword>" \
+    src/<module>/validation/ \
+    tests/unit/<module>/validation/ \
+    scripts/audit_*.py \
+    scripts/lint_*.py \
+    .github/scripts/ \
+    pre_commit_hooks/
+
+# In ProjectHephaestus specifically:
+grep -rn "<rule-keyword>" hephaestus/validation/ tests/unit/validation/
+```
+
+Read the rule's full definition: pattern, accept-list, reject-list, error message. If the rule has both a "good pattern" and a "bad pattern" registered (e.g., `POLICY_RULES["merge-strategy"]["good"] = "--rebase"`, `["bad"] = "--squash"`), READ BOTH SIDES.
+
+#### Step 3 — Locate the META source of the policy
+
+The META source is the single document that the rule purports to enforce. Common locations:
+
+| Repo Convention | META Source |
+|---|---|
+| Codebase-level | `CLAUDE.md`, `CONTRIBUTING.md`, `README.md`, `docs/POLICIES.md` |
+| Repo-policy-level | GitHub branch protection rules, `.github/CODEOWNERS`, ruleset JSON |
+| Org-level | Org-wide CLAUDE.md, shared style guide repo |
+
+Read the META source's statement of the rule verbatim.
+
+#### Step 4 — Diff the linter's assertion vs the META source
+
+Now perform the diff. There are three outcomes:
+
+| Linter says | META source says | Verdict |
+|---|---|---|
+| Accept X, reject Y | Require X, prohibit Y | Linter is correct. The violations are real bugs in the dependent files. Proceed with normal per-file fixes. |
+| Accept Y, reject X | Require X, prohibit Y | **LINTER IS WRONG-DIRECTION.** Fix linter FIRST. |
+| No assertion present | Require X, prohibit Y | Linter has a gap. Add the assertion, then fix dependent files. |
+
+If the linter is wrong-direction, the dependent files were written TO COMPLY WITH the wrong linter. They are not independently buggy — they are downstream consumers of a wrong contract.
+
+#### Step 5 — Re-sequence the fix as: linter PR FIRST, dependent PRs SECOND
+
+Reorder your planned PRs:
+
+```text
+WRONG ORDER (will fail CI):
+  PR1: fix skill A      ← CI will reject because linter rejects the new pattern
+  PR2: fix skill B      ← CI will reject for the same reason
+  PR3: fix doc C        ← CI will reject for the same reason
+
+CORRECT ORDER:
+  PR1: fix linter (validator + test assertions)  ← lands, unblocks the rest
+  PR2: fix skill A      ← now CI accepts the correct pattern
+  PR3: fix skill B      ← CI accepts
+  PR4: fix doc C        ← CI accepts
+```
+
+When fixing the linter, you MUST flip the test assertions in lock-step. The validator's own test suite is currently asserting the wrong direction. Treat the linter source + linter tests as a single atomic change.
+
+#### Step 6 — Verify each fix PR with the new linter
+
+After the linter PR merges, rebase the dependent PRs on top of main and confirm each one's CI passes. Do NOT batch-merge the dependent PRs without re-running CI on each — if the linter fix was incomplete, the dependent fixes may still fail.
+
+#### Step 7 — Add a regression test that exercises BOTH directions
+
+The validator's tests previously asserted "accept Y, reject X." Now they must assert "accept X, reject Y." Add at least one explicit test for each direction so that future drift is caught immediately:
+
+```python
+def test_accepts_correct_pattern_X():
+    """Rule must accept the META-source-required pattern."""
+    assert validator.is_valid("gh pr merge --auto --squash")
+
+def test_rejects_wrong_pattern_Y():
+    """Rule must reject the META-source-prohibited pattern."""
+    assert not validator.is_valid("gh pr merge --auto --rebase")
+```
+
+A single direction-test is not enough — a future contributor with the same wrong-direction mental model could flip the assertion direction again. Pair tests prevent silent drift.
+
+#### Step 8 — Update the META source if BOTH are wrong
+
+In rare cases, BOTH the linter AND the META source are wrong (e.g., CLAUDE.md says `--rebase` but GitHub branch protection actually disables rebase merging). The ultimate source of truth is the deployed configuration, not the documentation. Confirm against:
+
+- `gh api repos/<owner>/<repo>/branches/<branch>/protection` for branch protection
+- The actual CI behavior (run a test PR and observe)
+- Org-wide policy if it exists
+
+If META is wrong too, fix META FIRST, then linter, then dependent docs (3 PRs in dependency order).
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Open N parallel PRs to fix N violating skill files | 2 separate PRs to fix `skills/myrmidon-swarm/SKILL.md` and `skills/learn/SKILL.md` for `gh pr merge --auto --rebase` → `--squash` | The linter at `hephaestus/validation/doc_policy.py` was enforcing the WRONG direction: it REQUIRED `--rebase` and REJECTED `--squash`. New PRs would fail CI because the linter rejects the correct pattern | When ≥2 docs violate the same rule, the linter is the FIRST suspect. Read its rule definition before opening per-file fix PRs. |
+| Trust the META source (CLAUDE.md) but skip reading the linter | Assumed CLAUDE.md said `--squash` and that was sufficient ground truth to fix the docs | The skills were written to comply with the LINTER, not CLAUDE.md. The linter was authoritative in practice because CI gates on it | The linter's actual enforcement IS the de-facto policy. Always confirm linter and META source agree before fixing dependents |
+| Fix linter and skills in the same PR | Considered bundling all corrections into one mega-PR | Linter and skill changes have different test surfaces — bundling makes CI feedback ambiguous if either side fails | Keep linter fix as its own atomic PR; dependent doc fixes land afterward on top of the correct linter |
+| Skip flipping the linter's test assertions | Initially planned to update only the validator code, not its tests | Validator tests would have continued asserting "reject `--squash`" — CI would fail on the linter PR itself | Linter source + linter tests must be flipped together as a single atomic change |
+| Single-direction regression test only | Wrote a test that only asserted "accepts `--squash`" | A future agent with the same wrong-direction mental model could re-flip the assertion to "rejects `--squash`" and ship it | Pair tests: assert correct pattern accepted AND wrong pattern rejected. Both directions prevent silent drift |
+
+## Results & Parameters
+
+### Diagnostic checklist (run BEFORE opening per-file fix PRs)
+
+```bash
+# 1. Count distinct files violating the same rule
+audit_output | grep "Rule: <rule-id>" | awk '{print $2}' | sort -u | wc -l
+# If >= 2 → linter is a suspect
+
+# 2. Find the linter
+grep -rn "<rule-keyword>" hephaestus/validation/ tests/unit/validation/
+
+# 3. Find the META source
+grep -n "<rule-keyword>" CLAUDE.md CONTRIBUTING.md
+
+# 4. Diff the linter's good/bad pattern against META
+#    (read both and compare manually)
+
+# 5. If they disagree → fix linter PR FIRST
+```
+
+### Re-sequencing template
+
+```text
+Originally planned:
+  PR1: fix file_A   → MAJOR audit finding
+  PR2: fix file_B   → MAJOR audit finding
+
+Re-sequenced after linter check:
+  PR1: fix linter (validator + flipped test assertions)
+  PR2: fix file_A (depends on PR1 landing)
+  PR3: fix file_B (depends on PR1 landing)
+  PR4: fix META source (only if META was also wrong)
+```
+
+### Worked example — ProjectHephaestus 2026-05-31
+
+| PR | Target | Status |
+|---|---|---|
+| #863 | `hephaestus/validation/doc_policy.py` — `POLICY_RULES` flipped from `--rebase` to `--squash`; rejected `--rebase`/`--merge` | MERGED first (root-cause fix) |
+| #865 | `README.md` + `CONTRIBUTING.md` — added explicit `--squash` to all `gh pr merge` examples | MERGED after #863 |
+| #866 | `skills/myrmidon-swarm/SKILL.md:318` — `--rebase` → `--squash` | MERGED after #863 |
+| #867 | `skills/learn/SKILL.md:422` — `--rebase` → `--squash` | MERGED after #863 |
+
+All 4 PRs merged clean. Had PRs #866/#867 been opened first, they would have failed CI because the linter would have rejected the new `--squash` instructions.
+
+### Pair-direction regression test template
+
+```python
+class TestPolicyRule:
+    """Verify both directions for <rule-id> to prevent wrong-direction drift."""
+
+    def test_accepts_required_pattern(self):
+        """Linter must accept the META-source-required pattern."""
+        assert is_compliant("<required-pattern>"), (
+            "Linter rejected the META-source-required pattern. "
+            "Check that POLICY_RULES['<rule-id>'] enforces the correct direction."
+        )
+
+    def test_rejects_prohibited_pattern(self):
+        """Linter must reject the META-source-prohibited pattern."""
+        assert not is_compliant("<prohibited-pattern>"), (
+            "Linter accepted the META-source-prohibited pattern. "
+            "Check that POLICY_RULES['<rule-id>'] enforces the correct direction."
+        )
+```
+
+### When to escalate to a META-source audit
+
+If you discover that the linter was wrong-direction AND the META source (CLAUDE.md, CONTRIBUTING.md) was also internally inconsistent (e.g., one place says `--squash` and another says `--rebase`), file a follow-up issue to audit ALL policy statements in the META source. Wrong-direction linters are often downstream symptoms of META-source drift.
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectHephaestus | 2026-05-31 strict audit caught 2 skill files violating `--squash`-only merge policy; root-cause was `hephaestus/validation/doc_policy.py` enforcing the opposite direction. 4 PRs landed in dependency order. | PRs #863, #865, #866, #867 |
+
+## References
+
+- Related: [[doc-audit-policy-violations]] — standard audit workflow that this skill amends with the linter-as-root-cause meta-pattern.
+- Related: [[audit-driven-remediation-workflow]] — Phase 1 triage now must include "is the linter wrong-direction?" check.
+- Related: [[verify-audit-findings-before-acting]] — verification step generalizes to "verify the linter too, not just the findings."
+
+---
