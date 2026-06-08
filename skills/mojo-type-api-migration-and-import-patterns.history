@@ -2,6 +2,19 @@
 
 # History: mojo-type-api-migration-and-import-patterns
 
+## v1.1.0 (2026-06-07)
+
+Restore assert_value_at/reverse-dep-tree/refcount-trap/getitem/hyphen-dir/tuple-return nuance
+(nuance audit pass 2):
+
+- assert_value_at 4th-positional string → Float64 tolerance coercion; use `message=` keyword
+- reverse-dependency decision tree (DELETE pure wrapper / MOVE to base / function-scope if 1-2
+  callers / KEEP constants / inline)
+- same-scope ASAP refcount-test trap (force source out of scope via a helper)
+- `__getitem__` widening failures (Float64 return breaks ~108 sites; mutable-proxy return errors)
+- hyphenated-directory import ban (rename at OS level + update import paths/CI/docs)
+- deprecated tuple return `-> (T1, T2)` should be `-> Tuple[T1, T2]`
+
 ## v1.0.0 (2026-06-07)
 
 Consolidated 5 skills into the canonical `mojo-type-api-migration-and-import-patterns`:

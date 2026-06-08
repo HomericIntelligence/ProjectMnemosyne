@@ -3,7 +3,7 @@ name: mojo-type-api-migration-and-import-patterns
 description: "Use when: (1) upgrading Mojo to a new API baseline (Writable->WritableTo, trait/conformance refactors, parametric dtype migration), (2) migrating callers after a Mojo stdlib breaking change, (3) resolving 'import of X is ambiguous' errors caused by two modules exporting the same name, (4) systematically reviewing a large-scale parametric type system migration for dependency order and zero-copy conversion safety, (5) removing ImplicitlyCopyable trait from Mojo structs and fixing resulting compile errors, (6) migrating DType from runtime-typed patterns to native compile-time parametric patterns."
 category: architecture
 date: 2026-06-07
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 history: mojo-type-api-migration-and-import-patterns.history
 tags: [mojo, type-migration, api-migration, parametric-dtype, implicitlycopyable, import-ambiguity, trait, dtype-native]
@@ -231,6 +231,61 @@ After each directory: `pixi run mojo package -I . shared -o /tmp/shared.mojopkg 
 then `pixi run mojo test tests/shared/`. Local hosts may lack GLIBC 2.32+ — use CI/Podman for
 execution. Local commits without mojo-format: `SKIP=mojo-format git commit -m "..."`.
 
+#### 8. Reverse-dependency cycle breaking — decision tree
+
+When a module-level import from Package A appears in Package B (a reverse dependency creating a
+cycle), pick the fix by what the imported symbol actually is:
+
+```text
+Found module-level import from Package A in Package B (reverse dep):
+
+1. Is the file a pure wrapper with zero callers?
+   YES → DELETE the file (removes 100+ lines of dead code)
+
+2. Is the imported function a pure utility with no package deps?
+   YES → MOVE to shared/base/ (break cycle at root)
+
+3. Is the import used in only 1-2 function bodies?
+   YES → Convert to function-scoped import (deferred resolution)
+
+4. Is it a constants-only import?
+   YES → KEEP (constants don't create compilation cycles)
+
+5. None of the above?
+   → Consider co-locating or inlining the logic
+```
+
+#### 9. Test-writing gotchas during migration
+
+**`assert_value_at` 4th-positional trap**: the signature is
+`(tensor, index, expected, tolerance, message)`. Passing a string as the 4th positional argument
+silently coerces it to `Float64` for the `tolerance` parameter — always use the `message=` keyword:
+
+```mojo
+# WRONG — string interpreted as tolerance: Float64
+assert_value_at(parts[0], 0, 0.0, "should be 0.0")
+
+# CORRECT — message= keyword bypasses the tolerance parameter
+assert_value_at(parts[0], 0, 0.0, message="should be 0.0")
+```
+
+**Same-scope ASAP refcount trap**: Mojo's ASAP destruction does NOT fire within the same scope, so a
+refcount test that creates the source and the converted tensor in one scope (source-dies /
+target-survives) always passes regardless of correctness. Use a helper function that forces the
+source out of scope before the assertion:
+
+```mojo
+fn _make_view() -> ExTensor:
+    var src = make_source()       # source lives only inside the helper
+    return src.as_view()^         # forces src to be destroyed on return
+# Caller asserts on the returned view — source is now genuinely out of scope.
+```
+
+#### 10. Hyphenated-directory import ban
+
+Mojo cannot import from directories whose names contain hyphens. Rename the directory at the OS level
+(`git mv my-pkg my_pkg`) and update every import path, CI config glob, and doc reference to match.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -251,6 +306,10 @@ execution. Local commits without mojo-format: `SKIP=mojo-format git commit -m ".
 | Split test file to avoid ambiguity | Separate `shared.training` and top-level `shared` imports | Defeats the import-coverage test's regression signal | Alias instead of shrinking a test's scope |
 | `def __init__(out self, *, take existing: Self)` | Used `take` in a `def` for ownership transfer | `mojo format` strips the space → `takeexisting`; compiles silently, field inaccessible | Delete dead constructors or use `fn __init__(out self, owned existing: Self)` |
 | Skipping ADR re-test on version bump | Assumed a bump auto-supersedes old limitation ADRs | ADR stayed "Accepted" for months while FP16 SIMD already worked | Write a concrete test for the claimed limitation when bumping Mojo |
+| String as 4th positional arg to `assert_value_at` | `assert_value_at(tensor, idx, 0.0, "message")` | Mojo coerced the `StringLiteral` to `Float64` for the `tolerance` parameter | Always use the `message=` keyword; check the function signature before writing tests |
+| `__getitem__` widened to return `Float64` | Wider return type to accept more assignments | `Float32` cannot implicitly convert to `Float64` in Mojo — broke ~108 call sites | Mojo has zero implicit numeric conversions between float types |
+| Mutable-proxy return from `__getitem__` | Return a mutable proxy that accepts any assignment | `"expression must be mutable in assignment"` — ownership blocks reference-returning subscript | Mojo's ownership model does not support reference-returning `__getitem__` |
+| Refcount test in same scope | Created source + converted tensor in one scope to assert source-dies/target-survives | Mojo ASAP destruction doesn't fire within the same scope — the test always passes | Use a helper fn that forces the source out of scope before the assertion |
 
 ## Results & Parameters
 
@@ -301,6 +360,7 @@ de-duplicate. Convention: alias to `<ModuleName><TypeName>` (e.g., `SGD as Train
 | `@value` | `@fieldwise_init` + trait list |
 | `DynamicVector` | `List` |
 | `alias X = ...` | `comptime X = ...` |
+| `-> (T1, T2)` tuple return | `-> Tuple[T1, T2]` |
 
 ### Agent Coordination for Bulk Migrations
 
