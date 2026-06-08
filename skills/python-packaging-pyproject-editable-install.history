@@ -1,0 +1,1542 @@
+<!-- markdownlint-disable MD024 -->
+# Change History: python-packaging-pyproject-editable-install
+
+## v1.0.0 (2026-06-07)
+
+Consolidated 4 overlapping pyproject.toml-centric packaging skills into this general canonical:
+
+- `hatch-vcs-pyproject-auto-versioning-setup` (was ci-cd, v1.1.0, 2026-05-24)
+- `tooling-pyproject-scripts-dev-install-after-merge` (was tooling, v1.0.0, 2026-05-29)
+- `pyproject-scripts-not-def-main` (was tooling, v1.0.0, 2026-05-26)
+- `python-packaging-and-distribution` (was tooling, v1.1.0, 2026-06-07) — only the pyproject.toml-centric portions (hatch-vcs, console scripts, editable install, PyPI publishing) are surfaced in the canonical; the broader pixi.lock/CVE/Conan material remains documented verbatim below
+
+The general workflow (hatch-vcs dynamic versioning, stale editable install recovery, console-script enumeration, pytest-watch→pytest-watcher, PyPI trusted-publishing) is in the canonical; each specific case is preserved as an example. Absorbed originals are kept verbatim below.
+
+## Superseded from hatch-vcs-pyproject-auto-versioning-setup
+
+**Original date:** 2026-05-24
+**Original version:** 1.1.0
+
+```yaml
+---
+name: hatch-vcs-pyproject-auto-versioning-setup
+description: "Migrate a Python project from hardcoded version in pyproject.toml to hatch-vcs dynamic versioning from git tags, and update downstream tooling that assumed the static-version world. Use when: (1) the version string is hardcoded in pyproject.toml and a CI auto-tag workflow must bump it, (2) you want the version derived automatically from git tags at build/install time with no file edits needed, (3) an auto-tag workflow is creating bot commits on main that trigger infinite CI loops, (4) hatch-vcs is being added to pixi.toml pypi-dependencies unnecessarily, (5) post-migration, importlib.metadata.version() raises PackageNotFoundError because the import name differs from the distribution name, (6) a version-consistency or single-source check script grep's pyproject.toml for a version field that no longer exists."
+category: ci-cd
+date: "2026-05-24"
+version: "1.1.0"
+user-invocable: false
+verification: verified-ci
+history: hatch-vcs-pyproject-auto-versioning-setup.history
+tags:
+  - hatch-vcs
+  - hatchling
+  - pyproject
+  - auto-versioning
+  - git-tags
+  - dynamic-version
+  - importlib-metadata
+  - distribution-name
+  - single-source-versioning
+  - ci-cd
+---
+```
+
+# hatch-vcs pyproject.toml Auto-Versioning Setup
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-24 |
+| **Objective** | Replace a hardcoded `version = "X.Y.Z"` in `pyproject.toml` with `hatch-vcs` dynamic versioning so the auto-tag CI workflow only needs to push a git tag — no file edits, no bot commits — AND update downstream tooling (`__init__.py`, drift-check scripts, single-source-of-truth validators) that previously assumed the static-version world. |
+| **Outcome** | hatch-vcs generates `_version.py` at install time from the most recent git tag; pyproject.toml declares `dynamic = ["version"]`; CI auto-tag workflow simplified to tag-push only; `__init__.py` looks up version by distribution name; consistency checks derive canonical version from `git describe`; single-source check validates the hatch-vcs invariant via `tomllib`. |
+| **Verification** | verified-ci |
+| **History** | [changelog](./hatch-vcs-pyproject-auto-versioning-setup.history) |
+
+## When to Use
+
+- `pyproject.toml` has `version = "X.Y.Z"` hardcoded and a CI workflow bumps it on every merge, creating bot commits on `main`
+- Auto-tag CI workflow is producing infinite trigger loops (commit triggers CI, CI commits, triggers CI...)
+- You want `pip show <pkg>` / `importlib.metadata.version()` to reflect the latest git tag automatically
+- A `hatch-vcs` entry was added to `pixi.toml [pypi-dependencies]` and needs to be removed (it's a build-time dep only)
+- After migrating to hatch-vcs, `import yourpackage` raises `PackageNotFoundError` because `__version__` is looking up the import name instead of the distribution name
+- A drift-detection or single-source-of-truth script greps `pyproject.toml` for a version field that no longer exists once `dynamic = ["version"]` is set
+
+## Verified Workflow
+
+### Quick Reference
+
+The four pieces that MUST change together when migrating to hatch-vcs:
+
+- [ ] **1. `pyproject.toml`** — declare `dynamic = ["version"]`, add `[tool.hatch.version] source = "vcs"`, add `[tool.hatch.build.hooks.vcs] version-file = "<pkg>/_version.py"`, add `hatch-vcs` to `[build-system].requires`
+- [ ] **2. `<pkg>/__init__.py`** — `_pkg_version("<distribution-name>")` (case-sensitive value from `[project].name`), **NOT** `_pkg_version("<import-name>")`. importlib.metadata does NOT normalize between the two
+- [ ] **3. Drift / consistency scripts** — derive the canonical version from `git describe --tags --abbrev=0 --match 'v[0-9]*'` with `importlib.metadata` fallback. **Never** parse `pyproject.toml` for `[project].version` — the field is gone
+- [ ] **4. Single-source-of-truth checks** — validate the invariant (`dynamic = ["version"]` present AND `[tool.hatch.version].source == "vcs"`) via `tomllib`, **NOT** by comparing version strings across files
+
+Also: add `<pkg>/_version.py` to `.gitignore` and `[tool.ruff] exclude`. Remove `hatch-vcs` from `pixi.toml [pypi-dependencies]` if present.
+
+### 1. Update `pyproject.toml`
+
+```toml
+[build-system]
+# Add hatch-vcs to build-system.requires — it is a BUILD-TIME dep, NOT a runtime dep
+requires = ["hatchling>=1.27.0,<2", "hatch-vcs>=0.4.0,<1"]
+build-backend = "hatchling.build"
+
+[project]
+name = "YourPackageName"
+# Remove:  version = "0.7.0"
+# Add:
+dynamic = ["version"]
+
+# Add these two new sections:
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "yourpackage/_version.py"
+```
+
+Replace `yourpackage` with the actual package directory (the one containing `__init__.py`).
+
+### 2. Add generated file to `.gitignore`
+
+```gitignore
+# hatch-vcs generated version file (created at pip install / pixi install time)
+yourpackage/_version.py
+```
+
+Do NOT commit `_version.py`. It is regenerated on every install.
+
+### 3. Add generated file to ruff exclude (if using ruff)
+
+In `pyproject.toml`:
+
+```toml
+[tool.ruff]
+exclude = [
+  # existing excludes ...
+  "yourpackage/_version.py",   # hatch-vcs generated — not human-authored
+]
+```
+
+Without this, ruff will lint or format the generated file and may fail CI.
+
+### 4. Update `__init__.py` to use the DISTRIBUTION NAME (not import name)
+
+```python
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _pkg_version
+
+try:
+    # CRITICAL: This is the [project].name value from pyproject.toml,
+    # NOT the import package directory name.
+    __version__ = _pkg_version("HomericIntelligence-Hephaestus")
+except PackageNotFoundError:
+    __version__ = "unknown"
+```
+
+**The most common mistake:** using the import name (e.g. `"hephaestus"`) instead of the distribution name (e.g. `"HomericIntelligence-Hephaestus"`). `importlib.metadata.version()` does NOT normalize between PyPI distribution names and import package names. It performs a PEP 503 normalized lookup against installed `*.dist-info` directories — and there is no such directory for the import name. You will get `PackageNotFoundError` and `__version__ == "unknown"` at every import.
+
+The dist name is the **exact** value of the `name` field in `[project]` in `pyproject.toml` (PEP 503 normalization is applied, so case and `-`/`_` differences are tolerated, but the name itself must match).
+
+### 5. Remove hatch-vcs from `pixi.toml` (if added by mistake)
+
+`hatch-vcs` must NOT appear in `[pypi-dependencies]` in `pixi.toml`.
+pip/hatchling resolves it automatically from `[build-system].requires` during `pip install -e .`.
+Adding it to pixi.toml is harmless but adds noise to the lock file.
+
+```toml
+# Remove this line from pixi.toml [pypi-dependencies] if present:
+# hatch-vcs = ">=0.4.0,<1"
+```
+
+### 6. Simplify the auto-tag CI workflow
+
+With hatch-vcs the workflow only needs to push a tag — no `pyproject.toml` bump, no commit to `main`:
+
+```yaml
+- name: Compute next patch version and push tag
+  shell: bash
+  run: |
+    LATEST_TAG=$(git tag --list 'v*' --sort=-v:refname | head -1)
+    if [ -z "${LATEST_TAG}" ]; then
+      LATEST="0.7.0"   # bootstrap version — set to your last known release
+    else
+      LATEST="${LATEST_TAG#v}"
+    fi
+    MAJOR=$(echo "${LATEST}" | cut -d. -f1)
+    MINOR=$(echo "${LATEST}" | cut -d. -f2)
+    PATCH=$(echo "${LATEST}" | cut -d. -f3)
+    TAG="v${MAJOR}.${MINOR}.$((PATCH + 1))"
+    if git rev-parse "${TAG}" >/dev/null 2>&1; then
+      echo "Tag ${TAG} already exists — nothing to do"
+      exit 0
+    fi
+    git tag "${TAG}"
+    git push origin "${TAG}"
+```
+
+Remove any steps that previously: read the version from `pyproject.toml`, bumped the patch number,
+rewrote the file, and committed back to `main`.
+
+### 7. Verify installation
+
+```bash
+# After pixi install or pip install -e .
+python -c "import yourpackage; print(yourpackage.__version__)"
+# Should print the version derived from the most recent git tag, e.g. "0.7.1"
+
+# Check the generated file exists (it is local, not committed)
+ls yourpackage/_version.py
+```
+
+### 8. Update downstream consistency / single-source checks
+
+Any pre-existing tooling that assumed `pyproject.toml` holds a static `[project].version` will break. Update each pattern:
+
+**Pattern A — Drift/consistency check that compared `pyproject.toml` version to `__init__.py` / `VERSION` / `SECURITY.md`:**
+
+```python
+# OLD — broken after hatch-vcs migration
+# def _get_pyproject_version() -> str:
+#     data = tomllib.loads(Path("pyproject.toml").read_text())
+#     return data["project"]["version"]   # KeyError — field is dynamic now
+
+# NEW — derive canonical version from git, with importlib.metadata fallback
+import subprocess
+from importlib.metadata import PackageNotFoundError, version as _pkg_version
+
+def _get_canonical_version(dist_name: str) -> str:
+    """Canonical version: latest git tag, or installed dist metadata as fallback."""
+    try:
+        tag = subprocess.check_output(
+            ["git", "describe", "--tags", "--abbrev=0", "--match", "v[0-9]*"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        return tag.lstrip("v")
+    except subprocess.CalledProcessError:
+        pass
+    try:
+        return _pkg_version(dist_name)
+    except PackageNotFoundError:
+        return "unknown"
+```
+
+**Pattern B — "Single source of truth" check that previously asserted one literal version string:**
+
+After hatch-vcs, the "single source" is the **invariant** that pyproject delegates to VCS, not a string match. Validate via `tomllib`:
+
+```python
+import tomllib
+from pathlib import Path
+
+def check_single_source_invariant() -> None:
+    data = tomllib.loads(Path("pyproject.toml").read_text())
+    project = data.get("project", {})
+    dynamic = project.get("dynamic", [])
+    assert "version" in dynamic, (
+        "pyproject.toml [project].dynamic must include 'version' "
+        "(hatch-vcs single-source invariant violated)"
+    )
+    assert "version" not in project, (
+        "pyproject.toml [project] must NOT define a static 'version' "
+        "field once 'version' is in [project].dynamic"
+    )
+    hatch_version = data.get("tool", {}).get("hatch", {}).get("version", {})
+    assert hatch_version.get("source") == "vcs", (
+        "[tool.hatch.version] source must be 'vcs' for hatch-vcs single-source versioning"
+    )
+```
+
+**Pattern C — verification of script output.** When a check script prints a status line, verify it by reading the FULL output. Do not `tail -3` and claim a line is missing — earlier lines get truncated and you'll falsely report regressions. Quote the actual line from the script's stdout when claiming success or failure.
+
+## Key Insight: `_version.py` is generated at install time
+
+When `pip install -e .` or `pixi install` runs, hatch-vcs writes `yourpackage/_version.py`
+in the source tree containing the current version string. This file:
+
+- Exists locally after install; does NOT exist in a fresh CI checkout until install runs
+- Must be in `.gitignore` — never commit it
+- Must be in `[tool.ruff] exclude` — ruff will lint/format it if it exists on disk
+- Is NOT needed in `MANIFEST.in` or `[tool.hatch.build] artifacts` for development installs
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | --------------- | --------------- | ---------------- |
+| Add `hatch-vcs` to `pixi.toml [pypi-dependencies]` | Added `hatch-vcs = ">=0.4.0,<1"` under `[pypi-dependencies]` in `pixi.toml` | Unnecessary; pip resolves it automatically from `[build-system].requires`. Adds noise to lock file but does not cause errors. | `hatch-vcs` is a build-time dep — declare it only in `[build-system].requires`, never in `pixi.toml` |
+| Keep auto-tag workflow with `pyproject.toml` bump steps | Left steps in CI that read the version, incremented it, rewrote `pyproject.toml`, and committed back to `main` | Creates a bot commit on `main` on every CI pass, triggers infinite loop potential, and defeats the purpose of auto-versioning | With `hatch-vcs`, the workflow only needs to push a git tag — all file-edit/commit steps must be removed |
+| Not adding `_version.py` to `.gitignore` | Omitted `yourpackage/_version.py` from `.gitignore` | Generated file gets accidentally staged and committed; ruff lints it on next pre-commit run and fails CI | Always add the generated `_version.py` to `.gitignore` immediately when enabling `hatch-vcs` |
+| Not adding `_version.py` to ruff `exclude` | Left `_version.py` out of `[tool.ruff] exclude` | ruff reformats the generated file on every pre-commit run, causing spurious diffs or CI failures | Add `yourpackage/_version.py` to `[tool.ruff] exclude` alongside the `.gitignore` entry |
+| Use the **import name** with `importlib.metadata.version()` | `__version__ = _pkg_version("hephaestus")` in `hephaestus/__init__.py` when the installed distribution is `HomericIntelligence-Hephaestus` | `PackageNotFoundError`: `importlib.metadata` performs a PEP 503 normalized lookup against installed `*.dist-info` directories. The import package name is not the distribution name; there is no `hephaestus-*.dist-info` to find. `__version__` silently becomes `"unknown"` at every import. | `importlib.metadata.version()` requires the **distribution name** (the literal value of `[project].name`), not the import package directory name. The two are unrelated — never assume normalization across them |
+| Parse `pyproject.toml` for `[project].version` in a drift-check script | `_get_pyproject_version()` did `tomllib.load(...)["project"]["version"]` after the migration | `KeyError`/`None` — once `dynamic = ["version"]` is set, `[project].version` no longer exists in pyproject.toml. Hatch-vcs deliberately removes it because the field is computed at build time. | After hatch-vcs migration, derive canonical version from `git describe --tags --abbrev=0 --match 'v[0-9]*'` with `importlib.metadata.version("<dist-name>")` as fallback. Never grep pyproject for a field hatch-vcs deliberately removed |
+| Verify "the script printed line X" by reading `tail -3` of stdout | Claimed a single-source check was missing an output line based on the last 3 lines of its output | The relevant line was earlier in the output and got truncated by `tail`. I reported a false regression on a working script. | Verify script output by reading the FULL stdout (or grep for the expected line explicitly). Never assert a line is missing based on a truncated tail. Quote the actual matching line when claiming success or failure |
+
+## Results & Parameters
+
+### Key Parameters
+
+| Parameter | Description | Example |
+| ----------- | ------------- | --------- |
+| `yourpackage` | The package directory (contains `__init__.py`) | `hephaestus` |
+| `your-dist-name` | The `name` field in `pyproject.toml` — **use this literal value in `importlib.metadata.version()`** | `HomericIntelligence-Hephaestus` |
+| Bootstrap version | Last known release version for tag-list fallback | `"0.7.0"` |
+| `hatchling` version pin | Tested range | `>=1.27.0,<2` |
+| `hatch-vcs` version pin | Tested range | `>=0.4.0,<1` |
+| Canonical version source (post-migration) | git tag, parsed with `git describe --tags --abbrev=0 --match 'v[0-9]*'` | `v0.7.1` → `0.7.1` |
+
+### Expected Outcomes
+
+After completing the migration:
+
+- `pyproject.toml` has `dynamic = ["version"]` and no `version = "X.Y.Z"` line
+- `[tool.hatch.version]` and `[tool.hatch.build.hooks.vcs]` sections added
+- `yourpackage/_version.py` exists locally after `pixi install` / `pip install -e .` but is NOT committed
+- `importlib.metadata.version("<your-dist-name>")` returns the version from the most recent git tag
+- `import yourpackage; print(yourpackage.__version__)` prints the same version (NOT `"unknown"`)
+- Auto-tag CI workflow no longer commits to `main` — only pushes a tag
+- `hatch-vcs` is NOT present in `pixi.toml [pypi-dependencies]`
+- Drift/consistency scripts derive the canonical version from git, not from `pyproject.toml`
+- Single-source-of-truth check validates the hatch-vcs invariant via `tomllib`, not a string compare
+
+## Relationship to `versioning-consistency-release-workflow`
+
+The [`versioning-consistency-release-workflow`](./versioning-consistency-release-workflow.md)
+skill covers the static versioning pattern: `pyproject.toml` holds the canonical version,
+`importlib.metadata` reads it at runtime, and a pre-commit hook guards against drift.
+
+This skill replaces the "canonical version lives in `pyproject.toml`" part: with `hatch-vcs`,
+the canonical version lives in git tags and `pyproject.toml` declares `dynamic = ["version"]`.
+The `importlib.metadata` runtime pattern stays the same — but the lookup argument MUST be
+the distribution name, and any drift check must derive its canonical from `git describe`,
+not from parsing `pyproject.toml`.
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectHephaestus | Branch `5047-separate-dev-production-deps` | `version = "0.7.0"` removed; `dynamic = ["version"]` added; auto-tag workflow simplified to tag-push; pre-commit passes locally |
+| ProjectHephaestus | PR #434 | Fixed `hephaestus/__init__.py` to use distribution name `"HomericIntelligence-Hephaestus"` in `importlib.metadata.version()` instead of import name `"hephaestus"`; resolved `PackageNotFoundError`; merged via CI |
+| ProjectHephaestus | PR #436 | Rewrote `scripts/check_version_single_source.py` to validate the hatch-vcs invariant (`dynamic = ["version"]` + `[tool.hatch.version].source == "vcs"`) via `tomllib` instead of comparing version strings across files; merged via CI |
+| ProjectHephaestus | PR #438 | Replaced `_get_pyproject_version` in `hephaestus/version/consistency.py` with `_get_canonical_version` deriving from `git describe --tags --abbrev=0 --match 'v[0-9]*'` with `importlib.metadata` fallback; merged via CI |
+
+---
+
+## Superseded from tooling-pyproject-scripts-dev-install-after-merge
+
+**Original date:** 2026-05-29
+**Original version:** 1.0.0
+
+```yaml
+---
+name: tooling-pyproject-scripts-dev-install-after-merge
+description: "After git pull/merge that touches [project.scripts] in pyproject.toml, re-run editable install (pixi run dev-install / pip install -e .) — the source tree updates but console-script entry points stay stale until re-install. Use when: (1) command not found after git pull/merge, (2) new hephaestus-* CLI not on PATH after merge, (3) [project.scripts] entry not visible after pull, (4) editable install stale entry points, (5) python -m module works but the registered console-script binary does not."
+category: tooling
+date: 2026-05-29
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - python
+  - pyproject
+  - console-scripts
+  - editable-install
+  - pip-install-e
+  - dev-install
+  - entry-points
+  - pixi
+  - command-not-found
+  - post-merge
+---
+```
+
+# Re-run Editable Install After Pulling `[project.scripts]` Changes
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-29 |
+| **Objective** | Document why a newly-merged `[project.scripts]` entry yields `command not found` after `git pull`, and the one-line fix |
+| **Outcome** | Re-running `pixi run dev-install` (or `pip install -e .`) regenerates `*.dist-info/entry_points.txt` and the new binary stub appears on PATH |
+| **Verification** | verified-ci — observed end-to-end live in HomericIntelligence/ProjectHephaestus after squash-merging PR #707 (commit `2407884`) which added `hephaestus-ensure-state-labels` to `[project.scripts]` |
+
+## When to Use
+
+- A `git pull` / merge brought in a `pyproject.toml` diff that added or changed a `[project.scripts]` entry
+- A new console script (e.g. `hephaestus-ensure-state-labels`) returns `command not found` after pull, even though the source file is on disk and importable as a module
+- A teammate just opened a PR that mentions a new CLI binary by name, you pulled, and it isn't on your PATH
+- `python -m <module.path>` works but the console-script wrapper does not — telltale sign of stale entry points
+- You're triaging a "where is this binary?" question that started right after a pull
+- Onboarding a colleague who pulled the repo but can't run a newly-added CLI tool
+
+Do NOT use when:
+- The command was already broken BEFORE the pull (look elsewhere — env, PATH, shell config)
+- The source file referenced by `[project.scripts]` doesn't exist (real bug — install won't fix a missing module)
+- You haven't actually pulled anything that touched `pyproject.toml`'s `[project.scripts]` section (no entry-point change → no stale-entry-points problem)
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# After any git pull/merge that touched pyproject.toml [project.scripts]:
+
+# pixi-based project (ProjectHephaestus convention):
+pixi run dev-install
+
+# plain pip project:
+pip install -e .
+
+# Verify the new binary is registered:
+which hephaestus-ensure-state-labels   # should now print a path
+hephaestus-ensure-state-labels --help  # should produce usage text
+```
+
+### Detailed Steps
+
+**Why this is needed:** Editable installs register console-script names by writing
+`<package>-<version>.dist-info/entry_points.txt` (and corresponding stub binaries in
+`<env>/bin/`) at install time. A bare `git pull` only updates the working tree — it does
+NOT re-run any install step. So the on-disk source has a new `[project.scripts]` entry,
+but the package metadata that PATH consults still advertises the OLD entry-point list.
+
+**Step 1: Detect that you're in this situation.** Telltale signs:
+
+```bash
+# Source file exists and is importable:
+python -c "from hephaestus.automation import ensure_state_labels; print('ok')"
+# ok
+
+# Module-level invocation works:
+python -m hephaestus.automation.ensure_state_labels --help
+# (prints usage)
+
+# But the registered console-script is nowhere to be found:
+which hephaestus-ensure-state-labels
+# (empty / not found)
+hephaestus-ensure-state-labels --help
+# bash: hephaestus-ensure-state-labels: command not found
+```
+
+If the first two work but the third fails, you have a stale-entry-points problem, NOT a
+build/install/PATH problem.
+
+**Step 2: Verify the diff contained `[project.scripts]`.**
+
+```bash
+git log -p --since="1 hour ago" -- pyproject.toml | grep -A2 'project.scripts'
+# or:
+git diff HEAD~1 -- pyproject.toml
+```
+
+If you see a new line like `hephaestus-ensure-state-labels = "hephaestus.automation.ensure_state_labels:main"`,
+you confirmed the cause.
+
+**Step 3: Re-run the editable install.**
+
+For pixi-based projects (ProjectHephaestus convention):
+
+```bash
+pixi run dev-install
+```
+
+For plain pip projects:
+
+```bash
+pip install -e .
+```
+
+For projects using `--no-deps` to avoid lockfile churn:
+
+```bash
+pip install -e . --no-deps
+```
+
+The install is idempotent and fast — it re-uses cached wheel data, and the only
+meaningful change is `entry_points.txt` regeneration plus binary stub creation.
+
+**Step 4: Verify with the package-version-string evidence pattern.**
+
+```bash
+python -c "import hephaestus; print(hephaestus.__version__)"
+# Before re-install: 0.9.3.dev39+g4f63a5643 (pre-merge tag)
+# After  re-install: 0.9.3.dev46+g240788441 (post-merge tag)
+```
+
+The version string is `<base>.devN+g<git-sha>` for hatch-vcs projects — the SHA segment
+moves when you re-install, because hatch-vcs re-reads `git describe` at install time.
+If the SHA matches your current HEAD, the install picked up the merge.
+
+Then:
+
+```bash
+which hephaestus-ensure-state-labels
+# /home/.../envs/default/bin/hephaestus-ensure-state-labels  (now exists)
+```
+
+**Step 5: Bake it into your post-pull habit.** Any time `pyproject.toml` is in the diff —
+especially `[project.scripts]`, `[project.optional-dependencies]`, or `[tool.hatch.build.hooks.vcs]` —
+re-run `pixi run dev-install` / `pip install -e .`. Cost: a few seconds. Cost of
+debugging "command not found": noticeably more.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| `which hephaestus-ensure-state-labels` returns nothing → assume package is uninstalled | Initial diagnosis: "the package isn't installed" | Misleading — every other `hephaestus-*` console script was still on PATH, proving the package WAS installed; only the new entry was missing | `which` not finding ONE binary while other binaries from the same package work is a smoking gun for stale `entry_points.txt`, not for missing install |
+| Run `pixi install` (environment-level install) | Heavier reinstall to "make sure everything is fresh" | May help but is overkill — it rebuilds the whole pixi environment when the only thing that needed regeneration was `<dist-info>/entry_points.txt` | Use the targeted `pixi run dev-install` (= `pip install -e . --no-deps`); much faster, fixes the actual issue |
+| Modify `PATH` to add a directory where the binary "should" live | Suspected a PATH ordering problem | Wrong layer — the binary stub doesn't exist anywhere on disk yet; no amount of PATH manipulation can find a file that hasn't been created | The fix is to CREATE the stub via install, not to ADJUST PATH |
+| Invoke via `python -m hephaestus.automation.ensure_state_labels` | Workaround that doesn't require entry-point registration | Works as a one-off, but defeats the console-script convention; scripts/automation that hard-codes the binary name still breaks | OK as a 30-second workaround; NOT a fix. Re-install to make the registered name available |
+| Add the script entry manually to `<env>/bin/hephaestus-ensure-state-labels` | Hand-craft the stub | Possible in theory, error-prone in practice; also rewritten on next install; doesn't update `entry_points.txt` so `pip show` and other introspection still report stale state | Don't fight the package machinery — run the install command it was designed for |
+| Restart the shell (`exec bash`) | Suspect shell hash table cache | Doesn't help — the binary genuinely doesn't exist on disk yet. `exec bash` only fixes the case where the file exists but bash has cached its absence | Shell rehash only matters when the file already exists. For stale-entry-points, the file is missing |
+
+## Results & Parameters
+
+### The package-version-string evidence pattern
+
+For hatch-vcs / setuptools-scm projects, the runtime version string encodes the git
+state at install time:
+
+```text
+0.9.3.dev39+g4f63a5643   ← pre-merge install (39 dev commits past the v0.9.3 tag; SHA 4f63a5643)
+0.9.3.dev46+g240788441   ← post-merge install (46 dev commits; SHA 240788441 = the merge commit)
+```
+
+Use this as your fastest sanity check:
+
+```bash
+# Step A: capture the version BEFORE re-install
+OLD=$(python -c "import hephaestus; print(hephaestus.__version__)")
+
+# Step B: re-install
+pixi run dev-install
+
+# Step C: capture the version AFTER re-install
+NEW=$(python -c "import hephaestus; print(hephaestus.__version__)")
+
+echo "before: $OLD"
+echo "after:  $NEW"
+# If $NEW differs from $OLD (especially the SHA portion), the install picked up the merge.
+# If they're identical, you may not actually be on the merged commit — check `git log -1`.
+```
+
+### The diff-trigger heuristic
+
+Run `pixi run dev-install` (or `pip install -e .`) whenever ANY of these appear in a
+post-pull `git diff`:
+
+| Diff signal | Why it triggers re-install |
+|-------------|----------------------------|
+| `[project.scripts]` add/remove/rename | New/removed entry points need stub binaries on PATH |
+| `[project.optional-dependencies]` change | Extras-driven imports may now fail/succeed differently |
+| `[project.dependencies]` change | Runtime imports may have new/removed deps; needs to install/uninstall packages |
+| `[tool.hatch.build.hooks.vcs]` or `version-file` | The generated `_version.py` may have moved |
+| Any `pyproject.toml` `[build-system]` change | Build backend or its config changed; safest to re-install |
+
+Quick check: `git diff HEAD~1 pyproject.toml | head -50` after pull — if you see any
+of the above, just run `pixi run dev-install` and move on.
+
+### Why this is easy to miss
+
+| Misleading observation | Why it tricks you |
+|------------------------|-------------------|
+| `import hephaestus.automation.ensure_state_labels` works fine | Python re-reads source files on next import — no install step required for `import` to succeed |
+| Pre-existing console scripts (e.g. `hephaestus-merge-prs`) keep working | They were already registered at the last install; their stubs are still on PATH |
+| The error `command not found` looks like a build/install bug | It IS an install issue — just a targeted one (stale `entry_points.txt`), not "the package is broken" |
+| `pip show hephaestus` reports the package as installed | True — it IS installed; just with the old entry-points list |
+| `pip list \| grep hephaestus` shows the editable install | Same — the listing comes from `dist-info/`, which is stale |
+
+### Concrete observation log (HomericIntelligence/ProjectHephaestus, 2026-05-29)
+
+```text
+PR #707 squash-merged as commit 2407884; adds:
+  [project.scripts]
++ hephaestus-ensure-state-labels = "hephaestus.automation.ensure_state_labels:main"
+
+$ git pull --ff-only origin main
+$ hephaestus-ensure-state-labels --org HomericIntelligence
+bash: hephaestus-ensure-state-labels: command not found
+
+$ pixi run hephaestus-ensure-state-labels --org HomericIntelligence
+hephaestus-ensure-state-labels: command not found
+
+$ python -c "import hephaestus; print(hephaestus.__version__)"
+0.9.3.dev39+g4f63a5643      ← pre-merge
+
+$ pixi run dev-install
+# (a few seconds; reuses cached wheel data)
+
+$ python -c "import hephaestus; print(hephaestus.__version__)"
+0.9.3.dev46+g240788441      ← post-merge
+
+$ which hephaestus-ensure-state-labels
+/home/mvillmow/Projects/ProjectHephaestus/.pixi/envs/default/bin/hephaestus-ensure-state-labels
+
+$ hephaestus-ensure-state-labels --org HomericIntelligence
+# runs as expected
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | 2026-05-29 — PR #707 (`2407884`) added `hephaestus-ensure-state-labels` to `[project.scripts]` | After `git pull --ff-only`, the new binary was `command not found` despite the source module being importable. `pixi run dev-install` regenerated `entry_points.txt`; version string moved from `0.9.3.dev39+g4f63a5643` (pre-merge tag) to `0.9.3.dev46+g240788441` (post-merge tag, matching the squash-merge SHA); `which` then found the binary; the CLI ran correctly. Both the failure mode AND the fix were demonstrated live in the same session — hence `verified-ci`. |
+
+---
+
+## Superseded from pyproject-scripts-not-def-main
+
+**Original date:** 2026-05-26
+**Original version:** 1.0.0
+
+```yaml
+---
+name: pyproject-scripts-not-def-main
+description: "When sweeping a change across every console_script, enumerate `[project.scripts]` in pyproject.toml — NOT `grep '^def main'`. The grep misses *_main-suffixed callables (e.g. check_version_consistency_main). Use when: (1) adding a flag to every CLI, (2) refactoring shared CLI infrastructure, (3) writing a parametrized integration test that must cover every binary."
+category: tooling
+date: 2026-05-26
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [python, packaging, cli, console-scripts, pyproject]
+---
+```
+
+# Use `[project.scripts]`, Not `grep '^def main'`, for Full CLI Inventory
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-26 |
+| **Objective** | Document why `grep '^def main'` undercounts a project's CLI surface and what to use instead |
+| **Outcome** | Caught 10 missed CLIs in a 41-CLI repo by switching to pyproject-driven enumeration |
+| **Verification** | verified-local (a parametrized integration test caught the misses on the first run) |
+
+## When to Use
+
+- Adding a flag (`--json`, `--quiet`, `--version`, etc.) to every console script in a Python project
+- Refactoring a shared CLI helper (e.g. extracting `add_logging_args`, `format_output`) and need to update every consumer
+- Auditing CLI consistency (exit codes, help text, output format)
+- Writing a parametrized integration test that must cover every binary the package ships
+- Migrating from one CLI framework to another (argparse → click, etc.)
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# In pytest: parametrize over ALL console_scripts
+import tomllib
+from pathlib import Path
+
+def _load_entry_points() -> list[tuple[str, str, str]]:
+    data = tomllib.loads(Path("pyproject.toml").read_text())
+    scripts = data["project"]["scripts"]
+    return [(cmd, *target.partition(":")[::2]) for cmd, target in sorted(scripts.items())]
+```
+
+```bash
+# Quick shell inventory of (command, module:callable):
+python3 -c "
+import tomllib
+print('\n'.join(f'{c}\t{t}' for c,t in tomllib.loads(open('pyproject.toml','rb').read())['project']['scripts'].items()))
+" | sort
+```
+
+### Detailed Steps
+
+**The pitfall:** A natural way to inventory "all CLIs" in a Python repo is:
+
+```bash
+grep -rln '^def main' hephaestus/   # returns 33 files
+```
+
+This works for projects where every entry point is `module:main`. It silently misses entry points that use suffixed names:
+
+```toml
+[project.scripts]
+hephaestus-check-version-consistency = "hephaestus.version.consistency:check_version_consistency_main"
+hephaestus-bench-precommit            = "hephaestus.ci.precommit:bench_precommit_main"
+hephaestus-validate-agents            = "hephaestus.agents.frontmatter:validate_agents_main"
+# ...etc
+```
+
+The grep matches `^def main` but not `^def check_version_consistency_main`. In one verified session, this pattern missed **10 of 41 console_scripts** (24%).
+
+**Why suffixed names exist:** A module can host multiple CLIs (e.g. `hephaestus/validation/markdown.py` exposes BOTH `main` for `hephaestus-validate-links` AND `check_readmes_main` for `hephaestus-check-readmes`). Suffixed names are correct, idiomatic, and not going away.
+
+**Reliable inventory:** Read `pyproject.toml [project.scripts]` directly. It's the source of truth — by definition, every binary the package ships is listed there. Anything you can't see from `[project.scripts]` does not become a binary.
+
+**Detection / regression-prevention:** Write a parametrized integration test that loads `[project.scripts]` at collection time and asserts your invariant on every entry:
+
+```python
+# tests/integration/test_cli_entry_points.py
+@pytest.mark.parametrize("command,module_path,attr", ENTRY_POINTS, ids=ENTRY_POINT_IDS)
+def test_advertises_json_flag(self, command, module_path, attr):
+    binary = shutil.which(command) or pytest.skip(f"{command} not on PATH")
+    result = subprocess.run([binary, "--help"], capture_output=True, text=True, timeout=30)
+    assert "--json" in result.stdout + result.stderr, f"{command} missing --json"
+```
+
+When a new console_script is added, the test parametrize set grows automatically and immediately exercises the invariant. No manual list to maintain.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| `grep -rln '^def main' hephaestus/` | Find every CLI by looking for `def main` | Missed 10 of 41 (24%) — any `*_main` suffix is invisible to the regex | Don't use file-content grep for entry-point inventory |
+| `grep -rln 'def .*_main\|def main'` | Extend regex to suffixed names | Better, but still relies on a naming convention; also matches non-CLI helpers named `*_main` (e.g. test helpers) | Source of truth is config, not convention |
+| `find hephaestus -name '*.py' \| xargs grep -l argparse` | Find files that use argparse | Matches library modules that build parsers but don't ship as CLIs (e.g. shared parser helpers) | Too broad; doesn't distinguish CLI from library |
+| `ls /path/to/venv/bin/hephaestus-*` | List installed binaries | Works AFTER `pip install`, but order-dependent: if you forgot to add a `[project.scripts]` entry, the binary won't exist to be listed | Detects missing config, but won't help you survey what SHOULD be configured |
+| Manual checklist | Maintain a doc listing every CLI | Goes stale within 1 PR; doc rot | Use the parametrized test instead — the test list IS the inventory |
+
+## Results & Parameters
+
+**Observed miss rate:** 10 of 41 (24%) in one ProjectHephaestus session.
+
+**Time-cost-saved:** The first integration-test run after the `^def main` sweep failed loudly with 10 specific CLIs named. Re-grep + fix took 5 minutes. Without the test, the misses would have shipped silently to a PR review where reviewers might also miss them.
+
+**Recipe for "add flag F to every CLI":**
+
+1. **Inventory:** Parse `[project.scripts]` from pyproject.toml. Bucket by module to group co-located CLIs.
+2. **Helper:** Add a shared `add_F_arg(parser)` helper (or `emit_F_envelope` for output, etc.) in your CLI utils module.
+3. **Sweep:** Edit every entry point in the inventory. For modules with multiple `*_main` callables, edit EACH one.
+4. **Test:** Parametrize the integration test over `_load_entry_points()`. Assert the invariant.
+5. **Run:** Test failures name the specific missed entry points. Iterate until 100%.
+
+**Concrete numbers:**
+- pyproject parse + inventory: ~20 LOC of pytest fixture.
+- Test class: ~30 LOC parametrized over the fixture.
+- Catch rate on the first sweep: 76% (31/41); test caught the remaining 24%.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | 2026-05-26 --json sweep across 41 console_scripts (PR #603) | Initial sweep via `grep '^def main'` found 33 files. Parametrized `TestCLIJsonFlag` test caught 10 missing CLIs from `*_main` suffixed callables in `hephaestus/version/consistency.py`, `hephaestus/config/dep_sync.py`, `hephaestus/ci/precommit.py`, `hephaestus/ci/workflows.py`, `hephaestus/agents/frontmatter.py`. Final pass to 41/41 took one additional sub-agent run. |
+
+---
+
+## Superseded from python-packaging-and-distribution
+
+**Original date:** 2026-06-07
+**Original version:** 1.1.0
+
+```yaml
+---
+name: python-packaging-and-distribution
+description: "Canonical guide to Python packaging and distribution: wheel/sdist builds, hatchling/setuptools/hatch-vcs/conan integration, pixi.lock management, PyPI trusted-publishing, pip-audit CVE pinning and allowlists, cross-repo dependency hotfixes, pydantic-migration packaging, wheel-only builds. Use when: (1) shipping a Python package to PyPI, (2) regenerating or rebasing pixi.lock after a dep change, (3) handling a pip-audit CVE finding (override hard-pin / allowlist / migration), (4) configuring hatchling force-include for sdist/wheel parity, (5) packaging Conan-based C++ tooling for PyPI distribution, (6) CI fails with 'lock-file not up-to-date with the workspace', (7) pip-audit step flipped from advisory to fail-fast surfacing CVEs, (8) cross-repo shared lib not yet published to PyPI blocks consumer PRs, (9) hatch-vcs editable install makes pixi.lock perpetually stale, (10) migrating from FetchContent-only to hybrid Conan+CMake packaging, (11) double-rebase pixi.lock commit conflict requiring --skip, (12) second commit in rebase chain patches migrated code, (13) dependency version-pin lock drift (Environment is not consistent with the lockfile), (14) Dependabot multi-PR sequential pixi.lock fixing."
+category: tooling
+date: 2026-06-07
+version: "1.1.0"
+user-invocable: false
+verification: verified-local
+history: python-packaging-and-distribution.history
+tags: [merged, python-packaging, pypi, pixi, hatchling, conan, pip-audit, wheel, hatch-vcs, sdist, trusted-publishing, cve, pixi-lock]
+---
+```
+
+# Python Packaging and Distribution — Canonical Guide
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-18 |
+| **Objective** | Consolidate 24 python-packaging skills into one canonical reference covering wheels/sdist, pixi.lock management, pip-audit CVE workflows, PyPI trusted publishing, and Conan/C++ packaging |
+| **Outcome** | Merged — supersedes all skills listed in `python-packaging-and-distribution.history` |
+| **Verification** | verified-local (individual skills verified-ci / verified-precommit; see history for per-skill verification) |
+
+## When to Use
+
+**Sub-cluster A — Python wheel/sdist/PyPI publishing**
+- Shipping a Python package to PyPI for the first time
+- Setting up OIDC trusted publishing (no API token)
+- CI build fails with `FileNotFoundError: Forced include not found: src/<pkg>/...`
+- `hatch build` produces both `.tar.gz` and `.whl` and you want wheel-only
+- Centralizing shared validation scripts into a PyPI package with CLI entry points
+
+**Sub-cluster B — Pixi / lock management**
+- CI fails with `lock-file not up-to-date with the workspace`
+- Multiple open PRs all fail identical lock CI jobs after a version bump on main
+- `git rebase` causes `pixi.lock` conflicts
+- hatch-vcs editable install invalidates `pixi.lock` on every commit
+- `pixi: command not found` in a GitHub Actions workflow
+- Package appears in both `[dependencies]` and `[feature.dev.dependencies]` with conflicting constraints
+- Accidentally committed `.pixi/envs/` causing ruff F403 and pixi install failures
+- A branch rebased a second time conflicts on the prior pixi.lock-fix commit (use `--skip`)
+- Second commit in a rebase chain patches code migrated to an external package (functions no longer exist)
+- CI error `"Environment is not consistent with the lockfile"` (version-pin lock drift, distinct from `"lock-file not up-to-date"`)
+- Multiple Dependabot PRs need sequential pixi.lock fixes — never run in parallel
+
+**Sub-cluster C — Conan / C++ build-system packaging**
+- CMake configure fails with `Could not find toolchain file: build/*/conan_toolchain.cmake`
+- Code Coverage CI fails with `find_package` errors while other jobs pass
+- CMake error `target prometheus-cpp::pull was not found`
+- `validate-conan-install.sh` fails on Debian 11 / Ubuntu 20.04 (CMake 3.16–3.19)
+- Migrating a FetchContent-only C++20 project to hybrid Conan + FetchContent
+
+**Sub-cluster D — Dependency scanning (pip-audit / CVE pinning)**
+- pip-audit step is being flipped from advisory mode to fail-fast
+- CVEs flagged in transitive deps that upstream hard-pins with `==`
+- Bumping upstream alone does NOT clear CVEs (upstream keeps `==` pins)
+- CVEs in runner-image baseline packages (pip, setuptools, urllib3) that the repo doesn't control
+- pixi-managed project with CVEs in indirect PyPI dependencies
+
+**Sub-cluster E — Cross-repo / pydantic / symbol rename**
+- Consumer repo PRs fail because a shared lib version isn't published to PyPI yet
+- Incomplete Pydantic v2 migration causes `AttributeError: 'ClassName' has no 'model_dump'`
+- Renaming Python symbols across src/, tests/, scripts/
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# ── A: PyPI trusted publishing (OIDC) ──────────────────────────────────────
+# Push a vX.Y.Z tag → release.yml uses pypa/gh-action-pypi-publish@release/v1
+git tag v1.0.0
+git push origin v1.0.0
+# pyproject.toml [project] name MUST exactly match PyPI project name
+# Requires id-token: write + environment: pypi + pending publisher for NEW projects
+
+# ── A: Wheel-only hatchling build ──────────────────────────────────────────
+# Add to pyproject.toml ABOVE [tool.hatch.build.targets.wheel]:
+# [tool.hatch.build]
+# targets = ["wheel"]
+
+# ── A: Remove force-include that breaks sdist→wheel build ──────────────────
+# Delete [tool.hatch.build.targets.wheel.force-include] — if all paths are under
+# packages = ["src/pkg"], force-include is redundant AND breaks CI two-step build.
+
+# ── B: Single-branch pixi.lock fix ─────────────────────────────────────────
+git fetch origin
+git rebase origin/main
+pixi install          # NOT pixi update — install regenerates only the affected SHA
+git add pixi.lock
+git commit -m "fix(deps): regenerate pixi.lock after rebase on main"
+git push --force-with-lease origin <branch>
+
+# ── B: Multi-branch parallel pixi.lock fix (5 PRs) ─────────────────────────
+REPO_DIR="$HOME/.agent-brain/<repo>"
+git -C "$REPO_DIR" fetch origin
+for branch in branch1 branch2 branch3; do
+  dir="/tmp/fix-pr-${branch}"
+  git -C "$REPO_DIR" worktree add "$dir" "origin/${branch}"
+  (cd "$dir" && git rebase origin/main && pixi install && git add pixi.lock \
+   && git commit -m "fix(deps): regenerate pixi.lock after rebase" \
+   && git push --force-with-lease "origin/${branch}") &
+done
+wait
+
+# ── B: hatch-vcs / editable-install pixi.lock perpetual-stale fix ──────────
+# Add locked: false to EVERY setup-pixi step in ALL workflow files:
+# uses: prefix-dev/setup-pixi@v0.9.5
+# with:
+#   pixi-version: v0.63.2
+#   locked: false  # required when hatch-vcs editable path dep is in pixi.toml
+
+# ── B: pixi setup order — always install pixi before pixi commands ──────────
+# steps:
+#   - uses: actions/checkout@v4
+#   - uses: ./.github/actions/setup-pixi   # or prefix-dev/setup-pixi@v0.8.1
+#   - run: pixi install --locked
+
+# ── B: pixi.toml dep dedup ─────────────────────────────────────────────────
+grep -n "pytest\|<pkg>" pixi.toml
+# Remove the weaker [feature.dev.dependencies] duplicate; keep [dependencies] spec
+
+# ── B: Accidentally committed .pixi/envs/ ──────────────────────────────────
+git ls-files '**/.pixi/' | head -5   # ANY output = bug found
+git rm -r --cached clients/python/.pixi
+echo '.pixi/' >> .gitignore && echo '.venv/' >> .gitignore
+git add .gitignore && git commit -S -m "fix(ci): untrack committed .pixi/envs/ venv"
+
+# ── B: Double-rebase pixi.lock conflict (Phase 3c) ─────────────────────────
+# When a branch with a prior pixi.lock-fix commit is rebased again and that commit conflicts:
+git rebase --skip      # skip the stale pixi.lock commit entirely
+pixi install           # regenerate fresh
+git add pixi.lock
+git commit -m "fix(deps): regenerate pixi.lock after rebase on main"
+git push --force-with-lease origin <branch>
+
+# ── B: Fix branch for lock drift — always base off origin/main ─────────────
+git checkout origin/main -b fix/<name>   # NOT local main (may be 33+ commits behind)
+
+# ── B: Amend pattern after conflict resolution ─────────────────────────────
+# When pixi.lock is untracked after conflict resolution, fold into current commit:
+git add pixi.lock
+git commit --amend --no-edit
+
+# ── B: Divergence check before rebasing ────────────────────────────────────
+git log --oneline origin/<branch>..HEAD    # commits local has that origin doesn't
+
+# ── C: Conan install in GitHub Actions ─────────────────────────────────────
+# Add before cmake configure step:
+# - name: Install dependencies
+#   run: |
+#     sudo apt-get install -y ninja-build
+#     pip install conan
+#     conan profile detect --force
+# - name: Install Conan dependencies
+#   run: conan install . --build=missing -s build_type=Debug --output-folder build/debug
+
+# ── C: Coverage script — pass toolchain file ───────────────────────────────
+CONAN_TOOLCHAIN="$PROJECT_ROOT/build/conan-deps/conan_toolchain.cmake"
+CMAKE_ARGS=(-DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug -G Ninja)
+[[ -f "$CONAN_TOOLCHAIN" ]] && CMAKE_ARGS+=(-DCMAKE_TOOLCHAIN_FILE="$CONAN_TOOLCHAIN")
+cmake "${CMAKE_ARGS[@]}" "$PROJECT_ROOT"
+
+# ── C: prometheus-cpp — link correct target ────────────────────────────────
+# conanfile.py: self.options["prometheus-cpp"].with_pull = False
+# CMakeLists.txt: target_link_libraries(${PROJECT_NAME} PUBLIC prometheus-cpp::core)
+
+# ── D: pip-audit CVE — pixi-managed (bump lower bound) ────────────────────
+# pixi.toml:
+# [feature.dev.pypi-dependencies]
+# pytest = ">=9.0.3"   # CVE-2025-71176
+# pygments = ">=2.20.0"  # CVE-2026-4539
+pixi install && pixi run pip-audit   # verify 0 CVEs
+
+# ── D: pip-audit CVE — upstream hard-pin (two-pass install) ────────────────
+# requirements.txt:          upstream==<latest>
+# requirements-security-overrides.txt: GitPython>=<fixed>  # CVE-...
+pip install --no-cache-dir -r requirements.txt
+pip install --no-cache-dir --upgrade -r requirements-security-overrides.txt
+<binary> --version   # smoke check
+
+# ── D: pip-audit CVE — runner-baseline or no-upstream-fix (allowlist) ──────
+# In CI workflow:
+# pip-audit \
+#   --ignore-vuln GHSA-XXXX-XXXX-XXXX \
+#   --ignore-vuln CVE-YYYY-NNNNN
+# Open tracking issue first; reference its number in the inline comment.
+# No || true, no --exit-code 0, no --exit-zero.
+
+# ── D: pip-audit severity filter (pixi task) ──────────────────────────────
+# pixi.toml:
+# [feature.lint.pypi-dependencies]
+# pip-audit = ">=2.8"
+# [feature.lint.tasks]
+# pip-audit = "pip-audit --min-severity high"
+
+# ── E: Cross-repo shared lib not published yet ─────────────────────────────
+# 1. Publish: git tag vX.Y.Z && git push origin vX.Y.Z
+# 2. Fix pixi.toml path dep → PyPI version: homericintelligence-hephaestus = ">=0.6.0,<1"
+# 3. pixi lock && git add pixi.toml pixi.lock && git rebase origin/main
+```
+
+### Sub-cluster A: Python wheel/sdist/PyPI
+
+#### A1. PyPI Trusted Publishing (OIDC)
+
+Key checklist:
+
+1. `pyproject.toml [project] name` must **exactly** match the PyPI project name.
+2. GitHub environment `pypi` with deployment tag pattern `v*`.
+3. Workflow: `permissions: id-token: write` at top level.
+4. **New projects**: add a **pending publisher** at pypi.org/manage/account/publishing/. (Existing projects: add trusted publisher in project settings.)
+5. Use `pypa/gh-action-pypi-publish@release/v1` with `verbose: true` while debugging.
+6. Wheel filenames are PEP 625 normalized to lowercase (`orgname_projectname-*.whl`).
+
+```yaml
+# .github/workflows/release.yml (minimal verified pattern)
+name: Release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+  id-token: write
+jobs:
+  build-and-publish:
+    environment: pypi
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pixi
+      - run: pixi run python -m build
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          verbose: true
+```
+
+#### A2. Hatchling force-include Breaks sdist→Wheel
+
+`python -m build --no-isolation` runs two steps: sdist first, then wheel from the unpacked sdist. `force-include` paths are resolved relative to the sdist directory, not the repo root → `FileNotFoundError`. Fix: remove `force-include` entirely if the paths are already under `packages`.
+
+```toml
+# BEFORE (breaks two-step build):
+[tool.hatch.build.targets.wheel.force-include]
+"src/scylla/analysis/schemas" = "scylla/analysis/schemas"
+
+# AFTER (correct — packages already includes all subdirs recursively):
+[tool.hatch.build.targets.wheel]
+packages = ["src/scylla"]
+```
+
+#### A3. Wheel-Only Build
+
+```toml
+[tool.hatch.build]
+targets = ["wheel"]          # add ABOVE the targets.wheel section
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mypkg"]
+```
+
+`hatch build -t sdist` still works on demand; `hatch build` now produces only `.whl`.
+
+#### A4. Centralizing Shared Scripts into a PyPI Package
+
+Module pattern for each script:
+
+```python
+def check_something(repo_root: Path, verbose: bool = False) -> tuple[bool, dict]:
+    """Testable — never calls sys.exit()."""
+    ...
+
+def main() -> int:
+    parser = argparse.ArgumentParser(...)
+    args = parser.parse_args()
+    passed, _ = check_something(args.repo_root or get_repo_root(), args.verbose)
+    return 0 if passed else 1
+
+if __name__ == "__main__":
+    sys.exit(main())
+```
+
+CLI entry points in `pyproject.toml`:
+
+```toml
+[project.scripts]
+hephaestus-check-foo = "hephaestus.validation.foo:main"
+
+[project.optional-dependencies]
+toml = ["tomli>=2.0,<3;python_version<'3.11'"]
+schema = ["jsonschema>=4.0,<5"]
+```
+
+Use `pytest.importorskip()` **inside** each test method (not at class/module level — it raises `Skipped` at collection time and skips everything).
+
+### Sub-cluster B: Pixi / Lock Management
+
+#### B1. Diagnosing lock staleness
+
+```bash
+# Is it main or the branch?
+git checkout main && git pull --ff-only
+pixi install --locked
+# FAILS → fix main first (hotfix PR); PASSES → fix branches individually
+
+# Quick diagnostic
+pixi install --locked 2>&1 | grep -q "not up-to-date" && echo "MAIN IS BROKEN"
+```
+
+**`pixi install` vs `pixi update`**: Use `pixi install` for SHA-only staleness (1-line diff). `pixi update` re-resolves the entire dep graph and produces a ~50-line diff — avoid for routine lock fixups.
+
+**Version skew**: If local pixi binary is newer than CI's pinned version, CI rejects the regenerated lock with a schema error. Fix: install CI's exact pinned pixi version locally, then regenerate.
+
+#### B2. hatch-vcs + editable pixi.lock perpetual staleness
+
+Root cause: hatch-vcs derives version from git SHA → new wheel hash per commit → pixi.lock stale on every push. `pixi install` regenerates the SHA but the next commit immediately invalidates it. Fix: `locked: false` on every `setup-pixi` step in every workflow file.
+
+```yaml
+- uses: prefix-dev/setup-pixi@v0.9.5
+  with:
+    pixi-version: v0.63.2
+    locked: false  # required when hatch-vcs editable path dep is in pixi.toml
+```
+
+Audit all workflow files:
+
+```bash
+grep -rn "setup-pixi" .github/workflows/ | grep -v "locked: false"
+# Must produce zero output after fix
+```
+
+#### B3. Pixi CI setup order
+
+Runners do **not** have pixi pre-installed. Correct order every time:
+
+```yaml
+steps:
+  - uses: actions/checkout@v4
+  - uses: ./.github/actions/setup-pixi    # must come AFTER checkout
+  - run: pixi install --locked
+```
+
+Audit for missing setup:
+
+```bash
+grep -l "run:.*pixi " .github/workflows/*.yml | while read f; do
+  grep -q "setup-pixi\|prefix-dev/setup-pixi" "$f" || echo "MISSING: $f"
+done
+```
+
+#### B4. pixi.toml dep dedup
+
+When the same package appears in both `[dependencies]` and `[feature.dev.dependencies]`, remove the weaker dev duplicate. The `[dependencies]` spec is authoritative (active in all environments).
+
+#### B5. Accidentally committed `.pixi/envs/` or `.venv/`
+
+```bash
+# DIAGNOSE first (any output = bug)
+git ls-files | grep -E '(^|/)\.pixi/envs/' | head -10
+git ls-files | grep -E '(^|/)\.venv/' | head -10
+
+# FIX (keeps files on disk)
+git rm -r --cached clients/python/.pixi    # adjust path
+
+# PREVENT
+grep -qxF '.pixi/' .gitignore || echo '.pixi/' >> .gitignore
+grep -qxF '.venv/' .gitignore || echo '.venv/' >> .gitignore
+
+# COMMIT (expect thousands of deletions — correct)
+git commit -S -m "fix(ci): untrack accidentally-committed .pixi/envs/ venv"
+```
+
+Prevention — project-template `.gitignore` minimum:
+
+```gitignore
+.pixi/
+.venv/
+venv/
+__pycache__/
+*.egg-info/
+```
+
+#### B6. Pixi shell-only repo setup (go-yq not yq)
+
+```toml
+[workspace]
+name = "myrepo"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[dependencies]
+go-yq = ">=4.44"    # CRITICAL: NOT "yq" — that installs python-yq v3
+bats-core = ">=1.11"
+shellcheck = ">=0.10"
+jq = ">=1.7"
+```
+
+#### B7. pixi.lock Rebase Edge Cases
+
+##### Phase 3c: Double-Rebase pixi.lock Commit Conflict
+
+When a branch already has a pixi.lock-fix commit (from a prior rebase) and is rebased again:
+
+```
+CONFLICT (content): Merge conflict in pixi.lock
+error: could not apply <sha>... fix(deps): regenerate pixi.lock after rebase
+```
+
+The prior pixi.lock-fix commit conflicts with the newly-rebased state. Resolution:
+
+```bash
+git rebase --skip      # skip the now-stale pixi.lock commit entirely
+# After rebase completes:
+pixi install           # regenerate fresh from the current state
+git add pixi.lock
+git commit -m "fix(deps): regenerate pixi.lock after rebase on main"
+git push --force-with-lease origin <branch>
+```
+
+**Why `--skip` and not `--continue`**: The pixi.lock-fix commit's entire purpose was to
+regenerate pixi.lock. After the new rebase, the lock needs to be regenerated fresh anyway —
+the old regeneration commit is entirely superseded. Skipping it is semantically correct.
+
+##### Phase 3d: Multi-Commit Rebase Where Second Commit Is Superseded
+
+When a branch has two commits — a structural change (Commit A) followed by a follow-on fix (Commit B)
+to local scripts that have since been migrated to an external package as thin wrapper stubs:
+
+```
+Commit A: chore(deps): separate dev from production dependencies in pixi.toml
+Commit B: fix(deps): fix pixi.lock and version-drift checkers for dev/prod split
+```
+
+Between branch creation and rebase, `main` rewrote the scripts Commit B patches as one-line wrappers:
+
+```python
+# New form on main — the functions Commit B patched no longer exist
+from hephaestus.config.dep_sync import *  # noqa: F401,F403
+```
+
+**Rebase flow:**
+
+```bash
+git fetch origin
+git rebase origin/main
+# Commit A applies cleanly → continue rebase
+
+# Commit B conflicts — the files it patches are now thin wrappers on main
+# Accept main's version of ALL conflicted files:
+git checkout HEAD -- scripts/check_dep_sync.py scripts/check_precommit_versions.py
+git checkout HEAD -- pixi.lock   # if pixi.lock is also conflicted
+
+# The commit is now empty — skip it entirely:
+git rebase --skip       # NOT --continue (which would create an empty commit)
+
+# After rebase completes: re-run pixi install for any new environments from Commit A
+pixi install
+git add pixi.lock
+git commit -m "fix(deps): regenerate pixi.lock after rebase on main"
+git push --force-with-lease origin <branch>
+gh pr merge <pr-number> --auto --rebase
+```
+
+**Key distinction**: Use `--skip` (not `--continue`) when ALL conflicts in a commit are resolved
+by accepting `HEAD`'s version — the commit becomes empty and must be dropped to avoid polluting
+history with a no-op commit.
+
+**Signal that this pattern applies:**
+
+- Commit B patches functions or logic that simply does not exist in the current files on main
+- After `git checkout HEAD -- <files>`, running `git diff --cached` shows zero staged changes
+- The commit message of Commit B references "fixing" or "patching" scripts that main now delegates to an external package
+
+##### Phase 3e: Dependency Version-Pin Lock Drift
+
+When `pixi.toml` pins a specific version (e.g., `shellcheck = "0.10.0.*"`) but `pixi.lock` still
+references the old version, CI reports `"Environment is not consistent with the lockfile"`.
+This is distinct from `"lock-file not up-to-date"` — it indicates version-constraint mismatch rather
+than hash mismatch.
+
+```bash
+# Fix: create branch off origin/main (not local main which may be stale)
+git checkout origin/main -b fix/pixi-lock-drift
+
+# Copy the file that needs updating if blocked by Safety Net:
+git show <source-branch>:<file> > <file>
+
+# Regenerate the lock
+pixi install
+
+# Commit and push
+git add pixi.lock pixi.toml  # include pixi.toml if it changed
+git commit -m "fix(deps): regenerate pixi.lock after dependency version pin"
+git push -u origin fix/pixi-lock-drift
+gh pr create ...
+```
+
+**Why base off `origin/main` not local `main`**: Local `main` may be 33+ commits behind if
+the local clone hasn't been synced recently. Basing off a stale local `main` causes push conflicts
+(`non-fast-forward`). Use `git checkout origin/main -b <branch>` to guarantee a fresh base.
+
+#### B8. Dependabot Multi-PR Sequential Fixing
+
+When fixing multiple Dependabot PRs in sequence, **always re-fetch between each PR** and run fixes
+**sequentially, not in parallel** — shared lock file state causes conflicts during resolution.
+
+```bash
+# Pattern for each PR in sequence (not in parallel):
+git fetch origin          # always re-fetch before each rebase
+git checkout <next-branch>
+git rebase origin/main
+pixi install
+git add pixi.lock
+git commit -m "chore: regenerate pixi.lock for updated dependencies"
+git push --force-with-lease origin <branch>
+gh pr merge <pr-number> --auto --rebase
+```
+
+**Divergence check before rebasing**: before each rebase, confirm local and remote are not diverged:
+
+```bash
+git log --oneline origin/<branch>..HEAD    # commits local has that origin doesn't
+git log --oneline HEAD..origin/<branch>    # commits origin has that local doesn't
+```
+
+**Amend pattern after conflict resolution**: when `pixi.lock` shows as untracked after conflict
+resolution (rebase deleted it, then `pixi install` regenerated it), fold it into the existing commit:
+
+```bash
+git add pixi.lock
+git commit --amend --no-edit    # fold regenerated pixi.lock into the rebase commit
+```
+
+### Sub-cluster C: Conan / C++ Build-System Packaging
+
+#### C1. Add conan install step to GitHub Actions
+
+```yaml
+- name: Install dependencies
+  run: |
+    sudo apt-get install -y ninja-build
+    pip install conan
+    conan profile detect --force
+
+- name: Install Conan dependencies
+  env:
+    BUILD_TYPE: ${{ matrix.build_type }}
+  run: |
+    BUILD_TYPE_CAP=$(echo "$BUILD_TYPE" | sed 's/./\u&/')
+    conan install . --build=missing -s build_type="$BUILD_TYPE_CAP" \
+      --output-folder "build/$BUILD_TYPE"
+```
+
+Apply to all three workflow files: `build-test.yml`, `static-analysis.yml`, `code-coverage.yml`.
+
+#### C2. Coverage scripts and the Conan toolchain
+
+Every `cmake` call in a Conan project needs `-DCMAKE_TOOLCHAIN_FILE` if it runs `find_package`. CI coverage jobs often have two phases: Makefile/preset build (toolchain automatic) then a coverage shell script (does NOT inherit context).
+
+```bash
+CONAN_TOOLCHAIN="$PROJECT_ROOT/build/conan-deps/conan_toolchain.cmake"
+CMAKE_ARGS=(-DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug -G Ninja)
+[[ -f "$CONAN_TOOLCHAIN" ]] && CMAKE_ARGS+=(-DCMAKE_TOOLCHAIN_FILE="$CONAN_TOOLCHAIN")
+cmake "${CMAKE_ARGS[@]}" "$PROJECT_ROOT"
+```
+
+#### C3. prometheus-cpp: conan option / CMake target alignment
+
+| Goal | Conan `with_*` | CMake target |
+|------|---------------|--------------|
+| Emit text metrics (GET /metrics) | `with_pull=False` | `prometheus-cpp::core` |
+| Embedded HTTP pull server | `with_pull=True` | `prometheus-cpp::pull` |
+| Push gateway client | `with_push=True` | `prometheus-cpp::push` |
+
+Always use `PUBLIC` linkage so transitive headers propagate correctly.
+
+#### C4. Hybrid Conan 2.x + FetchContent for C++20
+
+```bash
+# Single repo build
+conan install . --output-folder=build/debug --profile=conan/profiles/debug --build=missing
+cmake --preset debug
+cmake --build --preset debug
+
+# Multi-repo meta install
+just install   # see conanfile.py exports for cross-repo install pattern
+```
+
+Key patterns: use `CMakePresets.json` with `toolchainFile` pointing to `build/${presetName}/conan_toolchain.cmake`. Keep FetchContent for deps not on ConanCenter (nats.c, cista).
+
+#### C5. CMake version mismatch on older distros
+
+If `validate-conan-install.sh` fails on Debian 11 / Ubuntu 20.04 (CMake 3.16–3.19):
+
+```bash
+# Option A: use pixi cmake in the script
+pixi run cmake --version   # conda-forge provides 3.20+
+
+# Option B: lower cmake_minimum_required in consumer test project
+# cmake_minimum_required(VERSION 3.16)   # toolchain file works from 3.16+
+```
+
+### Sub-cluster D: pip-audit / CVE Pinning
+
+#### D1. CVE pinning in pixi-managed projects
+
+```toml
+[feature.dev.pypi-dependencies]
+pytest = ">=9.0.3"    # CVE-2025-71176
+pygments = ">=2.20.0" # CVE-2026-4539
+```
+
+```bash
+pixi install       # regenerates pixi.lock
+pixi run pip-audit # must exit 0
+git add pixi.toml pixi.lock
+git commit -m "fix(deps): bump pytest>=9.0.3, pygments>=2.20.0 to resolve CVEs"
+```
+
+Wildcard `"*"` allows pixi to settle on vulnerable versions — always add explicit lower bounds for flagged packages, even indirect ones.
+
+#### D2. Two-pass pip install to override upstream hard-pins
+
+When an upstream hard-pins transitive deps with `==`, a single pip invocation raises `ResolutionImpossible`. Split into two files:
+
+```
+# requirements.txt
+upstream==<latest>
+
+# requirements-security-overrides.txt
+# Security overrides — two-pass pattern. upstream hard-pins these at vulnerable
+# versions; separate --upgrade pass deliberately replaces them.
+GitPython>=<fixed>    # CVE-XXXX-XXXXX
+Pillow>=<fixed>       # CVE-YYYY-YYYYY
+urllib3>=<fixed>      # CVE-ZZZZ-ZZZZZ
+```
+
+```dockerfile
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+RUN pip install --no-cache-dir --upgrade -r /tmp/requirements-security-overrides.txt
+RUN <binary> --version   # smoke check
+```
+
+**Escalation rule**: cap override attempts at ~3 deps per upstream. If Trivy keeps surfacing new HIGH CVEs in *different* transitive deps from the same upstream after 3 overrides, disable the vessel in CI (`if: false` / matrix removal) and open a tracking issue.
+
+#### D3. pip-audit `--ignore-vuln` allowlist with tracking issue
+
+For runner-baseline CVEs (pip, setuptools, etc.) or transitive deps with no upstream fix:
+
+```bash
+# 1. Open tracking issue first
+gh issue create --repo HomericIntelligence/<repo> \
+  --title "pip-audit: runner-image CVEs allowlist (review $(date -d '+90 days' +%Y-%m-%d))" \
+  --body "..."
+
+# 2. Add --ignore-vuln flags (NO || true, NO --exit-code 0)
+pip-audit \
+  --ignore-vuln GHSA-XXXX-XXXX-XXXX \
+  --ignore-vuln CVE-YYYY-NNNNN
+  # Allowlist tied to issue #<N> (review YYYY-MM-DD)
+```
+
+Decision tree:
+
+- **Own dep** (in `pixi.toml`) → bump version (D1)
+- **Upstream hard-pin** → two-pass install (D2)
+- **Runner-baseline or no upstream fix** → `--ignore-vuln` + tracking issue (D3)
+- **pixi project, severity filter acceptable** → `pip-audit --min-severity high` in pixi task
+
+#### D4. pip-audit severity filter (pixi task)
+
+```toml
+[feature.lint.pypi-dependencies]
+pip-audit = ">=2.8"
+
+[feature.lint.tasks]
+pip-audit = "pip-audit --min-severity high"
+```
+
+CI workflow step unchanged: `pixi run --environment lint pip-audit`. The task definition bakes in the flags.
+
+### Sub-cluster E: Cross-Repo / Pydantic / Symbol Rename
+
+#### E1. Cross-repo dep: publish then fix consumer PRs
+
+```bash
+# 1. Publish shared lib via git tag (OIDC)
+git tag vX.Y.Z && git push origin vX.Y.Z
+gh run list --workflow release.yml --limit 3   # wait for completion
+pip install homericintelligence-hephaestus==X.Y.Z --dry-run  # confirm
+
+# 2. Fix each consumer PR
+# pixi.toml: replace path dep with PyPI version
+# homericintelligence-hephaestus = ">=X.Y.Z,<N+1"
+pixi lock
+git rebase origin/main && git push --force-with-lease
+
+# 3. Check published API vs branch usage
+pip show homericintelligence-hephaestus | grep -i requires
+```
+
+Never use path deps in CI. Path deps work locally but CI doesn't have the sibling repo.
+
+#### E2. Incomplete Pydantic migration
+
+Pattern: some classes migrated to `BaseModel` (`.model_dump()`), others still dataclasses (`.to_dict()`).
+
+```python
+# If a class is still @dataclass, revert test calls:
+config_dict = config.to_dict()   # not .model_dump()
+
+# Resilient assertions for partially-migrated code:
+assert len(volumes) >= 3         # not == 3
+```
+
+#### E3. Python symbol rename across codebase
+
+```bash
+# 1. Discover
+grep -rn "<old_name>" src/ tests/ scripts/ --include="*.py" -l
+
+# 2. File renames — preserve history
+git mv src/pkg/automation/old_name.py src/pkg/automation/new_name.py
+
+# 3. Symbol renames (most-specific first)
+sed -i 's/_old_private_name/_new_private_name/g' $(grep -rl "_old_private_name" src/ --include="*.py")
+
+# 4. Verify only prose remains
+grep -rn "old_name" src/ tests/ scripts/ --include="*.py"
+# Expected: only comments/docstrings
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| `force-include` path fix (relative) | Changed `"src/pkg/path"` to `"path"` in force-include | Still fails — hatchling CWD during wheel-from-sdist is the sdist root, not the package dir | `force-include` cannot be made reliable in sdist→wheel builds regardless of path form |
+| `pixi update` to fix stale lock | Ran `pixi update` instead of `pixi install` | Re-resolved the entire dep graph; 50-line diff with unrelated bumps | Use `pixi install` for SHA-only staleness; `pixi update` for intentional dep upgrades |
+| `--ours`/`--theirs` to resolve pixi.lock conflict | Accepted one side of the lock conflict during rebase | Either side is stale relative to the rebased branch's actual pixi.toml | Never use `--ours`/`--theirs` for pixi.lock; always run `pixi install` fresh after rebase |
+| Single-file `==` + `>=` pip override | Added upstream `==` pin and `>=` security override in same `requirements.txt` | pip's resolver raises `ResolutionImpossible` — conflicting constraints in a single pass | Two separate `pip install` invocations (two resolver passes) are required |
+| `pip-audit --ignore-package` | Tried per-package allowlist flag | Flag does not exist in pip-audit 2.x; CLI fails with `unrecognized arguments` | Use `--ignore-vuln <ID>` per finding ID; no per-package ignore exists |
+| pip-audit `\|\| true` suppression | Wrapped pip-audit in `\|\| true` to avoid blocking CI | Banned by `ci-cd-forbid-suppressions-pygrep-lint-guard`; silently swallows all findings | Use `--ignore-vuln <ID>` per finding with tracking issue; never suppress wholesale |
+| Runner-baseline CVE — bump in pixi.toml | Added `pip = ">=25.3"` to pixi.toml to fix runner-image CVE | Runner-image packages live in the system Python env, not the repo's pixi env | When the flagged package is from the runner image, use `--ignore-vuln` allowlist pattern |
+| Linking `prometheus-cpp::pull` when `with_pull=False` | Used `::pull` CMake target with Conan option disabled | Conan only generates CMake targets for components with matching `with_*=True` | CMake target must exactly match the enabled Conan option set |
+| Path dep in CI pixi.toml | `{ path = "../ProjectHephaestus", editable = true }` in consumer repo | CI doesn't have the sibling repo checked out | Always use PyPI version constraint in pixi.toml; path deps only for local dev |
+| Regenerating pixi.lock to fix tracked venv | Ran `pixi install` repeatedly while `.pixi/envs/` was tracked by git | Pixi can't take ownership of the env directory; git owns every file in it | Run `git ls-files '**/.pixi/'` FIRST; tracked venv is a different bug class than lock staleness |
+| `ruff check --fix` for stdlib F403 errors | Tried to fix ruff F403 on committed stdlib files | Thousands of violations in committed stdlib — unfixable | If ruff reports errors at `.pixi/envs/` paths, the venv is tracked in git; that is the bug |
+| conan install for fixed build_type with lowercase | `conan install . -s build_type="debug"` (lowercase) | Conan rejects lowercase; expects `Debug` | Capitalize with `sed 's/./\u&/'` before passing to `-s build_type=` |
+| Only fixing build-test.yml for missing conan | Applied conan install fix to one workflow file | Static-analysis and code-coverage workflows still failed at configure | All workflow files that run cmake configure need the conan install step |
+| hatch-vcs lock regeneration (not `locked: false`) | Regenerated pixi.lock to fix the staleness for one commit | Next commit produced a new SHA → new wheel hash → stale again immediately | `locked: false` on all setup-pixi steps is the only durable fix |
+| Allowlist committed without tracking issue | Added `--ignore-vuln` flags without opening a tracking issue | Six months later no one remembers why CVEs were ignored; list drifted permanent | Always open tracking issue first; set a review date; reference issue number in comment |
+| `pytest.mark.skipif(pytest.importorskip(...))` at class level | Applied `importorskip` decorator at class level | Raises `Skipped` at collection time — entire module skipped, 0 tests collected | Use `pytest.importorskip()` inside individual test methods only |
+| Parallel pixi install for Dependabot PRs | Ran `pixi install` across multiple worktrees simultaneously | Shared lock file state caused conflicts during resolution | Run Dependabot pixi.lock fixes sequentially per PR, not in parallel; always re-fetch between each PR |
+| `git rebase --continue` on double-rebase pixi.lock conflict | Tried to resolve conflict and continue after the prior pixi.lock-fix commit conflicted | The prior pixi.lock-fix commit is entirely stale; continuing produces a broken lock | Use `git rebase --skip` to discard the stale commit, then `pixi install` fresh |
+| `git rebase --continue` after resolving empty commit (migrated-code scenario) | After accepting `HEAD` for all conflicted files in Commit B, tried `git rebase --continue` | Creates an empty commit that pollutes history with a no-op; may also trigger pre-commit failure on zero-change commit | When all conflicts are resolved by accepting `HEAD`'s version entirely — the commit adds nothing — use `git rebase --skip` to drop it |
+| Creating fix branch off stale local `main` | Ran `git checkout -b fix/pixi-lock-drift main` when local main was 33 commits behind origin/main | Push rejected as non-fast-forward; had to delete branch and recreate | Always use `git checkout origin/main -b fix/<name>` — bypasses local branch staleness entirely |
+| Committing only `pixi.toml` without regenerating `pixi.lock` | Updated version pin in pixi.toml but forgot to run `pixi install` before committing | CI immediately fails with "Environment is not consistent with the lockfile" — the lockfile SHA doesn't match the new constraint | Always run `pixi install` and commit the updated `pixi.lock` alongside any `pixi.toml` change |
+
+## Results & Parameters
+
+### Decision Matrix: Which pip-audit strategy to use?
+
+| Situation | Strategy | Skill section |
+|-----------|----------|---------------|
+| CVE in own dep (`pixi.toml`) | Bump lower bound | D1 |
+| Upstream hard-pins transitive dep with `==` | Two-pass pip install | D2 |
+| CVE in runner-image baseline (pip, setuptools) | `--ignore-vuln` + tracking issue | D3 |
+| Want blanket HIGH/CRITICAL filter | `--min-severity high` in pixi task | D4 |
+
+### pixi.lock: `pixi install` vs `pixi update`
+
+| Use case | Command | Diff size |
+|----------|---------|-----------|
+| SHA-only staleness (comment edit, minor pyproject change) | `pixi install` | 1 line |
+| Post-rebase lock refresh | `pixi install` | 1–5 lines |
+| Intentional dep version bump | `pixi update` | ~50 lines |
+| Never | `pixi update` for routine lock fixups | N/A |
+
+### PyPI namespace package naming
+
+| Repo | PyPI Name | Import | Wheel |
+|------|-----------|--------|-------|
+| ProjectHephaestus | `HomericIntelligence-Hephaestus` | `import hephaestus` | `homericintelligence_hephaestus-*.whl` |
+| ProjectKeystone | `HomericIntelligence-Keystone` | `import keystone` | `homericintelligence_keystone-*.whl` |
+
+### Verified pip-audit allowlist deployments
+
+| Repo | PR | Tracking issue | CVE count | Review date |
+|------|-----|----------------|-----------|-------------|
+| HomericIntelligence/Myrmidons | #712 | #713 | 37 IDs across 15 packages | 2026-08-08 |
+| HomericIntelligence/AchaeanFleet | #656 | #655 | 57 IDs across 14 packages | 2026-08-10 |
+| HomericIntelligence/ProjectOdyssey | #5387 | #5386 | 13 IDs across 5 packages | 2026-08-11 |
+
+### Conan component / option / target mapping
+
+| Goal | Conan option | CMake target |
+|------|--------------|--------------|
+| Emit metrics as text (GET /metrics) | `with_pull=False` | `prometheus-cpp::core` |
+| Embedded HTTP pull server | `with_pull=True` | `prometheus-cpp::pull` |
+| Pushgateway client | `with_push=True` | `prometheus-cpp::push` |
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| HomericIntelligence/ProjectScylla | PRs #1905, #1741–1744, multiple audit PRs | hatchling force-include, cross-repo dep publish, pip-audit CVE pinning |
+| HomericIntelligence/Myrmidons | PRs #350, #712, #713 | pixi CI setup order, pip-audit allowlist |
+| HomericIntelligence/AchaeanFleet | PRs #656, #662 | pip-audit allowlist, two-pass pip override |
+| HomericIntelligence/ProjectOdyssey | PR #5387 | pip-audit allowlist |
+| HomericIntelligence/ProjectAgamemnon | PRs #292, #400 | prometheus-cpp CMake target, committed venv fix |
+| HomericIntelligence/ProjectKeystone | PR #340 | Conan coverage script toolchain |
+
+---
