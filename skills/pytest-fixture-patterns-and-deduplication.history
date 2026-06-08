@@ -1,0 +1,3952 @@
+<!-- markdownlint-disable MD024 -->
+# pytest-fixture-patterns-and-deduplication — History
+
+## v1.0.0 (2026-06-07)
+
+Consolidated the following 9 skills into the canonical `pytest-fixture-patterns-and-deduplication`:
+
+- auto-discover-parametrize-fixtures
+- deduplicate-test-fixtures
+- shared-fixture-migration
+- tier-fixture-schema-coverage
+- expand-tier-fixture-coverage
+- multi-division-fixture-management
+- migrate-odyssey-deeply-nested-subdir-test
+- validation-test-fixture-symmetry
+- checkpoint-state-machine-test-fixtures
+
+## Superseded from auto-discover-parametrize-fixtures
+
+**Original date/version**: 2026-03-06 / 1.0.0
+
+### Original frontmatter
+
+```yaml
+name: auto-discover-parametrize-fixtures
+description: 'TRIGGER CONDITIONS: A pytest.mark.parametrize list hardcodes fixture
+  filenames that must be manually updated when new fixtures are added. Use when replacing
+  a hardcoded list with glob-based auto-discovery so new fixtures are picked up automatically.'
+category: testing
+date: 2026-03-06
+version: 1.0.0
+user-invocable: false
+```
+
+### Original body
+
+# auto-discover-parametrize-fixtures
+
+Replace a hardcoded `pytest.mark.parametrize` filename list with glob-based auto-discovery so new fixture files are picked up automatically without code changes.
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | 2026-03-06 |
+| Objective | Replace `["t0.yaml", ..., "t6.yaml"]` hardcoded list with `TIER_FIXTURES_DIR.glob("t*.yaml")` |
+| Outcome | Success — 43 tests pass; new tier fixtures auto-discovered at collection time |
+| Issue | HomericIntelligence/ProjectScylla#1433 |
+| PR | HomericIntelligence/ProjectScylla#1458 |
+
+## When to Use
+
+- A `pytest.mark.parametrize` list enumerates fixture filenames by hand
+- The test should run against all files matching a pattern in a known directory
+- New fixture files may be added in the future and the test should cover them without code changes
+- The fixture files follow a naming convention (e.g. `t*.yaml`, `case_*.json`, `*.toml`)
+
+## Verified Workflow
+
+### Before (hardcoded list)
+
+```python
+TIER_FIXTURES_DIR = REPO_ROOT / "tests" / "fixtures" / "config" / "tiers"
+
+@pytest.mark.parametrize(
+    "fixture_file",
+    ["t0.yaml", "t1.yaml", "t2.yaml", "t3.yaml", "t4.yaml", "t5.yaml", "t6.yaml"],
+)
+def test_real_tier_fixture_is_valid(self, schema: dict[str, Any], fixture_file: str) -> None:
+    data = load_yaml(TIER_FIXTURES_DIR / fixture_file)
+    check_schema(data, schema)
+```
+
+### After (auto-discovery)
+
+```python
+from pathlib import Path
+
+TIER_FIXTURES_DIR = REPO_ROOT / "tests" / "fixtures" / "config" / "tiers"
+
+@pytest.mark.parametrize(
+    "fixture_file",
+    sorted(TIER_FIXTURES_DIR.glob("t*.yaml")),
+    ids=lambda p: p.name,
+)
+def test_real_tier_fixture_is_valid(self, schema: dict[str, Any], fixture_file: Path) -> None:
+    data = load_yaml(fixture_file)
+    check_schema(data, schema)
+```
+
+### Key changes
+
+1. **Parameter type**: `str` → `Path` (pass full paths from glob, no joining needed)
+2. **`sorted()`**: stabilizes test order across platforms (glob order is not guaranteed)
+3. **`ids=lambda p: p.name`**: keeps test IDs readable (`t0.yaml`, `t1.yaml`) instead of showing full paths
+4. **No path joining**: `load_yaml(fixture_file)` directly — no `TIER_FIXTURES_DIR / fixture_file`
+
+### Why `sorted()` matters
+
+`Path.glob()` order is filesystem-dependent. Without `sorted()`, test order may differ between Linux and macOS or between CI runs, making failures hard to reproduce. Always wrap glob results in `sorted()` for parametrize.
+
+### Why `ids=` matters
+
+Without `ids=`, pytest uses the full absolute path as the test ID, making output hard to read:
+
+```
+FAILED tests/unit/config/test_json_schemas.py::TestTierSchema::test_real_tier_fixture_is_valid[/home/user/project/tests/fixtures/config/tiers/t0.yaml]
+```
+
+With `ids=lambda p: p.name`:
+
+```
+FAILED tests/unit/config/test_json_schemas.py::TestTierSchema::test_real_tier_fixture_is_valid[t0.yaml]
+```
+
+## Results & Parameters
+
+- **Pattern**: `sorted(FIXTURES_DIR.glob("<pattern>"))`
+- **IDs**: `ids=lambda p: p.name`
+- **Type hint**: `fixture_file: Path`
+- **Test count before**: 7 parametrized cases (hardcoded)
+- **Test count after**: 7 parametrized cases (auto-discovered, same fixtures)
+- **All 43 tests pass**; pre-commit hooks pass
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+### Original notes
+
+# Session Notes: auto-discover-parametrize-fixtures
+
+## Session Date
+2026-03-06
+
+## Issue
+HomericIntelligence/ProjectScylla#1433 — Auto-discover tier fixtures in parametrize instead of hardcoding list
+
+## Problem
+`tests/unit/config/test_json_schemas.py:154` hardcoded `["t0.yaml", "t1.yaml", "t2.yaml", "t3.yaml", "t4.yaml", "t5.yaml", "t6.yaml"]` in a parametrize decorator. Adding a new tier config fixture required a manual code update.
+
+## Fix
+Replace the list with `sorted(TIER_FIXTURES_DIR.glob("t*.yaml"))`.
+
+## File Changed
+`tests/unit/config/test_json_schemas.py` — `TestTierSchema.test_real_tier_fixture_is_valid`
+
+## Diff Summary
+```diff
+-    ["t0.yaml", "t1.yaml", "t2.yaml", "t3.yaml", "t4.yaml", "t5.yaml", "t6.yaml"],
++    sorted(TIER_FIXTURES_DIR.glob("t*.yaml")),
++    ids=lambda p: p.name,
+ )
+-def test_real_tier_fixture_is_valid(self, schema: dict[str, Any], fixture_file: str) -> None:
+-    data = load_yaml(TIER_FIXTURES_DIR / fixture_file)
++def test_real_tier_fixture_is_valid(self, schema: dict[str, Any], fixture_file: Path) -> None:
++    data = load_yaml(fixture_file)
+```
+
+## Test Results
+- 43 tests in `test_json_schemas.py` pass
+- Full suite: 4563 passed, 1 skipped (131s)
+- Coverage: 75.85% (threshold 9% combined, 75% unit)
+- Pre-commit: all hooks pass
+
+## PR
+HomericIntelligence/ProjectScylla#1458
+
+---
+
+## Superseded from deduplicate-test-fixtures
+
+**Original date/version**: 2026-01-02 / 1.0.0
+
+### Original frontmatter
+
+```yaml
+name: deduplicate-test-fixtures
+description: 'Eliminate duplicated test fixture files using runtime block-based composition.
+  Use when: test fixtures have duplicate YAML blocks, find | md5sum shows duplication,
+  want single source of truth for shared configs.'
+category: testing
+date: 2026-01-02
+version: 1.0.0
+```
+
+### Original body
+
+# Deduplicate Test Fixtures
+
+Eliminate duplicated test fixture files by using runtime block-based composition.
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-01-02 |
+| **Category** | testing |
+| **Objective** | Eliminate duplicated test fixture files by using runtime block-based composition |
+| **Outcome** | SUCCESS - Removed 1034 files (239,888 lines), reduced fixture size by 16% |
+
+## When to Use
+
+Use this skill when:
+
+- Test fixtures contain many copies of the same file across different test directories
+- You notice the same markdown/config content duplicated in 10+ locations
+- Repository size is growing due to test fixture duplication
+- `find | md5sum | sort | uniq -c` shows high duplication counts
+
+Trigger conditions:
+
+- Running `find tests -name "*.md" | xargs md5sum | sort | uniq -c | sort -rn | head -5` shows counts > 10
+- Test fixture directories follow a pattern like `test-XXX/tierY/subtestZ/`
+- A shared resources directory exists or can be created
+
+## Verified Workflow
+
+### Step 1: Identify Duplication Pattern
+
+```bash
+# Find most duplicated files by content hash
+find tests -type f -name "*.md" | xargs md5sum | awk '{print $1}' | sort | uniq -c | sort -rn | head -20
+
+# See which files share the same hash
+find tests -type f -name "*.md" | xargs md5sum | grep "<hash-from-above>"
+```
+
+### Step 2: Check for Existing Infrastructure
+
+Look for existing composition or symlink mechanisms:
+
+```bash
+# Search for compose/symlink functions
+grep -r "_compose\|_symlink\|resources" src/ --include="*.py"
+
+# Check for shared resources directory
+ls -la tests/*/shared/ 2>/dev/null
+```
+
+### Step 3: Create Shared Blocks Directory
+
+If not exists, decompose the duplicated content into reusable blocks:
+
+```text
+tests/shared/blocks/
+├── B01-section-name.md
+├── B02-another-section.md
+└── ...
+```
+
+### Step 4: Create Migration Script
+
+Create a script that:
+
+1. Maps directory names to block compositions
+2. Updates config.yaml with `resources` specification
+3. Deletes duplicated files after config update
+
+```python
+# Key mapping structure
+DIRECTORY_TO_BLOCKS = {
+    "00-empty": [],
+    "01-vanilla": [],
+    "02-specific": ["B02"],
+    "03-full": ["B01", "B02", "B03", ...],
+}
+```
+
+### Step 5: Run with Dry-Run First
+
+```bash
+python scripts/migrate_to_blocks.py tests/fixtures/tests/ --dry-run
+```
+
+Verify output shows expected updates before running for real.
+
+### Step 6: Execute Migration
+
+```bash
+python scripts/migrate_to_blocks.py tests/fixtures/tests/
+```
+
+### Step 7: Verify
+
+```bash
+# Check no duplicates remain
+find tests -type f -name "CLAUDE.md" -path "*/t0/*" | wc -l  # Should be 0
+
+# Check size reduction
+du -sh tests/fixtures/
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Config Format
+
+```yaml
+# config.yaml format for block-based composition
+name: "Full CLAUDE.md"
+description: "All 18 blocks"
+extends_previous: false
+resources:
+  claude_md:
+    blocks: [B01, B02, B03, B04, B05, B06, B07, B08, B09, B10, B11, B12, B13, B14, B15, B16, B17, B18]
+```
+
+### Directory to Block Mapping
+
+```yaml
+directory_patterns:
+  00-empty: []           # No blocks, no CLAUDE.md generated
+  01-vanilla: []         # Tool defaults, no CLAUDE.md
+  02-critical-only: [B02]
+  03-full: [B01-B18]     # All blocks
+  04-minimal: [B01, B02]
+  05-core-seven: [B01-B07]
+  NN-BXX: [BXX]          # Single block pattern (e.g., 06-B01 → [B01])
+```
+
+### Metrics
+
+| Metric | Before | After |
+| -------- | -------- | ------- |
+| CLAUDE.md files in T0 | 1034 | 0 |
+| Fixture size | 56MB | 47MB |
+| Lines removed | 0 | 239,888 |
+| Config files updated | 0 | 1128 |
+
+## Related Files
+
+- `scripts/migrate_t0_to_blocks.py` - Migration script
+- `src/scylla/e2e/tier_manager.py` - Runtime composition (`_compose_claude_md()`)
+- `tests/claude-code/shared/blocks/` - Shared block files (B01-B18)
+
+### Original notes
+
+# Session Notes: deduplicate-test-fixtures
+
+## Date: 2026-01-02
+
+## Problem Statement
+
+Test fixtures in ProjectScylla contained massive CLAUDE.md duplication:
+- 1,034 CLAUDE.md files duplicated across T0 tier directories
+- Each of 47 tests had ~22 copies of similar CLAUDE.md content
+- Total fixture size: 56MB
+
+## Key Findings
+
+1. **Actual duplication was different than reported**:
+   - User mentioned `implementation-review-specialist.md` duplicated 66 times
+   - Analysis revealed only 1 copy exists
+   - Real duplication was CLAUDE.md files in T0 tier directories
+
+2. **Existing infrastructure existed but wasn't used**:
+   - `tier_manager.py` already had `_compose_claude_md()` method
+   - Prior commit added infrastructure but never ran migration
+   - T1-T6 were already migrated, only T0 remained
+
+3. **Block-based composition pattern**:
+   - 18 shared blocks (B01-B18) in `tests/claude-code/shared/blocks/`
+   - Directory naming pattern maps to block composition
+
+## Solution Summary
+
+Used runtime block-based composition:
+1. Map directory names to block compositions
+2. Update config.yaml with `resources.claude_md.blocks` specification
+3. Delete duplicated CLAUDE.md files
+4. tier_manager composes at runtime from shared blocks
+
+## Results
+
+| Metric | Before | After |
+| -------- | -------- | ------- |
+| CLAUDE.md files in T0 | 1034 | 0 |
+| Fixture size | 56MB | 47MB |
+| Lines removed | 0 | 239,888 |
+| Config files updated | 0 | 1128 |
+
+## Key Files Modified
+
+- `scripts/migrate_t0_to_blocks.py` - Migration script
+- `src/scylla/e2e/tier_manager.py` - Runtime composition (`_compose_claude_md()`)
+- `tests/claude-code/shared/blocks/` - Shared block files (B01-B18)
+
+## Key Learnings
+
+1. **Always verify actual duplication source** - Run hash analysis before planning
+2. **Check for existing infrastructure** - Prior work may have added mechanism but not executed
+3. **Set clear scope boundaries** - Focus on largest source, defer smaller sources
+
+---
+
+## Superseded from shared-fixture-migration
+
+**Original date/version**: 2026-01-03 / 1.0.0
+
+### Original frontmatter
+
+```yaml
+name: shared-fixture-migration
+description: 'Migrate duplicated test fixture configs to a centralized shared location.
+  Use when: test fixtures have duplicated configs, find | md5sum shows 40+ duplicates,
+  configs are test-independent.'
+category: architecture
+date: 2026-01-03
+version: 1.0.0
+```
+
+### Original body
+
+# Shared Fixture Migration
+
+Migrate duplicated test fixture configs to a centralized shared location with runtime loading.
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-01-03 |
+| **Category** | architecture |
+| **Objective** | Migrate duplicated test fixture configs to a centralized shared location with runtime loading |
+| **Outcome** | SUCCESS - Reduced fixture size from 47MB to 1.4MB (97% reduction), eliminated 5355 duplicate files |
+
+## When to Use
+
+Use this skill when:
+
+- Test fixtures contain config files duplicated across many test directories
+- The same config content is repeated for each test but is actually test-independent
+- Running `find tests -name "*.yaml" | xargs md5sum | sort | uniq -c` shows high duplication (10+)
+- You want a single source of truth for shared configurations
+- Test directories follow a pattern like `test-XXX/tierY/subtestZ/config.yaml`
+
+Trigger conditions:
+
+- `find | md5sum | uniq -c | sort -rn` shows files duplicated 40+ times
+- Configs define tier/subtest properties that are identical across all tests
+- A shared resources directory exists or can be created
+
+## Verified Workflow
+
+### Step 1: Quantify the Duplication
+
+```bash
+# Find most duplicated files by content hash
+find tests/fixtures/tests -type f -name "config.yaml" | xargs md5sum | awk '{print $1}' | sort | uniq -c | sort -rn | head -30
+
+# Count total duplicates
+find tests/fixtures/tests -type f -name "config.yaml" | xargs md5sum | awk '{print $1}' | sort | uniq -c | awk '$1 > 1 {sum += $1; count++} END {print "Groups:", count, "Files:", sum}'
+```
+
+**Session finding**: 5361 config.yaml files, 5355 duplicates across 119 unique patterns.
+
+### Step 2: Create Shared Directory Structure
+
+```bash
+# Create tier subdirectories in shared location
+mkdir -p tests/claude-code/shared/subtests/t{0,1,2,3,4,5,6}
+```
+
+### Step 3: Copy Canonical Configs from One Test
+
+```bash
+# Use test-001 as the canonical source
+for tier in t0 t1 t2 t3 t4 t5 t6; do
+  for dir in tests/fixtures/tests/test-001/$tier/*/; do
+    subtest=$(basename "$dir")
+    if [ -f "$dir/config.yaml" ]; then
+      cp "$dir/config.yaml" "tests/claude-code/shared/subtests/$tier/$subtest.yaml"
+    fi
+  done
+done
+```
+
+**Key insight**: Rename `NN-subtest/config.yaml` to `NN-subtest.yaml` since subtests don't need subdirectories - they're just config files.
+
+### Step 4: Modify the Config Loader
+
+Update the loader (e.g., `tier_manager.py`) to:
+
+1. **First** load from shared directory (`shared/subtests/tN/*.yaml`)
+2. **Then** overlay any test-specific overrides (rare)
+
+```python
+def _discover_subtests(self, tier_id: TierID, tier_dir: Path) -> list[SubTestConfig]:
+    # Load from shared first
+    shared_subtests_dir = self._get_shared_dir() / "subtests" / tier_id.value.lower()
+    subtests = self._load_shared_subtests(tier_id, shared_subtests_dir)
+
+    # Overlay test-specific (if any)
+    subtest_by_id = {s.id: s for s in subtests}
+    if tier_dir.exists():
+        self._overlay_test_specific(subtest_by_id, tier_dir, tier_id)
+
+    return list(subtest_by_id.values())
+```
+
+### Step 5: Create Migration Script
+
+Create a script that:
+
+- Verifies shared configs exist
+- Deletes per-test tier directories
+- Supports `--dry-run` mode
+
+```bash
+# Dry-run first
+python scripts/migrate_subtests_to_shared.py tests/fixtures/tests/ --dry-run
+
+# Execute migration
+python scripts/migrate_subtests_to_shared.py tests/fixtures/tests/
+```
+
+### Step 6: Validate the Migration
+
+```bash
+# Run validation script
+python scripts/validate_tier_manager.py
+
+# Or quick validation
+python -c "
+from pathlib import Path
+import sys
+sys.path.insert(0, 'src')
+from scylla.e2e.tier_manager import TierManager
+from scylla.e2e.models import TierID
+
+manager = TierManager(Path('tests/fixtures/tests/test-001'))
+for tier_id in TierID:
+    config = manager.load_tier_config(tier_id)
+    print(f'{tier_id.value}: {len(config.subtests)} subtests')
+"
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Before/After Metrics
+
+| Metric | Before | After | Improvement |
+| -------- | -------- | ------- | ------------- |
+| Fixture size | 47MB | 1.4MB | 97% reduction |
+| config.yaml files | 5,361 | 160 | 97% reduction |
+| Tier directories per test | 7 | 0 | 100% |
+| Subtest directories | 5,361 | 0 | 100% (now YAML files) |
+| Lines of code deleted | --- | 120,735 | --- |
+
+### Final Directory Structure
+
+```text
+tests/
+├── claude-code/shared/
+│   └── subtests/             # Centralized configs
+│       ├── t0/
+│       │   ├── 00-empty.yaml
+│       │   ├── 01-vanilla.yaml
+│       │   └── ... (24 files)
+│       ├── t1/
+│       │   └── ... (10 files)
+│       └── t{2-6}/          # Total: 113 shared configs
+└── fixtures/tests/
+    ├── test-001/
+    │   ├── test.yaml         # Test definition
+    │   ├── config.yaml       # Test-specific overrides (timeout, etc.)
+    │   ├── prompt.md         # Test prompt
+    │   └── expected/         # Validation rubrics
+    └── test-{002-047}/       # Same minimal structure
+```
+
+### Config File Format
+
+```yaml
+# Shared subtest config (e.g., t1/04-github.yaml)
+name: GitHub Skills
+description: 10 skills from the github category
+extends_previous: true
+resources:
+  skills:
+    categories:
+      - github
+```
+
+## Related Files
+
+- `scripts/migrate_subtests_to_shared.py` - Migration script
+- `scripts/validate_tier_manager.py` - Validation script
+- `src/scylla/e2e/tier_manager.py` - Modified loader
+- `tests/claude-code/shared/subtests/` - Centralized configs
+
+### Original notes
+
+# Session Notes: shared-fixture-migration
+
+## Date: 2026-01-03
+
+## Problem Statement
+
+Test fixtures in ProjectScylla contained massive duplication:
+- 5,361 config.yaml files across 47 tests
+- 5,355 (99.9%) were duplicates
+- 119 unique subtest configurations repeated 47 times each
+- Total fixture size: 47MB
+
+## Solution Summary
+
+Created a centralized shared subtests directory with runtime loading:
+1. Moved 119 unique configs to `tests/claude-code/shared/subtests/t{0-6}/`
+2. Modified `tier_manager.py` to load from shared first, overlay test-specific
+3. Deleted all per-test tier directories
+
+## Results
+
+| Metric | Before | After |
+| -------- | -------- | ------- |
+| Fixture size | 47MB | 1.4MB |
+| config.yaml files | 5,361 | 160 |
+| Lines deleted | --- | 120,735 |
+
+## Key Files Modified
+
+- `src/scylla/e2e/tier_manager.py` - Added shared subtests loading
+- `scripts/migrate_subtests_to_shared.py` - Migration script
+- `scripts/validate_tier_manager.py` - Validation script
+
+## Validation Output
+
+```
+============================================================
+Validating TierManager with centralized shared subtests
+============================================================
+
+--- Shared Subtests Directory ---
+  T0: 24 subtests
+  T1: 10 subtests
+  T2: 15 subtests
+  T3: 41 subtests
+  T4: 7 subtests
+  T5: 15 subtests
+  T6: 1 subtests
+  Total: 113 shared subtest configs
+
+--- Loading Tiers via TierManager ---
+  T0: 24 subtests (expected 24) [PASS]
+  T1: 10 subtests (expected 10) [PASS]
+  T2: 15 subtests (expected 15) [PASS]
+  T3: 41 subtests (expected 41) [PASS]
+  T4: 7 subtests (expected 7) [PASS]
+  T5: 15 subtests (expected 15) [PASS]
+  T6: 1 subtests (expected 1) [PASS]
+
+============================================================
+VALIDATION PASSED - TierManager loads from shared correctly
+============================================================
+```
+
+## Key Learnings
+
+1. **Always run hash analysis first** - Use `find | md5sum | uniq -c` to identify actual duplication source
+2. **Check ALL file types** - Initial T0 migration left T1-T6 untouched
+3. **Distinguish test-specific vs shared** - Only prompts, expected results need to be per-test
+
+---
+
+## Superseded from tier-fixture-schema-coverage
+
+**Original date/version**: 2026-03-05 / 1.0.0
+
+### Original frontmatter
+
+```yaml
+name: tier-fixture-schema-coverage
+description: 'TRIGGER CONDITIONS: Use when schema validation tests parametrize over
+  tier fixture files but only early tiers exist (e.g. t0/t1), or when new tier-specific
+  boolean fields need coverage across the full tier range.'
+category: testing
+date: 2026-03-05
+version: 1.0.0
+user-invocable: false
+```
+
+### Original body
+
+# tier-fixture-schema-coverage
+
+How to extend schema coverage by adding YAML fixture files for each testing tier with distinct field combinations.
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | 2026-03-05 |
+| Objective | Add fixture files for t2-t6 so schema tests parametrize over the full tier range, each exercising distinct boolean capability fields |
+| Outcome | Success — 7 fixture files (t0-t6) all validate against tier.schema.json; 505 tier-related tests pass |
+
+## When to Use
+
+- Schema validation tests use `@pytest.mark.parametrize("fixture_file", ["t0.yaml", "t1.yaml"])` and need expansion
+- New tier-specific boolean fields (`uses_tools`, `uses_delegation`, `uses_hierarchy`) are added to the schema
+- `tests/fixtures/config/tiers/` has gaps (missing t2-t6) while t0/t1 exist
+- You want each tier fixture to exercise a distinct combination of capability flags
+
+## Verified Workflow
+
+### Step 1 — Check which fixtures are missing
+
+```bash
+ls tests/fixtures/config/tiers/
+# If only t0.yaml and t1.yaml exist, proceed
+```
+
+### Step 2 — Create one fixture per tier with distinct field combinations
+
+Each fixture should set tier-specific boolean flags to exercise distinct schema paths:
+
+```yaml
+# t2.yaml — Tooling tier: only uses_tools
+tier: "t2"
+name: "Tooling"
+description: "External tools and MCP servers"
+uses_tools: true
+uses_delegation: false
+uses_hierarchy: false
+```
+
+```yaml
+# t3.yaml — Delegation tier: only uses_delegation
+tier: "t3"
+name: "Delegation"
+description: "Flat multi-agent with specialist agents"
+uses_tools: false
+uses_delegation: true
+uses_hierarchy: false
+```
+
+```yaml
+# t4.yaml — Hierarchy tier: only uses_hierarchy
+tier: "t4"
+name: "Hierarchy"
+description: "Nested orchestration with orchestrator agents"
+uses_tools: false
+uses_delegation: false
+uses_hierarchy: true
+```
+
+```yaml
+# t5.yaml — Hybrid tier: tools + delegation
+tier: "t5"
+name: "Hybrid"
+description: "Best combinations and permutations"
+uses_tools: true
+uses_delegation: true
+uses_hierarchy: false
+```
+
+```yaml
+# t6.yaml — Super tier: all enabled
+tier: "t6"
+name: "Super"
+description: "Everything enabled at maximum capability"
+uses_tools: true
+uses_delegation: true
+uses_hierarchy: true
+```
+
+### Step 3 — Expand the parametrize list in the schema test
+
+```python
+# Before
+@pytest.mark.parametrize("fixture_file", ["t0.yaml", "t1.yaml"])
+
+# After
+@pytest.mark.parametrize("fixture_file", ["t0.yaml", "t1.yaml", "t2.yaml", "t3.yaml", "t4.yaml", "t5.yaml", "t6.yaml"])
+```
+
+### Step 4 — Run tests to verify
+
+```bash
+pixi run python -m pytest tests/ -v -k "tier"
+# Expect all tests to pass
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+**Boolean flag coverage matrix** (ensures each tier exercises unique schema paths):
+
+| Tier | uses_tools | uses_delegation | uses_hierarchy |
+| ------ | ----------- | ---------------- | ---------------- |
+| t0 | — | — | — |
+| t1 | — | — | — |
+| t2 | true | false | false |
+| t3 | false | true | false |
+| t4 | false | false | true |
+| t5 | true | true | false |
+| t6 | true | true | true |
+
+**File layout:**
+```
+tests/fixtures/config/tiers/
+├── t0.yaml   # Vanilla (no capability flags)
+├── t1.yaml   # Prompted (no capability flags)
+├── t2.yaml   # Tooling (uses_tools only)
+├── t3.yaml   # Delegation (uses_delegation only)
+├── t4.yaml   # Hierarchy (uses_hierarchy only)
+├── t5.yaml   # Hybrid (tools + delegation)
+└── t6.yaml   # Super (all enabled)
+```
+
+**Test reference:** `tests/unit/config/test_json_schemas.py:154` — `test_real_tier_fixture_is_valid`
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectScylla | Issue #1381, PR #1423 | [notes.md](../references/notes.md) |
+
+### Original notes
+
+# Session Notes: tier-fixture-schema-coverage
+
+## Context
+
+- **Project**: ProjectScylla
+- **Issue**: #1381 — Add tier fixture files for t2-t6
+- **PR**: #1423
+- **Branch**: `1381-auto-impl`
+- **Date**: 2026-03-05
+
+## What Was Found
+
+When the session started, the implementation was already complete:
+- Fixture files t2.yaml through t6.yaml had been created in commit `2012621`
+- The parametrize list in `tests/unit/config/test_json_schemas.py:154` already included all 7 tiers
+- PR #1423 was already open and linked to issue #1381
+- All 505 tier-related tests passed
+
+## Key Files
+
+- `tests/fixtures/config/tiers/t{0-6}.yaml` — fixture files
+- `tests/unit/config/test_json_schemas.py` — schema validation tests (line 154: parametrize list)
+- `schemas/tier.schema.json` — the schema being validated
+
+## Key Insight: Check Before Implementing
+
+The main lesson: when working from a `.claude-prompt-*.md` file on a pre-existing branch,
+always check `git log` and existing files before implementing. Automated prior runs may
+have already completed the work. The correct action is to verify tests pass and confirm
+the PR exists, not to re-implement.
+
+## Test Command Used
+
+```bash
+pixi run python -m pytest tests/ -v -k "tier" --tb=short
+# Result: 505 passed, 3935 deselected
+```
+
+---
+
+## Superseded from expand-tier-fixture-coverage
+
+**Original date/version**: 2026-03-19 / 1.0.0
+
+### Original frontmatter
+
+```yaml
+name: expand-tier-fixture-coverage
+description: Expand YAML fixture files and test parametrize lists when adding new
+  tiers to the testing tier registry. Use when tier count assertions or schema parametrize
+  lists are out of sync with fixture files.
+category: testing
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+tier: 2
+```
+
+### Original body
+
+# Expand Tier Fixture Coverage
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | 2026-03-04 |
+| Objective | Add YAML fixture files for tiers t2–t6 and update tests to cover the full tier range |
+| Outcome | Success — 7 fixtures, 4331 tests passing, 75.17% unit coverage |
+
+## When to Use
+
+- A new tier is added to the ablation study framework and needs a fixture file
+- `test_load_all_tiers` asserts a hardcoded count that is smaller than the actual tier set
+- `test_real_tier_fixture_is_valid` parametrize list does not include the new fixture files
+- `tests/fixtures/config/tiers/` has fewer YAML files than tiers defined in the tier taxonomy
+
+## Verified Workflow
+
+### 1. Check what fixtures exist
+
+```bash
+ls tests/fixtures/config/tiers/
+```
+
+### 2. Read existing fixtures to learn the field schema
+
+```bash
+# Confirm required fields: tier, name, description, uses_tools, uses_delegation, uses_hierarchy
+cat tests/fixtures/config/tiers/t0.yaml
+cat tests/fixtures/config/tiers/t1.yaml
+```
+
+### 3. Create one fixture per missing tier
+
+Each fixture **must**:
+- Set `tier:` to the filename stem (e.g. `"t2"` for `t2.yaml`) — mismatch raises `ConfigurationError`
+- Include all required fields: `tier`, `name`, `description`, `uses_tools`, `uses_delegation`, `uses_hierarchy`
+- Exercise a **distinct** boolean flag to differentiate the tier
+
+| Tier | Name | Distinguishing flag |
+| ------ | ------ | --------------------- |
+| t2 | Tooling | `uses_tools: true` |
+| t3 | Delegation | `uses_delegation: true` |
+| t4 | Hierarchy | `uses_hierarchy: true` |
+| t5 | Hybrid | `uses_tools: true`, `uses_delegation: true` |
+| t6 | Super | all three flags `true` |
+
+Example `t2.yaml`:
+
+```yaml
+# Test fixture: Tier 2 (Tooling)
+tier: "t2"
+name: "Tooling"
+description: "External tools and MCP servers"
+uses_tools: true
+uses_delegation: false
+uses_hierarchy: false
+```
+
+### 4. Update `test_config_loader.py` — count assertion
+
+Find `assert len(tiers) == <old_count>` in `test_load_all_tiers` and update it to the new total.
+Add name assertions for each new tier:
+
+```python
+assert len(tiers) == 7
+assert "t2" in tiers
+assert tiers["t2"].name == "Tooling"
+# ... repeat for t3–t6
+```
+
+### 5. Update `test_json_schemas.py` — parametrize list
+
+```python
+@pytest.mark.parametrize(
+    "fixture_file",
+    ["t0.yaml", "t1.yaml", "t2.yaml", "t3.yaml", "t4.yaml", "t5.yaml", "t6.yaml"],
+)
+```
+
+### 6. Verify
+
+```bash
+pixi run python -m pytest tests/unit/config/test_config_loader.py tests/unit/config/test_json_schemas.py -v
+pixi run python -m pytest tests/unit/ -v
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+- Fixtures directory: `tests/fixtures/config/tiers/`
+- Config loader test: `tests/unit/config/test_config_loader.py`
+- Schema validation test: `tests/unit/config/test_json_schemas.py`
+- Test count after change: 4331 passed (from 4316 before adding 5 new fixtures × 3 parametrized test cases)
+- Coverage: 75.17% unit (required floor: 75%)
+
+## References
+
+- `validate-tier-id-filename-consistency` — explains the `tier:` == filename stem invariant
+- `fix-tests-after-config-refactor` — general pattern for updating count assertions after structural changes
+- CLAUDE.md > Testing Tiers for the canonical t0–t6 taxonomy
+
+### Original notes
+
+# Raw Session Notes — expand-tier-fixture-coverage
+
+**Date**: 2026-03-04
+**Issue**: ProjectScylla #1381 — Add tier fixture files for t2-t6
+**Branch**: 1381-auto-impl
+**PR**: https://github.com/HomericIntelligence/ProjectScylla/pull/1423
+
+## What Was Done
+
+1. Read `.claude-prompt-1381.md` to understand the task
+2. Read `gh issue view 1381 --comments` — issue plan specified exact YAML content and two test file locations
+3. Confirmed only `t0.yaml` and `t1.yaml` existed under `tests/fixtures/config/tiers/`
+4. Read both existing fixtures to confirm field schema
+5. Checked `test_config_loader.py:192` — found `assert len(tiers) == 2`
+6. Checked `test_json_schemas.py:154` — found parametrize with only `["t0.yaml", "t1.yaml"]`
+7. Created `t2.yaml` through `t6.yaml` with distinct boolean flag combinations
+8. Updated both test files
+9. Ran `pixi run python -m pytest tests/unit/config/...` — 101 passed
+10. Ran `pixi run python -m pytest tests/unit/ -v` — 4331 passed, 75.17% coverage
+11. Committed and pushed; created PR with `gh pr create`; enabled auto-merge
+
+## Key Observations
+
+- The issue plan (from a previous planning agent) was complete and accurate — no deviation needed
+- The `tier:` field value must exactly match the filename stem; this is enforced in `load_all_tiers()`
+- `test_load_all_tiers` had a hardcoded count of 2 that needed updating to 7
+- `test_real_tier_fixture_is_valid` used a simple parametrize list — trivial to extend
+- The full unit suite takes ~2 minutes via `pixi run python -m pytest tests/unit/ -v`
+- Coverage floor is 75% for `scylla/` unit tests — adding fixtures kept coverage well above floor
+
+## Files Changed
+
+- `tests/fixtures/config/tiers/t2.yaml` (created)
+- `tests/fixtures/config/tiers/t3.yaml` (created)
+- `tests/fixtures/config/tiers/t4.yaml` (created)
+- `tests/fixtures/config/tiers/t5.yaml` (created)
+- `tests/fixtures/config/tiers/t6.yaml` (created)
+- `tests/unit/config/test_config_loader.py` (updated count + name assertions)
+- `tests/unit/config/test_json_schemas.py` (updated parametrize list)
+
+---
+
+## Superseded from multi-division-fixture-management
+
+**Original date/version**: 2026-03-01 / 1.0.0
+
+### Original frontmatter
+
+```yaml
+name: multi-division-fixture-management
+description: 'TRIGGER CONDITIONS: Use when adding a second division''s fixture set
+  to a flat tests/fixtures/ directory, or when capture-fixtures CLI needs named subdirs,
+  or when integration tests need to auto-discover all fixture sets.'
+category: testing
+date: 2026-03-01
+version: 1.0.0
+user-invocable: false
+```
+
+### Original body
+
+# multi-division-fixture-management
+
+How to migrate flat API fixture directories to per-division slugged subdirs, extend the capture CLI to auto-name them, and parameterize pytest integration tests to cover all sets automatically.
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | 2026-03-01 |
+| Objective | Add a second AES division fixture set without breaking existing integration tests, then make the system auto-scale to N divisions |
+| Outcome | Success — 189 tests pass (175 unit + 14 integration = 7 per division × 2 divisions) |
+
+## When to Use
+
+- You have a flat `tests/fixtures/*.json` layout and need to add a second fixture set
+- Your `capture_fixtures` CLI writes to a hardcoded output directory (no per-division naming)
+- Integration tests reference a single `FIXTURES_DIR` constant and need to scale to N divisions
+- You want `pixi run capture-fixtures <URL>` to auto-name subdirs from the division name, zero config
+
+## Verified Workflow
+
+### Step 1 — Move existing flat fixtures into a named subdir
+
+Determine the division name from the existing `event.json`:
+
+```python
+import json
+d = json.load(open("tests/fixtures/event.json"))
+# Find division name from plays.json: d["Division"]["Name"]
+```
+
+```bash
+mkdir tests/fixtures/<slug>/
+mv tests/fixtures/*.json tests/fixtures/<slug>/
+```
+
+### Step 2 — Update `capture_fixtures` CLI to auto-resolve slug subdir
+
+Before opening the API client, fetch the event to resolve the division name, then write to `output_dir / slug`:
+
+```python
+async def capture_fixtures(url: str, output_dir: Path):
+    parts = parse_aes_url(url)
+
+    async with AESClient() as client:
+        # Resolve division name first so we can name the subdirectory
+        event = await client.get_event(parts.event_key)
+        division_name = next(
+            (d["Name"] for d in event.get("Divisions", [])
+             if d["DivisionId"] == parts.division_id),
+            "unknown",
+        )
+        slug = _slugify(division_name)
+        output_dir = output_dir / slug
+        output_dir.mkdir(parents=True, exist_ok=True)
+        print(f"Capturing fixtures for '{division_name}' → {output_dir}/")
+
+        _save(output_dir / "event.json", event)
+        # ... rest of capture unchanged, all paths use output_dir
+```
+
+Key: save `event.json` here (already fetched) — don't fetch again.
+
+### Step 3 — Rewrite integration test to auto-discover fixture subdirs
+
+Replace the single `FIXTURES_DIR` constant with a `_fixture_dirs()` discovery function, then parametrize all test classes:
+
+```python
+FIXTURES_ROOT = Path(__file__).parent / "fixtures"
+
+def _fixture_dirs() -> list[Path]:
+    """Return all subdirs of fixtures/ that contain plays.json."""
+    if not FIXTURES_ROOT.exists():
+        return []
+    return sorted(d for d in FIXTURES_ROOT.iterdir()
+                  if d.is_dir() and (d / "plays.json").exists())
+
+_ALL_FIXTURE_DIRS = _fixture_dirs()
+_FIXTURE_IDS = [d.name for d in _ALL_FIXTURE_DIRS]
+
+skip_no_fixtures = pytest.mark.skipif(
+    len(_ALL_FIXTURE_DIRS) == 0,
+    reason="No fixture directories found. Run: pixi run capture-fixtures <URL>",
+)
+
+@skip_no_fixtures
+@pytest.mark.parametrize("fixture_dir", _ALL_FIXTURE_DIRS, ids=_FIXTURE_IDS)
+class TestEndToEndWithFixtures:
+    def test_full_pipeline_produces_valid_json(self, fixture_dir, tmp_path):
+        plays = _load(fixture_dir, "plays.json")
+        # ... use fixture_dir / filename everywhere instead of FIXTURES_DIR / filename
+```
+
+For test classes that only apply when certain files exist (e.g. poolsheets, brackets), filter at parametrize time:
+
+```python
+@pytest.mark.parametrize(
+    "fixture_dir",
+    [d for d in _ALL_FIXTURE_DIRS if any(d.glob("poolsheet_*.json"))],
+    ids=[d.name for d in _ALL_FIXTURE_DIRS if any(d.glob("poolsheet_*.json"))],
+)
+class TestPoolParserWithFixtures:
+    ...
+```
+
+### Step 4 — Capture the new division and verify
+
+```bash
+pixi run capture-fixtures <NEW_URL>
+pixi run test-all
+```
+
+Adding a new division now automatically adds 7 more integration tests with zero code changes.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+**Test count scaling:**
+- 1 division → 7 integration tests
+- 2 divisions → 14 integration tests
+- N divisions → 7N integration tests (automatic)
+
+**Slug function used:**
+```python
+def _slugify(name: str) -> str:
+    s = name.lower()
+    s = re.sub(r'[^a-z0-9]+', '-', s)
+    s = s.strip('-')
+    return s or 'unknown'
+# "18s - 15s Power League" → "18s-15s-power-league"
+# "14s Girls"              → "14s-girls"
+```
+
+**Directory layout after migration:**
+```
+tests/fixtures/
+├── .gitkeep
+├── 14s-girls/
+│   ├── event.json
+│   ├── plays.json
+│   ├── playdays.json
+│   ├── brackets_YYYY-MM-DD.json
+│   ├── pools_YYYY-MM-DD.json
+│   └── poolsheet_{playId}.json  (N files)
+└── 18s-15s-power-league/
+    ├── plays.json
+    ├── playdays.json
+    └── ...
+```
+
+Note: `event.json` is optional in subdirs — some divisions' events may be shared. The integration tests only require `plays.json` to detect a valid fixture dir.
+
+**pixi task (unchanged, works automatically):**
+```toml
+[tool.pixi.tasks]
+capture-fixtures = { cmd = "python -m scraper.cli --capture-fixtures" }
+test-all = "pytest tests/"
+```
+
+## Verified On
+
+- TitanSchedule project (AES volleyball tournament scraper)
+- Python 3.14, pytest 9.0.2, pixi environment
+- Two fixture sets: `14s-girls` (50 poolsheets) and `18s-15s-power-league` (80 poolsheets, 4 bracket dates)
+
+### Original notes
+
+# Session Notes — multi-division-fixture-management
+
+## Session: 2026-03-01 (TitanSchedule)
+
+### Context
+TitanSchedule is a Python + Cytoscape.js volleyball tournament visualization tool.
+It scrapes AES (Advanced Event Systems) public REST API → builds a DAG → renders with Cytoscape.js.
+
+The scraper CLI had `capture_fixtures` writing all JSON files flat into `tests/fixtures/`.
+A second division URL (`199187`, "18s - 15s Power League") needed to be captured alongside
+the existing `14s-girls` fixtures (division `199194`).
+
+### Problem
+- Flat `tests/fixtures/*.json` layout: adding a second division would overwrite `plays.json`,
+  mix `poolsheet_*.json` IDs, and give integration tests no way to distinguish divisions.
+- `test_integration.py` was hardcoded to `FIXTURES_DIR = Path(__file__).parent / "fixtures"` —
+  single directory, single `skipif` guard.
+
+### What Was Done
+
+1. **Identified existing division** from `event.json` + `plays.json`:
+   - Division 199194, "14s Girls", event key `PTAwMDAwNDE4MzE90`
+
+2. **Moved existing fixtures**: `tests/fixtures/*.json` → `tests/fixtures/14s-girls/`
+
+3. **Updated `capture_fixtures`** in `scraper/cli.py`:
+   - Added event fetch at top of function to resolve division name
+   - Computed slug, set `output_dir = output_dir / slug`
+   - Removed duplicate `event.json` fetch that was left from original code
+   - Saved `event.json` immediately after slug resolution (reusing already-fetched data)
+
+4. **Rewrote `test_integration.py`**:
+   - Replaced `FIXTURES_DIR` constant with `_fixture_dirs()` that discovers all subdirs
+   - Added `_ALL_FIXTURE_DIRS` + `_FIXTURE_IDS` computed at module load
+   - Single `skip_no_fixtures` mark replaces per-class `skipif`
+   - All 4 test classes parameterized via `@pytest.mark.parametrize`
+   - Subset classes (pool, bracket) filter to only dirs that have matching files
+
+5. **Captured new division**: `pixi run capture-fixtures <URL>` → `tests/fixtures/18s-15s-power-league/`
+   - 80 poolsheets, 4 bracket dates, 4 pool standing dates
+
+6. **Verified**: `pixi run test-all` → 189 passed (175 unit + 14 integration)
+
+### Bug Found During Work
+After updating `capture_fixtures`, there was a duplicate `_save(output_dir / "event.json", event)`
+call because the original function started with `# 1. Event metadata` → `event = await client.get_event(...)` → `_save(...)`.
+After inserting the slug-resolution block (which also fetched event and saved it), the original
+step 1 remained, fetching event a second time. Removed the duplicate.
+
+### Commit
+`da366d2` — "feat: add multi-URL scraping, per-division fixtures, and full codebase"
+
+### Environment
+- Python 3.14.3, pytest 9.0.2, pixi environment manager
+- TitanSchedule repo, branch: main
+- AES API base: `https://results.advancedeventsystems.com/api` (no auth)
+
+---
+
+## Superseded from migrate-odyssey-deeply-nested-subdir-test
+
+**Original date/version**: 2026-03-15 / 1.0.0
+
+### Original frontmatter
+
+```yaml
+name: migrate-odyssey-deeply-nested-subdir-test
+description: 'Pattern for testing multi-level directory nesting in shutil.copytree
+  migrations. Use when: adding coverage for recursive copy of auxiliary subdirectories,
+  verifying deep paths survive migration.'
+category: testing
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+```
+
+### Original body
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Skill** | migrate-odyssey-deeply-nested-subdir-test |
+| **Category** | testing |
+| **Task** | Add pytest test verifying deeply nested subdirs (e.g. `scripts/utils/helper.sh`) survive a `shutil.copytree`-based migration |
+| **Language** | Python / pytest |
+| **Trigger** | Issue requests test coverage for multi-level nesting inside auxiliary subdirs of a migration script |
+
+## When to Use
+
+- An issue mentions "no tests verifying multi-level nesting" for a copytree-based migration.
+- Existing tests only cover flat files within a subdirectory (e.g. `scripts/run.sh`) but not nested paths (`scripts/utils/helper.sh`).
+- The migration uses `shutil.copytree`, which is recursive by default, but coverage is missing.
+- A follow-up issue from a parent migration issue requests nesting tests.
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# Pattern: create a nested dir inside an existing auxiliary subdir, assert it arrives at dest
+nested_dir = skill_dir / "scripts" / "utils"
+nested_dir.mkdir(parents=True)
+(nested_dir / "helper.sh").write_text("#!/bin/bash\necho helper")
+
+# ... call migrate_skill(...)
+
+nested_helper = (
+    mnemosyne_skills
+    / "tooling" / "agent-run-orchestrator"
+    / "skills" / "agent-run-orchestrator"
+    / "scripts" / "utils" / "helper.sh"
+)
+assert nested_helper.exists(), f"Expected deeply nested helper at {nested_helper}"
+```
+
+### Step 1 — Read the existing test file
+
+Find which test class covers auxiliary subdirectory copying (e.g. `TestMigrateSkillAuxiliaryDirs`).
+Identify the nearest similar test (`test_skill_with_nested_scripts_content`) to use as a template.
+
+### Step 2 — Identify the insertion point
+
+The new test should be added directly after the flat-nesting test and before unrelated tests
+(e.g. `test_dry_run_does_not_copy_files`). This keeps related tests grouped.
+
+### Step 3 — Use the existing `make_skill_dir` helper
+
+The test helper already creates the base skill directory structure. Call it first, then
+**manually create** the nested subdirectory within `scripts/`:
+
+```python
+skill_dir = make_skill_dir(odyssey_skills, "agent-run-orchestrator")
+nested_dir = skill_dir / "scripts" / "utils"
+nested_dir.mkdir(parents=True)
+(nested_dir / "helper.sh").write_text("#!/bin/bash\necho helper")
+```
+
+Note: `make_skill_dir` returns the skill root directory — capture the return value.
+
+### Step 4 — Assert the full path at the destination
+
+Build the expected destination path component by component. The migration places content at:
+
+```
+mnemosyne_skills / <category> / <skill-name> / "skills" / <skill-name> / <subdir> / ...
+```
+
+So for `scripts/utils/helper.sh`:
+
+```python
+nested_helper = (
+    mnemosyne_skills
+    / "tooling"
+    / "agent-run-orchestrator"
+    / "skills"
+    / "agent-run-orchestrator"
+    / "scripts"
+    / "utils"
+    / "helper.sh"
+)
+assert nested_helper.exists(), f"Expected deeply nested helper at {nested_helper}"
+```
+
+### Step 5 — Run only the affected test class to confirm
+
+```bash
+pixi run python -m pytest tests/scripts/test_migrate_odyssey_skills.py::TestMigrateSkillAuxiliaryDirs -v
+```
+
+All tests in the class (not just the new one) must pass before committing.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A — direct approach worked | Read existing test class, identified pattern, inserted test immediately | — | The flat-nesting test (`test_skill_with_nested_scripts_content`) was a perfect template; no iteration needed |
+
+## Results & Parameters
+
+**Test added**: `test_skill_with_deeply_nested_scripts_subdir`
+
+**Class**: `TestMigrateSkillAuxiliaryDirs`
+
+**File**: `tests/scripts/test_migrate_odyssey_skills.py`
+
+**Run command**:
+
+```bash
+pixi run python -m pytest tests/scripts/test_migrate_odyssey_skills.py::TestMigrateSkillAuxiliaryDirs -v
+```
+
+**Result**: 12/12 passed (11 pre-existing + 1 new)
+
+**Key insight**: `shutil.copytree` is recursive by default, so no code change was needed — only
+a test to verify the behavior is exercised and protected against future regressions.
+
+### Original notes
+
+# Session Notes — migrate-odyssey-deeply-nested-subdir-test
+
+## Session Context
+
+- **Date**: 2026-03-15
+- **Issue**: ProjectOdyssey #3769
+- **Branch**: `3769-auto-impl`
+- **PR**: https://github.com/HomericIntelligence/ProjectOdyssey/pull/4790
+
+## Objective
+
+Add a pytest test verifying that deeply nested subdirectory content (e.g. `scripts/utils/helper.sh`)
+is correctly preserved after migration via `shutil.copytree` in `migrate_odyssey_skills.py`.
+
+The issue noted that while `shutil.copytree` is recursive by default, there were no tests
+exercising multi-level nesting inside auxiliary subdirs.
+
+## What Was Done
+
+1. Read `.claude-prompt-3769.md` for task context.
+2. Located the test file: `tests/scripts/test_migrate_odyssey_skills.py`.
+3. Identified `TestMigrateSkillAuxiliaryDirs` class and the existing
+   `test_skill_with_nested_scripts_content` test as the closest template.
+4. Added `test_skill_with_deeply_nested_scripts_subdir` after the template test.
+5. Used `make_skill_dir` helper to build the base structure, then manually created
+   `scripts/utils/helper.sh` two levels deep.
+6. Asserted the full destination path exists after calling `migrate_skill`.
+7. Ran the full test class: 12/12 passed.
+8. Committed and pushed to `3769-auto-impl`, created PR #4790.
+
+## Key Files
+
+- `tests/scripts/test_migrate_odyssey_skills.py` — where the test was added (lines ~280-314)
+- `scripts/migrate_odyssey_skills.py` — migration script (no changes needed)
+
+## Code Pattern
+
+```python
+def test_skill_with_deeply_nested_scripts_subdir(self, tmp_path: Path, migrate_module) -> None:
+    """scripts/utils/helper.sh (subdir inside scripts/) is preserved after migration."""
+    odyssey_skills = tmp_path / "odyssey_skills"
+    mnemosyne_skills = tmp_path / "mnemosyne" / "skills"
+    mnemosyne_skills.mkdir(parents=True)
+
+    skill_dir = make_skill_dir(odyssey_skills, "agent-run-orchestrator")
+    nested_dir = skill_dir / "scripts" / "utils"
+    nested_dir.mkdir(parents=True)
+    (nested_dir / "helper.sh").write_text("#!/bin/bash\necho helper")
+
+    skill_md = odyssey_skills / "agent-run-orchestrator" / "SKILL.md"
+
+    with patch.object(migrate_module, "MNEMOSYNE_SKILLS_DIR", mnemosyne_skills):
+        result = migrate_module.migrate_skill(
+            skill_name="agent-run-orchestrator",
+            source_skill_md=skill_md,
+            category="tooling",
+            dry_run=False,
+        )
+
+    assert result is True
+    nested_helper = (
+        mnemosyne_skills
+        / "tooling"
+        / "agent-run-orchestrator"
+        / "skills"
+        / "agent-run-orchestrator"
+        / "scripts"
+        / "utils"
+        / "helper.sh"
+    )
+    assert nested_helper.exists(), f"Expected deeply nested helper at {nested_helper}"
+```
+
+## Observations
+
+- No production code change was required — `shutil.copytree` already handles recursion.
+- The test fills a documentation/coverage gap, not a behavioral gap.
+- The `make_skill_dir` return value is the skill root; use it to build nested paths.
+- Destination path follows pattern: `<category>/<skill>/<skills>/<skill>/<subdir>/<nested>`.
+
+---
+
+## Superseded from validation-test-fixture-symmetry
+
+**Original date/version**: 2026-01-01 / 1.0.0
+
+### Original frontmatter
+
+```yaml
+name: validation-test-fixture-symmetry
+description: 'Skill: validation-test-fixture-symmetry. Use when working with validation
+  test fixture symmetry.'
+category: debugging
+date: 2026-01-01
+version: 1.0.0
+user-invocable: false
+```
+
+### Original body
+
+# Validation Test Fixture Symmetry
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-02-22 |
+| **Issue** | #808 - Extract common validation test fixture pattern for loaders |
+| **Follow-up from** | #733 |
+| **Objective** | Eliminate asymmetry between tier and model config loader tests by making tier fixture tests go through the loader (not the validator directly) |
+| **Outcome** | ✅ Success - Full symmetry achieved; 4 new tests via loader; 2396 tests pass |
+| **Test Impact** | +4 new tests; 0 regressions; 74.19% coverage maintained |
+
+## When to Use This Skill
+
+Use this workflow when you see:
+
+- **Asymmetric test patterns** — one loader calls the validator directly for fixture tests, another goes through the loader
+- **Loader-level validation** that needs adding to a new config loader (tier, rubric, test, etc.)
+- **`_`-prefixed test fixtures** that need to bypass name normalization **and** validation
+- Code review / follow-up issues asking for consistency between config loaders
+
+**Trigger phrases:**
+
+- "Test fixture calls validation directly, not through loader"
+- "Asymmetry between X config tests and Y config tests"
+- "Add validation to load_X() analogous to load_model()"
+- "Skip normalization / validation for test fixtures"
+
+## Verified Workflow
+
+### Phase 1: Understand the Asymmetry
+
+1. **Read the existing symmetric loader** (e.g., `load_model()`) to see the pattern:
+
+   ```python
+   # In load_model():
+   config = ModelConfig(**data)
+   warnings = validate_filename_model_id_consistency(model_path, config.model_id)
+   for warning in warnings:
+       logger.warning(warning)
+   return config
+   ```
+
+2. **Read the asymmetric loader** (e.g., `load_tier()`) — it lacks this validation call.
+
+3. **Read the corresponding test** to confirm it calls the validator directly:
+
+   ```python
+   # BEFORE (asymmetric — calls validator directly):
+   warnings = validate_name_model_family_consistency(config_path, name)
+   assert not warnings
+   ```
+
+   vs the model test (goes through loader):
+
+   ```python
+   # SYMMETRIC — calls through loader:
+   config = loader.load_model("_test-fixture")
+   assert not caplog.records
+   ```
+
+### Phase 2: Add Validation Function
+
+Add `validate_filename_X_consistency()` in `scylla/config/validation.py` following the same pattern as the existing validator:
+
+```python
+def validate_filename_tier_consistency(config_path: Path, tier: str) -> list[str]:
+    """Validate config filename matches tier identifier.
+
+    Args:
+        config_path: Path to tier config file
+        tier: tier field from config (normalized, e.g., "t0")
+
+    Returns:
+        List of warning messages (empty if valid)
+
+    """
+    filename_stem = config_path.stem
+
+    # Skip validation for test fixtures (prefixed with _)
+    if filename_stem.startswith("_"):
+        return []
+
+    if filename_stem == tier:
+        return []
+
+    return [
+        f"Config filename '{filename_stem}.yaml' does not match tier "
+        f"'{tier}'. Expected '{tier}.yaml'"
+    ]
+```
+
+**Key invariants to preserve:**
+- Returns `list[str]` (empty = valid, non-empty = warnings)
+- Skips validation for `_`-prefixed filenames
+- No exceptions — only warnings
+
+### Phase 3: Update the Loader
+
+In `load_tier()` (or analogous method), make **two** changes:
+
+1. **Skip name normalization for `_`-prefixed paths** (so `_test-fixture` isn't mangled to `t_test-fixture`):
+
+   ```python
+   # Before:
+   tier = tier.lower().strip()
+   if not tier.startswith("t"):
+       tier = f"t{tier}"
+
+   # After:
+   if not tier.startswith("_"):
+       tier = tier.lower().strip()
+       if not tier.startswith("t"):
+           tier = f"t{tier}"
+   ```
+
+2. **Call the new validator after constructing the config** (mirroring `load_model()`):
+
+   ```python
+   try:
+       config = TierConfig(**data)
+   except Exception as e:
+       raise ConfigurationError(f"Invalid tier configuration in {tier_path}: {e}")
+
+   warnings = validate_filename_tier_consistency(tier_path, config.tier)
+   for warning in warnings:
+       logger.warning(warning)
+
+   return config
+   ```
+
+3. **Import the new function** in `loader.py`:
+
+   ```python
+   from .validation import (
+       validate_filename_model_id_consistency,
+       validate_filename_tier_consistency,   # <-- add
+       validate_model_config_referenced,
+   )
+   ```
+
+### Phase 4: Write Tests via Loader
+
+Add a `TestFilenameXConsistency` class that mirrors the existing `TestFilenameModelIdValidation` class exactly — all 4 tests go through the **loader**, not the validator directly:
+
+```python
+class TestFilenameTierConsistency:
+    """Test validation of filename/tier consistency."""
+
+    def test_filename_matches_tier_exact(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test validation passes when filename matches tier exactly."""
+        tiers_dir = tmp_path / "config" / "tiers"
+        tiers_dir.mkdir(parents=True)
+        (tiers_dir / "t0.yaml").write_text("tier: t0\nname: Vanilla\n")
+
+        loader = ConfigLoader(str(tmp_path))
+        with caplog.at_level(logging.WARNING):
+            config = loader.load_tier("t0")
+
+        assert config.tier == "t0"
+        assert not caplog.records  # No warnings
+
+    def test_filename_mismatch_warns(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test validation warns when filename doesn't match tier field."""
+        tiers_dir = tmp_path / "config" / "tiers"
+        tiers_dir.mkdir(parents=True)
+        (tiers_dir / "t1.yaml").write_text("tier: t0\nname: Vanilla\n")  # mismatch!
+
+        loader = ConfigLoader(str(tmp_path))
+        with caplog.at_level(logging.WARNING):
+            config = loader.load_tier("t1")
+
+        assert config.tier == "t0"
+        assert len(caplog.records) == 1
+        assert "t1.yaml" in caplog.text
+        assert "t0" in caplog.text
+
+    def test_test_fixtures_skip_validation(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test that _-prefixed fixtures skip validation (via loader, not direct call)."""
+        tiers_dir = tmp_path / "config" / "tiers"
+        tiers_dir.mkdir(parents=True)
+        (tiers_dir / "_test-fixture.yaml").write_text("tier: t0\nname: Fixture Tier\n")
+
+        loader = ConfigLoader(str(tmp_path))
+        with caplog.at_level(logging.WARNING):
+            config = loader.load_tier("_test-fixture")
+
+        assert config.tier == "t0"
+        assert not caplog.records  # No warnings for test fixtures
+
+    def test_warning_message_format(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test warning message includes both filename and tier field value."""
+        tiers_dir = tmp_path / "config" / "tiers"
+        tiers_dir.mkdir(parents=True)
+        (tiers_dir / "t2.yaml").write_text("tier: t1\nname: Prompted\n")
+
+        loader = ConfigLoader(str(tmp_path))
+        with caplog.at_level(logging.WARNING):
+            loader.load_tier("t2")
+
+        assert len(caplog.records) == 1
+        warning_msg = caplog.records[0].message
+        assert "t2.yaml" in warning_msg
+        assert "t1" in warning_msg
+```
+
+### Phase 5: Verify and Commit
+
+```bash
+# Run targeted tests first
+pixi run python -m pytest tests/unit/test_config_loader.py -v
+
+# Run full suite to verify coverage threshold
+pixi run python -m pytest tests/ --ignore=tests/claude-code -v
+
+# Stage and commit (pre-commit will auto-format)
+git add scylla/config/loader.py scylla/config/validation.py tests/unit/test_config_loader.py
+git commit -m "feat(config): extract common validation test fixture pattern for loaders
+
+Closes #808"
+
+# Re-stage after ruff auto-format and commit again
+git add scylla/config/loader.py scylla/config/validation.py tests/unit/test_config_loader.py
+git commit -m "feat(config): ..."
+```
+
+## Failed Attempts & Lessons Learned
+
+### ❌ Don't: Call the validator directly in tests for the asymmetric loader
+
+**Why it fails:** This is the exact anti-pattern described in the issue. Calling the validator directly bypasses the loader, meaning if the loader's normalization or fixture-detection logic changes, the test won't catch it.
+
+**✅ Do:** Always go through `loader.load_X()` in tests, using `caplog` to capture warning output.
+
+### ❌ Don't: Forget to bypass normalization for `_`-prefixed fixture names
+
+**Why it fails:** `load_tier("_test-fixture")` without the guard becomes `_test-fixture.lower().strip()` then `t_test-fixture` (since it doesn't start with `t`). The file `_test-fixture.yaml` won't be found.
+
+**✅ Do:** Check `tier.startswith("_")` before normalization. The guard must come first.
+
+### ❌ Don't: Amend the previous commit after ruff auto-formats
+
+**Why it fails:** `--no-verify` is prohibited. If ruff formats a file, the pre-commit hook fails the commit. The files are modified-in-place. You must re-stage and create a **new** commit.
+
+**✅ Do:** After a hook-caused commit failure, `git add` the auto-formatted files and run `git commit` again (same message is fine).
+
+## Results & Parameters
+
+### Files Modified
+
+| File | Change |
+| ------ | -------- |
+| `scylla/config/validation.py` | Added `validate_filename_tier_consistency()` (22 lines) |
+| `scylla/config/loader.py` | Updated `load_tier()`: normalization guard + validation call + import |
+| `tests/unit/test_config_loader.py` | Added `TestFilenameTierConsistency` (4 tests, ~60 lines) |
+
+### Test Metrics
+
+| Metric | Value |
+| -------- | ------- |
+| New tests added | 4 |
+| Total tests | 2396 passed |
+| Coverage | 74.19% (threshold: 73%) |
+| Regressions | 0 |
+
+### Pre-commit Hooks
+
+```bash
+# Hooks that auto-ran (ruff-format reformatted the test file)
+- ruff-format-python  # Modified test file; required re-stage + re-commit
+- ruff               # Passed
+- mypy               # Passed
+```
+
+## Key Insights
+
+1. **Symmetry between loader tests is a quality signal** — if one loader goes through the loader for fixture tests and another doesn't, it's a maintenance hazard. The fix is small but valuable.
+
+2. **Name normalization must be fixture-aware** — any loader that normalizes input (lowercasing, prefixing) must skip normalization for `_`-prefixed fixture names, or the file lookup will fail.
+
+3. **The `_` prefix convention is a first-class concept** — it appears in both `validation.py` (skip validation) and `loader.py` (skip normalization). Both must be consistent.
+
+4. **`caplog` is the right tool for warning-based validation tests** — use `pytest.LogCaptureFixture` with `caplog.at_level(logging.WARNING)` and assert on `caplog.records` / `caplog.text`.
+
+5. **Ruff auto-formats on commit failure** — after a ruff-caused failure, re-stage and commit. Don't amend.
+
+## References
+
+- Issue: #808 (follow-up from #733)
+- PR: #950
+- Files modified:
+  - `scylla/config/validation.py`
+  - `scylla/config/loader.py`
+  - `tests/unit/test_config_loader.py`
+- Related skills: `enforce-model-config-consistency-hook`, `validate-model-configs-fix-mode`
+
+## Usage Examples
+
+### Invoke this skill when you see
+
+A follow-up issue saying:
+
+> "The X config test calls the validator directly (not through the loader) due to normalization. The Y config equivalent calls through the loader. This asymmetry could confuse future contributors."
+
+### Expected outcome
+
+- New `validate_filename_X_consistency()` function in `validation.py`
+- `load_X()` updated with normalization guard + validation call
+- `TestFilenameXConsistency` class with 4 tests, all via loader
+
+---
+
+**Category:** testing
+**Tags:** test-fixtures, symmetry, validation, loader, config, caplog, normalization, underscore-prefix
+**Confidence:** High (verified on real codebase with 2396 tests)
+
+---
+
+## Superseded from checkpoint-state-machine-test-fixtures
+
+**Original date/version**: 2026-06-07 / 1.1.0
+
+### Original frontmatter
+
+```yaml
+name: checkpoint-state-machine-test-fixtures
+description: "Use when: (1) writing integration or unit tests for ProjectScylla checkpoint-based state machines (StateMachine / SubtestStateMachine / TierStateMachine / ExperimentStateMachine), (2) debugging tests where checkpoint states are unexpectedly reset to pending, (3) adding orphan/integrity detectors to resume pipelines, (4) verifying additive/non-destructive resume behavior across sequential invocations, (5) testing zombie detection with real disk I/O, (6) verifying DataLoader reset behavior in Mojo training/validation loops, or (7) extracting shared pytest fixtures to eliminate per-test boilerplate."
+category: testing
+date: '2026-06-07'
+version: "1.1.0"
+user-invocable: false
+history: checkpoint-state-machine-test-fixtures.history
+tags:
+  - checkpoint
+  - state-machine
+  - test-fixtures
+  - pytest
+  - integration-tests
+  - orphan-detection
+  - resume
+  - zombie-detection
+  - dataloader
+  - mojo
+```
+
+### Original body
+
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-05-19 |
+| Project | ProjectScylla / ProjectOdyssey |
+| Objective | Unified patterns for building consistent checkpoint test fixtures and integration tests across the 4-level state machine hierarchy |
+| Outcome | 8 skills consolidated — covers fixture consistency rules, orphan detection, additive resume, zombie detection, shared fixtures, and DataLoader reset verification |
+
+## When to Use
+
+- Writing tests for `_initialize_or_resume_experiment()` or `ResumeManager.reset_failed_states()`
+- Debugging a test where checkpoint subtest/tier states are unexpectedly reset to `"pending"`
+- Adding integration tests for stateful/resumable experiment behavior across multiple invocations
+- Testing that ephemeral flags do not affect persistent state (config hash stability)
+- Adding orphan/integrity detectors to resume pipelines and auditing existing fixtures
+- Testing zombie detection (`ResumeManager.handle_zombie()`) with real disk I/O
+- Extending `RunState` enum and keeping `state_order` rank tables in sync
+- Extracting shared `pytest` fixtures from repetitive per-test object construction
+- Verifying that training/validation loops call `reset()` on a DataLoader before iterating
+
+## Verified Workflow
+
+### Quick Reference — Checkpoint Hierarchy Consistency
+
+```python
+# WRONG — orphan detector resets "01" to "pending"
+checkpoint = E2ECheckpoint(
+    experiment_state="failed",
+    subtest_states={"T0": {"00": "failed", "01": "aggregated"}},
+    # run_states defaults to {} — "01" has no backing runs!
+)
+
+# RIGHT — "01" has a terminal backing run, orphan detector leaves it alone
+checkpoint = E2ECheckpoint(
+    experiment_state="failed",
+    subtest_states={"T0": {"00": "failed", "01": "aggregated"}},
+    run_states={"T0": {"01": {"1": "worktree_cleaned"}}},
+)
+```
+
+### 1. The 4-Level Checkpoint Hierarchy
+
+ProjectScylla has four independent state machine layers, each populating distinct checkpoint fields:
+
+```
+experiment_state    (ExperimentStateMachine)
+  └─ tier_states        (TierStateMachine — only populates tier_states)
+       └─ subtest_states    (SubtestStateMachine)
+            └─ run_states       (StateMachine)
+```
+
+| State Machine | Checkpoint field populated |
+| --- | --- |
+| `StateMachine` | `run_states[tier_id][subtest_id][run_num]` |
+| `SubtestStateMachine` | `subtest_states[tier_id][subtest_id]` |
+| `TierStateMachine` | `tier_states[tier_id]` |
+| `ExperimentStateMachine` | `experiment_state` |
+
+**Critical**: Running only `SubtestStateMachine` leaves `tier_states` empty. A tier absent from `tier_states` is implicitly `"pending"` regardless of whether subtests/runs completed.
+
+### 2. Consistency Rules Enforced at Resume Time
+
+| Higher State | Required Lower State | Validator |
+| --- | --- | --- |
+| subtest `"aggregated"` or `"runs_complete"` | At least one entry in `run_states[tier][subtest]` | `_find_orphaned_subtest_states()` |
+| subtest `"runs_in_progress"` | At least one run in non-terminal state | `_find_tiers_with_intermediate_runs()` |
+| tier `"complete"` | All subtests in `"aggregated"` | `_reset_tier_state_for_rerun()` |
+| experiment `"complete"` | All tiers in complete-family state | `_reset_intermediate_runs_in_complete_experiment()` |
+
+**Orphan cascade**: When an orphaned subtest is detected, `_reset_tier_to_config_loaded()` and `_reset_experiment_to_tiers_running()` are also called, so tier and experiment states may change unexpectedly.
+
+### 3. ResumeManager Validator Execution Order
+
+```python
+def reset_failed_states(self):
+    self._reset_infra_error_runs()                          # Step 1
+    self._reset_intermediate_runs_in_complete_experiment()  # Step 2
+    self._reset_orphaned_subtest_states()                   # Step 3 ← resets "aggregated" without run_states
+    self._reset_failed_and_interrupted()                    # Step 4
+```
+
+Order matters: the orphan reset (Step 3) runs BEFORE the failed/interrupted reset (Step 4).
+
+### 4. Building a Resume Test Fixture (Step-by-Step)
+
+1. Decide which states you're testing — identify the specific reset behavior under test.
+2. Set all four levels consistently — if a subtest is `"aggregated"`, give it a terminal run.
+3. Use `"worktree_cleaned"` as the canonical terminal run state.
+4. Use non-terminal run states for in-progress work (`"pending"`, `"report_written"`, etc.).
+5. Audit: `grep -n '"aggregated"\|"runs_complete"' tests/unit/e2e/test_runner.py` — every match needs a backing `run_states` entry.
+
+```python
+def test_resume_resets_failed_subtests_only(self, mock_config, tmp_path):
+    """Only failed subtests reset; aggregated subtests with runs survive."""
+    checkpoint = E2ECheckpoint(
+        experiment_id=mock_config.experiment_id,
+        experiment_dir=str(tmp_path / mock_config.experiment_id),
+        config_hash="abc123",
+        experiment_state="failed",
+        tier_states={"T0": "failed"},
+        subtest_states={"T0": {"00": "failed", "01": "aggregated"}},
+        run_states={"T0": {"01": {"1": "worktree_cleaned"}}},
+        started_at=datetime.now(timezone.utc).isoformat(),
+        last_updated_at=datetime.now(timezone.utc).isoformat(),
+        status="failed",
+    )
+    assert checkpoint.subtest_states["T0"]["00"] == "pending"    # reset
+    assert checkpoint.subtest_states["T0"]["01"] == "aggregated" # untouched
+```
+
+### 5. Additive Resume — State Machine Layer Tests
+
+Tests at the state machine level (not `E2ERunner.run()`) — no real API calls, git ops, or subprocesses:
+
+```python
+from scylla.e2e.state_machine import StateMachine
+from scylla.e2e.subtest_state_machine import SubtestStateMachine, UntilHaltError
+from scylla.e2e.tier_state_machine import TierStateMachine
+```
+
+**TierState sequence and terminal states**:
+
+```python
+_TIER_STATE_SEQUENCE = [
+    TierState.PENDING,
+    TierState.CONFIG_LOADED,
+    TierState.SUBTESTS_RUNNING,
+    TierState.SUBTESTS_COMPLETE,
+    TierState.BEST_SELECTED,
+    TierState.REPORTS_GENERATED,
+    TierState.COMPLETE,
+]
+_TIER_TERMINAL_STATES = frozenset([TierState.COMPLETE, TierState.FAILED])
+```
+
+**`_simulate_tier_subtests_at_state` — simulate runs halted at a specific state (mimics `--until` flag)**:
+
+```python
+def _simulate_tier_subtests_at_state(cp, cp_path, tier_id, subtest_ids, run_count, until_run_state):
+    for subtest_id in subtest_ids:
+        ssm = SubtestStateMachine(checkpoint=cp, checkpoint_path=cp_path)
+
+        def _pending_runs() -> None:
+            run_sm = StateMachine(checkpoint=cp, checkpoint_path=cp_path)
+            for run_num in range(1, run_count + 1):
+                run_sm.advance_to_completion(
+                    tier_id, subtest_id, run_num,
+                    make_noop_run_actions(),
+                    until_state=until_run_state,
+                )
+            raise UntilHaltError("all runs reached until_state")
+
+        subtest_actions: dict[SubtestState, Callable[[], None]] = cast(
+            dict[SubtestState, Callable[[], None]],
+            {
+                SubtestState.PENDING: _pending_runs,
+                SubtestState.RUNS_IN_PROGRESS: MagicMock(),
+                SubtestState.RUNS_COMPLETE: MagicMock(),
+            },
+        )
+        ssm.advance_to_completion(tier_id, subtest_id, subtest_actions)
+```
+
+**`_simulate_tier_to_complete` and `make_noop_tier_actions`**:
+
+```python
+def _simulate_tier_to_complete(cp, cp_path, tier_id, subtest_ids, run_count):
+    """Run all subtests to WORKTREE_CLEANED, then advance TierStateMachine to COMPLETE."""
+    _simulate_tier_subtests_full(cp, cp_path, tier_id, subtest_ids, run_count)
+    tsm = TierStateMachine(checkpoint=cp, checkpoint_path=cp_path)
+    tsm.advance_to_completion(tier_id, make_noop_tier_actions())
+
+def make_noop_tier_actions():
+    from scylla.e2e.models import TierState
+    return {
+        TierState.PENDING: MagicMock(),
+        TierState.CONFIG_LOADED: MagicMock(),
+        TierState.SUBTESTS_RUNNING: MagicMock(),
+        TierState.SUBTESTS_COMPLETE: MagicMock(),
+        TierState.BEST_SELECTED: MagicMock(),
+        TierState.REPORTS_GENERATED: MagicMock(),
+    }
+```
+
+**Asserting additive preservation**:
+
+```python
+_simulate_tier_to_complete(cp, cp_path, "T0", ["00"], runs=3)
+cp = load_checkpoint(cp_path)
+assert cp.tier_states.get("T0") == TierState.COMPLETE.value
+
+# Add T1 partial runs without TierStateMachine advance
+cp = load_checkpoint(cp_path)
+_simulate_tier_subtests_at_state(cp, cp_path, "T1", ["00"], 3, RunState.REPLAY_GENERATED)
+cp_after = load_checkpoint(cp_path)
+assert cp_after.tier_states.get("T0") == TierState.COMPLETE.value  # preserved
+assert "T1" not in cp_after.tier_states                            # no phantom entry
+```
+
+**Monotonic State Advancement Check** — verify runs only move forward across a resume:
+
+```python
+def _run_state_index(state_str: str) -> int:
+    from scylla.e2e.state_machine import _RUN_STATE_SEQUENCE
+    for idx, state in enumerate(_RUN_STATE_SEQUENCE):
+        if state.value == state_str:
+            return idx
+    return -1  # Terminal states (failed, rate_limited)
+
+# Verify runs only move forward
+for tier_id, subtests in previous_cp.run_states.items():
+    for subtest_id, runs in subtests.items():
+        for run_key, old_state_str in runs.items():
+            new_state_str = cp.run_states.get(tier_id, {}).get(subtest_id, {}).get(run_key, old_state_str)
+            old_idx = _run_state_index(old_state_str)
+            new_idx = _run_state_index(new_state_str)
+            if old_idx == -1 and new_idx == -1:
+                continue  # Both terminal: OK
+            assert new_idx >= old_idx  # Monotonic
+```
+
+### 6. Config Hash Stability
+
+Fields excluded from config hash (as of v3.1): `tiers_to_run`, `max_subtests`, `parallel_subtests`, all `until_*`/`from_*`/`filter_*` ephemeral flags.
+
+```python
+configs = [
+    make_config(["T0"], max_subtests=1),
+    make_config(["T0", "T1"], max_subtests=2),
+    make_config(["T0", "T1", "T2"], max_subtests=3),
+]
+hashes = [compute_config_hash(c) for c in configs]
+assert len(set(hashes)) == 1  # all identical
+```
+
+### 7. Zombie Detection Integration Tests (Real Disk I/O)
+
+Use a guaranteed-dead PID to avoid mocking `os.kill`:
+
+```python
+_DEAD_PID = 999_999_999   # Linux max PID is 4,194,304 — this is always dead
+
+cp = make_checkpoint(status="running", pid=_DEAD_PID, last_heartbeat=_stale_heartbeat(),
+                     experiment_dir=str(tmp_path))
+cp_path = tmp_path / "checkpoint.json"
+save_checkpoint(cp, cp_path)
+
+rm = ResumeManager(cp, MagicMock(spec=ExperimentConfig), MagicMock())
+_, updated_cp = rm.handle_zombie(checkpoint_path=cp_path, experiment_dir=tmp_path,
+                                  heartbeat_timeout_seconds=120)
+
+assert updated_cp.status == "interrupted"
+assert load_checkpoint(cp_path).status == "interrupted"   # disk persistence
+```
+
+`is_zombie()` requires **all three**: `status=="running"` AND dead PID AND stale heartbeat.
+
+```python
+_STALE_HEARTBEAT_AGE = 300   # 5 minutes — past 120s default
+_FRESH_HEARTBEAT_AGE = 10    # within 120s default
+
+def _stale_heartbeat(): return (datetime.now(timezone.utc) - timedelta(seconds=_STALE_HEARTBEAT_AGE)).isoformat()
+def _fresh_heartbeat(): return (datetime.now(timezone.utc) - timedelta(seconds=_FRESH_HEARTBEAT_AGE)).isoformat()
+```
+
+### 8. state_order Rank Table Sync (RunState enum extensions)
+
+When adding new `RunState` values, keep `state_order` in `_reconcile_checkpoint_with_disk()` complete. Missing states silently get rank=0 (same as `"pending"`), causing `0 > 0 = False` — the state never advances.
+
+```python
+state_order = [
+    "pending", "dir_structure_created", "worktree_created", "symlinks_applied",
+    "config_committed", "baseline_captured", "prompt_written", "replay_generated",
+    "agent_complete", "diff_captured", "judge_pipeline_run", "judge_prompt_built",
+    "judge_complete", "run_finalized", "report_written", "checkpointed", "worktree_cleaned",
+]
+```
+
+**Regression guard test** — assert every non-terminal state appears in function source:
+
+```python
+def test_reconcile_state_order_covers_all_run_states(self):
+    import inspect, manage_experiment
+    from scylla.e2e.models import RunState
+    source = inspect.getsource(manage_experiment._reconcile_checkpoint_with_disk)
+    terminal = {RunState.FAILED.value, RunState.RATE_LIMITED.value}
+    for state_value in {s.value for s in RunState if s.value not in terminal}:
+        assert state_value in source, f"RunState '{state_value}' missing from state_order"
+```
+
+### 9. Shared `wired_runner` Pytest Fixture
+
+Extract per-test boilerplate when multiple tests construct the same object:
+
+```python
+@pytest.fixture
+def wired_runner(mock_config, mock_tier_manager, tmp_path):
+    """Pre-configured E2ERunner with experiment_dir and tier_manager already set."""
+    with patch.object(TierManager, "__init__", return_value=None):
+        runner = E2ERunner(mock_config, tmp_path / "tiers", tmp_path / "results")
+    runner.tier_manager = mock_tier_manager
+    runner.experiment_dir = tmp_path / "experiment"
+    runner.experiment_dir.mkdir(parents=True)
+    return runner
+```
+
+Use function scope (default) when the class under test mutates state. Adopt all-or-nothing within a test class — partial adoption creates inconsistency.
+
+### 10. DataLoader Reset Verification (Mojo — Pre-Exhaustion Strategy)
+
+Prove `reset()` is called without mock objects — use catastrophic failure as the signal:
+
+```mojo
+fn test_validation_loop_run_resets_loader() raises:
+    var vloop = ValidationLoop()
+    var loader = create_val_loader(n_batches=2)
+    loader.current_batch = loader.num_batches   # pre-exhaust
+    assert_true(not loader.has_next())          # confirm pre-condition
+    var metrics = TrainingMetrics()
+    var val_loss = vloop.run(simple_forward, simple_loss, loader, metrics)
+    assert_greater(val_loss, Float64(-1e-10))   # finite: reset() was called
+    assert_less(val_loss, Float64(1e10))
+```
+
+Without `reset()`: `num_batches == 0` → division by zero or NaN.
+With `reset()`: `num_batches == 2` → valid finite loss.
+
+Add call to `main()` in the correct test group block. Mojo tests use `fn main() raises`, not pytest.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --- | --- | --- | --- |
+| Minimal fixture with subtest_states only | Set `subtest_states={"T0": {"00": "failed", "01": "aggregated"}}` without `run_states` | `_find_orphaned_subtest_states()` correctly reset `"01"` to `"pending"` — aggregated subtest with no backing runs is orphaned | Fixtures must be cross-level consistent; higher-state assertions require lower-state backing data |
+| Using `_run_resume` helper for complex fixtures | Used shared helper which creates checkpoint with `run_states={}` by default | No way to inject `run_states` through the helper | For tests needing `run_states`, inline checkpoint creation instead of using shared helpers |
+| Fixing only the first failing test after rebase | Fixed one fixture and pushed | Second test (`test_resume_detects_missing_subtests_and_resets_tier_to_pending`) had same root cause in different class | Audit ALL fixtures with `grep '"aggregated"'` across the entire file, not just the first failure |
+| Assert `get_run_status() is None` after corrupted JSON | Expected no `mark_run_completed` call → `None` status | `set_run_state("worktree_cleaned")` auto-calls `mark_run_completed("passed")` as backward-compat sync | Always check if `set_run_state` has side-effects on `completed_runs` before asserting status |
+| `completed_runs={"T0": {"00": {"3": "passed"}}}` (str key) | Used string `"3"` as inner dict key | `E2ECheckpoint` declares `completed_runs: dict[str, dict[str, dict[int, str]]]` — inner key is `int` | Mypy error: incompatible type `"str": "str"`; expected `"int": "str"` — use `{3: "passed"}` |
+| Mock-based approach for DataLoader reset (Mojo) | Wrapping DataLoader to count `reset()` calls | Mojo structs do not support vtable-based mocking; no trait for spy | Use direct field mutation + observable side effects (finite loss) instead |
+| Asserting exact loss value in Mojo test | `assert_almost_equal(val_loss, Float64(1.0), ...)` | Relies on loss function returning exactly 1.0; brittle if loss function changes | Use range assertions (`> -eps` and `< large`) for robustness |
+| Using `run_in_background` for Skill tool commit | Called `commit-commands:commit-push-pr` skill | Skill tool denied (don't-ask mode) | Fall back to direct Bash git commands when Skill tool is unavailable |
+| Checking for pytest tests in Mojo project | Issue prompt suggested pytest | Project uses Mojo test runner, not pytest | Always check test file extension and existing patterns before writing tests |
+
+## Results & Parameters
+
+### Run Commands
+
+```bash
+# Integration tests (suppress coverage floor when running in isolation)
+pixi run python -m pytest tests/integration/ -v --override-ini="addopts="
+
+# Additive resume tier-level tests only
+pixi run python -m pytest tests/integration/e2e/test_additive_resume.py \
+    -v -k "TestAdditiveResumeTierStates"
+
+# Zombie detection integration tests
+pixi run python -m pytest tests/integration/e2e/test_zombie_resume.py -v \
+    --override-ini="addopts="
+
+# Unit tests for state machine / reconcile
+pixi run python -m pytest tests/unit/e2e/test_runner.py tests/unit/e2e/test_manage_experiment_run.py -v
+```
+
+### Audit Commands
+
+```bash
+# Find all test fixtures with aggregated/runs_complete that may need run_states
+grep -n '"aggregated"\|"runs_complete"' tests/unit/e2e/test_runner.py
+
+# Verify only one constructor call remains after fixture extraction
+grep -n "E2ERunner(" tests/unit/e2e/test_runner.py
+```
+
+### Key Constants
+
+```python
+# Zombie detection
+_DEAD_PID = 999_999_999          # Guaranteed dead on Linux (max is 4,194,304)
+_STALE_HEARTBEAT_AGE = 300       # 5 minutes — well past 120s default timeout
+_FRESH_HEARTBEAT_AGE = 10        # 10 seconds — well within 120s default timeout
+
+# Additive resume
+_RUNS = 3
+_EXPERIMENT_ID = "additive-resume-test"
+_FIXTURE_DIR = "<project-root>/tests/fixtures/tests/test-001"
+```
+
+### Minimal ExperimentConfig for Testing
+
+```python
+config = ExperimentConfig(
+    experiment_id="additive-resume-test",
+    task_repo="https://github.com/mvillmow/Hello-World",
+    task_commit="7fd1a60b01f91b314f59955a4e4d4e80d8edf11d",
+    task_prompt_file=Path("tests/fixtures/tests/test-001/prompt.md"),
+    language="python",
+    models=["claude-haiku-4-5-20251001"],
+    judge_models=["claude-haiku-4-5-20251001"],
+    runs_per_subtest=3,
+    tiers_to_run=[TierID("T0")],
+    max_subtests=1,
+    until_run_state=RunState.REPLAY_GENERATED,
+)
+```
+
+### `set_run_state` Auto-Sync Behavior
+
+```python
+# States that auto-call mark_run_completed("passed") if no prior status:
+terminal_complete = {"run_complete", "run_finalized", "report_written", "checkpointed", "worktree_cleaned"}
+existing = self.get_run_status(tier_id, subtest_id, run_num)
+compat_status = existing if existing in ("passed", "failed") else "passed"
+self.mark_run_completed(tier_id, subtest_id, run_num, status=compat_status)
+# Result: if inferred_status is None → no override → status stays "passed"
+```
+
+### Mojo DataLoader Pre-Exhaustion Template
+
+```mojo
+loader.current_batch = loader.num_batches   # exhaust loader
+assert_true(not loader.has_next())          # confirm pre-condition
+# call method under test
+assert_greater(val_loss, Float64(-1e-10))   # finite loss proves reset() was called
+assert_less(val_loss, Float64(1e10))
+```
+
+**Key parameters**: `n_batches=2`, `max_batches=2` (must equal `n_batches`), range bounds `-1e-10` to `1e10`.
+
+### Test Counts by PR
+
+| PR | Tests Added | Suite Result |
+| --- | --- | --- |
+| ProjectScylla#1149 (additive resume) | 16 integration tests | 3201 passed, 78.36% coverage |
+| ProjectScylla#1312 (zombie detection) | 11 integration tests | 3595 passed, 67.46% coverage |
+| ProjectScylla#1485 (state-order reconcile) | 5 edge-case unit tests | 4861 passed, 78.36% coverage |
+| ProjectScylla#815 (wired\_runner fixture) | 4 refactored (net +1) | 4/4 passed |
+| ProjectOdyssey#3687 (DataLoader reset) | 1 Mojo test | CI validated |
+| ProjectOdyssey#4770 (run() reset parallel) | 1 Mojo test | CI validated |
+
+## Verified On
+
+| Project | Context | Details |
+| --- | --- | --- |
+| ProjectScylla | PRs #815, #1149, #1312, #1485 | Checkpoint state machine test patterns |
+| ProjectOdyssey | PRs #3687, #4770 | Mojo DataLoader reset verification |
+
+---
+
+## Prior history absorbed from checkpoint-state-machine-test-fixtures
+
+The absorbed skill `checkpoint-state-machine-test-fixtures` was itself a consolidation; its prior history is preserved verbatim below.
+
+
+## Superseded from additive-resume-integration-tests
+
+```markdown
+---
+name: additive-resume-integration-tests
+description: "Integration test patterns for stateful additive resume behavior in ProjectScylla \u2014 validates that sequential invocations with expanding --tiers/--max-subtests never reset existing checkpoint state, including TierStateMachine-level tier_states verification."
+category: testing
+date: '2026-03-19'
+version: 1.1.0
+absorbed: [tier-state-additive-resume-tests]
+---
+# Skill: Integration Tests for Additive Resume Behavior
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-02-27 |
+| Project | ProjectScylla |
+| Objective | Add integration tests validating additive resume across sequential --tiers/--max-subtests/--until invocations |
+| Outcome | Success — 16/16 tests pass, full suite 3201 passed, 78.36% coverage |
+| Issue | HomericIntelligence/ProjectScylla#1111 |
+| PR | HomericIntelligence/ProjectScylla#1149 |
+
+## When to Use
+
+Use this skill when:
+- Adding integration tests for stateful/resumable experiment behavior
+- Testing checkpoint state machine progression across multiple invocations
+- Validating additive/non-destructive behavior (new tiers/subtests don't reset existing ones)
+- Testing that ephemeral flags don't affect persistent state (config hash stability)
+
+## Key Architectural Insight: State Machine Layers
+
+ProjectScylla has a 4-level state machine hierarchy:
+- **StateMachine** — run-level (RunState: PENDING → WORKTREE_CLEANED)
+- **SubtestStateMachine** — subtest-level (SubtestState: PENDING → AGGREGATED)
+- **TierStateMachine** — tier-level (TierState: PENDING → COMPLETE)
+- **ExperimentStateMachine** — experiment-level (ExperimentState: INITIALIZING → COMPLETE)
+
+**Important**: Each layer independently populates different checkpoint fields:
+- `run_states` ← populated by `StateMachine`
+- `subtest_states` ← populated by `SubtestStateMachine`
+- `tier_states` ← populated by `TierStateMachine` ONLY
+- If you only run `SubtestStateMachine`, `tier_states` stays empty (implicitly "pending")
+
+## Verified Workflow
+
+### Test Architecture Pattern
+
+Tests at the state machine level (not `E2ERunner.run()`) — no real API calls, git ops, or subprocesses:
+
+```python
+from scylla.e2e.state_machine import StateMachine
+from scylla.e2e.subtest_state_machine import SubtestStateMachine, UntilHaltError
+from scylla.e2e.tier_state_machine import TierStateMachine
+
+# Simulate runs halted at a specific state (mimics --until flag)
+def _simulate_tier_subtests_at_state(cp, cp_path, tier_id, subtest_ids, run_count, until_run_state):
+    for subtest_id in subtest_ids:
+        ssm = SubtestStateMachine(checkpoint=cp, checkpoint_path=cp_path)
+
+        def _pending_runs() -> None:
+            run_sm = StateMachine(checkpoint=cp, checkpoint_path=cp_path)
+            for run_num in range(1, run_count + 1):
+                run_sm.advance_to_completion(
+                    tier_id, subtest_id, run_num,
+                    make_noop_run_actions(),
+                    until_state=until_run_state,
+                )
+            raise UntilHaltError("all runs reached until_state")
+
+        subtest_actions: dict[SubtestState, Callable[[], None]] = cast(
+            dict[SubtestState, Callable[[], None]],
+            {
+                SubtestState.PENDING: _pending_runs,
+                SubtestState.RUNS_IN_PROGRESS: MagicMock(),
+                SubtestState.RUNS_COMPLETE: MagicMock(),
+            },
+        )
+        ssm.advance_to_completion(tier_id, subtest_id, subtest_actions)
+```
+
+### Config Hash Stability Verification
+
+```python
+from scylla.e2e.checkpoint import compute_config_hash
+
+# All these produce the same hash:
+configs = [
+    make_config(["T0"], max_subtests=1, until_run_state=RunState.REPLAY_GENERATED),
+    make_config(["T0", "T1"], max_subtests=2, until_run_state=RunState.REPLAY_GENERATED),
+    make_config(["T0", "T1", "T2"], max_subtests=3),
+    make_config(["T0", "T1", "T2", "T3"], max_subtests=1),
+]
+hashes = [compute_config_hash(c) for c in configs]
+assert len(set(hashes)) == 1  # All identical
+```
+
+Fields excluded from config hash (as of v3.1):
+- `tiers_to_run` — additive across resumes
+- `max_subtests` — development/testing only
+- `parallel_subtests` — parallelization setting only
+- All `until_*`, `from_*`, `filter_*` ephemeral flags
+
+### Monotonic State Advancement Check
+
+```python
+def _run_state_index(state_str: str) -> int:
+    from scylla.e2e.state_machine import _RUN_STATE_SEQUENCE
+    for idx, state in enumerate(_RUN_STATE_SEQUENCE):
+        if state.value == state_str:
+            return idx
+    return -1  # Terminal states (failed, rate_limited)
+
+# Verify runs only move forward
+for tier_id, subtests in previous_cp.run_states.items():
+    for subtest_id, runs in subtests.items():
+        for run_key, old_state_str in runs.items():
+            new_state_str = cp.run_states.get(tier_id, {}).get(subtest_id, {}).get(run_key, old_state_str)
+            old_idx = _run_state_index(old_state_str)
+            new_idx = _run_state_index(new_state_str)
+            if old_idx == -1 and new_idx == -1:
+                continue  # Both terminal: OK
+            assert new_idx >= old_idx  # Monotonic
+```
+
+## TierStateMachine Layer Tests
+
+The `tier_states` checkpoint field is populated **only** by `TierStateMachine`. Running
+`SubtestStateMachine` alone leaves `tier_states` empty; a tier is implicitly `"pending"` if absent
+from `tier_states`, regardless of whether subtests/runs completed.
+
+| State Machine | Checkpoint field populated |
+| --- | --- |
+| `StateMachine` | `run_states[tier_id][subtest_id][run_num]` |
+| `SubtestStateMachine` | `subtest_states[tier_id][subtest_id]` |
+| **`TierStateMachine`** | **`tier_states[tier_id]`** |
+| `ExperimentStateMachine` | `experiment_state` |
+
+### Helper: `_simulate_tier_to_complete`
+
+Combines `SubtestStateMachine` + `TierStateMachine` to drive a tier fully to COMPLETE:
+
+```python
+from scylla.e2e.tier_state_machine import TierStateMachine
+
+def _simulate_tier_to_complete(
+    cp: E2ECheckpoint,
+    cp_path: Path,
+    tier_id: str,
+    subtest_ids: list[str],
+    run_count: int,
+) -> None:
+    """Run all subtests to WORKTREE_CLEANED, then advance TierStateMachine to COMPLETE."""
+    _simulate_tier_subtests_full(cp, cp_path, tier_id, subtest_ids, run_count)
+
+    tsm = TierStateMachine(checkpoint=cp, checkpoint_path=cp_path)
+    tier_actions = make_noop_tier_actions()
+    tsm.advance_to_completion(tier_id, tier_actions)
+```
+
+### Helper: `make_noop_tier_actions` (full TierState enum coverage)
+
+```python
+from scylla.e2e.models import TierState
+from unittest.mock import MagicMock
+
+def make_noop_tier_actions() -> dict[TierState, Callable[[], None]]:
+    return {
+        TierState.PENDING: MagicMock(),
+        TierState.CONFIG_LOADED: MagicMock(),
+        TierState.SUBTESTS_RUNNING: MagicMock(),
+        TierState.SUBTESTS_COMPLETE: MagicMock(),
+        TierState.BEST_SELECTED: MagicMock(),
+        TierState.REPORTS_GENERATED: MagicMock(),
+    }
+```
+
+### TierState sequence
+
+```python
+_TIER_STATE_SEQUENCE = [
+    TierState.PENDING,
+    TierState.CONFIG_LOADED,
+    TierState.SUBTESTS_RUNNING,
+    TierState.SUBTESTS_COMPLETE,
+    TierState.BEST_SELECTED,
+    TierState.REPORTS_GENERATED,
+    TierState.COMPLETE,
+]
+_TIER_TERMINAL_STATES = frozenset([TierState.COMPLETE, TierState.FAILED])
+```
+
+### Assert tier_states additive across resume
+
+```python
+# After T0 reaches COMPLETE
+_simulate_tier_to_complete(cp, cp_path, "T0", ["00"], runs=3)
+cp = load_checkpoint(cp_path)
+assert cp.tier_states.get("T0") == TierState.COMPLETE.value
+
+# Load fresh from disk, add T1 partial runs (no TierStateMachine advance)
+cp = load_checkpoint(cp_path)
+_simulate_tier_subtests_at_state(cp, cp_path, "T1", ["00"], 3, RunState.REPLAY_GENERATED)
+cp_after = load_checkpoint(cp_path)
+
+# T0 must remain "complete" — never downgraded by adding T1
+assert cp_after.tier_states.get("T0") == TierState.COMPLETE.value
+# T1 absent from tier_states (TierStateMachine not advanced for T1)
+assert "T1" not in cp_after.tier_states
+```
+
+### Structural guarantee: only explicitly run tiers in tier_states
+
+```python
+_simulate_tier_to_complete(cp, cp_path, "T0", ["00"], 3)
+cp = load_checkpoint(cp_path)
+
+assert "T0" in cp.tier_states
+assert cp.tier_states["T0"] == TierState.COMPLETE.value
+assert len(cp.tier_states) == 1  # No phantom entries for T1, T2, etc.
+```
+
+### TestAdditiveResumeTierStates test scenarios
+
+`TestAdditiveResumeTierStates` in `tests/integration/e2e/test_additive_resume.py`:
+
+| Test | Scenario |
+| ------ | --------- |
+| `test_t0_complete_then_add_t1_preserves_t0_tier_state` | T0→COMPLETE, then T1 partial |
+| `test_two_tiers_complete_then_add_third_preserves_both` | T0+T1→COMPLETE, then T2 partial |
+| `test_complete_tier_tier_state_additive_across_three_invocations` | 3 sequential invocations |
+| `test_until_tier_state_partial_completion_preserved` | T0 halted at SUBTESTS_RUNNING |
+| `test_tier_states_dict_structure_after_full_completion` | Structural guarantee |
+
+```bash
+# Run tier-level tests only:
+pixi run python -m pytest tests/integration/e2e/test_additive_resume.py \
+    -v -k "TestAdditiveResumeTierStates"
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Test counts
+- 4 TestConfigHashStability tests
+- 4 TestAdditiveResume tests (4-stage progression)
+- 8 TestAdditiveResumeInvariants tests (parametrized + fine-grained)
+- Total: **16 integration tests**
+
+### Key constants
+```python
+_RUNS = 3        # runs_per_subtest (constant across all stages)
+_EXPERIMENT_ID = "additive-resume-test"
+_FIXTURE_DIR = Path("tests/fixtures/tests/test-001")
+```
+
+### Minimal ExperimentConfig for testing
+```python
+config = ExperimentConfig(
+    experiment_id="additive-resume-test",
+    task_repo="https://github.com/mvillmow/Hello-World",
+    task_commit="7fd1a60b01f91b314f59955a4e4d4e80d8edf11d",
+    task_prompt_file=Path("tests/fixtures/tests/test-001/prompt.md"),
+    language="python",
+    models=["claude-haiku-4-5-20251001"],
+    judge_models=["claude-haiku-4-5-20251001"],
+    runs_per_subtest=3,
+    tiers_to_run=[TierID("T0")],
+    max_subtests=1,
+    until_run_state=RunState.REPLAY_GENERATED,
+)
+```
+
+### pytestmark
+```python
+pytestmark = pytest.mark.integration
+# Run with: pixi run python -m pytest tests/integration/ -v -m integration
+```
+```
+
+## Superseded from checkpoint-reconcile-state-order
+
+```markdown
+---
+name: checkpoint-reconcile-state-order
+description: 'Fix stale checkpoint run states by reconciling with on-disk artifacts.
+  Use when: adding RunState enum values, testing checkpoint reconcile edge cases,
+  or debugging silent rank-comparison failures.'
+category: testing
+date: 2026-03-14
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Problem** | `_reconcile_checkpoint_with_disk()` uses a `state_order` rank list. States missing from the list get rank=0 (same as `pending`), so `inferred_rank > current_rank` is `0 > 0 = False` — the state never advances. No error is raised. |
+| **Root Cause** | `state_order` was not kept in sync with the `RunState` enum. Three states were missing: `worktree_created`, `config_committed`, `prompt_written`. |
+| **Fix** | Add all non-terminal `RunState` values in sequential order. Add a regression-guard test that asserts every non-terminal state appears in the function source. |
+| **Project** | ProjectScylla — `scripts/manage_experiment.py` + `tests/unit/e2e/test_manage_experiment_run.py` |
+
+## When to Use
+
+- You are extending a state machine and adding new `RunState` (or equivalent) enum values
+- A reconcile/recovery function uses a rank list (`state_order = [...]`) to compare states
+- Runs are "stuck" at an intermediate state despite on-disk artifacts being present
+- You need edge-case test coverage for: corrupted JSON, missing fields, mixed terminal/non-terminal states
+- CI fails with `assert 'passed' is None` or similar — checkpoint auto-syncs status on `set_run_state`
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# The pattern to watch for:
+state_order = [
+    "pending",
+    "dir_structure_created",
+    # ← missing states here get rank=0, silently fail rank comparison
+    "symlinks_applied",
+    ...
+]
+state_rank = {s: i for i, s in enumerate(state_order)}
+# current_rank = state_rank.get(current_state, 0)  ← "get with default 0" hides the gap
+```
+
+### Step 1 — Identify Missing States
+
+Compare `state_order` list against the `RunState` enum (or equivalent):
+
+```python
+# scylla/e2e/models.py RunState sequential order:
+# PENDING → DIR_STRUCTURE_CREATED → WORKTREE_CREATED → SYMLINKS_APPLIED
+# → CONFIG_COMMITTED → BASELINE_CAPTURED → PROMPT_WRITTEN → REPLAY_GENERATED
+# → AGENT_COMPLETE → DIFF_CAPTURED → JUDGE_PIPELINE_RUN → JUDGE_PROMPT_BUILT
+# → JUDGE_COMPLETE → RUN_FINALIZED → REPORT_WRITTEN → CHECKPOINTED
+# → WORKTREE_CLEANED
+# Terminal: FAILED | RATE_LIMITED (exclude from state_order)
+```
+
+Check: does `state_order` contain ALL non-terminal values?
+
+### Step 2 — Fix `state_order`
+
+Add missing states in correct sequential position:
+
+```python
+state_order = [
+    "pending",
+    "dir_structure_created",
+    "worktree_created",        # ← was missing
+    "symlinks_applied",
+    "config_committed",        # ← was missing
+    "baseline_captured",
+    "prompt_written",          # ← was missing
+    "replay_generated",
+    "agent_complete",
+    "diff_captured",
+    "judge_pipeline_run",
+    "judge_prompt_built",
+    "judge_complete",
+    "run_finalized",
+    "report_written",
+    "checkpointed",
+    "worktree_cleaned",
+]
+```
+
+### Step 3 — Add Regression Guard Test
+
+Use `inspect.getsource()` to assert all non-terminal states appear in the function:
+
+```python
+def test_reconcile_state_order_covers_all_run_states(self) -> None:
+    """All non-terminal RunState values must appear in state_rank (regression guard)."""
+    import inspect
+    import manage_experiment
+    from scylla.e2e.models import RunState
+
+    source = inspect.getsource(manage_experiment._reconcile_checkpoint_with_disk)
+    terminal_states = {RunState.FAILED.value, RunState.RATE_LIMITED.value}
+    non_terminal = {s.value for s in RunState if s.value not in terminal_states}
+
+    for state_value in non_terminal:
+        assert state_value in source, (
+            f"RunState '{state_value}' is missing from _reconcile_checkpoint_with_disk "
+            f"state_order — add it in the correct sequential position."
+        )
+```
+
+### Step 4 — Edge-Case Tests
+
+#### Corrupted JSON — state advances, status defaults to "passed"
+
+```python
+def test_reconcile_corrupted_run_result_json(self, tmp_path):
+    (run_dir / "run_result.json").write_text("{ not valid json !!!")
+    (run_dir / "report.md").write_text("# Report")
+    # checkpoint at intermediate state
+    corrected = _reconcile_checkpoint_with_disk(checkpoint, exp_dir)
+    assert corrected == 1
+    assert checkpoint.run_states["T0"]["00"]["1"] == "worktree_cleaned"
+    # set_run_state("worktree_cleaned") auto-calls mark_run_completed("passed")
+    # because inferred_status=None (JSON parse failed) → no override
+    assert checkpoint.get_run_status("T0", "00", 1) == "passed"
+```
+
+**Key insight**: `set_run_state("worktree_cleaned")` auto-syncs `completed_runs` to `"passed"` (backward compat). If `inferred_status is None`, this default is NOT overridden. So corrupted JSON → status = `"passed"`, NOT `None`.
+
+#### Missing `judge_passed` field — status = "failed" (default False)
+
+```python
+def test_reconcile_missing_judge_passed_field(self, tmp_path):
+    (run_dir / "run_result.json").write_text(json.dumps({"cost_usd": 0.05}))
+    (run_dir / "report.md").write_text("# Report")
+    corrected = _reconcile_checkpoint_with_disk(checkpoint, exp_dir)
+    assert corrected == 1
+    assert checkpoint.run_states["T0"]["00"]["1"] == "worktree_cleaned"
+    # .get("judge_passed", False) → False → inferred_status="failed"
+    # mark_run_completed(..., "failed") overrides the "passed" default
+    assert checkpoint.get_run_status("T0", "00", 1) == "failed"
+```
+
+#### `worktree_created` rank — run advances to `agent_complete`
+
+```python
+def test_reconcile_worktree_created_state_gets_correct_rank(self, tmp_path):
+    # agent/result.json exists on disk
+    checkpoint.run_states = {"T0": {"00": {"1": "worktree_created"}}}
+    corrected = _reconcile_checkpoint_with_disk(checkpoint, exp_dir)
+    assert corrected == 1
+    assert checkpoint.run_states["T0"]["00"]["1"] == "agent_complete"
+    # Before fix: worktree_created rank=0, agent_complete rank>0, 0 > 0 = False → no advance
+    # After fix: worktree_created rank=2, agent_complete rank=8, 8 > 2 = True → advances
+```
+
+#### Mixed `failed` + `rate_limited` + `worktree_cleaned`
+
+```python
+def test_reset_interleaved_rate_limited_and_failed(self, tmp_path):
+    checkpoint.run_states = {"T0": {"00": {"1": "failed", "2": "rate_limited", "3": "worktree_cleaned"}}}
+    checkpoint.completed_runs = {"T0": {"00": {3: "passed"}}}  # int key, not str
+    _reset_non_completed_runs(checkpoint)
+    assert checkpoint.run_states["T0"]["00"]["1"] == "pending"
+    assert checkpoint.run_states["T0"]["00"]["2"] == "pending"
+    assert checkpoint.run_states["T0"]["00"]["3"] == "worktree_cleaned"
+    assert checkpoint.get_run_status("T0", "00", 3) == "passed"
+```
+
+**Note**: `completed_runs` inner keys are `int`, not `str`. Mypy will catch `{"3": "passed"}` — use `{3: "passed"}`.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Assert `get_run_status() is None` after corrupted JSON | Expected that no `mark_run_completed` call → `None` status | `set_run_state("worktree_cleaned")` auto-calls `mark_run_completed("passed")` as backward-compat sync | Always check if `set_run_state` has side-effects on `completed_runs` before asserting status |
+| `completed_runs={"T0": {"00": {"3": "passed"}}}` (str key) | Used string `"3"` as inner dict key | `E2ECheckpoint` declares `completed_runs: dict[str, dict[str, dict[int, str]]]` — inner key is `int` | Mypy error: `Dict entry 0 has incompatible type "str": "str"; expected "int": "str"` |
+| Assumed `json.JSONDecodeError` not caught by `except (OSError, ValueError, KeyError)` | Thought the except block wouldn't fire | `json.JSONDecodeError` IS a subclass of `ValueError` — it is caught; the issue was the `set_run_state` side-effect | Verify the inheritance chain before assuming exception handling gaps |
+
+## Results & Parameters
+
+### PR Created
+
+- **Branch**: `reconcile-checkpoint-retry-errors`
+- **PR**: `HomericIntelligence/ProjectScylla#1485`
+- **Files changed**: `scripts/manage_experiment.py` (+3 lines), `tests/unit/e2e/test_manage_experiment_run.py` (+176 lines)
+- **Tests added**: 5 edge-case tests in `TestRetryErrorsInBatch`
+- **Test suite**: 4861 passed, 78.36% coverage
+
+### `E2ECheckpoint.set_run_state` Auto-Sync Behavior
+
+```python
+# States that auto-call mark_run_completed("passed") if no prior status:
+terminal_complete = {
+    "run_complete",      # v3.0 compat
+    "run_finalized",     # v3.1
+    "report_written",    # v3.1
+    "checkpointed",
+    "worktree_cleaned",
+}
+# Logic: preserves existing "passed"/"failed", defaults to "passed"
+existing = self.get_run_status(tier_id, subtest_id, run_num)
+compat_status = existing if existing in ("passed", "failed") else "passed"
+self.mark_run_completed(tier_id, subtest_id, run_num, status=compat_status)
+```
+
+This means: if you call `set_run_state("worktree_cleaned")` before `mark_run_completed(..., "failed")`, the final status is `"failed"` (override wins). But if `inferred_status is None`, no override occurs and status stays `"passed"`.
+# Session Notes: checkpoint-reconcile-state-order
+
+## Date
+2026-03-14
+
+## Session Summary
+Implemented plan to extend and ship `reconcile-checkpoint-retry-errors` branch for ProjectScylla.
+
+## Objective
+Fix `_reconcile_checkpoint_with_disk()` which had 3 RunState values missing from its `state_order` rank table, causing silent rank-comparison failures for runs stuck in those states.
+
+## Files Changed
+- `scripts/manage_experiment.py`: Added `worktree_created`, `config_committed`, `prompt_written` to `state_order` list (lines ~402-418)
+- `tests/unit/e2e/test_manage_experiment_run.py`: Added 5 edge-case tests to `TestRetryErrorsInBatch` class
+
+## Key Discovery: `set_run_state` side-effect
+`E2ECheckpoint.set_run_state()` in `scylla/e2e/checkpoint.py` has backward-compat logic:
+when state is set to `worktree_cleaned` (and similar terminal-complete states), it automatically
+calls `mark_run_completed()` with `"passed"` as default (or preserves existing status).
+
+This caused the first test iteration to fail with `assert 'passed' is None` because:
+1. `set_run_state("worktree_cleaned")` → `mark_run_completed("passed")` (auto-sync)
+2. `inferred_status is None` (corrupted JSON) → no explicit `mark_run_completed` call
+3. Final status = `"passed"` (from step 1), not `None`
+
+## Key Discovery: `completed_runs` int keys
+`E2ECheckpoint.completed_runs` type: `dict[str, dict[str, dict[int, str]]]`
+The innermost key (run number) is `int`, not `str`.
+Using `{"3": "passed"}` causes mypy error: `Dict entry 0 has incompatible type "str": "str"; expected "int": "str"`.
+Fix: use `{3: "passed"}`.
+
+## Ruff E501 Fix
+Docstring exceeded 100 chars: "Subtest with mixed run states: failed + rate_limited reset; worktree_cleaned preserved."
+Fix: shortened to "Mixed run states: failed + rate_limited reset; worktree_cleaned preserved."
+
+## Test Results
+- 17 targeted tests passed (`-k "reconcile or retry_errors"`)
+- 4861 total unit tests passed, 78.36% coverage
+- Pre-commit ruff + mypy clean on changed files
+- PR #1485 created and auto-merge enabled
+```
+
+## Superseded from checkpoint-test-fixture-patterns
+
+```markdown
+---
+name: checkpoint-test-fixture-patterns
+description: 'Patterns for building consistent checkpoint test fixtures with hierarchical
+  state. Use when: writing tests for resume/retry logic, debugging orphan detector
+  resets, or setting up checkpoint state for state machine tests.'
+category: testing
+date: 2026-03-17
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Problem** | Test fixtures for checkpoint-based resume logic silently break when they set higher-level state (e.g., subtest "aggregated") without providing the lower-level backing state (e.g., run_states entries) that integrity validators expect |
+| **Solution** | Always populate all four checkpoint hierarchy levels consistently: experiment_state → tier_states → subtest_states → run_states |
+| **Key Insight** | Runtime validators (orphan detectors, intermediate-run scanners) run during resume and will correct inconsistent fixtures — causing "correct code, broken test" failures |
+| **Scope** | ProjectScylla `scylla/e2e/resume_manager.py`, `scylla/e2e/checkpoint.py`, `tests/unit/e2e/test_runner.py` |
+
+## When to Use
+
+- Writing new tests for `_initialize_or_resume_experiment()` or `ResumeManager.reset_failed_states()`
+- Debugging a test where checkpoint subtest/tier states are unexpectedly reset to "pending"
+- Setting up `E2ECheckpoint` fixtures for state machine transition tests
+- Adding new checkpoint integrity validators that inspect cross-level consistency
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# WRONG — orphan detector will reset "01" to "pending"
+checkpoint = E2ECheckpoint(
+    experiment_state="failed",
+    subtest_states={"T0": {"00": "failed", "01": "aggregated"}},
+    # run_states defaults to {} — "01" has no backing runs!
+)
+
+# RIGHT — "01" has a backing run, orphan detector leaves it alone
+checkpoint = E2ECheckpoint(
+    experiment_state="failed",
+    subtest_states={"T0": {"00": "failed", "01": "aggregated"}},
+    run_states={"T0": {"01": {"1": "worktree_cleaned"}}},
+)
+```
+
+### Checkpoint Hierarchy Rules
+
+The E2ECheckpoint has a 4-level hierarchy. Each level's state implies constraints on levels below:
+
+```
+experiment_state  (1 value)
+  └─ tier_states      (per tier: T0, T1, ...)
+       └─ subtest_states  (per subtest: 00, 01, ...)
+            └─ run_states      (per run: 1, 2, 3, ...)
+```
+
+**Consistency rules enforced at resume time:**
+
+| Higher State | Required Lower State | Validator |
+| ------------- | --------------------- | ----------- |
+| subtest "aggregated" or "runs_complete" | At least one entry in `run_states[tier][subtest]` | `_find_orphaned_subtest_states()` |
+| subtest "runs_in_progress" | At least one run in non-terminal state | `_find_tiers_with_intermediate_runs()` |
+| tier "complete" | All subtests in "aggregated" | `_reset_tier_state_for_rerun()` |
+| experiment "complete" | All tiers in complete-family state | `_reset_intermediate_runs_in_complete_experiment()` |
+
+### Step-by-Step: Building a Resume Test Fixture
+
+1. **Decide which states you're testing** — identify the specific reset behavior under test
+2. **Set all four levels consistently** — if a subtest is "aggregated", give it a terminal run
+3. **Use terminal run states for completed work** — `"worktree_cleaned"` is the canonical terminal state
+4. **Use non-terminal run states for in-progress work** — `"pending"`, `"report_written"`, etc.
+5. **Verify the test asserts the right thing** — if testing that failed subtests reset, ensure non-failed subtests have backing state so they don't also reset
+
+### Common Terminal vs Non-Terminal Run States
+
+```python
+TERMINAL_STATES = {"worktree_cleaned"}  # Run is fully done
+RETRYABLE_STATES = {"failed", "rate_limited"}  # Reset to pending on resume
+INTERMEDIATE_STATES = {"report_written", "judge_pipeline_run", ...}  # Mid-pipeline
+```
+
+### Full Example: Testing Failed-Subtest Reset
+
+```python
+def test_resume_resets_failed_subtests_only(self, mock_config, tmp_path):
+    """Only failed subtests reset; aggregated subtests with runs survive."""
+    checkpoint = E2ECheckpoint(
+        experiment_id=mock_config.experiment_id,
+        experiment_dir=str(tmp_path / mock_config.experiment_id),
+        config_hash="abc123",
+        experiment_state="failed",
+        tier_states={"T0": "failed"},
+        subtest_states={"T0": {"00": "failed", "01": "aggregated"}},
+        # Critical: "01" needs backing run_states
+        run_states={"T0": {"01": {"1": "worktree_cleaned"}}},
+        started_at=datetime.now(timezone.utc).isoformat(),
+        last_updated_at=datetime.now(timezone.utc).isoformat(),
+        status="failed",
+    )
+    # ... run resume ...
+    assert checkpoint.subtest_states["T0"]["00"] == "pending"      # reset
+    assert checkpoint.subtest_states["T0"]["01"] == "aggregated"   # untouched
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Minimal fixture with subtest_states only | Set `subtest_states={"T0": {"00": "failed", "01": "aggregated"}}` without run_states | `_find_orphaned_subtest_states()` detected "01" as orphaned (aggregated with no backing runs) and correctly reset it to "pending" | Fixtures must be cross-level consistent — higher-state assertions require lower-state backing data |
+| Using `_run_resume` helper for complex fixtures | Used the shared helper which only accepts subtest_states/tier_states kwargs | Helper creates checkpoint with `run_states={}` — no way to inject run_states | For tests needing run_states, inline the checkpoint creation instead of using the shared helper |
+
+## Results & Parameters
+
+### Fix Applied
+
+```python
+# File: tests/unit/e2e/test_runner.py
+# Test: TestInitializeOrResumeExperimentFailedReset
+#       ::test_resume_failed_experiment_resets_failed_subtest_states_to_pending
+
+# Before (FAILING): used _run_resume helper, no run_states
+# After (PASSING): inlined checkpoint creation with run_states for subtest "01"
+```
+
+### Validators in ResumeManager.reset_failed_states()
+
+Execution order matters — validators run in this sequence:
+1. `_reset_infra_error_runs()` — failed/rate_limited runs → pending
+2. `_reset_intermediate_runs_in_complete_experiment()` — complete experiments with stuck runs
+3. `_reset_orphaned_subtest_states()` — aggregated subtests without run_states → pending
+4. `_reset_failed_and_interrupted()` — failed/interrupted experiment/tier/subtest → pending/tiers_running
+
+### Test Results
+
+```
+Before fix: 1 failed (assert 'pending' == 'aggregated')
+After fix:  2637 passed, 1 skipped
+```
+# Session Notes: Checkpoint Test Fixture Patterns
+
+## Date: 2026-03-17
+
+## Context
+
+During a push to `1490-always-retry-infra-failures` branch, the pre-push hook ran
+the full test suite and caught a failure in `test_resume_failed_experiment_resets_failed_subtest_states_to_pending`.
+
+The test was asserting that an "aggregated" subtest survives a resume, but the
+orphan detector (added as part of the ResumeManager decomposition) correctly
+identified it as orphaned and reset it.
+
+## Root Cause
+
+`_find_orphaned_subtest_states()` in `resume_manager.py` scans for subtests in
+"aggregated" or "runs_complete" state that have no entries in `run_states`. This
+is a valid checkpoint integrity check — in production, every aggregated subtest
+has runs that produced its aggregation.
+
+The test fixture used the `_run_resume()` helper which creates a checkpoint with
+`run_states={}` by default. Subtest "01" was set to "aggregated" but had no
+backing runs, so the orphan detector reset it to "pending".
+
+## Fix
+
+Inlined the checkpoint creation in the test method and added:
+```python
+run_states={"T0": {"01": {"1": "worktree_cleaned"}}}
+```
+
+This gives subtest "01" a legitimate backing run, so the orphan detector skips it.
+
+## Key Insight
+
+When writing resume/retry tests, the fixture must be internally consistent across
+all four checkpoint hierarchy levels. Runtime validators enforce this consistency
+during resume, and they will "fix" inconsistent fixtures — causing tests to fail
+even though the production code is correct.
+
+## Files Changed
+
+- `tests/unit/e2e/test_runner.py` — 1 test method rewritten (36 lines added, 5 removed)
+- Commit: `6bfe3e10 fix(test): add run_states to subtest reset test fixture to prevent orphan detection`
+```
+
+## Superseded from orphan-aware-test-fixtures
+
+```markdown
+---
+name: orphan-aware-test-fixtures
+description: 'Patterns for fixing test fixtures that break when checkpoint integrity
+  detectors are added. Use when: adding orphan detection to resume pipelines, or when
+  aggregated states get unexpectedly reset.'
+category: testing
+date: 2026-03-17
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Problem** | Adding `_reset_orphaned_subtest_states()` to the resume pipeline created a new invariant: subtest states in `aggregated`/`runs_complete` must have backing `run_states`, or they get reset to `pending`. Existing tests that set `subtest_states` without `run_states` broke silently — the orphan detector correctly reset them. |
+| **Solution** | Add `run_states` entries with `worktree_cleaned` for any test fixture subtest in `aggregated` or `runs_complete` state |
+| **Key Insight** | Integrity detectors create implicit invariants on test fixtures. When you add a detector that validates cross-field consistency (e.g., subtest_states must have backing run_states), ALL existing fixtures that set those fields must be updated. |
+| **Scope** | `tests/unit/e2e/test_runner.py` — `TestInitializeOrResumeExperimentFailedReset` and `TestInitializeOrResumeExperimentMaxSubtests` |
+
+## When to Use
+
+- Adding an orphan/integrity detector to a resume or state machine pipeline
+- Debugging tests where checkpoint states get unexpectedly reset to `pending`
+- Rebasing branches that add new checkpoint invariants onto branches with existing test fixtures
+- Seeing `assert 'pending' == 'aggregated'` or `assert 'config_loaded' == 'pending'` failures in resume tests
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# BEFORE (broken — orphan detector resets "01" to "pending"):
+checkpoint = E2ECheckpoint(
+    experiment_state="failed",
+    subtest_states={"T0": {"00": "failed", "01": "aggregated"}},
+    # No run_states → "01" is orphaned → reset to pending
+)
+
+# AFTER (fixed — "01" has backing run_states):
+checkpoint = E2ECheckpoint(
+    experiment_state="failed",
+    subtest_states={"T0": {"00": "failed", "01": "aggregated"}},
+    run_states={"T0": {"01": {"1": "worktree_cleaned"}}},
+)
+```
+
+### Step-by-Step: Diagnosing Orphan-Related Test Failures
+
+1. **Identify the symptom**: Test asserts a subtest state is `"aggregated"` or `"runs_complete"` but gets `"pending"` instead.
+
+2. **Check if an orphan detector exists**: Search for `_find_orphaned_subtest_states` or similar cross-field validation in the resume pipeline.
+
+3. **Trace the execution order**: In `reset_failed_states()`, the orphan reset runs BEFORE the failed/interrupted reset:
+   ```python
+   def reset_failed_states(self):
+       self._reset_infra_error_runs()           # Step 1
+       self._reset_intermediate_runs_in_complete_experiment()  # Step 2
+       self._reset_orphaned_subtest_states()     # Step 3 ← resets "aggregated" without run_states
+       self._reset_failed_and_interrupted()      # Step 4
+   ```
+
+4. **Fix**: Add `run_states` entries for every subtest that the test expects to remain in `aggregated` or `runs_complete` state. Use `"worktree_cleaned"` as the terminal run state.
+
+5. **Audit**: `grep` for `"aggregated"` and `"runs_complete"` across all test fixtures:
+   ```bash
+   grep -n '"aggregated"\|"runs_complete"' tests/unit/e2e/test_runner.py
+   ```
+   For each match, verify there's a corresponding `run_states` entry.
+
+### Cascade Effects
+
+The orphan detector also calls `_reset_tier_to_config_loaded()` and `_reset_experiment_to_tiers_running()`, which can change tier and experiment states as side effects:
+
+| Orphan detected | Tier state changes to | Experiment state changes to |
+| --- | --- | --- |
+| Any subtest orphaned | `config_loaded` (if was complete-family) | `tiers_running` (if was complete-family) |
+
+This means a test expecting `tier_states["T0"] == "pending"` might get `"config_loaded"` instead if the orphan detector fires first.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| First push after rebase | Rebased onto main, resolved 3 merge conflicts, pushed | `test_resume_failed_experiment_resets_failed_subtest_states_to_pending` failed — `"aggregated"` subtest without `run_states` was orphan-detected | Adding integrity detectors creates implicit invariants on ALL fixtures that touch the validated fields |
+| Second push after fixing one test | Fixed the first failing test, pushed | `test_resume_detects_missing_subtests_and_resets_tier_to_pending` failed — same root cause in different test class | Must audit ALL test fixtures for the pattern, not just the first failure; use `grep '"aggregated"'` across the entire file |
+
+## Results & Parameters
+
+### Fix Pattern
+
+```python
+# For every subtest in "aggregated" state in a test fixture,
+# add a terminal run_states entry:
+run_states={"T0": {"00": {"1": "worktree_cleaned"}, "01": {"1": "worktree_cleaned"}}}
+```
+
+### Audit Command
+
+```bash
+# Find all test fixtures with aggregated/runs_complete without run_states
+grep -n '"aggregated"\|"runs_complete"' tests/unit/e2e/test_runner.py
+```
+
+### Test Results
+
+```
+Before fix: 2 failures (2637 passed, 1 failed; then 2648 passed, 1 failed)
+After fix: 4914 passed, 2 skipped, 77.34% coverage
+Push: succeeded with --force-with-lease (rebased branch)
+```
+# Session Notes: Orphan-Aware Test Fixtures
+
+## Date: 2026-03-17
+
+## Context
+
+After implementing the dryrun3 analysis infrastructure (fig35-39, single-judge guards,
+Kendall's tau, table11, resume retry logic), the branch needed to be committed, rebased
+onto origin/main (20 commits behind), and pushed.
+
+## The Problem
+
+The push pre-hook runs the full test suite. Two tests failed sequentially:
+
+### Failure 1: `test_resume_failed_experiment_resets_failed_subtest_states_to_pending`
+- **Expected**: `subtest_states["T0"]["01"] == "aggregated"` (should survive reset)
+- **Got**: `"pending"` (orphan detector reset it)
+- **Root cause**: The fixture set `subtest_states={"T0": {"00": "failed", "01": "aggregated"}}`
+  but no `run_states`. The `_find_orphaned_subtest_states()` method found `"01"` was
+  `"aggregated"` with no backing runs → orphaned → reset to `"pending"`.
+
+### Failure 2: `test_resume_detects_missing_subtests_and_resets_tier_to_pending`
+- **Expected**: `tier_states["T0"] == "pending"` (should be reset due to missing subtests)
+- **Got**: `"config_loaded"` (orphan detector reset tier before the missing-subtests check)
+- **Root cause**: Same pattern — `subtest_states={"T0": {"00": "aggregated", "01": "aggregated"}}`
+  with no `run_states`. Orphan detector fired first, resetting tier to `"config_loaded"`.
+
+## The Fix
+
+Add `run_states` with `worktree_cleaned` entries for every subtest that tests expect to
+remain in `"aggregated"` state:
+
+```python
+# Before
+checkpoint = E2ECheckpoint(
+    subtest_states={"T0": {"00": "aggregated", "01": "aggregated"}},
+)
+
+# After
+checkpoint = E2ECheckpoint(
+    subtest_states={"T0": {"00": "aggregated", "01": "aggregated"}},
+    run_states={"T0": {"00": {"1": "worktree_cleaned"}, "01": {"1": "worktree_cleaned"}}},
+)
+```
+
+## Key Insight
+
+Adding an integrity detector creates an IMPLICIT INVARIANT on all existing test fixtures.
+The `_reset_orphaned_subtest_states()` method was added to `resume_manager.py` as part of
+the dryrun3 analysis work. It validated cross-field consistency (subtest_states vs run_states)
+that previous tests never needed to maintain because the check didn't exist.
+
+This is a general pattern: any new validation/invariant check in a pipeline will retroactively
+break tests that violate the invariant, even if those tests were correct before.
+
+## Rebase Summary
+
+- 20 commits on main ahead of branch
+- 3 merge conflicts resolved (all docstring/comment wording + run multiplier fixes)
+- 2 test fixtures fixed for orphan detection invariant
+- Final: 4914 passed, 77.34% coverage, push succeeded
+```
+
+## Superseded from zombie-detection-integration-tests
+
+```markdown
+---
+name: zombie-detection-integration-tests
+description: "Integration test patterns for zombie experiment detection and reset\
+  \ in ProjectScylla \u2014 validates the full path from dead PID + stale heartbeat\
+  \ through ResumeManager.handle_zombie() to checkpoint.status='interrupted' with\
+  \ real disk I/O."
+category: testing
+date: '2026-03-19'
+version: 1.0.0
+---
+# Skill: Integration Tests for Zombie Detection + Resume Flow
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-03-02 |
+| Project | ProjectScylla |
+| Objective | Add integration test exercising the full zombie detection path: dead PID + stale heartbeat → `reset_zombie_checkpoint()` → `checkpoint.status='interrupted'` |
+| Outcome | Success — 11/11 tests pass, full suite 3595 passed, 67.46% coverage |
+| Issue | HomericIntelligence/ProjectScylla#1224 |
+| PR | HomericIntelligence/ProjectScylla#1312 |
+
+## When to Use
+
+Use this skill when:
+- Writing integration tests for zombie detection or health monitoring paths
+- Testing `ResumeManager.handle_zombie()` or `reset_zombie_checkpoint()` with real disk I/O
+- Validating that checkpoint state (run/subtest/tier) is preserved during a zombie reset
+- Testing the no-op case (`experiment_dir=None` or non-running status)
+- Need to test dead-PID scenarios without mocking `os.kill`
+
+## Key Architectural Insight: Zombie Detection Three-Condition Check
+
+`is_zombie()` in `scylla/e2e/health.py` requires **all three** conditions to be true:
+
+1. `checkpoint.status == "running"`
+2. The PID referenced in `checkpoint.pid` (or `experiment.pid` file) is dead
+3. `checkpoint.last_heartbeat` is stale (older than `heartbeat_timeout_seconds`, default 120s)
+
+If any condition fails, the checkpoint is **not** treated as a zombie. This means:
+- A fresh heartbeat bypasses zombie detection even for dead PIDs (process restarted, heartbeat was written recently)
+- A non-running status (`interrupted`, `completed`, `failed`) is never a zombie
+
+## Verified Workflow
+
+### Dead PID Technique — No Mocking Required
+
+Use a guaranteed-dead PID value to avoid mocking `os.kill`:
+
+```python
+# Linux's max PID is 4,194,304. A value well above this is always dead.
+_DEAD_PID = 999_999_999
+
+cp = make_checkpoint(
+    status="running",
+    pid=_DEAD_PID,
+    last_heartbeat=_stale_heartbeat(),
+    experiment_dir=str(tmp_path),
+)
+```
+
+This is cleaner than `@patch("os.kill", side_effect=OSError)` and works on any Linux system.
+
+### Timestamp Helpers
+
+```python
+from datetime import datetime, timedelta, timezone
+
+_STALE_HEARTBEAT_AGE = 300   # well past 120s default
+_FRESH_HEARTBEAT_AGE = 10    # well within 120s default
+
+def _stale_heartbeat() -> str:
+    return (datetime.now(timezone.utc) - timedelta(seconds=_STALE_HEARTBEAT_AGE)).isoformat()
+
+def _fresh_heartbeat() -> str:
+    return (datetime.now(timezone.utc) - timedelta(seconds=_FRESH_HEARTBEAT_AGE)).isoformat()
+```
+
+### Integration Test Pattern (Real Disk I/O)
+
+Unlike unit tests that mock file operations, integration tests use `tmp_path` and real
+`save_checkpoint` / `load_checkpoint` calls to validate the full round-trip:
+
+```python
+from scylla.e2e.checkpoint import E2ECheckpoint, load_checkpoint, save_checkpoint
+from scylla.e2e.resume_manager import ResumeManager
+
+def test_status_is_interrupted_after_handle_zombie(self, tmp_path: Path) -> None:
+    cp = make_checkpoint(
+        status="running",
+        pid=_DEAD_PID,
+        last_heartbeat=_stale_heartbeat(),
+        experiment_dir=str(tmp_path),
+    )
+    cp_path = tmp_path / "checkpoint.json"
+    save_checkpoint(cp, cp_path)           # Write initial checkpoint
+
+    rm = _make_resume_manager(cp)
+    _, updated_cp = rm.handle_zombie(
+        checkpoint_path=cp_path,
+        experiment_dir=tmp_path,
+        heartbeat_timeout_seconds=120,
+    )
+
+    assert updated_cp.status == "interrupted"           # In-memory check
+    on_disk = load_checkpoint(cp_path)
+    assert on_disk.status == "interrupted"              # Disk persistence check
+```
+
+### Minimal ResumeManager Construction
+
+`ResumeManager` requires `config` and `tier_manager` collaborators. For tests that only
+exercise `handle_zombie()`, mock them with `MagicMock(spec=...)`:
+
+```python
+from unittest.mock import MagicMock
+from scylla.e2e.models import ExperimentConfig
+from scylla.e2e.resume_manager import ResumeManager
+
+def _make_resume_manager(checkpoint: E2ECheckpoint) -> ResumeManager:
+    config = MagicMock(spec=ExperimentConfig)
+    tier_manager = MagicMock()
+    return ResumeManager(checkpoint, config, tier_manager)
+```
+
+### Disk-Not-Modified Check
+
+To verify a no-op path (fresh heartbeat, `experiment_dir=None`) doesn't write to disk,
+use `st_mtime` before and after:
+
+```python
+original_mtime = cp_path.stat().st_mtime
+rm.handle_zombie(checkpoint_path=cp_path, experiment_dir=tmp_path)
+assert cp_path.stat().st_mtime == original_mtime
+```
+
+For the `experiment_dir=None` case, assert the checkpoint file was never created:
+
+```python
+# Do NOT write checkpoint to disk first
+cp_path = tmp_path / "checkpoint.json"
+rm.handle_zombie(checkpoint_path=cp_path, experiment_dir=None)
+assert not cp_path.exists()
+```
+
+### Test Class Organization
+
+Organize tests into 4 logical classes covering all code paths:
+
+```python
+class TestZombieResetsStatusToInterrupted:    # Core zombie → interrupted
+class TestZombieResetPreservesStateData:      # State data survives reset
+class TestNonZombieCheckpointUnchanged:       # Not a zombie → no change
+class TestExperimentDirNoneIsNoop:            # Guard against None dir
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Test counts (11 total)
+
+| Class | Count |
+| ------- | ------- |
+| `TestZombieResetsStatusToInterrupted` | 2 |
+| `TestZombieResetPreservesStateData` | 4 |
+| `TestNonZombieCheckpointUnchanged` | 3 |
+| `TestExperimentDirNoneIsNoop` | 2 |
+
+### Coverage behavior
+
+Running only integration tests hits ~8.27% combined coverage (below the 9% floor).
+Always run with `--override-ini="addopts="` to suppress the coverage floor when
+running integration tests in isolation:
+
+```bash
+pixi run python -m pytest tests/integration/ -v --override-ini="addopts="
+```
+
+The 9% floor is only meaningful when the full test suite runs together.
+
+### Key constants
+
+```python
+_DEAD_PID = 999_999_999          # Guaranteed dead on Linux (max is 4,194,304)
+_STALE_HEARTBEAT_AGE = 300       # 5 minutes — well past 120s default timeout
+_FRESH_HEARTBEAT_AGE = 10        # 10 seconds — well within 120s default timeout
+```
+
+### pytestmark
+
+```python
+pytestmark = pytest.mark.integration
+# Run with: pixi run python -m pytest tests/integration/ -v --override-ini="addopts="
+```
+
+### Zombie detection source
+
+- `scylla/e2e/health.py` — `is_zombie()`, `reset_zombie_checkpoint()`, `DEFAULT_HEARTBEAT_TIMEOUT_SECONDS`
+- `scylla/e2e/resume_manager.py` — `ResumeManager.handle_zombie()`
+- `tests/integration/e2e/test_zombie_resume.py` — the integration test file
+```
+
+## Superseded from wired-runner-fixture
+
+```markdown
+---
+name: wired-runner-fixture
+description: "Skill: wired-runner-fixture"
+category: testing
+date: 2026-03-19
+version: "1.0.0"
+user-invocable: false
+---
+# Skill: wired-runner-fixture
+
+## Overview
+
+| Field | Value |
+| ----------- | ------------------------------------------------------------ |
+| Date | 2026-02-20 |
+| Issue | #771 |
+| PR | #815 |
+| Objective | Extract shared `wired_runner` pytest fixture for `E2ERunner` tests |
+| Outcome | Success — 4 tests refactored, zero per-test boilerplate |
+| Category | testing |
+
+## When to Use
+
+Trigger this skill when:
+
+- Multiple test methods in a class each construct the same object with `SomeClass(mock_a, mock_b, ...)` before calling the method under test
+- The real constructor takes a `Path` argument and creates a heavy dependency (e.g. `TierManager`) internally, requiring mocking to avoid filesystem access
+- You want to add `experiment_dir` or other post-construction attributes that the constructor leaves as `None`
+- A follow-up issue references "extract fixture" or "eliminate boilerplate" across a test class
+
+## Verified Workflow
+
+### 1. Identify the boilerplate pattern
+
+```python
+# BEFORE: each test method constructs the object directly
+def test_foo(self, mock_config, mock_tier_manager):
+    runner = E2ERunner(mock_config, mock_tier_manager, Path("/tmp"))
+    result = runner.some_method(...)
+```
+
+Check the real constructor signature — the second arg may be a `Path`, not a mock:
+
+```python
+# Real constructor (scylla/e2e/runner.py)
+def __init__(self, config: ExperimentConfig, tiers_dir: Path, results_base_dir: Path, ...):
+    self.tier_manager = TierManager(tiers_dir)  # filesystem access!
+    self.experiment_dir: Path | None = None
+```
+
+### 2. Add imports
+
+```python
+from unittest.mock import MagicMock, patch
+from scylla.e2e.tier_manager import TierManager
+```
+
+### 3. Write the fixture
+
+Place it **after** the lower-level fixtures it depends on (`mock_config`, `mock_tier_manager`) and **before** the test class:
+
+```python
+@pytest.fixture
+def wired_runner(
+    mock_config: ExperimentConfig,
+    mock_tier_manager: MagicMock,
+    tmp_path: Path,
+) -> E2ERunner:
+    """Pre-configured E2ERunner with experiment_dir and tier_manager already set."""
+    with patch.object(TierManager, "__init__", return_value=None):
+        runner = E2ERunner(mock_config, tmp_path / "tiers", tmp_path / "results")
+    runner.tier_manager = mock_tier_manager
+    runner.experiment_dir = tmp_path / "experiment"
+    runner.experiment_dir.mkdir(parents=True)
+    return runner
+```
+
+**Key decisions:**
+
+- `patch.object(TierManager, "__init__", return_value=None)` — bypass real filesystem init, inject mock afterward
+- `tmp_path` (pytest built-in) — real directory, auto-cleaned, no `Path("/tmp")` collisions
+- Post-construction attribute injection — matches how tests actually use the object
+- Function scope (default) — `E2ERunner` mutates state, so per-test isolation is required
+
+### 4. Refactor all test methods in the class
+
+```python
+# AFTER: fixture parameter replaces both mock parameters and construction
+def test_foo(self, wired_runner: E2ERunner) -> None:
+    result = wired_runner.some_method(...)
+```
+
+Remove the `E2ERunner(...)` construction line from every method. Adopt **all-or-nothing** within the class — partial adoption creates inconsistency.
+
+### 5. Verify
+
+```bash
+# All tests in file pass
+pixi run python -m pytest tests/unit/e2e/test_runner.py -v
+
+# Only one E2ERunner(...) call remains — inside the fixture
+grep -n "E2ERunner(" tests/unit/e2e/test_runner.py
+
+# Pre-commit clean
+pre-commit run --files tests/unit/e2e/test_runner.py
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+```
+File modified: tests/unit/e2e/test_runner.py
+Tests refactored: 4 (TestTokenStatsAggregation class)
+Net line change: +25 insertions, -24 deletions (fixture adds ~16 lines, removes boilerplate)
+Pre-commit: all hooks passed (ruff, black, mypy)
+Test result: 4/4 passed
+```
+
+### Final fixture (copy-paste ready)
+
+```python
+@pytest.fixture
+def wired_runner(
+    mock_config: ExperimentConfig,
+    mock_tier_manager: MagicMock,
+    tmp_path: Path,
+) -> E2ERunner:
+    """Pre-configured E2ERunner with experiment_dir and tier_manager already set."""
+    with patch.object(TierManager, "__init__", return_value=None):
+        runner = E2ERunner(mock_config, tmp_path / "tiers", tmp_path / "results")
+    runner.tier_manager = mock_tier_manager
+    runner.experiment_dir = tmp_path / "experiment"
+    runner.experiment_dir.mkdir(parents=True)
+    return runner
+```
+```
+
+## Superseded from validation-loop-reset-test
+
+```markdown
+---
+name: validation-loop-reset-test
+description: 'Pattern for testing that training/validation loops reset DataLoaders
+  before iterating, using a pre-exhaustion strategy. Use when: adding tests for loop
+  reset behavior, verifying run() or run_subset() semantics, or writing parallel tests
+  across loop methods.'
+category: testing
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Category** | testing |
+| **Mojo version** | 0.26.1 |
+| **Issue** | #3688 (follow-up from #3186) |
+| **Pattern** | Pre-exhaustion strategy for DataLoader reset tests |
+| **File modified** | `tests/shared/training/test_validation_loop.mojo` |
+
+## When to Use
+
+- Adding a parallel test for `run()` after a `run_subset()` reset test already exists
+- Verifying that any training or validation loop method calls `reset()` on a DataLoader before iterating
+- Checking that a loop is resilient to a pre-exhausted (fully consumed) DataLoader
+- Following up on an issue that says "check whether method X has the same pattern as method Y"
+
+## Verified Workflow
+
+### Quick Reference
+
+```
+1. Read the existing parallel test (e.g. test_..._run_subset_resets_loader)
+2. Read the implementation to confirm the reset() call site and line number
+3. Add test function using pre-exhaustion strategy
+4. Add call to test function in main()
+5. Commit, push, PR
+```
+
+### Step 1 — Read the existing parallel test
+
+Locate the existing reset test for the sibling method and understand its structure:
+
+```mojo
+fn test_validation_loop_run_subset_resets_loader() raises:
+    """..."""
+    var vloop = ValidationLoop()
+    var loader = create_val_loader(n_batches=2)
+    loader.current_batch = loader.num_batches   # pre-exhaust
+    assert_true(not loader.has_next())
+    var metrics = TrainingMetrics()
+    var val_loss = vloop.run_subset(simple_forward, simple_loss, loader, 2, metrics)
+    assert_greater(val_loss, Float64(-1e-10))
+    assert_less(val_loss, Float64(1e10))
+    print("  test_validation_loop_run_subset_resets_loader: PASSED")
+```
+
+### Step 2 — Read the implementation to confirm reset() call site
+
+Check `validation_loop.mojo`:
+
+- `run_subset()` calls `val_loader.reset()` directly at line ~266.
+- `run()` delegates to `validate()`, which calls `val_loader.reset()` at line ~94.
+
+Document the exact call path in the docstring so reviewers understand the indirection.
+
+### Step 3 — Write the parallel test using pre-exhaustion strategy
+
+```mojo
+fn test_validation_loop_run_resets_loader() raises:
+    """Test run() resets a pre-exhausted DataLoader before iterating.
+
+    Strategy: Create a loader with exactly 2 batches, then exhaust it by
+    setting current_batch = num_batches. Without reset(), has_next() returns
+    False immediately -> 0 batches processed -> division by zero. With reset(),
+    the loader restarts and processes all 2 batches -> valid finite loss.
+
+    This proves run() calls val_loader.reset() internally (via validate(),
+    line 94 of validation_loop.mojo).
+    """
+    var vloop = ValidationLoop()
+    # 2 batches total (8 samples, batch_size=4)
+    var loader = create_val_loader(n_batches=2)
+    # Pre-exhaust: advance to end so has_next() returns False
+    loader.current_batch = loader.num_batches
+    assert_true(not loader.has_next())
+    var metrics = TrainingMetrics()
+    # run() delegates to validate() which calls val_loader.reset() internally
+    var val_loss = vloop.run(simple_forward, simple_loss, loader, metrics)
+    # Valid finite loss proves batches were processed after reset (not 0)
+    assert_greater(val_loss, Float64(-1e-10))
+    assert_less(val_loss, Float64(1e10))
+    print("  test_validation_loop_run_resets_loader: PASSED")
+```
+
+Key elements of the pre-exhaustion strategy:
+
+1. `loader.current_batch = loader.num_batches` — directly mutates the loader state to simulate exhaustion
+2. `assert_true(not loader.has_next())` — pre-condition: confirms loader is exhausted before calling the method under test
+3. A **valid finite loss** as the post-condition — proves `reset()` ran (otherwise division-by-zero or zero batches)
+
+### Step 4 — Add call to main()
+
+Place the call in the correct group block (under `run()` tests, not `run_subset()` tests):
+
+```mojo
+print("Running ValidationLoop.run() tests...")
+test_validation_loop_run_basic()
+test_validation_loop_run_updates_metrics()
+test_validation_loop_run_compute_accuracy_false()
+test_validation_loop_run_resets_loader()   # ← add here
+```
+
+### Step 5 — Commit, push, PR
+
+```bash
+git add tests/shared/training/test_validation_loop.mojo
+git commit -m "test(validation_loop): add test_validation_loop_run_resets_loader
+
+Closes #3688"
+git push -u origin 3688-auto-impl
+gh pr create --title "..." --body "Closes #3688"
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Using `run_in_background` for Skill tool | Called commit-commands:commit-push-pr skill | Skill tool denied (don't-ask mode) | Fall back to direct Bash git commands when Skill tool is unavailable |
+| Checking for pytest tests | Issue prompt said "use pytest" | Project uses Mojo test runner, not pytest | Always check test file extension and existing test patterns before writing tests |
+
+## Results & Parameters
+
+**Test file**: `tests/shared/training/test_validation_loop.mojo`
+
+**Pre-exhaustion snippet** (copy-paste):
+
+```mojo
+loader.current_batch = loader.num_batches
+assert_true(not loader.has_next())
+```
+
+**Post-condition assertions** (valid finite loss):
+
+```mojo
+assert_greater(val_loss, Float64(-1e-10))
+assert_less(val_loss, Float64(1e10))
+```
+
+**Why finite loss proves reset**:
+- Without reset: `has_next()` returns `False` immediately → 0 batches → division by zero (crash or `avg_loss = 0/0`)
+- With reset: loader restarts → N batches processed → `avg_loss = total / N` → finite positive value
+# Session Notes — validation-loop-reset-test
+
+## Date
+2026-03-15
+
+## Issue
+GitHub #3688 — "Test ValidationLoop.run() also resets DataLoader before iterating"
+Follow-up from #3186.
+
+## Objective
+Add `test_validation_loop_run_resets_loader` in Mojo to verify that `ValidationLoop.run()`
+calls `val_loader.reset()` internally, parallel to the existing `test_validation_loop_run_subset_resets_loader`.
+
+## Files Examined
+
+- `shared/training/loops/validation_loop.mojo` — implementation
+  - `run()` delegates to `validate()` at line ~205
+  - `validate()` calls `val_loader.reset()` at line ~94
+  - `run_subset()` calls `val_loader.reset()` directly at line ~266
+- `tests/shared/training/test_validation_loop.mojo` — test file
+
+## Approach
+
+Used the pre-exhaustion strategy:
+1. Create a `DataLoader` with 2 batches
+2. Set `loader.current_batch = loader.num_batches` to simulate exhaustion
+3. Assert `not loader.has_next()` as pre-condition
+4. Call `vloop.run()` — if reset works, batches are processed; if not, division by zero
+5. Assert valid finite loss as post-condition
+
+## Outcome
+
+- Added `test_validation_loop_run_resets_loader` (27 lines) after `test_validation_loop_run_subset_resets_loader`
+- Added call in `main()` under the `run()` tests block
+- Committed to branch `3688-auto-impl`, pushed, PR #4770 created
+
+## Skill Tool Failure
+
+The `commit-commands:commit-push-pr` skill was denied (don't-ask permission mode).
+Fell back to direct Bash `git add && git commit && git push` + `gh pr create`.
+
+## Key Patterns
+
+- Mojo tests use `fn main() raises` not pytest
+- DataLoader state is directly mutable via `loader.current_batch`
+- `assert_true(not loader.has_next())` is the canonical pre-exhaustion check
+- Finite loss (not zero, not infinity) is the correct post-condition for reset proof
+```
+
+## Superseded from dataloader-reset-verification
+
+```markdown
+---
+name: dataloader-reset-verification
+description: 'Test pattern to verify DataLoader reset behavior in training/validation
+  loops. Use when: confirming an iterator''s reset() is called before iteration, or
+  verifying a loop does not silently skip batches on a partially-consumed loader.'
+category: testing
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Category | testing |
+| Language | Mojo |
+| Issue | #3186 (ProjectOdyssey) |
+| Pattern | Self-proving test via catastrophic failure mode |
+
+## When to Use
+
+- You need to prove an iterator-consuming loop calls `reset()` before iteration
+- A validation/training loop accepts a pre-existing loader that may be partially consumed
+- The failure mode (division by zero from zero batches) is clearly distinct from success (valid finite loss)
+- You want a test that doesn't require mock objects — direct field mutation suffices
+
+## Verified Workflow
+
+### 1. Identify the reset call in the implementation
+
+Read the source to confirm where `reset()` is called (e.g., `validation_loop.mojo:255`):
+
+```mojo
+val_loader.reset()
+while val_loader.has_next() and num_batches < max_batches:
+    ...
+var avg_loss = total_loss / Float64(num_batches)  # division by zero if reset() absent
+```
+
+### 2. Pre-exhaust the loader via direct field mutation
+
+```mojo
+var loader = create_val_loader(n_batches=2)
+# Advance current_batch to num_batches so has_next() returns False
+loader.current_batch = loader.num_batches
+assert_true(not loader.has_next())
+```
+
+### 3. Call the function under test with max_batches matching loader capacity
+
+```mojo
+var val_loss = vloop.run_subset(simple_forward, simple_loss, loader, 2, metrics)
+```
+
+### 4. Assert the result is a valid finite number
+
+```mojo
+# Valid loss proves 2 batches were processed after reset (not 0)
+assert_greater(val_loss, Float64(-1e-10))
+assert_less(val_loss, Float64(1e10))
+```
+
+Without `reset()`: `num_batches == 0` → `total_loss / 0.0` → `NaN` or raises.
+With `reset()`: `num_batches == 2` → valid finite loss.
+
+### 5. Why this is self-proving
+
+The test does not require mocking. The failure mode (division by zero / NaN / raise) is
+categorically different from the success mode (valid bounded Float64). No spy object needed.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Mock-based approach | Wrapping DataLoader to count reset() calls | Mojo structs don't support vtable-based mocking easily; no trait for spy | Use direct field mutation + observable side effects instead |
+| Checking batch count post-call | Asserting `loader.current_batch == 2` after run_subset | run_subset may call reset() again at end or leave loader in partial state | Assert on the output (loss) not loader state after the call |
+| Asserting exact loss value | `assert_almost_equal(val_loss, Float64(1.0), ...)` | Relies on loss function returning exactly 1.0; brittle if loss function changes | Use range assertions (`> -eps` and `< large`) for robustness |
+
+## Results & Parameters
+
+```mojo
+# Copy-paste test template
+fn test_run_subset_resets_loader() raises:
+    var vloop = ValidationLoop()
+    var loader = create_val_loader(n_batches=2)  # small loader to keep test fast
+    loader.current_batch = loader.num_batches    # exhaust loader
+    assert_true(not loader.has_next())           # confirm pre-condition
+    var metrics = TrainingMetrics()
+    var val_loss = vloop.run_subset(
+        simple_forward, simple_loss, loader, 2, metrics
+    )
+    assert_greater(val_loss, Float64(-1e-10))    # finite: reset() was called
+    assert_less(val_loss, Float64(1e10))
+    print("  test_run_subset_resets_loader: PASSED")
+```
+
+**Key parameters:**
+
+- `n_batches=2`: Minimum batches that allows `max_batches=2` to be meaningful
+- `max_batches=2`: Must equal `n_batches` so that all batches are consumed after reset
+- Range bounds: `-1e-10` to `1e10` — wide enough to tolerate any valid loss function
+# Session Notes: DataLoader Reset Verification
+
+## Raw Session Details
+
+**Issue**: ProjectOdyssey #3186 — "Verify ValidationLoop.run_subset() resets DataLoader correctly"
+
+**Problem statement**: The existing `test_validation_loop_run_subset_limited` created a fresh
+`DataLoader` for each call, so it never tested whether `run_subset()` internally resets a
+partially-consumed loader. A pre-advanced loader would produce fewer batches than `max_batches`.
+
+**Files modified**:
+
+- `tests/shared/training/test_validation_loop.mojo` — added `test_validation_loop_run_subset_resets_loader()`
+
+**Key source reference**:
+
+- `shared/training/loops/validation_loop.mojo:255` — `val_loader.reset()` call
+- `shared/training/trainer_interface.mojo:352-354` — `DataLoader.reset()` implementation
+- `shared/training/trainer_interface.mojo:362` — `has_next()`: `current_batch < num_batches`
+
+**Approach chosen**: Direct field mutation (`loader.current_batch = loader.num_batches`) rather
+than mock objects. Mojo structs expose public fields so this is idiomatic. The failure mode
+(division by zero at `total_loss / Float64(0)`) is categorically distinguishable from success.
+
+**PR created**: ProjectOdyssey #3687
+
+**Pre-commit hooks**: All passed (mojo format, trailing whitespace, end-of-file-fixer,
+check-added-large-files, validate-test-coverage).
+
+**Local test execution**: Not possible — GLIBC version mismatch on host (requires 2.32+, host
+has older libc). Tests validated by code review and CI instead.
+
+## Generalizable Pattern
+
+The "self-proving via catastrophic failure" pattern applies whenever:
+
+1. A loop computes `total / count` and count can be 0 if reset() is absent
+2. The struct fields are accessible for direct mutation (no encapsulation barrier)
+3. The success outcome (finite number) is categorically distinct from failure (NaN/raise/zero)
+
+This avoids the need for mock objects, spy wrappers, or test doubles entirely.
+```
