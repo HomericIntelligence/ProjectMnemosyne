@@ -1,6 +1,34 @@
 <!-- markdownlint-disable MD024 -->
 # pytest-async-mock-isolation-patterns — History
 
+## v1.1.0 (2026-06-07)
+
+**Changed by:** Session learning — PR #1060, commit 4ac2263 (`tests/unit/automation/test_ci_driver_prs_mode.py`)
+**Verification:** verified-ci
+
+### What changed
+
+- Added trigger (11) to description frontmatter: ThreadPoolExecutor worker lifetime crosses test boundary and opens `_GH_BREAKER` after conftest autouse reset has already fired
+- Added "When to Use" trigger (13): `GitHubUnavailableError` in test B that never calls `gh` — caused by test A's executor workers still running
+- Added three new tags: `threadpool`, `background-threads`, `ThreadPoolExecutor`
+- Added bullet (6) to section G explaining the timing hazard and the correct fix (mock `_drive_issue`)
+- Added Failed Attempts row: mocking only `_discover_prs` + `_sweep_orphaned_arming_records` leaves executor workers alive
+- Added Verified On row: ProjectHephaestus PR #1060, commit 4ac2263
+
+### Why
+
+The conftest autouse reset is necessary but not sufficient when tests use a `ThreadPoolExecutor`. Test A's worker threads may still be running when the conftest resets the breaker before test B — those workers then open the breaker, and test B fails with `GitHubUnavailableError` even though it never made a `gh` call. The fix is to mock the per-item worker to prevent threads from spawning entirely.
+
+### Previous version (v1.0.0) snapshot
+
+Section G previously ended at:
+
+> 5. **Classify deterministic errors as non-transient** (HTTP 422, GraphQL schema errors) so they fail fast on attempt 1 — retrying wastes ~31s and adds breaker failures.
+
+No bullet 6 or ThreadPoolExecutor content existed. Description had only 10 trigger conditions.
+
+---
+
 ## v1.0.0 (2026-06-07)
 
 Initial canonical merge of 6 skills:

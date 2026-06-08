@@ -1,9 +1,9 @@
 ---
 name: pytest-async-mock-isolation-patterns
-description: "Use when: (1) pytest CI step times out or hangs due to asyncio event loops, epoll blocking, or runaway retry loops caused by sleep mocks; (2) an asyncio coroutine internally reassigns a global Event making pre-set fixtures ineffective; (3) writing integration tests for asyncio code that calls httpx.AsyncClient and need stateful fault injection (500/503/timeouts) via respx without nested context issues; (4) tests pass individually but fail together due to module-level singleton state (circuit breaker, cache, registry) not reset between tests; (5) a class-level patch.object becomes stale after importlib.reload() — use patch() string form; (6) FastAPI Depends() ignores a patched get_settings because the function reference was captured at import time; (7) an automation/agent-orchestration unit test reaches an invoke_claude subprocess gate that is absent in CI; (8) tests pass in isolation but fail when run after a test that mutates shared asyncio objects; (9) a mock service must simulate latency, kill, or queue-starvation side effects — not just record the fault command; (10) a test name says 'and' but only one assertion is made and a mock assertion is missing."
+description: "Use when: (1) pytest CI step times out or hangs due to asyncio event loops, epoll blocking, or runaway retry loops caused by sleep mocks; (2) an asyncio coroutine internally reassigns a global Event making pre-set fixtures ineffective; (3) writing integration tests for asyncio code that calls httpx.AsyncClient and need stateful fault injection (500/503/timeouts) via respx without nested context issues; (4) tests pass individually but fail together due to module-level singleton state (circuit breaker, cache, registry) not reset between tests; (5) a class-level patch.object becomes stale after importlib.reload() — use patch() string form; (6) FastAPI Depends() ignores a patched get_settings because the function reference was captured at import time; (7) an automation/agent-orchestration unit test reaches an invoke_claude subprocess gate that is absent in CI; (8) tests pass in isolation but fail when run after a test that mutates shared asyncio objects; (9) a mock service must simulate latency, kill, or queue-starvation side effects — not just record the fault command; (10) a test name says 'and' but only one assertion is made and a mock assertion is missing; (11) a ThreadPoolExecutor in one test spawns worker threads that outlive that test and open _GH_BREAKER after the next test's conftest autouse reset has already run — conftest reset is necessary but NOT sufficient against background threads."
 category: testing
 date: 2026-06-07
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 history: pytest-async-mock-isolation-patterns.history
 tags:
@@ -38,6 +38,9 @@ tags:
   - full-suite-before-green
   - cross-test-contamination
   - python
+  - threadpool
+  - background-threads
+  - ThreadPoolExecutor
 ---
 
 # Pytest Async, Mock, and Test Isolation Patterns
@@ -65,6 +68,7 @@ tags:
 10. **A mock service must simulate latency/kill/queue-starvation side effects** — not just record the fault command
 11. **A test name says "and" but only one assertion is made** — a `patch.object` is missing `as mock_X` and `assert_called_once()`
 12. **The same test fails identically on multiple Python versions in CI (3.10–3.13)** — a fingerprint of order-dependent shared state
+13. **`GitHubUnavailableError: GitHub API circuit breaker is open` in test B, but test B never calls a real `gh`** — test A's `ThreadPoolExecutor` workers are still running and open the breaker after the conftest autouse reset for test B has already fired
 
 ## Verified Workflow
 
@@ -242,6 +246,16 @@ A module-level singleton (`_GH_BREAKER = CircuitBreaker(fail_max=5, ...)`) keeps
 3. **Reset both before and after** (`yield` pattern) so a crashed test cannot leak state.
 4. **For new fail-fast tests**, call `module._GH_BREAKER.reset()` at the test top — every raised exception (even a fail-fast 422) counts as one breaker failure; a few new failure tests can push a shared breaker OPEN and turn unrelated siblings red.
 5. **Classify deterministic errors as non-transient** (HTTP 422, GraphQL schema errors) so they fail fast on attempt 1 — retrying wastes ~31s and adds breaker failures.
+6. **The conftest autouse reset is necessary but NOT sufficient against `ThreadPoolExecutor` workers.** The timing hazard: (a) conftest resets `_GH_BREAKER` before test B starts; (b) test A's ThreadPoolExecutor workers are still running after that reset; (c) those workers hit network errors in the CI sandbox and open the breaker; (d) test B fails with `GitHubUnavailableError: GitHub API circuit breaker is open` even though it never made a `gh` call. **The only reliable fix is to prevent the threads from spawning at all.** When testing `driver.run()` (or any method that dispatches work via a ThreadPoolExecutor), mock the per-item worker (`_drive_issue`) alongside `_discover_prs` and `_sweep_orphaned_arming_records`:
+
+   ```python
+   with patch.object(driver, "_discover_prs", return_value={661: 661}):
+       with patch.object(driver, "_sweep_orphaned_arming_records"):
+           with patch.object(driver, "_drive_issue", return_value=None):
+               driver.run()
+   ```
+
+   Mocking only the outer helpers (`_discover_prs`, `_sweep_orphaned_arming_records`) is insufficient: `run()` still dispatches `_drive_issue` into a `ThreadPoolExecutor`. A partial mock leaves real worker threads running past the test boundary.
 
 **Run the FULL suite before declaring green.** A passing subset (`pytest tests/unit/automation` → 1174 passed) is misleading because a shared breaker's threshold is only crossed at full scope. Run what CI runs (`pytest tests/unit`). When a function gains a NEW side-effecting call (a `gh`/network/db call), audit EVERY existing test that reaches it and add the mock — an unmocked real call fails in CI's no-network sandbox, trips the shared breaker, and cascades `CircuitBreakerOpenError` into unrelated tests. Treat that cascade as a SYMPTOM: find the EARLIEST non-breaker failure (the real root cause). Background long runs rather than skipping them.
 
@@ -310,6 +324,7 @@ Do NOT blank PATH entirely — pixi itself may live under `/tmp/pixi-.../bin` an
 | Ran only the changed subdirectory, declared green | `pytest tests/unit/automation` → 1174 passed | Full `tests/unit` (3391) crossed the breaker threshold; cascade in CI only | Run the FULL unit suite before green; stateful singletons make subsets misleading |
 | Left a new side-effecting `gh` call unmocked in existing tests | Added `gh_pr_resolve_thread` to a validator existing tests exercised | Real `gh` calls fail in CI's no-network sandbox → tripped shared breaker → `CircuitBreakerOpenError` cascade | Mock the new collaborator in EVERY reaching test; the cascade is a symptom — find the earliest real failure |
 | `patch.object(imported_logger, "error")` | Asserted subprocess error logging | A sibling test's `importlib.reload()` replaced the logger; the patch targeted the stale object | Use the string form `patch("pkg.module.logger.error")` (resolves at runtime) |
+| Mock `_discover_prs` + `_sweep_orphaned_arming_records` only when testing `driver.run()` | Expected those two patches to fully contain `run()` side effects | `run()` still dispatches `_drive_issue` into a `ThreadPoolExecutor`; workers outlived the test boundary and opened `_GH_BREAKER` after the next test's conftest reset | Mock the per-item worker (`_drive_issue`) too — prevent threads from spawning entirely; the conftest autouse reset is not enough against background threads (PR #1060, commit 4ac2263) |
 | Manual per-test asyncio Lock init | Each test re-creates `app.state.lock` in its body | Easy to forget on new tests; forgotten tests inherit dirty state | Use `@pytest.fixture(autouse=True)` in conftest |
 | `app.state.inflight_lock.clear()` | Tried to "clear" an asyncio.Lock | asyncio.Lock has no `clear()` method | Replace the instance: `app.state.inflight_lock = asyncio.Lock()` |
 | Module-scope fixture for async state | `scope="module"` | Lock held by test 1 still held when test 2 runs | Use default function scope with `autouse=True` |
@@ -448,3 +463,4 @@ PATH="$CLEAN_PATH" pixi run pytest tests/unit/automation/ -q --no-cov
 | ProjectTelemachy | Issue #48 — respx integration infrastructure | 9 integration tests; stateful fault injection (500/409/503/timeout/invalid); 57 tests pass; no nested-context issues |
 | ProjectCharybdis | PR #88 — chaos integration tests (NATS + mock Agamemnon) | Chaos tests R02–R05 green after adding side-effect simulation |
 | HomericIntelligence | CI — `_wait_for_pr_terminal` unmocked-wait hang | Full `pytest tests/unit` hung ~16 min vs ~4 min baseline; patched the wait in all green-path tests → 1003 passed in 93 s |
+| ProjectHephaestus | PR #1060, commit 4ac2263 — ThreadPoolExecutor worker lifetime crosses test boundary; `_drive_issue` must be mocked when testing `CIDriver.run()` | `test_run_gate_does_not_abort_with_prs` was opening `_GH_BREAKER` in sibling tests via executor workers; mocking `_drive_issue` eliminated the threads; verified-ci |
