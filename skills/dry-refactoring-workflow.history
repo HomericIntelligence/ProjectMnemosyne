@@ -2160,3 +2160,19 @@ git remote prune origin
 | HomericIntelligence/Odysseus | Symlink-to-submodule conversion, .gitmodules normalization | PR #66 |
 
 ---
+
+## v1.4.0 (2026-06-07)
+
+**Changed by:** nuance audit — restore SRP/LRU-cache/stale-script DRY patterns
+**Verification:** verified-ci
+
+### What changed
+
+Restored lost DRY-consolidation nuance from `dry-consolidate-to-canonical-refactor` (only 3 of ~9 patterns had been carried over in v1.3.0). Added Phase 9 with a `### Detailed Steps` subsection:
+
+- **9a Extract-method / SRP decomposition** — 50-LOC function / 100-LOC method soft limits; convert a `nonlocal`-mutating closure into a free-standing method via a small mutable box (one-field dataclass or single-element `list` cell).
+- **9b LRU-cache detection util** — extract repeated cached lookups into an `@lru_cache` helper. Gotcha: `@lru_cache` conflicts with `unittest.mock.patch` (cache holds the pre-patch value); call `helper.cache_clear()` in the test / between patches.
+- **9c Stale-script removal & deprecated-stub cleanup** — grep for callers first; rewrite stale back-references self-contained before deleting.
+- **9d Dynamic `Path.rglob` discovery** — replace hardcoded file lists with runtime discovery.
+
+Added 4 Failed Attempts rows (mutating-closure extraction, lru_cache vs mock.patch, delete-before-grep, hardcoded-list rot). Extended description, trigger phrases, and tags. Bumped 1.3.0 → 1.4.0.

@@ -1,9 +1,9 @@
 ---
 name: dry-refactoring-workflow
-description: "Complete TDD-driven workflow for identifying and eliminating code duplication by extracting reusable helper methods. Use when: (1) extracting duplicated helper methods into a shared module using TDD (write a failing test against the canonical, delete the duplicate, run green); (2) creating a private leaf module with leading-underscore naming to centralize a repeated internal call (e.g. importlib.metadata version resolution, path construction) and prevent re-introduction across modules; (3) centralizing hardcoded path constants into a single module to prevent drift when directory structure changes (incl. phase-routed in_progress/completed splits); (4) deduplicating LLM JSON extraction, parser logic, or any call-site pattern copy-pasted across several files; (5) test structure must mirror source structure when extracting helpers; (6) running a full DRY consolidation pass (discovery via grep, classifying true duplicates vs intentional variants, dict-structure consolidation) and refactoring to a single canonical source. Also covers cryptographic commit signing requirements in PR workflows."
+description: "Complete TDD-driven workflow for identifying and eliminating code duplication by extracting reusable helper methods. Use when: (1) extracting duplicated helper methods into a shared module using TDD (write a failing test against the canonical, delete the duplicate, run green); (2) creating a private leaf module with leading-underscore naming to centralize a repeated internal call (e.g. importlib.metadata version resolution, path construction) and prevent re-introduction across modules; (3) centralizing hardcoded path constants into a single module to prevent drift when directory structure changes (incl. phase-routed in_progress/completed splits); (4) deduplicating LLM JSON extraction, parser logic, or any call-site pattern copy-pasted across several files; (5) test structure must mirror source structure when extracting helpers; (6) running a full DRY consolidation pass (discovery via grep, classifying true duplicates vs intentional variants, dict-structure consolidation) and refactoring to a single canonical source; (7) extract-method / SRP decomposition of over-long functions (50-LOC) and methods (100-LOC), including converting a mutating closure into a method via a small mutable box; (8) extracting repeated cached lookups into an @lru_cache helper (and clearing the cache so unittest.mock.patch works); (9) removing stale scripts / deprecated stubs (grep callers first) and replacing hardcoded file lists with dynamic Path.rglob discovery. Also covers cryptographic commit signing requirements in PR workflows."
 category: architecture
 date: 2026-06-07
-version: 1.3.0
+version: 1.4.0
 user-invocable: false
 verification: verified-ci
 history: dry-refactoring-workflow.history
@@ -18,7 +18,7 @@ Complete TDD-driven workflow for identifying and eliminating code duplication by
 | ----------- | --------- |
 | **Date** | 2026-06-04 |
 | **Objective** | TDD-driven extraction of duplicated code into reusable helper modules, with emphasis on private module placement, test structure mirroring, and cryptographic commit signing |
-| **Outcome** | ✅ v1.0.0 (Feb 2026): Eliminated token aggregation duplication. v1.1.0 (Jun 2026): Extended with private module patterns, test mirroring enforcement, signing requirements. v1.3.0 (Jun 2026): Absorbed centralized path constants, LLM JSON extraction dedup, full DRY consolidation discovery/classify pass, and canonical-source refactor patterns (Pydantic type hierarchy, dict-structure consolidation, orphan relocation). |
+| **Outcome** | ✅ v1.0.0 (Feb 2026): Eliminated token aggregation duplication. v1.1.0 (Jun 2026): Extended with private module patterns, test mirroring enforcement, signing requirements. v1.3.0 (Jun 2026): Absorbed centralized path constants, LLM JSON extraction dedup, full DRY consolidation discovery/classify pass, and canonical-source refactor patterns (Pydantic type hierarchy, dict-structure consolidation, orphan relocation). v1.4.0 (Jun 2026): Restored SRP/extract-method (mutable-box closure), @lru_cache detection util (mock.patch/cache_clear gotcha), stale-script/stub cleanup, and dynamic Path.rglob discovery patterns from the nuance audit. |
 | **Primary Issues** | #642 (original), #739 (private module extraction), #917 (pr-policy signing), #503 (LLM JSON dedup) |
 | **Primary PRs** | #714 (original), #900+ (refactoring), #137/#1738 (path constants), #505 (JSON dedup), #201 (DRY consolidation) |
 | **History** | [changelog](./dry-refactoring-workflow.history) |
@@ -47,6 +47,12 @@ Use this workflow when you encounter:
 - "Run a full DRY consolidation pass — find and classify duplicates"
 - "Consolidate duplicate Pydantic models / type aliases into a base hierarchy"
 - "Same dict structure built in multiple call sites — extract a shared helper"
+- "This function/method is too long — extract methods / decompose by responsibility"
+- "Convert a mutating closure into a standalone method"
+- "Extract repeated cached lookups into an `@lru_cache` helper"
+- "`@lru_cache` is breaking my `mock.patch` test — how to clear the cache?"
+- "Remove stale scripts / deprecated stubs as part of consolidation"
+- "Replace a hardcoded file list with dynamic `Path.rglob` discovery"
 
 ## Verified Workflow
 
@@ -467,6 +473,90 @@ git rm package/orphan.py                                    # git rm (not rm) �
 grep -rn "from package\.orphan" .                           # must be empty before commit
 ```
 
+### Phase 9: Additional DRY-Consolidation Patterns (NEW in v1.4.0)
+
+Further consolidation patterns restored from `dry-consolidate-to-canonical-refactor`.
+
+#### Detailed Steps
+
+**9a. Extract-method / SRP decomposition.** Long functions/methods both violate Single Responsibility and hide duplication. Treat size as a smell trigger, not a hard rule: **functions > ~50 LOC** and **methods > ~100 LOC** are extraction candidates. Pull each distinct responsibility into its own named helper.
+
+A common snag: a closure that mutates a variable captured from the enclosing scope cannot be lifted into a standalone method as-is (Python rebinding makes the captured name local). Wrap the mutable state in a small **mutable box** — a one-field dataclass or a single-element `list` cell — and pass it in:
+
+```python
+# Before: closure mutates captured `total` — can't be extracted cleanly
+def process(items):
+    total = 0
+    def add(x):            # `nonlocal` ties this to the enclosing frame
+        nonlocal total
+        total += x
+    for i in items:
+        add(i)
+    return total
+
+# After: mutable box makes the helper a free-standing, testable method
+from dataclasses import dataclass
+
+@dataclass
+class _Accumulator:
+    total: int = 0
+
+def _add(box: _Accumulator, x: int) -> None:
+    box.total += x          # mutates the box's field, not a captured local
+
+def process(items: list[int]) -> int:
+    box = _Accumulator()
+    for i in items:
+        _add(box, i)
+    return box.total
+# (a single-element list `box = [0]` / `box[0] += x` works too for trivial cases)
+```
+
+**9b. LRU-cache detection util.** When the same expensive lookup is recomputed at many call sites (config resolution, path discovery, metadata reads), extract it into one `@lru_cache`-decorated helper so it is computed once:
+
+```python
+from functools import lru_cache
+
+@lru_cache(maxsize=None)
+def resolve_root() -> Path:
+    """Locate project root once; cached for the process lifetime."""
+    ...  # expensive walk / import
+```
+
+**Gotcha — `@lru_cache` conflicts with `unittest.mock.patch`.** The cache holds the value computed *before* the patch was applied, so the mock is never seen. Call `helper.cache_clear()` in the test (and between successive patches):
+
+```python
+def test_resolve_root(monkeypatch):
+    resolve_root.cache_clear()           # drop any pre-patch cached value
+    monkeypatch.setattr(module, "_walk", fake_walk)
+    resolve_root.cache_clear()           # ensure the patched impl is used
+    assert resolve_root() == expected
+```
+
+Prefer a `cache_clear()` in setup/teardown (or an autouse fixture) for any module exposing `@lru_cache` helpers.
+
+**9c. Stale-script removal & deprecated-stub cleanup.** Consolidation leaves behind stale scripts and deprecated stubs — remove them as part of the pass, but **grep for callers first**; a deletion is only safe once nothing references it:
+
+```bash
+grep -rn "stale_script\.py\|deprecated_stub\|old_entrypoint" \
+  --include="*.py" --include="*.md" --include="*.yaml" --include="*.yml" --include="*.sh" .
+```
+
+If a file you are keeping holds a **stale back-reference** to something being deleted, rewrite that file to be **self-contained first** (inline the still-needed logic / update the docstring), commit and verify, and only then delete the stale target. Deleting first leaves a dangling reference that breaks imports or docs.
+
+**9d. Dynamic discovery via `Path.rglob`.** Replace hardcoded file lists (which silently rot as files are added/removed) with dynamic discovery so the set is always current:
+
+```python
+# Before: hardcoded list drifts out of sync with the tree
+SKILL_FILES = ["a.md", "b.md", "c.md"]
+
+# After: discovered at runtime — new/removed files are picked up automatically
+from pathlib import Path
+skill_files = sorted(Path("skills").rglob("*.md"))
+```
+
+Sort the result for deterministic ordering and filter excludes explicitly (e.g. skip `*.notes.md` / `__pycache__`) rather than re-introducing a hardcoded allowlist.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -485,6 +575,10 @@ grep -rn "from package\.orphan" .                           # must be empty befo
 | Rename a class globally without a backward-compat alias | One-pass global rename | Broke external consumers importing the old name | Add `OldName = NewName` alias; old imports keep working |
 | Grep only source files for references before deleting/relocating | `--include="*.py"` only | Missed references in `CLAUDE.md`, `docs/`, `scripts/*.py`, `*.yaml` | Grep ALL file types (`.py`, `.mojo`, `.md`, `.yaml`, `.yml`) and use `git rm` to preserve history |
 | Leave the same dict structure built in multiple call sites | Kept identical dict construction in a format function and `main()` | Shapes drift independently when new fields are added later | Extract a `_serializable_*()` helper; add a regression test pinning shape parity |
+| Lift a mutating closure into a standalone method unchanged | Cut a `nonlocal`-mutating inner function out into a module-level helper as-is | The captured variable became a plain local in the new scope; the caller's value was never updated | Wrap the mutated state in a small mutable box (one-field dataclass or single-element `list` cell) and pass it into the extracted helper |
+| Mock a value behind an `@lru_cache` helper without clearing the cache | `unittest.mock.patch` / `monkeypatch.setattr` on the underlying function, then called the cached helper | The cache held the pre-patch value, so the mock was never exercised and the test asserted stale data | Call `helper.cache_clear()` in the test before (and between) patches — ideally via setup/teardown or an autouse fixture |
+| Delete a stale script before checking for callers | `git rm old_entrypoint.py` as part of consolidation without grepping first | A kept file still imported / documented it → broken import and dangling doc reference post-merge | Grep all file types for callers FIRST; if a kept file back-references the target, rewrite it self-contained and verify before deleting |
+| Keep a hardcoded file list after consolidating the tree | Left `SKILL_FILES = [...]` enumerating discovered files by hand | The list silently rotted as files were added/removed — discovery missed new files and pointed at deleted ones | Discover dynamically with `sorted(Path(...).rglob("*.ext"))` and filter excludes explicitly instead of maintaining an allowlist |
 ## Results & Parameters
 
 ### Code Changes
@@ -558,10 +652,11 @@ def _aggregate_token_stats(self, tier_results: dict[TierID, TierResult]) -> Toke
 
 ## Tags
 
-`refactoring`, `dry-principle`, `helper-methods`, `tdd`, `code-quality`, `python`, `pytest`, `private-modules`, `test-structure`, `git-signing`, `importlib-metadata`
+`refactoring`, `dry-principle`, `helper-methods`, `tdd`, `code-quality`, `python`, `pytest`, `private-modules`, `test-structure`, `git-signing`, `importlib-metadata`, `srp`, `extract-method`, `lru-cache`, `mock-patch`, `rglob`, `dead-code-removal`
 
 ## Version History
 
+- **v1.4.0** (2026-06-07): Restored SRP/LRU-cache/stale-script DRY patterns lost in the v1.3.0 absorption (nuance audit). Added Phase 9 + `### Detailed Steps`: extract-method/SRP decomposition with mutable-box closure conversion, `@lru_cache` detection util with the `mock.patch`/`cache_clear()` gotcha, stale-script/deprecated-stub cleanup (grep callers first, rewrite back-references self-contained), and dynamic `Path.rglob` discovery. Added 4 Failed Attempts rows.
 - **v1.3.0** (2026-06-07): Absorbed 5 skills — `centralized-path-constants`, `private-module-extraction-helper-pattern`, `deduplicate-llm-json-extraction`, `dry-consolidation-workflow`, `dry-consolidate-to-canonical-refactor`. Added Quick Reference h3 and Phase 8 (path constants, LLM JSON dedup, discovery/classify pass, Pydantic type hierarchy, dict-structure consolidation, orphan relocation). Extended description and Failed Attempts. Full originals preserved in history.
 - **v1.1.0** (2026-06-04): Added Phase 7 covering private module extraction patterns, test structure mirroring enforcement, cryptographic commit signing, PyPI distribution name handling. Verified via ProjectHephaestus issue #739.
 - **v1.0.0** (2026-02-15): Initial release covering token aggregation extraction with TDD workflow.
