@@ -1,0 +1,2224 @@
+<!-- markdownlint-disable MD024 -->
+
+# Changelog: mojo-ci-runtime-crash-diagnosis-and-mitigation
+
+## v1.0.0 (2026-06-07)
+
+Initial consolidation. Merged 6 overlapping skills into one canonical:
+
+- mojo-jit-crash-and-retry-strategies
+- ci-mojo-gha-vma-sequential-job
+- retry-all-mojo-workflow-calls
+- validate-upstream-mojo-fix-hostile-home-matrix
+- multi-layer-cpu-feature-detection-mismatch-probe
+- docker-mojo-uid-mismatch-crash-fix
+
+## Superseded from mojo-jit-crash-and-retry-strategies
+
+**Original date/version**: 2026-06-07 / "2.1.0"
+
+```yaml
+name: mojo-jit-crash-and-retry-strategies
+description: "HISTORICAL REFERENCE — most patterns OBSOLETE as of Mojo 1.0.0b2.dev2026052506 (modular/modular#6413 fixed upstream). Do NOT use the retry-wrapper, continue-on-error matrix, gdb-coredump-capture, or 4-hypothesis disproof patterns in NEW code. Use when: (1) reading historical PR/issue context that references these patterns, (2) needing the runtime-crash-bisection minimal-reproducer methodology (still useful for future Mojo bugs), (3) understanding the closed-source boundary for libKGEN/libAsyncRT/libMSupport debugging, (4) needing the AVX-512 wrong-ISA forensics for analogous CPU-feature bugs. NOT a guide for treating Mojo crashes as flakes — that posture was wrong and is now removed."
+category: ci-cd
+date: 2026-06-07
+version: "2.1.0"
+user-invocable: false
+verification: verified-ci
+history: mojo-jit-crash-and-retry-strategies.history
+tags: [obsolete, historical, mojo, jit, crash, libkgen, forensics, avx512, bisection, ci]
+```
+
+
+# Mojo JIT Crash and Retry Strategies
+
+> **⚠️ OBSOLETE as of 2026-05-26.** The dominant pre-fix JIT crash class
+> (AVX-512 mis-emission on masked-AVX-512 CPUs, `libKGENCompilerRTShared.so`
+> SIGILLs) was fixed upstream in [modular/modular#6413](https://github.com/modular/modular/issues/6413)
+> on 2026-05-22 and validated on Mojo `1.0.0b2.dev2026052506+`. ProjectOdyssey
+> demolished all retry/coredump/gdb-wrapper infrastructure in PRs #5458, #5459,
+> #5460 (2026-05-26).
+>
+> **DO NOT use in new code:**
+> - Retry wrappers around `pixi run mojo` (any subcommand)
+> - `continue-on-error: true` on Mojo CI matrix entries
+> - `MOJO_TEST_UNDER_GDB` / coredump-capture composite actions
+> - "Transient vs deterministic" classification — all Mojo crashes are now bugs,
+>   not flakes
+> - 4-hypothesis disproof checklist (was specific to the now-resolved
+>   `libKGENCompilerRTShared.so+0x6ef7b` non-deterministic crash)
+> - AVX-512-feature-stripping `--target-features -avx512*` outside the narrow
+>   sanitizer-only exception (the upstream driver fix doesn't yet propagate
+>   through ASAN/TSAN codegen — see ProjectOdyssey justfile `MOJO_TARGET_CPU`)
+>
+> **STILL USEFUL** (extract these patterns for analogous future bugs):
+> - "Runtime Crash Bisection — Minimal Reproducer" section: the methodology
+>   for reducing a crashing test to a standalone upstream-fileable reproducer
+>   remains the canonical approach for ANY future Mojo runtime bug
+> - "Closed-Source Boundary" section: documents that `libKGENCompilerRTShared.so`,
+>   `libAsyncRTMojoBindings.so`, `libMSupport.so` are NOT in the public
+>   `modular/modular` repo — only `mojo/stdlib/` is. Useful escalation context.
+> - "libKGEN Stripped-Binary Crash Forensics" section: the `nm --dynsym` +
+>   `objdump` flow for decoding stripped-binary stack offsets generalizes to
+>   any closed-source library crash
+> - "Crash 4 — 4-Hypothesis Disproof Checklist" structure: the meta-pattern
+>   (write down 4 falsifiable hypotheses, dispatch parallel investigations
+>   to disprove, escalate if all disproved) is reusable for any non-deterministic
+>   bug
+>
+> The body below is preserved verbatim as historical reference. Treat it as
+> archaeology, not as current guidance.
+
+## Overview
+
+| Field | Value |
+| --- | --- |
+| **Date** | 2026-05-18 |
+| **Objective** | Consolidated patterns for diagnosing, classifying, and recovering from Mojo JIT crashes in CI: retry wrappers, crash forensics, import audits, coredump capture, deterministic vs. transient classification, AVX-512 ISA mismatch, serialization CI crashes, and upstream issue filing. |
+| **Outcome** | Merged from 13 individual skills (M3 sub-PR 1/4, issue \#1772). All root-cause and mitigation patterns preserved. |
+| **Verification** | verified-local (multiple ProjectOdyssey PRs) |
+
+## When to Use
+
+1. CI produces `mojo: error: execution crashed` from `libKGENCompilerRTShared.so` before any test output
+2. Multiple unrelated test files crash in the same CI run on unchanged code
+3. Writing or auditing CI workflows for `pixi run mojo test/run/build/package` retry protection
+4. Need to classify crash as transient vs. deterministic before deciding on a fix
+5. Bisecting a Mojo runtime crash to a minimal standalone reproducer for upstream filing
+6. `mojo build --print-effective-target` shows `znver4` + AVX-512 but `/proc/cpuinfo` has no `avx512f` flag
+7. Investigating Mojo serialization CI crash (dtype string mismatch, Python pathlib interop)
+8. Diagnosing baseline compilation errors on `main` that block all open PRs
+
+## Crash Classification — Start Here
+
+### Four Distinct Crash Types in Mojo CI
+
+> Misidentifying the crash type wastes investigation time. Check the stack offsets first.
+
+| Symptom | Crash Type | Fix |
+| --- | --- | --- |
+| `execution crashed` BEFORE any test output + fixed offsets `+0x3cb78b / +0x3c93c6 / +0x3cc397` | Crash 1 — Bitcast UAF / heap corruption | ADR-013 bitcast fix (resolved in Mojo 0.26.x) |
+| `execution crashed` BEFORE any test output + fixed offsets `+0x6d4ab / +0x6a686 / +0x6e157` | Crash 2 — `__fortify_fail_abort` / UID mismatch | Fix UID in Docker cache key + entrypoint HOME-fixup |
+| `execution crashed` BEFORE any test output + variable offsets | Crash 3 — JIT volume overflow | Audit imports; convert package-level → targeted submodule |
+| `execution crashed` Mojo 1.0.0b2 offsets `+0x6ef7b / +0x6c156 / +0x6fc27` | Crash 4 — KGEN buffer overflow (non-deterministic) | 4-hypothesis disproof checklist → sanitizer agents → upstream issue |
+| `execution crashed` AFTER test output at \~15th test | Real heap corruption | Investigate bitcast/copyinit fix |
+| Crash after assertion message | Test logic bug | Debug the assertion |
+
+### Transient vs. Deterministic Decision Tree
+
+```text
+CI job fails with "mojo: error: execution crashed"?
+  |
+  +-- Stack frames include repo files?
+  |     YES → Investigate code change (real regression)
+  |     NO  → Likely transient
+  |
+  +-- Same test group passes on main CI (same date)?
+  |     NO  → May be a real regression, investigate further
+  |     YES → Confirmed transient
+  |
+  +-- Crash offsets FIXED across runs?
+        YES → Deterministic crash (investigate root cause)
+        NO  → Non-deterministic (JIT flakiness or ASLR-variable crash)
+```
+
+### Pre-Existing Flaky Crash — Re-trigger Pattern
+
+When a crash is confirmed transient (only runtime library frames, same tests pass on main):
+
+```bash
+# Re-run only the failed jobs (not the entire workflow)
+gh run rerun <RUN_ID> --repo <OWNER>/<REPO> --failed
+
+# Monitor
+gh run watch <NEW_RUN_ID>
+```
+
+If crashes persist after re-run, open a tracking issue and do NOT block PR merge on pre-existing flakiness.
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Classify: read the crash log for stack frame origin
+gh run view <RUN_ID> --log-failed 2>&1 | grep -A 20 "execution crashed"
+
+# 2. Confirm transient: same test group passes on main
+gh run list --branch main --workflow "Comprehensive Tests" --limit 3
+gh run view <MAIN_RUN_ID> --json jobs | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for j in data.get('jobs', []):
+    print(j['name'], j['conclusion'])"
+
+# 3. Re-trigger if transient (no code changes needed)
+gh run rerun <RUN_ID> --repo <OWNER>/<REPO> --failed
+
+# 4. Fix if deterministic: see crash-type table above
+```
+
+### CI Retry Wrapper — Standard Pattern
+
+Every `pixi run mojo test/run/build/package` call in CI must be wrapped:
+
+```bash
+attempt=0
+delay=1
+while [ $attempt -lt 3 ]; do
+  attempt=$((attempt + 1))
+  if pixi run mojo test -I . "$test_dir" --verbose; then
+    break
+  fi
+  if [ $attempt -lt 3 ]; then
+    echo "Attempt $attempt failed, retrying in ${delay}s (JIT crash -- issue #3329)"
+    sleep $delay
+    delay=$((delay * 2))
+  else
+    echo "Mojo tests failed after 3 attempts"
+    exit 1
+  fi
+done
+```
+
+### CI Flaky Test Groups — `continue-on-error` Pattern
+
+When CI matrix jobs fail with `libKGENCompilerRTShared.so` crashes that are intermittent and pass on main:
+
+```yaml
+- name: Run test group
+  # Some test groups have flaky Mojo runtime segfaults (libKGENCompilerRTShared.so crashes)
+  # on CI runners. Allow them to fail without blocking the workflow.
+  continue-on-error: ${{ matrix.test-group.name == 'Integration Tests' || matrix.test-group.name == 'Core Tensors' || matrix.test-group.name == 'Benchmarking' }}
+```
+
+Validate YAML after edits:
+
+```bash
+python3 -c "import yaml; yaml.safe_load(open('.github/workflows/comprehensive-tests.yml'))" && echo "YAML valid"
+```
+
+### Retry Pattern Validation — Audit Script
+
+Detect bare `pixi run mojo` calls not wrapped in a retry loop:
+
+```python
+# scripts/validate_mojo_retry_pattern.py
+COMPILING_SUBCOMMANDS = {"test", "run", "build", "package"}
+RETRY_MARKERS = ("while [", "attempt=")
+
+def _has_retry_protection(block: str) -> bool:
+    return any(marker in block for marker in RETRY_MARKERS)
+```
+
+Run: `python3 scripts/validate_mojo_retry_pattern.py .github/workflows/`
+
+### Baseline CI Compilation Fixes
+
+When the same compilation error appears across 5+ unrelated PRs, it is a baseline error on `main`:
+
+```bash
+# Fix A: Unused variable (--Werror)
+# Before: var throughput = Float64(n_params * n_iters) / (Float64(total_ns) / 1e9)
+# After:  _ = Float64(n_params * n_iters) / (Float64(total_ns) / 1e9)
+
+# Fix B: full() type mismatch (wrap with Float64)
+# Before: var t = full([3], Int8(5), DType.int8)
+# After:  var t = full([3], Float64(5), DType.int8)
+
+# Fix C: Deprecated alias keyword
+# Before: alias ToTensor = ToExTensor
+# After:  comptime ToTensor = ToExTensor
+
+# Fix D: Missing re-export (uncomment)
+# from .data.transforms import Normalize, ToTensor, Compose
+```
+
+### Crash 4 — 4-Hypothesis Disproof Checklist (Mojo 1.0.0b2)
+
+For `libKGENCompilerRTShared.so+0x6ef7b / +0x6c156 / +0x6fc27` non-deterministic crash:
+
+| # | Hypothesis | Disproof Threshold |
+| --- | --- | --- |
+| 1 | Tuple destructor UAF | 0 crashes in 200 iterations → DISPROVE |
+| 2 | Memory pressure | 0 crashes in 100 iterations + RSS stable → DISPROVE |
+| 3 | Import volume | 0 crashes after import audit → DISPROVE |
+| 4 | Sequential test-group leak | 1-test-per-invocation passes but all-in-one crashes → CONFIRMED |
+
+Dispatch 4 parallel sub-agents simultaneously. If all 4 disproved, escalate to sanitizer agents (ASAN; TSAN+MSAN+UBSAN), then file upstream.
+
+### libKGEN Stripped-Binary Crash Forensics
+
+The published 3-frame trace is Mojo's Crashpad signal-handler chain, NOT the real fault site. Frame 4 (`<unmapped>`) is JIT-emitted code. To get the real frame, capture a coredump.
+
+```bash
+# Build the dynsym map
+LIBKGEN=$(pixi run -- bash -c 'echo $CONDA_PREFIX/lib/mojo/libKGENCompilerRTShared.so')
+nm -D --numeric-sort "$LIBKGEN" > /tmp/libkgen.dynsym
+
+# Bucket each crash offset to nearest dynsym entry
+for off in 0x6ef7b 0x6c156 0x6fc27; do
+  awk -v t=$((off)) '
+    $1~/^[0-9a-f]+$/{a=strtonum("0x"$1); if(a<=t&&a>b){b=a;s=$0}}
+    END{printf "%#x → %s\n",t,s}
+  ' /tmp/libkgen.dynsym
+done
+
+# Disassemble each frame
+for off in 0x6ef7b 0x6c156 0x6fc27; do
+  objdump -d --start-address=$((off-0x10)) --stop-address=$((off+0x30)) "$LIBKGEN"
+done
+```
+
+In Mojo 1.0.0b2 all three offsets typically bucket into `_ZNSt24uniform_int_distributionImEclISt13random_deviceEEmRT_RKNS0_10param_typeE@@Base` — a 60+KB stripped region. This is NOT `std::uniform_int_distribution`; it is the last visible symbol before a stripped block of internal functions.
+
+### AVX-512 Wrong ISA Emission (modular/modular#6413)
+
+Mojo 1.0.0b2 emits AVX-512 instructions on AMD EPYC Zen 4 GHA runners where the Hyper-V hypervisor masks AVX-512 CPUID feature leaves — causing SIGILL at runtime.
+
+```bash
+# 1. Confirm the runner CPU
+gh run view <RUN_ID> --log | grep "model name" | head -3
+# Expect: AMD EPYC 9V74 (Zen 4, family 25, model 17)
+
+# 2. Confirm hypervisor masks AVX-512
+gh run view <RUN_ID> --log | grep -c avx512
+# Expect: 0
+
+# 3. First-line diagnostic: print driver-resolved target without compiling
+mojo build --print-effective-target dummy.mojo
+# Bug: --target-cpu znver4 with +avx512f,+avx512vl,...
+# Good: --target-cpu skylake/lunarlake with NO avx512 features
+
+# 4. Cross-check with C probe on suspect host
+# cpuid(7,0).ebx AVX512F=0 + mojo's +avx512f → confirmed mismatch
+```
+
+The mechanism: LLVM `getHostCPUName()` reads CPU family 0x19 + Genoa model → returns `znver4` → indexes `X86TargetParser.cpp::Processors[]` static feature list that includes AVX-512 — without cross-checking masked CPUID leaves. Confirmed in CI run 25778579617.
+
+### Exotic Dtype Default Parameter Crash
+
+ASAN abort before any test body runs (module-load time):
+
+```mojo
+# CRASHES: Scalar[E8M0](1.0) evaluated at module load — no valid float->E8M0 path
+fn some_func(val: Scalar[E8M0] = Scalar[E8M0](1.0)): ...
+
+# SAFE: bitcast-based alias evaluated at compile time
+fn _e8m0_from_exponent(exp: UInt8) -> Scalar[E8M0]:
+    return bitcast[E8M0, 1](SIMD[DType.uint8, 1](exp))[0]
+alias E8M0_ONE = _e8m0_from_exponent(127)  # 1.0 in E8M0 encoding (bias=127)
+
+# SAFE: FP8 bit pattern 0x3C = 1.0 in float8_e4m3fn
+alias FP8_ONE = bitcast[DType.float8_e4m3fn, 1](SIMD[DType.uint8, 1](0x3C))[0]
+```
+
+Distinguish from mid-test UAF: module-load crash fires before any test body; mid-test UAF fires after output from the Nth test.
+
+### Serialization CI Crash
+
+Two independent bugs in Mojo serialization:
+
+```mojo
+// Bug 1: dtype string mismatch
+// WRONG: var dtype_str = String(dtype)
+// CORRECT: var dtype_str = dtype_to_string(dtype)
+
+// Bug 2: Python pathlib interop crashes CI
+// WRONG: Python.import_module("pathlib") → p.glob("*.weights")
+// CORRECT: Native Mojo os.listdir() + insertion sort
+```
+
+Check if worktree branch is behind `origin/main` before investigating serialization crashes:
+
+```bash
+git diff origin/main -- shared/utils/serialization.mojo
+```
+
+### Runtime Crash Bisection — Minimal Reproducer
+
+For upstream filing, binary-reduce the crashing code:
+
+```text
+1. Characterize: run N times, note determinism, library frames, crash timing
+2. Reduce scope: strip to 1 test/function that still crashes
+3. Reduce ops: remove operations until crash boundary found
+4. Reduce struct: remove struct fields to isolate which field matters
+   (key: List[Int] field in struct often triggers heap corruption)
+5. Verify user code: add bounds checks, trace refcounts, test move semantics
+6. Inline deps: create zero-import self-contained reproducer
+7. File upstream with: Mojo version, reproducer, stack trace, isolation experiments table
+```
+
+Minimum crash config for heap-corruption reproducers:
+
+```text
+Spatial: ≥32x32  |  Channels: ≥16  |  Struct must have List[Int] field
+Shapes: via temporary List[Int] helpers  |  Operations in separate fn calls (not inline main)
+```
+
+### Closed-Source Boundary
+
+`libKGENCompilerRTShared.so`, `libAsyncRTMojoBindings.so`, `libMSupport.so` are NOT in the public `modular/modular` repo. Only `mojo/stdlib/` is public. Self-building Mojo to debug JIT crashes is impossible. The version hash in `mojo --version` (e.g. `ed7c8f0a`) is from Modular's private monorepo — unresolvable publicly.
+
+For runtime/JIT crashes:
+1. Capture a coredump (see `gha-mojo-coredump-capture` skill)
+2. Decode via dynsym + objdump (see forensics section above)
+3. File upstream at `https://github.com/modular/modular/issues` with: Mojo version, stack offsets, sanitizer reports, minimal repro, coredump artifact link
+4. Wait for Modular to investigate
+
+For stdlib bugs: clone `modular/modular`, edit `mojo/stdlib/`, build local package, test, PR upstream.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --- | --- | --- | --- |
+| Hypothesis: bug fires on any non-AVX-512 Intel CPU | Predicted SIGILL on Skylake-class Intel from early GHA evidence | 6/6 clean runs on Sandy Bridge-E, Haswell, Skylake, Whiskey Lake, Lunar Lake | Get `/proc/cpuinfo` from the actual runner BEFORE forming CPU-class hypotheses; GHA `ubuntu-latest` has migrated heavily to AMD EPYC |
+| Cache eviction as AVX-512 fix | `gh actions-cache delete <bad-key>` then re-ran expecting a bug-free image | New image rebuilt with same crash on Zen 4 EPYC runners | Cache eviction is not a fix; the trigger is runner CPU + hypervisor, not image bytes |
+| `@always_inline` to fix bitcast crashes | Applied `@always_inline` to crash-prone functions | Worsens JIT crashes — increases compilation volume and inlines more problematic code at each call site | `@always_inline` is an ANTI-PATTERN for JIT crash mitigation |
+| Re-triggering CI without code change (baseline fix) | Push empty commit to clear flaky CI | Flaky segfaults are non-deterministic; same crash recurs without mitigation | Proactive `continue-on-error` or import audit is required alongside re-trigger |
+| Raw alloc/free churn + bitcast (bisection) | 1000 alloc/free cycles with raw `alloc[UInt8]` then bitcast write | No crash — raw allocation alone doesn't trigger heap corruption | Bug requires `List[Int]` internal buffer churn, not just raw alloc/free |
+| `mojo run --print-effective-target` | Tried the flag on the `run` subcommand | Flag is only on `mojo build`, not `mojo run` | Use `mojo build --print-effective-target` even when investigating a `mojo run` SIGILL |
+| Clone modular/modular and grep for libKGEN function | `grep -r KGEN .` in the public repo | KGEN runtime source not in the public repo; grep returns hits in test names only | Compiler and runtime are closed-source; only `mojo/stdlib/` is public |
+| Treat module-load ASAN abort as UAF | Assumed 3-frame ASAN signature always means bitcast write UAF | Same ASAN abort fires for module-load default-param crashes | Distinguish by crash timing: pre-test-body = module load; mid-test = bitcast write UAF |
+| Single-iteration CI confirmation | Ran a suspect PR once green, declared "fixed" | At \~20% historical pass rate on non-EPYC runners, one green run is statistically meaningless | Always use ≥8-run protocol for Mojo JIT crash verification |
+| `Edit` and `Write` tools on workflow YAML | Tried standard editors on `.github/workflows/*.yml` | Project security hook blocks edits to workflow files | Use `python3 -` inline script with `str.replace()` or `Bash` with heredoc |
+
+## Results & Parameters
+
+### Companion Skills
+
+| Skill | Purpose |
+| --- | --- |
+| `docker-mojo-uid-mismatch-crash-fix` | Crash 2 fix: UID in image cache key + entrypoint HOME-fixup |
+| `mojo-sanitizer-support-matrix` | Which `--sanitize=` flags work in Mojo 1.0.0b2 (only ASAN; TSAN broken; MSAN/UBSAN rejected) |
+| `gha-mojo-coredump-capture` | CI workflow step to capture a real coredump when frame 4 is `<unmapped>` |
+
+### CI Run Budget Reference (from ProjectOdyssey)
+
+| Verification type | Min runs |
+| --- | --- |
+| Hypothesis disproof (local) | 100–200 iterations per hypothesis |
+| Bare-command reproducer (CI) | 10+ iterations × 2 repro sites |
+| "Fixed" declaration | ≥8 CI runs showing consistent green |
+| Transient crash re-trigger | 1 re-run (`--failed` flag only) |
+
+### Upstream References
+
+- AVX-512 ISA mismatch: [modular/modular#6413](https://github.com/modular/modular/issues/6413)
+- Heap corruption bisection: [modular/modular#6187](https://github.com/modular/modular/issues/6187)
+- KGEN buffer overflow: [modular/modular#6445](https://github.com/modular/modular/issues/6445)
+
+## Verified On
+
+| Project | Context | Details |
+| --- | --- | --- |
+| ProjectOdyssey | PR #3288, #3340, #3355 — transient/flaky crash patterns | mojo-transient-crash-rerun, mojo-flaky-segfault-mitigation, preexisting-flaky-crash-rerun |
+| ProjectOdyssey | PR #4839 / issue #3955 — retry-pattern CI validator | mojo-retry-pattern-ci-validator |
+| ProjectOdyssey | PR #4846 — baseline CI compilation fixes | mojo-baseline-ci-compilation-fixes |
+| ProjectOdyssey | PR #5177 — exotic dtype default param crash | mojo-exotic-dtype-default-param-crash |
+| ProjectOdyssey | PR #5363/#5364 — libKGEN crash forensics + closed-source boundary | mojo-binary-closed-source-debugging, mojo-jit-crash-retry v4.1.0 |
+| ProjectOdyssey | GHA run 25778579617 + 25778580407 — AVX-512 ISA mismatch confirmed | mojo-jit-emits-avx512-on-non-avx512-cpu v3.0.0, mojo-print-effective-target-codegen-diagnostic |
+| ProjectOdyssey | PR #3316 (issue #3074) — serialization CI crash | mojo-serialization-ci-crash |
+| ProjectOdyssey | PR #4776 / issue #3704 — runtime output pattern audit | mojo-runtime-output-pattern-audit |
+| ProjectOdyssey | modular/modular#6187 — heap corruption minimal reproducer | mojo-runtime-crash-bisection |
+
+## Restored Source-Code Bug Knowledge (Current — Not Historical)
+
+> **Note**: The OBSOLETE banner above applies specifically to the compiler-level AVX-512
+> mis-emission bug fixed in modular/modular#6413. The patterns in this section are
+> **source-code bugs** that are independent of #6413 and remain current guidance.
+> Absorbed from `mojo-jit-crash-retry` v3.9.0 (2026-04-14).
+
+### CRITICAL: Crashes ARE Real Bugs — Verify Root Causes First
+
+Before assuming JIT flakiness, look for these three verified non-compiler root causes.
+All three were found in ProjectOdyssey PR #5197–5204. Each manifested as non-deterministic
+`execution crashed` output indistinguishable from JIT flakiness on the surface.
+The non-determinism was explained by timing/allocation-layout variation, not compiler
+non-determinism. **Failed attempt: "Assumed crash = JIT flake — closed/retried. Reality:
+16 files had 3 concrete source bugs."**
+
+- **(a) Double-free from synthesized `__copyinit__`**: A struct marked `Copyable` with
+  `UnsafePointer` fields but no explicit `__copyinit__`, stored in a `List[T]` that
+  reallocates. Mojo synthesizes a shallow `__copyinit__`, duplicating the pointer. Both
+  copies call `__del__` → double-free.
+- **(b) Broken `fetch_add` mutex**: `SpinLock.lock()` implemented via `fetch_add` to
+  "claim" the lock. `fetch_add` returns the previous value and completes atomically, but
+  two threads can both see `0` and both proceed into the critical section because the add
+  and the conditional branch are not atomic together. A correct spinlock requires
+  compare-exchange (CAS / `compare_exchange_weak`) to atomically check-and-set.
+- **(c) Bitcast UAF from alias surviving ASAP destruction**: Writing to tensor data via
+  `tensor._data.bitcast[T]()[i] = val`. The `bitcast` creates a pointer alias. Mojo's ASAP
+  (As Soon As Possible) destruction may destroy `tensor` before all writes through the
+  bitcast pointer complete, leaving a dangling write.
+
+### ADR-009 Test File Splitting and fn main Deprecation
+
+Heap corruption threshold: **15 cumulative test function executions** within a single JIT
+process session. CI-only crashes that pass locally are characteristic because CI runs all
+integration tests sequentially.
+
+**ADR-009 splitting rules:**
+
+| Rule | Detail |
+| --- | --- |
+| Max functions per file | 10 |
+| Part file naming | `test_<base>_part1.mojo`, `test_<base>_part2.mojo`, ... |
+| Import block | Copy FULL import block verbatim to every part file |
+| main entrypoint | MUST use `def main() raises:` (not `fn main()`) for Mojo 0.26.3+ |
+| CI glob | Update to `test_*_part*.mojo` |
+
+**CRITICAL — `fn main` deprecation (Mojo 0.26.3+):** After splitting, every new part file
+must have `def main() raises:` not `fn main() raises:`. Mojo 0.26.3 deprecated `fn main()`
+and produces a parse error in CI.
+
+```bash
+# Fix: global replace in each new part file
+for f in $(find . -name "test_*_part*.mojo"); do
+  sed -i 's/fn main() raises:/def main() raises:/g' "$f"
+done
+```
+
+**Failed attempt:** `fn main() raises:` in split files — all new part files written with
+`fn main()`, Mojo 0.26.3 CI failed with parse error on every new file.
+
+### @always_inline Safety Rules
+
+Adding `@always_inline` to large branching methods DRAMATICALLY WORSENS Mojo JIT crashes.
+
+| Method Characteristics | @always_inline Safe? |
+| --- | --- |
+| Small body (1-3 lines), compile-time params | Yes |
+| Large body (10+ lines), runtime branching | NO |
+| Called in tight loops (100+ times) | Risky — test thoroughly |
+| Has 5+ if/elif branches | NO |
+
+**Impact (ProjectOdyssey PR #5099):** All six test groups (Models, Autograd, Core Utilities,
+Core Gradient, Core Activations, Gradient Checking) failed or worsened after `@always_inline`
+was applied to a function with a 15+ line body and 5+ runtime branches.
+
+If CI crashes get worse after a change, check git diff for `@always_inline` additions.
+
+### ASAP Destruction + Bitcast UAF in Perturbation Loops
+
+**Before-test-output crash** = JIT volume overflow (Crash 3 above).
+**After-test-output crash** = ASAP destruction UAF (this section).
+
+Mojo's ASAP destruction may destroy a temporary tensor returned by `forward_fn(x)` before
+all element reads in the loop body complete. Each `_get_float64(j)` call reads through a
+dangling pointer → heap corruption.
+
+**Fix: acquire `data_ptr[dtype]()` before the loop to keep source tensor alive:**
+
+```mojo
+# BEFORE (DANGEROUS — ASAP destruction UAF):
+var output_plus = forward_fn(input_copy_plus)
+var output_minus = forward_fn(input_copy_minus)
+for j in range(output_plus.numel()):
+    var diff = output_plus._get_float64(j) - output_minus._get_float64(j)
+    ...
+
+# AFTER (SAFE — data_ptr derivation keeps tensors alive):
+var output_plus = forward_fn(input_copy_plus)
+var output_minus = forward_fn(input_copy_minus)
+# Acquire typed pointers BEFORE the loop — deriving data_ptr keeps tensor alive
+var out_plus_ptr = output_plus.data_ptr[dtype]()
+var out_minus_ptr = output_minus.data_ptr[dtype]()
+for j in range(output_plus.numel()):
+    var diff = Float64(out_plus_ptr[j]) - Float64(out_minus_ptr[j])
+    ...
+```
+
+### Bitcast UAF Swarm Partition Workflow
+
+When grep returns 50+ files with `tensor._data.bitcast[T]()[i] = val` UAF write patterns,
+use a 5-agent Myrmidon swarm with parallel worktrees:
+
+```bash
+# Create isolated worktree for each batch (5 agents in parallel)
+git worktree add worktrees/fix-bitcast-batch-N -b fix/bitcast-writes-batch-N
+
+# Apply replacements via Python regex script (scripts/fix_bitcast_writes.py)
+# Replace: tensor._data.bitcast[T]()[i] = val
+# With:    tensor.set(i, T(val))
+python3 scripts/fix_bitcast_writes.py --files batch_N_files.txt
+
+# Commit and push
+git commit -m "fix(tensor): replace bitcast writes with safe set() in batch N"
+gh pr create --title "fix(tensor): eliminate bitcast UAF writes batch N/5" ...
+gh pr merge --auto --rebase
+```
+
+**Critical constraint:** assign non-overlapping file batches to prevent merge conflicts.
+PRs can merge in any order — non-overlapping files prevent rebase conflicts.
+
+**Python regex replacement script:**
+
+```python
+#!/usr/bin/env python3
+"""Replace tensor._data.bitcast[T]()[i] = val with tensor.set(i, T(val))."""
+import re
+import sys
+from pathlib import Path
+
+BITCAST_INDEXED = re.compile(
+    r'(\w+)\._data\.bitcast\[(\w+)\]\(\)\[([^\]]+)\]\s*=\s*(.+)'
+)
+
+def fix_line(line: str) -> str:
+    m = BITCAST_INDEXED.match(line.strip())
+    if not m:
+        return line
+    tensor, typ, idx, rhs = m.groups()
+    rhs = rhs.rstrip()
+    if rhs.startswith(f"{typ}(") and rhs.endswith(")"):
+        wrapped = rhs
+    else:
+        wrapped = f"{typ}({rhs})"
+    indent = len(line) - len(line.lstrip())
+    return " " * indent + f"{tensor}.set({idx}, {wrapped})\n"
+
+for path in sys.argv[1:]:
+    p = Path(path)
+    lines = p.read_text().splitlines(keepends=True)
+    new_lines = [fix_line(l) for l in lines]
+    p.write_text("".join(new_lines))
+    print(f"Fixed: {path}")
+```
+
+### When to Remove Retry Logic
+
+Remove retry wrappers from CI test runners when ANY of the following are true:
+
+1. **Crashes are being investigated** — retry masks reproduction rate and makes root cause
+   investigation harder. Fail fast, then diagnose.
+2. **A retry script exists** (`scripts/test-with-retry.sh` or equivalent) — these are
+   workarounds, not solutions. Delete them.
+3. **An ADR exists that justifies retry** (e.g. ADR-014) — mark it SUPERSEDED and remove
+   the machinery it justified.
+4. **You want to file an upstream issue** — you cannot confidently file a bug report for a
+   crash that only manifests after a retry. Make it fail deterministically first.
+
+**Note on `SKIP=mojo-format`:** When `mblack` has a broken `click.core` dependency
+(ImportError at pre-commit time), use `SKIP=mojo-format` to skip only that hook — not
+`--no-verify`. Document the skip reason in the commit message. Never use `--no-verify`.
+
+### Mojo Language Semantics Reference
+
+> Verified from docs.modular.com/mojo/manual — use when diagnosing UAF or double-free.
+
+| Fact | Details |
+| --- | --- |
+| **Default argument convention is `read`** | `fn foo(x: AnyTensor)` does NOT copy `x`. The default is an immutable borrow (reference). Only `owned` convention causes a copy/move. |
+| **`deinit` in `__moveinit__` suppresses destructor on source** | `fn __moveinit__(out self, deinit existing: Self)` — Mojo does NOT call `__del__` on `existing` after the function. Source is consumed, not destroyed separately. |
+| **ASAP destruction** | Mojo destroys values as soon as their last use is seen — potentially before end-of-scope. Pointer aliases (bitcast, raw UnsafePointer) may dangle if the owning value is destroyed early. |
+| **Synthesized `__copyinit__`** | If a struct is `Copyable` but defines no `__copyinit__`, Mojo synthesizes a field-by-field copy. For `UnsafePointer` fields this is a shallow copy — the pointer value is copied, not the heap data. |
+
+### Running Tests in Worktrees
+
+When running Mojo tests from a worktree (not the base repo checkout):
+
+```bash
+PIXI_PROJECT_MANIFEST=/path/to/worktree/pixi.toml pixi run mojo <test_file>.mojo
+```
+
+### Mojo 0.26.1: No mojo test Subcommand
+
+Mojo 0.26.1 has no `mojo test` subcommand. Use `pixi run mojo <file>` directly:
+
+```bash
+# CORRECT for Mojo 0.26.1
+pixi run mojo tests/path/to/test_file.mojo
+
+# WRONG — mojo test subcommand does not exist in 0.26.1
+mojo test tests/path/to/test_file.mojo
+```
+
+### Closure Escaping Annotation Requirement
+
+When un-skipping Mojo tests that use closures capturing outer variables, mark the closure
+`escaping`:
+
+```mojo
+# CORRECT when capturing outer variables
+fn forward_for_grad(inp: ExTensor) raises escaping -> ExTensor:
+    return multiply(inp, captured_grad_output)  # Captures grad_output
+```
+
+### batch_norm2d Pathological Test Case
+
+When `grad_output = ones_like(output)`, batch norm backward gives analytically-zero
+gradients. Float32 noise makes the numerical gradient non-zero (~0.009), causing a false
+~1000x mismatch. Use non-uniform `grad_output` that breaks symmetry:
+
+```mojo
+var grad_output = zeros_like(output)
+for i in range(numel):
+    var val = Float32(i % 4) * Float32(0.25) - Float32(0.3)
+    grad_output._data.bitcast[Float32]()[i] = val
+```
+
+### Additional Failed Attempts (Restored from v3.9.0)
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --- | --- | --- | --- |
+| Assume crash = JIT flake | Closed/retried without investigating root cause. 16 test files crashing. | 16 files had 3 concrete source-code bugs: double-free from synthesized `__copyinit__`, broken `fetch_add` mutex, bitcast UAF. | Check for double-free, broken locks, and bitcast UAF first before concluding JIT instability. |
+| Add retry logic to CI | Implemented `scripts/test-with-retry.sh` (88 lines) with `MAX_RETRIES=1` on `execution crashed` | Retry scripts hide real failures: a crash that is retried away cannot be filed upstream; prevents root cause investigation; masks reproducibility. | Delete retry scripts; use direct `pixi run mojo --Werror`; create minimal reproducers and file upstream. |
+| Increased `TEST_WITH_RETRY_MAX` to 2 | When required checks (`Core Types & Fuzz`, `Integration Tests`) fail non-deterministically, increased retry count to absorb double-crash scenarios. | Retry absorbs symptoms, not the cause; same crash will recur post-Mojo-upgrade; upstream can't reproduce the issue; RC/CA ADR cannot be written for a masked failure. | Do the import audit (targeted submodule imports) and write the RC/CA ADR instead. Retry is always the wrong answer. |
+| `fn main() raises:` in new split files | All split files written with `fn main()` after ADR-009 splitting. | Mojo 0.26.3 deprecated `fn main()`; CI failed with parse error on every new file. | After any file split in Mojo 0.26.3+, globally replace `fn main() raises:` with `def main() raises:`. |
+
+---
+
+## Superseded from ci-mojo-gha-vma-sequential-job
+
+**Original date/version**: 2026-05-04 / "1.0.0"
+
+```yaml
+name: ci-mojo-gha-vma-sequential-job
+description: "Fix non-deterministic GHA CI failures caused by Mojo compiler reserving ~3.6 GB virtual address space per invocation on free-tier runners with 7 GB RAM. Use when: (1) CI fails with 'JIT session error: Cannot allocate memory' or SIGSEGV in libKGENCompilerRTShared.so, (2) failures are non-deterministic and max-parallel:1 does not help, (3) ulimit -v on the runner confirms ~3.6 GB reservation per mojo process, (4) GHA matrix strategy is in use for Mojo test groups."
+category: ci-cd
+date: 2026-05-04
+version: "1.0.0"
+user-invocable: false
+verification: verified-precommit
+tags:
+  - mojo
+  - gha
+  - virtual-memory
+  - vmpeak
+  - sequential
+  - matrix
+  - ci
+  - libKGENCompilerRTShared
+  - memory-exhaustion
+```
+
+
+# CI: Mojo GHA VMA Sequential Job
+
+> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until
+> CI confirms. Verification is `verified-precommit` — pre-commit hooks pass and the PR is
+> awaiting CI confirmation as of 2026-05-04 (PR #5351).
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-04 |
+| **Objective** | Fix non-deterministic CI failures caused by Mojo 0.26.3 compiler exhausting GHA free-tier runner virtual memory (~7 GB total) by reserving ~3.6 GB VmPeak per invocation, even for trivial source files. |
+| **Outcome** | Proposed fix: replace GitHub Actions matrix strategy with a single sequential job where all test groups run as named steps. Awaiting CI confirmation. |
+| **Verification** | verified-precommit (pre-commit hooks pass; CI in progress on PR #5351 as of 2026-05-04) |
+| **Upstream Issue** | modular/modular#6433 — Mojo JIT unconditionally reserves ~3.6 GB VmPeak on startup |
+
+## When to Use
+
+- CI produces `JIT session error: Cannot allocate memory` or `SIGSEGV` in
+  `libKGENCompilerRTShared.so` with non-deterministic occurrence
+- `max-parallel: 1` on a GHA matrix **does not** fix the failures
+- `ulimit -v 3500000 && pixi run mojo` reproduces the crash deterministically locally
+- Failures correlate with GHA free-tier runners (7 GB RAM / 2-core)
+- Matrix strategy is currently used for Mojo test groups (one job per group)
+- Distinct from: UID mismatch crash (Crash 2), KGEN buffer overflow (deterministic + fixed
+  address), bitcast UAF (deterministic after Nth test) — see `mojo-jit-crash-retry` skill
+
+## Root Cause
+
+Upstream bug **modular/modular#6433**: Mojo 0.26.3 JIT unconditionally reserves ~3.6 GB of
+virtual address space on startup, regardless of source file size or compilation complexity.
+
+- GHA free-tier runners have **7 GB RAM total**
+- Each `mojo` invocation consumes ~3.6 GB VmPeak
+- Even with `max-parallel: 1`, GHA matrix jobs run **in separate processes on the same physical
+  machine** — setup, teardown, and job orchestration overlap, meaning two `mojo` processes may
+  co-exist transiently even when jobs are serialized at the GitHub Actions scheduling level
+- Combined VmPeak: 2 × 3.6 GB = 7.2 GB → exceeds 7 GB → OOM → SIGSEGV in JIT
+
+**Deterministic local reproducer (100% failure rate):**
+
+```bash
+ulimit -v 3500000 && pixi run mojo --Werror -I . tests/any_test.mojo
+# → JIT session error: Cannot allocate memory in static TLS block
+# Threshold: fails below ~3.6 GB virtual limit, passes at 4.0 GB+
+```
+
+## Verified Workflow
+
+> **Warning — Proposed Steps**: Steps below are based on verified-precommit work only.
+> CI confirmation is pending (PR #5351). Treat as a hypothesis until CI passes.
+
+### Quick Reference
+
+```yaml
+# Replace matrix strategy with a single sequential job
+# All test groups become named steps within ONE job
+# Only ONE mojo process runs at any given time on the runner
+
+test-mojo-comprehensive:
+  runs-on: ubuntu-latest
+  timeout-minutes: 120
+  steps:
+    - uses: actions/checkout@v4
+    # ... setup steps (pixi install, container start) ...
+    - name: "Memory snapshot"
+      run: free -h && ulimit -v
+    - name: "Core Tensors"
+      run: just test-group "tests/shared/core" "test_tensors*.mojo test_any_tensor*.mojo"
+    - name: "Core Activations & Types"
+      run: just test-group "tests/shared/core" "test_activation*.mojo test_dtype*.mojo"
+    # ... repeat for all test groups (22 total)
+```
+
+### Detailed Steps
+
+**Step 1: Confirm root cause (virtual memory, not JIT volume or UID)**
+
+```bash
+# Test 1: Does ulimit reproduce the crash?
+ulimit -v 3500000 && pixi run mojo --Werror -I . tests/any_test.mojo
+# YES → confirmed VmPeak exhaustion
+
+# Test 2: Does it pass with more virtual memory?
+ulimit -v 4000000 && pixi run mojo --Werror -I . tests/any_test.mojo
+# YES → threshold is ~3.6 GB, confirming per-process reservation
+
+# Test 3: Does max-parallel:1 fix it?
+# NO → confirms separate-job overlap is the actual concurrency vector
+```
+
+**Step 2: Replace matrix strategy with sequential steps in the workflow**
+
+In `.github/workflows/comprehensive-tests.yml`, convert the matrix job to a single job
+with all test groups as named steps:
+
+```yaml
+# BEFORE (fails): separate GHA jobs that overlap during setup/teardown
+test-mojo-comprehensive:
+  strategy:
+    max-parallel: 1
+    matrix:
+      test-group:
+        - name: "Core Tensors"
+          path: "tests/shared/core"
+          pattern: "test_tensors*.mojo test_any_tensor*.mojo"
+        # ... more groups
+  steps:
+    - name: Run test group
+      run: just test-group "${{ matrix.test-group.path }}" "${{ matrix.test-group.pattern }}"
+
+# AFTER (fix): single job, all groups as named steps
+test-mojo-comprehensive:
+  runs-on: ubuntu-latest
+  timeout-minutes: 120
+  steps:
+    - uses: actions/checkout@v4
+    # ... all setup steps ...
+    - name: "Memory snapshot"
+      run: free -h && ulimit -v
+    - name: "Core Tensors"
+      run: just test-group "tests/shared/core" "test_tensors*.mojo test_any_tensor*.mojo"
+    - name: "Core Activations & Types"
+      run: just test-group "tests/shared/core" "test_activation*.mojo test_dtype*.mojo"
+    # ... all remaining groups as steps
+```
+
+**Critical constraint: NO `continue-on-error: true`** — job must fail fast on first broken
+step so failures are immediately visible signals, not silently swallowed.
+
+**Step 3: Add `-debug-level=line-tables` to mojo invocations**
+
+In `justfile`, add debug symbols to `_test-group-inner` and `_test-mojo-inner` recipes:
+
+```just
+# BEFORE
+pixi run mojo --Werror -I "$REPO_ROOT" -I . "$test_file"
+
+# AFTER
+pixi run mojo --Werror -debug-level=line-tables -I "$REPO_ROOT" -I . "$test_file"
+```
+
+This produces symbolicated stack traces when a crash does occur, enabling faster diagnosis.
+
+**Step 4: Add "Memory snapshot" diagnostic step**
+
+Add this as the first non-setup step in the test job:
+
+```yaml
+- name: "Memory snapshot"
+  run: free -h && ulimit -v
+```
+
+Documents available memory and virtual address limits per run — critical for future diagnosis
+if the issue resurfaces with a different Mojo version.
+
+**Step 5: Validate and create PR**
+
+```bash
+# Validate workflow YAML
+python3 -c "import yaml; yaml.safe_load(open('.github/workflows/comprehensive-tests.yml'))" && echo "YAML valid"
+
+# Run pre-commit on modified files
+just precommit
+
+# Create PR
+gh pr create \
+  --title "fix(ci): replace matrix with sequential steps to fix Mojo VMA exhaustion" \
+  --body "Closes #<issue-number>"
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| `max-parallel: 1` on matrix | Set matrix `max-parallel: 1` to serialize GHA jobs | GHA jobs are separate processes — even with max-parallel:1, setup/teardown of adjacent jobs overlap on the same physical machine, causing transient co-existence of two `mojo` processes | `max-parallel` controls scheduling concurrency, not physical machine exclusivity; does NOT prevent VmPeak co-existence during job lifecycle overlap |
+| `ulimit -v unlimited` in justfile | Added `ulimit -v unlimited` to test recipes | Cannot override cgroup memory limits imposed at GHA runner level; the limit is enforced by the container/VM hypervisor, not the shell | Shell `ulimit` only affects per-process soft limits within the cgroup boundary; hard cgroup limits are set by GHA infrastructure and are not overridable from within the job |
+| Convert package-level imports to targeted submodule imports | Changed `from shared.core import X` to `from shared.core.tensor import X` etc. | Initial hypothesis (Crash 3 / JIT volume overflow) was wrong; 40/40 local runs passed after import changes but the root cause was per-process VmPeak, not compilation footprint | Reproducer with `ulimit -v` revealed the correct root cause; import volume was a red herring for this specific failure mode |
+| Retry failed runs | Used `gh run rerun` to dismiss crashes as flake | Masks the bug without fixing it; prohibited per team policy (`feedback_no_ci_retries.md`) | Never retry to dismiss; reproduce and fix the root cause |
+| Adding `continue-on-error: true` to matrix steps | Extend `continue-on-error` condition to cover crashing groups | Swallows failures silently; the actual goal is zero crashes, not ignoring them | `continue-on-error` is the wrong direction; it hides the symptom instead of fixing the cause |
+
+## Results & Parameters
+
+### Deterministic Local Reproducer
+
+```bash
+# Confirm threshold: fails below ~3.6 GB, passes at 4.0 GB
+ulimit -v 3500000 && pixi run mojo --Werror -I . tests/any_test.mojo
+# → SIGSEGV / "JIT session error: Cannot allocate memory in static TLS block"
+
+ulimit -v 4000000 && pixi run mojo --Werror -I . tests/any_test.mojo
+# → PASS
+```
+
+### GHA Runner Memory Profile
+
+| Resource | Value |
+| --------- | ------- |
+| Total RAM | ~7 GB (GHA free-tier `ubuntu-latest`) |
+| Mojo VmPeak per process | ~3.6 GB (modular/modular#6433) |
+| Maximum concurrent `mojo` processes before OOM | 1 (any overlap causes failure) |
+| `max-parallel: 1` prevents overlap? | NO — job lifecycle overlap still occurs |
+| Sequential steps prevent overlap? | YES — steps within one job are serialized |
+
+### Workflow Pattern Comparison
+
+| Strategy | Concurrency | OOM Risk | GHA UI |
+| --------- | ----------- | --------- | ------- |
+| Matrix with `max-parallel: 1` | Low but non-zero (lifecycle overlap) | HIGH | One row per group |
+| Matrix with no `max-parallel` | High | VERY HIGH | One row per group |
+| Single job, sequential steps | Zero (guaranteed serialization) | NONE | Flat step list |
+
+### Upstream Issue Reference
+
+- **Issue**: [modular/modular#6433](https://github.com/modular/modular/issues/6433)
+- **Description**: Mojo JIT unconditionally reserves ~3.6 GB VmPeak on startup
+- **Status**: Open as of 2026-05-04
+- **Expected resolution**: Mojo version upgrade that reduces startup VmPeak below 3 GB
+
+### Files Changed in ProjectOdyssey
+
+| File | Change |
+| ------ | -------- |
+| `.github/workflows/comprehensive-tests.yml` | Replaced matrix strategy with single sequential job (22 steps) |
+| `justfile` | Added `-debug-level=line-tables` to mojo invocations in `_test-group-inner` recipe |
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | PR #5351 — fix non-deterministic CI failures | CI run in progress as of 2026-05-04; verified-precommit |
+
+---
+
+## Superseded from retry-all-mojo-workflow-calls
+
+**Original date/version**: 2026-03-07 / 1.0.0
+
+```yaml
+name: retry-all-mojo-workflow-calls
+description: 'Audit GitHub Actions workflows for unprotected bare pixi run mojo calls
+  and apply retry logic. Use when: retry was applied to one workflow but others still
+  have bare pixi run mojo calls, or when auditing CI for JIT crash resilience.'
+category: ci-cd
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+```
+
+# retry-all-mojo-workflow-calls
+
+Audit all `.github/workflows/*.yml` files for unprotected `pixi run mojo` calls
+and protect them with retry logic — either by routing through `just test-group`
+(which has built-in retry) or by adding inline 3-attempt exponential-backoff loops.
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | 2026-03-07 |
+| Mojo Version | 0.26.1.0.dev2025122805 |
+| Objective | Extend JIT crash retry from one workflow to all workflows |
+| Outcome | Success — 8 files changed, all bare mojo calls now protected |
+| Repository | ProjectOdyssey |
+| Issue | #3329 (follow-up to #3120) |
+| PR | #3950 |
+
+## When to Use
+
+- A retry fix was applied to `just test-group` or one workflow, but other workflows still
+  call `pixi run mojo` directly without retry protection
+- CI has intermittent Mojo JIT crashes across multiple workflows (not just one)
+- You need to audit all workflows systematically for a class of vulnerability
+- Adding a new workflow that runs Mojo and want to ensure it has retry from the start
+
+## Verified Workflow
+
+### 1. Audit: Find All Bare Calls
+
+```bash
+grep -rn "pixi run mojo" .github/workflows/ --include="*.yml"
+```
+
+### 2. Classify Each Call
+
+For each hit, decide:
+
+| Call type | Best fix |
+| ----------- | ---------- |
+| Test file (`*.mojo` test) | Route through `just test-group` (add `Install Just` step) |
+| Package build (`mojo package`) | Inline retry loop |
+| Benchmark run (`mojo run`) | Inline retry loop |
+| Build step (`mojo build`) | Inline retry loop |
+| Version check (`mojo --version`) | No retry needed (not JIT compilation) |
+
+### 3. Upgrade `just test-group` Retry (3 attempts, exponential backoff)
+
+If `just test-group` currently has only 1 retry, upgrade to 3 attempts with exponential backoff:
+
+```bash
+# Replace the per-file if/else retry with a while loop
+attempt=0
+max_attempts=3
+delay=1
+test_passed=0
+while [ $attempt -lt $max_attempts ]; do
+    attempt=$((attempt + 1))
+    if pixi run mojo -I "$REPO_ROOT" -I . "$test_file"; then
+        test_passed=1
+        break
+    fi
+    if [ $attempt -lt $max_attempts ]; then
+        echo "Attempt $attempt failed, retrying in ${delay}s: $test_file"
+        sleep $delay
+        delay=$((delay * 2))
+    fi
+done
+if [ $test_passed -eq 1 ]; then
+    passed_count=$((passed_count + 1))
+else
+    failed_count=$((failed_count + 1))
+    failed_tests="$failed_tests\n  - $test_file"
+fi
+```
+
+### 4. Route Test Workflows Through `just test-group`
+
+Add `Install Just` step after Pixi setup, then replace bare calls:
+
+```yaml
+- name: Install Just
+  uses: extractions/setup-just@v3
+
+# Before:
+- name: Run tests
+  run: |
+    pixi run mojo -I . tests/path/test_foo.mojo
+
+# After:
+- name: Run tests
+  run: |
+    just test-group "tests/path" "test_foo.mojo"
+```
+
+Multiple files in one directory can be passed as a space-separated string:
+
+```yaml
+just test-group "tests/shared/core" "test_gradient_checking_basic.mojo test_gradient_checking_dtype.mojo"
+```
+
+### 5. Inline Retry for Non-Test Calls (Benchmarks, Builds, Package Compilation)
+
+For calls that cannot use `just test-group`, add an inline retry loop:
+
+```bash
+attempt=0
+delay=1
+while [ $attempt -lt 3 ]; do
+  attempt=$((attempt + 1))
+  if pixi run mojo <args>; then
+    break
+  fi
+  if [ $attempt -lt 3 ]; then
+    echo "Attempt $attempt failed, retrying in ${delay}s..."
+    sleep $delay
+    delay=$((delay * 2))
+  else
+    echo "Failed after 3 attempts"
+    exit 1
+  fi
+done
+```
+
+For soft-failure workflows (those already using `|| true`), preserve that behavior by
+wrapping the loop with `|| true` instead of `exit 1`.
+
+### 6. Verify YAML Syntax
+
+```bash
+# Pre-commit hooks validate YAML automatically:
+just pre-commit-all
+
+# Or manually:
+pixi run check-yaml .github/workflows/*.yml
+```
+
+## Files Changed in ProjectOdyssey #3329
+
+| File | Change |
+| ------ | -------- |
+| `justfile` | Upgraded `test-group` per-file retry: 2 → 3 attempts, 1s/2s backoff |
+| `comprehensive-tests.yml` | Wrapped `mojo package` compilation in 3-attempt retry |
+| `test-gradients.yml` | Added `Install Just` + routed 2 bare calls through `just test-group` |
+| `test-data-utilities.yml` | Added `Install Just` + routed 5 bare calls through `just test-group` |
+| `simd-benchmarks-weekly.yml` | Wrapped benchmark run in 3-attempt retry |
+| `benchmark.yml` | Wrapped Mojo benchmark run in 3-attempt retry |
+| `release.yml` | Wrapped `mojo build` loop + 2 `mojo test` steps in 3-attempt retry |
+| `paper-validation.yml` | Wrapped `mojo test` + `mojo train` in 3-attempt retry (preserving `\|\| true`) |
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Routing benchmark runs through `just test-group` | Tried to use `just test-group` for `simd-benchmarks-weekly.yml` | `test-group` expects test files, not benchmark scripts; output format is different | Benchmarks need inline retry, not `just test-group` routing |
+| Single retry for all call types | Considered using one inline loop pattern everywhere | `\|\| true` soft-failure semantics must be preserved for paper validation scripts | Soft-failure workflows need the retry loop wrapped with `\|\| true`, not `exit 1` |
+| Skipping `mojo --version` wrapping | Initially flagged `pixi run mojo --version` for retry | Version check does not invoke the JIT compiler, so it cannot crash this way | Only JIT-compilation calls (`mojo <file>`, `mojo test`, `mojo package`, `mojo build`, `mojo run`) need retry |
+
+## Results & Parameters
+
+Standard retry pattern used throughout:
+
+- **Max attempts**: 3
+- **Base delay**: 1s
+- **Backoff factor**: 2x (1s, 2s)
+- **Exit behavior**: `exit 1` on hard-fail workflows; `|| true` preserved on soft-fail workflows
+
+```bash
+# Audit command — shows all bare pixi run mojo calls across workflows
+grep -n "pixi run mojo" .github/workflows/*.yml | grep -v "mojo --version" | grep -v "mojo format"
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | Issue #3329, PR #3950 | [notes.md](../../references/notes.md) |
+
+---
+
+### Notes from retry-all-mojo-workflow-calls
+
+# Session Notes: retry-all-mojo-workflow-calls
+
+## Context
+
+- **Date**: 2026-03-07
+- **Repository**: ProjectOdyssey
+- **Issue**: #3329 (follow-up to #3120)
+- **PR**: #3950
+- **Branch**: `3329-auto-impl`
+
+## Background
+
+Issue #3120 added retry logic to `just test-group` for Mojo JIT crashes
+(see `mojo-jit-crash-retry` skill). However the retry only covered tests
+run via `just test-group`. Other workflows still called `pixi run mojo`
+directly — `build-validation.yml`, `model-e2e-tests-weekly.yml`,
+`test-gradients.yml`, `test-data-utilities.yml`, etc.
+
+Issue #3329 was filed to audit ALL workflows and extend retry everywhere.
+
+## Audit Results
+
+Bare `pixi run mojo` calls found (excluding `mojo --version` and `mojo format`):
+
+| File | Line | Call | Type |
+| ------ | ------ | ------ | ------ |
+| `comprehensive-tests.yml` | 114 | `mojo package -I "$REPO_ROOT" shared` | Package build |
+| `test-gradients.yml` | 39-40 | `mojo -I . tests/shared/core/test_gradient_checking_basic.mojo` + dtype | Test file |
+| `test-data-utilities.yml` | 47,52,60,67,75,84 | `mojo -I . tests/shared/data/...` | Test files (5) |
+| `simd-benchmarks-weekly.yml` | 45 | `mojo run -I . benchmarks/bench_simd.mojo` | Benchmark |
+| `benchmark.yml` | 96 | `mojo -I . "$SUITE_PATH/run_benchmark.mojo"` | Benchmark |
+| `release.yml` | 142,251,268 | `mojo build`, `mojo test tests/unit/`, `mojo test tests/integration/` | Build + tests |
+| `paper-validation.yml` | 253,306 | `mojo test -I . "$paper_dir/tests"`, `mojo -I . "$paper_dir/train.mojo"` | Tests + training |
+
+## Decision: Route vs Inline Retry
+
+Test workflows were routed through `just test-group` because:
+- Inherits any future improvements to `just test-group` automatically
+- Cleaner YAML (one line vs 12-line retry loop)
+- Consistent with how `comprehensive-tests.yml` already works
+
+Non-test calls (benchmarks, builds, package compilation) used inline loops because:
+- `just test-group` pattern-matches `.mojo` test files by pattern
+- Benchmark scripts have different output expectations
+- `mojo build` in a `find | while read` pipe needs the retry nested inside
+
+## Key Implementation Notes
+
+### `test-data-utilities.yml` — Per-file existence checks dropped
+
+The original workflow had per-file `if [ -f ... ]` guards before each `pixi run mojo`
+call. These were dropped when routing to `just test-group` because:
+- `just test-group` handles missing files gracefully (exits 0 with a warning)
+- The guards only existed to prevent hard failures on missing files
+- This matches the intent of the original code (soft-fail when files don't exist yet)
+
+### `paper-validation.yml` — `|| true` preserved
+
+The paper-validation mojo calls already had `|| true` (soft failures).
+The retry loop was wrapped to preserve this semantic:
+
+```bash
+while [ ... ]; do
+  attempt=$((attempt + 1))
+  if pixi run mojo ...; then break; fi
+  ...
+  else echo "failed after 3 attempts (soft failure)"; fi
+done || true  # <-- preserved soft-fail
+```
+
+### `justfile` — Upgraded from 2 to 3 attempts
+
+Original justfile had a simple if/else (attempt 1 + 1 retry = 2 attempts total).
+Upgraded to 3 attempts with 1s/2s exponential backoff using a while loop.
+
+---
+
+## Superseded from validate-upstream-mojo-fix-hostile-home-matrix
+
+**Original date/version**: 2026-05-25 / "2.0.0"
+
+```yaml
+name: validate-upstream-mojo-fix-hostile-home-matrix
+description: "Validate that an upstream Mojo fix (runtime crash, codegen flag
+  resolution, compiler-driver bug, JIT mis-emission, etc.) actually landed in
+  your newly-bumped nightly BEFORE removing downstream workarounds or starting
+  a demolition wave. Uses a 4-gate progression: (Gate 1) cheapest local signal
+  — either a hostile-`$HOME` matrix for filesystem-error class bugs, or
+  `mojo build --print-effective-target` codegen check for compiler-driver /
+  target-resolution bugs, or any analogous bug-class-specific micro-repro;
+  (Gate 2) ≥10× consecutive dispatches of the project's existing
+  `repro-<issue#>` workflow on the bump branch; (Gate 3) full-iteration soak
+  workflow if one exists; (Gate 4) ≥8 consecutive green required-check runs
+  on the bump branch. Includes the load-bearing caveat that pre-fix
+  infrastructure (coredump capture, gdb wrappers) often breaks for reasons
+  unrelated to the fix — read the actual Mojo invocation logs, not the
+  workflow's pass/fail summary. Use when: (1) you bumped the pinned Mojo
+  version past an upstream fix-shipped date and want to confirm the fix
+  landed in your build, (2) you are about to peel back a downstream workaround
+  (Dockerfile chmod, entrypoint mkdir, BUILD_FLAGS pin to specific
+  `--target-cpu`, sudoers `_ensure_writable`) and need deterministic
+  confirmation, (3) an upstream Modular issue closed with 'fix in next
+  nightly' and you want to verify before commenting or opening a
+  workaround-removal / demolition PR, (4) you need to position a validation
+  branch as a durable canary spanning the demolition wave."
+category: testing
+date: 2026-05-25
+version: "2.0.0"
+user-invocable: false
+verification: verified-ci
+history: validate-upstream-mojo-fix-hostile-home-matrix.history
+tags:
+  - mojo
+  - modular
+  - upstream-validation
+  - container
+  - permissions
+  - filesystem-error
+  - getAcceleratorArchOrEmpty
+  - hostile-home
+  - workaround-removal
+  - rootless-podman
+  - codegen-flags
+  - avx512
+  - target-cpu
+  - four-gate-protocol
+  - ci-canary
+  - print-effective-target
+```
+
+
+# Validate Upstream Mojo Fix — 4-Gate Protocol (Hostile-`$HOME` Matrix as Gate 1 Example)
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-25 |
+| **Objective** | Provide a reusable 4-gate validation protocol that confirms an upstream Mojo fix actually landed in a pinned-nightly bump, deterministically enough to gate downstream workaround removal or a demolition wave |
+| **Outcome** | Successful — protocol executed end-to-end on multiple upstream Mojo fixes (modular/modular#6412 filesystem-error / `getAcceleratorArchOrEmpty()`, modular/modular#6413 AVX-512 mis-emission on masked-AVX-512 CPUs). Latest application produced 47+ green required-check runs across Gate 4 before opening the demolition PR |
+| **Verification** | verified-ci |
+| **History** | [changelog](./validate-upstream-mojo-fix-hostile-home-matrix.history) |
+| **Scope** | Any upstream Mojo fix: runtime crashes (filesystem errors, SIGABRT), codegen bugs (wrong `--target-cpu`, spurious AVX-512 feature flags, SIGILL at JIT execution), compiler-driver target resolution, ABI churn that rides along in the same nightly bump |
+
+## When to Use
+
+- You bumped the pinned Mojo nightly past the date a relevant upstream fix was claimed shipped, and need confirmation before merging the bump or opening dependent demolition PRs
+- You are about to remove a downstream workaround (Dockerfile chmod, entrypoint mkdir, `BUILD_FLAGS` pin to a specific `--target-cpu`, sudoers `_ensure_writable`, HOME-redirect fallback) and need deterministic signal that the upstream fix landed
+- An upstream Modular issue closed with "fix in next nightly" and you want to validate the claim before posting a confirmation comment or opening a workaround-removal PR
+- You need to position a long-lived validation branch as a CI canary spanning the demolition wave — proof that the new pin is green on real project workload before bricks start coming out of the wall
+- The bug class is unfamiliar and you want a checklist that escalates from cheap local signal to full required-check matrix without skipping rungs
+- Your container runtime is rootless and blocks `setpriv` / `runuser` / `sudo -u`, ruling out true UID-mismatch reproducers — you need a permission-shape proxy for Gate 1 (Example A)
+
+## Verified Workflow
+
+> **Note:** verified-ci. Protocol executed end-to-end on at least two distinct
+> upstream Mojo fixes: modular/modular#6412 (filesystem-error /
+> `getAcceleratorArchOrEmpty()`, validated locally via Gate 1 Example A —
+> hostile-`$HOME` 8-shape matrix) and modular/modular#6413 (AVX-512
+> mis-emission on masked-AVX-512 CPUs like Intel Lunar Lake, validated via
+> Gate 1 Example B — `mojo build --print-effective-target` codegen check
+> plus 5×50 = 250 local reproducer iterations, then Gate 4 with 47+ green
+> required-check runs spanning Build Validation and the Comprehensive Tests
+> matrix). Gate 4 in the latter case also caught a stdlib API regression
+> (`UnsafePointer._unsafe_null=()` constructor removed) that arrived in the
+> same nightly bump and had to be fixed on the validation branch before the
+> demolition wave merged.
+
+### Quick Reference
+
+```bash
+# === GATE 0 (mandatory) — verify the version premise ===
+grep '^mojo' pixi.toml
+git log --oneline -- pixi.toml | head -5
+# If pinned version predates the upstream fix-shipped date in the issue,
+# STOP. The rest is theater until the bump lands.
+
+# === GATE 1 — cheapest local signal (pick the example matching the bug class) ===
+
+# --- Gate 1 Example A: hostile-$HOME matrix (filesystem-error class bugs, e.g. #6412) ---
+# Build a one-line Mojo binary once, exec under N hostile $HOME shapes.
+# See "Gate 1 Example A" section below for the 8-shape recipe.
+
+# --- Gate 1 Example B: codegen / target-resolution bugs (e.g. #6413 AVX-512 mis-emission) ---
+# Use --print-effective-target to verify the compiler driver now resolves the host correctly.
+cat > /tmp/repro.mojo <<'EOF'
+def main():
+    print("ok")
+EOF
+pixi run mojo build --print-effective-target /tmp/repro.mojo
+# Pre-fix on a masked-AVX-512 host (e.g. Intel Lunar Lake): --target-cpu znver4 with
+#   +avx512f,+avx512vl,+avx512bw,... feature flags. Post-fix: --target-cpu lunarlake
+#   with ZERO +avx512* features. The driver fix is in the binary, independent of any
+#   downstream sanitizer-codegen surface.
+# Also run the actual reproducer under your normal Podman setup for 5×50 = 250
+# iterations: pre-fix should be 100% crash rate, post-fix 0 crashes.
+
+# === GATE 2 — CI canary on the existing repro workflow (if one exists) ===
+# Dispatch the project's .github/workflows/repro-<issue#>.yml 10× consecutively
+# on the bump branch.
+for i in $(seq 1 10); do
+  gh workflow run repro-<issue#>.yml --ref <bump-branch>
+  sleep 2
+done
+gh run list --workflow=repro-<issue#>.yml --branch <bump-branch> --limit 10
+# Pass: zero SIGILLs / zero stack frames in the bug's signature library across all 10 runs.
+# CRITICAL CAVEAT: pre-fix repro workflows often have coredump-capture composite actions or
+# gdb wrappers that break on fresh runners or after the bug is gone. The workflow may report
+# "failure" while the actual Mojo invocation succeeded. INSPECT the logs of the Mojo step
+# itself, not the workflow's pass/fail badge. Do NOT spend cycles fixing pre-fix infra
+# slated for deletion in the upcoming demolition.
+
+# === GATE 3 — soak (if a soak workflow exists) ===
+gh workflow run soak-<issue#>.yml --ref <bump-branch>
+# Same broken-infra caveat as Gate 2. Skip Gate 3 entirely if the soak workflow is
+# broken for non-fix-related reasons; do not block on it.
+
+# === GATE 4 — ≥8 consecutive green required-check runs ===
+# Push commits to the bump branch and confirm every required check passes on the
+# first attempt across at least 8 consecutive runs. This is the strongest signal
+# because it exercises real project workload, not synthetic reproducers.
+gh pr checks <bump-pr> --watch
+gh run list --branch <bump-branch> --limit 50 \
+  --json conclusion,name,headSha --jq '.[] | select(.conclusion=="success") | .name' \
+  | sort | uniq -c
+# Gate 4 frequently catches stdlib API regressions that ride along with the bump
+# (removed constructors, renamed traits). Fix them on the bump branch BEFORE any
+# demolition begins.
+
+# === STRATEGIC POSITIONING ===
+# Keep the validation PR OPEN as a historical canary even after demolition starts.
+# It is the durable record of the pre-demolition green CI matrix on the new pin.
+# Close only AFTER the first demolition wave merges.
+```
+
+### Gate 1 Example A — Hostile-`$HOME` Matrix (filesystem-error class, e.g. modular#6412)
+
+Use this Gate 1 recipe when the upstream fix is in a startup path that calls
+`std::filesystem::status` (or similar) and historically threw
+`std::filesystem::filesystem_error` → `std::terminate()` → SIGABRT on hostile
+`$HOME` shapes.
+
+```bash
+# 1. Write a minimal Mojo binary (Mojo 1.0+ uses `def`, not `fn`)
+cat > /tmp/hello.mojo <<'EOF'
+def main():
+    print("ok")
+EOF
+
+# 2. Build ONCE, then exec under hostile-HOME matrix
+pixi run mojo build /tmp/hello.mojo -o /tmp/hello
+
+# Result interpretation:
+#   exit 0   = upstream fix landed for that HOME shape
+#   exit 134 = still broken (filesystem_error → SIGABRT) — do NOT peel workarounds
+#   anything else = investigate, do NOT peel workarounds
+
+# Shape 1: real HOME, baseline
+/tmp/hello; echo "1: exit=$?"
+
+# Shape 2: HOME mode 000, owner = self (EACCES proxy for cross-UID)
+mkdir -p /tmp/fake-home && chmod 000 /tmp/fake-home
+HOME=/tmp/fake-home /tmp/hello; echo "2: exit=$?"
+chmod 755 /tmp/fake-home
+
+# Shape 3: HOME mode 755, no .modular subdir
+mkdir -p /tmp/fake-home2 && chmod 755 /tmp/fake-home2
+HOME=/tmp/fake-home2 /tmp/hello; echo "3: exit=$?"
+
+# Shape 4: HOME mode 750, .modular mode 700 (verbatim from issue body)
+mkdir -p /tmp/fake-home3/.modular
+chmod 750 /tmp/fake-home3 && chmod 700 /tmp/fake-home3/.modular
+HOME=/tmp/fake-home3 /tmp/hello; echo "4: exit=$?"
+
+# Shape 5: HOME path doesn't exist at all
+HOME=/tmp/does-not-exist-$$ /tmp/hello; echo "5: exit=$?"
+
+# Shape 6: HOME unset entirely
+env -u HOME /tmp/hello; echo "6: exit=$?"
+
+# Shape 7: HOME points at a non-directory
+HOME=/dev/null /tmp/hello; echo "7: exit=$?"
+
+# Shape 8: real $HOME chmoded 700 + .modular removed; full `mojo run` startup
+SAVED_HOME_MODE=$(stat -c '%a' "$HOME")
+[ -e "$HOME/.modular" ] && mv "$HOME/.modular" "$HOME/.modular.bak.$$"
+chmod 700 "$HOME"
+pixi run mojo run /tmp/hello.mojo; echo "8: exit=$?"
+chmod "$SAVED_HOME_MODE" "$HOME"
+[ -e "$HOME/.modular.bak.$$" ] && mv "$HOME/.modular.bak.$$" "$HOME/.modular"
+
+# Cleanup
+rm -rf /tmp/fake-home /tmp/fake-home2 /tmp/fake-home3 /tmp/hello /tmp/hello.mojo
+```
+
+### Gate 1 Example B — Codegen / Target-Resolution Check (e.g. modular#6413 AVX-512 mis-emission)
+
+Use this Gate 1 recipe when the upstream fix is in the compiler-driver target
+resolution or feature-flag emission path (manifests as SIGILL at JIT execution
+on hosts whose CPU lacks features the driver mis-emitted).
+
+```bash
+# 1. Minimal reproducer
+cat > /tmp/repro.mojo <<'EOF'
+def main():
+    print("ok")
+EOF
+
+# 2. Print the effective target the compiler driver resolves for THIS host
+pixi run mojo build --print-effective-target /tmp/repro.mojo
+
+# Compare driver output:
+#   PRE-FIX on a masked-AVX-512 host (e.g. Intel Lunar Lake — has AVX-512 silicon
+#   disabled in microcode): --target-cpu znver4 with
+#   +avx512f,+avx512vl,+avx512bw,+avx512cd,+avx512dq,+avx512vnni,+avx512vbmi,...
+#   POST-FIX on the same host: --target-cpu lunarlake with NO +avx512* features.
+#
+# The driver fix is in the bumped binary if and only if the post-fix output matches
+# the host's real ISA. This is independent of any downstream sanitizer-codegen
+# issues — those are separate concerns.
+
+# 3. Run the actual reproducer 5 × 50 = 250 iterations under normal Podman setup
+just podman-up
+for outer in 1 2 3 4 5; do
+  for inner in $(seq 1 50); do
+    podman compose exec -T projectodyssey-dev pixi run mojo run /tmp/repro.mojo \
+      >/dev/null 2>&1 && echo -n . || echo -n X
+  done
+  echo " batch $outer done"
+done
+# Pre-fix: ~100% X (crash). Post-fix: 0 X (all dots).
+```
+
+### Detailed Steps
+
+1. **Gate 0 — Verify the version premise first.** Always
+   `grep '^mojo' pixi.toml && git log --oneline -- pixi.toml | head` before
+   declaring anything about an upstream fix. If the pinned version predates the
+   upstream-fix-shipped date in the issue, validation is meaningless — open a
+   version-bump PR first. (See Failed Attempts row 1.)
+
+2. **Gate 1 — Pick the cheapest local signal for the bug class.**
+   - **Filesystem-error class** → run the hostile-`$HOME` matrix (Example A).
+   - **Codegen / target-resolution / JIT mis-emission class** → run the
+     `--print-effective-target` driver check (Example B), plus a 250-iteration
+     local crash-rate check in your normal Podman setup.
+   - **Other classes** → write the smallest possible deterministic micro-repro
+     that exercises the exact crashing code path. The principle: cheapest signal
+     that distinguishes pre-fix from post-fix.
+
+3. **Gate 2 — Dispatch the existing `repro-<issue#>` workflow ≥10× on the bump
+   branch.** Pass criteria: zero stack frames in the bug's signature library
+   across all 10 runs. **Critical caveat**: the workflow's own infrastructure
+   (coredump capture, gdb wrappers) often breaks on fresh runners or after the
+   bug is gone. Read the logs of the Mojo invocation step itself; ignore the
+   workflow's pass/fail badge if the failure is in infra. Do NOT fix pre-fix
+   infrastructure that is slated for deletion in the demolition wave.
+
+4. **Gate 3 — Run any existing soak workflow at full iteration count.** Same
+   broken-infra caveat as Gate 2. Skip entirely if the soak workflow is broken
+   for non-fix-related reasons; do not block on it.
+
+5. **Gate 4 — ≥8 consecutive green required-check runs.** Push commits to the
+   bump branch and confirm every required check (Build Validation, Comprehensive
+   Tests matrix, etc.) passes on the first attempt across at least 8 consecutive
+   runs. This is the strongest signal because it exercises real project workload,
+   not synthetic reproducers. Gate 4 frequently catches **stdlib API regressions
+   that arrived in the same nightly bump** — fix them on the bump branch BEFORE
+   any demolition begins.
+
+6. **Strategically position the validation branch.** Keep the validation PR
+   OPEN as a historical canary even after the demolition starts. It serves as
+   the durable record of the pre-demolition green CI matrix on the new pin.
+   Close only AFTER the first demolition wave merges. If you close it too
+   early, you lose the audit trail that proves the bump was green BEFORE
+   workarounds came out — and recovering that signal post-demolition requires
+   re-running CI on a synthetic branch, which is much harder to defend in a
+   regression debugging session.
+
+7. **Post a confirmation comment on the upstream issue.** Once all gates pass,
+   post a result summary to the closed Modular issue with: the pinned Mojo
+   version, the commit/date, the gate results, and a one-line note about any
+   stdlib API churn that rode along. Be explicit about what you could NOT test
+   locally (true cross-UID for #6412-class bugs, real silicon-feature variation
+   for #6413-class bugs).
+
+8. **Open the demolition / workaround-removal PR as a separate branch.** Local
+   validation is necessary but not sufficient — the demolition itself should be
+   gated by its own CI run. The validation branch's job is to prove the new pin
+   is sound; the demolition branch's job is to prove the workarounds can come
+   out cleanly.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| 1 | Trusted user's claim that the Mojo version had been bumped, ran validation immediately | The version had not actually been bumped yet — earlier `/advise` accepted the premise without checking, then validation gave a meaningless answer | Always `grep '^mojo' pixi.toml && git log --oneline -- pixi.toml \| head` (Gate 0) before validating any claim about an upstream fix landing. The version premise IS the validation; without it, the rest is theater. |
+| 2 | `sudo -n rm -rf /tmp/fake-home && sudo -n chown root:root /tmp/fake-home` to set up a HOME owned by a different UID | Rootless container's NOPASSWD sudoers grant covers `mkdir/chown/chmod` for `_ensure_writable` paths only — not arbitrary `rm` or `chown` on `/tmp/...` | Skip true UID-mismatch repro inside rootless dev containers. Use mode-000 dirs owned by self instead — they trigger the same `std::filesystem::status` throw path on EACCES, which is what matters for the `filesystem_error` code path. |
+| 3 | `setpriv --reuid=65534 --regid=65534 -- /tmp/hello` to drop to `nobody` for a real UID-mismatch test | `setresuid: Operation not permitted` — rootless podman containers lack `CAP_SETUID` regardless of sudoers config | In-container UID switching needs privileged mode or `--cap-add=SETUID` at container start. CI is the only authoritative confirmation for true cross-UID. Document this caveat in the upstream comment. |
+| 4 | `sudo -n -u nobody /tmp/hello` as a setpriv alternative | sudoers NOPASSWD grant is `runas=root` only, no `runas=nobody` entry | Same lesson as row 2/3. Permission-shape proxies (mode 000, mode 700+ missing .modular) are the substitute we have. |
+| 5 | Wrote `fn main(): print("ok")` for the minimal reproducer | Mojo 1.0 removed top-level `fn`; compiler error: `'fn' is not a valid function declaration at top level — use 'def'` | In Mojo 1.0+ all top-level functions use `def`. Migrate any `fn` reproducer snippets in old skills/docs accordingly. |
+| 6 | `pixi run mojo test tests/...` for a sanity-check regression run after validation | `error: no such command 'test'` — the `mojo test` subcommand was removed in Mojo 1.0 | Tests now route through `just test-mojo` / `just test-group <PATH> <PATTERN>`. Don't assume `mojo test` exists in 1.0+. |
+| 7 | First `gh issue comment <num> --repo modular/modular --body ...` attempt to post the confirmation | `Resource not accessible by personal access token (addComment)` — the active `GITHUB_TOKEN` env var was a fine-grained PAT scoped only to the user's own repos | When commenting on third-party repos: `unset GITHUB_TOKEN; gh auth switch -h github.com -u <user>` to activate the classic OAuth token (`gho_…` with `repo` scope). Do NOT modify gh config beyond switching active accounts. |
+| 8 | Spent cycles debugging why Gate 2's `repro-<issue#>` workflow reported all 10 runs as "failed" on the bump branch | The actual Mojo invocation succeeded; failure was in the workflow's "Enable core dumps (pipe handler)" composite-action infrastructure, which had bitrotted since the original bug was reported | When a Gate 2/3 workflow fails on the bump branch, inspect the logs of the Mojo invocation step FIRST. If the Mojo step succeeded and the failure is in coredump-capture / gdb-wrapper / sanitizer-setup infrastructure, treat Gate 2/3 as "passed" and move to Gate 4. Pre-fix infra is going to be deleted in the demolition anyway — do not fix it. |
+| 9 | Dismissed a Gate 4 required-check failure as "looks like a flake, rerun" | The failure was a real stdlib API regression that arrived with the same nightly bump: `UnsafePointer._unsafe_null=()` constructor had been removed, breaking project code unrelated to the upstream fix being validated | Gate 4 failures on a Mojo-bump branch are almost never flakes. The nightly bump can drag in API churn (removed constructors, renamed traits, changed default-parameter values) that must be fixed on the SAME branch before any demolition begins. Treat every Gate 4 failure as a real regression until proven otherwise. |
+| 10 | Closed the validation PR immediately after all 4 gates passed, to "clean up" before opening the demolition PR | Lost the durable historical record of the pre-demolition green CI matrix on the new pin. When the demolition wave hit an unrelated regression two days later, there was no clean canary branch to A/B against | Keep the validation PR OPEN as a historical canary spanning the demolition. Close it only AFTER the first demolition wave merges. It costs nothing to leave open and provides invaluable audit signal if a regression surfaces during demolition. |
+
+## Results & Parameters
+
+### 4-Gate Pass Criteria
+
+| Gate | Signal | Pass Criteria | Confidence |
+| ---- | ------ | ------------- | ---------- |
+| Gate 0 | Pinned Mojo version in `pixi.toml` is at or past the upstream-fix-shipped date | `grep '^mojo' pixi.toml` shows the bumped version, `git log` confirms the bump commit | Mandatory pre-check |
+| Gate 1 | Cheapest local signal distinguishing pre-fix from post-fix for this bug class | All shapes / iterations return clean exit codes. Driver output (Example B) matches host's real ISA. | Low — proves the fix is in the binary, not that real workload is unaffected |
+| Gate 2 | Project's `repro-<issue#>` workflow dispatched ≥10× consecutively | Zero stack frames in the bug's signature library across all 10 Mojo invocation logs (ignore broken pre-fix infra steps) | Medium — synthetic reproducer in CI environment |
+| Gate 3 | Existing soak workflow at full iteration count | Zero crashes across full soak (skip if soak workflow is broken for non-fix reasons) | Medium-high — extended exposure, still synthetic |
+| Gate 4 | ≥8 consecutive green runs across ALL required checks on the bump branch | First-attempt success on every required check, 8 runs in a row | High — exercises real project workload |
+
+### Gate 1 Example A — Hostile-`$HOME` Matrix Results (modular#6412)
+
+| # | HOME shape | Exit (fixed build) | Exit (buggy build, expected) | Notes |
+| --- | ----------------------------------------------------- | ---- | ---- | ----------------------- |
+| 1 | Real `$HOME`, baseline | 0 | 0 | Smoke test |
+| 2 | `mkdir /tmp/fake-home && chmod 000`, owner = self | 0 | 134 | EACCES proxy |
+| 3 | HOME exists mode 755, no `.modular` subdir | 0 | 134 | Missing-`.modular` path |
+| 4 | HOME mode 750, `.modular` mode 700 (verbatim from issue body) | 0 | 134 | Issue's exact reproducer |
+| 5 | HOME path doesn't exist | 0 | 134 | ENOENT path |
+| 6 | HOME unset (`env -u HOME`) | 0 | varies | Edge case |
+| 7 | `HOME=/dev/null` (not a directory) | 0 | 134 | ENOTDIR path |
+| 8 | Real `$HOME` chmoded 700 + `.modular` removed, full `mojo run` startup (workarounds neutralized) | 0 | 134 | Closest-to-real local |
+
+### Gate 1 Example B — Codegen Driver Check Results (modular#6413)
+
+| Aspect | Pre-fix output (masked-AVX-512 host) | Post-fix output (same host) |
+| ------ | ------------------------------------ | --------------------------- |
+| `--target-cpu` | `znver4` (wrong — host is Intel) | `lunarlake` (correct) |
+| Feature flags | `+avx512f,+avx512vl,+avx512bw,+avx512cd,+avx512dq,+avx512vnni,+avx512vbmi,...` | No `+avx512*` features |
+| Local reproducer crash rate (5×50 iterations) | ~100% SIGILL | 0% — all 250 runs clean |
+
+### Caveats
+
+- **True cross-UID is NOT validated locally** for filesystem-error class bugs.
+  Rootless podman containers block `setpriv`/`sudo -u`/`runuser`. The mode-000
+  EACCES path is a proxy that exercises the same exception path; only CI confirms
+  the cross-UID image-built-as-1000-run-as-1001 case.
+- **Real silicon-feature variation is NOT validated locally** for codegen-flag
+  bugs. Your local host has one CPU; the CI matrix has another. Gate 2/4 in CI
+  is the only way to confirm the driver fix is correct across the supported
+  CPU set.
+- **Pre-fix infrastructure rots.** Repro workflows created during the original
+  bug report (coredump capture composite actions, gdb wrappers, sanitizer
+  setup) often break on fresh runners or after the bug is gone. Read the logs
+  of the Mojo invocation step itself; ignore the workflow badge if the
+  infrastructure is the failing component. Do not fix infrastructure that is
+  slated for deletion in the demolition.
+- **Bind-mount writability is a separate concern** from `getAcceleratorArchOrEmpty()`
+  startup. Keep `_ensure_writable` sudoers work even if Gate 1 Example A passes.
+- **Do not amend upstream issue bodies.** Post a NEW comment with the gate-result
+  summary; do not edit the original report.
+- **Keep the validation PR open across the demolition wave.** Close only after
+  the first demolition merges.
+
+### Verified On
+
+| Project | Context | Details |
+| ------- | ------- | ------- |
+| ProjectOdyssey | modular/modular#6412 validation (filesystem-error / `getAcceleratorArchOrEmpty()`) — Gate 1 Example A executed inside `podman compose exec -T projectodyssey-dev` against `mojo==1.0.0b2.dev2026050805 (ed7c8f0a)` (May 8 2026 nightly). All 8 hostile-`$HOME` shapes exit 0. Confirmation comment posted to upstream. | Original v1.0.0 verification |
+| ProjectOdyssey | modular/modular#6413 validation (AVX-512 mis-emission on masked-AVX-512 CPUs) — Gate 1 Example B (`--print-effective-target` + 250 local iterations), Gate 4 (47+ green required-check runs across Build Validation and Comprehensive Tests matrix on the bump branch). Gate 4 caught and fixed a coincident stdlib API regression (`UnsafePointer._unsafe_null=()` constructor removed). Validation PR kept open as historical canary through the demolition wave. | v2.0.0 protocol verification |
+
+## Related Skills
+
+- `[[docker-mojo-uid-mismatch-crash-fix]]` — the downstream workaround skill
+  (Dockerfile chmod 755, entrypoint `mkdir -p $HOME/.modular`, sudoers
+  `_ensure_writable`). Bind-mount `_ensure_writable` portion remains load-bearing
+  even after #6412 is confirmed fixed via this protocol's Gate 1 Example A.
+- `[[mojo-upstream-bug-filing-reproducibility-standard]]` — the gate to apply
+  BEFORE filing an upstream Mojo bug (this skill is the AFTER-fix-shipped mirror).
+- `[[ci-cd-remove-upstream-fixed-workaround-fan-out-matrix]]` — what to do
+  AFTER this protocol confirms the fix landed (peel the workaround, fan the
+  workflow back out).
+- `[[mojo-026-breaking-changes]]` / `[[mojo-runtime-crash-bisection]]` —
+  background on Mojo 1.0 `fn`→`def` migration, removed `mojo test` subcommand,
+  removed `UnsafePointer._unsafe_null=()` constructor, and runtime crash bisection.
+
+---
+
+## Superseded from multi-layer-cpu-feature-detection-mismatch-probe
+
+**Original date/version**: 2026-05-12 / "1.0.0"
+
+```yaml
+name: multi-layer-cpu-feature-detection-mismatch-probe
+description: "Language-agnostic 4-layer diagnostic methodology for 'SIGILL on this host but works on others' / 'wrong instruction emitted' reports. Probes (1) kernel-mediated view (`/proc/cpuinfo`, `AT_HWCAP`), (2) silicon-direct view (raw `cpuid` + `xgetbv(0)`), (3) compiler-rt view (`__builtin_cpu_supports`), (4) compiler driver-resolved target (Mojo `--print-effective-target`, `rustc --print=target-features`, `clang -march=native -E -dM`, `llc --print-supported-cpus`). When layers 1-3 agree but layer 4 disagrees, the bug is in the compiler driver's CPU detection path; when layer 1 (kernel) and layer 2 (silicon) disagree, it's hypervisor/kernel CPUID masking. Use when: (1) triaging a SIGILL-on-some-hosts crash across a fleet, (2) pre-flighting a compiled binary for a mixed CPU deployment, (3) validating that a `--target-features=-foo` override is honored, (4) confirming hypervisor CPUID masking behavior, (5) diagnosing modular/modular#6413-style cross-CPU codegen mismatches in LLVM-based toolchains."
+category: debugging
+date: 2026-05-12
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - cpu-feature-detection
+  - cpuid
+  - xgetbv
+  - hwcap
+  - builtin-cpu-supports
+  - target-features
+  - print-effective-target
+  - sigill
+  - hypervisor-masking
+  - cross-cpu
+  - codegen
+  - llvm
+  - mojo
+  - rust
+  - clang
+  - modular-6413
+  - diagnostic
+  - language-agnostic
+```
+
+
+# Multi-Layer CPU Feature-Detection Mismatch Probe
+
+## Overview
+
+| Field | Value |
+| --- | --- |
+| **Date** | 2026-05-12 |
+| **Objective** | Provide a language-agnostic, 4-layer probe methodology to localize the source of any "SIGILL on this host" / "wrong instruction emitted on this CPU" report. The four orthogonal layers — kernel-mediated, silicon-direct, compiler-runtime, and compiler-driver-resolved — let you pinpoint **which layer's view of CPU features is wrong** without guessing. |
+| **Outcome** | Verified-CI: applied to modular/modular#6413 on a GHA Azure AMD EPYC 9V74 (Zen 4) runner under Hyper-V. Layers 1-3 unanimously reported "no AVX-512"; layer 4 (Mojo `--print-effective-target`) reported `--target-cpu znver4` with 12 `+avx512*` features. The disagreement pinned the bug to the Mojo driver's static feature table (via LLVM `X86TargetParser.cpp::Processors[]`). CI runs 25778579617 + 25778580407. |
+| **Verification** | verified-ci |
+| **Companion skills** | `mojo-print-effective-target-codegen-diagnostic` (Mojo-specific subset of layer 4), `mojo-jit-emits-avx512-on-non-avx512-cpu` (specific bug class this probe exposed), `cross-cpu-survey-gha-only-crash` (multi-host fanout pattern when you suspect this class of bug) |
+
+## When to Use
+
+- Investigating "SIGILL on instruction X" reports across hosts (especially when one
+  host SIGILLs and another succeeds with the same binary or same compiler)
+- Pre-flight check before deploying compiled binaries to a mixed CPU fleet
+- Validating that a compiler is honoring a `--target-features=-foo` override or that
+  a `-mno-avx512f`-style flag actually disables codegen for that ISA
+- Confirming hypervisor CPUID masking behavior (the layer 1 vs layer 2 gap)
+- Diagnosing modular/modular#6413-style cross-CPU codegen mismatches in any
+  LLVM-based toolchain (Mojo, Rust, clang, Zig)
+- Any "rebased and now it works" CPU-detection story where you need to prove which
+  layer changed
+
+## The Four Layers
+
+| Layer | What it queries | API |
+| --- | --- | --- |
+| 1. Kernel-mediated view | `/proc/cpuinfo flags` after Linux's CPUID interpretation, including hypervisor masking | shell, `getauxval(AT_HWCAP/AT_HWCAP2)` |
+| 2. Silicon-direct view | raw `cpuid` instruction + `xgetbv(0)` for OS-enabled XCR0 state-component mask | inline asm or `<cpuid.h>` in C |
+| 3. Compiler-rt view | `__builtin_cpu_supports("name")` (gcc/clang) — reads the CPU-features global initialized by `__builtin_cpu_init` from a vendor-specific cpuid + hwcap path | gcc/clang builtin |
+| 4. Driver-resolved target | What the compiler actually decided to use for codegen — populated from `llvm::sys::getHostCPUName()` + `llvm::sys::getHostCPUFeatures()` and the static per-CPU feature table | Mojo: `--print-effective-target`; Rust: `rustc --print=target-features`; clang: `clang -march=native -E -dM - </dev/null \| grep -i avx`; LLVM: `llc --print-supported-cpus` |
+
+**Key insight:** these four layers can disagree, and **which pair disagrees tells you
+which subsystem is wrong**.
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Layer 1: Kernel view
+echo "=== Layer 1: Kernel view ==="
+grep -m1 ^flags /proc/cpuinfo | tr ' ' '\n' | \
+  grep -E '^(avx512[a-z0-9_]*|avx_vnni|avx|avx2|fma|f16c|sse4_[12]|vaes|sha_ni)$' | sort -u
+echo "AT_HWCAP/HWCAP2 via LD_SHOW_AUXV:"
+LD_SHOW_AUXV=1 /bin/true 2>&1 | grep -E '^AT_HWCAP'
+
+# Layer 2: silicon-direct
+cat > /tmp/probe.c <<'EOF'
+#include <stdio.h>
+#include <cpuid.h>
+int main(void) {
+    unsigned eax, ebx, ecx, edx;
+    __cpuid_count(7, 0, eax, ebx, ecx, edx);
+    printf("cpuid(7,0).ebx: AVX2=%d AVX512F=%d AVX512VL=%d AVX512BW=%d AVX512DQ=%d AVX512CD=%d\n",
+           !!(ebx&(1u<<5)), !!(ebx&(1u<<16)), !!(ebx&(1u<<31)),
+           !!(ebx&(1u<<30)), !!(ebx&(1u<<17)), !!(ebx&(1u<<28)));
+    __cpuid_count(0xd, 0, eax, ebx, ecx, edx);
+    printf("cpuid(0xd,0).eax (silicon XCR0 mask): 0x%x\n", eax);
+    __cpuid_count(1, 0, eax, ebx, ecx, edx);
+    if (ecx & (1u<<27)) {  // OSXSAVE
+        unsigned lo, hi;
+        __asm__("xgetbv" : "=a"(lo), "=d"(hi) : "c"(0));
+        printf("xgetbv(0) (OS-enabled XCR0): 0x%x\n", lo);
+    }
+    return 0;
+}
+EOF
+gcc -O2 -o /tmp/probe /tmp/probe.c && /tmp/probe
+
+# Layer 3: compiler-rt
+cat > /tmp/builtin.c <<'EOF'
+#include <stdio.h>
+int main(void) {
+    __builtin_cpu_init();
+    printf("avx512f=%d avx512vl=%d avx512bw=%d avx512dq=%d avx512cd=%d avx512vnni=%d\n",
+           __builtin_cpu_supports("avx512f"), __builtin_cpu_supports("avx512vl"),
+           __builtin_cpu_supports("avx512bw"), __builtin_cpu_supports("avx512dq"),
+           __builtin_cpu_supports("avx512cd"), __builtin_cpu_supports("avx512vnni"));
+    return 0;
+}
+EOF
+gcc -O2 -o /tmp/builtin /tmp/builtin.c && /tmp/builtin
+
+# Layer 4: driver-resolved target (language-specific)
+# Mojo:
+pixi run mojo build --print-effective-target some.mojo
+# Rust:
+rustc --print=target-features
+# Clang:
+echo | clang -march=native -E -dM - | grep -i avx
+# LLVM:
+llc --print-supported-cpus
+```
+
+### Detailed Steps
+
+1. **Run all four layers on the same host in the same shell session.** Capture the
+   output verbatim — order matters for the diff later. Save into one file per host.
+
+2. **Repeat on every suspect host.** Include the "known-good" baseline host (where
+   the binary doesn't SIGILL) so you have something to diff against. In CI, add a
+   workflow step that runs all four layers and uploads the result as an artifact.
+
+3. **Compare across layers on the same host first** (vertical analysis). Use the
+   interpretation matrix below. The dominant signal is the **disagreement pattern**,
+   not the absolute values.
+
+4. **Compare across hosts on the same layer** (horizontal analysis). If layer 4
+   diverges across hosts but layers 1-3 agree, the compiler driver is non-deterministic
+   in its CPU naming (e.g. `znver4` vs `generic` from the same silicon). If layers 1-3
+   diverge across hosts but layer 4 is the same, the issue is environmental (different
+   hypervisor mask, different kernel) and you should mask the feature out at build time.
+
+5. **Probe inside vs outside the container.** Both must be tested. The container's
+   `/proc/cpuinfo` may differ from the host's if cgroups/namespaces are configured
+   to filter (rare but possible). cpuid is always the silicon view regardless of
+   container — running cpuid inside an unprivileged container reads the same physical
+   instruction.
+
+### Interpretation matrix
+
+| Layer 1 (kernel) | Layer 2 (cpuid) | Layer 3 (builtin) | Layer 4 (compiler) | Diagnosis |
+| --- | --- | --- | --- | --- |
+| no AVX-512 | no AVX-512 | no AVX-512 | no AVX-512 | Consistent (silicon really lacks AVX-512) |
+| AVX-512 | AVX-512 | AVX-512 | AVX-512 | Consistent (silicon has it, all paths agree) |
+| no AVX-512 | AVX-512 (silicon) | no AVX-512 | varies | Hypervisor masking — compiler-rt correctly stops at kernel/XCR0 view |
+| no AVX-512 | no AVX-512 | no AVX-512 | **AVX-512** | **Bug in compiler driver** — emitted AVX-512 codegen despite all 3 lower layers agreeing it's unavailable. Either (a) CPU-name fingerprinting overrides feature view, or (b) build-time feature snapshot ignored runtime detection. |
+| AVX-512 | AVX-512 | AVX-512 | no AVX-512 | Compiler is conservative or honoring an explicit `--target-features=-avx512f` override — usually intentional |
+| AVX-512 | AVX-512 | no AVX-512 | varies | gcc/clang version too old to know about the feature name; upgrade the host toolchain |
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --- | --- | --- | --- |
+| Skip layer 1 (kernel) and trust cpuid only | Assumed silicon CPUID is always authoritative | In hypervisor-masked environments, the kernel's view is the authoritative one because XCR0 state-component bits are kernel-managed; cpuid alone misses this and reports features the kernel won't let userspace use | Always include layer 1; it's the layer that captures hypervisor masking |
+| Skip layer 2 (silicon cpuid) | Assumed `/proc/cpuinfo` plus `__builtin_cpu_supports` is enough | Without raw cpuid, you can't distinguish "no AVX-512 silicon" from "AVX-512 silicon with hypervisor mask". Both look the same from layers 1, 3, 4 | Always include layer 2; it's the only ground-truth view of the silicon |
+| Skip layer 4 (compiler-resolved target) | Hoped runtime probes alone would localize the bug | This is the smoking-gun layer. Without it you only know the runtime view; you can't prove the compiler is wrong | Always include layer 4; it's the only layer that captures the codegen-time decision |
+| Probe only on the failing host | Skipped the known-good baseline | Can't tell "feature is genuinely missing here" from "feature is masked here but not on the good host" without a diff target | Always include a known-good host in the survey |
+| Probe only outside the container | Assumed container inherits host CPUID verbatim | Usually true, but namespaced `/proc/cpuinfo` or `--cpu-shares`-driven masking can differ; verifying both rules out container-as-cause | Probe inside AND outside the container if a containerized binary is the SIGILL victim |
+
+## Results & Parameters
+
+### Example from modular/modular#6413 investigation
+
+All 4 layers captured on the same GHA Azure runner (AMD EPYC 9V74 Zen 4 under Hyper-V):
+
+```text
+Layer 1 (kernel /proc/cpuinfo): no avx512* flags
+Layer 2 (cpuid):                 AVX512F=0 AVX512VL=0 AVX512BW=0 AVX512DQ=0 (all 0)
+                                 xgetbv(0)=0x7 (no AVX-512 state enabled in XCR0)
+Layer 3 (__builtin_cpu_supports): avx512f=0 (all AVX-512 features = 0)
+Layer 4 (mojo --print-effective-target):
+  --target-cpu znver4
+  --target-features +avx512f,+avx512vl,+avx512bw,+avx512dq,+avx512cd,
+                    +avx512vnni,+avx512vbmi,+avx512vbmi2,+avx512bitalg,
+                    +avx512vpopcntdq,+avx512bf16,+avx512ifma (12 features)
+```
+
+**Layer 4 disagrees with 1-3 → bug in Mojo's driver.** Confirmed root cause: LLVM
+`getHostCPUName()` returns `"znver4"` from family/model/stepping (which Hyper-V doesn't
+mask), then `X86TargetParser.cpp::Processors[]` applies a static feature list with full
+AVX-512 without intersecting against the masked CPUID feature leaves.
+
+### Pinned versions
+
+| Artifact | Identifier |
+| --- | --- |
+| Mojo version under test | `1.0.0b2.dev2026050805` |
+| Container image | `projectodyssey:dev` |
+| GHA runner | Azure `ubuntu-24.04`, AMD EPYC 9V74 (Zen 4) under Hyper-V |
+| Companion CI runs | 25778579617, 25778580407 |
+
+## Companion Skills
+
+- [`mojo-print-effective-target-codegen-diagnostic`](mojo-print-effective-target-codegen-diagnostic.md)
+  — Mojo-specific implementation of layer 4 of this probe
+- [`mojo-jit-emits-avx512-on-non-avx512-cpu`](mojo-jit-emits-avx512-on-non-avx512-cpu.md)
+  — the specific Mojo bug class this probe exposed (modular/modular#6413)
+- [`cross-cpu-survey-gha-only-crash`](cross-cpu-survey-gha-only-crash.md)
+  — multi-host fanout pattern that wraps this probe when you suspect this bug class
+
+## Verified On
+
+| Project | Context | Details |
+| --- | --- | --- |
+| ProjectOdyssey | modular/modular#6413 root-cause confirmation | 4-layer probe on GHA Azure EPYC 9V74 confirmed layer 4 (Mojo) emits AVX-512 despite layers 1-3 unanimously saying no AVX-512. CI runs 25778579617 + 25778580407. |
+
+## References
+
+- [modular/modular#6413](https://github.com/modular/modular/issues/6413) — upstream issue
+- [Intel SDM Vol 2A, cpuid instruction](https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html)
+- [LLVM `X86TargetParser.cpp`](https://github.com/llvm/llvm-project/blob/main/llvm/lib/TargetParser/X86TargetParser.cpp)
+- [gcc `__builtin_cpu_supports` docs](https://gcc.gnu.org/onlinedocs/gcc/x86-Built-in-Functions.html)
+
+---
+
+## Superseded from docker-mojo-uid-mismatch-crash-fix
+
+**Original date/version**: 2026-05-03 / "1.2.0"
+
+```yaml
+name: docker-mojo-uid-mismatch-crash-fix
+description: "Fix deterministic Mojo runtime crash (exit 134) when container image UID
+  differs from host runner UID. Use when: (1) mojo run crashes before executing any
+  user code with 'filesystem error: status: Permission denied [/home/.../.modular]',
+  (2) CI passes locally (UID 1000) but fails in CI runner (UID 1001+), (3) crash is
+  100% reproducible — not a flaky JIT issue, (4) cached CI image was built at a
+  different UID than the current runner's uid, (5) execution crashed with
+  __fortify_fail_abort in libKGENCompilerRTShared.so before any test output,
+  (6) linker fails with 'cannot open output file build/release/X: Permission denied'
+  even after _ensure_writable runs (non-recursive chown left subdirs root:root),
+  (7) sudo chown or sudo mkdir silently failing in entrypoint (plain sudo blocks in
+  podman compose exec -T), (8) training subdirs (datasets/, model weights dir) not
+  writable after container startup."
+category: ci-cd
+date: 2026-05-03
+version: "1.2.0"
+user-invocable: false
+verification: verified-local
+history: docker-mojo-uid-mismatch-crash-fix.history
+tags:
+  - docker
+  - mojo
+  - uid
+  - permissions
+  - container
+  - crash
+  - modular
+  - cache-key
+  - github-actions
+```
+
+
+# Docker Mojo UID Mismatch Crash Fix
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-03 |
+| **Objective** | Fix deterministic CI failures where `mojo run` crashes before executing any user code; fix bind-mount subdir ownership failures |
+| **Outcome** | Successful — crash reproduced and fixed; CI cache key fix added; bind-mount writable dirs fixed |
+| **Verification** | verified-local (build linker writable, training datasets/ writable, weights dir created; CI pending PR #5351) |
+| **Root Cause** | `libAsyncRTMojoBindings.so` calls `std::filesystem::status("$HOME/.modular")` at startup. When container UID ≠ home dir owner UID, `filesystem_error: Permission denied` propagates to `std::terminate` → `abort()`. Also triggered when CI image cache is keyed without runner UID, causing a UID-1000 cached image to run as UID-1001. |
+| **Exit Code** | 134 (SIGABRT) |
+| **History** | [changelog](./docker-mojo-uid-mismatch-crash-fix.history) |
+| **Upstream Status (2026-05-13)** | `getAcceleratorArchOrEmpty()` startup crash (modular/modular#6412) is **fixed** in `mojo==1.0.0b2.dev2026050805+`. See `[[validate-upstream-mojo-fix-hostile-home-matrix]]` for the hostile-`$HOME` validation matrix and the confirmation comment. The bind-mount `_ensure_writable` portion of this skill (Fix 6) remains load-bearing regardless. |
+
+## When to Use
+
+- `mojo run` or `mojo test` crashes with exit code 134 before printing any user output
+- Error message contains: `terminate called after throwing an instance of 'std::filesystem::__cxx11::filesystem_error'`
+- Error message contains: `filesystem error: status: Permission denied [/home/dev/.modular]`
+- Stack trace shows `libKGENCompilerRTShared.so+0x6d4ab` / `+0x6a686` / `+0x6e157` + `libc.so.6+0x45330` (`__fortify_fail_abort`)
+- CI fails deterministically but local tests pass (local UID 1000 matches image build UID)
+- Image was built with `useradd -m` on Ubuntu (creates home dir with mode 750 by default)
+- Container is run with a different UID than the one used during `docker build`
+- CI image cache key does not include runner UID — a prior run cached at UID-1000, current run uses UID-1001
+- Linker fails with `cannot open output file build/release/X: Permission denied` even though `_ensure_writable build` ran (non-recursive `chown` left existing subdirs as root:root)
+- `sudo chown` or `sudo mkdir` silently failing in entrypoint (plain `sudo` without `-n` blocks for password prompt in `podman compose exec -T`, non-interactive)
+- Training subdirs (`datasets/`, `lenet5_weights/`, etc.) not writable after container startup
+
+## Verified Workflow
+
+> **Note:** Fixes 1-3 are verified-local (PR #5217). Fixes 4-5 are verified-precommit (PR #5252). Fix 6 is verified-local (PR #5351, CI pending): build linker succeeded (`build/release/` writable), training IDX files loaded (`datasets/` writable), weights saved (`lenet5_weights/` created). Treat Fix 6 as proposed until CI confirms.
+
+### Quick Reference
+
+```bash
+# Fix 1: Dockerfile — make home dir traversable by other UIDs
+RUN chmod 755 /home/${USER_NAME}
+
+# Fix 2: Dockerfile — remove overly restrictive pixi permissions
+# REMOVE: RUN chmod -R 700 $PIXI_HOME $PIXI_CACHE_DIR
+
+# Fix 3: entrypoint.sh — pre-create .modular or redirect HOME
+if [ ! -d "${HOME}/.modular" ]; then
+    mkdir -p "${HOME}/.modular" 2>/dev/null || {
+        export HOME="/tmp/mojo-home-$(id -u)"
+        mkdir -p "${HOME}/.modular"
+        export PIXI_HOME="${HOME}/.pixi"
+    }
+fi
+
+# Fix 4: GitHub Actions cache key — include runner UID
+- name: Get runner UID
+  id: uid
+  run: echo "user_id=$(id -u)" >> "$GITHUB_OUTPUT"
+- uses: actions/cache@v4
+  with:
+    key: container-image-uid${{ steps.uid.outputs.user_id }}-${{ hashFiles('Dockerfile', 'pixi.toml', 'pixi.lock') }}
+
+# Fix 5: justfile HOME-fixup for podman compose exec
+HOME_FIXUP := "if [ ! -w \"$$HOME\" ]; then export HOME=\"/tmp/mojo-home-$$(id -u)\"; mkdir -p \"$$HOME/.modular\" \"$$HOME/.pixi\"; fi;"
+_run CMD:
+    podman compose exec -T myservice bash -c "{{ HOME_FIXUP }} {{ CMD }}"
+
+# Fix 6: Dockerfile sudoers + entrypoint _ensure_writable (recursive, non-interactive)
+# Dockerfile:
+RUN printf 'dev ALL=(root) NOPASSWD: /bin/mkdir\ndev ALL=(root) NOPASSWD: /bin/chown\ndev ALL=(root) NOPASSWD: /bin/chmod\n' \
+    > /etc/sudoers.d/dev-workspace && chmod 440 /etc/sudoers.d/dev-workspace
+# entrypoint.sh:
+_ensure_writable() {
+    for dir in "$@"; do
+        mkdir -p "$dir" 2>/dev/null || sudo -n mkdir -p "$dir" 2>/dev/null || true
+        [ -w "$dir" ] && continue
+        chmod u+w "$dir" 2>/dev/null || sudo -n chown -R "$(id -u):$(id -g)" "$dir" 2>/dev/null || true
+    done
+}
+_ensure_writable build .pixi datasets lenet5_weights tests/configs/fixtures tests/shared/fixtures /tmp/mojo-tests
+```
+
+### Detailed Steps
+
+1. **Identify the crash** — confirm exit code 134 and the `filesystem_error` message:
+
+   ```bash
+   podman compose exec -T myservice bash -c "mojo run test.mojo"; echo "Exit: $?"
+   # Expected crash output:
+   # terminate called after throwing an instance of 'std::filesystem::__cxx11::filesystem_error'
+   #   what():  filesystem error: status: Permission denied [/home/dev/.modular]
+   # Exit: 134
+   ```
+
+2. **Reproduce the UID mismatch** (confirm root cause, not a coincidence):
+
+   ```bash
+   podman compose down -v             # delete ALL volumes (cold cache)
+   USER_ID=1001 GROUP_ID=1001 podman compose up -d
+   podman compose exec -T myservice bash -c "mojo run test.mojo"
+   # -> crash: filesystem error: status: Permission denied [/home/dev/.modular]
+   ```
+
+3. **Apply Fix 1 — Dockerfile home dir permissions** — after your `useradd` line, add:
+
+   ```dockerfile
+   RUN useradd -m -u ${USER_ID} -g ${GROUP_ID} -s /bin/bash ${USER_NAME} && \
+       chmod 755 /home/${USER_NAME}
+   ```
+
+   Ubuntu's `useradd -m` creates home directories with mode 750 (`drwxr-x---`),
+   which blocks `execute` (traverse) permission for other UIDs. Mode 755 allows
+   traversal without granting write access.
+
+4. **Apply Fix 2 — Remove restrictive pixi permissions** — remove or relax:
+
+   ```dockerfile
+   # REMOVE this if present:
+   RUN chmod -R 700 $PIXI_HOME $PIXI_CACHE_DIR
+
+   # Replace with no chmod (pixi creates files with reasonable defaults)
+   # OR use 755 if explicit control is needed:
+   RUN chmod -R 755 $PIXI_HOME $PIXI_CACHE_DIR
+   ```
+
+5. **Apply Fix 3 — entrypoint.sh pre-create `.modular`** — add before invoking mojo:
+
+   ```bash
+   #!/bin/bash
+   # Pre-create .modular so libAsyncRTMojoBindings.so startup check doesn't throw
+   if [ ! -d "${HOME}/.modular" ]; then
+       mkdir -p "${HOME}/.modular" 2>/dev/null || {
+           # HOME is not writable by current UID — redirect to /tmp
+           export HOME="/tmp/mojo-home-$(id -u)"
+           mkdir -p "${HOME}/.modular"
+           export PIXI_HOME="${HOME}/.pixi"
+       }
+   fi
+
+   exec "$@"
+   ```
+
+6. **Apply Fix 4 — CI image cache key includes runner UID** — prevents stale UID-1000 image
+   being reused on a UID-1001 runner:
+
+   ```yaml
+   # In GitHub Actions workflow or composite action:
+   - name: Get runner UID
+     id: uid
+     run: echo "user_id=$(id -u)" >> "$GITHUB_OUTPUT"
+
+   - name: Cache container image
+     uses: actions/cache@v4
+     with:
+       path: /tmp/container-image.tar
+       # Include UID in key so UID-1000 and UID-1001 images are cached separately
+       key: container-image-uid${{ steps.uid.outputs.user_id }}-${{ hashFiles('Dockerfile', 'pixi.toml', 'pixi.lock') }}
+   ```
+
+   **Important**: Use `${{ steps.uid.outputs.user_id }}` (step output), NOT `${{ env.USER_ID }}`.
+   Environment variables set in an earlier step of the same action may not be evaluated correctly
+   depending on runner version. Step outputs are always safe.
+
+7. **Apply Fix 5 — justfile HOME-fixup for every `podman compose exec`** — belt-and-suspenders
+   for any execution path that bypasses the entrypoint:
+
+   ```makefile
+   # In justfile, define a HOME fixup fragment
+   HOME_FIXUP := "if [ ! -w \"$$HOME\" ]; then export HOME=\"/tmp/mojo-home-$$(id -u)\"; mkdir -p \"$$HOME/.modular\" \"$$HOME/.pixi\"; fi;"
+
+   # Prepend to every podman compose exec invocation:
+   _run CMD:
+       podman compose exec -T myservice bash -c "{{ HOME_FIXUP }} {{ CMD }}"
+   ```
+
+8. **Apply Fix 6 — Dockerfile `sudoers` grant for `mkdir`/`chown`/`chmod`, and entrypoint
+   `_ensure_writable` with recursive chown and non-interactive sudo** — required when bind-mounted
+   workspace subdirs stay root:root inside the container:
+
+   ```dockerfile
+   # Dockerfile: grant dev passwordless sudo for mkdir, chown, chmod
+   RUN printf 'dev ALL=(root) NOPASSWD: /bin/mkdir\ndev ALL=(root) NOPASSWD: /bin/chown\ndev ALL=(root) NOPASSWD: /bin/chmod\n' \
+       > /etc/sudoers.d/dev-workspace \
+       && chmod 440 /etc/sudoers.d/dev-workspace
+   ```
+
+   ```bash
+   # entrypoint.sh: use sudo -n (non-interactive), chown -R (recursive), extend dir list
+   _ensure_writable() {
+       for dir in "$@"; do
+           mkdir -p "$dir" 2>/dev/null || sudo -n mkdir -p "$dir" 2>/dev/null || true
+           if [ -w "$dir" ]; then
+               continue
+           fi
+           chmod u+w "$dir" 2>/dev/null || \
+               sudo -n chown -R "$(id -u):$(id -g)" "$dir" 2>/dev/null || true
+       done
+   }
+
+   _ensure_writable build .pixi datasets lenet5_weights \
+       tests/configs/fixtures tests/shared/fixtures /tmp/mojo-tests
+   ```
+
+   **Why each change matters:**
+
+   - `sudo -n` (non-interactive): plain `sudo` blocks waiting for a password in `podman compose exec -T`
+   - `chown -R` (recursive): top-level-only chown leaves existing subdirs (`build/release/`, etc.) as root:root
+   - `NOPASSWD: /bin/mkdir` in sudoers: without this, `sudo mkdir` silently fails if the dir doesn't exist yet
+   - Extend dir list: training dirs (`datasets/`, model weights) must be in the list or they stay unwritable
+
+   **Sanity check:**
+
+   ```bash
+   podman compose exec -T projectodyssey-dev bash -c \
+       'sudo -n mkdir -p /tmp/check && sudo -n chown -R $(id -u):$(id -g) /tmp/check && echo OK'
+   # Expected: OK
+   ```
+
+9. **Rebuild and verify**:
+
+   ```bash
+   podman compose build --no-cache
+   podman compose down -v
+   USER_ID=1001 GROUP_ID=1001 podman compose up -d
+   podman compose exec -T myservice bash -c "mojo run test.mojo"
+   # -> Should print test output and exit 0
+   ```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Assumed JIT flakiness | Classified crash as non-deterministic `__fortify_fail_abort` JIT issue | Crash was 100% deterministic at UID mismatch; warm-cache local tests at UID 1000 always passed, masking the real bug | Never close a crash as "unfixable JIT flakiness" without first reproducing at the exact CI UID |
+| Local parallel test run | Ran 10 parallel `mojo test` locally without replicating CI UID | Local UID = 1000 matched image owner, so home dir was accessible and all tests passed | Always replicate the exact runtime UID of the CI runner when diagnosing "CI-only" crashes |
+| Setting `MODULAR_HOME` env var | Tried redirecting via `MODULAR_HOME=/tmp/.modular` | `libAsyncRTMojoBindings.so` reads `$HOME/.modular` directly via `std::filesystem::status`; env var redirect does not affect this call | The crash happens in native C++ before any Mojo env var handling; must fix permissions or pre-create the directory |
+| Cache key without UID | CI image cache key used only `hashFiles(Dockerfile, pixi.toml, pixi.lock)` | A prior CI run at UID-1000 cached the image; current run at UID-1001 reused the stale image with wrong home dir owner | Include `$(id -u)` in the cache key so UID-1000 and UID-1001 images are always cached separately |
+| `${{ env.VAR }}` for UID in cache key | Tried setting UID via `${{ env.USER_ID }}` in the same composite action | `${{ env.VAR }}` may not be evaluated when the env var is set in an earlier step of the same action (runner version dependent) | Use `${{ steps.<id>.outputs.<name> }}` for values computed in earlier steps — step outputs are always safe |
+| Non-recursive `chown` in `_ensure_writable` | Called `sudo chown $(id -u):$(id -g) "$dir"` (without `-R`) on the top-level dir | Only the top-level dir is re-owned; existing subdirs (`build/release/`, etc.) that were created as root:root stay root:root and the linker still cannot write | Always use `chown -R` when reclaiming ownership of a directory tree that may already contain root-owned children |
+| Plain `sudo` without `-n` in entrypoint | Called `sudo chown …` and `sudo mkdir …` without the `-n` flag in `entrypoint.sh` | `sudo` without `-n` blocks waiting for a password prompt when invoked from `podman compose exec -T` (non-interactive session), causing the entrypoint to hang silently | Always pass `-n` (non-interactive) to `sudo` in entrypoint scripts; use `or true` so a non-fatal failure doesn't abort startup |
+| Missing `mkdir` in sudoers NOPASSWD grant | sudoers only listed `chown` and `chmod` in NOPASSWD; `mkdir` was not included | `sudo mkdir -p` silently failed when the target directory did not yet exist, so the dir was never created and the subsequent `chown` had nothing to act on | Add `/bin/mkdir` to the NOPASSWD sudoers grant alongside `chown` and `chmod`; verify with `sudo -n mkdir -p /tmp/check && echo OK` |
+
+## Results & Parameters
+
+### Crash Signature
+
+```text
+terminate called after throwing an instance of 'std::filesystem::__cxx11::filesystem_error'
+  what():  filesystem error: status: Permission denied [/home/dev/.modular]
+Aborted (core dumped)
+```
+
+Exit code: **134** (SIGABRT from `std::terminate` → `abort()`)
+
+Stack trace identifiers (Mojo 0.26.x):
+
+```text
+libKGENCompilerRTShared.so+0x6d4ab
+libKGENCompilerRTShared.so+0x6a686
+libKGENCompilerRTShared.so+0x6e157
+libc.so.6+0x45330  (= __fortify_fail_abort)
+```
+
+### Root Cause Chain
+
+```text
+mojo run → dlopen libAsyncRTMojoBindings.so
+  → getAcceleratorArchOrEmpty()
+    → std::filesystem::status("$HOME/.modular")   ← throwing overload
+      → filesystem_error: Permission denied        ← home dir is mode 750, UID mismatch
+        → std::terminate() → abort() → SIGABRT
+```
+
+### Dockerfile Fix Template
+
+```dockerfile
+ARG USER_NAME=dev
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+
+RUN groupadd -g ${GROUP_ID} ${USER_NAME} && \
+    useradd -m -u ${USER_ID} -g ${GROUP_ID} -s /bin/bash ${USER_NAME} && \
+    chmod 755 /home/${USER_NAME}          # <-- CRITICAL: allow other UIDs to traverse
+
+# If you set pixi cache/home permissions, use 755 not 700:
+ENV PIXI_HOME=/home/${USER_NAME}/.pixi
+ENV PIXI_CACHE_DIR=/home/${USER_NAME}/.cache/rattler
+# Do NOT: RUN chmod -R 700 $PIXI_HOME $PIXI_CACHE_DIR
+```
+
+### GitHub Actions Cache Key Template
+
+```yaml
+- name: Get runner UID
+  id: uid
+  run: echo "user_id=$(id -u)" >> "$GITHUB_OUTPUT"
+
+- name: Cache container image
+  uses: actions/cache@v4
+  with:
+    path: /tmp/container-image.tar
+    key: container-image-uid${{ steps.uid.outputs.user_id }}-${{ hashFiles('Dockerfile', 'pixi.toml', 'pixi.lock') }}
+    restore-keys: |
+      container-image-uid${{ steps.uid.outputs.user_id }}-
+```
+
+### Upstream Bug
+
+Filed as **modular/modular#6412**. The fix in Mojo's C++ runtime should replace:
+
+```cpp
+std::filesystem::status(path)          // throwing overload — NEVER throws safely
+```
+
+with:
+
+```cpp
+std::error_code ec;
+std::filesystem::status(path, ec)      // error_code overload — never throws
+if (ec) return "";
+```
+
+### Verification Commands
+
+```bash
+# Verify home dir permissions are correct (should show drwxr-xr-x = 755)
+podman compose exec -T myservice stat /home/dev | grep Access
+
+# Verify mojo runs as different UID without crash
+USER_ID=1001 GROUP_ID=1001 podman compose up -d
+podman compose exec -T myservice bash -c "id && mojo run -e 'print(42)'"
+# Expected: uid=1001 ... \n 42
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | CI deterministic crash reproduced and fixed locally, PR #5217 | UID 1001 CI runner vs UID 1000 image owner; `docker-compose.yml` with `USER_ID` ARG |
+| ProjectOdyssey | CI cache key UID isolation added, PR #5252 | `setup-container/action.yml` amended to include `uid` step output in cache key; justfile `_run` recipe amended with HOME_FIXUP |
+| ProjectOdyssey | Bind-mount subdir ownership fix, PR #5351 | `_ensure_writable` made recursive + non-interactive; `Dockerfile` sudoers grant added for `mkdir`/`chown`/`chmod`; training dirs added to writable list |
+
+---
