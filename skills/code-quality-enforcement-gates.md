@@ -1,13 +1,13 @@
 ---
 name: code-quality-enforcement-gates
-description: "Canonical guide to code-quality enforcement THRESHOLDS and decisions: when to fail builds on complexity, when to enable mypy strict modes, when to promote warnings to errors, how to scope override subsets, deprecation removal policy. Use when: (1) deciding fix-vs-suppress for a new lint rule, (2) enabling mypy check-untyped-defs or new ruff rules, (3) promoting CI warnings to exit-1, (4) tuning markdownlint MD024 / ruff C901 thresholds, (5) narrowing mypy module override globs to specific paths."
+description: "Canonical guide to code-quality enforcement THRESHOLDS, remediation workflow, and post-audit verification: when to fail builds on complexity, when to enable mypy strict modes, when to promote warnings to errors, how to scope override subsets, deprecation removal policy, how to fix production asserts/hardcoded paths, how to run a post-remediation audit, and how to verify audit/PR-reviewer findings against ground truth before acting. Use when: (1) deciding fix-vs-suppress for a new lint rule, (2) enabling mypy check-untyped-defs or new ruff rules, (3) promoting CI warnings to exit-1, (4) tuning markdownlint MD024 / ruff C901 thresholds, (5) narrowing mypy module override globs to specific paths, (6) replacing production assert input-validation or hardcoded /tmp paths with safe equivalents, (7) executing a post-remediation audit to close remaining CI/classifier/release/docs gaps after an initial cleanup, (8) strict-mode repo audits or PR-reviewer sub-agents produce hallucinated findings (nonexistent files, phantom CI checks, red-on-main checks cited as PR blockers) — verify against live state before acting."
 category: ci-cd
-date: 2026-05-18
-version: "1.0.0"
+date: 2026-06-07
+version: "1.1.0"
 user-invocable: false
 verification: verified-local
 history: code-quality-enforcement-gates.history
-tags: [merged, code-quality, quality-gate, mypy, ruff, complexity-budget, deprecation]
+tags: [merged, code-quality, quality-gate, mypy, ruff, complexity-budget, deprecation, post-remediation-audit, audit-verification, fact-checking, production-code-fixes]
 ---
 
 # Code-Quality Enforcement Gates
@@ -16,10 +16,10 @@ tags: [merged, code-quality, quality-gate, mypy, ruff, complexity-budget, deprec
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-05-18 |
-| **Objective** | Canonical reference for when and how to turn lint warnings into hard build failures |
-| **Outcome** | Merged from 8 skills — covers complexity thresholds, mypy strictness, deprecation enforcement, markdown rule tuning, override narrowing, and regression-guard tests |
-| **Scope** | ci-cd quality gates only — for hook wiring / pre-commit-config surface area see M1 (pre-commit-linting-hooks-config) |
+| **Date** | 2026-06-07 |
+| **Objective** | Canonical reference for when and how to turn lint warnings into hard build failures, fix production code-quality issues, run a post-remediation audit, and verify audit/reviewer findings before acting |
+| **Outcome** | Merged from 11 skills — covers complexity thresholds, mypy strictness, deprecation enforcement, markdown rule tuning, override narrowing, regression-guard tests, production assert/path fixes, post-remediation auditing, and ground-truth verification of hallucinated findings |
+| **Scope** | ci-cd quality gates, remediation workflow, and audit verification — for hook wiring / pre-commit-config surface area see M1 (pre-commit-linting-hooks-config) |
 
 ## When to Use
 
@@ -31,6 +31,9 @@ tags: [merged, code-quality, quality-gate, mypy, ruff, complexity-budget, deprec
 6. Coordinating **batch fixes** across 5+ files in a single PR
 7. Fixing **placeholder code / type-migration assertion** CI failures
 8. **Fixing regression-guard tests** that pin to suppression syntax before an ecosystem sweep
+9. Replacing **production `assert` input validation** (stripped by `python -O`) with explicit `ValueError`, or **hardcoded `/tmp` paths** with `tempfile`
+10. Running a **post-remediation audit** to close residual CI/classifier/release-gate/docs gaps before ecosystem integration
+11. **Verifying audit or PR-reviewer findings against ground truth** before writing a remediation plan, filing issues, or posting a REQUEST_CHANGES verdict (strict-mode audits and reviewer sub-agents hallucinate ~10–30% of findings)
 
 ---
 
@@ -48,6 +51,9 @@ tags: [merged, code-quality, quality-gate, mypy, ruff, complexity-budget, deprec
 | Batch fix PR scope | 5–12 low-complexity issues, one PR | Read all files before editing; use Python scripts for 10+ bulk replacements |
 | Placeholder code CI | Comment out ALL code using a placeholder variable | Fix type-migration assertions to match new native types |
 | Regression-guard tests | Assert property, not literal suppression syntax | Run meta-test grep BEFORE a sweep; fix in a predecessor PR |
+| Production assert / `/tmp` | Replace with `raise ValueError` / `tempfile.gettempdir()` | `python -O` strips asserts; grep `tests/` for `AssertionError` after |
+| Post-remediation audit | Read state in parallel → fix classifier/release/docs gaps | Classifiers reflect what CI tests; release needs `needs: test` gate |
+| Verify audit/reviewer findings | `ls` / `grep` / `git ls-files` / `gh run list --branch main` | 10–30% of strict-audit & reviewer findings are hallucinated; verify before acting |
 
 ---
 
@@ -55,59 +61,35 @@ tags: [merged, code-quality, quality-gate, mypy, ruff, complexity-budget, deprec
 
 **Decision rule:** Accept complexity 11–12 for orchestration/CLI code. Suppress >12 with documented rationale. Default threshold (10) is too strict for non-trivial orchestration.
 
-**Step 1 — Audit violations at candidate threshold:**
+**Step 1 — Audit violations**, then set `max-complexity = 12`:
 
 ```bash
-# Count violations at default complexity=10
-pixi run ruff check <source-dirs>/ --select C901 2>&1 | grep "C901"
-
-# Get file:line locations
 pixi run ruff check <source-dirs>/ --select C901 2>&1 | grep -E "C901|-->" | paste - -
 ```
-
-**Step 2 — Update `pyproject.toml`:**
 
 ```toml
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "D", "UP", "S101", "B", "SIM", "C4", "C901", "RUF"]
-
 [tool.ruff.lint.mccabe]
 max-complexity = 12
 ```
 
-**Step 3 — Add annotated suppressions (noqa MUST be on the `def` line):**
+**Step 2 — Add annotated suppressions — noqa MUST be on the `def` line** (ruff ignores it on the
+return-type / closing line of a multi-line signature):
 
 ```python
-# CORRECT — noqa on the def line
 def run_subtest(  # noqa: C901  # orchestration with many retry/outcome paths
-    self,
-    tier_id: TierID,
+    self, tier_id: TierID,
 ) -> SubTestResult:
-
-# WRONG — noqa on return type line (ruff ignores it)
-def run_subtest(
-    self,
-) -> SubTestResult:  # noqa: C901  # does NOT suppress
 ```
 
-**Standard rationale categories:**
+Standard rationale categories: `orchestration with many retry/outcome paths` (`run`, `_implement_all`);
+`pipeline with sequential conditional stages` (`_run_mojo_pipeline`); `CLI dispatch with many command
+branches` (`main`, `cmd_run`); `validation with many independent rule checks` (`validate_frontmatter`);
+`config loader with many format/version branches` (`load_rubric_weights`); `AST traversal with many node
+type branches` (`detect_shadowing`).
 
-| Rationale | Function archetypes |
-| --- | --- |
-| `orchestration with many retry/outcome paths` | `run`, `run_subtest`, `_implement_all` |
-| `pipeline with sequential conditional stages` | `_run_mojo_pipeline`, `_run_python_pipeline` |
-| `CLI dispatch with many command branches` | `main`, `cmd_run`, `cmd_visualize` |
-| `validation with many independent rule checks` | `validate_frontmatter`, `check_configs` |
-| `config loader with many format/version branches` | `load`, `load_run`, `load_rubric_weights` |
-| `AST traversal with many node type branches` | `detect_shadowing` |
-
-**Step 4 — Verify:**
-
-```bash
-pixi run ruff check <source-dirs>/ --select C901
-pixi run ruff check <source-dirs>/
-pixi run python -m pytest tests/ -v
-```
+**Step 3 — Verify:** `pixi run ruff check <source-dirs>/ --select C901` then full `ruff check` + tests.
 
 ---
 
@@ -242,18 +224,10 @@ echo "$count"
     fi
 ```
 
-Key changes from warning step: `::warning::` → `::error::`, add `exit 1`, mirror all new exclusions into the diagnostics grep block.
-
-**Deprecation gate promotion checklist:**
-
-- [ ] Run grep chain locally — confirm count is 0
-- [ ] Classify count > 0 hits as caller (remove) or safe reference (exclude)
-- [ ] Add `grep -v` exclusions for re-exports and docstring annotations
-- [ ] Update step name "Track..." → "Enforce..."
-- [ ] Change `::warning::` → `::error::`
-- [ ] Add `exit 1` inside the `if` block
-- [ ] Mirror all new exclusions into the diagnostic grep block
-- [ ] Run full test suite to confirm no regressions
+**Promotion checklist:** confirm count is 0 → classify any hit as caller (remove) or safe reference
+(exclude) → add `grep -v` for re-exports and docstring annotations → rename step "Track..." →
+"Enforce..." → `::warning::` → `::error::` → add `exit 1` → mirror exclusions into the diagnostic grep
+block → run the full test suite.
 
 ---
 
@@ -309,14 +283,8 @@ grep -rn "continue-on-error\|or-true\|::warning::" tests/ .github/ \
   --include="*.yml" --include="*.yaml"
 ```
 
-Any hits must be fixed in a **predecessor PR** before the sweep.
-
-**Anti-pattern (pinned to literal):**
-
-```python
-def test_npm_audit_is_non_blocking():
-    assert "continue-on-error: true" in step_text
-```
+Any hits must be fixed in a **predecessor PR** before the sweep. The anti-pattern is pinning to a
+literal (`assert "continue-on-error: true" in step_text`) — assert the property instead.
 
 **Broadened (accepts either syntax form):**
 
@@ -436,6 +404,196 @@ Always rebase before pushing when merge conflicts exist — never wait for CI wi
 
 ---
 
+### 8. Production Code Quality Fixes (assert / hardcoded path)
+
+**Production `assert` for input validation is unsafe** — `python -O` (optimized mode) strips all
+`assert` statements at compile time, leaving a silent validation gap. Replace with an explicit raise.
+
+**Step 1 — Locate asserts outside test files:**
+
+```bash
+grep -rn "^    assert\|^assert" <source-dir>/ --include="*.py"
+```
+
+**Step 2 — Replace assert → `ValueError`:**
+
+```python
+# Before — stripped by python -O
+assert 0.0 <= score <= 1.0, f"Score {score} is outside valid range [0.0, 1.0]"
+
+# After — always enforced
+if not (0.0 <= score <= 1.0):
+    raise ValueError(f"score must be in [0.0, 1.0], got {score}")
+```
+
+**Step 3 — Locate and replace hardcoded `/tmp` paths:**
+
+```bash
+grep -rn '"/tmp/' <source-dir>/ --include="*.py"
+```
+
+```python
+# Before — not cross-platform; collides under parallel runs
+env["PYTHONPYCACHEPREFIX"] = "/tmp/scylla_pycache"
+
+# After — portable
+import tempfile
+env["PYTHONPYCACHEPREFIX"] = str(Path(tempfile.gettempdir()) / "scylla_pycache")
+```
+
+Check existing imports first — `tempfile` and `Path` are often already imported.
+
+**Step 4 — CRITICAL: update tests that expected `AssertionError`:**
+
+```bash
+grep -rn "AssertionError" tests/ --include="*.py"
+```
+
+```python
+# Before
+with pytest.raises(AssertionError, match="outside valid range"):
+    assign_letter_grade(1.1)
+# After
+with pytest.raises(ValueError, match="score must be in"):
+    assign_letter_grade(1.1)
+```
+
+Add a parametrized boundary test for the new `ValueError`, then run affected tests + pre-commit on
+the changed files only.
+
+---
+
+### 9. Post-Remediation Audit (close residual gaps)
+
+**When to use:** after a first-pass cleanup, before ecosystem integration — verifies CI/classifier
+alignment, release-gate safety, undocumented CLI tools, and residual code smells.
+
+**Step 1 — Read current state in parallel** (single batch): `pyproject.toml` (classifiers, pytest
+version, console_scripts), `.github/workflows/release.yml` (test gate), `README.md` (CLI docs), and
+the source files flagged for bare-except / redundant-import smells.
+
+| Issue Type | File | Fix |
+| --- | --- | --- |
+| Classifier/CI mismatch | `pyproject.toml` classifiers | Remove classifiers for untested Python versions |
+| pytest version skew | `pyproject.toml` dev deps | Align to range tested in `pixi.toml` |
+| Release without test gate | `.github/workflows/release.yml` | Add `test` job + `needs: test` on publish job |
+| Undocumented CLI | `README.md` | Add CLI Commands section with table + examples |
+| Bare `except Exception: pass` | Source file | Add inline comment justifying the broad catch |
+| Redundant local import | Source file | Remove — use module-level import directly |
+| Empty placeholder dirs | `scripts/` | `rmdir` the empty directories |
+
+**Step 2 — Classifiers reflect what CI tests, not aspiration:**
+
+```toml
+# pyproject.toml — REMOVE untested versions (CI only tests 3.12)
+classifiers = ["Programming Language :: Python :: 3",
+               "Programming Language :: Python :: 3.12"]
+```
+
+**Step 3 — Gate the release workflow on tests** — add a `test` job and `needs: test` on the
+`build-and-publish` job so a failed test blocks the PyPI publish.
+
+**Step 4 — Fix residual smells:**
+
+```python
+except Exception:  # /etc/os-release parsing is best-effort; any failure is non-fatal
+    pass
+```
+
+Remove redundant local imports (e.g. `import re as _re` inside a method when `re` is module-level)
+and `rmdir` empty placeholder directories.
+
+**Step 5 — Verify all green** before committing:
+
+```bash
+pixi run ruff check <pkg>/ tests/
+pixi run mypy <pkg>/
+pixi run pytest tests/unit -q
+pre-commit run --all-files
+```
+
+Commit with a structured conventional message listing every audit item. Outcome reference: 82% → 86%
+grade across 15 dimensions, coverage above the threshold, all hooks green.
+
+**Audit checklist (copy-paste):**
+
+```markdown
+- [ ] CI matrix Python versions match pyproject.toml classifiers
+- [ ] pytest version range in dev deps matches pixi.toml lower bound
+- [ ] Release workflow has `needs: test` before publish job
+- [ ] All `console_scripts` documented in README with examples
+- [ ] No unjustified `except Exception: pass` (add comment or narrow exception)
+- [ ] No redundant local imports (check `__init__` methods especially)
+- [ ] No empty placeholder directories in scripts/
+- [ ] Coverage threshold consistent across pyproject.toml, pytest addopts, and CI
+```
+
+---
+
+### 10. Verify Audit & Reviewer Findings Against Ground Truth Before Acting
+
+Strict-mode repo audits AND PR-reviewer sub-agents routinely **hallucinate** findings (references to
+nonexistent files, "missing CI checks" that already exist, a red-on-the-PR check that is ALSO red on
+`main`) and **miss** real ones (linters present but enforcing the wrong rule). Observed false-positive
+rate: **10–30% across multiple sessions.** Verify each finding against live state BEFORE writing a
+remediation plan, filing issues, or posting a REQUEST_CHANGES verdict.
+
+**Per-finding 30-second verify:**
+
+```bash
+ls <path-the-audit-claimed-is-missing>   # is the file really absent?
+grep -rn <symbol-or-config> <path>        # is the integration really missing?
+git ls-files <path>                       # is the file really tracked? (empty = not tracked)
+git log --all -- <path>                   # was it ever there?
+```
+
+| Finding type | Verify with |
+| --- | --- |
+| "Reference to missing file X" | `ls X && grep -rln 'pattern' <dir>` — absent file AND no reference → hallucinated |
+| "No SAST/secrets-scan/dep-audit in CI" | `grep -rniE 'gitleaks\|trufflehog\|detect-secrets\|pip-audit\|bandit\|codeql\|semgrep' .github/` — controls often live in an aggregator / `_required.yml`, not the file named after them |
+| "File X tracked despite .gitignore" | `git ls-files X` — empty output means not tracked → already-fixed-state hallucination |
+| "File A duplicates file B" | Read BOTH files — do not trust prose summaries of structural overlap |
+| "Function X has wrong return type" | `grep -nE '^def X' <file>` + read every `return` |
+
+**Run Phase 1 verification BEFORE drafting the remediation plan** — not before issue filing. Drafting
+against unverified findings produces PRs that fix non-issues AND leaves the real root causes untouched.
+Dispatch ONE Explore agent with the full findings list; it returns a STATUS table
+(CONFIRMED / REFUTED / PARTIAL with evidence).
+
+**Search the inverse hypothesis space (Phase 1.5):** for every "X is MISSING" finding, also ask "is X
+PRESENT but WRONG?" (e.g. "linter MISSING" → "linter present but enforcing the WRONG rule"; "no CI gate
+for Y" → "gate exists but `continue-on-error: true` makes it a no-op"). This is the most common audit
+blind spot and often the actual root cause. Worked example: an audit flagged skills mandating `--rebase`
+despite squash-only policy; the inverse check found `validation/doc_policy.py` was REJECTING `--squash` —
+the linter was the ROOT CAUSE. Sequencing PR1 = fix linter, PR2+ = fix skills made all 10 PRs pass CI.
+
+**Every audit-driven remediation plan MUST contain an `## AUDIT CORRECTIONS` section** listing what
+Phase 1 refuted (with evidence) and an `## AUDIT-MISSED FINDINGS (NEW)` section listing inverse-search
+discoveries — this bridges the audit's finding count to the plan's PR count for reviewers.
+
+**PR-reviewer REQUEST_CHANGES verdict — check `main` before blocking on a red check:**
+
+```bash
+# 1. Get the failing check names on the PR
+gh pr view N --repo OWNER/REPO --json statusCheckRollup \
+  --jq '.statusCheckRollup[] | select(.conclusion=="FAILURE") | .name'
+# 2. Check the same names on latest main
+gh run list --repo OWNER/REPO --branch main --limit 5 \
+  --json name,conclusion,headSha --jq '.[] | "\(.headSha[0:8]) \(.name) \(.conclusion)"'
+# 3. If a failure appears on BOTH the PR and latest main for the same job name,
+#    it's pre-existing -> mention it but do NOT block on it.
+```
+
+A `feature-dev:code-reviewer` sub-agent sees only the PR's `statusCheckRollup` and has no visibility
+into `main`'s independent CI state. Trusting its label without checking `main` produces false
+REQUEST_CHANGES verdicts that unfairly block clean dependency bumps.
+
+**Triage rule:** if verification refutes a finding, log it but do NOT file an issue or open a PR. If
+the stale-finding rate exceeds 20%, question the audit methodology, not the codebase. Verification is
+"cheaply confirm each," not "distrust everything" — verified MAJOR findings still hold up.
+
+---
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -454,6 +612,18 @@ Always rebase before pushing when merge conflicts exist — never wait for CI wi
 | Testing for step property via `gh workflow run` | Live runtime check of step behavior | Too slow for pre-merge unit tests | Use static analysis: parse YAML structurally and check step text |
 | Enabling `check_untyped_defs` in config before triaging | Added flag to `pyproject.toml` first | Surprise failures in CI; no chance to fix before push | Always run the flag manually first, fix all errors, then commit config |
 | Broad `tests.unit.*` glob override as permanent state | One glob suppresses all unannotated test subdirs forever | Suppresses already-annotated subdirs; masks progress | Narrow to explicit list whenever a subdir is confirmed clean |
+| Replacing production assert without updating tests | Swapped `assert` → `raise ValueError` and committed | A pre-existing test expecting `AssertionError` failed CI | After replacing asserts, `grep tests/ -rn AssertionError` and update each to `ValueError` |
+| `noqa: BLE001` on bare except | Added `# noqa: BLE001` to suppress the broad-except warning | `BLE001` was not in the project's ruff `select` → "unused noqa directive" error | Check `[tool.ruff.lint] select` before adding noqa codes; use a plain justifying comment when the rule isn't selected |
+| Relative `cd build/$$/...` in Bash | Used a relative path with shell PID `$$` | `$$` expanded to empty string in the tool invocation context | Always use absolute paths; capture `$$` into a variable first |
+| File all audit findings as issues, then triage in PRs | Trusted the audit; assumed the backlog would sort itself | 3 of 11 majors were stale → 3 PRs would have "fixed" non-issues (e.g. adding gitleaks when already present) | Triage during audit-consume, not after issue filing |
+| Re-run the audit to "verify itself" | Hoped a second pass would catch the hallucinations | Identical output — strict-mode prompt + same model = same hallucinations | Audits cannot fact-check themselves; verify against the filesystem |
+| Believe "CRITICAL" severity tags | Deferred to the audit's own ranking | A hallucinated "CRITICAL: missing hook" — severity tag does not correlate with accuracy | Severity is a model's prediction, not a filesystem fact |
+| Trust "missing control" from the obviously-named file | Read only `security.yml`, declared "no secrets-scanning in CI" | Gitleaks was a REQUIRED check in `_required.yml` — a file the agent never grepped | For any "missing X" claim, grep the WHOLE `.github/`/repo — controls live in aggregator/required workflows |
+| File/fix at the audit's cited file:line without re-checking | Opened the issue/PR at the exact reported line | Line refs were stale even in TRUE findings (line 18 vs 19; already-fixed `timeout=10`) | Re-verify exact file:line at fix time; a finding can be real while its location is stale |
+| Draft remediation plan from raw audit output | Started planning before Phase 1 verification | 10.3% of findings refuted on disk → PRs that fix non-issues, root causes left untouched | Run Phase 1 verification BEFORE drafting the plan, not before issue filing |
+| Skip the inverse-hypothesis check | Treated the audit's hypothesis space as complete | Missed a `doc_policy.py` linter REJECTING `--squash` — the actual root cause | For every "X is missing", also ask "is X present but wrong?" |
+| Omit the AUDIT CORRECTIONS section | Handed the plan to reviewers without explaining the count gap | Reviewers confused; downstream agents re-introduced refuted findings | Every audit-driven plan needs an AUDIT CORRECTIONS section with refutation evidence |
+| Post REQUEST_CHANGES citing a red CI check | Reviewer agent said CI was red, so drafted REQUEST_CHANGES | The same check was ALSO red on `main` — failure was pre-existing, not PR-introduced | `gh run list --branch main --limit 5` before treating a red check as PR-introduced |
 
 ---
 
@@ -467,73 +637,53 @@ Always rebase before pushing when merge conflicts exist — never wait for CI wi
 | 11–12 (accepted) | No change needed at `max-complexity = 12` |
 | > 12 | `# noqa: C901  # <rationale>` on the `def` line |
 
-### Mypy Config Reference
+### Key Config & Parameter Reference
 
 ```toml
+# pyproject.toml — quality-gate anchors
 [tool.mypy]
-python_version = "3.11"
-warn_return_any = true
-warn_unused_configs = true
 disallow_untyped_defs = true
 check_untyped_defs = true
-explicit_package_bases = true
-mypy_path = "."
-exclude = "<excluded-dir>/"
-
-# Narrow override — replace broad glob with explicit list
-[[tool.mypy.overrides]]
-module = [
-    "tests.unit.adapters.*",
-    "tests.unit.analysis.*",
-    # ... one entry per unannotated subdir
-]
+[[tool.mypy.overrides]]                 # narrow override: explicit list, not broad glob
+module = ["tests.unit.adapters.*", "tests.unit.analysis.*"]  # one entry per unannotated subdir
 disable_error_code = ["no-untyped-def"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 12                      # pragmatic threshold for orchestration code
 ```
 
-### Markdownlint Config Reference
-
 ```yaml
-# .markdownlint.yaml
-default: true
-
-MD024:
-  siblings_only: true
-
-# Optional companions for changelog-heavy repos:
+# .markdownlint.yaml — MD024 fix + changelog companions
+MD024: { siblings_only: true }
 MD013: false
-MD033:
-  allowed_elements: [br, details, summary]
+MD033: { allowed_elements: [br, details, summary] }
 MD034: false
 ```
 
-### Batch Fix Parameters
+**Batch fix:** 5–12 low-complexity issues per PR; read all files before editing; Python `re.sub` for
+10+ bulk replacements; validate changed lines via `git diff`.
 
-```yaml
-issues_per_batch: 8          # Sweet spot: 5–12
-files_affected: 9            # Typically 8–12
-complexity_level: low        # Text/comment/docstring only — no refactoring
-read_before_edit: true       # Always
-use_python_script: true      # For 10+ bulk replacements
-validate_with_git_diff: true # Check only changed lines
-```
-
-### Deprecation Gate Verification Commands
+**Deprecation gate / post-fix verification:**
 
 ```bash
-# Confirm count is 0 before promoting to exit 1
+# Deprecation: count MUST be 0 before promoting ::warning:: → ::error:: + exit 1
 count=$(grep -rn "<DeprecatedSymbol>" . --include="*.py" --exclude-dir=".pixi" \
-  | grep -v "<definition_file>" | grep -v "# deprecated" | grep -v "(deprecated)" \
-  | wc -l); echo "$count"
-
-# Run tests after CI step change
+  | grep -v "<definition_file>" | grep -v "# deprecated" | grep -v "(deprecated)" | wc -l); echo "$count"
+# After any production-code or migration fix, run tests + pre-commit on changed files
 <package-manager> run python -m pytest tests/ -v
 ```
+
+**Audit verification metrics:** 10–30% of strict-audit/reviewer findings are hallucinated
+(3/11, ~3/16, 3/29 refuted across three sessions); ~30s verify per finding vs ~30 min per
+false-positive PR; post-remediation audit moved a repo 82% → 86% across 15 dimensions.
 
 ## Verified On
 
 | Project | Context |
 | --- | --- |
-| ProjectScylla | narrow-mypy-override-subset (PR #1316); testing-regression-guard (PR #1968) |
+| ProjectScylla | narrow-mypy-override-subset (PR #1316); testing-regression-guard (PR #1968); production-code-quality-fixes (issue #757, PR #891) |
 | ProjectOdyssey | enable-mypy-check-untyped-defs (PR #4036); batch-fix-implementation; fix-placeholder-code-ci (PR #3017); ruff-c901-mccabe-complexity |
 | ProjectAgamemnon | markdownlint-md024-siblings-only-for-changelogs (PR #404) |
+| ProjectHephaestus | post-remediation-audit (82% → 86%, 358 tests); verify-audit-findings-before-acting (strict-full audits 2026-05-26/27/31, 10–30% findings refuted) |
+| AchaeanFleet | verify-audit-findings-before-acting (Dependabot review session — 2 reviewer agents cited pre-existing main-branch CI failures as PR blockers; PR #688 flipped to APPROVE) |
 | HomericIntelligence (ecosystem) | ci-deprecation-enforcement (PR #834); testing-regression-guard sweep (PR #5385, #5387) |
