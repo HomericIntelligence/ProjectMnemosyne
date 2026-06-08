@@ -2,6 +2,31 @@
 
 # History: multi-repo-pr-automation-loop-orchestration
 
+## v1.1.0 (2026-06-07)
+
+**Changed by:** PR #1090 closes #1088 — BLOCKED early-exit in `_wait_for_pr_terminal`
+**Verification:** verified-ci (mypy 320 files clean, ruff clean, 3402 unit tests passed)
+
+### What changed
+
+- Extended `_wait_for_pr_terminal` terminal-state set to include `BLOCKED`
+- Added BLOCKED early-exit logic (description + code pattern) guarded by both `_failing_required_check_names` AND new `_pending_required_check_names` helper
+- Added new `_pending_required_check_names` helper explanation (checks `status != "completed"` for required checks)
+- Documented caller handling: `_drive_issue` → `WorkerResult(success=True)`; `_check_arming_on_drive_start` → same as TIMEOUT
+- Added Failed Attempts row: "BLOCKED early-exit guarded only by `not failing`" — why the guard without pending check is wrong
+- Added Results table row: PR #1090 closes #1088
+- Updated Outcome field to include PR #1090 in the hardening chain
+- Updated Verified On table for driver honest-success path row
+- Updated description field trigger (8) for BLOCKED poll behavior
+- Added tags: `blocked-pr-early-exit`, `pending-required-checks`, `wait-for-pr-terminal`
+- Version bumped 1.0.0 → 1.1.0 (minor: new finding, new method, new caller handling)
+
+### Why
+
+`_wait_for_pr_terminal` only exited early for DIRTY/CONFLICTING states. BLOCKED (branch protection gate — e.g. unresolved required review threads) had no early exit, causing the bot to poll every ~60s for 30 minutes when a PR could never auto-merge because of unresolved review threads. The guard requires BOTH failing=empty AND pending=empty because GitHub reports `BLOCKED` for both (a) branch-protection gates (permanent until resolved) and (b) required checks still in-flight (transient — must keep polling).
+
+---
+
 ## v1.0.0 (2026-06-07)
 
 Merged 7 skills into this canonical:
