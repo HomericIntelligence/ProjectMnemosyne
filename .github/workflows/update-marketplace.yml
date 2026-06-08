@@ -1,13 +1,10 @@
 name: Update Marketplace
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'skills/**'
-      - 'plugins/**'
-      - '!.claude-plugin/marketplace.json'
+  schedule:
+    # Weekly, Sunday 00:00 UTC — regenerates marketplace.json on a cadence so it
+    # self-heals even when individual merges don't trigger a regeneration.
+    - cron: '0 0 * * 0'
   workflow_dispatch:
 
 permissions:
