@@ -3,7 +3,7 @@ name: pixi-runtime-env-gotchas
 description: "Use when: (1) pixi silently re-solves the shared .pixi/envs/default and wipes the pip install -e . editable install mid-run after a worktree edit to pyproject.toml, (2) CI logs show 'Saved cache with ID -1' or cache hits are inconsistent despite cache: true in setup-pixi, (3) adding a second actions/cache over .pixi poisons a locked pixi env (downgrades packages, fails pip-audit), (4) a pre-commit hook invoking 'pixi run <command>' resolves to the system-installed binary instead of the project's pixi env binary because dev-install was not run, (5) GLIBC_PRIVATE linker errors appear when using system OpenSSL with a pixi conda-forge compiler toolchain."
 category: debugging
 date: 2026-06-07
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 history: pixi-runtime-env-gotchas.history
 tags:
@@ -144,6 +144,35 @@ pixi install && rm -rf build/debug && cmake --preset debug && cmake --build --pr
    _assert_editable_install_present()
    ```
 
+**Permanent fix (eliminate the failure mode, not just react to it).** The
+`dev-install` task + pre-flight check is a *reactive* posture: it recovers from
+a wipe but does not prevent the next one. The *permanent* fix declares the
+editable install natively so it lives in `pixi.lock` and every env-resolve
+preserves it:
+
+```toml
+# pixi.toml
+[pypi-dependencies]
+<pkg> = { path = ".", editable = true }
+```
+
+This entry is, however, the same one that historically caused perpetual
+`pixi.lock` churn under `hatch-vcs` dynamic versioning — so re-adding it alone
+will re-introduce the churn. The combined permanent fix is therefore:
+
+1. Migrate the project to **pixi lockfile v7** first (requires **pixi
+   >=0.68.0**). Lockfile v7 drops the source-dependency input hashes that
+   caused the churn, so the self-reference can safely return.
+2. Then re-add `<pkg> = { path = ".", editable = true }` under
+   `[pypi-dependencies]`.
+3. Drop the `[tasks] dev-install = "pip install -e . --no-deps"` line.
+4. Verify on a clean tree: `pixi install && git diff --exit-code pixi.lock`
+   must exit 0, and `pixi run python -c "import <pkg>"` must succeed with **no**
+   preceding `dev-install`.
+
+Until this combined migration is validated end-to-end on a given project, keep
+the reactive posture (the `dev-install` task AND the Step 6 pre-flight check).
+
 #### (B) `cache: true` in setup-pixi is unreliable (non-locked workflows)
 
 `prefix-dev/setup-pixi@v0.9.x` with `cache: true` uses an internal caching mechanism that can silently fail, logging `Saved cache with ID -1` — the cache is never saved and every CI run rebuilds from scratch. The fix is to drop `cache: true` and add an explicit `actions/cache@v5` over BOTH paths pixi uses, keyed on the lockfile:
@@ -249,6 +278,7 @@ compiler.version=14       # match pixi, NOT 13
 | Continue the swarm run after the first `ModuleNotFoundError` | Assumed a flaky import | Every repo started after the env-resolve timestamp failed identically; the loss compounded | A sharp before/after cliff at one timestamp is structural, not flaky — stop and investigate env state |
 | Re-run `pixi install` alone to fix the wiped editable install | `pixi install` builds the env from `pixi.lock` | It does NOT run the `dev-install` task; the editable install stays missing | `pixi install` and `pixi run dev-install` are different operations; you need the latter after any env-resolve |
 | Run `pixi run dev-install` from inside a swarm worktree | Recovery attempted from the worktree that triggered the re-solve | The worktree's `pyproject.toml` re-triggers another re-solve | Always run `pixi run dev-install` from the parent / clean worktree |
+| Add `pip install -e .` to a CI / pre-commit hook to "prevent" the wipe | Treated a reactive re-install hook as a preventive guard | A hook only runs on commit/CI; it does NOT rescue a driver already running with a stale `sys.path` — the wipe happens mid-run, long after any hook fired | Reactive re-install ≠ prevention. The only preventive fix is the native `[pypi-dependencies] <pkg> = { path = ".", editable = true }` entry (on lockfile v7 / pixi >=0.68.0) so the editable install lives in `pixi.lock` |
 | Keep `cache: true` in setup-pixi | Used `prefix-dev/setup-pixi@v0.9.4` with `cache: true` | Fails silently; logs "Saved cache with ID -1"; no cache ever saved | Never use `cache: true` — use an explicit `actions/cache` (non-locked case) |
 | Cache only `.pixi` | Cached `.pixi`, skipped `~/.cache/rattler/cache` | Pixi re-downloads packages on every run even on a `.pixi` hit | Must cache BOTH paths or the cache is incomplete |
 | Hash `pixi.toml` as the cache key | Used `hashFiles('pixi.toml')` | `pixi.toml` doesn't encode resolved versions; false-positive cache hits | Use `pixi.lock` for precise invalidation |

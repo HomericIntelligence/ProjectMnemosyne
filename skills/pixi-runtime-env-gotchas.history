@@ -1,6 +1,19 @@
 <!-- markdownlint-disable MD024 -->
 # pixi-runtime-env-gotchas — History
 
+## v1.1.0 (2026-06-07)
+
+restore permanent editable-install fix + reactive-vs-preventive nuance (nuance audit pass 2)
+
+- Added a "Permanent fix" subsection under failure mode (A): the native
+  `[pypi-dependencies] <pkg> = { path = ".", editable = true }` declaration
+  combined with the pixi lockfile-v7 / pixi >=0.68.0 migration (avoids
+  re-introducing `hatch-vcs` lockfile churn). The canonical previously
+  documented only the reactive `dev-install` + pre-flight-check posture.
+- Added a Failed Attempts row capturing the reactive-vs-preventive nuance:
+  adding `pip install -e .` to a CI/pre-commit hook does NOT rescue a driver
+  that is already running with a stale `sys.path`.
+
 ## v1.0.0 (2026-06-07)
 
 Initial consolidation. Merged 4 pixi runtime-environment skills into one canonical:
