@@ -3,7 +3,7 @@ name: mojo-tensor-unit-test-and-gradient-checking
 description: "Use when: (1) writing or extending Mojo tensor unit tests (dtype-aware string/repr, BFloat16 NaN canonicalization, UInt bitwise boundary tests, view vs copy semantics in slice tests), (2) re-enabling NOTE-disabled or TODO-stubbed Mojo test files and resolving TODO(#N) markers, (3) writing numerical gradient checks for conv2d, depthwise conv2d, batch norm, layer norm, or pooling backward passes in Mojo, (4) a gradient check reports analytical≈0 vs numerical≈nonzero for a normalization layer (often caused by symmetric weight initialization), (5) adding end-to-end convergence tests as a complement to per-op finite-difference checks, (6) diagnosing symmetric-weight-init dead-symmetry pathology where uniform-fill weights produce algebraically zero gradients to early layers, (7) adding hardware-guarded BF16 precision recommendations to dtype selection functions."
 category: testing
 date: 2026-06-07
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 history: mojo-tensor-unit-test-and-gradient-checking.history
 tags:
@@ -154,6 +154,26 @@ disable pattern (stub `main()` printing "SKIPPED", `NOTE: temporarily disabled`,
 uncomment/implement. Common Mojo syntax fixes: `shape.append(4)` not `shape[0]=4`; list literals
 `[1,2,3]` not `List[Int](1,2,3)`; DataLoader requires 2D input `[n_samples, feature_dim]`.
 
+**A7 — Value-correctness gap after `as_contiguous()`.** When an existing test only verifies
+`is_contiguous()` and `_strides` after `as_contiguous()`, it never checks that the values were
+actually reordered. Build the tensor with `arange + reshape + transpose` (predictable values),
+derive the expected layout from the transpose stride mapping, and append per-element
+`assert_almost_equal` calls after the stride assertions. For `(rows=3, cols=4)` transposed to
+`(4, 3)`, the contiguous result follows `c[j,i] = i*cols + j`:
+
+```mojo
+# Original (3,4) row-major: a[i,j] = i*4 + j (values 0..11)
+# After transpose to (4,3): t[j,i] = a[i,j]; row 0 = col 0 of original: 0, 4, 8
+assert_almost_equal(c._get_float64(0), 0.0, 1e-6, "c[0,0] should be 0")
+assert_almost_equal(c._get_float64(1), 4.0, 1e-6, "c[0,1] should be 4")
+assert_almost_equal(c._get_float64(2), 8.0, 1e-6, "c[0,2] should be 8")
+assert_almost_equal(c._get_float64(3), 1.0, 1e-6, "c[1,0] should be 1")
+```
+
+Rule: assert values on the contiguous result `c`, NOT on the non-contiguous view `t` —
+`_get_float64(i)` reads flat memory ignoring strides, so on `t` it returns the pre-transpose
+layout and gives false positives.
+
 #### B. Gradient / Backward-Pass Finite-Difference Checking
 
 **B1 — The normalization cancellation problem.** For any mean-centering normalization layer,
@@ -289,6 +309,7 @@ large+no-BF16→float16 (Apple guard), large+no-FP16→float32.
 | Test `0xFF80` as negative BF16 NaN | Treated as negative NaN | `0xFF80` is -Inf (mantissa=0) | BF16 NaN needs exp=0xFF AND mantissa≠0; negative quiet NaN is `0xFFC0` |
 | `dtype.is_integral()` for int dtype check | Called `.is_integral()` | Codebase never uses this pattern | Use explicit `== DType.xxx` comparisons to match existing style |
 | Assumed `__getitem__(Slice)` returns view | Asserted `_is_view == True` on `tensor[2:8]` | `__getitem__(Slice)` returns a copy | Use `tensor.slice(a, b)` for write-through views |
+| Asserted values on non-contiguous view `t` after transpose | Read `t._get_float64(i)` before `as_contiguous()` | `_get_float64(i)` reads flat memory ignoring strides — returns pre-transpose layout | Assert values on the contiguous result `c`, NOT the non-contiguous view `t` |
 | Creating new file instead of extending | Created `test_uint_overflow.mojo` | `test_unsigned.mojo` already had the structure | Extend existing test files; don't duplicate |
 | `ones_like(output)` for normalization grad | Uniform upstream grad for BN/LN backward | `sum(x_norm)=0`; analytical grad exactly zero; numerical ≈0.009 noise | Never use uniform grad_output for a zero-mean normalization layer |
 | Increase atol to hide mismatch | Raised tolerance 1e-5→1e-2 | Masks the real issue without validating correctness | Fix the test setup, not the threshold |
@@ -321,10 +342,13 @@ from shared.core.reduction import sum as reduce_sum
 ### Gradient Return Types
 
 ```text
-GradientTriple (Conv2d / DepthwiseConv2d backward):
+GradientTriple (Conv2d / DepthwiseConv2d backward, with bias):
   .grad_input   → gradient w.r.t. input x
   .grad_weights → gradient w.r.t. kernel/weights (NOT .grad_kernel for depthwise)
   .grad_bias    → gradient w.r.t. bias
+GradientPair (a.k.a. Conv2dNoBiasBackwardResult — no-bias conv backward path):
+  .grad_a → gradient w.r.t. input
+  .grad_b → gradient w.r.t. kernel
 layer_norm_backward / batch_norm2d_backward return tuples:
   result[0] → grad_input, result[1] → grad_gamma, result[2] → grad_beta
 ```

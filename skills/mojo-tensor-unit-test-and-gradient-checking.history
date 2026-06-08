@@ -2,6 +2,17 @@
 
 # mojo-tensor-unit-test-and-gradient-checking — History
 
+## v1.1.0 (2026-06-07)
+
+restore as_contiguous Pattern 7 + GradientPair return type (nuance audit pass 2)
+
+- Added Detailed Step A7 (value-correctness gap after `as_contiguous()`): transpose stride mapping
+  `c[j,i] = i*cols + j` with the worked (3,4)->(4,3) example, and the rule to assert values on the
+  contiguous result `c`, NOT the non-contiguous view `t`.
+- Added `GradientPair` (a.k.a. `Conv2dNoBiasBackwardResult`) with fields `.grad_a` / `.grad_b` to
+  the Gradient Return Types section (no-bias conv backward path).
+- Added Failed Attempts row for the `_get_float64`-ignores-strides lesson.
+
 ## v1.0.0 (2026-06-07)
 
 Consolidated 4 Mojo testing skills into one canonical covering tensor unit-test patterns, numerical gradient/backward-pass checking, symmetric-weight-init dead-symmetry diagnosis, and hardware-guarded BF16 precision recommendation. Absorbed skills:
