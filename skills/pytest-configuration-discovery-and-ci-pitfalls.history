@@ -1,0 +1,1500 @@
+<!-- markdownlint-disable MD024 -->
+
+# pytest-configuration-discovery-and-ci-pitfalls — History
+
+## v1.0.0 (2026-06-07)
+
+Consolidated 6 overlapping pytest configuration / discovery / CI skills into one general
+canonical. Absorbed originals are preserved verbatim below.
+
+Merged skills:
+- pytest-configuration-and-isolation-pitfalls
+- pytest-testpaths-integration-discovery
+- ci-pytest-pip-install-pyproject-addopts-trap
+- ci-stale-pattern-cleanup
+- pytest-watch-to-watcher-dependency-replacement
+- fix-isolation-mode-export-data-path
+
+---
+
+## Superseded from pytest-configuration-and-isolation-pitfalls
+
+**Original date/version:** 2026-05-19 / 1.0.0
+
+```yaml
+name: pytest-configuration-and-isolation-pitfalls
+description: "Use when: (1) CI Python test job hangs until timeout with no explicit failure, (2) pytest warns 'ignoring pytest config in pyproject.toml!' or a pytest.ini coexists with pyproject.toml, (3) test collection count is suspiciously low or ImportError on a scripts/ module, (4) coverage gate fires for a partial test run (e.g., pytest -m integration) but full-suite coverage is fine, (5) a test is flaky only in the full suite and uses class-level patch.object, (6) YAML fixture timeouts are far too conservative and inflate CI job duration, (7) a test suddenly fails in CI with no code changes and references hardcoded calendar dates or Unix timestamps."
+category: testing
+date: 2026-05-19
+version: "1.0.0"
+user-invocable: false
+history: pytest-configuration-and-isolation-pitfalls.history
+tags: [pytest, configuration, isolation, coverage, mock, fixture, timeout, date-bomb, pythonpath, fail-under]
+```
+
+# pytest Configuration and Isolation Pitfalls
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-19 |
+| **Objective** | Canonical reference for pytest setup/configuration problems that cause mysterious test failures independent of the code under test |
+| **Outcome** | Synthesised from 6 absorbed skills; covers pytest.ini shadowing, pythonpath gaps, coverage gate misfires, mock state leakage, fixture timeout over-inflation, and date-bomb tests |
+| **Verification** | verified-ci (multiple projects) |
+
+## When to Use
+
+- CI Python test job hits `timeout-minutes` gate on every run with no explicit failure message
+- pytest log shows `configfile: pytest.ini (WARNING: ignoring pytest config in pyproject.toml!)`
+- Test collection count is artificially low (e.g., ~1691 vs ~3257 expected); `ImportError` on a `scripts/` module at collection time
+- Coverage gate fires with "Required test coverage of X% not reached" from a partial-run job (e.g., `-m integration`) while full-suite coverage is fine
+- A test is **flaky only in the full suite**, passes in isolation, and the test class uses `patch.object(instance.__class__, ...)`
+- Batch E2E runs finish but YAML fixture `timeout_seconds` values are far too conservative, causing job-level timeouts
+- A test was passing for weeks or months and suddenly fails with no code changes; the test references a specific calendar date or hardcoded Unix timestamp
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1 — Detect pytest.ini shadowing pyproject.toml
+pytest --co -q 2>&1 | grep "configfile:"
+ls pytest.ini setup.cfg tox.ini 2>/dev/null
+git rm pytest.ini  # if pyproject.toml [tool.pytest.ini_options] is authoritative
+
+# 2 — Detect suppressed test collection (pythonpath gap)
+pixi run pytest --collect-only 2>&1 | grep ERROR
+# Fix: add the missing directory to pythonpath in pyproject.toml
+# [tool.pytest.ini_options] pythonpath = [".", "scripts"]
+
+# 3 — Detect coverage gate partial-run trap
+grep -rn "fail_under\|cov-fail-under" pyproject.toml .github/workflows/ pytest.ini setup.cfg 2>/dev/null
+# Fix: remove fail_under from pyproject.toml; put --cov-fail-under only on the full-suite CI step
+
+# 4 — Detect class-level mock state leakage
+grep -rn "patch.object.*__class__" tests/
+# Fix: add autouse teardown fixture with patch.stopall() to the leaking class
+
+# 5 — Detect date-bomb tests
+grep -rn "17[6-9][0-9]\{7\}\|18[0-2][0-9]\{7\}" tests/
+grep -rn '"[A-Z][a-z]* [0-9]\{1,2\},\? [0-9]\{1,2\}[ap]m"' tests/
+```
+
+### Pitfall 1 — pytest.ini Silently Shadows pyproject.toml
+
+**Root cause**: pytest's config-file precedence gives `pytest.ini` absolute priority; when it exists, all `[tool.pytest.ini_options]` in `pyproject.toml` are completely ignored — including `pythonpath`, `asyncio_mode`, and `addopts`. A missing `pythonpath` causes `ModuleNotFoundError` at collection; in `asyncio_mode = auto` the dangling event loop makes pytest hang forever.
+
+```bash
+# Check which config is active
+pytest --co -q 2>&1 | grep -E "configfile:|WARNING"
+
+# Audit both files
+cat pytest.ini
+grep -A 20 '\[tool.pytest.ini_options\]' pyproject.toml
+
+# Fix: delete pytest.ini
+git rm pytest.ini
+git commit -m "fix(test): remove pytest.ini — pyproject.toml is authoritative config"
+
+# Verify
+pytest --co -q 2>&1 | head -20  # should show: configfile: pyproject.toml (no WARNING)
+```
+
+**Config precedence (highest to lowest)**:
+
+```
+pytest.ini          ← WINS — completely silences pyproject.toml
+pyproject.toml      ← [tool.pytest.ini_options] ignored if pytest.ini exists
+setup.cfg           ← [tool:pytest] section
+tox.ini             ← [pytest] section
+```
+
+### Pitfall 2 — Missing Directory on pythonpath Suppresses Collection
+
+**Root cause**: `scripts/` (or any non-standard directory) not listed in `[tool.pytest.ini_options] pythonpath` causes `ImportError` at collection. pytest silently skips the failing file — test count drops with no obvious error unless you inspect `--collect-only` output.
+
+```bash
+# Diagnose
+pixi run pytest --collect-only 2>&1 | grep ERROR
+
+# Fix in pyproject.toml
+# Before:  pythonpath = ["."]
+# After:   pythonpath = [".", "scripts"]
+
+# Remove manual workaround from test files (if present)
+# Delete lines like: sys.path.insert(0, str(Path(__file__).parent / "scripts"))
+
+# Verify
+pixi run pytest tests/unit/analysis/test_export_data.py -v --collect-only
+pixi run pytest -x
+pre-commit run --all-files
+```
+
+**Diagnostic signal**: hook/CI test count (~1691) vs direct `pytest` count (~3257) diverge — always compare these when investigating coverage regressions.
+
+### Pitfall 3 — Coverage fail\_under Fires on Partial Runs
+
+**Root cause**: `[tool.coverage.report] fail_under = X` in `pyproject.toml` fires for **every** pytest invocation. A partial-run job (e.g., `pytest -m integration`) naturally covers fewer statements and trips the gate even when full-suite coverage is fine.
+
+```bash
+# Diagnose
+grep -rn "fail_under\|cov-fail-under" pyproject.toml .github/workflows/ pytest.ini setup.cfg 2>/dev/null
+pixi run pytest -m integration --cov | tail -25   # see partial-run coverage
+pixi run pytest --cov | tail -25                  # see full-suite coverage
+
+# Symptom in CI logs
+# FAIL Required test coverage of 80.0% not reached. Total coverage: 78.52%
+# (job name contains "Integration" or similar — partial-run trap)
+```
+
+**Fix — move gate to CI workflow, not pyproject.toml**:
+
+```toml
+# pyproject.toml — REMOVE fail_under; keep everything else
+[tool.coverage.report]
+precision = 2
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:"]
+# DO NOT put fail_under here
+```
+
+```yaml
+# .github/workflows/ci.yml
+- name: Unit tests (full suite, gated)
+  run: pixi run pytest -m "not integration" --cov-fail-under=80
+- name: Integration tests (no gate)
+  run: pixi run pytest -m integration -v   # no --cov-fail-under
+```
+
+**Alternative for partial jobs**: pass `--no-cov` to disable coverage measurement entirely for the partial run.
+
+### Pitfall 4 — Class-Level Patch Leaks Mock State Between Tests
+
+**Root cause**: `patch.object(instance.__class__, "method", ...)` patches the **class**, not the instance. If a test fails mid-context-manager, the patch remains active for all subsequent tests — even in different classes — causing order-dependent failures.
+
+```bash
+# Find leaking patterns
+grep -rn "patch.object.*__class__" tests/
+```
+
+**Fix — add autouse teardown with patch.stopall()**:
+
+```python
+from collections.abc import Generator
+from unittest.mock import patch
+import pytest
+
+class TestWithClassLevelPatches:
+    @pytest.fixture(autouse=True)
+    def _isolate(self) -> Generator[None, None, None]:
+        """Ensure no class-level mock state bleeds into subsequent tests."""
+        yield
+        patch.stopall()  # safe to call even when no patches are active
+```
+
+`patch.stopall()` stops all patches started via `patch()` or `patch.object()` that haven't been explicitly stopped. Move per-method `from unittest.mock import patch` imports to module level after adding this fixture.
+
+### Pitfall 5 — YAML Fixture Timeouts Over-Inflated
+
+**Root cause**: YAML test fixtures are often created with a generic default `timeout_seconds = 300` that is far too conservative. When many fixtures use this default, the cumulative job timeout is inflated (e.g., ~147,900s vs ~29,820s needed), causing CI jobs to time out at the pipeline level.
+
+**Calibration formula**:
+
+```
+timeout_seconds = max(180, ceil(actual_duration * 3 / 60) * 60)
+```
+
+- Multiplier: 3× observed duration
+- Granularity: round up to nearest 60s
+- Floor: 180s minimum
+
+```python
+import math
+
+def calibrate_timeout(actual_duration_seconds: float) -> int:
+    raw = actual_duration_seconds * 3
+    rounded = math.ceil(raw / 60) * 60
+    return max(180, rounded)
+```
+
+```bash
+# Collect observed durations
+grep -r "duration_seconds" tests/fixtures/results/ | sort
+
+# CRITICAL: check for hardcoded assertions referencing old default
+grep -rn "timeout_seconds" tests/unit/
+grep -rn "== 300" tests/unit/
+# Update any hardcoded assertions to the new floor (180) or make data-driven
+
+# Commit
+git add tests/fixtures/
+git commit -m "test(fixtures): calibrate timeout_seconds using 3x observed duration formula"
+```
+
+### Pitfall 6 — Date-Bomb: Hardcoded Timestamps That Expire
+
+**Root cause**: Tests that hardcode a Unix epoch or calendar date string (e.g., `"May 8, 5pm"` / `1778284800`) with a fixed tolerance (e.g., `< 86400`) pass when written but detonate once the system clock moves past the tolerance window.
+
+```bash
+# Detect date bombs
+grep -rn "17[6-9][0-9]\{7\}\|18[0-2][0-9]\{7\}" tests/
+grep -rn "abs(.*parsed.*-.*[0-9]\{10\})" tests/
+grep -rn '"[A-Z][a-z]* [0-9]\{1,2\},\? [0-9]\{1,2\}[ap]m"' tests/
+```
+
+**Fix — make tests temporally reflexive**:
+
+```python
+# BAD — date bomb
+def test_parses_date():
+    parsed = parse_date_string("May 8, 5pm")
+    expected_epoch = 1778284800  # hardcoded!
+    assert abs(parsed - expected_epoch) < 86400
+
+# GOOD — temporally reflexive
+from datetime import datetime, timedelta, timezone
+
+def test_parses_date():
+    now = datetime.now(timezone.utc)
+    future = now + timedelta(days=2)
+    input_str = future.strftime("%B %-d, %-I%p").lower()  # e.g., "may 12, 4pm"
+    expected_epoch = future.timestamp()
+    parsed = parse_date_string(input_str)
+    assert abs(parsed - expected_epoch) < 86400
+```
+
+**Template for any relative-date parser test**:
+
+```python
+from datetime import datetime, timedelta, timezone
+
+def test_parses_<unit>_relative():
+    now = datetime.now(timezone.utc)
+    target = now + timedelta(<offset>)
+    input_str = target.strftime("<format>")
+    expected = target.timestamp()
+    parsed = parse_date_string(input_str)
+    assert abs(parsed - expected) < <tolerance_seconds>
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Increase CI `timeout-minutes` | Raised job timeout from 10 to 20 min to stop the hang | Rejected by team; root cause was not slow tests but infinite hang from dangling asyncio event loop | Never mask a hang by increasing timeout — diagnose it |
+| Inspect test source for slow `asyncio.sleep` | Found tests with `asyncio.sleep(10.0)` and filed as issue | These were not the cause; they run fine once imports succeed | Collection failures cause hangs independent of test execution time |
+| Lower `fail_under` to match partial-run coverage | Edited `pyproject.toml` from 80 to 78 | Next full-suite run still shows 96%; next partial run hits 78% again with no explanation | Don't lower the gate — fix the configuration so the gate only applies to full-suite runs |
+| Remove `[tool.coverage.report]` entirely | Wholesale delete of the block | Removed `precision` and `exclude_lines` along with `fail_under` | Surgical fix: delete only the `fail_under` line, keep the rest of the block |
+| Add teardown only to the wrong test class | Added `_isolate` fixture to `TestEvalOrchestratorEndToEnd` | The leak originates in `TestEvalOrchestratorWithFixture`; fixing the wrong class has no effect | `grep -rn "patch.object.*__class__"` to find the source, not the symptom class |
+| Use `patch.object(instance, "method", ...)` to fix leakage | Would fix root cause | Out of scope — the test predated the session | Autouse `_isolate` fixture with `patch.stopall()` is the least-invasive fix |
+| Increase date tolerance from 24h to 7 days | Widen the tolerance window on a hardcoded timestamp | Defers the failure by ~5 days; does not eliminate it | Tolerance widening is a band-aid; make the test temporally reflexive |
+| `sys.path.insert` workaround in test file | Manual path manipulation at line 4-9 of test file | Works for direct runs but not for hooks or CI that don't inherit the same env | Fix belongs in `pyproject.toml pythonpath`, not in test source |
+
+## Results & Parameters
+
+### Authoritative pyproject.toml Config Reference
+
+```toml
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = [".", "scripts"]   # include all non-standard source dirs
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = ["--cov=<package>", "--cov-report=term-missing"]
+# No fail_under here — put --cov-fail-under only in CI workflow
+
+[tool.coverage.run]
+source = ["<package>"]
+
+[tool.coverage.report]
+precision = 2
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:"]
+# DO NOT add fail_under — it fires for every pytest invocation
+```
+
+### Coverage Gate Placement Reference
+
+| Run command | Tests run | Typical cover | Gate-safe at `fail_under=80`? |
+|-------------|-----------|---------------|-------------------------------|
+| `pytest` | All | 96% | YES |
+| `pytest -m "not integration"` | Unit only | 92% | YES |
+| `pytest -m integration` | Integ only | ~78% | NO — partial-run trap |
+| `pytest tests/foo.py::TestBar` | 5 tests | ~50% | NO — extreme partial-run |
+| `pytest --cov-append` (cumulative) | Cumulative | 96% | YES |
+
+### Fixture Timeout Calibration Table
+
+| Observed Duration | Raw (3×) | Rounded to 60s | Final |
+|-------------------|----------|----------------|-------|
+| 28s | 84s | 120s | 180s (floor) |
+| 45s | 135s | 180s | 180s |
+| 72s | 216s | 240s | 240s |
+| 150s | 450s | 480s | 480s |
+| 300s | 900s | 900s | 900s |
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectKeystone | CI `Python Tests` job hung on every run; branch `fix/security-scan-gitleaks-jq` | pytest.ini missing `pythonpath`; pyproject.toml had `pythonpath = ["src"]` |
+| ProjectScylla | Issue #1137, PR #1190 — scripts/ pythonpath gap | Test count dropped from 3257 to 1691; fixed by adding `"scripts"` to `pythonpath` |
+| ProjectHermes | PR #475 — `fail_under = 80` added to pyproject.toml; integration-only CI jobs began failing at 78.52% | Worked around by adding integration tests; real fix deferred to follow-up |
+| ProjectScylla | Issue #1131 — `patch.object.__class__` leaking mock state | 3799 tests all pass after autouse `_isolate` fixture added |
+| ProjectHephaestus | PR #884 — 47 YAML fixture files with `timeout_seconds = 300` default | Total timeout sum reduced from ~147,900s to ~29,820s (~80% reduction) |
+| ProjectHephaestus | PR #367 — `test_rate_limit.py` hardcoded epoch `1778284800` | Test began failing in CI after the system clock passed May 8, 2026 5pm UTC |
+
+---
+
+## Superseded from pytest-testpaths-integration-discovery
+
+**Original date/version:** 2026-06-04 / 1.0.0
+
+```yaml
+name: pytest-testpaths-integration-discovery
+description: "Use when: (1) developers run bare `pytest` and only unit tests are discovered, (2) integrating a new `tests/integration/` suite but default test invocation skips it, (3) you want to enable marker-based test selection (`-m unit`, `-m integration`) without fragmenting test discovery, (4) CI test counts differ from local collection counts, (5) you need consistent test discovery behavior across all invocation patterns."
+category: testing
+date: 2026-06-04
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [pytest, testpaths, test-discovery, integration-tests, markers, pytest-markers]
+```
+
+# pytest testpaths Integration Discovery
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-04 |
+| **Objective** | Ensure integration tests are discovered in default pytest invocation by expanding `testpaths` to include `tests/integration` alongside `tests/unit`, and provide reliable marker-based test selection (`-m unit`, `-m integration`) |
+| **Outcome** | Default `pytest` discovers all test suites (3406 tests: 3188 unit + 218 integration); developers can selectively run suites; CI workflows unaffected; coverage gate remains solid at 84.80% |
+| **Verification** | verified-ci (full test suite passed with 3387 passed, 19 skipped) |
+
+## When to Use
+
+- Developers run bare `pytest` and only unit tests are discovered; integration tests silently skipped
+- Integrating a new `tests/integration/` suite but want it in the default test discovery without explicit CLI flags
+- You want marker-based test selection (`pytest -m unit`, `pytest -m integration`) to work cleanly without test discovery gaps
+- CI test counts differ from local counts; suspicion is that `testpaths` is restricting discovery
+- You need **consistent discovery behavior** across all pytest invocation patterns:
+  - `pytest` (default) → all suites
+  - `pytest -m unit` → unit only
+  - `pytest -m integration` → integration only
+  - `pytest --collect-only` → all suites
+  - CI `pytest tests/unit` → unit only (explicit path overrides testpaths)
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1 — Expand testpaths to include both unit and integration suites
+# pyproject.toml
+[tool.pytest.ini_options]
+testpaths = ["tests/unit", "tests/integration"]
+# (was: testpaths = ["tests/unit"])
+
+# 2 — Add module-level markers to all integration test files
+# Add at the top of tests/integration/test_*.py
+import pytest
+pytestmark = pytest.mark.integration
+
+# 3 — Run collection to verify all tests are discovered
+pytest --collect-only | grep -E "test session|collected"
+# Expected: collected 3406 items
+
+# 4 — Verify marker-based selection works
+pytest -m unit --collect-only | wc -l
+pytest -m integration --collect-only | wc -l
+pytest -m "not integration" --collect-only | wc -l
+
+# 5 — Run full suite to verify coverage still meets gate
+pytest --cov --cov-report=term-missing | tail -10
+# Expected: coverage >= 80%
+
+# 6 — Commit and push
+git add pyproject.toml tests/integration/*.py
+git commit -m "test(discovery): expand testpaths to include integration suite with markers"
+```
+
+### Detailed Steps
+
+**Step 1: Expand testpaths in pyproject.toml**
+
+Edit `[tool.pytest.ini_options]` to include both `tests/unit` and `tests/integration`:
+
+```toml
+[tool.pytest.ini_options]
+# Before: testpaths = ["tests/unit"]
+# After:
+testpaths = ["tests/unit", "tests/integration"]
+pythonpath = [".", "scripts"]
+asyncio_mode = "auto"
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = ["--cov=hephaestus", "--cov-report=term-missing"]
+```
+
+**Why this works**: pytest's `testpaths` is a **list** that supports multiple directories. When pytest runs without an explicit path argument, it searches all directories in testpaths. When CI passes an explicit path (e.g., `pytest tests/unit`), that overrides testpaths — so CI is unaffected.
+
+**Step 2: Add module-level pytest markers to all integration test files**
+
+Add this import at the **very top** of each `tests/integration/test_*.py` file (before all other imports):
+
+```python
+import pytest
+
+pytestmark = pytest.mark.integration
+```
+
+**Example: tests/integration/test_cli_entry_points.py**
+
+```python
+import pytest
+
+pytestmark = pytest.mark.integration
+
+# ... rest of imports and test code
+```
+
+**Why this matters**: The module-level `pytestmark` marker automatically applies the `integration` marker to **every test function** in that file. This enables reliable marker-based selection without per-function decorators.
+
+**Files to update** (all integration test files):
+- `tests/integration/test_cli_entry_points.py`
+- `tests/integration/test_gh_trace_id_propagation.py`
+- `tests/integration/test_package_import.py`
+- `tests/integration/test_*.py` (any new integration files added later)
+
+**Step 3: Verify test discovery**
+
+Run pytest collection and validate test counts:
+
+```bash
+# Collect all tests — should show unit + integration count
+pytest --collect-only -q
+# Output: 3406 items collected in <time>
+
+# Collect unit tests only
+pytest -m unit --collect-only -q | tail -1
+# Output: 3188 items collected
+
+# Collect integration tests only
+pytest -m integration --collect-only -q | tail -1
+# Output: 218 items collected
+
+# Sanity check: unit + integration = total
+# 3188 + 218 = 3406 ✓
+```
+
+**Step 4: Run full test suite to verify coverage**
+
+```bash
+pytest --cov=hephaestus --cov-report=term-missing
+# Expected output (tail -20):
+# ============ 3387 passed, 19 skipped in X.XXXs ============
+# ============ coverage: 84.80% ============
+```
+
+**Coverage gate**: The full-suite coverage MUST exceed the `fail_under` threshold (typically 80%). If it drops below, investigate which new code lacks test coverage.
+
+**Step 5: Verify CI workflows are unaffected**
+
+CI workflows that use explicit paths (e.g., `.github/workflows/ci.yml` with `pytest tests/unit`) will **override** testpaths and run only the specified directory. Verify by examining the CI job:
+
+```bash
+grep -n "pytest" .github/workflows/*.yml
+# Look for lines like:
+# - run: pytest tests/unit --cov --cov-fail-under=80
+# (explicit path tests/unit overrides testpaths setting)
+```
+
+**Why CI is immune**: The pytest documentation states: "when `testpaths` is set, pytest will only look in those directories **if no explicit path is passed**. If you pass a path on the command line, it takes precedence." This means your CI jobs with `pytest tests/unit` or `pytest tests/integration` run exactly what they specify, regardless of the testpaths setting.
+
+**Step 6: Update documentation**
+
+Add a section to README.md under "Testing" or "Development" with marker-based selection examples:
+
+```markdown
+### Test Selection
+
+Run all tests (unit + integration):
+```bash
+pytest
+```
+
+Run only unit tests:
+```bash
+pytest -m unit
+```
+
+Run only integration tests:
+```bash
+pytest -m integration
+```
+
+Run everything except integration tests:
+```bash
+pytest -m "not integration"
+```
+
+Verify test discovery:
+```bash
+pytest --collect-only -q | tail -1
+# Should show: 3406 items collected
+```
+```
+
+### Key Concepts
+
+**testpaths expansion strategy**: Instead of having test discovery split (unit in default, integration in CI-only), expand the default discovery to include all suites. This mirrors the CI behavior and ensures developers see the full test suite locally.
+
+**Marker-based selection**: The `pytestmark = pytest.mark.integration` marker enables reliable filtering **without** forcing developers to use CLI flags. They can run bare `pytest` and get everything; or selectively run suites with `-m unit` / `-m integration` when needed.
+
+**CI immunity via explicit paths**: CI workflows that use explicit paths (e.g., `pytest tests/unit`) automatically override the testpaths setting, so expanding testpaths has zero impact on CI job behavior or test counts.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Use `testpaths = ["tests"]` (parent directory) | Thought a parent-level testpaths would automatically discover subdirectories | pytest treats `tests/` as a single directory; must explicitly list `tests/unit` and `tests/integration` | Always be explicit with testpaths; pytest does not automatically recurse parent directories in the list |
+| Add markers only at import, not module-level | Added `import pytest; pytest.mark.integration(...)` in conftest.py | Per-function decorators required; module-level marker did not propagate to test functions | Use `pytestmark = pytest.mark.integration` at module scope — it auto-applies to all functions in that file |
+| Skip adding markers, rely on testpaths alone | Expanded testpaths but omitted the marker step | `pytest -m unit` still included integration tests because files lacked the `integration` marker | Markers are essential for filtering; testpaths only controls discovery, not selection |
+| Use different marker names per suite | Tried `pytestmark = pytest.mark.slow` for integration tests | Inconsistent naming confuses developers; `integration` is the canonical marker name across the ecosystem | Stick with standard marker names; `integration` is recognized by most pytest plugins |
+| Add marker to only 2 out of 5 integration files | Marked some files but not others | `pytest -m unit` unexpectedly included the unmarked integration files, defeating the whole workflow | **All integration test files must have the marker** — missing markers cause selection failures |
+| Use pytest.ini instead of pyproject.toml testpaths | Set testpaths in pytest.ini to avoid changing pyproject.toml | pytest.ini creates maintenance burden; the canonical pattern is `[tool.pytest.ini_options]` in pyproject.toml | Keep all pytest config in one place (pyproject.toml); avoid redundant configuration files |
+
+## Results & Parameters
+
+### pyproject.toml Configuration Reference
+
+```toml
+[tool.pytest.ini_options]
+# CRITICAL: Include both unit AND integration suites
+testpaths = ["tests/unit", "tests/integration"]
+
+# Support all relative imports in tests
+pythonpath = [".", "scripts"]
+
+# Standard pytest discovery settings
+asyncio_mode = "auto"
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+# Coverage reporting (no fail_under here — apply to CI job only)
+addopts = ["--cov=hephaestus", "--cov-report=term-missing"]
+
+# Register the 'integration' marker to suppress warnings
+markers = [
+    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+]
+```
+
+### Test Discovery Expected Outputs
+
+| Command | Test Count | Details |
+|---------|-----------|---------|
+| `pytest --collect-only -q` | 3406 items | All unit + integration tests |
+| `pytest -m unit --collect-only -q` | 3188 items | Unit tests only (integration filtered out) |
+| `pytest -m integration --collect-only -q` | 218 items | Integration tests only |
+| `pytest -m "not integration" --collect-only -q` | 3188 items | Unit tests only (inverse of integration marker) |
+
+### Test Execution Expected Outputs
+
+| Command | Expected Result | Coverage |
+|---------|---|---|
+| `pytest` | 3387 passed, 19 skipped | 84.80% |
+| `pytest -m unit` | ~3188 passed, ~0 skipped | 92%+ |
+| `pytest -m integration` | ~218 passed, ~19 skipped | ~78% (partial coverage expected) |
+| `pytest --cov --cov-fail-under=80` | Coverage gate passes | Full suite 84.80% > 80% ✓ |
+
+### CI Workflow Example (Unaffected by testpaths Change)
+
+```yaml
+# .github/workflows/ci.yml
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pixi install
+      - name: Run unit tests with coverage gate
+        run: |
+          # Explicit path "tests/unit" overrides testpaths setting
+          # This job is 100% unaffected by testpaths expansion
+          pixi run pytest tests/unit --cov --cov-fail-under=80
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pixi install
+      - name: Run integration tests (no gate)
+        run: |
+          # Explicit path "tests/integration" overrides testpaths setting
+          # This job is 100% unaffected by testpaths expansion
+          pixi run pytest tests/integration -v
+```
+
+### Integration Test File Template
+
+Add this header to every integration test file:
+
+```python
+"""
+Integration tests for [module/feature].
+
+These tests verify [what is being tested] in realistic conditions.
+They require [any special setup, external services, etc.].
+"""
+
+import pytest
+
+# CRITICAL: Module-level marker — applies to all test functions in this file
+pytestmark = pytest.mark.integration
+
+# ... rest of imports and test code
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | Issue #740, PR #925 | Expanded testpaths from `["tests/unit"]` to `["tests/unit", "tests/integration"]`; added markers to 3 integration files; full test suite 3387 passed, 84.80% coverage |
+| ProjectHephaestus | CI workflows (unchanged) | `.github/workflows/ci.yml` jobs use explicit paths (`pytest tests/unit`), so they override testpaths and run exactly what they specify |
+| ProjectHephaestus | Local developer experience | Bare `pytest` now discovers 3406 tests instead of 3188; `pytest -m unit` cleanly excludes integration tests; `pytest -m integration` shows only integration tests |
+
+---
+
+## Superseded from ci-pytest-pip-install-pyproject-addopts-trap
+
+**Original date/version:** 2026-05-09 / 1.0.0
+
+```yaml
+name: ci-pytest-pip-install-pyproject-addopts-trap
+description: "Slim `pip install pytest` CI jobs silently inherit `addopts` from `pyproject.toml` and fail because pytest-cov (or other plugins in addopts) is not installed. Use when: (1) a matrix CI job does `pip install pytest` without the full project env and crashes with 'unrecognized arguments: --cov=...' or 'no module named yaml', (2) a lightweight test job works locally but fails in CI with missing plugin errors, (3) splitting a pixi/poetry test job into a minimal pip-only job starts failing after addopts was set in pyproject.toml."
+category: ci-cd
+date: 2026-05-09
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - pytest
+  - pip-install
+  - addopts
+  - pyproject-toml
+  - pytest-cov
+  - pyyaml
+  - ci-matrix
+  - pixi
+```
+
+# CI pytest `pip install` Trap: `addopts` Inherited from `pyproject.toml`
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-09 |
+| **Objective** | Document the failure mode where a slim `pip install pytest` CI job crashes because `pyproject.toml` injects `--cov=...` or other plugin flags into every pytest invocation |
+| **Outcome** | Identified and fixed in HomericIntelligence/ProjectArgus PRs #289 and #273 |
+| **Verification** | verified-ci |
+
+## When to Use
+
+- A CI job does `pip install pytest` (or a minimal subset) and crashes with `unrecognized arguments: --cov=<module>` or `ERROR: unrecognized arguments: --cov-report=xml`
+- A matrix job that previously worked starts failing after `[tool.pytest.ini_options] addopts = "--cov=..."` was added to `pyproject.toml`
+- A test job fails with `ModuleNotFoundError: No module named 'yaml'` when using `pip install pytest` without the project environment
+- Splitting a pixi/poetry-based test step into a lighter CI job that installs only `pytest`
+- Deciding whether to install `pytest-cov` and `pyyaml` in a pip-only CI job vs. using the full project environment
+
+## Verified Workflow
+
+### Quick Reference
+
+```yaml
+# Option A (quickest fix) — install all required test deps explicitly
+- name: Test exporter
+  run: |
+    pip install pytest pytest-cov pyyaml
+    pytest tests/test_exporter.py
+
+# Option B — override addopts inline to disable inherited flags
+- name: Test exporter
+  run: |
+    pip install pytest
+    pytest -o addopts= tests/test_exporter.py
+
+# Option C (most robust) — use the project's real environment
+- name: Test exporter
+  run: pixi run pytest tests/test_exporter.py
+```
+
+### Detailed Steps
+
+1. **Identify the failure mode**: Check CI logs for either:
+   - `ERRORS ... unrecognized arguments: --cov=<module>` — pytest-cov is missing from the pip install line
+   - `ModuleNotFoundError: No module named 'yaml'` — pyyaml is missing
+
+2. **Locate the `addopts` setting** in `pyproject.toml`:
+   ```toml
+   [tool.pytest.ini_options]
+   addopts = "--cov=exporter --cov-report=xml"
+   ```
+   These flags are injected into **every** pytest invocation, including slim CI jobs that didn't install `pytest-cov`.
+
+3. **Choose a fix pattern**:
+
+   **Option A — Add all missing deps to the `pip install` line** (quickest, good when the job must stay pip-only):
+   ```yaml
+   pip install pytest pytest-cov pyyaml
+   ```
+   Add `pyyaml` if any test file does `import yaml`. Add any other missing plugins similarly.
+
+   **Option B — Disable `addopts` for this specific invocation** (good when you intentionally don't want coverage in this job):
+   ```yaml
+   pytest -o addopts= tests/test_exporter.py
+   ```
+   Warning: this silently disables coverage collection, which may bypass the project's coverage intent.
+
+   **Option C — Use the project's actual environment** (most robust, zero dep-drift):
+   ```yaml
+   run: pixi run pytest tests/test_exporter.py
+   # or: poetry run pytest tests/test_exporter.py
+   ```
+   This inherits all real deps and stays in sync with `pyproject.toml` automatically.
+
+4. **Verify the fix** by re-running the CI job and confirming it exits 0.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Attempt 1 | `pip install pytest pytest-cov` without `pyyaml` | Tests imported `yaml`; `ModuleNotFoundError: No module named 'yaml'` | `pip install pytest pytest-cov` doesn't pull in pyyaml; must list it explicitly |
+| Attempt 2 | `pip install pytest` alone | `pyproject.toml` has `addopts = "--cov=..."` which pytest passes to pytest-cov; pytest-cov not installed → `unrecognized arguments` | `addopts` is read regardless of which environment invokes pytest |
+| Attempt 3 | Removing `--cov` from pytest CLI but keeping `addopts` in `pyproject.toml` | `addopts` overrides CLI; flags re-injected automatically | Must either override `addopts=` at invocation time or remove from `pyproject.toml` |
+
+## Results & Parameters
+
+Verified in HomericIntelligence/ProjectArgus on 2026-05-09:
+- PRs #273 and #289 both hit this trap in the "Test exporter" CI job
+- Root cause: `[tool.pytest.ini_options] addopts = "--cov=exporter --cov-report=xml"` in `pyproject.toml`
+- Fix applied: `pip install pytest pytest-cov pyyaml` (Option A)
+- Result: CI green after adding `pyyaml`
+
+**Decision guide**:
+
+| Situation | Recommended Fix |
+|-----------|----------------|
+| Job must stay pip-only and needs coverage | Option A: add all missing deps |
+| Job intentionally skips coverage | Option B: `-o addopts=` |
+| Job can use pixi/poetry | Option C: `pixi run pytest` (always prefer) |
+| `addopts` will keep accumulating deps | Consider Option C to avoid dep-drift |
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectArgus | CI "Test exporter" matrix job — PRs #273 and #289 (2026-05-09) | `pyyaml` missing from `pip install pytest pytest-cov`; fixed by adding it |
+
+---
+
+## Superseded from ci-stale-pattern-cleanup
+
+**Original date/version:** 2026-03-28 / 1.0.0
+
+```yaml
+name: ci-stale-pattern-cleanup
+description: "Use when: (1) a CI matrix has patterns that may reference renamed or deleted test files (detect stale), (2) a test file was deleted but still appears in a GitHub Actions workflow pattern string (remove stale), (3) closing a cleanup issue where the only remaining work is a dangling workflow reference, (4) adding an inverse CI coverage check that flags matrix patterns matching zero existing files as warnings."
+category: ci-cd
+date: 2026-03-28
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags:
+  - ci-cd
+  - github-actions
+  - stale-patterns
+  - cleanup
+  - validate-coverage
+```
+
+# CI Stale Pattern Cleanup
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-28 |
+| **Objective** | Consolidated skill for detecting and removing stale CI patterns — patterns that reference renamed or deleted test files |
+| **Outcome** | Merged from 2 source skills: stale-ci-pattern-detection, stale-ci-pattern-removal |
+| **Verification** | unverified |
+
+## When to Use
+
+- A CI matrix YAML lists `path` + `pattern` entries and files may have been renamed or deleted
+- You already have a forward check (uncovered test files) and want the inverse (unused patterns)
+- A GitHub issue asks to "remove a test file entirely" and the file no longer exists on disk
+- CI workflow contains a space-separated pattern string that lists individual test filenames
+- The only remaining work to close an issue is removing a stale filename from a YAML workflow
+- A cleanup/deprecation issue where the test file itself is already gone
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Confirm the file is actually gone (do not assume)
+ls <project-root>/tests/shared/core/test_<name>.mojo 2>/dev/null || echo "File does not exist"
+
+# 2. Find all references
+grep -r "test_<name>" . --include="*.yml" --include="*.yaml" --include="*.toml" --include="*.mojo"
+
+# 3. Run stale pattern check
+python3 -c "
+import sys; sys.path.insert(0, 'scripts')
+from validate_test_coverage import parse_ci_matrix, check_stale_patterns
+from pathlib import Path
+root = Path('.')
+groups = parse_ci_matrix(root / '.github/workflows/comprehensive-tests.yml')
+stale = check_stale_patterns(groups, root)
+print('Stale:' if stale else 'No stale patterns')
+for s in stale: print(f'  {s}')
+"
+```
+
+### A. Detecting Stale Patterns (Adding to Validation Script)
+
+Add `check_stale_patterns()` to `scripts/validate_test_coverage.py` as an inverse coverage check — patterns that expand to zero files are stale.
+
+**Implementation** (add before `check_coverage()`):
+
+```python
+def check_stale_patterns(
+    ci_groups: Dict[str, Dict[str, str]], root_dir: Path
+) -> List[str]:
+    """
+    Check for CI matrix patterns that match 0 existing test files.
+
+    Returns:
+        Sorted list of group names whose patterns match no existing files.
+    """
+    stale = []
+    for group_name, group_info in ci_groups.items():
+        matched = expand_pattern(group_info["path"], group_info["pattern"], root_dir)
+        if not matched:
+            stale.append(group_name)
+    return sorted(stale)
+```
+
+**Wire into `main()` after the forward check** — print warnings to stderr (does not change exit code):
+
+```python
+stale_patterns = check_stale_patterns(ci_groups, repo_root)
+if stale_patterns:
+    print("=" * 70, file=sys.stderr)
+    print("Warning: Stale CI Patterns", file=sys.stderr)
+    print("=" * 70, file=sys.stderr)
+    print(file=sys.stderr)
+    print(
+        f"WARNING: Found {len(stale_patterns)} CI pattern(s) matching 0 files:",
+        file=sys.stderr,
+    )
+    print(file=sys.stderr)
+    for group_name in stale_patterns:
+        group_info = ci_groups[group_name]
+        print(
+            f"   * {group_name!r}  "
+            f"(path={group_info['path']!r}, pattern={group_info['pattern']!r})",
+            file=sys.stderr,
+        )
+    print(file=sys.stderr)
+    print(
+        "Remove or update these entries in .github/workflows/comprehensive-tests.yml",
+        file=sys.stderr,
+    )
+    print("=" * 70, file=sys.stderr)
+    print(file=sys.stderr)
+# Exit code unchanged — only forward check (uncovered files) returns 1
+```
+
+**Write pytest tests** using `tmp_path` fixture:
+
+```python
+@pytest.fixture()
+def tmp_repo(tmp_path: Path) -> Path:
+    (tmp_path / "tests" / "unit").mkdir(parents=True)
+    (tmp_path / "tests" / "unit" / "test_foo.mojo").touch()
+    (tmp_path / "tests" / "integration").mkdir(parents=True)
+    (tmp_path / "tests" / "integration" / "test_baz.mojo").touch()
+    return tmp_path
+
+def test_stale_when_path_does_not_exist(tmp_repo):
+    ci_groups = {"Ghost": {"path": "tests/nonexistent", "pattern": "test_*.mojo"}}
+    assert check_stale_patterns(ci_groups, tmp_repo) == ["Ghost"]
+
+def test_no_stale_when_all_patterns_match(tmp_repo):
+    ci_groups = {
+        "Unit": {"path": "tests/unit", "pattern": "test_*.mojo"},
+        "Integration": {"path": "tests/integration", "pattern": "test_*.mojo"},
+    }
+    assert check_stale_patterns(ci_groups, tmp_repo) == []
+
+def test_multiple_stale_sorted(tmp_repo):
+    ci_groups = {
+        "Zebra": {"path": "tests/z_gone", "pattern": "test_*.mojo"},
+        "Alpha": {"path": "tests/a_gone", "pattern": "test_*.mojo"},
+        "Good":  {"path": "tests/unit",   "pattern": "test_*.mojo"},
+    }
+    assert check_stale_patterns(ci_groups, tmp_repo) == ["Alpha", "Zebra"]
+```
+
+**Key design decisions**:
+
+| Decision | Choice | Rationale |
+| ---------- | -------- | ----------- |
+| Exit code | No change (warnings only) | Stale patterns are advisory; only missing coverage blocks CI |
+| Output stream | `sys.stderr` | Keeps stdout clean for downstream consumers |
+| Return type | `List[str]` (sorted group names) | Stable, testable, easy to iterate |
+| Deduplication | Handled by `expand_pattern()` returning `Set[Path]` | No extra logic needed |
+
+### B. Removing Stale Filename References
+
+Use when a test file was deleted but its name still appears in CI workflow pattern strings.
+
+1. **Confirm the file is actually gone** — do not assume the issue description is current:
+   ```bash
+   ls <project-root>/tests/shared/core/test_<name>.mojo 2>/dev/null || echo "File does not exist"
+   ```
+
+2. **Grep for all references** to find every place the filename appears:
+   ```bash
+   grep -r "test_<name>" . \
+     --include="*.yml" --include="*.yaml" \
+     --include="*.toml" --include="*.mojo" \
+     -l
+   ```
+
+3. **Edit the workflow file** — remove only the stale filename token from the pattern string. Pattern strings are space-separated; remove the token and its surrounding space.
+
+   Use the Edit tool (not sed) to make a precise, reviewable change:
+   ```
+   # Before:
+   pattern: "test_backward_linear.mojo test_backward_conv_pool.mojo test_backward_compat_aliases.mojo test_backward_losses.mojo"
+   # After:
+   pattern: "test_backward_linear.mojo test_backward_conv_pool.mojo test_backward_losses.mojo"
+   ```
+
+4. **Verify no remaining references** (excluding prompt/issue files):
+   ```bash
+   grep -r "test_<name>" . --include="*.yml" --include="*.toml" --include="*.mojo"
+   ```
+
+5. **Commit, push, create PR**:
+   ```bash
+   # Branch naming
+   git checkout -b <issue-number>-remove-stale-ci-pattern
+
+   # Commit
+   git add .github/workflows/comprehensive-tests.yml
+   git commit -m "refactor(tests): remove <test_filename> from CI
+
+   The test file <path> has been deleted; this removes the dangling
+   reference from the CI workflow pattern string.
+
+   Closes #<issue>"
+
+   git push -u origin <branch>
+   gh pr create --title "refactor(tests): remove <test_filename> from CI" \
+     --body "Closes #<issue>"
+   gh pr merge --auto --rebase <pr-number>
+   ```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A for `check_stale_patterns` implementation | Implementation was straightforward on first attempt | — | Reusing `expand_pattern()` directly avoided any duplication |
+| Glob for the file in worktree before confirming deletion | `Glob tests/shared/core/test_backward_compat_aliases.mojo` | File did not exist — already deleted in a prior commit | Always verify file existence first; issue descriptions may lag behind actual state |
+| Background `find` command for existence check | Used `find /home/... -name "test_backward_compat_aliases.mojo"` as background task | Output wasn't available when needed | For quick existence checks, use `ls` or `Glob` synchronously |
+
+## Results & Parameters
+
+### Key Design: Warnings Only, Not Errors
+
+Exit code behavior for `check_stale_patterns`:
+- `0` = clean (both forward and inverse checks clean)
+- `1` = only when forward check fails (uncovered test files)
+- Stale patterns are printed to stderr as warnings — they are advisory, not blockers
+
+This is intentional: stale patterns are a hygiene issue (dead references), not a coverage failure.
+
+### Copy-Paste Test Template
+
+```python
+# tests/scripts/test_validate_test_coverage.py
+import sys
+from pathlib import Path
+import pytest
+
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts"))
+from validate_test_coverage import check_stale_patterns, expand_pattern
+
+@pytest.fixture()
+def tmp_repo(tmp_path):
+    (tmp_path / "tests" / "unit").mkdir(parents=True)
+    (tmp_path / "tests" / "unit" / "test_foo.mojo").touch()
+    return tmp_path
+
+class TestCheckStalePatterns:
+    def test_empty_ci_groups(self, tmp_repo):
+        assert check_stale_patterns({}, tmp_repo) == []
+
+    def test_all_match(self, tmp_repo):
+        ci_groups = {"Unit": {"path": "tests/unit", "pattern": "test_*.mojo"}}
+        assert check_stale_patterns(ci_groups, tmp_repo) == []
+
+    def test_missing_path(self, tmp_repo):
+        ci_groups = {"Ghost": {"path": "tests/gone", "pattern": "test_*.mojo"}}
+        assert check_stale_patterns(ci_groups, tmp_repo) == ["Ghost"]
+```
+
+### Minimal Commit Message Template
+
+```
+refactor(tests): remove <test_filename> from CI
+
+The test file <path> has been deleted; this removes the dangling
+reference from the CI workflow pattern string.
+
+Closes #<issue>
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | Issue #3357, PR #4001 | stale-ci-pattern-detection implementation (13 tests pass) |
+| ProjectOdyssey | Cleanup issues | stale-ci-pattern-removal for deleted test files |
+
+---
+
+## Superseded from pytest-watch-to-watcher-dependency-replacement
+
+**Original date/version:** 2026-06-04 / 1.0.0
+
+```yaml
+name: pytest-watch-to-watcher-dependency-replacement
+description: "Replace the unmaintained pytest-watch (last release 2018) with pytest-watcher, a modern actively maintained fork. Removes deprecated docopt 0.6.2 transitive dependency while preserving ptw CLI compatibility. Use when: (1) pytest-watch is declared in pixi.toml, (2) docopt deprecation warnings appear, (3) pytest 9.x compatibility testing flags legacy dependencies."
+category: tooling
+date: 2026-06-04
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - pytest
+  - pytest-watcher
+  - dependency
+  - pixi
+  - docopt
+  - deprecation
+```
+
+# Dependency Replacement: pytest-watch → pytest-watcher
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-04 |
+| **Issue** | #746 |
+| **PR** | #921 |
+| **Objective** | Replace unmaintained pytest-watch (last 2018 release, transitive docopt 0.6.2) with pytest-watcher (modern fork actively maintained for pytest 9.x) |
+| **Outcome** | Success — ptw CLI unchanged, drop-in replacement, docopt removed from lockfile, all 3170 unit tests pass |
+| **Verification** | verified-local (tests pass locally; CI validation pending) |
+
+## When to Use
+
+- Replacing an unmaintained test-related dependency with an active fork
+- Removing deprecated transitive dependencies (docopt 0.6.2) while keeping developer UX unchanged
+- Ensuring pytest tool compatibility across major pytest versions (9.x)
+- Swapping dependencies where the old package has no new releases but forks exist with modern support
+
+## Verified Workflow
+
+### Prerequisites
+- ProjectHephaestus uses pixi for environment management
+- `pytest-watch = ">=4.2,<5"` is declared in `pixi.toml:[feature.dev.pypi-dependencies]`
+- `ptw` is invoked via justfile recipe or command-line for file-change test re-running
+
+### Quick Reference
+
+```bash
+# 1. Edit pixi.toml: swap dependency and update comment
+# OLD:
+#   pytest-watch = ">=4.2,<5"
+# NEW:
+#   pytest-watcher = ">=0.4,<1"
+
+# 2. Resolve environment
+pixi install
+
+# 3. Restore editable install if pixi re-solve drops it (known issue)
+pixi run dev-install
+
+# 4. Verify ptw entry point
+pixi run which ptw
+pixi run ptw --help | head -5
+
+# 5. Verify deprecated docopt is gone from lockfile
+! grep -E '^name = "docopt"' pixi.lock && echo "PASS: docopt absent"
+
+# 6. Run unit tests
+pixi run pytest tests/unit -q
+
+# 7. Commit with closing pattern
+git commit -S -m "build(deps): replace pytest-watch with pytest-watcher
+
+Swap pytest-watch (last release 2018, pulls deprecated docopt 0.6.2) for
+pytest-watcher, the actively maintained modern fork.
+
+Closes #746"
+
+# 8. Push and create PR with state:implementation-go label
+git push -u origin <branch>
+gh pr create --title "..." --body "Closes #746..."
+gh pr edit <PR#> --add-label state:implementation-go
+gh pr merge --auto --squash <PR#>
+```
+
+### Detailed Steps
+
+1. **Locate the old dependency declaration**
+   - Search pixi.toml: `grep -n "pytest-watch" pixi.toml`
+   - Confirm it's in `[feature.dev.pypi-dependencies]` section (PyPI, not conda-forge)
+
+2. **Replace the dependency line and update comment**
+   - Old: `pytest-watch = ">=4.2,<5"`
+   - New: `pytest-watcher = ">=0.4,<1"`
+   - Update adjacent comment to name pytest-watcher and reference issue (e.g., "see issue #746")
+   - Rationale for `>=0.4,<1`: pytest-watcher 0.4.x is the current stable line with pytest 9.x support; major cap follows convention used in other PyPI entries
+
+3. **Update any consumer references (e.g., justfile comment)**
+   - Check justfile for references to "pytest-watch" in comments
+   - Update comment text to "pytest-watcher"
+   - **DO NOT** change the actual `ptw` invocation — the CLI name is identical
+
+4. **Resolve the environment**
+   - Run: `pixi install`
+   - This regenerates `pixi.lock`, pulling pytest-watcher and removing pytest-watch + docopt
+
+5. **Restore editable install (mitigation for known pixi issue)**
+   - Per [pixi-env-resolve-drops-editable-install](https://github.com/HomericIntelligence/ProjectMnemosyne/blob/main/skills/pixi-env-resolve-drops-editable-install.md), pixi may wipe `pip install -e .`
+   - Run: `pixi run dev-install`
+   - This re-applies the editable install in O(seconds)
+
+6. **Verify entry point and help**
+   - Run: `pixi run which ptw`
+   - Expected: path to ptw executable in .pixi environment
+   - Run: `pixi run ptw --help | head -5`
+   - Expected: pytest_watcher usage banner (shows it's the new package)
+
+7. **Confirm docopt is gone**
+   - Run: `! grep -E '^name = "docopt"' pixi.lock && echo "PASS" || echo "FAIL"`
+   - Expected: PASS (docopt was a transitive of pytest-watch; pytest-watcher doesn't pull it)
+
+8. **Run full unit test suite**
+   - Run: `pixi run pytest tests/unit -q`
+   - Expected: all tests pass (existing tests don't depend on pytest-watch implementation details)
+
+9. **Create signed commit**
+   - Follow conventional commits: `git commit -S -m "build(deps): replace pytest-watch with pytest-watcher"`
+   - Include in body: rationale, version pin reasoning, docopt removal, test results
+   - Close the issue with: `Closes #746` (literal keyword, capital C, no colon)
+
+10. **Push and PR**
+    - Push: `git push -u origin <branch>`
+    - Create PR with body containing `Closes #746` on its own line
+    - Add label: `state:implementation-go` (required before auto-merge)
+    - Arm auto-merge: `gh pr merge --auto --squash`
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Verify ptw CLI before pixi install | Checked if `ptw` would work without regenerating lock | Premature verification; need to know if the new package ships a `ptw` entry point | Run `pixi install` first, then verify CLI; pytest-watcher does ship `ptw` (drop-in confirmed) |
+| Skip docopt check | Assumed docopt would remain if not directly pulled | Incorrect; docopt was a transitive of pytest-watch specifically | Always verify lock file for removed transitives; confirms the swap eliminated the deprecated dependency |
+
+## Results & Parameters
+
+### Dependency Configuration
+
+**pixi.toml change:**
+```toml
+[feature.dev.pypi-dependencies]
+# OLD:
+pytest-watch = ">=4.2,<5"
+
+# NEW:
+# pytest-watcher (ptw) powers `just watch` — runs unit tests on file change for
+# fast feedback during local development. Actively maintained fork of the
+# unmaintained pytest-watch (last 2018 release; see issue #746). Not on
+# conda-forge; ships from PyPI.
+pytest-watcher = ">=0.4,<1"
+```
+
+### Lock File Delta
+
+**Before:** pixi.lock includes:
+```
+name = "pytest-watch"
+version = "4.2.0"
+
+name = "docopt"
+version = "0.6.2"
+```
+
+**After:** pixi.lock includes:
+```
+name = "pytest-watcher"
+version = "0.4.x" (latest 0.4.x at resolution time)
+
+# docopt absent
+```
+
+### Test Results
+
+```
+pixi run pytest tests/unit -q
+============================= test session starts ==============================
+platform linux -- Python 3.14.4, pytest-9.0.3, pluggy-1.6.0
+...
+================================ tests coverage ================================
+Name                                              Stmts   Miss Branch BrPart   Cover
+...
+TOTAL                                              9362   1327   3064    313  84.66%
+Required test coverage of 80% reached. Total coverage: 84.66%
+================= 3170 passed, 18 skipped in 256.39s (0:04:16) =================
+```
+
+### CLI Verification
+
+```bash
+$ pixi run which ptw
+/home/mvillmow/Projects/ProjectHephaestus/build/.worktrees/issue-746/.pixi/envs/default/bin/ptw
+
+$ pixi run ptw --help | head -5
+[ptw] Unable to initialize terminal state; interactive mode disabled
+usage: pytest_watcher [-h] [--now] [--clear] [--notify-on-failure]
+                      [--delay DELAY] [--runner RUNNER] [--patterns PATTERNS]
+                      [--ignore-patterns IGNORE_PATTERNS] [--version]
+                      path
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | Issue #746, PR #921 | Successfully replaced pytest-watch with pytest-watcher; docopt removed; all 3170 tests pass; ptw CLI works unchanged |
+
+---
+
+## Superseded from fix-isolation-mode-export-data-path
+
+**Original date/version:** 2026-03-02 / 1.0.0
+
+```yaml
+name: fix-isolation-mode-export-data-path
+description: Fix ModuleNotFoundError when patching a scripts/ module that isn't on
+  sys.path during single-file pytest runs; add sys.path guard to conftest.py
+category: debugging
+date: 2026-03-02
+version: 1.0.0
+user-invocable: false
+```
+
+# Skill: Fix Isolation-Mode ModuleNotFoundError in conftest Patches
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Date** | 2026-03-02 |
+| **Objective** | Fix `ModuleNotFoundError: No module named 'export_data'` when `pytest tests/unit/analysis/test_figures.py` is run in isolation |
+| **Outcome** | ✅ Success — single-file runs pass; `export_data` patches also applied, speeding up `test_export_data.py` |
+| **Category** | Debugging |
+| **Tags** | pytest, sys.path, isolation, conftest, mock, patch, scripts, pythonpath, ModuleNotFoundError |
+| **Issue** | #1196 (follow-up from #1136) |
+| **PR** | #1303 |
+
+## When to Use This Skill
+
+Use this skill when:
+
+- `pytest <single-file>` fails with `ModuleNotFoundError: No module named '<script>'`
+- The **full suite** passes but **single-file isolation** fails
+- The module that's missing lives in `scripts/` (or another non-package directory added via `pyproject.toml` `pythonpath`)
+- A `conftest.py` autouse fixture calls `unittest.mock.patch("scripts_module.something")` and the module isn't yet imported
+
+**Trigger phrases:**
+- "Tests pass in CI but fail when run directly with `pytest path/to/test.py`"
+- "`ModuleNotFoundError` in conftest fixture setup, not in the test body"
+- "Works when running the full suite but breaks on a subset"
+- "patch target raises `ModuleNotFoundError` at fixture setup time"
+
+## Root Cause
+
+`pyproject.toml` sets `pythonpath = [".", "scripts"]`. When pytest is invoked on a
+single file, rootdir detection still works, but **`pythonpath` injection only happens
+reliably when pytest discovers its config via a full collection pass** from the project
+root. In single-file mode, pytest may parse the ini file without fully processing
+`pythonpath`.
+
+The `mock_power_simulations` autouse fixture calls:
+```python
+patch("export_data.mann_whitney_power", ...)
+```
+`patch()` calls `importlib.import_module("export_data")` internally. If `scripts/` is
+not yet on `sys.path`, this raises `ModuleNotFoundError` before any test body runs.
+
+## Verified Workflow
+
+### Step 1: Reproduce the failure
+
+```bash
+# Remove scripts from pythonpath override, run a test that doesn't import export_data
+pixi run python -m pytest tests/unit/analysis/test_figures.py --override-ini="pythonpath=" -q
+# ModuleNotFoundError: No module named 'export_data' (from conftest fixture setup)
+```
+
+### Step 2: Add sys.path guard to conftest.py
+
+Add at the top of `tests/unit/analysis/conftest.py` (below standard imports, before any fixtures):
+
+```python
+import sys
+from pathlib import Path
+
+# Ensure scripts/ is importable when tests run in isolation.
+# pyproject.toml sets pythonpath=[".", "scripts"] for full-suite runs,
+# but rootdir detection may not inject it during single-file collection.
+_scripts_dir = str(Path(__file__).parents[3] / "scripts")
+if _scripts_dir not in sys.path:
+    sys.path.insert(0, _scripts_dir)
+```
+
+**Key details:**
+- `Path(__file__).parents[3]` navigates from `tests/unit/analysis/conftest.py` up 3 levels to the project root
+- Adjust the `.parents[N]` index based on your conftest depth
+- The guard `if _scripts_dir not in sys.path` prevents duplicate entries on full-suite runs
+
+### Step 3: Extend the autouse fixture to patch the scripts module namespace
+
+`export_data.py` does `from scylla.analysis.stats import mann_whitney_power`, binding
+the name in `export_data`'s own namespace. You must patch that namespace too:
+
+```python
+@pytest.fixture(autouse=True)
+def mock_power_simulations():
+    with (
+        patch("scylla.analysis.stats.mann_whitney_power", return_value=0.8),
+        patch("scylla.analysis.stats.kruskal_wallis_power", return_value=0.75),
+        patch("scylla.analysis.tables.comparison.mann_whitney_power", return_value=0.8),
+        patch("scylla.analysis.tables.comparison.kruskal_wallis_power", return_value=0.75),
+        patch("export_data.mann_whitney_power", return_value=0.8),       # NEW
+        patch("export_data.kruskal_wallis_power", return_value=0.75),    # NEW
+    ):
+        yield
+```
+
+Note: Do **not** use `create=True` once the `sys.path` guard is in place — `export_data`
+will be fully importable and `create=True` is unnecessary. If patching before the module
+is loaded, `create=True` is needed instead of the sys.path guard.
+
+### Step 4: Verify
+
+```bash
+# Single-file run — must now succeed
+pixi run python -m pytest tests/unit/analysis/test_figures.py -q --no-cov
+
+# Full suite — must still pass
+pixi run python -m pytest tests/unit/analysis/ -q --no-cov
+
+# Pre-commit (ruff will strip import if unused — that's fine, sys.path guard still runs)
+pre-commit run --files tests/unit/analysis/conftest.py
+```
+
+**Important:** Ruff may remove a bare `import export_data` if added for side-effects
+(F401 unused import). The `sys.path` guard block does not have this problem since it
+uses no importable names — just modifies `sys.path`.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Before vs After
+
+| Scenario | Before | After |
+| ---------- | -------- | ------- |
+| `pytest tests/unit/analysis/test_figures.py` | `ModuleNotFoundError` (conftest setup) | 55 passed |
+| `pytest tests/unit/analysis/test_export_data.py` | 27 passed, **23s** (unpatched power fns) | 27 passed, **23s** (patched — other stats still run) |
+| `pytest tests/unit/analysis/` | 385 passed | 385 passed |
+| Full suite | 3584 passed | 3584 passed |
+
+Note: `test_export_data.py` runtime doesn't drop to <1s because `compute_statistical_results()`
+calls many other statistics functions (Shapiro-Wilk, Spearman, etc.) that aren't mocked.
+The power simulation mock prevents the worst-case 130s+ hang per test.
+
+### The Complete conftest.py Patch (copy-paste)
+
+```python
+import sys
+from pathlib import Path
+from unittest.mock import patch
+import pytest
+
+# Ensure scripts/ is importable when tests run in isolation.
+_scripts_dir = str(Path(__file__).parents[3] / "scripts")
+if _scripts_dir not in sys.path:
+    sys.path.insert(0, _scripts_dir)
+
+
+@pytest.fixture(autouse=True)
+def mock_power_simulations():
+    """Mock expensive Monte Carlo simulations to prevent test hangs."""
+    with (
+        patch("scylla.analysis.stats.mann_whitney_power", return_value=0.8),
+        patch("scylla.analysis.stats.kruskal_wallis_power", return_value=0.75),
+        patch("scylla.analysis.tables.comparison.mann_whitney_power", return_value=0.8),
+        patch("scylla.analysis.tables.comparison.kruskal_wallis_power", return_value=0.75),
+        patch("export_data.mann_whitney_power", return_value=0.8),
+        patch("export_data.kruskal_wallis_power", return_value=0.75),
+    ):
+        yield
+```
+
+### General Pattern for Any scripts/ Module
+
+```python
+# In conftest.py — add near top, before fixtures
+import sys
+from pathlib import Path
+
+_scripts_dir = str(Path(__file__).parents[N] / "scripts")  # adjust N for conftest depth
+if _scripts_dir not in sys.path:
+    sys.path.insert(0, _scripts_dir)
+```
+
+Where `N` = number of directory levels from conftest up to project root:
+- `tests/conftest.py` → `parents[1]`
+- `tests/unit/conftest.py` → `parents[2]`
+- `tests/unit/analysis/conftest.py` → `parents[3]`
+
+---
