@@ -1,9 +1,9 @@
 ---
 name: multi-repo-pr-automation-loop-orchestration
-description: "Use when: (1) running an automation loop (drive-prs-green, hephaestus-automation-loop, loop_runner.py, ci_driver.py) across multiple repos and it skips PRs, reports success incorrectly, silently no-ops, or never arms auto-merge, (2) a multi-repo swarm is orchestrating PRs across 3+ HomericIntelligence repos with sequential-within-repo merge ordering, (3) an ecosystem-wide sweep implements every planned issue across all repos in parallel waves, (4) the automation driver logs success but live GitHub state shows open failing PRs — always cross-check live state per repo before reporting done, (5) a hephaestus automation loop deadlocks because the drive-green phase skips iterations or the implementer returns early before labeling with state:implementation-go, (6) an org-wide issue backlog across 10+ repos needs parallel implementation with one signed auto-merge PR per issue, (7) automated review-plan files (claude-review-fix-*.md) need to be bulk-processed across stale PR branches"
+description: "Use when: (1) running an automation loop (drive-prs-green, hephaestus-automation-loop, loop_runner.py, ci_driver.py) across multiple repos and it skips PRs, reports success incorrectly, silently no-ops, or never arms auto-merge, (2) a multi-repo swarm is orchestrating PRs across 3+ HomericIntelligence repos with sequential-within-repo merge ordering, (3) an ecosystem-wide sweep implements every planned issue across all repos in parallel waves, (4) the automation driver logs success but live GitHub state shows open failing PRs — always cross-check live state per repo before reporting done, (5) a hephaestus automation loop deadlocks because the drive-green phase skips iterations or the implementer returns early before labeling with state:implementation-go, (6) an org-wide issue backlog across 10+ repos needs parallel implementation with one signed auto-merge PR per issue, (7) automated review-plan files (claude-review-fix-*.md) need to be bulk-processed across stale PR branches, (8) _wait_for_pr_terminal polls the full timeout on a BLOCKED PR — add early-exit guarded by both _failing_required_check_names and _pending_required_check_names"
 category: ci-cd
 date: 2026-06-07
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 history: multi-repo-pr-automation-loop-orchestration.history
 tags:
@@ -26,6 +26,9 @@ tags:
   - sequential-within-repo
   - squash-auto-merge
   - homericintelligence
+  - blocked-pr-early-exit
+  - pending-required-checks
+  - wait-for-pr-terminal
 ---
 
 # Multi-Repo PR Automation Loop and Swarm Orchestration
@@ -36,7 +39,7 @@ tags:
 | ------- | ------- |
 | **Date** | 2026-06-07 |
 | **Objective** | One canonical for driving PRs to green across many HomericIntelligence repos via an automation loop or a myrmidon swarm: make the driver report honestly (no silent no-op, wait for the real terminal state, gate "repo done" on live open-PR count), cross-check every run summary against live GitHub state before reporting success, unblock the loop-runner / implementer deadlocks (drive-green discovery + the `state:implementation-go` labeling deadlock), orchestrate parallel waves across 3+ repos with sequential-within-repo merge ordering, run ecosystem-wide and org-wide planned-issue sweeps, and bulk-process automated review-plan files across stale PR branches. |
-| **Outcome** | Driver hardened across four ProjectHephaestus releases (PRs #833/#837/#839 → #876 → #879) from "lies success" → "honest reporting" → "waits for the real outcome" → "re-arms, survives concurrency, resolves conflicts, never self-inflicts a lint failure". Existing-PR labeling deadlock shipped fixed (PRs #1073/#1075/#1077/#1079). Report-vs-live-state protocol surfaced honesty gaps merged as PR #849. Swarm pattern merged 87 PRs across 8 repos and ran ecosystem sweeps (51+ PRs / 78 issues retired, 0 broken-main events). Org-wide planned-issue swarm piloted ~51 signed squash-auto-merge PRs across 5 repos (430 plan-carrying issues detected). Batch review-plan processing cleared 14 OPEN PRs in ~20-30 min. |
+| **Outcome** | Driver hardened across five ProjectHephaestus releases (PRs #833/#837/#839 → #876 → #879 → #1090) from "lies success" → "honest reporting" → "waits for the real outcome" → "re-arms, survives concurrency, resolves conflicts, never self-inflicts a lint failure" → "BLOCKED early-exit (PR #1090 closes #1088)". Existing-PR labeling deadlock shipped fixed (PRs #1073/#1075/#1077/#1079). Report-vs-live-state protocol surfaced honesty gaps merged as PR #849. Swarm pattern merged 87 PRs across 8 repos and ran ecosystem sweeps (51+ PRs / 78 issues retired, 0 broken-main events). Org-wide planned-issue swarm piloted ~51 signed squash-auto-merge PRs across 5 repos (430 plan-carrying issues detected). Batch review-plan processing cleared 14 OPEN PRs in ~20-30 min. |
 | **Verification** | verified-ci |
 
 ## When to Use
@@ -113,10 +116,40 @@ guards in order (each catches what the next cannot):
    not `gh pr list --limit 100` (silent cap). Per-issue success ≠ repo cleanliness.
 
 **Wait for the terminal state (v1.1.0+).** An armed-and-merging PR is NOT a failure. Do not exit
-`rc=1` on any open PR. `_wait_for_pr_terminal(issue, pr)` polls `MERGED|CLOSED|FAILING|DIRTY|TIMEOUT`
+`rc=1` on any open PR. `_wait_for_pr_terminal(issue, pr)` polls `MERGED|CLOSED|FAILING|DIRTY|BLOCKED|TIMEOUT`
 with exponential backoff capped 60s, bounded by `HEPH_PR_MERGE_MAX_WAIT` (default 1800s); a required
 check concluding `failure` returns `FAILING` immediately. Partition still-open PRs: truthy
 `autoMergeRequest` ⇒ `armed_pending` (WARNING, not failure); falsy ⇒ `needs_action` ⇒ `rc=1`.
+
+**BLOCKED early-exit (v1.3.0 / PR #1090 closes #1088).** `mergeStateStatus=BLOCKED` has two causes:
+(a) branch-protection gate (e.g. unresolved required review threads) — **never self-heals**, the driver
+will timeout in 30 min; and (b) required CI checks still in-flight — **transient, must keep polling**.
+GitHub uses `BLOCKED` for BOTH causes, so a naive early-exit on `BLOCKED + not failing` is wrong when
+checks are still pending. The correct guard:
+
+```python
+if merge_status == "BLOCKED":
+    failing = self._failing_required_check_names(pr_number)
+    if not failing:
+        pending = self._pending_required_check_names(pr_number)
+        if not pending:
+            # All required checks concluded green but still BLOCKED →
+            # definite branch-protection gate (unresolved threads etc.).
+            # Leave armed and exit early — nothing the driver can fix.
+            logger.warning(
+                "PR #%d BLOCKED by branch-protection gate (0 failing, 0 pending required checks);"
+                " leaving armed and exiting poll early",
+                pr_number,
+            )
+            return "BLOCKED"
+        # pending checks exist — keep polling (transient BLOCKED)
+    # failing checks exist — keep polling (will return FAILING on conclusion)
+```
+
+`_pending_required_check_names` checks `c.get("status") != "completed"` for required checks (complement
+of `_failing_required_check_names` which checks `conclusion == "failure"`). Handle `"BLOCKED"` in
+callers: `_drive_issue` ⇒ `WorkerResult(success=True, pr_number=pr_number)` (leave armed, nothing to
+fix); `_check_arming_on_drive_start` ⇒ same as `TIMEOUT` (leave armed, return success).
 
 **Re-arm after a fix, survive concurrency, resolve DIRTY, never self-inflict lint (v1.2.0).**
 After a fix returns `fixed=True`, re-enter check→arm→wait ONCE (`_recheck_and_arm_after_fix`) — a
@@ -244,6 +277,7 @@ Bulk-process automated `review-plan-*.md` + `review-*.json` (`phase=failed`) acr
 | Return success the instant a fix lands | `_attempt_ci_fixes` returned on `fixed=True`, never re-arming | The fix re-triggers CI; the now-green PR sat CLEAN but auto-merge un-armed forever | Re-enter check→arm→wait once via `_recheck_and_arm_after_fix`; mock it in tests too |
 | Leave the `--session-id` resume fallback unguarded | Deterministic uuid5 id, unguarded resume on create-collision | Two parallel workers raced before the transcript JSONL was on disk; the error killed the drive | Wrap resume in try/except (3× backoff), then fall back to a fresh `uuid4` so a collision is never terminal |
 | Wait out TIMEOUT for a DIRTY armed PR | `_gh_pr_state` fetched no `mergeStateStatus` | Could not tell pending from conflicted; waited the full 1800s every run forever | Add `mergeStateStatus`, return `"DIRTY"`, run `_resolve_dirty_pr` (rebase → agent conflict prompt) |
+| BLOCKED early-exit guarded only by `not failing` (v1.3.0) | Added early-exit on `mergeStateStatus=BLOCKED` when `_failing_required_check_names` returns empty — no pending check | GitHub reports `BLOCKED` for both (a) branch-protection gates (unresolved threads — never self-heals) AND (b) required checks still in-flight (transient — must keep polling). Guard on `not failing` alone exits early while CI is still running, abandoning a PR that would have self-healed | Guard on BOTH: `not failing` AND `not pending` (`_pending_required_check_names` returns empty). Only then is BLOCKED definitively a branch-protection gate (all required checks concluded green). If either failing OR pending is non-empty, keep polling. |
 | Tell the agent to commit a blocker file | Prompt said "commit a file documenting the blocker" | The `CI_BLOCKER.md` itself failed markdownlint (turning one red check into two) and orphaned Dependabot PRs | Forbid the blocker file (use a `BLOCKED:` line); require every edited file lint-clean, no rule disabled |
 | Trust the summary banner / `rc=0` | Reported from `_summary.json` (`Driven 8 / Failed 4`) | "Driven" only means the driver was invoked; 7/8 had 0 in-scope PRs, 3/4 "Failed" were false | Cross-check live `gh pr list --state open` per repo before reporting; classify each failure mode |
 | `hephaestus-automation-loop --phases drive-green --loops N` | Increased loop budget / set `--loops 1` | Not-final-loop gate + zero-work early-exit make N>1 unreachable; `--loops 1` discovers `@me` issues not PRs | Bypass via `drive_prs_green.py --issues <N> --force-run`; fix is PR-based discovery (#818-#821) |
@@ -271,6 +305,7 @@ Bulk-process automated `review-plan-*.md` + `review-*.json` (`phase=failed`) acr
 | #876 | — | v1.1.0: `_wait_for_pr_terminal`, robust Dependabot arming, honest exit-gate partition, bounded no-commit retry |
 | #879 | #878 | v1.2.0: `_recheck_and_arm_after_fix`, guarded session-id resume → fresh uuid4, `mergeStateStatus`/`DIRTY`/`_resolve_dirty_pr`, lint-clean blocker prompt. Suite: 1011 passed |
 | #1073/#1075/#1077/#1079 | #1072/#1074/#1076/#1078 | existing-PR review→label deadlock fix: enter review loop, origin-sync anti-clobber, session-path fix, review_validator, bot-thread resolve |
+| #1090 | #1088 | v1.3.0: BLOCKED early-exit in `_wait_for_pr_terminal` — guarded by both `_failing_required_check_names` and new `_pending_required_check_names`; handle `"BLOCKED"` in `_drive_issue` and `_check_arming_on_drive_start` callers. Suite: 3402 passed. |
 
 ### Org merge policy (all 12 HomericIntelligence repos)
 
@@ -314,7 +349,7 @@ merge-conflict ~1.
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectHephaestus | Driver honest-success path | PRs #833/#837/#839 (guards) → #876 (wait-for-merge) → #879 (re-arm/concurrency/DIRTY/lint). Suite 1011 passed; two ecosystem runs drove failures 7→4→1 genuine. |
+| ProjectHephaestus | Driver honest-success path | PRs #833/#837/#839 (guards) → #876 (wait-for-merge) → #879 (re-arm/concurrency/DIRTY/lint) → #1090 (BLOCKED early-exit closes #1088). Suite 3402 passed; verified-ci (mypy 320 files clean, ruff clean, all pre-commit hooks). |
 | ProjectHephaestus | Report-vs-live-state | Run `20260531T190615Z`: banner `Driven 8 / Failed 4` decomposed to 1 honest-idle + 7 architecturally-blind / 1 real-bug + 3 false-failures; honesty gaps merged as PR #849. `Telemachy #246` MERGED 29s after reported failed. |
 | ProjectHephaestus | Loop deadlocks | drive-green discovery #818-#821 (NOT shipped, bypass verified live 2026-05-30); existing-PR labeling deadlock shipped as PRs #1073/#1075/#1077/#1079 (9 green PRs unblocked). |
 | HomericIntelligence ecosystem | Swarm PR orchestration | 8 repos, 87 PRs merged + Odysseus pins (2026-04-19); 12-repo silent-failures sweep 17/18 auto-squash-merged (2026-05-10). |
