@@ -2,9 +2,10 @@
 name: skill-corpus-merge-consolidation-workflow
 description: "Workflows for maintaining a skills corpus: deduplicating overlapping skills, merging clusters into canonicals, preserving history snapshots, enumerating cluster members from examples, migrating formats (hierarchical→flat, dual-dir→single), and generalizing skills for cross-repo compatibility. Use when: (1) multiple skills share a common prefix and cover redundant content, (2) a merge epic lists only example members and a full member list is needed, (3) a merge PR deletes originals and their content must remain searchable, (4) legacy skills/<category>/<name>/SKILL.md files need migration to flat skills/<name>.md format, (5) skills have hardcoded repo paths that must be generalized, (6) a dual plugins/+skills/ directory must be consolidated, (7) bulk-migrating skills from one project to another, (8) a skill topic is now OBSOLETE and needs a prominent notice."
 category: tooling
-date: 2026-05-19
-version: "1.0.0"
+date: 2026-06-07
+version: "2.0.0"
 user-invocable: false
+verification: verified-ci
 history: skill-corpus-merge-consolidation-workflow.history
 tags: [skill-merge, deduplication, semver, consolidation, history, manifest, enumeration, flat-format, migration, plugin-generalization, corpus-maintenance]
 ---
@@ -15,7 +16,7 @@ tags: [skill-merge, deduplication, semver, consolidation, history, manifest, enu
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-05-19 |
+| **Date** | 2026-06-07 |
 | **Objective** | Consolidate all skills-corpus maintenance operations: deduplication, cluster merges, history preservation, member enumeration, format migration, and cross-repo generalization |
 | **Outcome** | Absorbed 8 narrow skills covering overlapping corpus-maintenance topics |
 | **Verification** | verified-ci |
@@ -67,6 +68,25 @@ done
 find skills/ -type d -mindepth 1
 find skills/ -name "SKILL.md"
 
+# Gate 1a — absorbed-vs-absorbed duplicates (same skill in two clusters)
+jq -r '.absorbed_skills[]' /tmp/skill-merge-manifests/*.json | sort | uniq -d
+
+# Gate 1b — canonical-vs-absorbed collision (one cluster's canonical is being
+# absorbed/deleted by another cluster). MUST run too, or a canonical gets folded away.
+python3 - <<'EOF'
+import json, glob
+canon, absorbed = {}, {}
+for f in glob.glob('/tmp/skill-merge-manifests/*.json'):
+    m = json.load(open(f))
+    cid = m.get('cluster_id', f)
+    canon[m['canonical_name']] = cid
+    for a in m.get('absorbed_skills', []):
+        absorbed.setdefault(a.replace('.md', ''), []).append(cid)
+for name, cid in canon.items():
+    if name in absorbed:
+        print(f"COLLISION: canonical '{name}' ({cid}) is absorbed by {absorbed[name]}")
+EOF
+
 # Validate
 python3 scripts/validate_plugins.py
 ```
@@ -99,11 +119,36 @@ When an issue lists only 3 examples per cluster:
 }
 ```
 
-4. Gate 1 — cross-cluster duplicate check before any merge launches:
+4. Gate 1 — cross-cluster duplicate check before any merge launches. Run BOTH halves:
 
-```bash
-jq -r '.absorbed_skills[]' /tmp/skill-merge-manifests/*.json | sort | uniq -d
-```
+   **Gate 1a (absorbed-vs-absorbed)** — the same skill claimed by two clusters:
+
+   ```bash
+   jq -r '.absorbed_skills[]' /tmp/skill-merge-manifests/*.json | sort | uniq -d
+   ```
+
+   **Gate 1b (canonical-vs-absorbed)** — a cluster's `canonical_name` appears in ANOTHER
+   cluster's `absorbed_skills`. If skipped, one agent deletes/folds a skill that another agent
+   is amending as a canonical → wrong-merge + a duplicate PR. This is mandatory:
+
+   ```bash
+   python3 - <<'EOF'
+   import json, glob
+   canon, absorbed = {}, {}
+   for f in glob.glob('/tmp/skill-merge-manifests/*.json'):
+       m = json.load(open(f))
+       cid = m.get('cluster_id', f)
+       canon[m['canonical_name']] = cid
+       for a in m.get('absorbed_skills', []):
+           absorbed.setdefault(a.replace('.md', ''), []).append(cid)
+   for name, cid in canon.items():
+       if name in absorbed:
+           print(f"COLLISION: canonical '{name}' ({cid}) is absorbed by {absorbed[name]}")
+   EOF
+   ```
+
+   For each collision, decide which cluster keeps the skill as canonical and remove it from the
+   other cluster's `absorbed_skills[]` before launching any merge agent.
 
 5. For second-pass sessions (existing canonicals from prior wave), pass the existing-canonicals list to every enumeration agent and require two-bucket output: `clusters[]` (new only) + `absorb_into_canonical[]`
 
@@ -124,6 +169,29 @@ stop-reassess-gate-bulk-transformation
 3. Create `skills/<merged-name>.history` with `## Superseded from <name>` per absorbed skill (see Part B)
 4. Delete all source `.md`, `.notes.md`, and `.history` files (skip-missing-safe)
 5. Parallel agents: assign non-overlapping files to avoid conflicts; 3 at a time for large batches
+6. **Run pre-commit once and re-stage BEFORE the real commit.** The `end-of-file-fixer` hook
+   modifies the `.history` file on the first `git commit`, which aborts that commit (leaving the
+   branch pushed with no commit / an empty PR number) and forces a manual retry. Sequence the
+   merge helper as:
+
+   ```bash
+   git add -A skills/
+   pre-commit run --files skills/<canonical>.md skills/<canonical>.history  # fixers run once
+   git add -A skills/                                                       # re-stage the fixes
+   git commit -m "feat: ..."                                                # now succeeds clean
+   ```
+
+7. **Do NOT re-dispatch a merge agent for a cluster while an earlier one may still be alive.**
+   During error recovery, re-dispatching for the same cluster created a DUPLICATE PR on the same
+   branch. Verify cluster progress from git/gh state, NOT from agent/background-task IDs (those
+   notification IDs get reshuffled and mislabeled):
+
+   ```bash
+   git ls-remote --heads origin "skill/<cluster-branch>"   # already pushed?
+   gh pr list --head "skill/<cluster-branch>" --json number,url  # PR already open?
+   ```
+
+   Only re-dispatch if BOTH return empty.
 
 **Special case: OBSOLETE topics**
 
@@ -292,6 +360,10 @@ Add "Verified On" table to each generalized skill. Move project-specific details
 | Assumed SKILL.md needed full rewrite | Expected old format without frontmatter | All 4 legacy files already had YAML frontmatter | Check SKILL.md content before assuming full rewrite needed |
 | Forgot `version` field after copying SKILL.md | Copied SKILL.md without checking required fields | 3 of 4 were missing `version: "1.0.0"` and failed validation | Always verify all required frontmatter fields after copy |
 | Bulk removing `source:` without checking URL sources | Removed all `^source:` lines | Removed legitimate `source: https://...` references | Keep URL sources; only remove project-name sources (`source: ProjectName`) |
+| Gate 1 only checked absorbed-vs-absorbed | Ran only `jq '.absorbed_skills[]' \| sort \| uniq -d` | `markdown-linting-and-build-fixes` was a canonical of one cluster yet listed as an absorbed skill in the mkdocs cluster; the merge folded/deleted it → wrong-merge + a redundant PR that had to be closed and redirected after merge | Gate 1 must ALSO check canonical-vs-absorbed: flag any cluster whose `canonical_name` appears in another cluster's `absorbed_skills` (Gate 1b) |
+| Committing before running pre-commit | Let the first `git commit` trigger the hooks | `end-of-file-fixer` modified the `.history` file during commit, aborting it; the branch was pushed with no commit and an empty PR number, forcing a manual retry | Run `pre-commit run --files <canonical>.md <canonical>.history` once, `git add -A skills/` again, THEN commit |
+| Re-dispatching merge agent by agent ID during recovery | Re-launched an agent for a cluster believed dead, keyed off the background-task notification ID | Two agents both ran `skill/ruff-specific-rule-fixes`, producing duplicate PRs #2233 + #2234; notification IDs had been reshuffled/mislabeled | Track cluster progress from git/gh state (`git ls-remote --heads`, `gh pr list --head`), never from agent/background-task IDs; only re-dispatch when both are empty |
+| Relying on update-marketplace.yml to refresh the index | Expected the workflow to keep `marketplace.json` current post-consolidation | Workflow regenerates the file but FAILS at "Open PR" — org policy blocks GitHub Actions from creating PRs; `marketplace.json` silently went stale | Regenerate manually in a dedicated PR (`python3 scripts/generate_marketplace.py` → commit → PR) as the final reconcile step of every pass |
 
 ## Results & Parameters
 
@@ -304,6 +376,7 @@ Add "Verified On" table to each generalized skill. Move project-specific details
 | deprecated-file-cleanup-* | 6 | 1 | -5 (-83%) | Prefix grouping |
 | conv2d-gradient-* cluster | 9 | 3 | -6 (-67%) | Topic sub-grouping |
 | Large-scale algorithmic pass | 975 | 933 | -42 (-4.3%) | marketplace.json + SequenceMatcher |
+| Full-corpus pass (2026-06-07) | 518 | 291 | -227 (-44%) | 50-cluster manifest-first; 10 waves of <=5 worktree swarm agents |
 
 ### Algorithmic Detection Parameters
 
@@ -348,6 +421,22 @@ grep -h "### Superseded from" skills/*.history | sort
 find skills/ -type d -mindepth 1
 ```
 
+### Reconcile marketplace.json MANUALLY after a consolidation pass
+
+The `update-marketplace.yml` workflow is **broken** and cannot keep `marketplace.json` fresh.
+It regenerates the file but FAILS at its "Open PR" step because org policy blocks GitHub Actions
+from opening PRs ("GitHub Actions is not permitted to create or approve pull requests"). So after
+a consolidation pass, `marketplace.json` goes stale and must be regenerated by hand in its own PR:
+
+```bash
+python3 scripts/generate_marketplace.py
+git add marketplace.json .claude-plugin/marketplace.json 2>/dev/null
+git commit -m "chore: regenerate marketplace.json after consolidation pass"
+gh pr create --fill && gh pr merge <#> --auto --squash
+```
+
+Do this as a final reconcile step of every consolidation pass — do not rely on the workflow.
+
 ## Verified On
 
 | Project | Context | Details |
@@ -360,3 +449,4 @@ find skills/ -type d -mindepth 1
 | ProjectMnemosyne | PR #1017, migrated last 4 hierarchical skills to flat format | 2026-03-25 |
 | ProjectMnemosyne | 20 merge PRs using history-as-superseded-snapshot pattern | 2026-05-18 |
 | ProjectMnemosyne | 17-cluster 1100-skill consolidation with manifest-first enumeration | 2026-05-19 |
+| ProjectMnemosyne | 2026-06-07 full-corpus pass: 50 clusters, 273 skills -> 50 canonicals, 10 waves of <=5 worktree swarm agents | corpus 518 -> 291 (-227, -44%) |

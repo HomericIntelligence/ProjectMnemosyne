@@ -1,6 +1,42 @@
 <!-- markdownlint-disable MD024 -->
 # skill-corpus-merge-consolidation-workflow — History
 
+## v2.0.0 (2026-06-07)
+
+**Changed by:** 2026-06-07 full-corpus consolidation pass (50 clusters)
+**Verification:** verified-ci
+
+### What changed
+
+- **Gate 1 now requires a canonical-vs-absorbed collision check (Gate 1b)** in addition to the
+  existing absorbed-vs-absorbed check (Gate 1a). Flags any cluster whose `canonical_name` appears
+  in another cluster's `absorbed_skills`. Added to Quick Reference, the Phase 2 workflow, and a
+  Failed Attempts row. Real incident: `markdown-linting-and-build-fixes` was absorbed by the
+  mkdocs cluster while another cluster amended it as a canonical → wrong-merge + duplicate PR.
+- **Merge helper must run `pre-commit` once and re-stage before the real commit.** The
+  `end-of-file-fixer` hook modifies the `.history` on the first commit, aborting it (branch pushed
+  with no commit / empty PR number). Added a note in the Phase 3 merge workflow + a Failed
+  Attempts row.
+- **Do not re-dispatch merge agents by agent/background-task ID during recovery.** Re-dispatching
+  for a still-live cluster produced duplicate PRs (#2233 + #2234 on `skill/ruff-specific-rule-fixes`).
+  Verify cluster progress from git/gh state (`git ls-remote --heads`, `gh pr list --head`), not
+  from notification IDs. Added a Failed Attempts row + Phase 3 note.
+- **`update-marketplace.yml` is broken** — it regenerates `marketplace.json` but FAILS at "Open
+  PR" because org policy blocks GitHub Actions from creating PRs. Added a manual reconcile section
+  (`python3 scripts/generate_marketplace.py` → commit → PR) + a Failed Attempts row.
+- Added a **Verified On** row and a **Deduplication Scale Examples** row for the 2026-06-07
+  full-corpus pass (518 → 291 skills, -227, -44%).
+
+### Why
+
+A large validated 50-cluster full-corpus consolidation pass (273 absorbed skills, 10 waves of up
+to 5 worktree swarm agents) surfaced materially new gate rules and workflow steps. These are
+breaking additions to the merge procedure (a new mandatory gate, a re-ordered commit sequence, and
+a now-mandatory manual marketplace reconcile), warranting a MAJOR version bump. No existing history
+content is removed; the absorbed-skill snapshots below are retained verbatim.
+
+---
+
 ## v1.0.0 (2026-05-19)
 
 **Changed by:** Merge — absorbed 8 narrow skills (epic #1866 / cluster P2-tooling-C3)
