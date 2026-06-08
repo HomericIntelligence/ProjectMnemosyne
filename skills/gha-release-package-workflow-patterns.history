@@ -3,6 +3,18 @@
 
 This file preserves the full original content of the skills merged into this canonical.
 
+## v1.1.0 (2026-06-07)
+
+Restore release-notes extraction + signed-tag verify (nuance audit pass 2):
+
+- Re-added the publish-job Python step that extracts the dated CHANGELOG section into
+  `RELEASE_NOTES` (regex `## \[VERSION\] - \d{4}-\d{2}-\d{2}\n(.*?)(?=\n## \[|$)` with
+  `re.DOTALL`, plus `%`/`%0A`/`%0D` GitHub-output escaping) and wired
+  `body: ${{ steps.notes.outputs.RELEASE_NOTES }}` into `softprops/action-gh-release`.
+- Restored the signed-tag command `git tag -s -a vX.Y.Z -m "..."` and the
+  signature-verify check `git log --format='%h %G? %s'` expecting `G`.
+- Added Failed Attempts rows for empty release notes and unsigned tags; added Quick Reference rows.
+
 ## v1.0.0 (2026-06-07)
 
 Merged 3 skills into `gha-release-package-workflow-patterns`:

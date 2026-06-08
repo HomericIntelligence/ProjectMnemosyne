@@ -3,7 +3,7 @@ name: gha-release-package-workflow-patterns
 description: "Use when: (1) creating a tag-triggered release workflow with keepachangelog CHANGELOG format and semver version consistency checks across manifests, (2) implementing automated package building via GitHub Actions with artifact publication and GitHub Release creation, (3) adding pre-commit script validation of Python version drift between pyproject.toml classifiers and Dockerfile FROM line, (4) adding CI steps that replace fragile shell printf emoji byte-escape encoding with dedicated Python scripts for better portability."
 category: ci-cd
 date: 2026-06-07
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 history: gha-release-package-workflow-patterns.history
 tags:
@@ -51,6 +51,8 @@ tags:
 | Manifest version consistency | `scripts/check_version_consistency.py` (pre-commit + release.yml) | All manifests + CHANGELOG agree on version |
 | CHANGELOG format | keepachangelog: `[Unreleased]` + `## [X.Y.Z] - YYYY-MM-DD` | release.yml requires both sections present |
 | Package publish | `softprops/action-gh-release` after `validate` job | `publish` job `needs: validate` |
+| Release notes body | Python step regexes the dated CHANGELOG section into `RELEASE_NOTES` | `body: ${{ steps.notes.outputs.RELEASE_NOTES }}` (empty body = missing step) |
+| Signed release tag | `git tag -s -a vX.Y.Z` + `git log --format='%h %G? %s'` | Every line shows `G` (good signature) |
 | Python version drift | `scripts/check_python_version_consistency.py` | Highest `pyproject.toml` classifier == Dockerfile `FROM python:X.Y` |
 | CI emoji portability | `scripts/build_<report>.py` Python script | pytest asserts `b"\xf0\x9f"` not in output |
 
@@ -206,13 +208,49 @@ jobs:
           TAG="${GITHUB_REF#refs/tags/}"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+      - name: Extract release notes from CHANGELOG
+        id: notes
+        env:
+          VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          python3 << 'EOF'
+          import os
+          import re
+
+          version = os.environ["VERSION"]
+          with open("CHANGELOG.md", "r", encoding="utf-8") as f:
+              content = f.read()
+          # Match "## [X.Y.Z] - YYYY-MM-DD" up to the next "## [" or EOF.
+          pattern = rf"## \[{re.escape(version)}\] - \d{{4}}-\d{{2}}-\d{{2}}\n(.*?)(?=\n## \[|$)"
+          match = re.search(pattern, content, re.DOTALL)
+          if not match:
+              print("::error::Could not extract release notes for version", version)
+              raise SystemExit(1)
+          notes = match.group(1).strip()
+          # Escape for the GitHub Actions step output (single-line set).
+          notes = notes.replace("%", "%25").replace("\n", "%0A").replace("\r", "%0D")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write(f"RELEASE_NOTES={notes}\n")
+          EOF
       - name: Create GitHub Release
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365ece477b33038  # v0.1.15
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
+          body: ${{ steps.notes.outputs.RELEASE_NOTES }}
           draft: false
           prerelease: false
 ```
+
+The release-notes extraction step is what wires the CHANGELOG into the release `body`. Without
+it the `Create GitHub Release` step publishes an **empty** release. Key details:
+
+- **Regex** `## \[VERSION\] - \d{4}-\d{2}-\d{2}\n(.*?)(?=\n## \[|$)` with `re.DOTALL` so `.`
+  spans newlines; capture group 1 is everything between this version header and the next
+  `## [` header (or EOF). `re.escape(version)` guards the dotted version.
+- **GitHub-output escaping**: `%`→`%25`, `\n`→`%0A`, `\r`→`%0D` (escape `%` first so the
+  later replacements are not double-escaped). This lets a multi-line CHANGELOG section survive a
+  single-line `>> "$GITHUB_OUTPUT"` write.
+- **Wiring**: `body: ${{ steps.notes.outputs.RELEASE_NOTES }}` on the release-create step.
 
 **4. Keep bash regression tests in a dedicated job** (not lint — lint is static analysis; bash tests are runtime/regression):
 
@@ -246,6 +284,27 @@ dispatch-contract-test:
 ```
 
 `scripts/check_version_consistency.py` reads each manifest (`tomllib` for TOML, `json` for package.json, regex for the first dated CHANGELOG section), filters out absent optional files, and exits non-zero if the surviving set has more than one distinct version.
+
+**6. Create the release tag *signed*, then verify the signature**
+
+Branch protection and the `mattlqx/pre-commit-sign` hook only cover commits — the release **tag**
+must also be signed, or the published release cannot be verified for authorship. Use `-s` (sign)
+together with `-a` (annotated):
+
+```bash
+git tag -s -a v0.1.0 -m "Release v0.1.0: initial versioned release"
+git push origin v0.1.0
+```
+
+Verify the tag (and recent commits) carry a good signature before pushing:
+
+```bash
+git log --format='%h %G? %s' | head -10
+# Every line must show 'G' (good signature); 'N' (not signed) or 'B' (bad) blocks the release.
+```
+
+`%G?` legend: `G` good, `B` bad, `U` good-but-unknown-validity, `N` no signature, `E` cannot
+check. Treat anything other than `G` as a failed release gate.
 
 #### B. Python version drift detection (pyproject.toml ↔ Dockerfile)
 
@@ -343,6 +402,8 @@ A pytest guard asserts the bytes are gone: `assert b"\xf0\x9f" not in out.read_b
 | String-sorting Python versions | Compared classifier vs Dockerfile versions as strings | `"3.9" > "3.10"` by string sort — picks the wrong "highest" | Compare as numeric tuples: `(3, 9) < (3, 10)` |
 | Committing the new Python script once | Staged all files and ran `git commit` | ruff-format/ruff-check modified files and aborted the first commit (and an SQLite pre-commit lock briefly blocked the retry) | Re-stage the linter-modified files and commit again; retry clears the transient lock |
 | Leaving emoji in `comment-marker` YAML | Kept `"\U0001F4CA Test Metrics Report"` while making the file body plain text | The marker locates existing bot comments; a unicode escape is inconsistent with the new plain header | Set the marker to plain ASCII to match the script's header string |
+| Release published with empty notes | Wired only `tag_name` into `action-gh-release` and assumed it would pull notes from the CHANGELOG automatically | `softprops/action-gh-release` does not read CHANGELOG.md — with no `body`, the release notes are blank | Add an explicit extraction step (regex the dated section, escape `%`/`\n`/`\r` for `$GITHUB_OUTPUT`) and wire `body: ${{ steps.notes.outputs.RELEASE_NOTES }}` |
+| Pushing an unsigned (or lightweight) release tag | Ran `git tag v0.1.0` / `git tag -a v0.1.0` and pushed | The tag had no signature, so authorship could not be verified and `%G?` showed `N` | Sign the tag with `git tag -s -a vX.Y.Z -m "..."` and gate the release on `git log --format='%h %G? %s'` showing `G` |
 
 ## Results & Parameters
 
