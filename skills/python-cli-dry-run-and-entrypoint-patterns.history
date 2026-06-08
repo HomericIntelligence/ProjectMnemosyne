@@ -1,0 +1,670 @@
+<!-- markdownlint-disable MD024 -->
+
+# History: python-cli-dry-run-and-entrypoint-patterns
+
+This file preserves the full verbatim content of skills consolidated into the
+`python-cli-dry-run-and-entrypoint-patterns` canonical, plus the canonical changelog.
+
+## v1.0.0 (2026-06-07)
+
+Initial consolidation. Merged 3 overlapping skills into one general canonical:
+
+- `cli-dry-run-help-standardization` (tooling, 2026-06-05, v1.0.0)
+- `script-dry-run-flag` (tooling, 2026-03-07, v1.0.0)
+- `testing-cli-entrypoint-help-smoke` (testing, 2026-05-27, v1.1.0)
+
+## Superseded from cli-dry-run-help-standardization
+
+**Original date:** 2026-06-05
+**Original version:** "1.0.0"
+
+```yaml
+name: cli-dry-run-help-standardization
+description: "Standardize --dry-run help text across multiple CLIs using a shared constant and helper function. Use when: (1) Multiple CLIs need identical --dry-run semantics, (2) Token-cost caveats must be user-visible at --help time, (3) Refactoring CLI parsers to extract testable _build_parser() entrypoints, (4) Adding parametrized help-text tests across CLI modules."
+category: tooling
+date: 2026-06-05
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [argparse, cli, help-text, dry-run, testing, parametrized-tests, DRY-principle, refactoring]
+```
+
+
+# CLI Dry-Run Help Text Standardization
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-05 |
+| **Objective** | Standardize --dry-run help text across 7+ ProjectHephaestus CLI modules to prevent help-text drift and ensure consistent token-cost warnings at --help time |
+| **Outcome** | SUCCESS — created DRY_RUN_HELP_CAVEAT constant, add_dry_run_arg() helper, extracted _build_parser() from _parse_args() in 7 CLI modules, 11-test suite validating help text across all CLIs |
+| **Verification** | verified-ci (PR #974, all unit tests + ruff/mypy/formatting pass) |
+
+## When to Use
+
+- Multiple CLI modules in the same project each declare `--dry-run` with subtly different help text
+- Token-cost caveats need to be user-visible (appearing in `--help` output, not buried in docs)
+- CLI parsers are tightly coupled to argument parsing logic, making help-text testing difficult (no clean way to access parser metadata)
+- You want to prevent copy-paste drift in help text across modules via a canonical constant
+- Adding comprehensive parametrized tests to ensure help-text consistency across CLIs
+
+## Verified Workflow
+
+### Quick Reference
+
+**1. Create canonical DRY_RUN_HELP_CAVEAT constant** in `hephaestus/cli/utils.py`:
+
+```python
+DRY_RUN_HELP_CAVEAT = (
+    "Do not create PR, file follow-up issues, or invoke /learn. "
+    "Useful for testing without incurring token costs."
+)
+```
+
+**2. Create add_dry_run_arg() helper function** with auto-punctuation:
+
+```python
+def add_dry_run_arg(parser: ArgumentParser, *, prefix: str | None = None) -> None:
+    """Add --dry-run argument to parser with canonical help text.
+
+    Args:
+        parser: ArgumentParser to add --dry-run to
+        prefix: Optional prefix to prepend to help text (e.g., "For <X>: ")
+    """
+    help_text = DRY_RUN_HELP_CAVEAT
+    if prefix:
+        # Auto-punctuation: ensure period is present before concatenation
+        if not prefix.endswith("."):
+            prefix = prefix + "."
+        help_text = f"{prefix} {help_text}"
+    else:
+        # Ensure help text starts with capital and ends with period
+        if help_text and not help_text[0].isupper():
+            help_text = help_text[0].upper() + help_text[1:]
+        if not help_text.endswith("."):
+            help_text = help_text + "."
+
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help=help_text,
+    )
+```
+
+**3. Extract _build_parser() from _parse_args()** in each CLI module:
+
+```python
+def _build_parser() -> ArgumentParser:
+    """Build and return parser without parsing args.
+
+    This factoring enables tests to validate parser metadata (help text,
+    argument names, defaults) without side effects or mocking.
+    """
+    parser = ArgumentParser(description="...")
+    parser.add_argument("--verbose", "-v", action="store_true")
+    add_dry_run_arg(parser, prefix="Skip PR creation")
+    # ... more arguments ...
+    return parser
+
+def _parse_args(args: list[str] | None = None) -> Namespace:
+    """Parse command-line arguments using _build_parser()."""
+    return _build_parser().parse_args(args)
+```
+
+**4. Write parametrized test suite** accessing _build_parser():
+
+```python
+@pytest.mark.parametrize("cli_module", [
+    "hephaestus.automation.planner",
+    "hephaestus.automation.plan_reviewer",
+    "hephaestus.automation.pr_reviewer",
+    "hephaestus.automation.address_review",
+    "hephaestus.automation.implementer_cli",
+    "hephaestus.cli.ci_driver",
+    "hephaestus.automation.loop_runner",
+])
+def test_dry_run_help_text_consistent(cli_module: str) -> None:
+    """All CLI modules have identical --dry-run help text."""
+    module = importlib.import_module(cli_module)
+    parser = module._build_parser()
+
+    # Find --dry-run action
+    dry_run_action = next(
+        (a for a in parser._actions if "--dry-run" in a.option_strings),
+        None,
+    )
+    assert dry_run_action is not None, f"{cli_module} has no --dry-run arg"
+    assert dry_run_action.help == expected_help_text
+```
+
+### Detailed Steps
+
+1. **Identify all CLI modules declaring --dry-run** — use `grep -r "add_argument.*dry.run" hephaestus/` to find all occurrences and inspect their help text.
+
+2. **Create DRY_RUN_HELP_CAVEAT constant** in `hephaestus/cli/utils.py` with the canonical message. Include a token-cost caveat so users see it at `--help` time.
+
+3. **Create add_dry_run_arg() helper function** that encapsulates:
+   - Automatic help-text punctuation (adding period if missing, ensuring capital first letter)
+   - Optional prefix support for context-specific variations (e.g., "For plan review: ")
+   - Single source of truth for the `--dry-run` argument
+
+4. **Refactor each CLI module** to extract `_build_parser()` from `_parse_args()`:
+   - `_build_parser()` constructs and returns the parser (no side effects, no sys.exit on error)
+   - `_parse_args(args)` calls `_build_parser().parse_args(args)` and returns the namespace
+   - This separation enables tests to access parser metadata without mocking or subprocess invocation
+
+5. **Update _review_utils.py** if it has shared argument setup — use `add_dry_run_arg()` for consistency.
+
+6. **Create test_dry_run_help.py** with:
+   - Parametrized test over all CLI modules (use `@pytest.mark.parametrize`)
+   - Each test imports the module and calls `_build_parser()`
+   - Assertions on help text, action store_true, presence in option_strings
+   - Edge cases: missing --dry-run argument, malformed help text
+
+7. **Validate with pre-commit hooks**:
+   - `ruff check --select=E,F,W,I` — import sorting (isort-style)
+   - `ruff format` — formatter consistency
+   - `mypy` — type checking
+   - Run `pre-commit run --all-files` before committing
+
+8. **Verify test suite** covers all CLI entry points that have --dry-run.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Leaving help text inline in each argparse call | Each CLI had its own `help="Do not create PR, ..."` string | Help text drifted: some said "token costs", others omitted it; some had typos; copy-paste produced minor variations | Canonical constant (DRY_RUN_HELP_CAVEAT) prevents drift. Use a helper function to access it, never inline strings. |
+| Adding period/capitalization manually in each CLI | Some CLIs added period in the constant, others in the argparse call | Inconsistent capitalization and punctuation across modules; when updating the canonical text, had to search-replace in 7 places | Encapsulate auto-punctuation logic inside add_dry_run_arg(). The function ensures consistent formatting regardless of how the prefix is provided. |
+| Accessing parser in tests by importing _parse_args()—then calling it | Tests called `_parse_args(["--help"])` and caught SystemExit | ArgumentParser.parse_args() calls sys.exit(2) on error or --help; tests couldn't safely call it without subprocess isolation | Extract _build_parser() as a separate function. Tests call _build_parser() directly (no side effects), inspect the parser object, and validate metadata. |
+| Using __all__ export list with unsorted names | Initial __all__ had entries in creation order, not alphabetical | ruff --fix complained "imported but unused" and reordered alphabetically when fixing; pre-commit hook failed | Use isort-style __all__ sorting: alphabetical order, case-sensitive (lowercase before UPPERCASE). Run `ruff format --select=I` to auto-fix. |
+| Multi-line docstring closing quote on same line as `"""` | Some docstring blocks had `"""` closing on the same line as content | ruff --check (formatter) flagged as misaligned | Move closing `"""` to its own line. Formatter is strict about docstring shape. |
+| Testing only the planner module | Created a small test covering just hephaestus.automation.planner | Missed drift in 6 other CLI modules (plan_reviewer, pr_reviewer, address_review, implementer_cli, ci_driver, loop_runner); parametrized test later caught inconsistencies | Use parametrized tests from the start (@pytest.mark.parametrize) to cover all modules simultaneously. Catch drift across the entire CLI surface. |
+| Assuming keyword-only parameters were obvious | Initially wrote `add_dry_run_arg(parser, prefix=None)` without the `*` | Callers passed positional arguments in wrong order; function signature was ambiguous about intent | Use keyword-only parameters: `add_dry_run_arg(parser, *, prefix=None)`. The `*` makes it impossible to pass prefix positionally and signals intent at call site. |
+| Storing help text in a per-module config dict | Tried to move help text to a config file indexed by module name | Config file drifted from source code; modules could forget to register themselves; no type checking | Keep the canonical constant in Python code alongside the helper function. Type hints ensure consistency; no separate config file. |
+
+## Results & Parameters
+
+### DRY_RUN_HELP_CAVEAT Constant
+
+```python
+DRY_RUN_HELP_CAVEAT = (
+    "Do not create PR, file follow-up issues, or invoke /learn. "
+    "Useful for testing without incurring token costs."
+)
+```
+
+**Key properties**:
+- Lowercase start (auto-capitalized by add_dry_run_arg when used standalone)
+- No period at end (auto-added by add_dry_run_arg)
+- Token-cost caveat explicitly mentioned (user-visible in --help)
+- Concise (fits on one line in --help output)
+
+### add_dry_run_arg() Function Signature
+
+```python
+def add_dry_run_arg(parser: ArgumentParser, *, prefix: str | None = None) -> None:
+    """Add --dry-run argument to parser with canonical help text.
+
+    Args:
+        parser: ArgumentParser to add --dry-run to
+        prefix: Optional prefix to prepend to help text (e.g., "For plan review: ")
+                Prefix is auto-punctuated (period added if missing).
+    """
+```
+
+**Behavior**:
+- Keyword-only `prefix` parameter (enforced by `*`) prevents positional-argument mistakes
+- Auto-punctuation: ensures prefix ends with `.`, ensures full help text ends with `.`
+- Standalone use (no prefix): ensures capital first letter
+- action="store_true": --dry-run is a boolean flag
+- Return type is None (modifies parser in-place per argparse conventions)
+
+### CLI Modules Updated (7 total)
+
+| Module | File Path | Test Coverage |
+|--------|-----------|---|
+| planner | hephaestus/automation/planner.py | test_dry_run_help.py::test_planner_has_dry_run |
+| plan_reviewer | hephaestus/automation/plan_reviewer.py | test_dry_run_help.py::test_plan_reviewer_has_dry_run |
+| pr_reviewer | hephaestus/automation/pr_reviewer.py | test_dry_run_help.py::test_pr_reviewer_has_dry_run |
+| address_review | hephaestus/automation/address_review.py | test_dry_run_help.py::test_address_review_has_dry_run |
+| implementer_cli | hephaestus/automation/implementer_cli.py | test_dry_run_help.py::test_implementer_has_dry_run |
+| ci_driver | hephaestus/cli/ci_driver.py | test_dry_run_help.py::test_ci_driver_has_dry_run |
+| loop_runner | hephaestus/automation/loop_runner.py | test_dry_run_help.py::test_loop_runner_has_dry_run |
+
+### Test Suite (11 tests)
+
+All in `tests/unit/cli/test_dry_run_help.py`:
+
+1. **test_dry_run_help_text_all_modules_consistent** — parametrized test over 7 modules, validates all have identical help text
+2. **test_dry_run_is_store_true** — verifies action="store_true" across all modules
+3. **test_dry_run_in_option_strings** — confirms "--dry-run" appears in action.option_strings
+4. **test_add_dry_run_arg_without_prefix** — unit test of helper, validates help text capitalization
+5. **test_add_dry_run_arg_with_prefix** — unit test of helper with prefix, validates auto-punctuation
+6. **test_add_dry_run_arg_prefix_already_has_period** — edge case: prefix already ends with period
+7. **test_add_dry_run_arg_help_ends_with_period** — standalone help text gets period appended
+8. **test_planner_build_parser_returns_parser** — _build_parser() returns ArgumentParser
+9. **test_planner_parse_args_respects_dry_run** — _parse_args(["--dry-run"]).dry_run is True
+10. **test_planner_parse_args_dry_run_defaults_false** — dry_run defaults to False
+11. **test_all_cli_modules_export_build_parser** — each module exports _build_parser() function
+
+**Coverage**: 11 tests, all passing; ruff/mypy/pre-commit all pass; CI verified.
+
+### Expected --help Output
+
+```
+usage: planner [-h] [--dry-run] [--verbose] ...
+
+options:
+  -h, --help      show this help message and exit
+  --dry-run       Do not create PR, file follow-up issues, or invoke /learn. Useful for testing without incurring token costs.
+  --verbose, -v   increase verbosity
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | Issue #772, PR #974 | Standardize --dry-run help text across all CLIs. Created DRY_RUN_HELP_CAVEAT constant in hephaestus/cli/utils.py, add_dry_run_arg(parser, *, prefix=None) helper, extracted _build_parser() from _parse_args() in 7 CLI modules (planner, plan_reviewer, pr_reviewer, address_review, implementer_cli, ci_driver, loop_runner). Created test_dry_run_help.py with 11 tests covering help-text consistency, auto-punctuation, parametrized validation. All tests pass, ruff/mypy/formatting pass, pre-commit hooks pass. Verification: verified-ci (PR #974 merged). |
+
+---
+
+## Superseded from script-dry-run-flag
+
+**Original date:** 2026-03-07
+**Original version:** 1.0.0
+
+```yaml
+name: script-dry-run-flag
+description: "TRIGGER CONDITIONS: Adding a --dry-run flag to a CLI script that exits\
+  \ 1 on errors. Use when developers need to preview all violations/errors across\
+  \ many files without blocking a pre-commit hook or CI step \u2014 especially during\
+  \ bulk config migrations or refactors."
+category: tooling
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+```
+
+# script-dry-run-flag
+
+How to add a `--dry-run` flag to a validation script so all errors are printed but
+the exit code is always 0, allowing developers to preview failures without blocking commits.
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | 2026-03-07 |
+| Objective | Add `--dry-run` to `scripts/validate_config_schemas.py` |
+| Outcome | Success — PR HomericIntelligence/ProjectScylla#1463 |
+| Issue | HomericIntelligence/ProjectScylla#1442 |
+
+## When to Use
+
+- Any validation script that exits 1 on errors where you want a non-blocking preview mode
+- Bulk config file migrations where you want to see all violations before fixing any
+- Pre-commit hooks that should optionally run in advisory (non-blocking) mode
+- Follows `precommit-schema-validation` skill when the base script is already in place
+
+## Verified Workflow
+
+### 1. Add `dry_run` parameter to the core function
+
+Add `dry_run: bool = False` as a keyword argument. Keep the default `False` so existing
+callers are unaffected. After collecting all failures, check the flag before returning:
+
+```python
+def check_files(
+    files: list[Path],
+    repo_root: Path,
+    verbose: bool = False,
+    dry_run: bool = False,
+) -> int:
+    """Validate each file against its matching schema.
+
+    Args:
+        files: List of file paths to check.
+        repo_root: Repository root used for schema resolution.
+        verbose: If True, print ``PASS:`` lines for valid files.
+        dry_run: If True, print all errors but return 0 (do not block commits).
+
+    Returns:
+        0 if all files are valid or ``dry_run`` is True, 1 if any violations
+        are found and ``dry_run`` is False.
+
+    """
+    # ... existing validation loop unchanged ...
+
+    if any_failure and dry_run:
+        return 0
+    return 1 if any_failure else 0
+```
+
+**Key**: The `if any_failure and dry_run: return 0` check comes **after** the full loop,
+so all files are always processed (all errors printed) before the exit code decision.
+
+### 2. Add `--dry-run` argparse flag in `main()`
+
+```python
+parser.add_argument(
+    "--dry-run",
+    action="store_true",
+    help="Print all errors but exit 0 — useful for previewing violations without blocking commits",  # noqa: E501
+)
+
+args = parser.parse_args()
+return check_files(args.files, args.repo_root, verbose=args.verbose, dry_run=args.dry_run)
+```
+
+`argparse` converts `--dry-run` to `args.dry_run` (hyphen → underscore) automatically.
+
+### 3. Update the module docstring exit codes section
+
+```python
+Exit codes:
+    0: All files valid (or no matching schema found — warned, not failed)
+    0: Violations found but --dry-run is set (errors printed, commit not blocked)
+    1: One or more schema violations found (without --dry-run)
+```
+
+### 4. Write tests covering all four cases
+
+```python
+class TestDryRun:
+    """Tests for --dry-run behaviour in check_files() and main()."""
+
+    def test_dry_run_with_violations_returns_zero(self, tmp_path: Path) -> None:
+        """dry_run=True should return 0 even when there are violations."""
+        assert check_files([bad], repo_root, dry_run=True) == 0
+
+    def test_dry_run_false_with_violations_returns_one(self, tmp_path: Path) -> None:
+        """dry_run=False should return 1 when there are violations."""
+        assert check_files([bad], repo_root, dry_run=False) == 1
+
+    def test_dry_run_prints_errors(self, tmp_path, capsys) -> None:
+        """dry_run=True should still print errors to stderr."""
+        check_files([bad], repo_root, dry_run=True)
+        assert "FAIL" in capsys.readouterr().err
+
+    def test_dry_run_no_violations_returns_zero(self, tmp_path: Path) -> None:
+        """dry_run=True with a valid file should still return 0."""
+        assert check_files([good], repo_root, dry_run=True) == 0
+
+    def test_dry_run_multiple_bad_files_all_reported(self, tmp_path, capsys) -> None:
+        """dry_run=True should report all invalid files, not just the first."""
+        result = check_files([bad_a, bad_b], repo_root, dry_run=True)
+        assert result == 0
+        assert "bad_a.yaml" in capsys.readouterr().err
+        assert "bad_b.yaml" in capsys.readouterr().err
+
+    def test_main_dry_run_flag_with_violations_exits_zero(
+        self, tmp_path, capsys, monkeypatch
+    ) -> None:
+        """main() with --dry-run should exit 0 even when violations are found."""
+        monkeypatch.setattr(
+            "sys.argv",
+            ["validate_config_schemas.py", "--dry-run", "--repo-root", str(repo_root), str(bad)],
+        )
+        assert main() == 0
+
+    def test_main_no_dry_run_with_violations_exits_one(self, tmp_path, monkeypatch) -> None:
+        """main() without --dry-run should exit 1 when violations are found."""
+        monkeypatch.setattr(
+            "sys.argv",
+            ["validate_config_schemas.py", "--repo-root", str(repo_root), str(bad)],
+        )
+        assert main() == 1
+```
+
+Use `monkeypatch.setattr("sys.argv", [...])` to test `main()` without spawning a subprocess.
+Include `--repo-root` so the test controls schema resolution via a `tmp_path`-based fake root.
+
+### 5. Handle the line-length lint issue
+
+The `--dry-run` help string will typically exceed 100 chars. Add `# noqa: E501` inline:
+
+```python
+help="Print all errors but exit 0 — useful for previewing violations without blocking commits",  # noqa: E501
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+- 7 new tests added in `TestDryRun` (33 total in the test module)
+- No changes to `.pre-commit-config.yaml` — hook registration unchanged
+- `argparse` hyphen-to-underscore: `--dry-run` → `args.dry_run` (built-in behaviour)
+- Default `dry_run=False` preserves backward compatibility for all existing callers
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectScylla | PR #1463, issue #1442 | Follow-up to precommit-schema-validation (#1382/#1439) |
+
+---
+
+## Superseded from testing-cli-entrypoint-help-smoke
+
+**Original date:** 2026-05-27
+**Original version:** "1.1.0"
+
+```yaml
+name: testing-cli-entrypoint-help-smoke
+description: "Smoke-test Python CLI entry points with --help subprocess calls and import verification. Use when: (1) a package declares [project.scripts] entry points, (2) entry points need regression protection, (3) an issue asks for CLI importability tests."
+category: testing
+date: 2026-05-27
+version: "1.1.0"
+user-invocable: false
+verification: verified-ci
+history: testing-cli-entrypoint-help-smoke.history
+tags:
+  - python
+  - cli
+  - integration-testing
+  - entry-points
+  - smoke-tests
+```
+
+
+# Testing CLI Entry Points with --help Smoke Tests
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-27 |
+| **Objective** | Verify all `[project.scripts]` entry points are importable and respond to `--help` without crashing |
+| **Outcome** | Success — 8 tests (4 import + 4 subprocess) all pass in 0.39s |
+| **Verification** | verified-ci (v1.1.0 editable-install finding); v1.0.0 test pattern was verified-local |
+| **History** | [changelog](./testing-cli-entrypoint-help-smoke.history) |
+
+## When to Use
+
+- A Python package declares `[project.scripts]` entry points in `pyproject.toml`
+- Entry points need smoke tests to catch import errors, missing dependencies, or broken `main()` signatures
+- An issue explicitly asks for CLI entry point integration tests
+- The existing integration tests only cover module imports, not the `main()` functions that serve as entry points
+
+Do NOT use when:
+- Entry points require real credentials or network access just for `--help` (check first)
+- The package doesn't use argparse/click (custom CLI parsing may not support `--help`)
+
+### Install prerequisite for subprocess smoke tests (v1.1.0)
+
+A subprocess-based smoke test (`subprocess.run([sys.executable, ..., "--help"])`)
+requires the package to be **actually installed** (editable or regular) into the
+subprocess's site-packages. A freshly-spawned `python` subprocess does **NOT** inherit
+pytest's `[tool.pytest.ini_options] pythonpath` injection, nor `conftest.py` `sys.path`
+tricks — those only help **in-process** tests. Consequences to plan for:
+
+1. If you write a subprocess CLI smoke test, ensure **every** CI workflow that runs it
+   first installs the package (editable is fine). Do not rely on `pythonpath`/`conftest`
+   sys.path manipulation — it does not cross the subprocess boundary.
+2. Diagnostic tell: if `test_script_is_importable` (in-process) **passes** while
+   `test_script_help_exits_zero` (subprocess) **fails** with `ModuleNotFoundError`, the
+   package isn't installed in that env — it's a missing-install / workflow-parity problem,
+   **not** a code bug. Do NOT "fix" it by weakening or deleting the subprocess test.
+3. When a package is deliberately kept out of the dependency manager's lockfile (e.g.
+   hatch-vcs editable installs causing pixi.lock churn), the editable-install step becomes
+   an explicit, easy-to-forget prerequisite that must be replicated across **all**
+   test-running workflows. Audit every workflow that runs the smoke tests.
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Run CLI entry point tests
+pixi run pytest tests/integration/test_cli_entry_points.py -v --no-cov
+
+# Verify a single entry point manually
+python -m hephaestus.git.changelog --help
+```
+
+### Detailed Steps
+
+#### 1. Read `pyproject.toml` to find entry points
+
+```bash
+grep -A10 '\[project.scripts\]' pyproject.toml
+```
+
+Example output:
+```toml
+[project.scripts]
+hephaestus-changelog = "hephaestus.git.changelog:main"
+hephaestus-merge-prs = "hephaestus.github.pr_merge:main"
+hephaestus-system-info = "hephaestus.system.info:main"
+hephaestus-download-dataset = "hephaestus.datasets.downloader:main"
+```
+
+#### 2. Verify each module has a `main()` function and `__main__` block
+
+```bash
+grep -n "def main\|if __name__" hephaestus/git/changelog.py
+```
+
+Confirm: each module has `def main()` and `if __name__ == "__main__": main()`.
+
+#### 3. Check for side effects before `--help`
+
+Read each `main()` function to verify `--help` exits cleanly:
+- argparse handles `--help` **before** any business logic runs — `sys.exit(0)` is called by argparse
+- This is safe as long as there are no module-level side effects (network calls, file writes) at import time
+
+#### 4. Create the test file
+
+Key design decisions:
+- **Use `sys.executable -m module.path`** instead of installed script names — avoids depending on pip-installed entry points
+- **Parametrize with ids** matching the script names from `pyproject.toml` for readable test output
+- **Two test classes**: import verification (fast, in-process) + subprocess `--help` (realistic, out-of-process)
+- **Assert usage text** in stdout to confirm argparse actually ran (not just a silent exit 0)
+
+```python
+import importlib
+import subprocess
+import sys
+import pytest
+
+ENTRY_POINTS = [
+    ("hephaestus.git.changelog", "main"),
+    ("hephaestus.github.pr_merge", "main"),
+    ("hephaestus.system.info", "main"),
+    ("hephaestus.datasets.downloader", "main"),
+]
+
+class TestCLIEntryPointImports:
+    @pytest.mark.parametrize(
+        "module_path,func_name",
+        ENTRY_POINTS,
+        ids=["hephaestus-changelog", "hephaestus-merge-prs",
+             "hephaestus-system-info", "hephaestus-download-dataset"],
+    )
+    def test_main_importable_and_callable(self, module_path: str, func_name: str) -> None:
+        mod = importlib.import_module(module_path)
+        main_func = getattr(mod, func_name, None)
+        assert main_func is not None, f"{module_path}.{func_name} not found"
+        assert callable(main_func), f"{module_path}.{func_name} is not callable"
+
+class TestCLIEntryPointHelp:
+    @pytest.mark.parametrize(
+        "module_path",
+        [ep[0] for ep in ENTRY_POINTS],
+        ids=["hephaestus-changelog", "hephaestus-merge-prs",
+             "hephaestus-system-info", "hephaestus-download-dataset"],
+    )
+    def test_help_exits_cleanly(self, module_path: str) -> None:
+        result = subprocess.run(
+            [sys.executable, "-m", module_path, "--help"],
+            capture_output=True, text=True, timeout=30,
+        )
+        assert result.returncode == 0, (
+            f"{module_path} --help exited with code {result.returncode}\n"
+            f"stdout: {result.stdout}\nstderr: {result.stderr}"
+        )
+        assert "usage:" in result.stdout.lower(), (
+            f"{module_path} --help did not produce usage text"
+        )
+```
+
+#### 5. Run and verify
+
+```bash
+pixi run pytest tests/integration/test_cli_entry_points.py -v --no-cov
+pixi run ruff check tests/integration/test_cli_entry_points.py
+pixi run ruff format --check tests/integration/test_cli_entry_points.py
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Using installed script names | Tried `subprocess.run(["hephaestus-changelog", "--help"])` | Requires package to be pip-installed with entry points registered; fails in pixi/dev environments | Use `sys.executable -m module.path` — tests the same `main()` code path via `__main__` block without needing pip install |
+| N/A — direct approach worked | Import + subprocess two-pronged strategy succeeded on first try | N/A | For argparse-based CLIs, `--help` is always safe — argparse calls `sys.exit(0)` before any business logic |
+| Relying on pytest `pythonpath` for the subprocess test | ProjectHephaestus release workflow ran `pixi run pytest tests/unit` with no editable-install step; the `hephaestus` package is intentionally excluded from the pixi lockfile (installed via separate `pixi run dev-install` = `pip install -e . --no-deps` to avoid hatch-vcs churn) | 15 failures, all `test_script_help_exits_zero[*]`, each `ModuleNotFoundError: No module named 'hephaestus'`. The in-process import test passed (pytest's `pythonpath` applied), but the spawned `python --help` subprocess did not inherit it. The PR test workflow passed because it ran `pip install -e ".[dev]"` first — a workflow-parity bug | Subprocess smoke tests need the package installed in the env they spawn into; `pythonpath`/`conftest` sys.path tricks only help in-process. Add the editable-install step to EVERY CI workflow that runs the test; don't weaken the test to make it pass |
+
+## Results & Parameters
+
+**Test file**: `tests/integration/test_cli_entry_points.py`
+
+**Test count**: 8 (4 import + 4 subprocess)
+
+**Execution time**: ~0.39s total
+
+**Pattern for adding new entry points**: Add a tuple to `ENTRY_POINTS` list and a corresponding id string to both `ids=` lists.
+
+**Key assertion**: Always check for `"usage:"` in stdout — this confirms argparse actually ran, not just a silent exit 0 from some other code path.
+
+**Pre-flight check for new entry points**: Before adding to tests, verify:
+1. Module has `def main()` function
+2. Module has `if __name__ == "__main__": main()` block
+3. `main()` uses argparse (or click) with `--help` support
+4. No module-level side effects that would crash on import
+
+**CI workflow parity (v1.1.0)**: Every workflow that runs the subprocess smoke test must
+install the package first. The fix that resolved the ProjectHephaestus release-workflow
+failures (PR #612) added an editable-install step before pytest:
+
+```yaml
+- name: Editable install (scripts/ smoke tests spawn subprocesses that import hephaestus)
+  run: pixi run dev-install   # = pip install -e . --no-deps
+- name: Run tests
+  run: pixi run pytest tests/unit
+```
+
+After merging, the release run's test + type-check + build-and-publish jobs all went
+green in CI — hence `verified-ci` for this finding.
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectHephaestus | Issue #52, PR #95 | 4 CLI entry points: changelog, merge-prs, system-info, download-dataset (v1.0.0, verified-local) |
+| ProjectHephaestus | PR #612 | Editable-install / workflow-parity fix: release.yml ran pytest without `pixi run dev-install`, causing 15 `ModuleNotFoundError` failures in subprocess `--help` tests (v1.1.0, verified-ci) |
+
+---
