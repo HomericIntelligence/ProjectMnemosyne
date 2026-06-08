@@ -3,7 +3,7 @@ name: python-cli-dry-run-and-entrypoint-patterns
 description: "Use when: (1) adding a --dry-run flag to a CLI script that exits 1 on errors, letting developers preview all violations without blocking pre-commit or CI during bulk migrations; (2) standardizing --dry-run help text across multiple CLIs using a shared constant and testable _build_parser() entrypoint helper; (3) smoke-testing Python CLI entry points declared in [project.scripts] with --help subprocess calls and import verification to prevent regressions; (4) refactoring CLI parsers to extract testable _build_parser() functions and adding parametrized help-text tests across CLI modules."
 category: tooling
 date: 2026-06-07
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 history: python-cli-dry-run-and-entrypoint-patterns.history
 tags:
@@ -206,6 +206,13 @@ pixi run pytest tests/integration/test_cli_entry_points.py -v --no-cov
 
 4. **Replace every inline `--dry-run` help string** with `add_dry_run_arg(parser, ...)`.
 
+   **Ruff/pre-commit gotchas while refactoring** (see Failed Attempts): if the shared module
+   declares an `__all__` export list, keep it alphabetically sorted (case-sensitive, lowercase
+   before UPPERCASE) or ruff isort will fail — fix with `ruff check --select=I --fix`. And when
+   writing the `add_dry_run_arg`/`_build_parser` docstrings, put the closing `"""` of a
+   multi-line docstring on its own line; ruff's formatter rejects a closing `"""` that shares a
+   line with content.
+
 #### C. Extract a testable `_build_parser()` entrypoint
 
 Split parser construction from parsing so tests can inspect parser metadata (help text,
@@ -321,6 +328,8 @@ def test_dry_run_help_text_consistent(cli_module: str) -> None:
 | Checking `dry_run` inside the validation loop | Early-returned 0 as soon as `dry_run` and a failure were seen | Stopped after the first failing file, so only one violation was printed | Check `if any_failure and dry_run: return 0` AFTER the full loop so ALL violations are reported |
 | Leaving help text inline in each argparse call | Each CLI had its own `help="Do not create PR, ..."` string | Help text drifted: typos, missing token-cost caveat, copy-paste variations | Use a canonical constant + helper (`add_dry_run_arg`), never inline strings |
 | Adding period/capitalization manually per CLI | Some added punctuation in the constant, others in the call | Inconsistent punctuation; updating canonical text meant editing 7 places | Encapsulate auto-punctuation inside the helper so formatting is consistent regardless of prefix |
+| Declaring `__all__` in creation order in the shared module | Entries listed in the order helpers were defined, not alphabetically | ruff isort (`--select=I`) flagged `__all__` as unsorted and reordered it on `--fix`, failing pre-commit | Keep `__all__` alphabetically sorted, case-sensitive (lowercase before UPPERCASE); auto-fix with `ruff check --select=I --fix` |
+| Closing a multi-line docstring with `"""` on the same line as content | `add_dry_run_arg`/`_build_parser` docstrings ended with text and `"""` on one line | The ruff formatter rejected the docstring shape as misaligned | Put the closing `"""` of a multi-line docstring on its own line — the formatter is strict about docstring shape |
 | Accessing the parser in tests via `_parse_args(["--help"])` | Called `_parse_args` and caught `SystemExit` | `parse_args()` calls `sys.exit(2)` / exits on `--help`; unsafe to call in-process | Extract `_build_parser()` and inspect the returned parser object — no side effects |
 | Testing only one CLI module | Wrote a test covering just `planner` | Missed drift in 6 other modules | Use `@pytest.mark.parametrize` from the start to cover the whole CLI surface |
 | Using a per-module config dict for help text | Moved help text into a config file keyed by module | Config drifted from code; modules could forget to register; no type checking | Keep the constant + helper in Python code with type hints; no separate config file |

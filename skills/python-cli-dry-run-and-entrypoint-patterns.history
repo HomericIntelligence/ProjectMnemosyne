@@ -5,6 +5,10 @@
 This file preserves the full verbatim content of skills consolidated into the
 `python-cli-dry-run-and-entrypoint-patterns` canonical, plus the canonical changelog.
 
+## v1.1.0 (2026-06-07)
+
+restore ruff __all__/docstring lessons (nuance audit pass 2)
+
 ## v1.0.0 (2026-06-07)
 
 Initial consolidation. Merged 3 overlapping skills into one general canonical:
