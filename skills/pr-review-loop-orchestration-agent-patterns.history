@@ -1,0 +1,2363 @@
+<!-- markdownlint-disable MD024 -->
+
+# History: pr-review-loop-orchestration-agent-patterns
+
+This file preserves the full original content of the skills merged into this canonical.
+
+## v1.0.0 (2026-06-07)
+
+Initial merge consolidating 9 source skills:
+
+- `automation-review-loop-evidence-based-resolution`
+- `comprehensive-pr-review-orchestration`
+- `automation-pr-review-inline-comment-diff-hunk-validation`
+- `bash-upstream-pr-review-traps`
+- `gh-fix-pr-feedback`
+- `self-cancelling-review-plan`
+- `feature-dev-code-reviewer-cannot-execute-shell-commands`
+- `ci-cd-no-commit-retry-with-review-thread-injection`
+- `automation-github-graphql-field-validation-live-schema`
+
+## Superseded from automation-review-loop-evidence-based-resolution
+
+**Original date:** 2026-06-07 / **Original version:** 1.0.0
+
+```yaml
+name: automation-review-loop-evidence-based-resolution
+description: "How to build a Python implement->review loop that drives LLM sub-agents to review a PR and fix its review comments, so it converges on an EVIDENCE-BASED GO instead of a self-reported one. SHIPPED & verified-ci (ProjectHephaestus PR #1084 / issue #1083): (a) the fixer agent's address step counts as progress ONLY when `addressed AND committed` are both true -- a clean worktree with prose replies like 'documented as a limitation' must NOT resolve threads; resolution is gated on a real commit, never on the model's self-report; (b) the loop converges ONLY on an explicit `Verdict: GO` -- 'reviewer posted zero threads' regardless of verdict ends AMBIGUOUS/NO-GO too fast; (c) thread RESOLUTION is moved OUT of the fixer and INTO a fresh read-only REVIEWER/validator on the next pass that compares each prior thread against the new diff and resolves only genuinely-addressed ones, re-opening the rest -- the fixer only edits+commits+pushes and must NOT call the resolve mutation; (d) a `state:skip` label (sourced from the state_labels single-source module, auto-provisioned, honored on issue OR PR) skips all phases and is auto-applied on iteration exhaustion; (e) a `--nitpick` flag where the reviewer severity-tags every inline comment (critical/major/minor/nitpick) and SUPPRESSES nitpick by default so the loop doesn't burn iterations on cosmetics; (f) per-comment dispatch -- classify each comment's fix difficulty with a cheap sub-agent, render a `@ <file> Line <#> - <difficulty> - <desc>` todo list, dispatch ONE sub-agent per comment (serialize same-file comments), tier models simple->haiku/medium->sonnet/hard->opus. ALSO captures (UNVERIFIED, found by strict post-merge review of that very code) FOUR design defects to avoid: match threads by thread `id` not `(path, line)`; FETCH+concatenate an existing comment body before `updatePullRequestReviewComment` (it REPLACES, not appends); gate auto-`state:skip` on real iteration exhaustion not blanket non-GO; FENCE untrusted comment text in prompts. Use when: (1) building/auditing a Python loop that has an LLM sub-agent review a PR then fix the inline comments, (2) a review loop resolves threads even though no commit was produced, (3) a loop ends NO-GO/AMBIGUOUS 'too fast' before ever earning a GO, (4) deciding whether the fixer or the reviewer resolves GitHub review threads, (5) adding a skip-label or a nitpick-suppression flag to such a loop, (6) dispatching one fix sub-agent per review comment with tiered models."
+category: architecture
+date: 2026-06-07
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - hephaestus-automation-loop
+  - implement-review-loop
+  - review-thread-resolution
+  - evidence-based-resolution
+  - commit-gated-progress
+  - verdict-go-convergence
+  - state-skip-label
+  - nitpick-severity-suppression
+  - per-comment-dispatch
+  - tiered-models
+  - prompt-injection
+  - graphql-review-threads
+  - homericintelligence
+```
+
+
+# Review Loop: Resolve Threads on Commit Evidence, Converge on Verdict GO
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-07 |
+| **Objective** | Make a Python implement->review loop (an LLM sub-agent reviews a PR, another fixes the inline comments) converge on an EVIDENCE-BASED `Verdict: GO` rather than on the fixer's self-report. Stop the loop from (a) resolving review threads when no commit was produced, (b) terminating NO-GO/AMBIGUOUS before earning a GO, and (c) burning iterations on cosmetic nitpicks. Add a `state:skip` escape hatch and per-comment tiered dispatch. |
+| **Outcome** | SHIPPED -- ProjectHephaestus PR #1084 (closes #1083) merged CI-green. The commit-gate, the `Verdict: GO` convergence, the reviewer-side evidence-based resolution, the `state:skip` vocabulary/gating, the `--nitpick` default-off suppression, and per-comment tiered dispatch all landed. A STRICT post-merge review then found 4 MAJOR design defects in the merged code (see Failed Attempts -- those corrections are NOT yet validated). |
+| **Verification** | verified-ci for what shipped (commit-gate, `state:skip` vocabulary/gating, `--nitpick` suppression, verdict-GO convergence, reviewer-side resolution, per-comment dispatch). The 4 design corrections in Failed Attempts are `unverified` -- proposed, not yet implemented or CI-confirmed. Do NOT treat the buggy-as-merged behavior as the ideal. |
+
+## When to Use
+
+Trigger phrases / situations:
+
+- "review loop resolved a thread but no commit was made"
+- "the fixer agent replied 'documented as a limitation' and the thread got resolved"
+- "the loop ended NO-GO / AMBIGUOUS too fast" / "it never earned a GO"
+- "should the fixer or the reviewer resolve the review threads?"
+- "add a skip label to the automation loop" / "honor state:skip on an issue or PR"
+- "suppress nitpick comments" / "reviewer severity tags critical/major/minor/nitpick"
+- "dispatch one sub-agent per review comment" / "tiered models for fix difficulty"
+- You are building or auditing a Python loop where one LLM sub-agent reviews a PR and another fixes the inline review comments, and you need the contract for "what counts as progress" and "who resolves threads."
+- This is the **successor** to `tooling-hephaestus-automation-loop-drive-green-broken-design` (PRs #1073/#1075/#1077/#1079) -- that skill introduced `review_validator.py` (re-raise unaddressed comments as new threads) and bot-thread resolution. PR #1084 hardens the *resolution-vs-commit* and *convergence* contract on top of it.
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# 1. PROGRESS IS GATED ON A REAL COMMIT, NOT THE MODEL'S SELF-REPORT.
+#    _commit_if_changes returns a bool. The address step only counts as
+#    progress when BOTH the model said it addressed comments AND a commit
+#    actually landed. A clean worktree -> no progress, regardless of prose.
+addressed = run_fixer_agent(...)          # model self-report (untrusted alone)
+committed = _commit_if_changes(worktree)  # True only if HEAD advanced
+made_progress = addressed and committed   # BOTH required
+# Thread resolution NEVER happens here -- the fixer does not call the resolve mutation.
+
+# 2. CONVERGE ONLY ON AN EXPLICIT `Verdict: GO`. Zero threads != GO.
+if reviewer_verdict == "GO":
+    converge()
+# "reviewer posted zero threads" with verdict AMBIGUOUS/NO-GO is NOT convergence.
+# Require the literal GO so the loop can't end before earning it.
+
+# 3. RESOLUTION IS EVIDENCE-BASED AND LIVES IN THE REVIEWER, NOT THE FIXER.
+#    On the NEXT review pass, a fresh READ-ONLY sub-agent compares each prior
+#    thread against the new diff: resolve only genuinely-addressed threads,
+#    re-open (new inline thread) the rest. The fixer only edits+commits+pushes.
+for thread in prior_threads:
+    if validator_says_addressed_by_diff(thread, new_diff):
+        resolve(thread.id)        # reviewer side only
+    else:
+        reopen_as_new_thread(thread)  # re-open OVERRIDES a stale GO
+```
+
+```bash
+# 4. state:skip -- manual+automatic override, honored on issue OR PR.
+#    The label NAME lives in the single-source state_labels module (NOT hard-coded).
+#    Auto-provision it; auto-apply it when the loop exhausts iterations without GO.
+#    When present on the issue OR the PR, skip ALL phases.
+
+# 5. --nitpick flag. Reviewer severity-tags EVERY inline comment:
+#    critical | major | minor | nitpick. nitpick is SUPPRESSED by default;
+#    --nitpick re-enables it. Default-off keeps the loop off cosmetic threads.
+review --nitpick   # opt IN to nitpick-severity comments
+```
+
+### Detailed Steps
+
+1. **Gate "progress" on a real commit (`addressed AND committed`).**
+   `_commit_if_changes` returns `True` only if HEAD advanced. The fixer's
+   self-reported "addressed" list is untrusted on its own -- a clean worktree
+   with prose replies (e.g., "documented as a limitation", "this is intended")
+   must count as ZERO progress and must NOT resolve any thread. Resolution is
+   gated on commit evidence, never on the model's self-report.
+
+2. **Converge ONLY on an explicit `Verdict: GO`.** Do not converge on "reviewer
+   posted zero threads." A zero-thread pass with verdict AMBIGUOUS or NO-GO ends
+   the loop too fast -- before it ever earns a GO. Parse the verdict explicitly
+   (see `llm-output-verdict-parse-last-line-not-substring`) and require the
+   literal `GO` token to converge.
+
+3. **Move thread RESOLUTION into the reviewer/validator on the next pass.**
+   The fixer agent ONLY edits, commits, and pushes; it MUST NOT call the GitHub
+   resolve mutation. On the next review pass, a fresh READ-ONLY sub-agent
+   compares each prior thread against the new diff and:
+   - resolves a thread ONLY if the diff genuinely addressed it (evidence-based);
+   - re-opens (as a NEW inline thread -- GitHub has no "unresolve" mutation, and
+     the unresolved-thread lister filters resolved threads out) every thread the
+     diff did NOT address. A re-open OVERRIDES a stale GO so the loop keeps going.
+   Respect the own-threads-only guarantee (do not touch human threads).
+
+4. **`state:skip` label as a manual + automatic override.** Put the label NAME
+   in the single-source-of-truth `state_labels` module -- do NOT hard-code the
+   string at the callsite. Auto-provision the label (create it if missing).
+   Honor it on EITHER the issue OR the PR: if present, skip ALL phases. Auto-apply
+   it when the loop exhausts its iteration budget without a GO (but see the
+   PITFALL in Failed Attempts: gate the auto-apply on TRUE exhaustion, not on a
+   single iteration-0 zero-thread non-GO).
+
+5. **`--nitpick` flag + severity tagging.** The reviewer tags every inline comment
+   with a severity: `critical | major | minor | nitpick`. By DEFAULT, suppress
+   nitpick-severity comments entirely; `--nitpick` re-enables them. Default-off
+   suppression keeps the loop from burning iterations on cosmetic threads.
+
+6. **Per-comment dispatch with tiered models.** Classify each review comment's
+   fix difficulty with a cheap, separate sub-agent. Render a todo list of the
+   form `@ <file> Line <#> - <difficulty> - <description>`. Dispatch ONE sub-agent
+   per comment, but SERIALIZE same-file comments to avoid worktree write conflicts.
+   Tier the model by difficulty: simple -> haiku, medium -> sonnet, hard -> opus.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Resolve threads from the fixer's self-reported "addressed" list | The loop resolved review threads whenever the fixer agent said it had addressed them -- even with a clean worktree and prose-only replies ("documented as a limitation") | Threads got resolved (with reply text) while NO commit was produced; the PR looked addressed but the diff was unchanged | Gate resolution on a real commit: `_commit_if_changes` returns a bool; count an address step as progress ONLY when `addressed AND committed`. Never trust the model's self-report alone. (SHIPPED, PR #1084.) |
+| Converge when the reviewer posts zero threads | The loop terminated on "zero new threads" regardless of the verdict | It ended AMBIGUOUS/NO-GO "too fast", before ever earning a GO; a quiet reviewer pass was mistaken for success | Require an explicit `Verdict: GO` to converge. Zero threads != GO. (SHIPPED, PR #1084.) |
+| Let the fixer agent resolve its own threads | The implementer/fixer agent both edited the code AND called the resolve mutation in one pass | The fixer has every incentive to declare victory; resolution co-located with fixing is not evidence-based | Move resolution to a fresh READ-ONLY reviewer/validator on the next pass that diffs each prior thread against the new code; the fixer only edits+commits+pushes and must NOT call resolve. (SHIPPED, PR #1084.) |
+| Burn iterations on every cosmetic comment | Reviewer treated all inline comments equally; the loop tried to address nitpicks | Cosmetic threads consumed iterations the loop needed for real defects | Severity-tag every comment (critical/major/minor/nitpick) and SUPPRESS nitpick by default; `--nitpick` opts back in. (SHIPPED, PR #1084.) |
+| **(PROPOSED / UNVERIFIED)** Match prior threads for resolution on `(path, line)` | The validator paired a prior thread to the new diff by file path + line number | Two threads can share a line (e.g., the reviewer's original + a re-open), and path normalization can drift across hunks -- so the wrong thread gets resolved/re-opened | Match on the thread `id`: include the id in the validation prompt AND the payload, and have the sub-agent echo it back. NOT YET FIXED in #1084. |
+| **(PROPOSED / UNVERIFIED)** Edit an existing comment via `updatePullRequestReviewComment` using only its node id | To avoid duplicating a comment, the code fetched only the node id from the comment index and called the update mutation | `updatePullRequestReviewComment` REPLACES the body -- updating with new text silently DESTROYS the original comment. Returning only the node id is insufficient | FETCH the existing body first and CONCATENATE; the comment index must return the body, not just the id. NOT YET FIXED in #1084. |
+| **(PROPOSED / UNVERIFIED)** Auto-apply `state:skip` on any `last_verdict != "GO"` | The loop labeled the issue/PR `state:skip` whenever the most recent verdict was not GO | It fired after a SINGLE iteration-0 zero-thread NO-GO, permanently stranding a fixable issue that just hadn't been worked yet | Gate auto-skip on TRUE exhaustion -- `iterations_run >= MAX_ITERATIONS` (or an explicit AMBIGUOUS terminal state), not blanket non-GO. NOT YET FIXED in #1084. |
+| **(PROPOSED / UNVERIFIED)** Interpolate `thread["body"]` unfenced into the coordinator prompt | Untrusted GitHub comment text was dropped directly into the prompt's todo list (authoritative region), with only first-line truncation as "safety" | First-line truncation is not injection-safe; an attacker-controlled comment can inject instructions into the prompt's authoritative region | FENCE all untrusted comment text (or reduce it to path+line only) before interpolation. Truncation is not a sanitizer. NOT YET FIXED in #1084. |
+| **(PROPOSED / UNVERIFIED, DRY)** Re-implement the read-only sub-agent invocation per sub-agent type | Each sub-agent type duplicated the `is_codex` branch -> `invoke_claude_with_session`/`run_codex_text` -> `parse_json_block` -> 3-exception catch shape | The same invocation+parse+error-handling block is copy-pasted per sub-agent, drifting over time | Factor a shared `run_read_only_session` helper that all read-only sub-agents call. NOT YET FACTORED in #1084. |
+
+> Rows marked **(PROPOSED / UNVERIFIED)** are design defects a strict post-merge
+> review found IN the merged PR #1084 code. The corrections are NOT yet
+> implemented or CI-confirmed -- treat them as the next implementer's must-fix
+> list, not as shipped behavior.
+
+## Results & Parameters
+
+### The progress / convergence contract (SHIPPED, verified-ci)
+
+| Rule | Implementation | Why |
+|------|----------------|-----|
+| Progress requires a commit | `made_progress = addressed and committed`; `_commit_if_changes` returns bool (True iff HEAD advanced) | A clean worktree with prose replies is NOT progress and must not resolve threads |
+| Convergence requires an explicit GO | parse reviewer output, require literal `Verdict: GO` | "zero threads" with AMBIGUOUS/NO-GO is not success |
+| Fixer never resolves | fixer agent only edits+commits+pushes; resolution mutation lives in the reviewer/validator | evidence-based resolution; fixer can't self-declare victory |
+| Reviewer resolution is diff-evidence-based | fresh READ-ONLY sub-agent compares each prior thread vs new diff; resolve addressed, re-open (new thread) the rest | re-open OVERRIDES a stale GO; GitHub has no unresolve mutation |
+
+### `state:skip` label (SHIPPED, verified-ci)
+
+| Property | Value |
+|----------|-------|
+| Label name source | the single-source `state_labels` module (NOT a hard-coded string at the callsite) |
+| Provisioning | auto-provisioned (created if missing) |
+| Scope | honored on the issue OR the PR |
+| Effect when present | skip ALL phases |
+| Auto-apply (shipped) | applied when the loop exhausts iterations without GO |
+| Auto-apply (CORRECTION, unverified) | gate the auto-apply on `iterations_run >= MAX_ITERATIONS` or AMBIGUOUS terminal, NOT on a blanket `last_verdict != "GO"` (a single iteration-0 NO-GO must NOT strand the issue) |
+
+### `--nitpick` severity model (SHIPPED, verified-ci)
+
+```text
+Reviewer tags every inline comment with one severity:
+  critical | major | minor | nitpick
+
+Default:    suppress nitpick-severity comments entirely.
+--nitpick:  re-enable nitpick comments.
+
+Rationale: default-off suppression keeps the loop from spending iterations
+on cosmetic threads it would otherwise have to "address" to earn a GO.
+```
+
+### Per-comment dispatch + tiered models (SHIPPED, verified-ci)
+
+```text
+1. For each review comment, a cheap separate sub-agent classifies fix difficulty.
+2. Render a todo list:
+     @ <file> Line <#> - <difficulty> - <description>
+3. Dispatch ONE sub-agent per comment.
+   - SERIALIZE comments that touch the SAME file (avoid worktree write conflicts).
+   - Parallelize across distinct files.
+4. Tier the model by difficulty:
+     simple -> haiku
+     medium -> sonnet
+     hard   -> opus
+```
+
+### Cross-references to companion skills
+
+- **`tooling-hephaestus-automation-loop-drive-green-broken-design`** (PRs
+  #1073/#1075/#1077/#1079) -- the PREDECESSOR. It introduced `review_validator.py`
+  (re-raise unaddressed comments as NEW inline threads, since GitHub has no
+  unresolve mutation) and drive-green bot-thread resolution. PR #1084 (this skill)
+  hardens the resolution-vs-commit and convergence contract on top of it.
+- **`llm-output-verdict-parse-last-line-not-substring`** -- how to robustly parse
+  the `Verdict: GO` token from the reviewer's output (do not substring-match).
+- **`ci-cd-no-commit-retry-with-review-thread-injection`** (PR #847) -- the
+  no-commit-on-red-CI retry path; complements this skill's "no commit -> no
+  progress, no resolution" rule.
+- **`architecture-github-labels-as-state-vocabulary`** -- why `state:skip` belongs
+  in a single-source label vocabulary module rather than a hard-coded string.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | PR #1084 (closes #1083), merged CI-green: shipped the commit-gated progress rule, `Verdict: GO` convergence, reviewer-side evidence-based thread resolution, `state:skip` label vocabulary/gating + auto-apply, `--nitpick` default-off severity suppression, and per-comment tiered dispatch. | [PR #1084](https://github.com/HomericIntelligence/ProjectHephaestus/pull/1084) / [issue #1083](https://github.com/HomericIntelligence/ProjectHephaestus/issues/1083) |
+| ProjectHephaestus | Strict post-merge review of PR #1084 found 4 MAJOR design defects (thread `(path,line)` matching, comment-body REPLACE-vs-concatenate, over-eager auto-`state:skip`, unfenced untrusted comment text) + 1 DRY note (`run_read_only_session`). Corrections captured as PROPOSED/UNVERIFIED Failed-Attempts rows. | Same PR #1084 -- corrections not yet implemented or CI-confirmed. |
+
+---
+
+## Superseded from comprehensive-pr-review-orchestration
+
+**Original date:** 2026-01-23 / **Original version:** 1.0.0
+
+```yaml
+name: comprehensive-pr-review-orchestration
+description: Orchestrate comprehensive PR reviews using specialized sub-reviewers.
+  Use when reviewing complex PRs.
+category: ci-cd
+date: 2026-01-23
+version: 1.0.0
+user-invocable: false
+```
+
+# Skill: Comprehensive PR Review Orchestration
+
+| Property | Value |
+| ---------- | ------- |
+| **Date** | 2026-01-23 |
+| **Objective** | Conduct comprehensive PR review using code-review-orchestrator to coordinate multiple specialized reviewers |
+| **Outcome** | ✅ Successfully identified 3 blocking issues, posted structured review comments to PR and issue |
+| **Context** | PR #3109 needed comprehensive review for alignment with issue #3033 and repository architecture |
+
+## When to Use This Skill
+
+Use this skill when:
+- Need to conduct a thorough, multi-dimensional PR review
+- PR must align with specific issue requirements and repository architecture
+- Want structured, prioritized feedback across multiple review dimensions
+- Need actionable review comments posted as GitHub review for engineer to address
+
+**Key Indicators**:
+- User asks to "review PR comprehensively"
+- Review must check alignment with original issue requirements
+- Need to verify adherence to repository architecture/patterns
+- Want review comments filed for others to fix (not implement fixes directly)
+
+## Verified Workflow
+
+### 1. Use Code Review Orchestrator Agent
+
+**Launch with clear requirements:**
+```markdown
+Use the Task tool with subagent_type="code-review-orchestrator"
+
+Prompt should include:
+1. PR number and URL
+2. Related issue number for alignment verification
+3. Requirement to check repository architecture/design adherence
+4. Request to coordinate multiple specialized reviewers
+```
+
+**Example:**
+```markdown
+Review PR #3109 (https://github.com/user/repo/pull/3109) comprehensively.
+
+Key requirements:
+1. Verify alignment with issue #3033 (improve import test robustness)
+2. Check adherence to repository architecture and design patterns from CLAUDE.md
+3. Route to appropriate specialist reviewers based on the changes
+
+Please:
+- First, fetch the PR details and understand what changed
+- Read issue #3033 to understand the requirements
+- Identify which specialist reviewers are needed based on the changes
+- Coordinate reviews across all applicable dimensions
+- Provide an aggregated summary with prioritized findings
+```
+
+### 2. Orchestrator Routes to Specialist Reviewers
+
+The orchestrator analyzes changes and routes to appropriate specialists:
+
+**Common specialists for Mojo projects:**
+- **Test Review Specialist** - Test coverage, quality, assertions
+- **Mojo Language Review Specialist** - Mojo-specific idioms, syntax, patterns
+- **Implementation Review Specialist** - General code quality, logic correctness
+- **Documentation Review Specialist** - Documentation clarity, completeness
+- **Memory Safety Review Specialist** - Memory management, ownership
+- **Algorithm Review Specialist** - Mathematical correctness (ML code)
+
+**Routing decision based on changes:**
+- Test files changed → Test Review Specialist
+- Mojo language features used → Mojo Language Review Specialist
+- Documentation added/modified → Documentation Review Specialist
+- Algorithm implementation → Algorithm Review Specialist
+
+### 3. Review Output Structure
+
+The orchestrator provides:
+
+**A. Specialist Findings** - Organized by reviewer:
+```markdown
+### 1. Test Review Specialist
+✅ Strengths: [What's good]
+⚠️ Important Issues: [Priority issues with file:line references]
+📝 Minor Issues: [Nice-to-have improvements]
+
+### 2. Mojo Language Review Specialist
+[Same structure]
+```
+
+**B. Consolidated Report** - Aggregated across all specialists:
+```markdown
+### Priority 1: Blocking Issues (Must Fix Before Merge)
+1. Issue description [file:line] - Specialist name
+
+### Priority 2: Important Improvements (Should Fix)
+[Same structure]
+
+### Priority 3: Nice to Have (Consider for Future)
+[Same structure]
+```
+
+**C. Alignment Assessment:**
+```markdown
+**Issue Goal Alignment:** ✅/⚠️/❌
+**Repository Architecture:** ✅/⚠️/❌
+**Predicted CI Status:** ✅/❌
+```
+
+### 4. File Review Comments for Engineer
+
+**Post comprehensive review:**
+```bash
+gh api \
+  repos/OWNER/REPO/pulls/PR_NUMBER/reviews \
+  -X POST \
+  -f event='COMMENT' \
+  -f body="[Full review with Priority 1/2/3 sections, testing instructions, alignment assessment]"
+```
+
+**Post line-specific issues:**
+```bash
+gh pr comment PR_NUMBER --body "$(cat <<'EOF'
+## 📍 Line-Specific Issues
+
+### file.mojo:263
+🚫 **BLOCKING:** Issue description
+Fix: [code example]
+
+### file.mojo:284
+⚠️ **IMPORTANT:** Issue description
+Fix: [code example]
+EOF
+)"
+```
+
+**Update tracking issue:**
+```bash
+gh issue comment ISSUE_NUMBER --body "$(cat <<'EOF'
+## PR #XXX Review Complete - Changes Requested
+
+### Status: ⚠️ Changes Requested
+
+**N blocking issues** identified:
+1. Issue summary
+2. Issue summary
+
+### Review Details
+Full review: [PR review link]
+Line-specific: [PR comment link]
+
+### Next Steps
+Engineer should:
+1. Apply fixes
+2. Run local tests
+3. Push updates
+EOF
+)"
+```
+
+### 5. Verify Review Posted Successfully
+
+```bash
+# Check review was posted
+gh pr view PR_NUMBER --json reviews --jq '.reviews[-1]'
+
+# Check comments were posted
+gh pr view PR_NUMBER --json comments --jq '.comments[-1]'
+
+# Check issue comment was posted
+gh issue view ISSUE_NUMBER --json comments --jq '.comments[-1]'
+```
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Agent Configuration
+
+**Agent Type**: `code-review-orchestrator`
+**Model**: Default (inherited from parent, likely Sonnet)
+**Mode**: Default (no special permissions needed)
+
+**Prompt Structure**:
+```markdown
+Review PR #[NUMBER] ([URL]) comprehensively.
+
+Key requirements:
+1. Verify alignment with issue #[NUMBER] ([description])
+2. Check adherence to repository architecture and design patterns
+3. Route to appropriate specialist reviewers
+
+Please:
+- Fetch PR details
+- Read related issue
+- Identify needed specialists
+- Coordinate reviews
+- Provide aggregated summary with prioritized findings
+```
+
+### Review Output Example
+
+**PR #3109 Review Results:**
+
+**Specialists Engaged**: 4
+- Test Review Specialist
+- Mojo Language Review Specialist
+- Implementation Review Specialist
+- Documentation Review Specialist
+
+**Findings**:
+- 3 blocking issues (Priority 1)
+- 2 important improvements (Priority 2)
+- 2 nice-to-have suggestions (Priority 3)
+
+**Blocking Issues Identified**:
+1. Missing AUTHOR and LICENSE constants (import failure)
+2. Undefined `int()` function (compilation error)
+3. Missing exports in `shared/__init__.mojo` (import failure)
+
+**Review Comments Posted**:
+- Main review: https://github.com/.../pull/3109#pullrequestreview-3698599863
+- Line-specific: https://github.com/.../pull/3109#issuecomment-3791264504
+- Issue tracking: https://github.com/.../issues/3033#issuecomment-3791265854
+
+### GitHub API Commands Used
+
+```bash
+# Post comprehensive review summary
+gh api repos/OWNER/REPO/pulls/3109/reviews \
+  -X POST \
+  -f event='COMMENT' \
+  -f body="[Full markdown review]"
+
+# Post line-specific issues as PR comment
+gh pr comment 3109 --body "$(cat <<'EOF'
+## 📍 Line-Specific Issues
+[Formatted issues with file:line references]
+EOF
+)"
+
+# Update tracking issue
+gh issue comment 3033 --body "$(cat <<'EOF'
+## PR #3109 Review Complete - Changes Requested
+[Status summary and next steps]
+EOF
+)"
+```
+
+### Testing Commands
+
+**Recommended for engineer to verify fixes:**
+```bash
+# Test compilation
+pixi run mojo build tests/shared/test_imports.mojo
+
+# Test execution
+pixi run mojo test tests/shared/test_imports.mojo
+
+# Verify exports
+pixi run mojo build shared/__init__.mojo
+
+# Run full test group
+just test-group tests/shared "test_imports.mojo"
+```
+
+## Key Takeaways
+
+1. **Use code-review-orchestrator for comprehensive reviews** - Coordinates multiple specialists automatically
+2. **Be explicit about requirements** - Specify issue alignment, architecture adherence in prompt
+3. **Let orchestrator route to specialists** - Don't manually specify which reviewers to use
+4. **Prioritize findings** - P1 (blocking) → P2 (important) → P3 (nice-to-have)
+5. **Use simple PR comments, not inline review comments** - Inline API is complex, simple comments work
+6. **Post three locations** - Main review (PR), line-specific (PR comment), tracking (issue comment)
+7. **Include testing instructions** - Help engineer verify fixes locally
+8. **Estimate fix time** - Sets expectations (e.g., "15-30 minutes")
+9. **Don't implement fixes when asked to file comments** - Maintain clear ownership
+
+## Cross-Project Applicability
+
+This skill applies to any project with:
+- ✅ Pull request workflow on GitHub
+- ✅ Hierarchical agent system (orchestrator + specialists)
+- ✅ Code review requirements before merge
+- ✅ Issue tracking for feature work
+
+**Adaptation notes**:
+- Specialist selection depends on project language (Mojo, Python, TypeScript, etc.)
+- Priority levels may vary by project standards
+- Testing commands are project-specific
+
+## Related Skills
+
+- `verify-issue-before-work` - Check issue requirements before starting implementation
+- `fix-ci-test-failures` - Fix tests that fail in CI but pass locally
+- `grading-consolidation` - Multi-agent orchestration pattern for complex analysis
+
+## Port to Other Projects
+
+This skill is already in ProjectMnemosyne (team knowledge base). To apply to specific projects:
+
+```bash
+# Reference in project CLAUDE.md
+echo "See ProjectMnemosyne/skills/ci-cd/comprehensive-pr-review-orchestration" >> CLAUDE.md
+
+# Or create project-specific adaptation
+cp -r ProjectMnemosyne/skills/ci-cd/comprehensive-pr-review-orchestration \
+  YourProject/.claude/skills/
+```
+
+---
+
+## Superseded from automation-pr-review-inline-comment-diff-hunk-validation
+
+**Original date:** 2026-06-06 / **Original version:** 1.0.0
+
+```yaml
+name: automation-pr-review-inline-comment-diff-hunk-validation
+description: >-
+  Validate LLM/agent-generated inline PR-review comments against the PR diff
+  hunks before POSTing the review, so GitHub does not reject the entire review
+  with HTTP 422. Use when: (1) writing/editing code that POSTs a PR review with
+  inline comments via `gh api -X POST .../pulls/{n}/reviews`, (2) a runtime log
+  shows `gh: Unprocessable Entity (HTTP 422)` on a review POST, (3) an LLM/agent
+  generates inline review comments (path/line/side) that may not lie on a
+  changed line, (4) an automation loop records a spurious NOGO/Grade=F because
+  the in-loop review POST failed, (5) the diff shown to a review model is
+  truncated so it can cite real-but-out-of-hunk lines.
+category: tooling
+date: 2026-06-06
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - github-api
+  - pull-request-review
+  - "422"
+  - unprocessable-entity
+  - diff-hunk
+  - inline-comments
+  - llm-generated-comments
+  - fail-open
+  - automation-pipeline
+```
+
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| Date | 2026-06-06 |
+| Objective | Stop GitHub from 422'ing an entire PR review because one LLM-generated inline comment points at a line that is not in the diff hunk. |
+| Outcome | `gh_pr_review_post` now parses the unified diff into accepted (line, side) positions, drops + logs out-of-hunk comments, and still posts the summary review with whatever survives. Spurious NOGO/Grade=F from a 422'd in-loop review is eliminated. |
+| Verification | verified-ci — fix merged to ProjectHephaestus `main` (PR #1043, closes #1039) with new unit/integration tests covering the 422 path and the pure hunk parser. |
+
+## When to Use
+
+- You are writing or editing code that POSTs a PR review carrying inline
+  comments via `gh api -X POST /repos/{owner}/{repo}/pulls/{n}/reviews`.
+- A runtime log shows `gh: Unprocessable Entity (HTTP 422)` on a review POST.
+- An LLM or agent generates inline review comments (`path`/`line`/`side`) and
+  those positions may not land on a changed line of the PR.
+- An automation loop records a spurious `Verdict=NOGO` / `Grade=F` because the
+  in-loop review POST failed (not because the code was actually bad).
+- The diff handed to a review model is truncated (e.g. to 8000 chars), so the
+  model can cite real lines that are nonetheless outside the visible hunk.
+
+## Verified Workflow
+
+1. **Fetch the FULL diff, not the truncated review context.** The reviewer
+   model may only see a truncated diff (8000 chars), but validation must run
+   against the complete PR diff. Use `gh pr diff <n>` (or
+   `GET /repos/{owner}/{repo}/pulls/{n}` with `Accept: application/vnd.github.v3.diff`).
+   Validating against the truncated context would wrongly drop valid comments on
+   large diffs.
+
+2. **Parse the unified diff once into a set of accepted (line, side) positions
+   per file.** Walk hunk headers and track new-file and old-file line counters:
+   - `RIGHT` side = added (`+`) lines and context (` `) lines, numbered in the
+     NEW file.
+   - `LEFT` side = removed (`-`) lines and context (` `) lines, numbered in the
+     OLD file.
+   - Hunk header form: `@@ -oldStart,oldLen +newStart,newLen @@` — the `,len`
+     part is optional (e.g. `@@ -1 +1 @@`), so parse defensively.
+
+3. **Filter the LLM comments.** Keep each comment whose `(path, line, side)`
+   tuple is in the accepted set. DROP the rest, and LOG each dropped comment at
+   `WARNING` (with path/line/side) so the loss is visible.
+
+4. **Still POST the summary review with whatever remains.** The summary-only
+   path (empty `comments` array) works fine against the reviews endpoint, so an
+   all-dropped review still delivers the body/event verdict.
+
+5. **FAIL OPEN.** If the diff is empty or could not be fetched, return the
+   comments UNCHANGED. Dropping feedback because the diff fetch hiccuped is worse
+   than a possible 422.
+
+6. **Add the missing tests.** The post-reviews path had NO test exercising a 422
+   / out-of-hunk comment (existing tests mocked `gh_pr_review_post` or returned
+   success). Add: (a) out-of-hunk comment filtered while in-hunk survives,
+   (b) all-out-of-hunk → summary-only POST, (c) empty diff → fail open, and
+   (d) pure unit tests of the hunk parser for RIGHT/LEFT/context numbering.
+
+### Quick Reference
+
+```text
+Hunk header parse rule:
+  @@ -oldStart[,oldLen] +newStart[,newLen] @@
+        ^old counter         ^new counter      (",len" is OPTIONAL)
+
+Side mapping (which (line, side) GitHub accepts):
+  RIGHT : added '+' lines AND context ' ' lines, numbered in the NEW file
+  LEFT  : removed '-' lines AND context ' ' lines, numbered in the OLD file
+
+Pipeline:
+  full_diff = gh pr diff <n>            # NOT the 8000-char model context
+  accepted  = parse(full_diff)          # {path -> {(line, side)}}
+  kept      = [c for c in comments if (c.line, c.side) in accepted[c.path]]
+  # log+drop the rest at WARNING
+  if not full_diff: return comments     # FAIL OPEN
+  POST review(body, event, comments=kept)   # summary-only is OK if kept == []
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Post comments unvalidated | `gh_pr_review_post` in `hephaestus/automation/github_api.py` mapped LLM comment dicts (`path`, `line`, `side`, `body`) straight into the `POST .../pulls/{n}/reviews` payload with no diff check. | GitHub rejects the ENTIRE review with HTTP 422 if ANY single comment is out-of-hunk; the in-loop implementer then logged a spurious `Verdict=NOGO Grade=F`. | One bad comment poisons the whole review — validate every `(path, line, side)` against the diff before POST. |
+| Validate against the truncated context diff | Reuse the 8000-char diff already shown to the reviewer model as the source of accepted positions. | On large PRs the truncation omits real hunks, so valid in-hunk comments would be wrongly dropped. | Validation needs the FULL `gh pr diff`, not the model's truncated context. |
+| Fail closed on empty diff | If the diff was empty/unavailable, drop all comments to be "safe". | A transient diff-fetch hiccup would silently discard all reviewer feedback. | FAIL OPEN: when the diff is unavailable, return comments unchanged — a possible 422 beats guaranteed silent feedback loss. |
+
+## Results & Parameters
+
+- **Root cause**: `gh_pr_review_post` mapped LLM-produced comment dicts straight
+  into the reviews payload with NO validation that each `(path, line, side)`
+  lies on a line present in the PR diff. GitHub 422s the whole review on any
+  out-of-hunk comment; the loop recorded it as a spurious `Verdict=NOGO
+  Grade=F`. Amplified because the diff shown to the reviewer model was truncated
+  to 8000 chars (the model cites real-but-out-of-hunk lines).
+- **Fix**: parse the unified diff once into accepted `(line, side)` positions per
+  file, filter comments to that set, drop + log the rest at WARNING, and still
+  POST the summary review with whatever remains. Fail open on empty/unavailable
+  diff.
+- **Endpoint**: `POST /repos/{owner}/{repo}/pulls/{n}/reviews` (via
+  `gh api -X POST`). Failure mode: `gh: Unprocessable Entity (HTTP 422)`.
+- **Side semantics**: `RIGHT` = `+`/context lines numbered in the new file;
+  `LEFT` = `-`/context lines numbered in the old file.
+- **Hunk header**: `@@ -oldStart,oldLen +newStart,newLen @@`; the `,len` is
+  optional — parse defensively.
+- **Design invariant**: fail OPEN — never drop comments because the diff could
+  not be fetched.
+- **Source**: `hephaestus/automation/github_api.py` (`gh_pr_review_post`).
+- **Verification**: verified-ci — merged to ProjectHephaestus `main` via PR
+  #1043 (closes #1039) with new tests for the 422/out-of-hunk path and the pure
+  hunk parser.
+
+---
+
+## Superseded from bash-upstream-pr-review-traps
+
+**Original date:** 2026-04-27 / **Original version:** 2.0.0
+
+```yaml
+name: bash-upstream-pr-review-traps
+description: "Implement a feature or fix in a forked bash project and navigate maintainer review rounds. Use when: (1) contributing a new flag/env-var to an upstream bash CLI extension, (2) performing two-round review of bash scripts for logic and safety bugs, (3) debugging git branch --list exit-code trap or bash function-before-definition hazard, (4) filing separate bug issues found during code review and opening one PR per bug with correct branch dependencies."
+category: tooling
+date: 2026-04-27
+version: "2.0.0"
+user-invocable: false
+verification: verified-local
+history: bash-upstream-pr-review-traps.history
+tags: [bash, git-branch, function-definition, arg-parsing, ansi-color, env-var, upstream-pr, fork, open-source, review, gh-tidy, word-splitting, multi-pr, issue-filing, branch-dependency]
+```
+
+
+# Bash Upstream PR Review: Traps and Patterns
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-27 |
+| **Objective** | Implement and review bash PRs against upstream forks, handle out-of-scope bug discovery, and manage multi-PR branch dependencies |
+| **Outcome** | PR #63 (feature), PR #67/#68/#69 (bugs) created at `HaywardMorihara/gh-tidy`; all fixes verified locally |
+| **Verification** | verified-local — tested with `GH_TIDY_DEV_MODE=1` in throwaway git repos; upstream CI pending |
+| **History** | [changelog](./bash-upstream-pr-review-traps.history) |
+
+## When to Use
+
+- Contributing a new CLI flag + env-var override to an upstream bash extension you don't maintain
+- Reviewing bash scripts for logic correctness and safety (two-round review process)
+- Debugging silent failures where a `git` command's exit code is misleading
+- Calling color/utility functions from inside a bash `while` arg-parsing loop
+- Adding env-var override notices to a bash script's startup output
+- Ensuring `--value-flag`-style arguments cannot silently consume the next flag as their value
+- Filing separate GitHub issues for out-of-scope bugs found during code review
+- Opening one PR per bug with correct branch dependencies (in-flight vs independent)
+- Deciding whether a fix branch should be based on `main` or an in-flight feature branch
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Fork and clone
+gh repo fork <owner>/<repo> --clone --remote
+
+# Implement following existing patterns exactly
+# (read source first — do not rely on memory)
+
+# Smoke test via dev mode
+GH_TIDY_DEV_MODE=1 bash <script> [flags]
+
+# Validate git branch presence correctly
+# WRONG: if git branch --list "$branch"; then ...   (always exits 0)
+# RIGHT: if [[ -n "$(git branch --list "$branch")" ]]; then ...
+
+# Safe branch iteration — no word-splitting, no glob expansion
+# WRONG (word-splits and glob-expands):
+#   for branch in $(git branch --list); do ...
+# RIGHT:
+while IFS= read -r branch; do
+  branch="${branch#\* }"   # strip leading "* " from current branch
+  branch="${branch#  }"    # strip leading "  " from other branches
+  ...
+done < <(git branch --list)
+
+# CRITICAL: when mutating a bash array inside the loop, MUST use process substitution
+# (not pipe | while) — pipe creates a subshell and array mutations are lost
+problem_branches=()
+while IFS= read -r branch; do
+  problem_branches+=("$branch")
+done < <(git branch --list)
+
+# Guard value-flags against consuming the next flag as value
+--trunk)
+  shift
+  if [[ -z "$1" || "$1" == --* ]]; then
+    echo "Error: --trunk requires a value" >&2; exit 1
+  fi
+  TRUNK_BRANCH="$1" ;;
+
+# Prefer [[ -n "${var}" ]] over [[ ! -z ${var} ]]
+
+# Place env-var override notices AFTER arg parsing, BEFORE first git op
+# Use echo >&2 (not color functions) if calling from inside the while loop
+
+# Sync fork before branching for independent bugs
+git fetch upstream
+git checkout main
+git merge --ff-only upstream/main
+git push origin main
+
+# Parallel issue filing (independent gh issue create calls can run concurrently)
+# Sequential PR creation (each needs its own number from GitHub)
+# Push all branches in one call:
+git push origin branch1 branch2 branch3
+```
+
+### Detailed Steps
+
+1. **Fork the upstream repo and clone**
+
+   ```bash
+   gh repo fork HaywardMorihara/gh-tidy --clone --remote
+   cd gh-tidy
+   git checkout -b feature/auto-delete-merged
+   ```
+
+2. **Read the full source file before writing a single line**
+
+   Establish: existing flag pattern, env-var naming convention, color function names,
+   where arg parsing ends, where the first git operation occurs. Do NOT rely on memory
+   from the issue-filing session — the actual code may differ.
+
+3. **Implement following existing patterns exactly**
+
+   For a new boolean flag + env-var pair:
+
+   ```bash
+   # Env-var declaration (near top with other env vars):
+   AUTO_DELETE_MERGED="${GH_TIDY_AUTO_DELETE_MERGED:-false}"
+
+   # Arg-parsing block (inside while loop):
+   --auto-delete-merged)
+     AUTO_DELETE_MERGED=true ;;
+
+   # Env-var override notice block (AFTER the while loop, BEFORE first git op):
+   if [[ "$AUTO_DELETE_MERGED" == "true" ]]; then
+     yellow "Notice: GH_TIDY_AUTO_DELETE_MERGED is set — skipping prompt for merged branches."
+   fi
+
+   # Usage logic (where merged branch prompts appear):
+   if [[ "$AUTO_DELETE_MERGED" == "true" ]]; then
+     delete_branch "$branch"
+   else
+     # existing interactive prompt
+   fi
+   ```
+
+4. **First round review — structural and style issues**
+
+   Run through this checklist before requesting review:
+
+   - Comment placement: forward-looking TODO must be ABOVE the while loop (not inside it)
+   - Are env-var override notices present for ALL flags, not just the new one?
+   - Does help text use tabs (not spaces) for flag descriptions?
+   - Is punctuation consistent across messages (periods or no periods — not mixed)?
+   - Do ALL `read -p "..."` prompts have ANSI color resets at the END of the prompt string?
+     - Wrong: `printf '%b' "$'\e[93m'Some prompt: "`
+     - Right: `printf '%b' "$'\e[93m'Some prompt: $'\e[0m'"`
+   - Is the `$problem_branches` array always declared, even in non-interactive paths?
+   - Are all `for branch in $(git branch ...)` loops replaced with `while IFS= read -r`?
+   - Are all `[[ ! -z ${var} ]]` patterns replaced with `[[ -n "${var}" ]]`?
+
+5. **Second round review — logic and safety bugs**
+
+   The most dangerous bugs hide in:
+
+   a. **`git branch --list` exit code trap** (always returns 0):
+
+      ```bash
+      # WRONG — git branch --list exits 0 even if the branch does not exist
+      if git branch --list "$branch"; then
+        # This ALWAYS runs — the branch may not actually exist locally
+        echo "branch exists"
+      fi
+
+      # RIGHT — test the OUTPUT, not the exit code
+      if [[ -n "$(git branch --list "$branch")" ]]; then
+        echo "branch exists"
+      fi
+      ```
+
+   b. **`for` loop word-splitting on branch names**:
+
+      ```bash
+      # WRONG — word-splits and glob-expands branch names
+      for branch in $(git branch --list); do
+        echo "$branch"
+      done
+
+      # RIGHT — IFS= read -r prevents both
+      while IFS= read -r branch; do
+        branch="${branch#\* }"   # strip "* " prefix (current branch)
+        branch="${branch#  }"    # strip "  " prefix (other branches)
+        echo "$branch"
+      done < <(git branch --list)
+      ```
+
+      **Critical subshell trap**: if the loop body mutates a bash array, you MUST use
+      process substitution `< <(...)` — NOT a pipe (`| while`). A pipe creates a subshell
+      and all array mutations in the loop body are lost when the subshell exits:
+
+      ```bash
+      # WRONG — subshell loses array mutations
+      git branch --list | while IFS= read -r branch; do
+        problem_branches+=("$branch")   # lost! subshell exits
+      done
+
+      # RIGHT — process substitution keeps array mutations in parent shell
+      while IFS= read -r branch; do
+        problem_branches+=("$branch")   # persists in parent shell
+      done < <(git branch --list)
+      ```
+
+   c. **Value-flag silently consuming the next flag as its value**:
+
+      ```bash
+      # WRONG — if user passes `--trunk` at the end or immediately before another flag,
+      # $1 after inner shift may be empty or another flag like "--auto-delete-merged"
+      --trunk)
+        shift
+        TRUNK_BRANCH="$1" ;;
+
+      # RIGHT — guard against both missing value and flag-as-value
+      --trunk)
+        shift
+        if [[ -z "$1" || "$1" == --* ]]; then
+          echo "Error: --trunk requires a branch name argument" >&2
+          exit 1
+        fi
+        TRUNK_BRANCH="$1" ;;
+      ```
+
+   d. **Misleading prompt text** — "is the same as local `$trunk_branch`" should be
+      "is merged into `$trunk_branch`" (more precise and less surprising to users)
+
+   e. **`$problem_branches` array not declared** when AUTO_DELETE_MERGED=false skips the
+      rebase section — declare it unconditionally:
+
+      ```bash
+      problem_branches=()   # declare before the if/else block that populates it
+      ```
+
+   f. **Typo in success message**: "Successfully rebase" → "Successfully rebased"
+
+   g. **`[[ ! -z ${var} ]]` antipattern** — replace with the affirmative form:
+
+      ```bash
+      # Wrong — double negation, missing quotes
+      [[ ! -z ${var} ]]
+
+      # Right — affirmative, quoted
+      [[ -n "${var}" ]]
+      ```
+
+   h. **`set_trunk_branch` missing `exit 1`**:
+
+      ```bash
+      # Wrong — prints error but returns normally; script continues with TRUNK_BRANCH=""
+      red "Error: Could not determine trunk branch"
+      # (falls through — next line prints: "Determined '' as the trunk branch")
+
+      # Right — halt the script immediately
+      red "Error: Could not determine trunk branch"
+      exit 1
+      ```
+
+6. **Bash function-before-definition execution hazard**
+
+   If your new code calls a color/utility function (e.g., `yellow()`, `red()`) from inside
+   the arg-parsing `while` loop at the top of the script, and those functions are defined
+   LATER in the file, the call will fail at runtime:
+
+   ```bash
+   # Script structure (simplified):
+   while [[ "$#" -gt 0 ]]; do
+     case "$1" in
+       --bad-flag)
+         red "Error: bad flag"   # BAD — red() is not defined yet at parse time
+         exit 1 ;;
+     esac
+   done
+
+   red() { printf '%b' "$'\e[31m'$*$'\e[0m'" ; }   # defined here — too late
+   ```
+
+   **Fix**: Use `echo >&2` (or `printf >&2`) for any error messages emitted during
+   arg parsing — these don't depend on function definitions:
+
+   ```bash
+   --bad-flag)
+     echo "Error: bad flag" >&2   # SAFE — no function dependency
+     exit 1 ;;
+   ```
+
+7. **Env-var override notice placement**
+
+   Always place the notice block:
+   - AFTER the `while` arg-parsing loop (so CLI args have already been applied)
+   - BEFORE the first git operation (so users see actual effective values)
+
+   ```bash
+   # Parse args
+   while [[ "$#" -gt 0 ]]; do ... done
+
+   # notices go here
+   if [[ "$AUTO_DELETE_MERGED" == "true" ]]; then
+     yellow "Notice: GH_TIDY_AUTO_DELETE_MERGED is set — merged branches will be deleted without prompt."
+   fi
+
+   # First git operation
+   git fetch --prune ...
+   ```
+
+8. **ANSI color reset in `read -p` prompts**
+
+   When using colored prompts with `read -p`, the color must be reset before the
+   cursor — otherwise the user's input appears in the prompt color:
+
+   ```bash
+   # WRONG — user input appears in yellow
+   read -p "$(printf '%b' "$'\e[93m'Delete branch $branch? [y/N]: ")" response
+
+   # RIGHT — reset at end of prompt string
+   read -p "$(printf '%b' "$'\e[93m'Delete branch $branch? [y/N]: $'\e[0m'")" response
+   ```
+
+9. **Create PR against upstream (feature)**
+
+   ```bash
+   gh pr create \
+     --repo HaywardMorihara/gh-tidy \
+     --head mvillmow:feature/auto-delete-merged \
+     --base main \
+     --title "Add --auto-delete-merged flag for non-interactive use" \
+     --body "Closes #62 ..."
+   ```
+
+10. **When out-of-scope bugs are found during review — file separate issues**
+
+    Each distinct bug gets its own issue. File all issues in parallel (independent calls),
+    then create PRs sequentially:
+
+    ```bash
+    # File all issues in parallel (gh issue create calls are independent)
+    gh issue create --repo owner/repo --title "fix: bug 1" --body "..." &
+    gh issue create --repo owner/repo --title "fix: bug 2" --body "..." &
+    gh issue create --repo owner/repo --title "fix: bug 3" --body "..." &
+    wait
+    # Note the issue numbers assigned by GitHub
+
+    # Sync fork before branching
+    git fetch upstream
+    git checkout main && git merge --ff-only upstream/main && git push origin main
+
+    # Create branches (see dependency decision tree below)
+    # Push all branches in one call
+    git push origin branch1 branch2 branch3
+
+    # Create PRs sequentially (each needs its own number)
+    gh pr create --repo owner/repo --head fork:branch1 --base main --title "..." --body "..."
+    gh pr create --repo owner/repo --head fork:branch2 --base main --title "..." --body "..."
+    gh pr create --repo owner/repo --head fork:branch3 --base main --title "..." --body "..."
+    ```
+
+11. **Branch dependency decision tree**
+
+    Before creating a fix branch, decide its base:
+
+    ```text
+    Does the bug touch code that was already modified by an in-flight PR?
+    YES → git checkout <in-flight-branch>
+          git checkout -b <issue>-<description>
+          PR body note: "Based on #<PR>; needs rebase onto main after #<PR> merges"
+    NO  → git checkout main && git pull --ff-only
+          git checkout -b <issue>-<description>
+    ```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| `if git branch --list "$branch"; then` | Used exit code of `git branch --list` to check branch existence | `git branch --list` always exits 0, even when the branch does not exist — the exit code only reflects command execution, not whether any branch was matched | Always test the OUTPUT: `[[ -n "$(git branch --list "$branch")" ]]` |
+| Calling `red()` from inside arg-parsing while loop | Emitted a colored error message during argument parsing using a color function defined later in the file | Bash function definitions are not hoisted; functions defined below the while loop don't exist when the loop runs | Use `echo >&2` or `printf >&2` for all error output inside arg-parsing blocks |
+| `--trunk` flag with no guard after inner shift | After `shift` to consume `--trunk`, used `$1` directly as `TRUNK_BRANCH` | If `--trunk` is the last arg or is followed immediately by another flag, `$1` is empty or another flag name | After shifting a value-flag, always guard: `[[ -z "$1" \|\| "$1" == --* ]]` and emit an error |
+| "is the same as local $trunk_branch" prompt text | Used this phrasing to tell users a branch matches trunk | The phrase is misleading — "same as" implies identical content, but the check is whether the branch is merged into trunk | Use "is merged into $trunk_branch" for accuracy |
+| Assuming $problem_branches was always initialized | Used `$problem_branches` in cleanup code without unconditional declaration | When `REBASE_ALL=false`, the block that populates `problem_branches` was skipped — using the array later caused an unbound variable error | Always declare arrays unconditionally before conditional blocks that populate them |
+| Placing env-var notices inside the while loop | Emitted override notices during argument parsing | The CLI override for that flag may appear later in the argument list | Place the entire notice block after the while loop closes, before the first git operation |
+| `for branch in $(git branch ...)` loop | Iterated over branch names using command substitution in a for-loop | Word-splits on spaces/newlines and glob-expands special characters; pipe subshell loses bash array mutations | Use `while IFS= read -r branch; do ... done < <(git branch ...)` — process substitution keeps mutations in parent shell |
+| `set_trunk_branch` missing `exit 1` | Function printed an error but returned normally | Script continued with `TRUNK_BRANCH=""`, printed `"Determined '' as the trunk branch"`, then failed on `git checkout` (empty argument) | Always add `exit 1` immediately after the error message in error-handling branches |
+| `[[ ! -z ${var} ]]` instead of `[[ -n "${var}" ]]` | Used negative-of-zero check throughout `set_trunk_branch` (8 occurrences) | Double negation is harder to read; missing quotes allow glob expansion of `$var` | Prefer the affirmative form `[[ -n "${var}" ]]` with double-quoted variable |
+| Basing dependent fix branch on `main` | Created branch for a bug in code already modified by in-flight PR #63, starting from `main` | Would have conflicted with in-flight changes — the for-loops were already modified by PR #63's branch | If the buggy code was already touched by an in-flight PR, base the fix branch on that PR's branch; note the dependency in the PR body |
+
+## Results & Parameters
+
+### Pattern: Complete new flag + env-var template for bash CLI
+
+```bash
+# 1. Near the top — env-var with default:
+FLAG_NAME="${GH_TIDY_FLAG_NAME:-false}"
+
+# 2. In the while/case arg-parsing block:
+--flag-name)
+  FLAG_NAME=true ;;
+
+# 3. After the while loop closes, before first git op — override notices:
+if [[ "$FLAG_NAME" == "true" ]]; then
+  yellow "Notice: GH_TIDY_FLAG_NAME is set — <describe behavior>."
+fi
+
+# 4. At the point of use — skip/automate the interactive prompt:
+if [[ "$FLAG_NAME" == "true" ]]; then
+  <automated action>
+else
+  read -p "$(printf '%b' "$'\e[93m'<Prompt text>? [y/N]: $'\e[0m'")" response
+  if [[ "$response" =~ ^[Yy]$ ]]; then
+    <action>
+  fi
+fi
+```
+
+### git branch existence check (correct pattern)
+
+```bash
+# Test OUTPUT, not exit code
+branch_exists_locally() {
+  local branch="$1"
+  [[ -n "$(git branch --list "$branch")" ]]
+}
+```
+
+### Value-flag arg-parsing guard (correct pattern)
+
+```bash
+--trunk)
+  shift
+  if [[ -z "$1" || "$1" == --* ]]; then
+    echo "Error: --trunk requires a branch name argument" >&2
+    exit 1
+  fi
+  TRUNK_BRANCH="$1" ;;
+```
+
+### Safe branch iteration with array mutation
+
+```bash
+# Correct form — process substitution preserves array in parent shell
+problem_branches=()
+while IFS= read -r branch; do
+  branch="${branch#\* }"   # strip "* " (current branch marker)
+  branch="${branch#  }"    # strip "  " (regular branch indent)
+  [[ -z "$branch" ]] && continue
+  problem_branches+=("$branch")
+done < <(git branch --list)
+# problem_branches is fully populated here
+```
+
+### Parallel issue filing, sequential PR creation
+
+```bash
+# File all issues in parallel — save the issue numbers
+IDS=()
+while IFS= read -r id; do IDS+=("$id"); done < <(
+  gh issue create --repo owner/repo --title "fix: bug 1" --body "..." --json number --jq .number &
+  gh issue create --repo owner/repo --title "fix: bug 2" --body "..." --json number --jq .number &
+  gh issue create --repo owner/repo --title "fix: bug 3" --body "..." --json number --jq .number &
+  wait
+)
+
+# Push all branches in one call
+git push origin "${IDS[0]}-bug1" "${IDS[1]}-bug2" "${IDS[2]}-bug3"
+
+# Create PRs sequentially
+gh pr create --repo owner/repo --head fork:"${IDS[0]}-bug1" --base main --title "..." --body "Fixes #${IDS[0]}"
+gh pr create --repo owner/repo --head fork:"${IDS[1]}-bug2" --base main --title "..." --body "Fixes #${IDS[1]}"
+gh pr create --repo owner/repo --head fork:"${IDS[2]}-bug3" --base main --title "..." --body "Fixes #${IDS[2]}"
+```
+
+### Issue body quality checklist
+
+```text
+- Exact file + line numbers of the bug
+- Minimal code snippet showing the bug (not the whole function)
+- Fix snippet (the correct code)
+- Impact/scope (N occurrences, what breaks)
+- Title format: "fix(scope): <short description>"
+```
+
+### Two-round review process summary
+
+```text
+Round 1 (structural/style):
+  - Comment placement
+  - Missing env-var notices for all flags
+  - Help text tabs vs spaces
+  - Punctuation consistency
+  - ANSI reset in all read -p prompts
+  - for-loops using $(git branch ...) — replace with while IFS= read -r
+  - [[ ! -z ${var} ]] — replace with [[ -n "${var}" ]]
+
+Round 2 (logic/safety):
+  - git branch --list exit code trap
+  - Value-flag silently consuming next flag
+  - Misleading prompt text
+  - Uninitialized array variables
+  - Typos in messages
+  - Function-before-definition hazard
+  - Missing exit 1 after error messages in utility functions
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| gh-tidy (HaywardMorihara/gh-tidy) | PR #63 `--auto-delete-merged` feature (issue #62) | Two review rounds; verified locally with `GH_TIDY_DEV_MODE=1` |
+| gh-tidy (HaywardMorihara/gh-tidy) | PRs #67/#68/#69 — three bug fixes found during PR #63 review | Issues #64 (word-split), #65 (exit 1), #66 (style); #69 branched off #63's branch; #67/#68 branched off main |
+
+---
+
+## Superseded from gh-fix-pr-feedback
+
+**Original date:** 2026-03-19 / **Original version:** 1.0.0
+
+```yaml
+name: gh-fix-pr-feedback
+description: "Fix GitHub PR feedback"
+category: ci-cd
+date: 2026-03-19
+version: "1.0.0"
+user-invocable: false
+```
+
+
+# Fix PR Review Feedback
+
+Address PR review comments by implementing fixes and responding to each comment.
+
+## When to Use
+
+- PR has open review comments requiring responses
+- Ready to implement reviewer's requested changes
+- PR is blocked on feedback
+
+### Quick Reference
+
+```bash
+# 1. Get all review comments
+gh api repos/OWNER/REPO/pulls/PR/comments --jq '.[] | {id: .id, path: .path, body: .body}'
+
+# 2. Make fixes to code, then test
+pixi run test
+
+# 3. Commit changes
+git add . && git commit -m "fix: address PR review feedback"
+
+# 4. Reply to EACH comment
+gh api repos/OWNER/REPO/pulls/PR/comments/COMMENT_ID/replies \
+  --method POST -f body="Fixed - [brief description]"
+
+# 5. Push and verify
+git push
+gh pr checks PR
+```
+
+## Reply Format
+
+Keep responses SHORT (1 line preferred):
+
+- `Fixed - Updated parser to handle negative IDs`
+- `Fixed - Removed duplicate test`
+- `Fixed - Added error handling for edge case`
+
+## Verification
+
+After addressing feedback:
+
+- [ ] All review comments have replies
+- [ ] Changes committed and pushed
+- [ ] CI checks passing
+- [ ] No new issues introduced
+
+## References
+
+- See CLAUDE.md for PR workflow
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
+## Verified Workflow
+
+Steps that worked:
+1. Step 1
+2. Step 2
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
+---
+
+## Superseded from self-cancelling-review-plan
+
+**Original date:** 2026-03-05 / **Original version:** 1.0.0
+
+```yaml
+name: self-cancelling-review-plan
+description: 'Recognize and handle review fix files whose plan body declares no changes
+  are needed. Use when: a .claude-review-fix-*.md file says ''implement all fixes''
+  but the embedded Fix Plan concludes the PR is already correct and complete.'
+category: ci-cd
+date: 2026-03-05
+version: 1.0.0
+user-invocable: false
+```
+
+# self-cancelling-review-plan
+
+Handle `.claude-review-fix-*.md` files generated by review automation where the outer
+wrapper instructs "implement all fixes" but the inner Fix Plan body concludes no changes
+are required.
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | 2026-03-05 |
+| Issue | #3152 |
+| PR | #3343 |
+| Objective | Implement review fixes for a Docker PR |
+| Outcome | No-op — plan declared PR already correct; confirmed with git status |
+| Category | ci-cd |
+| Project | ProjectOdyssey |
+
+## When to Use
+
+- You receive a `.claude-review-fix-<number>.md` file with the instruction "implement all fixes"
+- The embedded **Fix Plan** section states the PR is correct and complete with "No fixes required"
+- The failing CI jobs listed are pre-existing failures on `main` unrelated to the PR's scope
+- `git status` shows a clean working tree (no uncommitted changes)
+- The only untracked file is the review instructions file itself
+
+## Verified Workflow
+
+1. **Read the review file** — parse both the outer wrapper instruction ("implement all fixes")
+   and the inner Fix Plan body carefully
+2. **Check the Fix Order section** — if it says "No fixes are required" or equivalent, the
+   plan is self-cancelling
+3. **Verify git status** — run `git status` and `git log --oneline -5` to confirm the fix
+   commit already exists on the branch
+4. **Do not manufacture commits** — if the branch is already correct, make no changes
+5. **Report clearly** — explain that the fix plan declares no action needed and the branch
+   is already up to date
+
+```bash
+# Step 3: Confirm branch state
+git status
+git log --oneline -5
+
+# Expected: clean working tree, fix commit present, only .claude-review-fix-*.md untracked
+```
+
+## Key Signals That a Plan Is Self-Cancelling
+
+| Signal | Location in File | Meaning |
+| -------- | ----------------- | --------- |
+| "No fixes are required" | Fix Order section | Plan explicitly cancels itself |
+| "The PR is correct and complete" | Summary section | Implementation already done |
+| "Pre-existing failures on main" | Problems Found section | Failing CI is not caused by PR |
+| All checklist items marked ✅ | Fix Order list | Everything already implemented |
+| Clean `git status` | Terminal | No uncommitted changes exist |
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A — correct approach taken immediately | Read the full fix plan before acting | — | Always read the entire plan body, not just the outer wrapper instruction |
+| Potential mistake: manufacturing a commit | Could have committed a no-op or modified an unrelated file | Would create spurious history and confuse reviewers | "Implement all fixes" means implement what the plan says, and if the plan says nothing, do nothing |
+
+## Results & Parameters
+
+```text
+Branch: 3152-auto-impl
+Fix commit: a0652773 fix(docker): replace cargo install just with pre-built binary, pin Pixi version
+git status: clean (only .claude-review-fix-3152.md untracked — review instructions, not committed)
+Action taken: none
+```
+
+### Self-Cancelling Pattern Template
+
+A review fix file is self-cancelling when it matches this structure:
+
+```text
+Implement the fixes described in the plan below for PR #<N> (issue #<M>).
+
+**Fix Plan:**
+<analysis text>
+
+## Fix Order
+
+No fixes are required. The PR is correct and complete:
+1. <change> ✅
+2. <change> ✅
+...
+```
+
+The outer shell says "implement fixes." The inner plan says "fixes = nothing." Trust the inner plan.
+
+---
+
+## Superseded from feature-dev-code-reviewer-cannot-execute-shell-commands
+
+**Original date:** 2026-05-31 / **Original version:** 1.0.0
+
+```yaml
+name: feature-dev-code-reviewer-cannot-execute-shell-commands
+description: "The `feature-dev:code-reviewer` agent type has only read-only tools — it can analyze a PR but cannot post `gh pr review`. Use this skill to (1) choose the right agent type for tasks that need to write back, (2) structure prompts so analysis-only agents return parseable bodies the orchestrator can post, (3) avoid wasting agent tokens composing `gh` commands the agent cannot execute, (4) detect the failure signature (`I cannot run shell commands` / `Available tools: Read, WebFetch, ...`) when sub-agents report blockers, (5) decide between `general-purpose` (full toolset, can post) and `feature-dev:code-reviewer` (read-only, analysis only) for PR-review delegation."
+category: tooling
+date: 2026-05-31
+version: "1.0.0"
+user-invocable: false
+tags:
+  - agent-types
+  - code-review
+  - sub-agents
+  - shell-access
+  - gh-cli
+  - tool-availability
+  - read-only-agent
+  - prompt-design
+  - delegation
+  - orchestrator-pattern
+  - write-back
+  - feature-dev
+  - general-purpose
+  - analysis-only
+```
+
+
+# Skill: feature-dev:code-reviewer Cannot Execute Shell Commands
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-31 |
+| **Objective** | Document the discovery that the `feature-dev:code-reviewer` sub-agent type has a read-only toolset (Read, WebFetch, WebSearch, Grep, Glob, TaskStop) and therefore cannot execute `gh pr review`, `gh issue create`, or any shell command. Prevent the orchestrator from wasting tokens prompting analysis-only agents with action verbs. |
+| **Outcome** | verified-local. Observed across 11 `feature-dev:code-reviewer` dispatches in a single session reviewing HomericIntelligence/AchaeanFleet Dependabot PRs. Every agent returned the same blocker verbatim: "I cannot run shell commands. Available tools: Read, WebFetch, WebSearch, Grep, Glob, TaskStop." The orchestrator had to post all 11 reviews itself, costing ~5 extra turns. Two prompt patterns now eliminate the waste. |
+| **Verification** | verified-local (no CI gate exists to verify agent-toolset capabilities). |
+
+## When to Use
+
+Apply this skill when:
+
+- You are about to delegate a PR review to a sub-agent and the workflow REQUIRES posting the review back to GitHub (write-back).
+- You are choosing between `feature-dev:code-reviewer` and `general-purpose` agent types for a code-review task.
+- A swarm of code-reviewer agents has returned long output strings containing `gh pr review ...` command templates instead of actually posting the reviews.
+- Sub-agent output contains any of the detection signatures:
+  - "I cannot run shell commands"
+  - "I cannot execute shell commands"
+  - "no Bash tool available"
+  - "WebFetch is read-only"
+  - "Available tools: Read, WebFetch, WebSearch, Grep, Glob, TaskStop"
+  - "the command above is ready for an operator to run"
+  - "the review body is composed below, ready for the orchestrator to post"
+- You are writing prompts for multi-PR review swarms and need to decide whether the agent itself or the orchestrator owns the write step.
+- You are about to instruct an agent to "post via `gh pr review ...`" — STOP and verify the agent has Bash first.
+
+## Verified Workflow
+
+### Quick Reference
+
+**Decision rule**: Does the task require executing a shell command (gh, git, sed, etc.)?
+
+| Need to write back? | Agent type | Prompt pattern |
+|----|----|----|
+| YES (post review, create issue, commit, push) | `general-purpose` | "Analyze the PR AND post the review with `gh pr review ...`" |
+| NO (analysis only, orchestrator posts) | `feature-dev:code-reviewer` | "Return verdict + Markdown body ONLY. Do NOT include `gh` syntax." |
+
+**Pattern A — Write-back with `general-purpose`** (recommended when the agent must post):
+
+```text
+Use general-purpose agent. Prompt:
+"Review PR #N in repo OWNER/NAME. Analyze for correctness, security, and policy.
+Then POST the review using:
+  gh pr review N --repo OWNER/NAME --approve|--request-changes|--comment --body \"$BODY\"
+Return the gh command exit code and the URL of the posted review."
+```
+
+**Pattern B — Analysis-only with `feature-dev:code-reviewer`** (when you want isolated read-only analysis and the orchestrator posts):
+
+```text
+Use feature-dev:code-reviewer agent. Prompt:
+"Analyze PR #N in repo OWNER/NAME using Read/Grep/Glob/WebFetch only.
+Return ONLY:
+  VERDICT: APPROVE|REQUEST_CHANGES|COMMENT
+  BODY:
+  <markdown review body>
+Do NOT include any `gh` command syntax in your output.
+Do NOT attempt to execute shell commands — you do not have Bash."
+```
+
+Then the orchestrator wraps the body itself:
+
+```bash
+gh pr review "$N" --repo "$OWNER/$NAME" \
+  "$([ "$VERDICT" = "APPROVE" ] && echo --approve || \
+     [ "$VERDICT" = "REQUEST_CHANGES" ] && echo --request-changes || \
+     echo --comment)" \
+  --body "$BODY"
+```
+
+### Detailed Steps
+
+1. **Before dispatching**: Identify whether the task requires write-back (post review, create issue, push commit) or analysis only.
+2. **Inspect the agent type's toolset** before composing the prompt. The `feature-dev:code-reviewer` toolset is exactly: Read, WebFetch, WebSearch, Grep, Glob, TaskStop. The `general-purpose` toolset includes Bash, Edit, Write in addition to read tools.
+3. **If write-back is required**: Use `general-purpose`. Prompt MUST include the explicit `gh` command for the agent to execute.
+4. **If analysis-only is required**: Use `feature-dev:code-reviewer`. Prompt MUST forbid `gh` syntax in the output and MUST tell the agent it does not have Bash (this is faster than letting the agent discover it mid-task).
+5. **Parse the agent's output**: For Pattern B, extract `VERDICT:` and `BODY:` deterministically. Reject outputs that contain `gh pr review` — the agent ignored the instruction.
+6. **Post yourself**: For Pattern B, the orchestrator wraps the body in the appropriate `gh pr review` flag and runs it.
+7. **Verify the post**: After running, confirm with `gh pr view N --repo OWNER/NAME --json reviews --jq '.reviews[-1]'` that the review actually landed.
+
+### Related Skills
+
+- `[[parallel-agent-swarm-dispatch-patterns]]` — covers the broader "know your agent's toolset before delegating an action verb" pattern, including model-tier routing and pre-dispatch re-grading. This skill is a specialization for the read-only-toolset trap.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Wave 1 (6 agents) | Prompted 6 `feature-dev:code-reviewer` agents with full `gh pr review N --repo HomericIntelligence/AchaeanFleet --approve --body "..."` command templates expecting the agent to execute them. | All 6 agents responded identically: "I cannot run shell commands. Available tools: Read, WebFetch, WebSearch, Grep, Glob, TaskStop. The review body is composed below, ready for the orchestrator to post." Each agent burned tokens composing the full `gh` command string verbatim in its output. | The `feature-dev:code-reviewer` type has NO Bash. Action-verb prompts (post, push, create) waste tokens. |
+| Wave 2 (5 agents) | Same prompt pattern as Wave 1, dispatched in parallel to cover the remaining 5 Dependabot PRs. Did not change the prompt because Wave 1 results had not yet been parsed. | Same blocker, 5 more times. Orchestrator now had 11 review bodies to post manually. | Verify the toolset of one agent before fanning out to N. One probe call would have saved 10 wasted dispatches. |
+| Naive fix: switch to `general-purpose` mid-stream | Considered re-dispatching all 11 PRs to `general-purpose` so the agent could post. | Would have re-paid the analysis cost (each agent reads the diff again). The analysis from Wave 1+2 was correct; only the posting step was missing. | When analysis already exists, just extract verdict + body and post yourself. Do not re-analyze. |
+| Tell `feature-dev:code-reviewer` to "use Bash anyway" | Tested adding "you have Bash, use it" to the prompt. | The agent still reports "I do not have access to Bash." The toolset is enforced by the harness, not the prompt. | Prompt cannot grant tools the agent type does not have. Only the agent-type registration controls capability. |
+
+## Results & Parameters
+
+### Configuration
+
+**Agent type capability matrix** (verified 2026-05-31):
+
+| Agent type | Read | Grep | Glob | WebFetch | WebSearch | Bash | Edit | Write | TaskStop |
+|---|---|---|---|---|---|---|---|---|---|
+| `feature-dev:code-reviewer` | yes | yes | yes | yes | yes | NO | NO | NO | yes |
+| `general-purpose` | yes | yes | yes | yes | yes | yes | yes | yes | yes |
+
+**Pattern A — `general-purpose` prompt skeleton** (write-back):
+
+```text
+You are reviewing PR #<N> in <OWNER>/<NAME>.
+
+Steps:
+1. Fetch the PR diff: `gh pr diff <N> --repo <OWNER>/<NAME>`
+2. Read changed files via Read tool.
+3. Analyze for: correctness, security, KISS/YAGNI/DRY/SOLID, policy compliance.
+4. Compose review body as Markdown.
+5. Post via `gh pr review <N> --repo <OWNER>/<NAME> [--approve|--request-changes|--comment] --body "$BODY"`.
+6. Verify with `gh pr view <N> --repo <OWNER>/<NAME> --json reviews --jq '.reviews[-1]'`.
+7. Report: verdict, posted review URL, gh exit code.
+```
+
+**Pattern B — `feature-dev:code-reviewer` prompt skeleton** (analysis-only):
+
+```text
+You are an ANALYSIS-ONLY reviewer. You do NOT have Bash, Edit, or Write tools.
+Your tools: Read, WebFetch, WebSearch, Grep, Glob, TaskStop.
+
+Analyze PR #<N> in <OWNER>/<NAME>:
+1. Use WebFetch on https://github.com/<OWNER>/<NAME>/pull/<N>.diff to read the diff.
+2. Read changed files via Read on the local checkout if available.
+3. Compose verdict + body.
+
+Return EXACTLY this format, nothing else:
+
+VERDICT: APPROVE
+BODY:
+<markdown review body here>
+
+Rules:
+- VERDICT must be one of: APPROVE, REQUEST_CHANGES, COMMENT.
+- Do NOT include any `gh` command syntax in your output.
+- Do NOT attempt to execute commands.
+- Do NOT include shell scripts, the orchestrator will post.
+```
+
+### Orchestrator Post Snippet (Pattern B)
+
+```bash
+# Assuming agent output is in $AGENT_OUTPUT
+VERDICT=$(printf '%s\n' "$AGENT_OUTPUT" | sed -n 's/^VERDICT: \(.*\)$/\1/p' | head -1)
+BODY=$(printf '%s\n' "$AGENT_OUTPUT" | sed -n '/^BODY:$/,$p' | tail -n +2)
+
+case "$VERDICT" in
+  APPROVE)         FLAG=--approve ;;
+  REQUEST_CHANGES) FLAG=--request-changes ;;
+  COMMENT)         FLAG=--comment ;;
+  *) echo "Bad verdict: $VERDICT" >&2; exit 1 ;;
+esac
+
+gh pr review "$N" --repo "$OWNER/$NAME" "$FLAG" --body "$BODY"
+```
+
+### Expected Output
+
+For Pattern A success: the agent reports a posted review URL and exit code 0.
+For Pattern B success: the agent returns VERDICT + BODY (no `gh` syntax), the orchestrator's `gh pr review` exits 0, and `gh pr view --json reviews` shows the new review at index -1.
+
+### Detection Signatures (in agent output)
+
+If any of these phrases appear in a sub-agent's response, the agent is read-only and the orchestrator MUST post:
+
+- "I cannot run shell commands"
+- "I cannot execute shell commands"
+- "no Bash tool available"
+- "Available tools: Read, WebFetch, WebSearch, Grep, Glob, TaskStop"
+- "WebFetch is read-only"
+- "the command above is ready for an operator to run"
+- "the review body is composed below, ready for the orchestrator to post"
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| HomericIntelligence/AchaeanFleet | 11 Dependabot PRs reviewed in a single session 2026-05-31; all 11 agents returned the read-only blocker; orchestrator posted all 11 reviews. | Discovery session — no notes file. |
+
+## References
+
+- Related skill: [parallel-agent-swarm-dispatch-patterns](parallel-agent-swarm-dispatch-patterns.md) — broader patterns for agent toolset verification and pre-dispatch checks.
+- Claude Code sub-agent types documentation (per agent type, the registered toolset is fixed at registration; prompts cannot extend capability).
+
+---
+
+## Superseded from ci-cd-no-commit-retry-with-review-thread-injection
+
+**Original date:** 2026-05-31 / **Original version:** 1.0.0
+
+```yaml
+name: ci-cd-no-commit-retry-with-review-thread-injection
+description: "When an agent-driven CI-fix loop returns from a session without producing a new commit AND the PR's required CI checks are still red, that combination is itself a bug — not a 'do nothing' condition. The correct response is exactly ONE bounded retry on the SAME PR-scoped session with a force-engagement prompt that (1) names the failing required check names verbatim, (2) restates the branch invariant (do not create/switch branches), (3) restates the signed-commit + no-`--no-verify` policy, and (4) prepends ALL unresolved PR review threads (fetched via GraphQL `reviewThreads { isResolved, comments { body, path, line } }`) verbatim — because an unresolved bot or human review comment is usually the actual blocker behind the red CI, and the agent cannot fix what it cannot see. Inject the review-thread block into BOTH the initial CI-fix prompt AND the retry prompt, not just one. Gate the retry on `gh pr checks --required` exit code (don't retry if CI went green via concurrent activity). After the retry, if HEAD still has not advanced, write a `state_dir/repeated-no-commit-<pr>.json` forensics marker and move on — never loop, never open a new PR. Use when: (1) an agent CI-fix driver logs 'agent session produced no new commit (HEAD unchanged at …); skipping push', (2) the same PR is being skipped run after run while its required checks stay red, (3) reviewing/extending a `_run_ci_fix_session` or `drive_prs_green`-style driver, (4) a no-commit honesty guard (#836-style) is already in place but the driver still gives up after one no-commit turn, (5) a PR review bot left an unresolved comment naming the actual blocker and the fix agent never references it."
+category: ci-cd
+date: 2026-05-31
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - automation
+  - ci-driver
+  - force-engagement-retry
+  - no-commit-honesty-guard
+  - review-thread-injection
+  - agent-contract-violation
+  - drive-green
+  - same-session-retry
+  - gh-pr-checks
+  - graphql-review-threads
+  - signed-commit-invariant
+  - forensics-marker
+  - bounded-retry
+```
+
+
+# Agent CI-Fix: Retry Once on No-Commit + Red CI, and Inject Unresolved Review Threads Into the Prompt
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-31 |
+| **Objective** | Close the gap between the `#836` no-commit honesty guard (which correctly refuses to push when HEAD did not advance) and the next obvious question: "the agent's contract was violated — what now?" Treat `no-commit + still-red required CI` as a force-engagement trigger that earns exactly one same-session retry with the failing check names named verbatim and all unresolved PR review threads injected into the prompt. |
+| **Outcome** | Success — ProjectHephaestus PR #847 shipped `_format_review_threads_block`, `_failing_required_check_names`, `_force_engagement_prompt`, and `_retry_no_commit_once` on `CIDriver`. 18 new unit tests across `TestReviewThreadInjection`, `TestFailingRequiredCheckNames`, `TestForceEngagementPrompt`, and `TestNoCommitRetry`. 2998+ unit tests pass. mypy + ruff clean. Merged via auto-merge (squash). The driver now (a) prepends unresolved threads to both the initial and retry prompts, (b) only retries when `gh pr checks --required` exits non-zero, (c) caps retries at exactly 1, (d) writes `repeated-no-commit-<pr>.json` forensics on the second no-commit, (e) keeps the PR-scoped session_uuid stable across the retry. |
+| **Verification** | verified-ci |
+
+## When to Use
+
+Trigger phrases / log lines that MUST surface this skill:
+
+- "agent returned no commit"
+- "agent session produced no new commit (HEAD unchanged at …); skipping push"
+- "agent didn't engage with CI failure"
+- "force-engagement retry prompt"
+- "no-commit honesty guard"
+- "inject unresolved review threads into prompt"
+- "PR reviewer comments invisible to fix agent"
+- "drive-green agent contract violation"
+- "retry on no-commit + red CI"
+- "same-session retry"
+- "Previous Turn Produced No Commit"
+- "BLOCKED:" reply line from a stuck CI-fix agent
+
+Trigger situations:
+
+- You are reading the `_run_ci_fix_session` (or equivalent) path on a driver that has a no-commit honesty guard already (a la PR #836) but still gives up silently after one no-commit turn.
+- A driver run log shows the **same PR** hitting `agent session produced no new commit` on consecutive iterations and the required checks (`lint`, `test-py310`, etc.) are still red on the remote.
+- An automation review (audit / PR review / `repo-analyze`) is touching a CI-fix driver and you need to confirm whether the driver injects unresolved review threads into the prompt — most don't.
+- A reviewer bot (github-code-quality, CodeRabbit, etc.) or a human left an inline review comment naming the *real* blocker on the PR, but the fix agent keeps "fixing" something else because it only sees the raw CI logs.
+- You are designing a driver that resumes the **same PR-scoped session** across iterations (see `automation-session-naming-pr-scoped-not-commit-scoped`) and need to confirm the retry path doesn't accidentally mint a new session_uuid.
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# Three-call pattern. Place inside _run_ci_fix_session right after the agent returns.
+
+# 1. Build the review-thread block (used by BOTH the initial prompt and the retry).
+review_threads_block = self._format_review_threads_block(pr_number)
+
+# 2. Snapshot HEAD before invoking the agent (used by the honesty guard AND retry).
+pre_agent_sha = self._head_sha(worktree_path)
+
+# ... invoke the agent with the prompt that PREPENDS review_threads_block ...
+
+# 3. After the agent returns, if HEAD did not advance, do one bounded retry.
+if not self._head_advanced(worktree_path, pre_agent_sha, issue_number):
+    if not self._retry_no_commit_once(
+        issue_number=issue_number,
+        pr_number=pr_number,
+        worktree_path=worktree_path,
+        pr_head_branch=pr_head_branch,
+        pre_agent_sha=pre_agent_sha,
+        session_id=session_id,   # SAME session — PR-scoped, NOT regenerated
+    ):
+        return False   # second no-commit → forensics marker written, give up
+```
+
+```python
+# _retry_no_commit_once: ONE bounded retry, same session. Never loops.
+
+def _retry_no_commit_once(
+    self, *, issue_number, pr_number, worktree_path,
+    pr_head_branch, pre_agent_sha, session_id,
+) -> bool:
+    failing = self._failing_required_check_names(pr_number)
+    if not failing:
+        # CI is actually green now (concurrent activity fixed it). Do NOT perturb.
+        return False
+
+    review_threads_block = self._format_review_threads_block(pr_number)
+    retry_prompt = self._force_engagement_prompt(
+        pr_number=pr_number,
+        issue_number=issue_number,
+        pr_head_branch=pr_head_branch,
+        failing_check_names=failing,
+        review_threads_block=review_threads_block,
+    )
+
+    # CRITICAL: re-invoke on the SAME session_uuid — same repo, issue, AGENT_CI_DRIVER.
+    invoke_claude_with_session(
+        repo=repo_slug, issue=issue_number,
+        agent=AGENT_CI_DRIVER,
+        prompt=retry_prompt,
+        session_id=session_id,
+        cwd=worktree_path,
+    )
+
+    if self._head_advanced(worktree_path, pre_agent_sha, issue_number):
+        return True
+
+    # Second no-commit → write forensics marker and stop. Never retry again.
+    self._record_repeated_no_commit(
+        issue_number=issue_number,
+        pr_number=pr_number,
+        pr_head_branch=pr_head_branch,
+        failing_required_checks=failing,
+    )
+    return False
+```
+
+```python
+# The force-engagement prompt content — every requirement must be present.
+# See the "Results & Parameters" section for the full literal template.
+```
+
+### Detailed Steps
+
+1. **Inject the unresolved review-thread block into BOTH prompts.**
+   Use the existing `gh_pr_list_unresolved_threads` helper (already in
+   `hephaestus/automation/github_api.py`) — do not roll a new GraphQL query.
+   The helper returns the `reviewThreads { isResolved, comments { body, path, line } }`
+   shape; the formatter dumps every unresolved thread verbatim, one block per thread,
+   with file path + line + comment body. Prepend the block above the existing CI-fix
+   instructions in `_run_ci_fix_session`'s initial prompt AND inside `_retry_no_commit_once`'s
+   force-engagement prompt. If `gh_pr_list_unresolved_threads` returns empty, the formatter
+   must return the empty string (not a header with no body) so the prompt stays clean.
+
+2. **Snapshot HEAD before invoking the agent.**
+   `pre_agent_sha = git -C <worktree> rev-parse HEAD`. Save it; the honesty guard and
+   the retry both need it.
+
+3. **After the agent returns, gate the retry on TWO conditions.**
+   - `_head_advanced(worktree_path, pre_agent_sha, issue_number)` returned `False` (no commit), AND
+   - `gh pr checks <pr_number> --required` returned non-zero (still red).
+
+   Skip the retry if either condition is false. If CI went green through concurrent
+   activity (someone else fixed the PR, or a flake cleared), retrying just burns tokens.
+
+4. **Build the failing-check list with `gh pr checks <pr> --required`.**
+   Parse the `bucket` column (`fail`, `cancel`, `skipping` count as failing; `pass`
+   does not). Return the check names — these will be embedded verbatim into the
+   retry prompt so the agent knows exactly what to look at. If the list is empty,
+   abort the retry (`return False`).
+
+5. **Compose the force-engagement prompt with the literal template below.**
+   The prompt MUST:
+   - Open with `## Force-Engagement Retry — Previous Turn Produced No Commit`.
+   - Quote the failing check names as a bullet list, verbatim from `gh pr checks`.
+   - State that returning no commit on red CI is itself a bug.
+   - Re-state the branch invariant: NEVER `git checkout -b` / `git switch -c`;
+     the fix lands on `{pr_head_branch}` and nowhere else.
+   - Re-state the signed-commit + no-`--no-verify` invariant verbatim — even though
+     the original prompt already said it, the retry must repeat it. (Empirically,
+     no-commit retries that drop this clause produce unsigned commits.)
+   - End with an explicit escape hatch: `If after the steps above you still cannot
+     produce a commit, reply with a single line BLOCKED: <one-sentence reason> and stop.`
+     This stops the agent from looping the retry inside its own session.
+   - PREPEND the same `review_threads_block` from step 1.
+
+6. **Re-invoke on the SAME session_uuid.**
+   The retry MUST use the existing PR-scoped session id (`session_uuid(repo, issue, AGENT_CI_DRIVER)`).
+   See `automation-session-naming-pr-scoped-not-commit-scoped`: regenerating the
+   id on retry fragments the transcript and the agent loses context of the first
+   no-commit turn. Pass `session_id=session_id` straight through; do not call
+   `session_uuid(...)` again.
+
+7. **Cap the retry at exactly 1.**
+   `_retry_no_commit_once` returns `True` if HEAD advanced after the retry, `False`
+   otherwise. The caller does NOT loop. Two no-commits in a row is the final state.
+
+8. **Write the forensics marker on second no-commit.**
+   `state_dir/repeated-no-commit-<pr_number>.json` with the JSON schema in
+   Results & Parameters. This is the breadcrumb downstream tools (and operators)
+   use to triage stuck PRs. The marker is also what stops the next loop iteration
+   from re-attempting the same PR for the same head SHA — `_run_ci_fix_session`
+   should check for the marker and skip if it exists for the current PR head SHA.
+
+9. **Do NOT open a new PR.**
+   The retry never calls `gh pr create`. The fix has to land on the existing PR
+   so its review history, `Closes #N` link, and arming state stay intact. If the
+   second no-commit fires, the marker is written and the loop moves on — the
+   operator (or the next loop run, after a code change) is responsible for
+   unblocking the PR.
+
+10. **Pin the contract with unit tests.** Mirror the PR #847 test layout:
+    - `TestReviewThreadInjection` — empty list returns `""`; non-empty list
+      formats one block per thread with `path:line` and comment body;
+      the formatter is called with the same `pr_number` in both prompt paths.
+    - `TestFailingRequiredCheckNames` — `gh pr checks` JSON with mixed
+      `pass`/`fail`/`cancel`/`skipping` rows returns only the failing names;
+      empty JSON returns `[]`.
+    - `TestForceEngagementPrompt` — asserts every required clause is present:
+      the title line, the failing check names, the branch invariant, the
+      signed-commit invariant, the `BLOCKED:` escape hatch, the prepended
+      review-thread block.
+    - `TestNoCommitRetry` — green CI on retry-entry returns `False` without
+      invoking the agent; red CI invokes the agent with `session_id=session_id`
+      unchanged; second no-commit writes the forensics JSON to `state_dir`
+      with the correct schema; HEAD-advance on retry returns `True` without
+      writing the marker.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Push anyway on no-commit | Pre-#836 behavior: `git push --force-with-lease HEAD:branch` returns 0 silently when HEAD already matches origin | Driver logged "pushed CI fixes" for sessions that committed nothing — silent lie to operators and downstream consumers of the run log | #836 honesty guard: snapshot HEAD pre/post agent and refuse to push when they are equal (predecessor skill `automation-ci-driver-honest-success-path-no-silent-noop`) |
+| Give up after one no-commit | Post-#836 behavior: log "skipping push and treating iteration as failed", `return False`, move to next iteration | Agent's contract was violated; nobody asked WHY. Same prompt every run on the same red CI produces the same no-commit. ProjectNestor run `20260531T190615Z` had 4 PRs (#49, #43, #40, #41) stuck this way for multiple consecutive runs | Treat `no-commit + still-red required CI` as a force-engagement trigger, not a stop. Earn one bounded retry with a stronger prompt. |
+| Retry on ANY no-commit | Always retry whether or not the required checks are still red | Wasted tokens on PRs whose CI actually passed through concurrent activity (someone else pushed a fix, or a flake cleared). The retry would then "fix" a green PR and possibly introduce regressions | Gate the retry on `gh pr checks --required` exit code; if it's clean, return `False` from the retry path without invoking the agent |
+| Retry with the same prompt | Re-invoke `claude` with the *original* CI-fix prompt unchanged | Same prompt, same context window (same session_id resumes the prior transcript), almost always the same no-commit. The agent has nothing new to chew on | The retry prompt MUST be different from the initial prompt: name the failing checks verbatim, state explicitly that the previous turn violated the contract, repeat the signed-commit + branch invariants |
+| Ignore PR review threads | Build the prompt from `ci_logs` alone | Bot (github-code-quality, CodeRabbit) or human reviewers leave the real blocker in an unresolved review thread. The fix agent only sees raw CI logs and "fixes" something tangential. The PR stays red forever | Fetch unresolved `reviewThreads { isResolved, comments { body, path, line } }` via the existing GraphQL helper and inject them verbatim into BOTH the initial and the retry prompts |
+| Inject review threads only into the retry | Skip the threads on the initial prompt, only show them after the first no-commit | The first iteration's no-commit is exactly the failure this skill is trying to prevent. Half the time the initial prompt with threads is enough; without them you guarantee one wasted iteration | Inject in BOTH places. The retry is a backstop, not the primary delivery mechanism |
+| Loop the retry until commit or quota | No bound on retries inside `_retry_no_commit_once`; loop until either HEAD advances or some `max_retries` quota is exhausted | Burns tokens on a genuinely stuck PR; defers the operator decision indefinitely | Exactly ONE retry. Two no-commits in a row is a hard stop. Write the forensics marker and move on. Let the next loop run (with a different code state) try again. |
+| Open a new PR on second failure | "Fix-forward" by closing the stuck PR and opening a fresh one from a clean branch | Loses the existing PR's review history (resolved threads, prior commit graph), breaks the `Closes #N` link, and orphans the arming-state record (see `automation-learn-on-merge-per-issue-arming-state`) | Always re-use the existing PR + its head branch. Never call `gh pr create` from the retry path. The fix MUST land on `{pr_head_branch}`. |
+| Mint a new session_uuid for the retry | Call `session_uuid(repo, issue, AGENT_CI_DRIVER, "retry")` or similar to "start fresh" | A new session means the retry agent loses the prior turn's context. The prompt now has to re-establish state from scratch, defeating the point of the same-session retry | Pass the original `session_id` through unchanged. The PR-scoped invariant from `automation-session-naming-pr-scoped-not-commit-scoped` MUST hold here. |
+| Drop the signed-commit reminder from the retry prompt | "The initial prompt already said it, no need to repeat" | Empirically, retry prompts that omit the signed-commit + no-`--no-verify` clause produce unsigned commits — possibly because the longer transcript pushes the original instructions out of the agent's attention window | Repeat the invariant verbatim in every prompt the driver constructs. Cost: a few tokens. Benefit: no rejected pushes. |
+| Drop the branch invariant from the retry prompt | "It's obvious the agent should stay on the PR's head branch" | Without explicit `do NOT run git checkout -b / git switch -c` instructions, the retry agent has occasionally branched off, committed the fix, and left HEAD on a new branch — which then doesn't get pushed | Restate the branch invariant in every prompt. Same reasoning as the signed-commit invariant. |
+| Skip writing the forensics marker | "The log line is enough; ops can grep" | The next loop run has no way to know the PR has already used its retry quota for this head SHA. Without the marker, the loop wastes another invocation on the same stuck PR | Write `state_dir/repeated-no-commit-<pr>.json` on second no-commit. Make `_run_ci_fix_session` check for the marker (keyed by PR + head SHA) and skip if present. |
+
+## Results & Parameters
+
+### Force-engagement prompt template (verbatim from PR #847)
+
+```text
+## Force-Engagement Retry — Previous Turn Produced No Commit
+
+You just returned from a CI-fix session for PR {pr} (issue {issue}) WITHOUT
+producing a new commit on branch `{pr_head_branch}`. The required CI checks
+below are STILL failing on the remote:
+
+{failing_check_names_bulleted}
+
+Returning no commit when required checks are still red is itself a bug — either
+fix the code so the failing checks pass, or, if no fix is possible, write a
+commit that documents the blocker in the PR description and references the
+upstream cause.
+
+Required behaviour:
+1. Re-read the failing check logs for the names listed above.
+2. Make the minimal change that addresses each failure.
+3. Run `pixi run python -m pytest tests/ -v` and `pre-commit run --all-files`
+   locally to verify before committing.
+4. **Every commit MUST be cryptographically signed (`git commit -S`).**
+   NEVER use `--no-verify`. The repository's CI gate rejects unsigned commits
+   and any commit that bypassed pre-commit hooks.
+5. Do NOT run `git checkout -b`, `git switch -c`, or any command that creates
+   or switches branches — the fix has to land on `{pr_head_branch}`.
+
+If after the steps above you still cannot produce a commit, reply with a single
+line `BLOCKED: <one-sentence reason>` and stop.
+```
+
+Where:
+
+- `{pr}`, `{issue}`, `{pr_head_branch}` are the PR number, issue number, and head branch name.
+- `{failing_check_names_bulleted}` is the output of `_failing_required_check_names`,
+  one check name per line, prefixed with `` `- ` ``. Example:
+
+  ```text
+  - lint
+  - test-py310
+  ```
+
+- The `review_threads_block` from `_format_review_threads_block(pr_number)` is
+  PREPENDED above this entire template (NOT inlined into a step).
+
+### `gh_pr_list_unresolved_threads` GraphQL query shape
+
+The helper already exists in `hephaestus/automation/github_api.py`. The query shape it issues:
+
+```graphql
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      reviewThreads(first: 100) {
+        nodes {
+          isResolved
+          comments(first: 50) {
+            nodes {
+              body
+              path
+              line
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Filter for `isResolved == false` client-side. `_format_review_threads_block` then
+emits, for each unresolved thread, a block of the form:
+
+```text
+## Unresolved Review Thread — {path}:{line}
+
+{comment_body}
+
+---
+```
+
+If the list is empty, return `""` (NOT a header with no body).
+
+### Failing-required-check parser
+
+`_failing_required_check_names(pr_number)`:
+
+```bash
+gh pr checks <pr_number> --required --json name,bucket
+```
+
+Returns the list of `name`s where `bucket` is in `{"fail", "cancel", "skipping"}`.
+`bucket == "pass"` is excluded; `bucket == "pending"` is excluded (treat in-flight
+as "not failing yet"). Exit code 0 with empty array means CI is clean — abort the retry.
+
+### Forensics marker JSON schema
+
+Path: `state_dir/repeated-no-commit-<pr_number>.json`
+
+```json
+{
+  "issue_number": 41,
+  "pr_number": 83,
+  "pr_head_branch": "41-auto-impl",
+  "failing_required_checks": ["lint", "test-py310"],
+  "recorded_at": "2026-05-31T19:37:30Z"
+}
+```
+
+Fields:
+
+- `issue_number` — the closed issue number (from the PR body's `Closes #N`)
+- `pr_number` — the PR number
+- `pr_head_branch` — the PR's head ref (e.g. `41-auto-impl`)
+- `failing_required_checks` — sorted list of check names that were still red on second no-commit
+- `recorded_at` — UTC ISO-8601 timestamp with `Z` suffix
+
+`_run_ci_fix_session` should check for `state_dir/repeated-no-commit-<pr>.json`
+at entry and short-circuit (skip the PR for this iteration) if it exists AND
+the PR's current head SHA matches the SHA that was current when the marker
+was written. Re-arming requires a new commit landing on the PR head branch
+(operator pushes a fix, or the implementer agent on a later loop produces one).
+
+### Cross-references to companion skills
+
+- **`automation-ci-driver-honest-success-path-no-silent-noop`** (PR #836) — the
+  predecessor. That skill installs the HEAD-snapshot honesty guard; this skill
+  is the follow-up "OK, you caught the lie — now what?" answer.
+- **`automation-learn-on-merge-per-issue-arming-state`** (PR #840) — uses the
+  same `state_dir` convention as this skill's `repeated-no-commit-<pr>.json`
+  marker. Reuse the existing `state_dir` resolution; do not add a parallel
+  directory.
+- **`automation-session-naming-pr-scoped-not-commit-scoped`** (PR #845) — the
+  retry MUST stay on the same PR-scoped `session_uuid(repo, issue, AGENT_CI_DRIVER)`.
+  This skill is downstream of #845's invariant; violating it (e.g., by passing
+  a different `session_id` to the retry's `invoke_claude_with_session`) regenerates
+  the session and the retry agent loses the first turn's context.
+
+### Concrete failure evidence (motivating run)
+
+ProjectNestor run `20260531T190615Z` log shows 4 issues stuck on
+`agent session produced no new commit (HEAD unchanged at …); skipping push
+and treating iteration as failed`:
+
+| Issue | PR head SHA at no-commit |
+|-------|--------------------------|
+| #49   | `66871883` |
+| #43   | `5d95f38c` |
+| #40   | `d9d5bfd2` |
+| #41   | `752ed43f` |
+
+Pre-#847 behavior: the driver logged the warning and moved on; on the next
+loop run, the same PRs hit the same no-commit at the same SHA, because nothing
+changed in the prompt or the input. Post-#847 behavior: each PR earns one
+force-engagement retry with the failing check names + unresolved review
+threads in the prompt; if that second attempt also no-commits, the forensics
+marker is written and the PR is skipped until its head SHA advances.
+
+---
+
+## Superseded from automation-github-graphql-field-validation-live-schema
+
+**Original date:** 2026-06-05 / **Original version:** 1.1.0
+
+```yaml
+name: automation-github-graphql-field-validation-live-schema
+description: "A GitHub GraphQL mutation/query that selects a non-existent output field — OR names a mutation whose Input type lacks the argument you pass — fails on EVERY call (`Field 'X' doesn't exist on type 'Y'` for a bad output selection; `InputObject '<Input>' doesn't accept argument '<arg>'` + `Variable $X is declared by <Mutation> but not used` for a wrong mutation name), and a code path with no direct unit test can ship such a broken query indefinitely. Validate every field selection AND every input argument against the LIVE schema via introspection before shipping. Use when: (1) writing or editing a raw `gh api graphql` query/mutation string (especially `addPullRequestReview`, `addPullRequestReviewThreadReply`, `reviewThreads`, or any PR-review traversal), (2) a runtime log shows `gh: Field '<field>' doesn't exist on type '<Type>'`, `gh: InputObject '<Input>' doesn't accept argument '<arg>'`, `Variable $X is declared by <Mutation> but not used`, or repeated identical mutation failures, (3) you need to read a parent object off a child node (e.g. a comment's thread or review) and are assuming a reverse edge exists, (4) a function that builds a GraphQL query has no direct unit test and is only mocked out by higher-level callers, (5) an automation loop treats a PR as NOGO/re-runs forever because an in-loop review/comment/reply never posts."
+category: tooling
+date: 2026-06-05
+version: "1.1.0"
+user-invocable: false
+verification: verified-ci
+history: automation-github-graphql-field-validation-live-schema.history
+tags:
+  - graphql
+  - github-api
+  - schema-introspection
+  - field-validation
+  - input-argument-validation
+  - wrong-mutation-name
+  - addPullRequestReview
+  - addPullRequestReviewThreadReply
+  - resolveReviewThread
+  - reviewThreads
+  - pull-request-review
+  - silent-broken-query
+  - missing-unit-test
+  - child-to-parent-edge
+  - gh-api-graphql
+  - automation-pipeline
+```
+
+
+# Automation: Validate GitHub GraphQL Field Selections Against the Live Schema
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-05 |
+| **Objective** | Stop a GitHub GraphQL mutation/query from selecting a non-existent output field OR naming a mutation whose Input type lacks the argument you pass (both fail on EVERY call), by validating every field selection AND every input argument against the live schema via introspection before shipping, and by giving every raw-query function a direct unit test. |
+| **Outcome** | SUCCESS (two confirmed instances). **v1.0.0:** `gh_pr_review_post` selected `pullRequestReviewThread { id isResolved }` on a `PullRequestReviewComment` node; that output field does not exist, so the `addPullRequestReview` mutation failed on every call and NO in-loop PR review ever posted. Fixed by returning only `pullRequestReview { id }` and resolving threads via a separate `pullRequest.reviewThreads` query. Shipped in PR #906 (closes #905). **v1.1.0 (new variant — wrong mutation NAME):** `gh_pr_resolve_thread` replied with `addPullRequestReviewComment(input: {pullRequestReviewThreadId: $threadId, body: $body})`, but `AddPullRequestReviewCommentInput` has NO `pullRequestReviewThreadId` field, so every reply failed with `gh: InputObject 'AddPullRequestReviewCommentInput' doesn't accept argument 'pullRequestReviewThreadId'` + `Variable $threadId is declared by AddReply but not used`; PR review threads were never replied-to or resolved. Fixed by switching the reply mutation to `addPullRequestReviewThreadReply(input: {pullRequestReviewThreadId: $threadId, body: $body}) { comment { id } }` (the correct Input type). Shipped in PR #1006 (closes #999). |
+| **Verification** | verified-ci — both fixes merged/auto-merging this session; every field selection AND input argument validated against the live GitHub schema via `gh api graphql` introspection. v1.1.0: mypy clean tree-wide (315 files), ruff clean, 112 automation tests pass (incl. 3 new). |
+| **History** | [changelog](./automation-github-graphql-field-validation-live-schema.history) |
+
+## When to Use
+
+- You are writing or editing a raw `gh api graphql` query/mutation string, especially `addPullRequestReview`, `addPullRequestReviewThreadReply`, `resolveReviewThread`, `reviewThreads`, or any pull-request-review traversal.
+- A runtime log shows `gh: Field '<field>' doesn't exist on type '<Type>'`, or you see many identical mutation failures in one automation run (the v1.0.0 case produced 219 identical failures).
+- **A runtime log shows `gh: InputObject '<Input>' doesn't accept argument '<arg>'` and/or `Variable $X is declared by <Mutation> but not used`.** This signature means the mutation NAME is wrong (or the arg is): the Input type you named lacks that argument, and the variable you declared never binds. The v1.1.0 case logged `InputObject 'AddPullRequestReviewCommentInput' doesn't accept argument 'pullRequestReviewThreadId'` + `Variable $threadId is declared by AddReply but not used`, then 3 retry-exhaustion failures. Fix: introspect the Input type's `inputFields` (NOT just the output type's `fields`) and pick the mutation whose Input actually accepts your argument (here `addPullRequestReviewThreadReply` / `AddPullRequestReviewThreadReplyInput`).
+- You need to read a parent object from a child node (e.g. a comment's thread, or a comment's review) and are assuming a reverse edge exists on the child.
+- A function that builds a GraphQL query/mutation has NO direct unit test and is only mocked out by higher-level callers.
+- An automation loop treats a PR as NOGO and re-runs forever because an in-loop review, comment, or thread reply never actually posts.
+
+## Verified Workflow
+
+### Quick Reference
+
+Validate any field selection against the LIVE schema BEFORE shipping. There is no
+compile-time check — an invalid selection ships silently and fails at runtime:
+
+```bash
+# List every OUTPUT field that actually exists on a type:
+gh api graphql -f query='{ __type(name: "PullRequestReviewComment") { fields { name } } }'
+
+# Inspect a connection's node fields (e.g. what a reviewThread exposes):
+gh api graphql -f query='{ __type(name: "PullRequestReviewThread") { fields { name } } }'
+gh api graphql -f query='{ __type(name: "PullRequestReview") { fields { name } } }'
+
+# List the INPUT arguments a mutation's Input type accepts (validates the args you pass):
+gh api graphql -f query='{ __type(name: "AddPullRequestReviewCommentInput") { inputFields { name } } }'
+gh api graphql -f query='{ __type(name: "AddPullRequestReviewThreadReplyInput") { inputFields { name } } }'
+# ...and confirm the payload's leaf fields for the response selection set:
+gh api graphql -f query='{ __type(name: "AddPullRequestReviewThreadReplyPayload") { fields { name } } }'
+```
+
+Correct PR-review-thread reply (the v1.1.0 fix — right mutation NAME + right Input):
+
+```graphql
+# WRONG: AddPullRequestReviewCommentInput has no pullRequestReviewThreadId field.
+# addPullRequestReviewComment(input: { pullRequestReviewThreadId: $threadId, body: $body }) { ... }
+
+# CORRECT: addPullRequestReviewThreadReply takes pullRequestReviewThreadId + body.
+mutation AddReply($threadId: ID!, $body: String!) {
+  addPullRequestReviewThreadReply(input: {
+    pullRequestReviewThreadId: $threadId,
+    body: $body
+  }) {
+    comment { id }   # AddPullRequestReviewThreadReplyPayload exposes `comment`
+  }
+}
+# Step 2 resolveReviewThread(input: { threadId: $threadId }) was already correct.
+```
+
+Correct PR-review post + foreign-thread-safe resolve (fields that ACTUALLY exist):
+
+```graphql
+# 1. Mutation: select ONLY pullRequestReview { id } (NOT a comment's thread).
+mutation {
+  addPullRequestReview(input: {
+    pullRequestId: "<PR_NODE_ID>",
+    event: COMMENT,
+    body: "<review body>",
+    comments: [{ path: "<file>", line: <n>, body: "<comment>" }]
+  }) {
+    pullRequestReview { id }   # PullRequestReview has `id`, NOT `databaseId`
+  }
+}
+
+# 2. Follow-up query: read threads off the PARENT (pullRequest.reviewThreads),
+#    and read each thread's first comment's parent review id (child -> parent).
+query {
+  repository(owner: "<owner>", name: "<name>") {
+    pullRequest(number: <pr>) {
+      reviewThreads(first: 100) {
+        nodes {
+          id
+          isResolved
+          comments(first: 1) {
+            nodes { pullRequestReview { id } }   # comment -> its parent review
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+```python
+# 3. Keep only unresolved threads created by THE review we just posted
+#    ("foreign thread" guarantee — excludes pre-existing human-reviewer threads):
+own_thread_ids = [
+    t["id"]
+    for t in review_threads
+    if not t["isResolved"]
+    and (t["comments"]["nodes"] or [{}])[0]
+        .get("pullRequestReview", {})
+        .get("id") == created_review_id
+]
+```
+
+### Detailed Steps
+
+1. **Before writing the selection set, introspect the type — outputs AND inputs.** For
+   every object whose fields you select, run
+   `gh api graphql -f query='{ __type(name: "TYPE") { fields { name } } }'` and confirm
+   each selected field name is in the returned list. Do this for the mutation payload
+   type AND every nested node type. **Equally important: introspect the mutation's Input
+   type's `inputFields`** with
+   `gh api graphql -f query='{ __type(name: "<Mutation>Input") { inputFields { name } } }'`
+   and confirm every argument you pass exists. A wrong mutation name passes a valid-looking
+   argument to the WRONG Input type and fails with
+   `InputObject '<Input>' doesn't accept argument '<arg>'` + `Variable $X is declared ... but not used`.
+
+2. **Never assume a reverse (child→parent) edge.** A GraphQL connection edge often
+   exists in only ONE direction. Here, a `PullRequestReviewComment` has NO thread
+   field, and a `PullRequestReviewThread` has NO direct `review` field. The available
+   edges are: `PullRequestReview.comments` (parent→child), `PullRequest.reviewThreads`
+   (parent→child), and a thread comment's `pullRequestReview { id }` (child→parent).
+   If `Child.parent` doesn't exist, fetch via `Parent.children` and filter.
+
+3. **Treat HTTP 200 with an `errors` array as a FAILURE.** `gh api graphql` can return
+   exit code 0 with a top-level `errors` array. A bare exit-code check misses it.
+   Parse the JSON and surface `data.errors` (or the `errors` key) explicitly.
+
+4. **Give every raw-query function a direct unit test.** Mock `_gh_call` / the
+   subprocess, assert the exact query string AND the parsing of a sample response.
+   A cheap durable guard: assert the sent query string does NOT contain the
+   known-bad field name (e.g. `assert "pullRequestReviewThread" not in sent_query`).
+   Mocking the whole function out in higher-level tests is what let the broken
+   query ship for a long time.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---|---|---|---|
+| 1 | `addPullRequestReview` mutation selected `pullRequestReviewThread { id isResolved }` on each `PullRequestReviewComment` node | That field does NOT exist on `PullRequestReviewComment` — `gh: Field 'pullRequestReviewThread' doesn't exist on type 'PullRequestReviewComment'`; the mutation failed on EVERY call so NO in-loop review ever posted (219 identical failures in one run) | A field selection has no compile-time check; introspect every type with `__type { fields { name } }` against the LIVE schema before shipping |
+| 2 | `gh_pr_review_post` had no direct unit test — coverage only mocked it out via `pr_reviewer` tests | The structurally-broken query passed CI indefinitely because nothing exercised the real query string | Any function that builds a raw GraphQL query/mutation MUST have a direct unit test asserting the query string and the parsing; add a guard asserting the known-bad field name is absent |
+| 3 | Assumed a comment could report its own thread (read thread off the comment / child) | The reverse edge does not exist; you cannot read a comment's thread off the comment | Child→parent edges often don't exist; fetch threads via `pullRequest.reviewThreads` (parent→child) and filter |
+| 4 | Tried selecting `databaseId` on `PullRequestReview` to correlate threads to the review | `PullRequestReview` exposes `id`, not `databaseId`, in the path needed here; correlation must use the node `id` | Confirm the exact identifier field name via introspection; don't assume `databaseId` exists everywhere |
+| 5 | (Risk) relied on `gh api graphql` exit code alone to detect success | `gh api graphql` can return HTTP 200 with a top-level `errors` array and still have FAILED | Surface the `errors` array from the JSON response; a bare exit-code check can miss a failed operation |
+| 6 | `gh_pr_resolve_thread` Step-1 reply used `addPullRequestReviewComment(input: {pullRequestReviewThreadId: $threadId, body: $body})` | `AddPullRequestReviewCommentInput` has NO `pullRequestReviewThreadId` field (it takes `pullRequestId`/`pullRequestReviewId`/`inReplyTo`/...), so every call failed with `gh: InputObject 'AddPullRequestReviewCommentInput' doesn't accept argument 'pullRequestReviewThreadId'` + `Variable $threadId is declared by AddReply but not used`, then retry-exhaustion — threads were never replied-to or resolved | Introspect the Input type's `inputFields` (NOT just the output type's `fields`) before shipping. The correct mutation for thread replies is `addPullRequestReviewThreadReply` (`AddPullRequestReviewThreadReplyInput` accepts `pullRequestReviewThreadId` + `body`); a wrong mutation NAME yields a DIFFERENT error signature than a wrong output field — `InputObject doesn't accept argument` + `Variable declared but not used`, not `Field doesn't exist on type` |
+| 7 | `gh_pr_resolve_thread` had no direct unit test — callers (`address_review`) mock it at the boundary | The broken reply mutation shipped silently for the same reason as v1.0.0 Attempt 2: nothing exercised the real query string | Added a direct unit test (`TestGhPrResolveThread`) pinning the mutation name + call args + `dry_run` no-op; every raw-query function needs a direct test, not just boundary mocks |
+
+## Results & Parameters
+
+**Schema relationships (verified via live introspection, 2026-06-03):**
+
+- `PullRequestReviewComment` has **no** thread field at all (verified:
+  `gh api graphql -f query='{ __type(name: "PullRequestReviewComment") { fields { name } } }'`).
+- `PullRequestReview` exposes `id` and `comments` (NOT `databaseId` in this path).
+- `PullRequestReviewThread` exposes `comments` (no direct `review` field).
+- A thread's comment exposes `pullRequestReview { id }` (child→parent), which is how
+  you correlate a thread back to the review that created it.
+
+**Mutation Input types (verified via live introspection, 2026-06-05):**
+
+- `AddPullRequestReviewCommentInput.inputFields` = `clientMutationId, pullRequestId,
+  pullRequestReviewId, commitOID, body, path, position, inReplyTo` — there is **NO**
+  `pullRequestReviewThreadId`. Passing it yields
+  `InputObject 'AddPullRequestReviewCommentInput' doesn't accept argument 'pullRequestReviewThreadId'`.
+- `AddPullRequestReviewThreadReplyInput.inputFields` = `clientMutationId,
+  pullRequestReviewId, pullRequestReviewThreadId, body` — this is the CORRECT Input for
+  replying to a review thread by thread id.
+- `AddPullRequestReviewThreadReplyPayload.fields` = `clientMutationId, comment` — so
+  `{ comment { id } }` is a valid response selection.
+- `resolveReviewThread(input: { threadId: ... })` (Step 2) was already correct and unchanged.
+
+**Corrected thread-reply mutation (v1.1.0 — right NAME + right Input + valid leaf):**
+
+```graphql
+mutation AddReply($threadId: ID!, $body: String!) {
+  addPullRequestReviewThreadReply(input: {
+    pullRequestReviewThreadId: $threadId, body: $body
+  }) {
+    comment { id }
+  }
+}
+```
+
+**Corrected mutation (returns only an existing field):**
+
+```graphql
+mutation {
+  addPullRequestReview(input: {
+    pullRequestId: $prId, event: COMMENT, body: $body, comments: $comments
+  }) {
+    pullRequestReview { id }
+  }
+}
+```
+
+**Corrected follow-up resolve query + foreign-thread filter:**
+
+```graphql
+query {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $pr) {
+      reviewThreads(first: 100) {
+        nodes {
+          id
+          isResolved
+          comments(first: 1) { nodes { pullRequestReview { id } } }
+        }
+      }
+    }
+  }
+}
+```
+
+Keep unresolved threads whose first comment's `pullRequestReview.id` equals the
+review id you just created — this excludes pre-existing human-reviewer threads
+(the "foreign thread" guarantee) using fields that actually exist.
+
+**Generalizable lessons (the heart of this skill):**
+
+1. Validate every GraphQL field selection against the LIVE schema via introspection
+   BEFORE shipping: `gh api graphql -f query='{ __type(name: "TYPE") { fields { name } } }'`.
+   There is no compile-time check; an invalid selection ships silently and the
+   `gh` CLI prints `Field 'X' doesn't exist on type 'Y'` only at runtime.
+2. `gh api graphql` returning HTTP 200 with an `errors` array still means the
+   operation FAILED — surface the `errors` array, don't trust the exit code alone.
+3. Any function that builds a raw GraphQL query/mutation MUST have a direct unit
+   test (mock `_gh_call`/subprocess, assert the query string and the parsing). A
+   cheap durable guard is a unit test asserting the sent query string does NOT
+   contain the known-bad field name.
+4. Child→parent vs parent→child: a connection edge often exists in only ONE
+   direction. If `Child.parent` doesn't exist, fetch via `Parent.children` and filter.
+5. **Two distinct error signatures, one discipline.** A wrong OUTPUT field selection
+   fails with `Field '<f>' doesn't exist on type '<T>'`. A wrong mutation NAME (so the
+   Input type lacks your argument) fails DIFFERENTLY: `InputObject '<Input>' doesn't
+   accept argument '<arg>'` + `Variable $X is declared by <Mutation> but not used`.
+   Both are caught by the same pre-ship habit — introspect the Input type's
+   `inputFields`, not just the output type's `fields`, before shipping.
+
+## Verified On
+
+| Project | File / Issue | Notes |
+|---|---|---|
+| ProjectHephaestus | `hephaestus/automation/github_api.py` (`gh_pr_review_post`) | v1.0.0: removed non-existent `pullRequestReviewThread` output selection; mutation now returns `pullRequestReview { id }` |
+| ProjectHephaestus | Issue #905 / PR #906 | v1.0.0 fix merged 2026-06-03; thread resolution moved to `pullRequest.reviewThreads` follow-up query |
+| ProjectHephaestus | `hephaestus/automation/github_api.py` (`gh_pr_resolve_thread`) | v1.1.0: Step-1 reply switched from `addPullRequestReviewComment` (wrong Input — no `pullRequestReviewThreadId`) to `addPullRequestReviewThreadReply(input: {pullRequestReviewThreadId, body}) { comment { id } }`; Step-2 `resolveReviewThread` unchanged |
+| ProjectHephaestus | Issue #999 / PR #1006 | v1.1.0 fix merged/auto-merging 2026-06-05; verified-ci — mypy clean (315 files), ruff clean, 112 automation tests pass incl. 3 new (`TestGhPrResolveThread`) |
+| GitHub GraphQL API | live schema introspection | v1.0.0: `__type(name: "PullRequestReviewComment" / "PullRequestReviewThread" / "PullRequestReview") { fields }`; v1.1.0: `__type(name: "AddPullRequestReviewCommentInput" / "AddPullRequestReviewThreadReplyInput") { inputFields }` + `AddPullRequestReviewThreadReplyPayload { fields }` confirmed the correct Input type and leaf |
+
+---
