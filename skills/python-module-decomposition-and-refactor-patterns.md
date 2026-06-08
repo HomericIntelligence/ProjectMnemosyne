@@ -9,10 +9,20 @@ description: >-
   functional/immutable style, (5) preparing a codebase for extensibility
   through extraction, parameterization, and protocol-based abstraction,
   (6) extracting a CLI entry point or main() out of a module while preserving
-  existing patch-based tests without edits (reverse-delegation pattern).
+  existing patch-based tests without edits (reverse-delegation pattern),
+  (7) reducing cyclomatic complexity (CC>15) by extracting helper steps from
+  oversized pipeline methods carrying `# noqa: C901`, (8) refactoring a broad
+  repository-wide scanner to target a single subdirectory using
+  Path.is_relative_to() allow-lists, (9) detecting and fixing double-increment
+  bugs caused by incomplete context-manager refactors where callers still hold
+  stale manual counter management, (10) safely removing legacy dead-code files
+  marked as fallback/reference-only after verifying zero real callers,
+  (11) reading the existing substrate code before estimating a large refactor
+  to avoid 3-5x LOC over-estimation, (12) finalizing code after parallel phases
+  complete by addressing technical debt accumulated during rapid development.
 category: architecture
 date: 2026-06-05
-version: "1.2.0"
+version: "1.3.0"
 user-invocable: false
 history: python-module-decomposition-and-refactor-patterns.history
 tags:
@@ -28,6 +38,13 @@ tags:
   - cli-extraction
   - patch-routing
   - entry-point
+  - cyclomatic-complexity
+  - pipeline-extraction
+  - scanner-scoping
+  - context-manager
+  - dead-code
+  - estimation
+  - phase-cleanup
 ---
 
 # Python Module Decomposition and Refactor Patterns
@@ -38,8 +55,8 @@ tags:
 | ------- | ------- |
 | **Date** | 2026-06-05 |
 | **Objective** | Decompose oversized Python modules/classes into focused, independently testable units using SRP, TDD, and DRY principles |
-| **Outcome** | Synthesized from 7 verified skills; covers function-level extraction, class-based extraction, circular import fixes, immutability refactoring, extensibility-driven decomposition, CLI entry-point extraction with preserved patch routing, and top-level symbol extraction to break sibling module cycles |
-| **Trigger** | Files >800 lines, circular import errors, mixed-concern methods, C901 complexity, extensibility requirements, CLI main() extraction, deferred imports inside function bodies preventing static analysis |
+| **Outcome** | Synthesized from 13 verified skills; covers function-level extraction, class-based extraction, circular import fixes, immutability refactoring, extensibility-driven decomposition, CLI entry-point extraction with preserved patch routing, top-level symbol extraction to break sibling module cycles, CC>15 pipeline-step extraction, scanner-to-subdirectory scoping, context-manager double-counter fixes, safe legacy-code deletion, substrate-read-before-estimate discipline, and post-parallel phase cleanup |
+| **Trigger** | Files >800 lines, circular import errors, mixed-concern methods, C901/CC>15 complexity, extensibility requirements, CLI main() extraction, deferred imports inside function bodies preventing static analysis, broad scanners needing subdirectory scope, stale callers after context-manager refactors, dead fallback files, pessimistic refactor estimates, technical debt after parallel phases |
 
 ## When to Use
 
@@ -54,6 +71,12 @@ Apply this skill when any of the following is true:
 - A method **mutates `self.attribute` and also returns it**, breaking an otherwise immutable class API
 - You need to **prepare a codebase for a new pluggable feature** requiring protocol-based abstraction
 - Sibling modules (e.g., `implementer_cli`, `implementer_phase_runner`) have **deferred back-pointer imports inside function bodies** that mask circular dependencies from static analysis tools and complicate test patching
+- A pipeline function runs **4+ sequential stages**, carries a `# noqa: C901` suppression, and has **CC>15** (or above the project threshold)
+- A scanner/linter/auditing script uses a **deny-list (`EXCLUDED_PREFIXES`)** and you want to scope it to a single subdirectory via an allow-list
+- A counter/semaphore/ref-count test asserting `== 1` now observes `2` **after a context-manager refactor** (stale manual `+1/-1` left in a caller)
+- A code file declares itself **"kept for reference / fallback only"** but has zero real callers and leaves stale back-references in production code
+- A `TODO.md`/roadmap/audit estimates **"thousands of LOC" or weeks** for a substrate rewrite — read the substrate first to avoid a 3-5x pessimistic estimate
+- You are in the **cleanup phase** after parallel Test/Implementation/Package phases and need to address accumulated technical debt before merge
 
 ## Verified Workflow
 
@@ -71,6 +94,12 @@ Decision tree:
   Extensibility blocked by coupling     → Extract-Parameterize-Protocol pattern
   Extract CLI main() while keeping      → Reverse-Delegation Pattern (Phase 11) OR
     existing patch.object tests intact    Top-Level Extraction (Phase 12)
+  CC>15 pipeline method (# noqa: C901)  → Pipeline-Step Extraction (Phase 13)
+  Broad scanner → one subdirectory      → Allow-list scope helper (Phase 14)
+  Counter == 2 after ctx-manager move   → Audit callers, drop stale +1/-1 (Phase 15)
+  Dead "fallback only" file, 0 callers  → Safe Legacy Deletion (Phase 16)
+  Estimating a big rewrite              → Read substrate FIRST (Phase 17)
+  Cleanup after parallel phases         → Finalization checklist (Phase 18)
 
 Universal rule for mock patches after any move:
   Patch where the name is LOOKED UP at call time — not where it was defined.
@@ -519,34 +548,6 @@ def _implement_issue(self):
    imports exist in sibling modules (prevents future deferred imports).
 5. **Retarget existing test patches**: Update any patches that target the old location.
 
-**Example: Full refactor (ProjectHephaestus #714)**:
-
-```python
-# BEFORE: implementer_phase_runner.py
-class ImplementationPhaseRunner:
-    def __init__(self, impl: IssueImplementer):
-        self._impl = impl
-    
-    @property
-    def _impl_module(self):
-        from . import implementer
-        return implementer
-    
-    def _implement_issue(self):
-        # Deferred import masks the cycle from static analysis
-        impl_mod = self._impl_module
-        if impl_mod.is_plan_review_go(...):
-            ...
-
-# AFTER: implementer_phase_runner.py
-from .review_state import is_plan_review_go  # ← top-level
-from ._review_utils import find_pr_for_issue  # noqa: F401
-
-def _implement_issue(self):
-    if is_plan_review_go(...):  # ← direct, clean
-        ...
-```
-
 **Regression test (AST-based guard)**:
 
 ```python
@@ -607,6 +608,195 @@ def test_no_runtime_backpointer_to_implementer() -> None:
 | CI gates pass | Yes |
 | Verification level | verified-ci |
 
+### Phase 13: Pipeline-Step Extraction — CC>15 Reduction
+
+Use when a module-level function runs **4+ sequential pipeline stages** (each with an
+"if tool not installed → skip" and "if step failed → return" branch), carries a
+`# noqa: C901` suppression, and exceeds the project's complexity threshold.
+
+**1. Identify the repeated step shape** — each inline stage is a 6–10 line "if tool missing →
+return na; run subprocess; if failed → return" block inside the pipeline function.
+
+**2. Extract each step into a `_run_<pipeline>_<stage>_step` helper returning a 3-tuple**:
+
+```python
+def _run_mojo_build_step(workspace: Path, is_modular: bool) -> tuple[bool, bool, str]:
+    if not shutil.which("magic" if is_modular else "mojo"):
+        return False, True, ""          # passed, na, output
+    result = _run_subprocess(["mojo", "build", ...], workspace)
+    return result.passed, False, result.output
+```
+
+The 3-tuple contract is consistent everywhere: `(passed: bool, na: bool, output: str)`.
+The pipeline function unpacks and early-returns:
+
+```python
+passed, na, output = _run_mojo_build_step(workspace, is_modular)
+if na:
+    return BuildPipelineResult(build=StepResult(passed=False, output="", na=True), ...)
+if not passed:
+    return BuildPipelineResult(build=StepResult(passed=False, output=output), ...)
+```
+
+**3. Extract shared steps once** (no pipeline prefix) when two pipelines share an identical
+stage such as pre-commit — one `_run_precommit_step(workspace, env=None) -> (bool, bool, str)`
+helper, not one per pipeline.
+
+**4. Split large orchestrators into two phases** — context gathering vs. retry execution:
+
+```python
+def run_llm_judge(...) -> JudgeResult:
+    judge_start = time.time()
+    judge_prompt, _pipeline_result = _gather_judge_context(...)   # file reads, rubric, pipeline
+    return _execute_judge_with_retry(judge_prompt, model, workspace, judge_dir, judge_start, language)
+```
+
+**5. Promote inline imports to module level** before extracting — otherwise each extracted
+helper needs its own inline import. **6. Verify** with
+`ruff check --select C901 <file>.py` → "All checks passed!", then remove `# noqa: C901`.
+**7. Fix RUF059** by prefixing unused unpacked tuple fields with `_`
+(`passed, _na, _output = ...`); keep the name un-prefixed when it IS used in an assertion.
+**8. Each step helper gets 3 unit tests**: tool-not-installed (`na=True`),
+tool-installed-fails, tool-installed-passes.
+
+### Phase 14: Scope a Broad Scanner to a Single Subdirectory
+
+Use when a scanner/linter/auditing script uses a growing deny-list (`EXCLUDED_PREFIXES`)
+and you want to restrict it to one directory. **Allow-list beats deny-list**: deny-lists
+grow forever (`.pixi/`, `build/`, `node_modules/`, …) and break on every new top-level dir.
+
+```python
+# BEFORE: deny-list (fragile, grows over time)
+EXCLUDED_PREFIXES = (".pixi/", "build/", "node_modules/", "tests/claude-code/")
+def scan_repository(repo_root: Path) -> list[Finding]:
+    for py in sorted(repo_root.rglob("*.py")):
+        rel = str(py.relative_to(repo_root)).replace("\\", "/")
+        if any(rel.startswith(p) for p in EXCLUDED_PREFIXES):
+            continue
+        ...
+
+# AFTER: allow-list helper (correct by construction, independently testable)
+def _is_scylla_file(path: Path, root: Path) -> bool:
+    """Return True if path is a .py file under the scylla/ directory."""
+    return path.suffix == ".py" and path.is_relative_to(root / "scylla")
+
+def scan_repository(repo_root: Path) -> list[Finding]:
+    for py in sorted(repo_root.rglob("*.py")):
+        if not _is_scylla_file(py, repo_root):
+            continue
+        ...
+```
+
+`Path.is_relative_to()` needs Python 3.9+. For older runtimes, wrap `relative_to()` in
+`try/except ValueError`. **Export the helper** so tests import it directly. Add
+`TestIsScyllaFile` (accept in-scope `.py`, reject out-of-scope dir, reject non-`.py`) and
+`TestScanRepositoryScope` (in-scope file with a fragment is found; out-of-scope file is not).
+
+**Critical migration step**: existing tests that wrote fixtures at `tmp_path / "bad.py"` now
+return zero findings (root is outside scope). Move fixtures into the scoped dir and update
+hard-coded path assertions (`"bad.py"` → `"scylla/bad.py"`).
+
+### Phase 15: Fix Double-Counter from a Stale Caller After a Context-Manager Refactor
+
+Use when a counter/semaphore/ref-count test asserting `== 1` now observes `2` after a
+refactor introduced a context manager that owns the lifecycle. This is an **incomplete
+migration** sub-case: the context manager owns the `+1/-1`, but a caller still does it manually.
+
+```python
+# Context manager owns lifecycle (correct):
+@contextmanager
+def _inflight_context(self):
+    self._inflight += 1
+    try:
+        yield
+    finally:
+        self._inflight -= 1
+
+# Callee adopts it (correct):
+def _handle_webhook(self, ...):
+    with self._inflight_context():
+        ...
+
+# STALE caller — double-increment bug:
+def receive_webhook(self, ...):
+    self._inflight += 1          # BUG: duplicates context manager → REMOVE
+    self._handle_webhook(...)
+    self._inflight -= 1          # BUG: duplicates context manager → REMOVE
+```
+
+**Workflow**: (1) find the new `@contextmanager`; (2) confirm the callee uses it;
+(3) `grep -rn "_handle_webhook" src/ tests/` to find **every** caller; (4) audit each for
+manual `self._inflight [+-]= 1` pairs; (5) delete the stale lines; (6) re-run
+`pytest -k inflight -v`. **General principle**: a refactor that moves lifecycle into a
+context manager / RAII / try-finally is INCOMPLETE until you grep the whole codebase for
+prior manual lifecycle code in callers. Search production code, not just the failing test.
+
+### Phase 16: Safe Legacy Dead-Code Deletion
+
+Use after extraction is complete and a file declares itself "kept for reference / fallback
+only" but has zero real callers (the completion step of any decomposition). Never delete
+before the replacement is verified — follow Extract → Verify → Delete.
+
+1. **Confirm the legacy declaration** (`head -20 <file>`: "kept for reference / fallback
+   only" or "Deprecated in favor of `<replacement>`") and **identify the tested replacement**.
+2. **Verify zero real callers** (the critical step) — grep invocations across `*.py`, `*.sh`,
+   `*.md`, `.github/`; expect zero matches except the file itself and its own tests:
+   ```bash
+   grep -r "run_automation_loop\.sh" --include="*.py" --include="*.sh" --include="*.md" .
+   grep -r "from legacy_module import\|import legacy_module" --include="*.py" .
+   ```
+3. **Rewrite stale back-references** — comments that point at the file (without calling it)
+   become self-contained explanations of *why* the code works, not *where* to read more.
+4. **Delete the file and its exclusive tests**; update README/docs that list it.
+5. **Comprehensive verification** — full unit + integration + shell suites, ruff, mypy, and a
+   final grep proving zero remaining references. **Commit with rationale** quoting the file's
+   own "fallback only" header (a YAGNI anti-pattern) and listing deleted files + scrubbed refs.
+
+### Phase 17: Read the Substrate Before Estimating a Rewrite
+
+Use before estimating a large refactor — TODO.md / roadmap / audit LOC estimates are
+commonly **3-5x pessimistic** because they don't credit infrastructure that already exists.
+This is a prerequisite to any module-decomposition decision.
+
+1. **Resist trusting the TODO.** Treat "Phase X: ~N000 LOC" as a pessimistic upper bound,
+   not a target.
+2. **Inventory the substrate** — `find src/ -path "*<subsystem>*" | xargs wc -l`.
+3. **Read each substrate file in full** (not skim). Record, with `file.ext:line` citations:
+   public functions that already work, invariants relied on (e.g., "forward execution order
+   = topo order"), state already polymorphic enough for the extension, and existing dispatch
+   tables/registries.
+4. **Cite line numbers as evidence** — no "X already works" without a citation.
+5. **List actual gaps** with the minimum-needed signature each — separates real new code
+   from wiring.
+6. **Revised estimate = new code only.** If existing infra handles 70%, estimate is ~30% of
+   the TODO number. Re-classify audit "CRITICAL: missing" as "incomplete, N% gap" when the
+   substrate exists.
+7. **Validate by landing** the smallest end-to-end slice and comparing actual LOC to the
+   revised estimate (verified case: TODO said "~5000 LOC", revised ~1400, actual +937).
+
+### Phase 18: Cleanup / Finalization After Parallel Phases
+
+Use as the finalization phase after parallel Test/Implementation/Package work completes,
+to address technical debt accumulated during rapid parallel development before merge.
+
+**Workflow**: (1) collect TODOs/FIXMEs/bugs from all parallel outputs; (2) refactor —
+remove duplication (DRY), simplify complexity (KISS), improve naming; (3) update docs to
+match implementation; (4) final quality gates (format, lint, test, coverage); (5) verify
+merge-ready.
+
+```bash
+grep -r "TODO\|FIXME\|HACK" src/         # collect debt
+<formatter> <src> <tests>                # format
+<test-runner> <tests>                    # all green
+<build> 2>&1 | grep -i warning && echo "WARN" || echo "clean"   # zero-warnings policy
+git status                               # no uncommitted changes
+```
+
+**Cleanup checklist**: no TODOs/FIXMEs (or tracked in an issue), duplication removed,
+complex functions simplified, naming consistent, docs updated, all tests passing, code
+formatted, zero compiler warnings, coverage at/above floor, ready for review. Cleanup is the
+final polishing gate before PR approval and merge.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -631,6 +821,12 @@ def test_no_runtime_backpointer_to_implementer() -> None:
 | **Missing coverage omit-allowlist update** | Added new `implementer_cli.py` orchestration module without updating pyproject omit list or guard tests | `test_omit_allowlist.py` and `test_orchestration_smoke.py` failed: counts mismatch + module not in expected list | Update the omit list in `pyproject.toml` AND both guard test files in the same PR as the new module |
 | **Using `Refs #N` only on partial-fix PR** | Opened PR for one CLI-extraction slice with `Refs #468` (umbrella) but no `Closes #N` | pr-policy CI gate hard-requires literal `Closes #N` line; PR was blocked | File a narrow sub-issue for the specific slice, put `Closes #<sub>` + `Refs #<umbrella>` in PR body — umbrella stays open, CI passes |
 | **Using reverse-delegation for sibling-module cycles** | Applied Phase 11 (lazy `from . import implementer as _impl` in function bodies) to break cycle between `implementer_phase_runner` and `implementer` | Deferred imports inside function bodies mask the cycle from static analysis tools (AST-based linters, import-graph audits); regression tests need fragile AST ID-tracking to detect reintroduction | For sibling-module cycles (not parent→child), use Phase 12 (top-level imports with `# noqa: F401`) instead; static analysis visibility + simpler code is worth retargeting a few test patches |
+| **Assuming the context manager refactor was complete** | Introduced `_inflight_context()` in `_handle_webhook` and opened the PR without auditing callers | `receive_webhook()` still did manual `self._inflight += 1 / -= 1`, double-incrementing; `test_inflight_increments_during_publish` saw `[2]` not `[1]` | A refactor that moves lifecycle into a context manager is INCOMPLETE until every caller is grepped and stale manual `+1/-1` is removed (Phase 15) |
+| **Debugging a doubled counter only in the test file** | Searched the test for the assertion failure to find the root cause | The bug was in production code (`receive_webhook`), not the test | When counter values are unexpectedly doubled, grep production code for stale lifecycle management, not just tests |
+| **Deny-list to scope a scanner** | Kept adding directories to `EXCLUDED_PREFIXES` to narrow a repo-wide scan | Deny-lists grow forever and break on every new top-level dir; root-level test fixtures also slipped through | Use a `Path.is_relative_to()` allow-list helper (Phase 14); it's smaller, correct-by-construction, and independently testable |
+| **Forgetting fixture migration after scoping a scanner** | Scoped the scanner to `scylla/` but left existing tests writing fixtures at `tmp_path/"bad.py"` | Root-level fixtures are now out of scope — tests returned zero findings and failed | After narrowing scanner scope, move every test fixture into the scoped dir and update hard-coded path assertions (`"bad.py"` → `"scylla/bad.py"`) |
+| **Trusting a TODO/audit LOC estimate without reading the substrate** | Took `TODO.md` "Phase 2: ~5000 LOC" and an audit's "CRITICAL: autograd missing" as authoritative effort | Existing tape/registry/SavedTensors infra already covered ~70%; estimate was 3-5x too high and conflated "documented" with "missing" | Read every substrate file in full with line-cited evidence BEFORE estimating (Phase 17); re-classify "missing" as "incomplete, N% gap" |
+| **Deleting legacy code before verifying zero callers** | Assumed a "fallback only" file was dead and considered deleting it on the strength of its header alone | "Fallback only" claims are not self-enforcing — the codebase may still depend on it in non-obvious ways; dead code passes all CI | Systematically grep all callers across `*.py/*.sh/*.md/.github/` first, rewrite stale back-references as self-contained comments, then delete and run full suites (Phase 16) |
 
 ## Results & Parameters
 
@@ -654,52 +850,30 @@ collaborator-extraction (runner.py):  69 new unit tests (27 + 19 + 23); 3,326 to
 single-responsibility (ResumeManager): 26 new unit tests; 3,211 total pass
 circular-import fix:   4 mock patches updated; CI passed (ProjectScylla + ProjectHephaestus)
 immutable refactor:    3 lines changed; 30 tests pass
+pipeline-step extraction (llm_judge): 28 new tests; 4,591 pass; 3 # noqa: C901 removed
+scanner-scoping (check_docstring_fragments): 12 scope tests; 4,333 pass
+context-manager double-counter (Hermes): test went [2]→[1] after dropping stale +1/-1
+legacy-code deletion: 587-LOC bash driver + 480 LOC tests removed; 1,093 + 26 tests pass
+substrate-read estimate (Odyssey #5457): TODO ~5000 LOC → revised ~1400 → actual +937
 ```
 
-### Leaf module template (circular import fix)
+### Pipeline-step return-tuple contract (Phase 13)
 
-```python
-# package/shutdown.py — leaf module
-"""Shutdown coordination primitives (extracted to break circular imports)."""
-import threading
-
-_shutdown_event = threading.Event()
-
-class ShutdownInterruptedError(Exception): ...
-
-def is_shutdown_requested() -> bool:
-    return _shutdown_event.is_set()
-
-def request_shutdown() -> None:
-    _shutdown_event.set()
+```text
+(passed: bool, na: bool, output: str)
+  na=True  → tool not installed (step skipped)
+  passed=False, na=False → step ran and failed (output has stderr)
+  passed=True  → step succeeded
 ```
 
-### Explicit re-export form required by mypy
+### Substrate-read checklist before estimating (Phase 17)
 
-```python
-# WRONG (mypy: "Module does not explicitly export attribute"):
-from hephaestus.github.gh_subprocess import _gh_call
-
-# RIGHT (mypy accepts):
-from hephaestus.github.gh_subprocess import _gh_call as _gh_call
-```
-
-### Extract-Parameterize-Protocol pattern (canonical)
-
-```python
-# Old: Hardcoded logic in _private_method()
-#   ↓
-# New: Reusable function(source_dir: Path)
-#   ↓
-# Protocol: class Provider(Protocol): def discover(...): ...
-#   ↓
-# Client: accepts Provider, defaults to FileSystemProvider
-
-# Optional parameter with smart default (backward-compatible):
-def __init__(self, required: Path, optional: Path | None = None):
-    if optional is None:
-        optional = self._compute_default()
-    self._value = optional
+```markdown
+## Phase 0 — Substrate Read (complete BEFORE estimating)
+Files read in full: path/to/substrate.ext (N LOC) — what works: …
+What already works (with line citations): substrate.ext:123 — feature A
+What is actually missing (min signatures only): op_foo(x) -> y — not implemented
+Revised LOC estimate: ~X (vs TODO "~Y"); justification: ~Z% already in substrate.
 ```
 
 ## Verified On
@@ -716,3 +890,9 @@ def __init__(self, required: Path, optional: Path | None = None):
 | ProjectScylla | PRs #356–#361 — extensibility refactor (discovery lib, SubtestProvider, TestFixture) | Superseded `refactor-for-extensibility` |
 | ProjectHephaestus | PR #674 — `implementer.py` 872→702 lines; new `implementer_cli.py` (236 lines); reverse-delegation preserves 45 pre-existing tests unchanged; 780 automation tests pass; ruff+mypy clean (verified-local) | CLI entry-point extraction with preserved patch routing (Phase 11) |
 | ProjectHephaestus | PR #714 — `implementer_phase_runner.py` breaks cycle with top-level symbol extraction; 9 patchable symbols extracted; 3 deferred imports removed; regression test added (test_implementer_no_cycle.py with AST guards); all automation tests pass; CI gates pass (verified-ci) | Top-level symbol extraction for sibling-module cycles (Phase 12); comparison with reverse-delegation approach |
+| ProjectScylla | PR #1457 (Issue #1430) — three `llm_judge.py` functions CC>15→CC≤8 via pipeline-step extraction; 3 `# noqa: C901` removed; 28 new tests; 4591 tests pass | Superseded `pipeline-step-extraction` (Phase 13) |
+| ProjectScylla | PR #1440 (Issue #1399) — docstring-fragment scanner scoped to `scylla/` via `_is_scylla_file()` allow-list; 12 scope tests; 4333 tests pass | Superseded `scope-scanner-to-subdirectory` (Phase 14) |
+| ProjectHermes | PR #522 — `receive_webhook()` double-incremented `_inflight` after `_handle_webhook` adopted `_inflight_context()`; test expected `[1]` got `[2]`; fix removed stale manual counter management | Superseded `refactor-context-manager-double-counter-stale-caller` (Phase 15) |
+| ProjectHephaestus | PR #745 — deleted 587-line legacy `run_automation_loop.sh` + helper + 480 lines of tests; scrubbed 8 stale back-references across 4 files; 1093 tests + 26 shell tests pass | Superseded `legacy-code-deletion-safe-removal-pattern` (Phase 16) |
+| ProjectOdyssey | PR #5457 — Phase 0 substrate read revised a TODO "~5000 LOC" estimate to ~1400; actual landed +937 LOC (CI green) | Superseded `architecture-estimate-rewrite-read-substrate-first` (Phase 17) |
+| HomericIntelligence ecosystem | Cleanup-phase coordination after parallel Test/Implementation/Package phases (KISS/DRY/SOLID finalization before merge) | Superseded `phase-cleanup` (Phase 18) |

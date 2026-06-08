@@ -1,4 +1,35 @@
+<!-- markdownlint-disable MD024 -->
 # python-module-decomposition-and-refactor-patterns — History
+
+## v1.3.0 (2026-06-07)
+
+**Changed by:** Skill-consolidation pass (cluster PYR02)
+**Verification:** consolidation (sources verified independently; see Superseded blocks)
+
+### What changed
+
+Absorbed 6 additional refactoring skills into this canonical:
+
+- `pipeline-step-extraction` → Phase 13 (CC>15 reduction via pipeline-step helpers, 3-tuple contract)
+- `scope-scanner-to-subdirectory` → Phase 14 (deny-list → `Path.is_relative_to()` allow-list helper)
+- `refactor-context-manager-double-counter-stale-caller` → Phase 15 (double-increment from stale caller)
+- `legacy-code-deletion-safe-removal-pattern` → Phase 16 (safe removal of fallback/reference-only files)
+- `architecture-estimate-rewrite-read-substrate-first` → Phase 17 (read substrate before estimating)
+- `phase-cleanup` → Phase 18 (finalization after parallel phases)
+
+Also: extended `description` (triggers 7–12), Overview outcome/trigger, When-to-Use bullets,
+Quick Reference decision tree (Phases 13–18), Failed Attempts (7 new deduped rows), Verified On
+(6 new rows), Results & Parameters (new benchmarks + pipeline-tuple + substrate checklist), and
+new tags. Bumped MINOR 1.2.0 → 1.3.0.
+
+### Why
+
+The 6 absorbed skills are all sub-cases of Python module decomposition/refactoring: pipeline-step
+extraction reduces CC in oversized methods; scanner-scoping narrows a broad component; the
+context-manager double-counter is an incomplete-migration debugging case; legacy deletion is the
+completion step of any decomposition; substrate-read is the prerequisite to estimating a decomposition;
+phase-cleanup is the finalization gate. Consolidating removes overlap while preserving each specific
+example. Absorbed originals are retained verbatim below.
 
 ## v1.2.0 (2026-06-05)
 
@@ -2034,3 +2065,1193 @@ git diff    # Review before commit
 - Implement `DynamicSubtestProvider(BenchmarkSpec)`
 - Create LLM-based benchmark generation pipeline
 - Add validation tests for generated benchmarks
+
+## Superseded from pipeline-step-extraction
+
+**Original date/version:** 2026-03-19 / 1.0.0
+
+```markdown
+---
+name: pipeline-step-extraction
+description: "Skill: Pipeline Step Extraction (CC>15 Reduction)"
+category: tooling
+date: 2026-03-19
+version: "1.0.0"
+user-invocable: false
+---
+# Skill: Pipeline Step Extraction (CC>15 Reduction)
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-03-06 |
+| Category | refactoring |
+| Objective | Reduce cyclomatic complexity of three `llm_judge.py` functions from CC>15 to CC≤8 by extracting private pipeline step helpers |
+| Outcome | Success — all three `# noqa: C901` directives removed; 28 new unit tests; 4591 tests pass at 76% coverage |
+| Issue | HomericIntelligence/ProjectScylla#1430 |
+| PR | HomericIntelligence/ProjectScylla#1457 |
+
+## When to Use
+
+Use this skill when:
+- A module-level function executes 4+ sequential pipeline stages, each with `if not installed → (False, True, "")` and `if failed → (False, False, output)` branches
+- The function carries a `# noqa: C901` suppression because its CC exceeds the project threshold (12)
+- Two parallel pipelines (e.g., mojo + python) share identical step shapes but differ in the subprocess call
+- A top-level function has a long context-gathering preamble followed by a retry loop that could be separated
+
+**Companion skills**: See `ruff-c901-mccabe-complexity` for enabling C901 enforcement; `extract-method-to-private-methods` for closure extraction from class methods.
+
+## Verified Workflow
+
+### 1. Identify the step shape
+
+Each pipeline step in `_run_mojo_pipeline` / `_run_python_pipeline` follows this shape:
+
+```python
+# Before (inline, 6–10 lines per step)
+if not shutil.which("mojo"):
+    return BuildPipelineResult(..., passed=False, na=True, ...)
+result = _run_subprocess(["mojo", "build", ...], workspace)
+if not result.passed:
+    return BuildPipelineResult(..., passed=False, ...)
+```
+
+Extract each step into a `_run_<pipeline>_<stage>_step` function returning `(passed, na, output)`:
+
+```python
+def _run_mojo_build_step(workspace: Path, is_modular: bool) -> tuple[bool, bool, str]:
+    if not shutil.which("magic" if is_modular else "mojo"):
+        return False, True, ""
+    result = _run_subprocess(["mojo", "build", ...], workspace)
+    return result.passed, False, result.output
+```
+
+### 2. Return-tuple contract
+
+All step helpers use a consistent 3-tuple:
+
+| Position | Type | Meaning |
+| ---------- | ------ | --------- |
+| 0 | `bool` | `passed` — step succeeded |
+| 1 | `bool` | `na` — step not applicable (tool not installed) |
+| 2 | `str` | `output` — stdout/stderr from the subprocess |
+
+The pipeline function unpacks and early-returns on failure:
+
+```python
+passed, na, output = _run_mojo_build_step(workspace, is_modular)
+if na:
+    return BuildPipelineResult(build=StepResult(passed=False, output="", na=True), ...)
+if not passed:
+    return BuildPipelineResult(build=StepResult(passed=False, output=output), ...)
+```
+
+### 3. Extract shared steps across pipelines
+
+When two pipelines share an identical step (e.g., pre-commit), extract a single shared helper
+with a generic name (no pipeline prefix):
+
+```python
+# Shared by both _run_mojo_pipeline and _run_python_pipeline
+def _run_precommit_step(
+    workspace: Path, env: dict[str, str] | None = None
+) -> tuple[bool, bool, str]:
+    if not shutil.which("pre-commit"):
+        return False, True, ""
+    result = _run_subprocess(["pre-commit", "run", "--all-files"], workspace, env=env)
+    return result.passed, False, result.output
+```
+
+### 4. Decompose large orchestrator functions (two-phase split)
+
+For functions like `run_llm_judge` that mix context gathering with retry execution:
+
+**Phase 1 — context gathering** (`_gather_judge_context`):
+- Accepts all input parameters
+- Returns `(judge_prompt: str, pipeline_result: BuildPipelineResult | None)`
+- Handles: file reading, baseline formatting, rubric loading, pipeline execution
+
+**Phase 2 — retry execution** (`_execute_judge_with_retry`):
+- Accepts: `judge_prompt, model, workspace, judge_dir, judge_start, language`
+- Returns: `JudgeResult`
+- Handles: LLM call loop, retry on rate-limit/empty, timeout, logging
+
+```python
+# After decomposition
+def run_llm_judge(...) -> JudgeResult:
+    judge_start = time.time()
+    judge_prompt, _pipeline_result = _gather_judge_context(...)
+    return _execute_judge_with_retry(judge_prompt, model, workspace, judge_dir, judge_start, language)
+```
+
+### 5. Promote inline imports to module level
+
+Functions with inline imports (`import time`, `from datetime import datetime, timezone`) hide
+dependencies and inflate per-call complexity. Move them to module level before extracting helpers —
+otherwise extracted helpers that need them will require their own inline imports.
+
+```python
+# Remove from function bodies; add once at module top
+import time
+from datetime import datetime, timezone
+```
+
+### 6. Verify CC is resolved
+
+```bash
+pixi run ruff check --select C901 scylla/e2e/llm_judge.py
+# Expected: "All checks passed!"
+```
+
+Then remove the `# noqa: C901` directives from all three functions.
+
+### 7. Fix RUF059 (unpacked variables never used) in tests and source
+
+When unpacking the 3-tuple in tests or callers, prefix unused fields with `_`:
+
+```python
+# Test: only asserting on `passed`
+passed, _na, _output = _run_mojo_build_step(workspace, is_modular=False)
+assert passed is False
+
+# Test: asserting on `output`
+_passed, _na, output = _run_precommit_step(workspace)
+assert "not available" in output
+
+# Source: pipeline_result not used after context gathering
+judge_prompt, _pipeline_result = _gather_judge_context(...)
+```
+
+**Exception**: keep `output` (not `_output`) when the variable IS used in an assertion. RUF059
+flags variables that are completely unused in the rest of the scope.
+
+### 8. Write step-helper unit tests
+
+Each step helper needs three test cases:
+
+| Test | Setup | Assert |
+| ------ | ------- | -------- |
+| tool not installed | `mock_which.return_value = None` | `passed=False`, `na=True`, `output=""` |
+| tool installed, step fails | `mock_which.return_value = "/usr/bin/mojo"`, subprocess returns failure | `passed=False`, `na=False` |
+| tool installed, step passes | `mock_which.return_value = "/usr/bin/mojo"`, subprocess returns success | `passed=True`, `na=False` |
+
+Use `unittest.mock.patch` with `side_effect` for subprocess, `wraps` is unnecessary.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### CC before and after
+
+| Function | CC Before | CC After |
+| ---------- | ----------- | ---------- |
+| `_run_mojo_pipeline` | ~18 | ~6 |
+| `_run_python_pipeline` | ~16 | ~6 |
+| `run_llm_judge` | ~17 | ~8 |
+
+### New helpers added
+
+| Helper | Shared? | Returns |
+| -------- | --------- | --------- |
+| `_run_mojo_build_step` | no | `tuple[bool, bool, str]` |
+| `_run_mojo_format_step` | no | `tuple[bool, bool, str]` |
+| `_run_mojo_test_step` | no | `tuple[bool, bool, str]` |
+| `_run_precommit_step` | yes (mojo+python) | `tuple[bool, bool, str]` |
+| `_execute_python_scripts` | no | `list[str]` |
+| `_run_python_build_step` | no | `tuple[bool, bool, str]` |
+| `_run_python_format_step` | no | `tuple[bool, bool, str]` |
+| `_run_python_test_step` | no | `tuple[bool, bool, str]` |
+| `_gather_judge_context` | no | `tuple[str, BuildPipelineResult \| None]` |
+| `_execute_judge_with_retry` | no | `JudgeResult` |
+
+### Test results
+
+- 28 new unit tests across 3 new test classes
+- 4591 total tests pass (76% unit coverage, above 75% threshold)
+- All pre-commit hooks pass (ruff format, ruff check, mypy)
+- `ruff check --select C901 scylla/e2e/llm_judge.py` → "All checks passed!"
+
+```
+
+---
+
+## Superseded from scope-scanner-to-subdirectory
+
+**Original date/version:** 2026-03-19 / 1.0.0
+
+```markdown
+---
+name: scope-scanner-to-subdirectory
+description: Pattern for refactoring a broad repository-wide Python file scanner to
+  target a single subdirectory. Replaces EXCLUDED_PREFIXES deny-list approach with
+  a Path.is_relative_to() allow-list helper. Covers implementation, test updates,
+  and fixture migration when existing tests break due to new scope.
+category: tooling
+date: '2026-03-19'
+version: 1.0.0
+---
+# Skill: scope-scanner-to-subdirectory
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-03-05 |
+| Project | ProjectScylla |
+| Objective | Restrict a repo-wide AST docstring-fragment scanner to `scylla/` only to reduce signal-to-noise |
+| Outcome | Scanner now only processes `scylla/**/*.py`; 12 new scope tests added; all 4333 existing tests pass |
+| PR | HomericIntelligence/ProjectScylla#1440 |
+| Issue | HomericIntelligence/ProjectScylla#1399 |
+
+## When to Use
+
+Use this skill when:
+- A scanner, linter, or auditing script currently uses a deny-list (`EXCLUDED_PREFIXES`) and you want to switch to an allow-list (single directory)
+- You need to scope a `Path.rglob("*.py")` scan from "everything minus exclusions" to "one specific directory plus everything under it"
+- Tests for a scanner are failing because fixture files are no longer within the scanner's scope after refactoring
+- You want to extract the scope logic into a testable helper function
+
+## Key Insight: Allow-List beats Deny-List for Single-Directory Scope
+
+Deny-lists grow over time (`.pixi/`, `build/`, `node_modules/`, `tests/claude-code/`...) and are fragile — any new directory outside the target scope must be explicitly excluded.
+
+Switching to an allow-list with `Path.is_relative_to()` is simpler, smaller, and self-documenting:
+
+```python
+# BEFORE: deny-list (fragile, grows over time)
+EXCLUDED_PREFIXES = (".pixi/", "build/", "node_modules/", "tests/claude-code/")
+
+def scan_repository(repo_root: Path) -> list[FragmentFinding]:
+    for py_file in sorted(repo_root.rglob("*.py")):
+        relative_str = str(py_file.relative_to(repo_root)).replace("\\", "/")
+        if any(relative_str.startswith(prefix) for prefix in EXCLUDED_PREFIXES):
+            continue
+        all_findings.extend(scan_file(py_file, repo_root))
+
+# AFTER: allow-list (simple, correct by construction)
+def _is_scylla_file(path: Path, root: Path) -> bool:
+    """Return True if path is a .py file under the scylla/ directory."""
+    scylla_dir = root / "scylla"
+    return path.suffix == ".py" and path.is_relative_to(scylla_dir)
+
+def scan_repository(repo_root: Path) -> list[FragmentFinding]:
+    for py_file in sorted(repo_root.rglob("*.py")):
+        if not _is_scylla_file(py_file, repo_root):
+            continue
+        all_findings.extend(scan_file(py_file, repo_root))
+```
+
+## Verified Workflow
+
+### 1. Replace the deny-list with an allow-list helper
+
+Extract scope logic into a named helper function so it can be tested independently:
+
+```python
+def _is_scylla_file(path: Path, root: Path) -> bool:
+    """Return True if path is a .py file under the scylla/ directory."""
+    scylla_dir = root / "scylla"
+    return path.suffix == ".py" and path.is_relative_to(scylla_dir)
+```
+
+`Path.is_relative_to()` is available in Python 3.9+. For older Python, use:
+```python
+try:
+    path.relative_to(scylla_dir)
+    return path.suffix == ".py"
+except ValueError:
+    return False
+```
+
+### 2. Update scan_repository to use the helper
+
+```python
+def scan_repository(repo_root: Path) -> list[FragmentFinding]:
+    """Scan all Python files under scylla/ in the repository."""
+    all_findings: list[FragmentFinding] = []
+    for py_file in sorted(repo_root.rglob("*.py")):
+        if not _is_scylla_file(py_file, repo_root):
+            continue
+        all_findings.extend(scan_file(py_file, repo_root))
+    return all_findings
+```
+
+### 3. Export the helper so tests can import it
+
+Import the helper directly in tests for unit testing:
+
+```python
+from scripts.check_docstring_fragments import _is_scylla_file
+```
+
+### 4. Add TestIsScyllaFile — unit tests for the helper
+
+```python
+class TestIsScyllaFile:
+    def test_scylla_py_file_accepted(self, tmp_path: Path) -> None:
+        scylla_dir = tmp_path / "scylla"
+        scylla_dir.mkdir()
+        py = scylla_dir / "module.py"
+        py.touch()
+        assert _is_scylla_file(py, tmp_path)
+
+    def test_scripts_py_file_rejected(self, tmp_path: Path) -> None:
+        scripts_dir = tmp_path / "scripts"
+        scripts_dir.mkdir()
+        py = scripts_dir / "tool.py"
+        py.touch()
+        assert not _is_scylla_file(py, tmp_path)
+
+    def test_non_py_file_in_scylla_rejected(self, tmp_path: Path) -> None:
+        scylla_dir = tmp_path / "scylla"
+        scylla_dir.mkdir()
+        txt = scylla_dir / "README.md"
+        txt.touch()
+        assert not _is_scylla_file(txt, tmp_path)
+```
+
+### 5. Add TestScanRepositoryScope — integration tests
+
+```python
+class TestScanRepositoryScope:
+    def test_scylla_file_with_fragment_is_found(self, tmp_path: Path) -> None:
+        scylla_dir = tmp_path / "scylla"
+        scylla_dir.mkdir()
+        bad_py = scylla_dir / "module.py"
+        bad_py.write_text('"""across multiple tiers."""\nx = 1\n')
+        findings = scan_repository(tmp_path)
+        assert len(findings) == 1
+
+    def test_scripts_file_not_scanned(self, tmp_path: Path) -> None:
+        scripts_dir = tmp_path / "scripts"
+        scripts_dir.mkdir()
+        bad_py = scripts_dir / "tool.py"
+        bad_py.write_text('"""across multiple tiers."""\nx = 1\n')
+        findings = scan_repository(tmp_path)
+        assert findings == []
+```
+
+### 6. Fix broken existing tests — move fixture files into scylla/
+
+Existing tests that used `tmp_path / "bad.py"` (at the root of `tmp_path`) will now return no findings because root-level files are outside `scylla/`. Update them:
+
+```python
+# BEFORE (broken after scope change)
+bad_py = tmp_path / "bad.py"
+bad_py.write_text('"""across multiple tiers."""\nx = 1\n')
+
+# AFTER (works with new scope)
+scylla_dir = tmp_path / "scylla"
+scylla_dir.mkdir()
+bad_py = scylla_dir / "bad.py"
+bad_py.write_text('"""across multiple tiers."""\nx = 1\n')
+```
+
+Also update any hard-coded path assertions:
+```python
+# BEFORE
+assert parsed[0]["file"] == "bad.py"
+
+# AFTER
+assert parsed[0]["file"] == "scylla/bad.py"
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Changes Made
+
+| File | Change |
+| ------ | -------- |
+| `scripts/check_docstring_fragments.py` | Removed `EXCLUDED_PREFIXES`; added `_is_scylla_file()` helper; updated `scan_repository()` |
+| `tests/unit/scripts/test_check_docstring_fragments.py` | Added `TestIsScyllaFile` (6 tests) + `TestScanRepositoryScope` (6 tests); fixed 4 existing `main()` tests |
+
+### Test Run Results
+
+| Suite | Count | Result |
+| ------- | ------- | -------- |
+| Targeted test file | 75 passed | Pass |
+| Full unit test suite | 4333 passed, 1 skipped | Pass |
+| Coverage | 75.17% | Pass (floor: 75%) |
+| Pre-commit | All hooks | Pass |
+| Live scan | `pixi run python scripts/check_docstring_fragments.py` | Exit 0 |
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectScylla | Issue #1399, PR #1440 | Docstring fragment scanner scoped to `scylla/` |
+
+```
+
+---
+
+## Superseded from refactor-context-manager-double-counter-stale-caller
+
+**Original date/version:** 2026-05-09 / 1.0.0
+
+```markdown
+---
+name: refactor-context-manager-double-counter-stale-caller
+description: "Detects and fixes double-increment bugs caused by incomplete context-manager
+  refactors where callers still hold stale manual counter management code. Use when:
+  (1) tests asserting counter == 1 observe 2 instead, (2) a context manager was introduced
+  to own resource lifecycle but tests regressed, (3) a refactor moved try/finally lifecycle
+  code into a context manager without auditing callers."
+category: debugging
+date: 2026-05-09
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: []
+---
+
+# Refactor: Context-Manager Double-Counter from Stale Caller
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-09 |
+| **Objective** | Diagnose and fix double-increment of a counter after introducing a context manager that owns the lifecycle |
+| **Outcome** | Test `test_inflight_increments_during_publish` regressed (`[2]` instead of `[1]`); fixed by removing stale manual counter management in caller |
+| **Verification** | verified-ci |
+| **Found In** | HomericIntelligence/ProjectHermes PR #522 |
+
+## When to Use
+
+- A test asserting `counter == 1` (or checking a list contains `[1]`) now observes `2` after a refactor
+- A context manager was introduced to wrap a resource lifecycle (counters, semaphores, file handles)
+- The refactored callee uses `with self._some_context():` but tests began failing immediately after merge
+- Code review shows both a `with _ctx():` call AND a manual `counter += 1` / `counter -= 1` in a caller
+- CI fails on assertions about inflight request counts, connection counts, or ref-counted resources
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Find all callers of the function that adopted the context manager
+grep -rn "_handle_webhook\|_inflight\b" src/ tests/
+
+# Look for manual increment/decrement pairs that duplicate what the context manager does
+grep -n "self\._inflight [+-]= 1" src/
+```
+
+### Detailed Steps
+
+1. **Identify the new context manager** — find the `@contextmanager` (or `__enter__`/`__exit__`) that now owns the counter:
+   ```python
+   @contextmanager
+   def _inflight_context(self):
+       self._inflight += 1
+       try:
+           yield
+       finally:
+           self._inflight -= 1
+   ```
+
+2. **Identify the callee that adopted it** — confirm the internal method now uses it:
+   ```python
+   def _handle_webhook(self, ...):
+       with self._inflight_context():
+           # process
+   ```
+
+3. **Grep every caller of the callee** across the entire codebase:
+   ```bash
+   grep -rn "_handle_webhook" src/ tests/
+   ```
+
+4. **Audit each caller for stale manual lifecycle code**:
+   ```python
+   # STALE — caller still doing manual +1/-1 that the context manager now owns
+   def receive_webhook(self, ...):
+       self._inflight += 1        # ← REMOVE THIS
+       self._handle_webhook(...)
+       self._inflight -= 1        # ← REMOVE THIS
+   ```
+
+5. **Remove the stale lines** from every caller. The context manager is now the sole owner.
+
+6. **Run the full test suite** to confirm the counter assertion returns to expected value:
+   ```bash
+   pytest tests/ -k "inflight" -v
+   ```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Assume the context manager was enough | Introduced `_inflight_context()` in `_handle_webhook` and opened PR without checking callers | `receive_webhook()` still had manual `+1/-1`, causing double-increment; test observed `[2]` | Refactor PRs that move lifecycle into a context manager are INCOMPLETE until all callers are audited |
+| Check only the test file for the bug | Searched tests for the assertion failure to find its root cause | The bug was in production code (`receive_webhook`), not in the test | Always search production code, not just tests, when counter values are unexpectedly doubled |
+
+## Results & Parameters
+
+**Symptom pattern:**
+```
+AssertionError: assert [2] == [1]
+# or
+AssertionError: inflight_counts == [1, 1] but got [2, 2]
+```
+
+**Root cause pattern:**
+```python
+# Context manager owns lifecycle (correct):
+@contextmanager
+def _inflight_context(self):
+    self._inflight += 1
+    try:
+        yield
+    finally:
+        self._inflight -= 1
+
+# Callee uses context manager (correct):
+def _handle_webhook(self, ...):
+    with self._inflight_context():
+        ...
+
+# STALE caller — double-increment bug:
+def receive_webhook(self, ...):
+    self._inflight += 1          # BUG: duplicates context manager
+    self._handle_webhook(...)
+    self._inflight -= 1          # BUG: duplicates context manager
+```
+
+**Fix:**
+```python
+def receive_webhook(self, ...):
+    # No manual counter management — _handle_webhook owns it via _inflight_context
+    self._handle_webhook(...)
+```
+
+**General principle:** When refactoring resource lifecycle into a context manager / RAII / try-finally pattern, GREP THE ENTIRE CODEBASE for prior manual lifecycle code in callers. The refactor PR is "incomplete" until those manual sites are also removed.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| HomericIntelligence/ProjectHermes | PR #522, 2026-05-09 | `receive_webhook()` manually `+1`'d `_inflight` then called `_handle_webhook()` which uses `_inflight_context()` (+1 again). Test `test_inflight_increments_during_publish` expected `[1]` but got `[2]`. Fix: removed the redundant counter management from `receive_webhook`. |
+
+```
+
+---
+
+## Superseded from legacy-code-deletion-safe-removal-pattern
+
+**Original date/version:** 2026-06-04 / 1.0.0
+
+```markdown
+---
+name: legacy-code-deletion-safe-removal-pattern
+description: Safe removal of legacy dead code files marked as fallback/reference-only. Use when a code file claims "kept for reference/fallback only" but has zero real callers across the codebase, leading to stale back-references in production code that create cognitive load during maintenance.
+category: tooling
+date: 2026-06-04
+version: 1.0.0
+user-invocable: true
+verification: verified-local
+tags:
+  - legacy-code
+  - code-deletion
+  - refactoring
+  - yagni
+  - dead-code
+---
+
+# Legacy Code Deletion: Safe Removal Pattern
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Date** | 2026-06-04 |
+| **Objective** | Safely identify and remove legacy code files marked as fallback/reference-only with zero real callers, then scrub all stale back-references in production code |
+| **Outcome** | Successful deletion of 587-line legacy bash automation loop driver + 52-line bash helper + 480 lines of associated tests; 8 stale back-references scrubbed across 4 production files; 1093 unit/integration tests pass + 26 shell tests pass |
+| **Verification** | verified-local (all test suites pass, ruff/mypy clean, grep verification confirms zero remaining callers) |
+
+## When to Use This Skill
+
+Use this pattern whenever:
+
+- A code file explicitly states "kept for reference" or "fallback only" in its header comment
+- The file has a declared replacement (e.g., "Python version already handles this")
+- You suspect the file has zero real callers in production code
+- A codebase audit or code review flags the file as dead weight
+- Removing the file would reduce cognitive load and maintenance surface area
+- Multiple files or comments refer back to the legacy code (stale back-references)
+
+## Root Cause
+
+Legacy fallback code accumulates because:
+
+1. **Explicit retention for "just in case"** — premature defense against hypothetical scenarios (YAGNI anti-pattern)
+2. **Forgotten migration** — replacement was built and verified working, but old code lingers "just in case"
+3. **Zero caller verification gap** — it's assumed nobody uses it, but never systematically verified via codebase grep
+4. **Stale reference accumulation** — production code comments point at the fallback code, creating maintenance overhead and confusion even if nobody calls it
+5. **No automated enforcement** — unlike broken imports (which fail CI), dead code passes all checks
+
+## Verified Workflow
+
+### 1. Confirm the Legacy Declaration
+
+Read the file header to confirm explicit fallback/reference language:
+
+```bash
+head -20 scripts/run_automation_loop.sh
+# Expected: "# This script is kept for reference / fallback only"
+# OR: "# Deprecated in favor of hephaestus-automation-loop (Python)"
+```
+
+### 2. Identify the Declared Replacement
+
+Locate the production replacement and confirm it is actively maintained and tested:
+
+```bash
+# Example: bash driver → Python console script
+grep -n "hephaestus-automation-loop\|entry.points" pyproject.toml
+grep -n "loop_runner" hephaestus/automation/
+# Confirm integration tests exercise the replacement
+grep -r "hephaestus-automation-loop\|loop_runner" tests/integration/
+```
+
+### 3. Verify Zero Real Callers (Critical Step)
+
+Search the entire codebase for **actual function/script calls** to the legacy code:
+
+```bash
+# For a bash script, search for invocations
+grep -r "run_automation_loop\.sh" --include="*.py" --include="*.sh" --include="*.md" .
+grep -r "./scripts/run_automation_loop" --include="*.py" --include="*.sh" --include="*.md" .
+grep -r "bash.*run_automation_loop" --include="*.py" --include="*.sh" --include="*.md" .
+
+# For Python functions, search for imports and calls
+grep -r "from legacy_module import\|import legacy_module\|legacy_module\(\)" --include="*.py" .
+
+# Check GitHub workflows, CI files, and scripts
+grep -r "run_automation_loop" .github/ scripts/ || echo "No matches"
+```
+
+Expected result: **zero matches** (except in the legacy file itself and its test suite).
+
+### 4. Find and List All Stale Back-References
+
+Search for comments that reference the legacy code **without actually calling it**:
+
+```bash
+# Example: find comments pointing to the bash script
+grep -rn "run_automation_loop\|repo_ordering\.sh" --include="*.py" .
+# Expected output: production code comments mentioning the file but not importing/calling it
+```
+
+Document the locations:
+- `hephaestus/automation/loop_runner.py` — line X comment references bash equivalent
+- `hephaestus/github/rate_limit.py` — line Y mentions old script behavior
+- etc.
+
+### 5. Rewrite Stale Back-References as Self-Contained Explanations
+
+For each stale reference, replace the back-reference with a self-contained explanation of why the code works the way it does:
+
+**Before:**
+```python
+# See scripts/run_automation_loop.sh for ordering logic
+repo_order = compute_order(repos)
+```
+
+**After:**
+```python
+# Order repos by dependency: pull requests first, then implementation,
+# then discovery — ensures dependent issues resolve before dependents.
+repo_order = compute_order(repos)
+```
+
+This preserves the context without depending on a file you're about to delete.
+
+### 6. Remove the Legacy File and Its Tests
+
+Delete the legacy code file and any tests that exclusively test it:
+
+```bash
+rm scripts/run_automation_loop.sh
+rm tests/shell/scripts/test_run_automation_loop.bats
+rm scripts/shell/lib/repo_ordering.sh  # helper-only code
+rm tests/shell/scripts/test_repo_ordering.bats
+```
+
+Also update any README or documentation that lists the legacy script:
+
+```bash
+# Remove entry from documentation
+grep -n "run_automation_loop" docs/ README.md scripts/README.md
+# Edit to remove the entry
+```
+
+### 7. Run Comprehensive Verification
+
+Execute the full test suite to ensure no hidden dependencies:
+
+```bash
+# Run unit tests
+pytest tests/unit -v --tb=short
+
+# Run integration tests
+pytest tests/integration -v --tb=short
+
+# Run shell tests (if applicable)
+./tests/shell/run_all_tests.sh
+
+# Run linting and type checks
+ruff check hephaestus/ tests/
+mypy hephaestus/
+
+# Confirm grep shows zero references to the deleted code
+grep -r "run_automation_loop\|repo_ordering\.sh" --include="*.py" --include="*.sh" . \
+  && echo "FAIL: stale references remain" || echo "PASS: no remaining references"
+```
+
+Expected: all tests pass, no remaining references, no lint/type errors.
+
+### 8. Commit with Clear Rationale
+
+Use a conventional commit message that explains the deletion:
+
+```bash
+git add scripts/run_automation_loop.sh tests/shell/scripts/test_*.bats \
+        hephaestus/automation/loop_runner.py hephaestus/github/rate_limit.py \
+        hephaestus/automation/planner.py hephaestus/automation/session_naming.py \
+        scripts/README.md
+
+git commit -S -m "refactor(scripts): remove legacy run_automation_loop.sh
+
+Delete the legacy bash automation loop driver (587 LoC) and its dead support
+infrastructure. The Python replacement (hephaestus-automation-loop) has been
+the canonical driver since pyproject.toml:68 and is already verified by
+integration tests. The bash script's own header declared it 'kept for
+reference / fallback only' — exactly the YAGNI anti-pattern audits flag.
+
+Deletes:
+- scripts/run_automation_loop.sh (587 lines)
+- scripts/shell/lib/repo_ordering.sh (bash helper)
+- tests/shell/scripts/test_run_automation_loop.bats
+- tests/shell/scripts/test_repo_ordering.bats
+
+Scrubs stale back-references in production code (8 comments pointing at
+the deleted script) across:
+- hephaestus/automation/loop_runner.py (6 refs)
+- hephaestus/github/rate_limit.py (1 ref)
+- hephaestus/automation/planner.py (1 ref)
+- hephaestus/automation/session_naming.py (1 ref)
+
+Verification:
+- All 1093 unit + integration tests pass
+- Remaining bats shell suite (26 tests) passes
+- ruff checks clean on all edited Python files
+- mypy reports no issues
+
+Closes #745"
+```
+
+## Failed Attempts
+
+None. The verification approach (systematically grep all callers, then rewrite back-references, then test) worked cleanly on the first attempt.
+
+## Results & Parameters
+
+### Grep Commands Reference
+
+```bash
+# Verify zero callers
+grep -r "run_automation_loop\.sh\|run_automation_loop\(\)" --include="*.py" --include="*.sh" --include="*.md" .
+
+# Find back-references (comments only)
+grep -rn "run_automation_loop\|repo_ordering" --include="*.py" --include="*.md" hephaestus/
+
+# Verify deletion worked
+[ -f scripts/run_automation_loop.sh ] && echo "FAIL: file still exists" || echo "PASS: file deleted"
+```
+
+### Verification Checklist
+
+- [ ] Legacy file header explicitly states "reference only" / "fallback only"
+- [ ] Replacement code identified and confirmed working (e.g., via integration tests)
+- [ ] Grep confirms zero real callers across entire codebase
+- [ ] All stale back-references identified and located
+- [ ] Back-references rewritten as self-contained explanations (no file dependency)
+- [ ] Legacy file deleted
+- [ ] Associated test files deleted (tests that exclusively test legacy code)
+- [ ] Documentation/README updated to remove legacy file references
+- [ ] All unit tests pass (`pytest tests/unit -v`)
+- [ ] All integration tests pass (`pytest tests/integration -v`)
+- [ ] All shell tests pass (if applicable)
+- [ ] Linting passes (`ruff check .`)
+- [ ] Type checking passes (`mypy .`)
+- [ ] Final grep confirms zero references to deleted code
+
+### Key Insights
+
+1. **Always verify "fallback" code has zero real callers via grep** — explicit "fallback only" claims are not self-enforcing; the codebase may still depend on it in ways not obvious from reading the header.
+
+2. **Stale comments are cognitive load** — production code comments that point at non-existent files create confusion during maintenance. Rewrite them as self-contained explanations that explain *why* the code works, not *where* to find documentation.
+
+3. **Deletion PRs benefit from comprehensive verification** — showing what breaks and what doesn't (e.g., "1093 tests pass, remaining 26 shell tests pass, zero ruff/mypy issues") helps reviewers understand the blast radius and confidence level.
+
+4. **Test deletion is part of cleanup** — removing unit tests that exclusively test the legacy code is appropriate and reduces maintenance surface. Only keep tests that exercise active code paths.
+
+## Related Skills
+
+- `ci-stale-pattern-cleanup` — for removing stale CI patterns that reference deleted test files
+- `fixme-todo-cleanup` — for removing obsolete TODO/FIXME comments
+- `mkdocs-nav-cleanup` — for removing deleted file references from documentation
+
+```
+
+---
+
+## Superseded from architecture-estimate-rewrite-read-substrate-first
+
+**Original date/version:** 2026-05-26 / 1.0.0
+
+```markdown
+---
+name: architecture-estimate-rewrite-read-substrate-first
+description: "Before estimating a large refactor or rewrite, read the existing substrate code in full — TODO.md and roadmap LOC estimates are commonly pessimistic by 3-5x because they don't credit infrastructure that already exists. Use when: (1) starting a substrate-rewrite epic, (2) a TODO.md or roadmap estimates thousands of LOC or weeks of work, (3) an audit flags a CRITICAL gap based on docs, (4) before committing to a multi-week refactor estimate to a user or stakeholder."
+category: architecture
+date: 2026-05-26
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: []
+---
+
+# Read the Substrate Before Estimating a Rewrite
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-26 |
+| **Objective** | Avoid 3-5x pessimistic effort estimates on large refactors by reading the existing substrate code before trusting roadmap/TODO LOC numbers. |
+| **Outcome** | Successful — revised a "5000 LOC, 2-4 weeks" TODO estimate down to ~1400 LOC after a Phase 0 substrate read; actual landed PR was +937 LOC. |
+| **Verification** | verified-ci — ProjectOdyssey PR #5457 landed Phase 2 autograd substrate at +937 LOC, within the revised 1400 estimate, far below the 5000 in the original TODO. CI passed on merge. |
+
+## When to Use
+
+- Before starting a substrate-rewrite epic (autograd, scheduler, executor, runtime, etc.)
+- When a `TODO.md`, roadmap, or design doc estimates "thousands of LOC" or "weeks" of work
+- When an audit flags a CRITICAL gap based on docs ("autograd doesn't exist", "no scheduler") — verify against the code, not the README
+- Before committing to a multi-week refactor estimate to a user or stakeholder
+- When scoping a parallel-agent swarm dispatch — bad estimates lead to bad parallelization plans
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Phase 0: Read the substrate BEFORE estimating.
+# 1. Locate the existing substrate files relevant to the rewrite.
+find src/ -name "*.mojo" -path "*<subsystem>*" | xargs wc -l
+
+# 2. Read each file in full — not just the public interface.
+#    For each file, write down: what works today, with line citations.
+
+# 3. List the actual gaps with minimum-needed signatures.
+
+# 4. THEN estimate. Treat TODO.md LOC numbers as upper bounds, not targets.
+```
+
+### Detailed Steps
+
+1. **Resist the urge to trust the TODO.** When a roadmap or TODO file states "Phase X: ~N000 LOC future major release", treat N as an upper bound from a pessimistic author, not a target.
+
+2. **Inventory the substrate.** List every file in the subsystem with `find` + `wc -l`. Note what each file claims to do (top docstring) and its size.
+
+3. **Read each substrate file in full.** Not skim — full read. For each file, record:
+   - Public functions/types that already work
+   - Internal invariants the code relies on (e.g., "forward execution order = topo order")
+   - Storage/state already polymorphic enough for the planned extension (e.g., a `List[AnyTensor] + List[List[Int]] + List[Float64]` struct that already handles arbitrary saved-tensor shapes)
+   - Dispatch tables, registries, or vtables already in place
+
+4. **Cite line numbers as evidence.** Don't claim "X already works" without a `file.mojo:123` citation. The citations become the substrate-read receipt.
+
+5. **List the actual gaps.** For each missing capability, write the minimum-needed signature/contract — not a full design. This separates "real new code" from "wiring".
+
+6. **Revised estimate = new code only.** Do not re-count code that already works. If existing infrastructure handles 70% of the planned epic, the LOC estimate is 30% of the TODO number.
+
+7. **Validate by landing.** Ship the smallest end-to-end slice of new code. Compare actual LOC against the revised estimate, not the original TODO. If revised estimate was right (within ~50%), the substrate read paid off.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| 1 | Trusted `src/projectodyssey/autograd/TODO.md` "Phase 2: ~5000 LOC future major release" as the authoritative effort estimate without reading the substrate. | Estimate was 3-5x too high. Existing `GradientTape.backward()`, `VariableRegistry.set_grad()` accumulation, and `SavedTensors` polymorphism already covered ~70% of the planned work. Acting on the 5000 LOC number would have made the epic look unschedulable and forced an unnecessary multi-week breakdown. | TODO.md describes aspirations; code describes actual state. Read the code before estimating. |
+| 2 | Trusted a repo audit's "CRITICAL: autograd missing" framing without verifying against `tape*.mojo` and `variable.mojo`. | The audit conflated "documented feature" with "implemented feature". The autograd substrate was already implemented at the tape/registry layer — only op coverage and a few dispatch arms were missing. Treating the gap as "missing" instead of "incomplete" would have justified a from-scratch rewrite. | Audits that flag CRITICAL gaps based on README/TODO scans must be re-verified against the code. "Missing" and "incomplete" are different remediation profiles. |
+
+## Results & Parameters
+
+**Phase 0 substrate-read checklist** (copy-paste into the issue/PR description before estimating):
+
+```markdown
+## Phase 0 — Substrate Read (complete BEFORE estimating)
+
+Files read in full:
+- [ ] `path/to/substrate1.mojo` (N LOC) — what works: …
+- [ ] `path/to/substrate2.mojo` (N LOC) — what works: …
+- [ ] `path/to/substrate3.mojo` (N LOC) — what works: …
+
+What already works (with line citations):
+- `substrate1.mojo:123` — feature A
+- `substrate2.mojo:45`  — feature B
+- `substrate3.mojo:200` — feature C
+
+What is actually missing (minimum-needed signatures only):
+- `op_foo(x: Tensor) -> Tensor` — not yet implemented
+- dispatch arm for `OpKind.BAR` in `dispatch.mojo`
+
+Revised LOC estimate: ~X (vs TODO.md "~Y")
+Justification: ~Z% of planned work already in substrate.
+```
+
+**Heuristic ratios** (from observed cases):
+
+| TODO/Roadmap Estimate | Typical Actual (after substrate read) | Ratio |
+|-----------------------|----------------------------------------|-------|
+| "5000 LOC, 2-4 weeks" | ~937 LOC, days | ~5x pessimistic |
+| "Major version rewrite" | Incremental amendment | varies |
+| "CRITICAL: missing" (per audit) | "incomplete, 30% gap" | re-classify |
+
+**Verified case — ProjectOdyssey Phase 2 autograd (PR #5457):**
+
+- Original TODO: `src/projectodyssey/autograd/TODO.md` → "Phase 2 full tape-based autograd: ~5000 LOC future major release"
+- Substrate-read discoveries:
+  - `GradientTape.backward()` already iterates nodes in linear reverse order — works because forward execution is topo order. No DAG topo sort needed.
+  - `VariableRegistry.set_grad()` already accumulates gradients (`has_grad ? add : copy`). Multi-use parameter case already solved.
+  - `SavedTensors` already had `tensors: List[AnyTensor] + shapes: List[List[Int]] + scalars: List[Float64]` — sufficient polymorphism for all conv/pool hyperparams. No new struct types needed.
+  - 11 `variable_*` ops + 10 dispatch arms already existed.
+- Revised estimate: ~1400 LOC.
+- Actual landed: +937 LOC (PR #5457, merged, CI green).
+- Ratio: 5000 / 937 ≈ 5.3x pessimism in original TODO.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectOdyssey | Phase 2 autograd substrate, PR #5457 (merged) — TODO claimed 5000 LOC, actual 937 LOC after Phase 0 substrate read | Repo audit flagged autograd as CRITICAL gap (C3); Phase 0 read of `tape_types.mojo`, `tape.mojo`, `variable.mojo`, `backward_ops.mojo` revealed substrate was ~70% complete |
+
+```
+
+---
+
+## Superseded from phase-cleanup
+
+**Original date/version:** 2026-03-19 / 1.0.0
+
+```markdown
+---
+name: phase-cleanup
+description: Refactor and finalize code after parallel phases complete, addressing
+  technical debt. Use in cleanup phase to polish code before merge.
+category: tooling
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+phase: Cleanup
+---
+# Cleanup Phase Coordination Skill
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Refactor and finalize code after all parallel phases (Test, Implementation, Package) are complete. - After Test, Implementation, and Package phases... |
+| Outcome | Operational |
+
+Refactor and finalize code after all parallel phases (Test, Implementation, Package) are complete.
+
+## When to Use
+
+- After Test, Implementation, and Package phases complete
+- Addressing technical debt and code quality issues
+- Finalizing code before merge to main
+- Consolidating and polishing parallel phase outputs
+
+### Quick Reference
+
+```bash
+# Check for code quality issues
+grep -r "TODO\|FIXME\|HACK" src/
+just pre-commit-all
+pixi run mojo test -I . tests/
+
+# Format and clean
+pixi run mojo format src/**/*.mojo
+pixi run mojo format tests/**/*.mojo
+
+# Verify no warnings
+pixi run mojo build -I . shared/ 2>&1 | grep -i "warning" && echo "⚠️ Warnings found" || echo "✅ No warnings"
+```
+
+## Verified Workflow
+
+1. **Collect issues** - Gather TODOs, FIXMEs, and bugs from parallel phases
+2. **Refactor code** - Remove duplication, simplify complexity, improve naming
+3. **Update documentation** - Ensure all docs match implementation
+4. **Final quality checks** - Format, lint, test, coverage
+5. **Verify ready for merge** - All quality gates passing
+
+## Refactoring Principles
+
+**KISS - Keep It Simple**:
+
+```mojo
+# Before: Over-engineered
+fn process(data: Tensor) -> Tensor:
+    let step1 = stage1(data)
+    let step2 = stage2(step1)
+    let step3 = stage3(step2)
+    return finalize(step3)
+
+# After: Simple pipeline
+fn process(data: Tensor) -> Tensor:
+    return pipeline(data)
+```
+
+**DRY - Don't Repeat Yourself**:
+
+```mojo
+# Before: Duplication
+fn add_f32(a: Float32, b: Float32) -> Float32:
+    return a + b
+fn add_f64(a: Float64, b: Float64) -> Float64:
+    return a + b
+
+# After: Generic
+fn add[dtype: DType](a: Scalar[dtype], b: Scalar[dtype]) -> Scalar[dtype]:
+    return a + b
+```
+
+**SOLID - Single Responsibility**:
+
+```mojo
+# Before: Mixed responsibilities
+fn load_and_process(path: String) -> Tensor:
+    let raw = load_file(path)
+    let cleaned = remove_outliers(raw)
+    return normalize(cleaned)
+
+# After: Separate
+fn load_data(path: String) -> RawData:
+    return load_file(path)
+
+fn preprocess_data(data: RawData) -> Tensor:
+    return normalize(remove_outliers(data))
+```
+
+## Quality Checklist
+
+- [ ] No TODOs/FIXMEs (or documented in issue)
+- [ ] Code duplication removed (DRY)
+- [ ] Complex functions simplified (KISS)
+- [ ] Naming clear and consistent
+- [ ] Documentation updated
+- [ ] All tests passing
+- [ ] Code formatted (`mojo format`)
+- [ ] No compiler warnings (zero-warnings policy)
+- [ ] Test coverage ≥ 80%
+- [ ] Ready for review
+
+## Common Cleanup Tasks
+
+1. **Remove dead code** - Unused functions, imports, variables
+2. **Consolidate imports** - Organize by module
+3. **Standardize errors** - Consistent error handling patterns
+4. **Add missing tests** - Cover gaps in coverage
+5. **Update comments** - Ensure accuracy after changes
+6. **Review variable names** - Use clear, descriptive names
+
+## Phase Dependencies
+
+- **Input from**: Test, Implementation, and Package phases (all parallel outputs)
+- **Precedes**: Merge to main (final polishing gate)
+- **Must complete before**: PR approval and merge
+
+## Output Location
+
+- **Refactored code**: Same locations as implementation (in-place)
+- **Updated docs**: GitHub issue comments
+- **Final artifacts**: Ready for merge to `main` branch
+
+## Error Handling
+
+| Issue | Action |
+| ------- | -------- |
+| TODOs remain | Document in issue or remove code |
+| Tests fail | Revert changes, debug, try again |
+| Coverage low | Add tests for uncovered lines |
+| Warnings | Fix immediately (zero-warnings policy) |
+| Merge conflicts | Resolve with implementation team |
+
+## Verification Checklist
+
+Before marking cleanup complete:
+
+```bash
+# 1. Format
+pixi run mojo format src/**/*.mojo tests/**/*.mojo
+
+# 2. Test
+pixi run mojo test -I . tests/
+
+# 3. No warnings
+pixi run mojo build -I . shared/ 2>&1 | tee /tmp/build.log
+grep -i "warning" /tmp/build.log && echo "❌ Warnings found" || echo "✅ Clean"
+
+# 4. No TODOs
+grep -r "TODO\|FIXME" src/ && echo "❌ TODOs found" || echo "✅ Clean"
+
+# 5. Pre-commit
+just pre-commit-all
+
+# 6. Final confirmation
+git status  # No uncommitted changes
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
+
+## References
+
+- `CLAUDE.md` - "Key Development Principles" (KISS, DRY, SOLID, YAGNI)
+- `CLAUDE.md` - "Zero-Warnings Policy" (enforcement guidelines)
+- `CLAUDE.md` - "Common Mistakes to Avoid" (patterns from 64+ test failures)
+
+---
+
+**Key Principle**: Cleanup completes the 5-phase workflow. Code must be merge-ready.
+
+```
+
+**Notes (phase-cleanup.notes.md):**
+
+```markdown
+# Notes
+
+Migrated from plugins/uncategorized/skills/phase-cleanup/ on 2026-01-02.
+
+```
+
+---
