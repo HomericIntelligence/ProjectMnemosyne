@@ -1,0 +1,1532 @@
+<!-- markdownlint-disable MD024 -->
+
+# mojo-tensor-unit-test-and-gradient-checking — History
+
+## v1.0.0 (2026-06-07)
+
+Consolidated 4 Mojo testing skills into one canonical covering tensor unit-test patterns, numerical gradient/backward-pass checking, symmetric-weight-init dead-symmetry diagnosis, and hardware-guarded BF16 precision recommendation. Absorbed skills:
+
+- mojo-tensor-unit-test-patterns
+- gradient-checking-and-backward-pass-testing
+- debugging-symmetric-weight-init-dead-symmetry
+- bf16-precision-recommendation
+
+## Superseded from mojo-tensor-unit-test-patterns
+
+**Original date:** 2026-05-19 · **Original version:** 1.0.0
+
+```yaml
+name: mojo-tensor-unit-test-patterns
+description: >-
+  Test patterns specific to Mojo tensor and operator implementations. Use when:
+  (1) activating TODO-guarded __str__/__repr__ placeholder tests in Mojo,
+  (2) adding dtype-aware string/repr formatting for integer or bool types,
+  (3) writing BFloat16 NaN canonicalization or regression tests,
+  (4) adding UInt bitwise NOT or overflow/wrap-around boundary tests,
+  (5) closing value-correctness gaps in structural tensor tests,
+  (6) fixing view vs copy semantics mismatches in slice tests,
+  (7) replacing hardcoded /tmp paths with unique per-run paths,
+  (8) re-enabling NOTE-disabled or TODO-stubbed Mojo test files,
+  (9) annotating pass-only placeholder tests against staleness,
+  (10) resolving TODO(#N) markers after a blocking issue closes.
+category: testing
+date: 2026-05-19
+version: "1.0.0"
+user-invocable: false
+history: mojo-tensor-unit-test-patterns.history
+tags:
+  - mojo
+  - tensor
+  - extensor
+  - dtype
+  - bfloat16
+  - uint
+  - view
+  - copy
+  - str
+  - repr
+  - placeholder
+  - todo
+  - re-enable
+```
+
+# Skill: Mojo Tensor Unit Test Patterns
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Date** | 2026-05-19 |
+| **Category** | testing |
+| **Language** | Mojo v0.26.1+ |
+| **Objective** | Canonical reference for all Mojo tensor test patterns: string/repr, BF16, UInt arithmetic, view/copy semantics, placeholder management, and test re-enablement |
+| **Outcome** | Merged from 12 skills covering ExTensor, DType, UInt, and test lifecycle patterns |
+| **Context** | ProjectOdyssey — `shared/core/extensor.mojo`, `tests/shared/core/` |
+
+## When to Use
+
+Use this skill when working in a Mojo tensor/operator test suite and any of these apply:
+
+1. A test file has `pass  # Placeholder` stubs guarded by `# TODO(#NNNN)` comments
+2. `ExTensor.__str__` or `__repr__` renders integer values with decimals or bools as 0.0/1.0
+3. BFloat16 NaN hash values are inconsistent across different NaN bit patterns
+4. A dtype-dispatched function lacks a bfloat16 branch (silent no-op or garbage read)
+5. UInt bitwise NOT (`~`) or overflow/wrap-around tests are missing from the test suite
+6. A structural test checks only `is_contiguous()` and `_strides` but skips element values
+7. A slice test asserts `_is_view == True` on `__getitem__(Slice)` (which returns a copy)
+8. A test writes to a hardcoded `/tmp/<fixed-name>` path that can persist across runs
+9. A `.mojo` test file has `NOTE: temporarily disabled` or only prints "SKIPPED"
+10. A tracking issue documents `TODO(#N)` markers and issue #N is now closed
+
+Do NOT use when:
+- Tests are skipped due to an active, unfixed compiler bug — document the blocker instead
+- Tests require external resources not available in CI
+- The blocking upstream issue is still open — verify `gh issue view N --json state` first
+
+## Verified Workflow
+
+### Quick Reference
+
+| Pattern | Key Action | File(s) Typically Changed |
+| --------- | ------------ | -------------------------- |
+| Activate `__str__`/`__repr__` stubs | Implement `Stringable`/`Representable` on struct | `extensor.mojo`, `test_utility.mojo` |
+| Dtype-aware str/repr formatting | Add `_format_element()` helper, dispatch by `DType` | `extensor.mojo`, `test_utility.mojo` |
+| BF16 NaN canonicalization | Raw bit manipulation in `_get_float64` BF16 branch | `extensor.mojo`, `test_utility.mojo` |
+| BF16 regression (silent no-op) | Three-part test: zero-guard, write zero-guard, round-trip | `test_extensor_getset_<fn>.mojo` |
+| UInt bitwise NOT tests | Create standalone `test_uint_bitwise_not.mojo` | new test file + CI YAML |
+| UInt overflow/wrap tests | Extend `test_unsigned.mojo` with 15 tests | `test_unsigned.mojo` |
+| Value-correctness gap | Append `assert_almost_equal` after stride assertions | `test_utility.mojo` |
+| View vs copy semantics | Use `tensor.slice(a, b)` for write-through; `tensor[a:b]` is a copy | test file |
+| Unique `/tmp` path | `from time import perf_counter_ns` + string suffix | test file |
+| Re-enable disabled tests | Determine disable pattern, check blockers, write/uncomment tests | stub test file |
+| Annotate stale placeholders | Add `# TODO(#N)` + concrete spec to docstring | test files |
+| Resolve blocked TODOs | Verify blocking issue closed, cherry-pick or implement, enable tests | test files |
+
+---
+
+### Pattern 1 — Activate `__str__`/`__repr__` Placeholder Tests
+
+#### Step 1: Confirm implementation status
+
+```bash
+grep -rn "fn __str__\|fn __repr__" shared/core/extensor.mojo
+```
+
+If absent, implementation is needed (Steps 2–3). If present, skip to Step 4.
+
+#### Step 2: Add traits to struct declaration
+
+```mojo
+# Before
+struct ExTensor(Copyable, ImplicitlyCopyable, Movable, Sized):
+
+# After
+struct ExTensor(Copyable, ImplicitlyCopyable, Movable, Sized, Stringable, Representable):
+```
+
+#### Step 3: Implement `__str__` and `__repr__`
+
+Use `_get_float64(index)` for element access (handles all dtypes via cast):
+
+```mojo
+fn __str__(self) -> String:
+    """Human-readable string representation."""
+    var result = String("ExTensor([")
+    for i in range(self._numel):
+        if i > 0:
+            result += ", "
+        result += String(self._get_float64(i))
+    result += "], dtype=" + String(self._dtype) + ")"
+    return result
+
+fn __repr__(self) -> String:
+    """Detailed representation for debugging."""
+    var shape_str = String("[")
+    for i in range(len(self._shape)):
+        if i > 0:
+            shape_str += ", "
+        shape_str += String(self._shape[i])
+    shape_str += "]"
+    var result = String("ExTensor(shape=") + shape_str
+    result += ", dtype=" + String(self._dtype)
+    result += ", numel=" + String(self._numel)
+    result += ", data=["
+    for i in range(self._numel):
+        if i > 0:
+            result += ", "
+        result += String(self._get_float64(i))
+    result += "])"
+    return result
+```
+
+#### Step 4: Activate placeholder tests
+
+```mojo
+fn test_str_readable() raises:
+    var t = arange(0.0, 3.0, 1.0, DType.float32)
+    var s = String(t)
+    assert_equal(s, "ExTensor([0.0, 1.0, 2.0], dtype=float32)", "__str__ format")
+
+fn test_repr_complete() raises:
+    var shape = List[Int]()
+    shape.append(2)
+    shape.append(2)
+    var t = ones(shape, DType.float32)
+    var r = repr(t)
+    assert_equal(
+        r,
+        "ExTensor(shape=[2, 2], dtype=float32, numel=4, data=[1.0, 1.0, 1.0, 1.0])",
+        "__repr__ format",
+    )
+```
+
+---
+
+### Pattern 2 — Dtype-Aware str/repr Formatting (Integer and Bool)
+
+When `ExTensor.__str__` renders int32 as `"1.0"` or bool as `"0.0"`, add a
+`_format_element` helper that dispatches by dtype:
+
+```mojo
+fn _format_element(self, i: Int) -> String:
+    """Format a single element based on dtype."""
+    if self._dtype == DType.bool:
+        return "True" if self._get_int64(i) != 0 else "False"
+    elif (
+        self._dtype == DType.int8
+        or self._dtype == DType.int16
+        or self._dtype == DType.int32
+        or self._dtype == DType.int64
+        or self._dtype == DType.uint8
+        or self._dtype == DType.uint16
+        or self._dtype == DType.uint32
+        or self._dtype == DType.uint64
+    ):
+        return String(self._get_int64(i))
+    else:
+        return String(self._get_float64(i))
+```
+
+Use explicit `== DType.xxx` comparisons — the codebase uses runtime enum comparisons
+everywhere; do NOT use `dtype.is_integral()`.
+
+Update `__str__` and `__repr__` to call `self._format_element(i)` instead of
+`String(self._get_float64(i))`.
+
+Test using `zeros(shape, dtype) + t[i] = value`:
+
+```mojo
+fn test_str_int32_no_decimals() raises:
+    var shape = List[Int]()
+    shape.append(3)
+    var t = zeros(shape, DType.int32)
+    t[1] = 1.0
+    t[2] = 2.0
+    assert_equal(String(t), "ExTensor([0, 1, 2], dtype=int32)", "__str__ int32")
+
+fn test_str_bool_true_false() raises:
+    var shape = List[Int]()
+    shape.append(3)
+    var t = zeros(shape, DType.bool)
+    t[1] = 1.0
+    assert_equal(
+        String(t), "ExTensor([False, True, False], dtype=bool)", "__str__ bool"
+    )
+```
+
+---
+
+### Pattern 3 — BFloat16 NaN Canonicalization Test
+
+#### Diagnose the conversion path
+
+```mojo
+# WRONG — numeric cast may silently canonicalize NaN bit patterns
+elif self._dtype == DType.bfloat16:
+    var ptr = (self._data + offset).bitcast[BFloat16]()
+    return Float64(Float32(ptr[]))
+```
+
+#### Fix with raw bit manipulation
+
+BF16 bits map directly to the upper 16 bits of Float32:
+
+```mojo
+# CORRECT — preserves all NaN mantissa bits
+elif self._dtype == DType.bfloat16:
+    var raw_ptr = (self._data + offset).bitcast[UInt16]()
+    var raw: UInt16 = raw_ptr[]
+    var f32_bits: UInt32 = UInt32(raw) << 16
+    var f32_val = UnsafePointer[UInt32](to=f32_bits).bitcast[Float32]()[]
+    return Float64(f32_val)
+```
+
+#### Inject raw NaN bits for testing (bypass typed setter)
+
+```mojo
+fn make_bf16_nan_tensor(raw_bits: UInt16) -> ExTensor:
+    var t = ExTensor(Shape(1), DType.bfloat16)
+    t._data.bitcast[UInt16]()[0] = raw_bits
+    return t
+```
+
+#### Three NaN invariant tests
+
+```mojo
+def test_bf16_nan_canonical_hash():
+    var t1 = make_bf16_nan_tensor(0x7FC0)
+    var t2 = make_bf16_nan_tensor(0x7FC0)
+    assert_equal(hash(t1), hash(t2))
+
+def test_bf16_nan_negative_hash():
+    var t1 = make_bf16_nan_tensor(0xFFC0)
+    var t2 = make_bf16_nan_tensor(0xFFC0)
+    assert_equal(hash(t1), hash(t2))
+
+def test_bf16_nan_cross_variant_hash():
+    var t_pos = make_bf16_nan_tensor(0x7FC0)
+    var t_neg = make_bf16_nan_tensor(0xFFC0)
+    assert_equal(hash(t_pos), hash(t_neg))
+```
+
+BF16 NaN bit patterns reference:
+
+| Pattern | Hex | Meaning |
+| --------- | ----- | --------- |
+| `0111 1111 1100 0000` | `0x7FC0` | Canonical positive quiet NaN |
+| `1111 1111 1100 0000` | `0xFFC0` | Negative quiet NaN |
+| `0111 1111 1000 0000` | `0x7F80` | Positive Infinity (NOT NaN — mantissa is zero) |
+
+---
+
+### Pattern 4 — BFloat16 Regression Tests (Silent No-Op)
+
+Audit dtype-dispatched functions for missing bfloat16 branches:
+
+```bash
+grep -n "elif self._dtype == DType" shared/core/extensor.mojo | grep -A1 "float64"
+```
+
+Three-part regression pattern (use exactly-representable values: 0.5, 1.0, 1.5, 2.0, -1.0):
+
+```mojo
+# 1. Zero-guard: read path
+fn test_get_fn_bfloat16() raises:
+    var t = zeros([1], DType.bfloat16)
+    t._set_float64(0, 1.5)          # seed via trusted float64 path
+    var got = t._get_fn(0)
+    assert_true(Float64(got) != 0.0, "bfloat16 _get_fn returned 0 — branch missing")
+    assert_almost_equal(Float64(got), 1.5, tolerance=1e-2)
+
+# 2. Zero-guard: write path
+fn test_set_fn_bfloat16() raises:
+    var t = zeros([1], DType.bfloat16)
+    t._set_fn(0, FloatType(1.5))
+    var got = t._get_float64(0)     # read via trusted float64 path
+    assert_true(got != 0.0, "bfloat16 _set_fn silently wrote zero — branch missing")
+    assert_almost_equal(got, 1.5, tolerance=1e-2)
+
+# 3. Round-trip
+fn test_get_fn_bfloat16_roundtrip() raises:
+    var t = zeros([4], DType.bfloat16)
+    t._set_fn(0, FloatType(1.0))
+    t._set_fn(1, FloatType(2.0))
+    t._set_fn(2, FloatType(0.5))
+    t._set_fn(3, FloatType(-1.0))
+    assert_almost_equal(Float64(t._get_fn(0)), 1.0, tolerance=1e-2)
+    assert_almost_equal(Float64(t._get_fn(1)), 2.0, tolerance=1e-2)
+    assert_almost_equal(Float64(t._get_fn(2)), 0.5, tolerance=1e-2)
+    assert_almost_equal(Float64(t._get_fn(3)), -1.0, tolerance=1e-2)
+```
+
+Tolerance rationale:
+
+| Dtype | Mantissa bits | Precision | Tolerance |
+| ------- | ------------- | ---------- | --------- |
+| bfloat16 | 7 | ~2 decimal digits | `1e-2` |
+| float16 | 10 | ~3 decimal digits | `1e-3` |
+| float32 | 23 | ~7 decimal digits | `1e-6` |
+
+---
+
+### Pattern 5 — UInt Bitwise NOT Tests
+
+Create a standalone file `tests/shared/core/test_uint_bitwise_not.mojo` with 4 cases per type
+(16 total):
+
+```mojo
+fn test_uint8_not_zero() raises:
+    var result: UInt8 = ~UInt8(0)
+    if result != 255:
+        raise Error("~UInt8(0) expected 255, got " + String(result))
+
+fn test_uint8_not_max() raises:
+    var result: UInt8 = ~UInt8(255)
+    if result != 0:
+        raise Error("~UInt8(255) expected 0, got " + String(result))
+
+fn test_uint8_not_alternating() raises:
+    var result: UInt8 = ~UInt8(0b10101010)
+    if result != 85:
+        raise Error("~UInt8(0b10101010) expected 85, got " + String(result))
+
+fn test_uint8_double_inversion() raises:
+    var val: UInt8 = 42
+    if ~~val != val:
+        raise Error("~~UInt8(42) expected 42")
+```
+
+Alternating bit values per type:
+
+| Type | Input | Expected |
+| ------ | ------- | ---------- |
+| UInt8 | `0b10101010` (170) | `0b01010101` (85) |
+| UInt16 | `0xAAAA` (43690) | `0x5555` (21845) |
+| UInt32 | `0xAAAAAAAA` (2863311530) | `0x55555555` (1431655765) |
+| UInt64 | `0xAAAAAAAAAAAAAAAA` | `0x5555555555555555` |
+
+Register in CI explicit file lists (if project uses them):
+
+```yaml
+pattern: "... test_unsigned.mojo test_uint_bitwise_not.mojo ..."
+```
+
+---
+
+### Pattern 6 — UInt Overflow/Wrap-Around Tests
+
+Extend the existing `test_unsigned.mojo` (do not create a new file). Three tests per type
+(12 overflow + 3 sanity = 15 total):
+
+```mojo
+fn test_uint8_add_overflow() raises:
+    var max_val: UInt8 = 255
+    var one: UInt8 = 1
+    var result = max_val + one
+    if result != 0:
+        raise Error("UInt8(255) + 1 should wrap to 0, got " + String(result))
+```
+
+Use typed variables, not literal expressions, to ensure arithmetic stays in the correct type.
+
+Overflow-triggering values:
+
+| Type | Add overflow | Sub underflow | Mul overflow (a, b) |
+| ------ | ------------ | ------------- | ------------------- |
+| UInt8 | `255 + 1` | `0 - 1` | `16 * 16 = 0` |
+| UInt16 | `65535 + 1` | `0 - 1` | `256 * 256 = 0` |
+| UInt32 | `4294967295 + 1` | `0 - 1` | `65536 * 65536 = 0` |
+| UInt64 | `max + 1` | `0 - 1` | `4294967296 * 4294967296 = 0` |
+
+---
+
+### Pattern 7 — Value-Correctness Gap After as_contiguous
+
+When an existing test only verifies `is_contiguous()` and `_strides` after `as_contiguous()`:
+
+1. Confirm the tensor is built with `arange + reshape + transpose` (predictable values)
+2. Derive expected values: for `(rows=3, cols=4)` transposed to `(4, 3)`, `c[j,i] = i*cols + j`
+3. Append 12 `assert_almost_equal` calls (one per element) after the stride assertions
+
+```mojo
+# Verify element values are correctly reordered per transpose stride mapping.
+# Original (3,4) row-major: a[i,j] = i*4 + j (values 0..11)
+# After transpose to (4,3): t[j,i] = a[i,j]; row 0 = col 0 of original: 0, 4, 8
+assert_almost_equal(c._get_float64(0), 0.0, 1e-6, "c[0,0] should be 0")
+assert_almost_equal(c._get_float64(1), 4.0, 1e-6, "c[0,1] should be 4")
+assert_almost_equal(c._get_float64(2), 8.0, 1e-6, "c[0,2] should be 8")
+assert_almost_equal(c._get_float64(3), 1.0, 1e-6, "c[1,0] should be 1")
+```
+
+Assert values on the contiguous result `c`, not on the non-contiguous view `t`.
+
+---
+
+### Pattern 8 — View vs Copy Semantics
+
+Two AnyTensor slice methods have different semantics:
+
+| Method | Returns | `_is_view` | Use When |
+| -------- | --------- | ------------ | ---------- |
+| `tensor[a:b]` | Copy | `False` | Read-only slicing |
+| `tensor.slice(a, b)` | View | `True` | Write-through to original |
+
+```mojo
+# WRONG: __getitem__ returns copy — writes don't affect original
+var view = original[2:8]
+view[0] = Float32(99.0)
+
+# RIGHT: slice() returns view — writes affect original
+var view = original.slice(2, 8)
+view[0] = Float32(99.0)
+```
+
+When a function expects `AnyTensor` but you have `Tensor[dtype]`, add `.as_any()`.
+Watch for cascading type changes when the return type of a function shifts.
+
+---
+
+### Pattern 9 — Unique `/tmp` Paths
+
+```mojo
+# Before
+var test_path = "/tmp/test_remove_safely_3283.txt"
+
+# After
+from time import perf_counter_ns
+var suffix = String(perf_counter_ns())
+var test_path = "/tmp/test_remove_safely_" + suffix + ".txt"
+```
+
+`perf_counter_ns()` is the correct choice — Mojo v0.26.1 has no `uuid` module.
+The inline import inside the function is valid Mojo syntax.
+
+---
+
+### Pattern 10 — Re-Enabling Disabled/Stubbed Tests
+
+Before writing anything, determine the disable pattern:
+
+| Pattern | Indicator | Action |
+| --------- | ----------- | -------- |
+| Stub file | `main()` only prints "SKIPPED" | Write all tests from scratch |
+| NOTE-disabled | `NOTE: temporarily disabled pending X` | Check if X is resolved, then write tests |
+| TODO commented-out | `# var b = fn(a)` + `pass  # Placeholder` | Uncomment + fix syntax |
+| Backward-pass disabled | `# DISABLED — ownership issues` | Check type alias, write analytical tests |
+| pytest.skip() | `if not file.exists(): pytest.skip(...)` | Fix path or config, remove guard |
+
+Always `Read` the actual file before assuming its structure from the issue description.
+
+Common Mojo syntax bugs in commented-out code:
+
+| Bug Pattern | Fix |
+| ------------- | ----- |
+| `target_shape[0] = 4` | `target_shape.append(4)` |
+| `var b = tile(a, 3)` | `var reps = List[Int](); reps.append(3); var b = tile(a, reps)` |
+| `List[Int](1, 2, 3)` | Use list literals `[1, 2, 3]` (Mojo v0.26.1+) |
+
+DataLoader requires 2D input — always use `[n_samples, feature_dim]`:
+
+```mojo
+var data = ones([n_samples, 10], DType.float32)
+var labels = zeros([n_samples, 1], DType.float32)
+return DataLoader(data^, labels^, batch_size=4)
+```
+
+Commit without mojo-format on GLIBC-old hosts:
+
+```bash
+SKIP=mojo-format git commit -m "fix(tests): re-enable X tests"
+```
+
+---
+
+### Pattern 11 — Annotating Stale Placeholders
+
+Every placeholder upgrade involves two issues: the dependency (#dep) and a
+staleness-tracker (#tracker):
+
+```mojo
+# Before
+fn test_from_array_1d() raises:
+    """NOTE(#3013): placeholder."""
+    pass
+
+# After
+fn test_from_array_1d() raises:
+    """Blocked on #3013 (from_array() not yet implemented).
+    Tracked by #4127 to prevent staleness.
+    Once #3013 merges: [0.5, 1.0, 1.5] -> shape [3], dtype float32."""
+    # TODO(#3013): implement when from_array() ships
+    pass
+```
+
+Use `docs(tests):` commit prefix — no behavior changes.
+
+---
+
+### Pattern 12 — Resolving Blocked TODO Markers
+
+```bash
+# Phase A: verify blocker is closed
+gh issue view <N> --json state -q '.state'   # must return "CLOSED"
+
+# Phase B: locate all markers
+grep -rn "TODO.*#<N>\|TODO(#<N>)" --include="*.mojo" .
+
+# Phase C: check for implementation on a feature branch
+git branch --all | grep "<N>"
+git cherry-pick <commit-hash> --no-commit
+```
+
+After cherry-picking or implementing:
+1. Remove `# TODO(#N)` lines
+2. Uncomment test code
+3. Replace `pass  # Placeholder` with real assertions
+4. Verify no markers remain: `grep -rn "TODO.*#<N>" --include="*.mojo" .`
+
+## Results & Parameters
+
+### DType string formats
+
+| Expression | Output |
+| ----------- | ------- |
+| `String(DType.float32)` | `"float32"` |
+| `String(Float64(0.0))` | `"0.0"` |
+| `String(DType.int32)` | `"int32"` |
+| `String(DType.bool)` | `"bool"` |
+
+### ExTensor str/repr expected outputs
+
+```text
+# float32
+ExTensor([0.0, 1.0, 2.0], dtype=float32)
+
+# int32 (no decimals)
+ExTensor([0, 1, 2], dtype=int32)
+
+# bool
+ExTensor([False, True, False], dtype=bool)
+
+# __repr__ float32
+ExTensor(shape=[2, 2], dtype=float32, numel=4, data=[1.0, 1.0, 1.0, 1.0])
+
+# __repr__ int32
+ExTensor(shape=[3], dtype=int32, numel=3, data=[0, 1, 2])
+```
+
+### Bfloat16 safe test values
+
+```text
+Safe (power-of-2 fractions):    0.0, 0.5, 1.0, 1.5, 2.0, -0.5, -1.0, -1.5, -2.0
+Unsafe (not exact in bfloat16): 0.1, 0.3, 1.3, 2.7, 3.9
+```
+
+### Local Mojo environment note
+
+Mojo binary requires GLIBC 2.32+. On hosts with older GLIBC, tests only run in CI
+(Docker). Pre-commit hooks still validate formatting locally. Use `SKIP=mojo-format`
+for the mojo format hook when committing on those hosts.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Grep for `__str__` in extensor.mojo before implementing | Expected to find existing implementation based on issue description | Methods were absent — only found in unrelated `nvfp4.mojo` | Always verify implementation existence before activating tests; issue descriptions can be wrong |
+| Run `pixi run mojo test` locally | Tried to verify tests on host | GLIBC version mismatch (2.31 vs required 2.32+) on most ProjectOdyssey dev machines | Mojo tests can only run in CI Docker; verify syntax via pre-commit hooks |
+| Use `uuid` module for unique tmp path | `from uuid import uuid4` | No `uuid` module in Mojo v0.26.1 stdlib | Use `perf_counter_ns()` instead |
+| Test 0xFF80 as negative BF16 NaN | Used 0xFF80 as "negative NaN" bit pattern | `0xFF80` is BF16 negative infinity (mantissa=0), not NaN | BF16 NaN requires exp=0xFF AND mantissa != 0; negative quiet NaN is `0xFFC0` |
+| Numeric cast for BF16 in `_get_float64` | `Float64(Float32(BFloat16))` two-step cast | CPU numeric cast canonicalizes NaN bits, breaking hash consistency | Use raw bit manipulation: UInt16 read, shift left 16, Float32 bitcast |
+| Use `_set_float64` to inject BF16 NaN | Called typed setter with NaN value | Same numeric cast path immediately canonicalizes the injected NaN | Use `bitcast[UInt16]` pointer to write raw bits directly |
+| Assumed `__getitem__(Slice)` returns view | Asserted `_is_view == True` on `tensor[2:8]` | `__getitem__(Slice)` explicitly returns a copy (`_is_view = False`) | Read method docstring; use `tensor.slice(a, b)` for views |
+| Fixed tuple destructuring without checking call sites | Changed `var (a,b,c) = fn()` to subscript access | Introduced new error: `forward(input)` failed because Tensor cannot convert to AnyTensor | When fixing one error, check ALL other calls in that function for type compatibility |
+| `dtype.is_integral()` for integer dtype check | Called `.is_integral()` on dtype | Untested locally due to GLIBC mismatch; codebase never used this pattern | Use explicit `== DType.xxx` comparisons to match existing codebase style |
+| Creating new file instead of extending | Created `test_uint_overflow.mojo` for overflow tests | File `test_unsigned.mojo` already had the right structure | Always check for existing test files before creating new ones; extend, don't duplicate |
+| Assuming disabled tests existed but were gated | Expected skip guard or `@disabled` annotation | File had zero test functions — it was a complete stub | Always `Read` the actual file before assuming its structure from issue description |
+| Using `List[Int](1, 2, 3)` constructor syntax | Older Mojo list construction pattern | Mojo v0.26.1+ uses list literals `[1, 2, 3]` | Compiler is truth — use list literal syntax |
+| DataLoader with 1D data `[n_samples]` | Passed flat tensor to DataLoader | DataLoader reads `shape()[1]` for feature_dim, panics on 1D | DataLoader requires 2D input: `[n_samples, feature_dim]` |
+| Using `_get_float64(i)` on non-contiguous tensor | Asserting values on `t` before `as_contiguous()` | `_get_float64(i)` reads flat memory index, ignoring strides | Assert values on `c` (the contiguous result), not on the non-contiguous view |
+| Using bfloat16 round-trip with `2.7` | Copied float32 test value to bfloat16 | 2.7 is not exactly representable in bfloat16 | Use only power-of-2 fractions for bfloat16 tests |
+| Cherry-pick waiting for blocking issue to be in main | Waited for #2722 to merge to main | Implementation was on branch `2722-auto-impl`, not yet in main | Check `git branch --all` and cherry-pick from feature branch when needed |
+| Implement tests without checking if blocking issue merged | Assumed feature needed re-implementation | Code fix was already present in a prior commit (`3c1b07fa`) | Always check both the implementation AND the tests — a fixed function can still lack coverage |
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | Issues #3162, #3376, #3293, #3292, #4060, #3910, #3842, PR #5097, #3013, #3077, #4127, #3082, #3081 | Absorbed from 12 member skills; see `.history` file |
+
+---
+
+## Superseded from gradient-checking-and-backward-pass-testing
+
+**Original date:** 2026-05-26 · **Original version:** 1.1.0
+
+```yaml
+name: gradient-checking-and-backward-pass-testing
+description: "Use when: (1) writing numerical gradient checks for conv2d, depthwise\
+  \ conv2d, batch norm, layer norm, or pooling backward passes in Mojo, (2) a gradient\
+  \ check reports analytical≈0 vs numerical≈nonzero for a normalization layer, (3)\
+  \ migrating from check_gradients() to check_gradient() or choosing tolerances for\
+  \ float32 backward tests, (4) extending backward coverage to inference mode, 4D\
+  \ inputs, multi-channel configs, or all three gradient fields (grad_input, grad_weights,\
+  \ grad_bias), (5) implementing analytically tractable exact-value tests for conv2d\
+  \ backward with all-ones configs, (6) adding end-to-end convergence tests as a\
+  \ complementary class to per-op finite-difference checks for validating the full\
+  \ forward→backward→optimizer→writeback loop"
+category: testing
+date: 2026-05-26
+version: "1.1.0"
+user-invocable: false
+history: gradient-checking-and-backward-pass-testing.history
+tags:
+  - gradient-checking
+  - backward-pass
+  - batch-norm
+  - layer-norm
+  - conv2d
+  - depthwise-conv2d
+  - pooling
+  - finite-differences
+  - float32-precision
+  - mojo
+```
+
+# Gradient Checking and Backward Pass Testing
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-05-26 |
+| Objective | Numerically correct backward pass tests for all ML layer types in Mojo, plus end-to-end convergence tests that validate the full training loop |
+| Outcome | Consolidated patterns from 10 skills covering conv2d, depthwise conv2d, batch norm, layer norm, and pooling; v1.1 adds convergence-test class |
+| Verification | verified-ci |
+
+## When to Use
+
+- Conv2d, depthwise conv2d, batch norm, layer norm, or pooling backward pass lacks gradient-correctness tests
+- Gradient check fails with "analytical ≈ 0 but numerical ≈ 0.009" for a normalization layer
+- Choosing between `check_gradient()` and `check_gradients()` APIs
+- Adding inference-mode (`training=False`) backward tests for batch norm
+- Extending gradient coverage to 4D inputs, multi-channel configs, param gradients (grad_gamma, grad_beta)
+- Writing exact-value analytical tests for conv2d backward (no finite differences needed)
+- Per-file test count is approaching its limit and a new file must be created
+
+## Verified Workflow
+
+### Quick Reference
+
+**Normalization cancellation fix (BatchNorm, LayerNorm — any zero-mean layer):**
+
+```mojo
+# NEVER use ones_like(output) for normalization backward tests!
+# PREFERRED: sum(output^2) loss — closed-form derivative
+var two = full_like(output, 2.0)
+var grad_output = multiply(two, output)  # dL/dY = 2 * output
+
+fn forward_for_grad(inp: ExTensor) raises -> ExTensor:
+    var out = batch_norm2d(inp, gamma, beta, running_mean, running_var,
+                           training=True, epsilon=1e-5)[0]
+    var sq = multiply(out, out)
+    var r = sq
+    while r.dim() > 0:
+        r = reduce_sum(r, axis=0, keepdims=False)
+    return r
+
+# ALTERNATIVE: non-uniform cycling pattern (interim approach)
+var grad_output = zeros_like(output)
+for i in range(output.numel()):
+    grad_output._data.bitcast[Float32]()[i] = Float32(i % 4) * Float32(0.25) - Float32(0.3)
+# Pattern: [-0.3, -0.05, 0.2, 0.45, ...], mean ≈ 0.075
+```
+
+**check_gradient() vs check_gradients():**
+
+| API | Tolerance model | Use when |
+| --- | --- | --- |
+| `check_gradient(fwd, bwd, x, grad_out, rtol, atol)` | Combined: `abs(diff) ≤ atol + rtol*magnitude` | All gradient checking tests (correct for large magnitudes) |
+| `check_gradients(fwd, bwd, x, eps, tol)` | Pure absolute: `abs(diff) < tol` | ONLY the 2 meta-test files that verify Bool-return semantics |
+
+**Tolerance quick-ref by layer type:**
+
+| Layer | rtol | atol | epsilon |
+| --- | --- | --- | --- |
+| Conv2D backward | `1e-2` | `1e-2` | `1e-4` or `3e-4` |
+| Depthwise Conv2D | `1e-2` | `1e-2` | `3e-4` |
+| BatchNorm training | `2e-2` | `1e-4` | `1e-3` |
+| BatchNorm inference | `1e-2` | `1e-4` | `1e-3` |
+| LayerNorm input | `1e-2` | `1e-5` | `1e-4` |
+| LayerNorm gamma/beta | `1e-2` | `1e-4` | `1e-4` |
+| MaxPool/AvgPool | `1e-3` | `5e-4` | `3e-4` |
+
+### Step 1: Understand the Cancellation Problem
+
+Normalization layers have a structural property:
+
+```text
+x_norm = (x - mean(x)) / std(x)  =>  sum(x_norm) = 0  (always)
+```
+
+BatchNorm backward contains a term `sum(grad_output * x_norm)`. When `grad_output = ones`:
+- `sum(1 * x_norm) = sum(x_norm) = 0` → analytical gradient is **exactly zero**
+- In float32, perturbing `x[i]` by ε=1e-4 produces numerical gradient ≈ 0.009
+- Result: "false failure" — 1000× mismatch, but the implementation is correct
+
+**The same identity holds for LayerNorm and any mean-centering normalization layer.**
+
+### Step 2: Choose the Correct grad_output Strategy
+
+**For normalization layers** — use either:
+
+1. `sum(output^2)` loss (preferred — loss function with closed-form derivative):
+
+   ```mojo
+   var grad_output = multiply(full_like(output, 2.0), output)
+   # forward closure reduces sum(out * out) to scalar
+   ```
+
+2. Non-uniform cycling pattern (interim):
+
+   ```mojo
+   for i in range(output.numel()):
+       grad_output._data.bitcast[Float32]()[i] = Float32(i % 4) * Float32(0.25) - Float32(0.3)
+   ```
+
+**For conv2d / depthwise conv2d** — `ones_like(output)` is safe (no zero-mean property).
+With `padding > 0`, prefer non-uniform to be safe at boundary positions.
+
+**For pooling** — use non-uniform for the numerical tier (AvgPool with symmetric inputs
+can cause gradient cancellation).
+
+**Consistency rule**: The `grad_output` and `forward_for_grad` closure MUST derive from the
+same loss function.
+
+### Step 3: Use check_gradient() (Not check_gradients())
+
+```mojo
+from shared.testing.gradient_checker import check_gradient
+
+fn _ones_grad(output: AnyTensor) raises -> AnyTensor:
+    var grad = zeros_like(output)
+    for i in range(output.numel()):
+        grad._set_float64(i, 1.0)
+    return grad^
+
+var output = forward(input)
+var grad_output = _ones_grad(output)
+check_gradient(forward, backward, input, grad_output, rtol=1e-2, atol=1e-2)
+```
+
+Why `check_gradient()` is required: For a gradient of magnitude 32.4 with diff 0.046:
+
+- `check_gradients(tolerance=0.01)`: 0.046 ≥ 0.01 → **FAIL** (false failure)
+- `check_gradient(rtol=1e-2, atol=1e-2)`: 0.046 ≤ 0.01 + 0.01×32.4 = 0.334 → **PASS**
+
+**Tolerance conversion from old check_gradients() calls:**
+
+| Old call | New call |
+| --- | --- |
+| `check_gradients(..., tolerance=0.01)` | `check_gradient(..., rtol=1e-2, atol=1e-2)` |
+| `check_gradients(..., tolerance=0.05)` | `check_gradient(..., rtol=5e-2, atol=1e-4)` |
+| `check_gradients(..., tolerance=0.1)` | `check_gradient(..., rtol=1e-1, atol=1e-2)` |
+
+**Exceptions** (must keep `check_gradients()`):
+- `test_gradient_checker_meta.mojo` — tests Bool-return semantics
+- `test_gradient_checker_noncont_tensors.mojo` — tests Bool-return semantics
+
+### Step 4: Conv2D Gradient Checking
+
+Two gradient checking APIs — pick the one matching existing tests:
+
+```mojo
+# API 1: check_gradient (explicit grad_output)
+fn forward_input(inp: ExTensor) raises -> ExTensor:
+    return conv2d(inp, kernel, bias, stride=1, padding=0)
+
+fn backward_input(grad_out: ExTensor, inp: ExTensor) raises -> ExTensor:
+    return conv2d_backward(grad_out, inp, kernel, stride=1, padding=0).grad_input
+
+var output = forward_input(x)
+var grad_output = ones_like(output)
+check_gradient(forward_input, backward_input, x, grad_output, rtol=1e-2, atol=1e-2)
+
+# API 2: check_gradients (internal grad_output, note 'raises escaping' on closures)
+fn forward(x: ExTensor) raises escaping -> ExTensor:
+    return conv2d(x, kernel, bias, stride=stride, padding=padding)
+
+fn backward(grad_out: ExTensor, x: ExTensor) raises escaping -> ExTensor:
+    return conv2d_backward(grad_out, x, kernel, stride=stride, padding=padding).grad_input
+
+var passed = check_gradients(forward, backward, input, epsilon=1e-4, tolerance=1e-2)
+assert_true(passed, "Conv2D gradient check failed")
+```
+
+**With padding > 0** — use non-uniform `grad_output`:
+
+```mojo
+var grad_output = zeros_like(output)
+for i in range(output.numel()):
+    grad_output._data.bitcast[Float32]()[i] = Float32(i % 4) * Float32(0.25) - Float32(0.3)
+```
+
+**Per-file test count budget:**
+
+```
+test_gradient_checking_basic.mojo:  ≤10 tests
+test_gradient_checking_dtype.mojo:  ≤10 tests
+test_gradient_checking_conv2d.mojo: ≤10 tests (all 3 outputs × 3 configs = 9 tests)
+test_backward_conv_padding.mojo:    ≤10 tests
+```
+
+Check before adding: `grep -c "^fn test_" <file>.mojo`
+
+**Recommended test configurations for conv2d:**
+
+| Config | in\_ch | out\_ch | kernel | stride | padding | input shape |
+| --- | --- | --- | --- | --- | --- | --- |
+| same-padding | 1 | 1 | 3×3 | 1 | 1 | `(1,1,5,5)` |
+| strided | 1 | 1 | 3×3 | 2 | 0 | `(1,1,7,7)` |
+| multi-channel | 2 | 3 | 3×3 | 1 | 0 | `(1,2,5,5)` |
+
+### Step 5: Analytically Exact Conv2D Backward Tests
+
+For all-ones input, all-ones kernel, zero bias, single output position (`input_spatial = kernel_spatial`):
+
+| Gradient | Formula | Example (in\_ch=3, out\_ch=8, batch=1) |
+| --- | --- | --- |
+| `grad_weights[oc,ic,kh,kw]` | `batch × 1.0` | `1.0` |
+| `grad_input[b,ic,ih,iw]` | `out_channels × 1.0` | `8.0` |
+| `grad_bias[oc]` | `batch × out_H × out_W` | `1.0` (single output pos) |
+
+Batched (batch=2): `grad_bias` and `grad_weights` multiply by batch; `grad_input` unchanged.
+
+Padding=1 border pixel formula (all-ones, kernel=3, out\_ch=C, spatial=N):
+
+```text
+grad_input[b,ic,ih,iw] = out_channels × overlap_h(ih) × overlap_w(iw)
+
+corner   (0, 0):   2×2 = 4  →  4×C
+edge  (0, 1):      2×3 = 6  →  6×C
+interior (1, 1):   3×3 = 9  →  9×C
+
+Example (C=8, N=5): corner=32.0, edge=48.0, interior=72.0
+```
+
+### Step 6: Depthwise Conv2D Specifics
+
+**Critical API differences from regular conv2d:**
+
+| Aspect | Regular Conv2D | Depthwise Conv2D |
+| --- | --- | --- |
+| Kernel shape | `(out_channels, in_channels, kH, kW)` | `(channels, 1, kH, kW)` |
+| Gradient field | `.grad_weights` | `.grad_weights` (NOT `.grad_kernel`) |
+| Per-file limit | ≤10 tests | ≤8 tests (stricter) |
+
+```mojo
+# Depthwise kernel shape
+kernel_shape.append(channels)
+kernel_shape.append(1)  # Always 1
+kernel_shape.append(kH)
+kernel_shape.append(kW)
+```
+
+**grad_bias analytical test** (1×1 output per channel):
+
+```mojo
+var grad_output = zeros_like(output)
+grad_output._data.bitcast[Float32]()[0] = Float32(0.5)   # channel 0
+grad_output._data.bitcast[Float32]()[1] = Float32(-0.3)  # channel 1
+var grads = depthwise_conv2d_backward(grad_output, x, kernel, stride=1, padding=0)
+assert_almost_equal(grads.grad_bias._data.bitcast[Float32]()[0], Float32(0.5), tolerance=1e-5)
+```
+
+### Step 7: BatchNorm Gradient Testing
+
+**Training mode (sum(output^2) loss approach):**
+
+```mojo
+var result = batch_norm2d(x, gamma, beta, running_mean, running_var, training=True, epsilon=1e-5)
+var output = result[0]
+var grad_output = multiply(full_like(output, 2.0), output)
+
+fn forward_for_grad(inp: ExTensor) raises -> ExTensor:
+    var res = batch_norm2d(inp, gamma, beta, running_mean, running_var, training=True, epsilon=1e-5)
+    var out = res[0]
+    var sq = multiply(out, out)
+    var r = sq
+    while r.dim() > 0:
+        r = reduce_sum(r, axis=0, keepdims=False)
+    return r
+
+var numerical = compute_numerical_gradient(forward_for_grad, x, epsilon=1e-3)
+assert_gradients_close(grad_input, numerical, rtol=2e-2, atol=1e-4, message="...")
+```
+
+**Inference mode (training=False):**
+
+```mojo
+# Non-trivial running stats
+var running_mean = zeros(param_shape, DType.float32)
+running_mean._data.bitcast[Float32]()[0] = 0.3
+var running_var = ones(param_shape, DType.float32)
+running_var._data.bitcast[Float32]()[0] = 0.5
+
+fn forward_for_gamma_infer(g: ExTensor) raises -> ExTensor:
+    var res = batch_norm2d(x, g, beta, running_mean, running_var, training=False, epsilon=1e-5)
+    var out = res[0]
+    var weighted = multiply(out, grad_output)
+    var r = weighted
+    while r.dim() > 0:
+        r = reduce_sum(r, axis=0, keepdims=False)
+    return r
+
+var num_gamma = compute_numerical_gradient(forward_for_gamma_infer, gamma, epsilon=1e-3)
+assert_gradients_close(grad_gamma_analytical, num_gamma, rtol=1e-2, atol=1e-4, message="...")
+```
+
+### Step 8: LayerNorm Parameter Gradient Checks
+
+`layer_norm_backward(grad_output, x, gamma, epsilon)` returns `(grad_input, grad_gamma, grad_beta)`.
+
+```mojo
+# grad_gamma test — perturb gamma, hold x and grad_output fixed
+fn forward_for_gamma(g: ExTensor) raises -> ExTensor:
+    var out = layer_norm(x, g, beta, epsilon=1e-5)
+    var weighted = multiply(out, grad_output)
+    var r = weighted
+    while r.dim() > 0:
+        r = reduce_sum(r, axis=0, keepdims=False)
+    return r
+
+var num_gamma = compute_numerical_gradient(forward_for_gamma, gamma, epsilon=1e-4)
+var grad_gamma_analytical = layer_norm_backward(grad_output, x, gamma, epsilon=1e-5)[1]
+assert_gradients_close(grad_gamma_analytical, num_gamma, rtol=1e-2, atol=1e-4, ...)
+
+# grad_beta test — perturb beta (use non-zero beta to document additive shift path)
+fn forward_for_beta(b: ExTensor) raises -> ExTensor:
+    var out = layer_norm(x, gamma, b, epsilon=1e-5)
+    var weighted = multiply(out, grad_output)
+    var r = weighted
+    while r.dim() > 0:
+        r = reduce_sum(r, axis=0, keepdims=False)
+    return r
+```
+
+**Gamma shape for 4D inputs** — flattened over last 3 dims:
+
+| Input shape | Gamma shape |
+| --- | --- |
+| `[B, C, H, W]` | `[C*H*W]` |
+| `[2, 2, 2, 4]` | `[16]` |
+
+### Step 9: Pooling Backward (Three-Tier Pattern)
+
+**Tier 1 — Shape:** `grad_input.shape() == input.shape()`
+
+**Tier 2 — Analytical values:**
+
+```mojo
+# MaxPool: max position receives gradient, others get 0
+var x_known = ExTensor([1, 1, 2, 2], dtype)
+x_known._set_float64(1, 4.0)  # max — receives gradient
+var go = ExTensor([1, 1, 1, 1], dtype)
+go._set_float64(0, 1.0)
+var gi = maxpool2d_backward(go, x_known, 2, 2, 0)
+# gi[1] > 0.5, gi[0] ≈ gi[2] ≈ gi[3] ≈ 0
+
+# AvgPool: each element = 1 / (pool_size^2)
+var gi_avg = avgpool2d_backward(go, x_all_ones, 2, 2, 0)
+# Each gi_avg[k] ≈ 0.25
+```
+
+**Tier 3 — Numerical check (non-uniform grad_output required for AvgPool):**
+
+```mojo
+fn forward_max(x: ExTensor) raises escaping -> ExTensor:
+    var pool_out = maxpool2d(x, pool_size, stride, padding=padding)
+    var result = ExTensor([1], x.dtype())
+    var s: Float64 = 0.0
+    for i in range(pool_out.numel()):
+        s += pool_out._get_float64(i) * grad_out_nu._get_float64(i)
+    result._set_float64(0, s)
+    return result^
+
+var analytical = maxpool2d_backward(grad_out_nu, input_small, pool_size, stride, padding)
+var numerical = compute_numerical_gradient(forward_max, input_small, epsilon)
+assert_gradients_close(analytical, numerical, rtol=1e-3, atol=5e-4, ...)
+```
+
+### Step 10: Commit Pattern (GLIBC Mismatch)
+
+On hosts with GLIBC < 2.32, the mojo-format pre-commit hook will fail:
+
+```bash
+SKIP=mojo-format git commit -m "test(<layer>): add gradient checking tests"
+# CI runs mojo format in Docker with correct GLIBC
+```
+
+## End-to-end Convergence Tests (complementary to FD checks)
+
+Finite-difference (FD) per-op gradient checks validate *gradient values* on isolated layers, but
+they do NOT validate *training dynamics*. A substrate with correct per-op gradients can still
+fail to train if the data pipeline corrupts inputs, the optimizer skips parameters silently,
+or writeback is broken. **Add at least one end-to-end convergence test per autograd substrate.**
+
+### The gap FD checks cannot catch
+
+Surfaced in ProjectOdyssey PR #5466: the existing `test_variable_layers.mojo` validated
+`loss.backward()` populated gradient registry entries and matched analytical values for 3×3 conv
+and 2×3 linear ops. All tests PASSED while `train_autograd.mojo` trained EMNIST to 2.76% accuracy
+(= chance for 47 classes; ln(47)=3.85 loss flatline). Root cause was a 1-byte-per-element batch
+copy upstream of the substrate — not catchable by per-op FD tests because they bypass the data
+pipeline.
+
+### Three-tier convergence test pattern
+
+Each tier runs N training steps on persistent parameters and asserts loss decreased by at least X%.
+Each tier catches a different failure mode:
+
+| Tier | Architecture | Steps | Pass criterion | Catches |
+|------|--------------|-------|----------------|---------|
+| 1 | Tiny MLP (linear → CE) | 20 | loss drops ≥90% | Substrate basics: tape recording, backward dispatch, optimizer step, writeback |
+| 2 | Small conv stack (conv → relu → flatten → linear → CE) | 30 | loss drops ≥70% | Multi-layer gradient propagation; cancellation through chained ops |
+| 3 | Full production shape (e.g. LeNet: conv→relu→maxpool×2, flatten, 3×FC) | 50 | loss drops ≥30% | Exact op stack used in production, at realistic shape |
+
+### Critical implementation details
+
+- **Asymmetric weight init is mandatory** for multi-layer tiers (e.g. `t[i] = base + i*slope`).
+  Uniform fill creates dead-symmetry pathology: every layer output is identical, softmax is uniform,
+  and gradients to earlier layers are algebraically zero (only fp32 cancellation noise survives).
+  Tier 1 (single layer) does not manifest this, but tiers 2+ do.
+- **Asymmetric inputs**, not constant fill. Conv kernels need spatial signal to differentiate
+  pixels; constant inputs produce false-negative "convergence failure" that is actually input
+  deficiency.
+- **Loss-decrease threshold must be relative** (`(first - last) / first ≥ target`) so the test
+  is scale-invariant.
+- **Also assert ≥1 trainable parameter changed** by some `min_abs_delta` to catch silent
+  optimizer no-ops (e.g. `has_gradient()` returning False and SGD skipping the param).
+- **Persist parameter state across steps** by reassigning from `parameters[i].data` after each
+  `optimizer.step()`.
+
+### When a convergence test fails AND a magnitude test shows weird-small gradients
+
+Before blaming the substrate: (a) rerun with asymmetric init, (b) compare gradients directly with
+a manual chain. L2 difference between manual and autograd grads should be exactly 0.0 if the
+substrate is correct. Symmetric init + a real upstream data bug produce identical symptoms
+(chance-loss plateau + tiny gradients), so direct manual-vs-autograd comparison is the only way
+to disambiguate.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --- | --- | --- | --- |
+| Trusting FD gradient checks as sufficient validation | Existing `test_variable_layers.mojo` checked gradients against analytical values on isolated 3×3 ops; all tests passed | Per-op FD validates *gradient values*, not *training dynamics*. A correct-gradient substrate can still produce a training loop that never converges if the data pipeline corrupts inputs upstream | Pair every per-op gradient test with at least one end-to-end convergence test that runs ≥20 SGD steps on persistent params and asserts loss decreased by a relative threshold |
+| Writing the first draft of the convergence tests with uniform weight init | All weights filled with constant 0.05 to keep the test self-contained | Uniform init = mathematical pathology: every layer output is identical, softmax is uniform, gradient back through the layer is algebraically zero (only fp32 cancellation noise survives) | Convergence tests MUST use asymmetric init (e.g., `t[i] = base + i*slope`). Tier 1 (single layer) doesn't manifest the pathology, but tiers 2+ (multi-layer) do |
+| Using constant-fill inputs in the convergence tests | Input `t[i] = 0.3` for all pixels | Conv kernels have no spatial signal to differentiate; even when grads flow, the kernel can't learn a meaningful pattern. False-negative "convergence failure" that's actually input deficiency | Convergence-test inputs should vary across the spatial dimensions. Use `_make_asymmetric` not `_make_tensor(fill=const)` for both weights and inputs |
+| Test 2 plateau at ln(2)=0.694 initially diagnosed as conv backward bug | Saw loss flatline at chance loss for 2 classes, plus a buggy magnitude test showing 1e-8 conv grads | Misdiagnosis: this combination of symptoms (chance-loss plateau + tiny conv grads) is exactly what symmetric init produces, AND it's what a real substrate bug would produce. Required direct manual-vs-autograd gradient comparison to disambiguate | When a convergence test fails AND a magnitude test shows weird-small gradients, before blaming the substrate: (a) rerun with asymmetric init, (b) compare gradients directly with a manual chain |
+| `grad_output = ones_like(output)` for normalization | Uniform upstream gradient for batch norm \| layer norm backward | `sum(x_norm) = 0` by construction; analytical grad is exactly zero; numerical picks up float32 noise ≈ 0.009 | Never use uniform grad_output for any zero-mean normalization layer |
+| Increase atol to hide mismatch | Raised tolerance from 1e-5 to 1e-2 for the failing normalization test | Masks the real issue without validating backward correctness | Fix the test setup, not the threshold |
+| Modify backward formula | Changed grad_input formula to produce non-zero output for uniform grad | The formula IS correct; zero result for uniform grad is mathematically right | Don't change correct code to pass a badly designed test |
+| `epsilon=1e-6` for numerical gradient | Smaller perturbation for more accurate finite differences | Worsens float32 rounding; analytical vs numerical gap grows | Smaller epsilon increases numerical error in float32; use 3e-4 or 1e-3 |
+| `check_gradients()` with conv2d (magnitude 32.4) | Old API kept; only epsilon changed from 1e-4 to 3e-4 | Diff dropped from 0.134 to 0.046 but still failed absolute tolerance 0.01 | The problem was the tolerance model (absolute vs relative), not epsilon |
+| `check_gradients()` with non-uniform inputs for depthwise conv2d | Added non-uniform inputs but kept old API | Diff was 0.0103 at magnitude 126.4 — barely exceeded absolute tolerance 0.01 | Large-magnitude gradients need relative tolerance; `check_gradient()` is required |
+| Tight tolerances (1e-3\|1e-6) copied from linear layer tests | Used linear layer rtol/atol for conv2d tests | Conv2d accumulates more FP error via strided access + multiple passes | Use rtol=1e-2, atol=1e-2 for conv2d; pool tolerances can be tighter (1e-3\|5e-4) |
+| `.grad_kernel` field for depthwise backward | Assumed depthwise returns a field named `.grad_kernel` | Actual return type is `GradientTriple` with `.grad_weights` | Always verify field names from `gradient_types.mojo`, not docstrings |
+| `rtol`/`atol` keyword args in `assert_almost_equal` | Passed `rtol=1e-2, atol=1e-2` | `assert_almost_equal` takes `tolerance: Float32`, not rtol/atol | Check the actual Mojo function signature — differs from PyTorch/numpy |
+| Adding tests to an existing file at capacity | Kept adding to `test_backward_conv_pool.mojo` | File at per-file test limit; CI heap corruption risk | Check `grep -c "^fn test_"` before adding; create new split file when ≥6-8 tests exist |
+| `ones_like(output)` for pooling numerical tier | Passed uniform grad for AvgPool numerical check | AvgPool with symmetric inputs causes gradient cancellation — numerical grad ≈ 0 everywhere | Use non-uniform grad_output for pooling numerical tier |
+| `compute_numerical_gradient` on vector pool output | Called function where forward returned raw pool output | Vector-output path sums all Jacobian elements — can cancel for AvgPool | Wrap forward function to compute weighted dot product and return scalar ExTensor |
+| Non-uniform alternating pattern as final norm solution | Used `grad_output[i] = (i%4)*0.25 - 0.3` as long-term fix | Works but is ad-hoc, not derived from a loss function | Use `sum(output^2)` loss with `grad_output = 2 * output` for principled verification |
+| Single `epsilon=1e-4` for float32 inference mode | Same epsilon as training mode tests | Fixed running stats amplify perturbation sensitivity | Use `epsilon=1e-3` for inference mode batch norm |
+| `full_like` not imported | Used `full_like` without adding to extensor import | Mojo compilation error: `full_like` undefined | Add `full_like` to extensor import before using it |
+| `_make_ones_grad(fwd: NumericalForward, x)` helper | Helper takes NumericalForward trait parameter to compute forward internally | Mojo `def` functions cannot take trait parameters directly | Use `_ones_grad(output: AnyTensor)` taking the already-computed output |
+| Skipping non-uniform pattern for small inputs | Assumed small tensors ([2,4,4,4]) avoid cancellation | Cancellation is structural (math), not statistical — size doesn't matter | The zero-sum property is inherent to batch norm math, not input size |
+| `List[Int](1, 3, 6, 6)` literal syntax for shapes | Used list literal constructor | Deprecated syntax flagged by pre-commit hook | Always use `List[Int]()` + `.append()` calls for shape construction |
+| Reusing conv2d forward closure directly for batch norm | `fn forward(x): return batch_norm2d(x, ...)[0]` returning full tensor | `compute_numerical_gradient` sums all output elements — equivalent to ones upstream (same cancellation) | The closure must compute the scalar loss explicitly |
+| Gamma shape `[C, H, W]` for 4D layer norm | Used 3D gamma for 4D input | Implementation uses flat `[C*H*W]` for 4D inputs | Verify gamma shape convention matches the implementation |
+| Create a new standalone testing doc | Draft new `normalization-testing-guide.md` | Duplication; belongs in the existing shared guide | Extend the existing doc; don't create parallel documentation |
+
+## Results & Parameters
+
+### Required Imports
+
+```mojo
+from shared.testing import (
+    compute_numerical_gradient,
+    assert_gradients_close,
+)
+from shared.testing.gradient_checker import check_gradient
+from shared.core.extensor import ExTensor, zeros, ones, zeros_like, ones_like, full_like
+from shared.core.normalization import (
+    batch_norm2d, batch_norm2d_backward,
+    layer_norm, layer_norm_backward,
+)
+from shared.core.conv import conv2d, conv2d_backward, depthwise_conv2d, depthwise_conv2d_backward
+from shared.core.pooling import maxpool2d, avgpool2d, maxpool2d_backward, avgpool2d_backward
+from shared.core.arithmetic import multiply
+from shared.core.reduction import sum as reduce_sum
+```
+
+### Gradient Return Types
+
+```text
+GradientTriple (Conv2dBackwardResult, DepthwiseConv2dBackwardResult):
+  .grad_input   → gradient w.r.t. input x
+  .grad_weights → gradient w.r.t. kernel/weights (NOT .grad_kernel for depthwise)
+  .grad_bias    → gradient w.r.t. bias
+
+GradientPair (Conv2dNoBiasBackwardResult):
+  .grad_a → gradient w.r.t. input x
+  .grad_b → gradient w.r.t. kernel
+
+layer_norm_backward / batch_norm2d_backward return tuples:
+  result[0] → grad_input
+  result[1] → grad_gamma
+  result[2] → grad_beta
+```
+
+### Migration Decision Tree
+
+```text
+Writing or migrating a gradient checking test?
+├─ Is this a meta-test that checks Bool return of check_gradients()?
+│   └─ YES → Keep check_gradients() (test_gradient_checker_meta, test_gradient_checker_noncont_tensors)
+└─ NO → Use check_gradient() with:
+    ├─ Normalization layer? → Non-uniform or sum(output^2) grad_output
+    └─ All other layers → _ones_grad(output) helper
+    ├─ Old tolerance=X → rtol=X, atol=1e-2 (normal) or atol=1e-4 (large values)
+    └─ Always: non-uniform inputs (Float32(i) * 0.1)
+```
+
+### Convergence Test Helpers
+
+```mojo
+# Asymmetric tensor init — eliminates the dead-symmetry pathology
+def _make_asymmetric(shape: List[Int], base: Float64, slope: Float64) raises -> AnyTensor:
+    var t = zeros(shape, DType.float32)
+    var n = 1
+    for d in shape: n *= d
+    for i in range(n):
+        t._set_float64(i, base + Float64(i) * slope)
+    return t^
+
+# Loss-decrease assertion (relative, scale-invariant)
+def _assert_loss_decreased(name: String, losses: List[Float32], min_relative_drop: Float64) raises:
+    var first = Float64(losses[0])
+    var last = Float64(losses[len(losses) - 1])
+    var drop = (first - last) / first
+    if drop < min_relative_drop:
+        raise Error(name + ": loss drop " + String(drop) + " < required " + String(min_relative_drop))
+
+# Parameter-changed sanity check — catches silent optimizer no-ops
+def _assert_parameter_changed(name: String, before: Float64, after: Float64, min_abs_delta: Float64) raises:
+    var delta = before - after if before > after else after - before
+    if delta < min_abs_delta:
+        raise Error(name + ": parameter unchanged (delta=" + String(delta) + ")")
+```
+
+### Convergence Test Template
+
+```mojo
+def test_my_convergence() raises:
+    var optimizer = SGD(learning_rate=0.01)
+    var w = _make_asymmetric([out, in], 0.05, 0.003)  # NOT _make_tensor(fill=const)
+    var b = _make_tensor([out], 0.0)
+    var losses = List[Float32]()
+    var w_before_0 = w._get_float64(0)
+    for step in range(N):
+        var tape = GradientTape()
+        tape.enable()
+        var x = Variable(_make_asymmetric([batch, in], 0.1, 0.01), False, tape)  # asymmetric input too
+        var v_w = Variable(w, True, tape)
+        var v_b = Variable(b, True, tape)
+        # ... forward → loss → backward ...
+        losses.append(loss_val)
+        var params: List[Variable] = []
+        params.append(v_w^); params.append(v_b^)
+        optimizer.step(params, tape)
+        w = params[0].data  # persist for next step
+        b = params[1].data
+        optimizer.zero_grad(tape)
+    _assert_loss_decreased("name", losses, 0.30)
+    _assert_parameter_changed("w[0]", w_before_0, w._get_float64(0), 0.0001)
+```
+
+### CI Workflow Update
+
+```yaml
+- name: "Core Gradient"
+  path: "tests/shared/core"
+  pattern: "... test_gradient_checking_conv2d.mojo test_backward_conv_padding.mojo
+    test_depthwise_conv_grad_check_part1.mojo test_depthwise_conv_grad_check_part2.mojo ..."
+  continue-on-error: true
+```
+
+Insert new test files alphabetically in the `pattern` field.
+
+## Verified On
+
+| Project | Context | Details |
+| --- | --- | --- |
+| ProjectOdyssey | BatchNorm backward gradient tests (PRs #3816, #4780) | Sum-of-squares loss pattern for normalization |
+| ProjectOdyssey | Conv2d gradient checking (PRs #3865, #3772, #4793, #4809) | All 3 outputs × 3 configs |
+| ProjectOdyssey | Depthwise conv2d gradient checking (PR #4794, issue #3775) | Part1+Part2 split files |
+| ProjectOdyssey | check\_gradient migration — PR #5107, PR #5210 (59 calls across 5 files) | Migration complete |
+| ProjectOdyssey | LayerNorm param gradients (PR #4806, issue #3810) | grad\_gamma and grad\_beta |
+| ProjectOdyssey | Pool backward tester (PR #4782, issue #3720) | Three-tier pattern |
+| ProjectOdyssey | Conv2d analytical value tests (PRs #4797, #4799, issue #3235) | Batch+padding formulas |
+| ProjectOdyssey | PR #5466 — added `tests/projectodyssey/autograd/test_autograd_convergence.mojo` | All 3 convergence tiers pass after upstream data-copy fix; previously RED due to combined test-init + data-copy bugs. Caught a class of training-pipeline failures that per-op FD tests missed for months. Tier 1 loss 1.39→0.022 (20 steps); Tier 2 loss 1.41→0.099 (30 steps); Tier 3 loss 7.16e7→2.23 (50 steps) |
+
+---
+
+## Superseded from debugging-symmetric-weight-init-dead-symmetry
+
+**Original date:** 2026-05-26 · **Original version:** 1.0.0
+
+```yaml
+name: debugging-symmetric-weight-init-dead-symmetry
+description: "Diagnose and avoid the symmetric-weight-init pathology where uniform-fill weights make multi-layer gradients algebraically zero and produce false 'substrate bug' diagnoses. Use when: (1) a convergence test or training run plateaus at the uniform-distribution loss (e.g., ln(num_classes)), (2) gradients to early layers come back at fp32 cancellation noise magnitude (~1e-8) while later layers have normal-magnitude gradients, (3) writing self-contained test cases for autograd/backward correctness, (4) reviewing test code that initializes weights with a constant fill."
+category: debugging
+date: 2026-05-26
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - autograd
+  - weight-init
+  - dead-symmetry
+  - convergence-test
+  - backward
+  - gradient-pathology
+  - mojo
+```
+
+# Symmetric Weight Init Dead-Symmetry Pathology
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-26 |
+| **Objective** | Recognize when "broken substrate" symptoms (tiny early-layer grads, loss plateau at ln(C)) are actually caused by uniform-fill weight init creating algebraically-zero gradients, not a real backward bug |
+| **Outcome** | Success — switching to asymmetric per-element ramp init unmasks real substrate behavior and prevents 30+ minute misdiagnoses |
+| **Verification** | verified-ci (ProjectOdyssey PR #5466) |
+
+## When to Use
+
+- Convergence test plateaus at chance loss (e.g., `ln(num_classes)`) after the first few steps
+- Gradients to early (conv/embedding) layers are ~1e-8 in magnitude while later (FC) gradients are ~1e-1
+- Tempted to write `_make_tensor(shape, 0.05)` or equivalent uniform-fill weight init in a test
+- Reviewing a PR that uses constant-fill weights in any multi-layer test
+- Diagnosing "the substrate seems broken but only in chained ops, not in isolation"
+
+## Verified Workflow
+
+### Quick Reference
+
+```mojo
+# WRONG — uniform init creates dead-symmetry, algebraically zeros gradients
+var w = _make_tensor([4, 32], 0.05)  # every weight = 0.05
+
+# RIGHT — asymmetric init with per-element ramp, breaks the symmetry
+def _make_asymmetric(shape: List[Int], base: Float64, slope: Float64) raises -> AnyTensor:
+    var t = zeros(shape, DType.float32)
+    var n = 1
+    for d in shape: n *= d
+    for i in range(n):
+        t._set_float64(i, base + Float64(i) * slope)
+    return t^
+
+var w = _make_asymmetric([4, 32], 0.05, 0.001)  # 0.050, 0.051, 0.052, ...
+```
+
+For DIAGNOSIS (when you see the symptom and want to confirm it's the pathology, not a real bug):
+
+```bash
+# Compare grads with asymmetric vs symmetric init; if they differ by orders of
+# magnitude on the same input, the symmetric run was hitting dead-symmetry.
+```
+
+### Detailed Steps
+
+1. **Identify the symptom**: convergence test loss plateaus at `ln(C)` for C classes, or earlier-layer gradients are ~7 orders of magnitude smaller than later-layer gradients.
+2. **Don't immediately blame the substrate.** First, rerun with asymmetric weight init using `_make_asymmetric(shape, base, slope)` where `slope` is small but nonzero (e.g., 1% of `base`).
+3. If the gradients now look healthy and the loss decreases, the original failure was the symmetric-init pathology, not a backward bug.
+4. If gradients still look wrong, build a manual-vs-autograd direct comparison on the same input. The L2 difference between manual and autograd gradients should be exactly 0.0 if the substrate is correct.
+
+### The Math (for the README of any test you write)
+
+For a linear layer `y = Wx + b` with W uniformly initialized to constant `c`:
+
+- Every column of W is identical
+- Every output `y[i] = sum_k(c * x[k]) + b[i] = c * sum(x) + b[i]` — outputs differ only by bias
+- After softmax, probability mass is near-uniform across classes
+- Cross-entropy backward: `dL/d_logits = softmax - target` sums to exactly 0 across the class axis
+- Backward through linear: `dL/dx = sum_k(dL/dy[k] * W[k, :]) = (sum dL/dy[k]) * c` because every W column is identical
+- Since `sum(dL/dy) = 0`, the input gradient is **exactly zero** algebraically — only fp32 cancellation noise (~1e-8) survives
+- All upstream layers (conv, etc.) see this near-zero upstream grad and produce near-zero kernel grads
+
+The single-linear-layer case doesn't manifest because the FC layer's own grad is still nonzero (it's `dL/dy ⊗ x`, not the broken `sum(dL/dy) * c`). The pathology only shows up in multi-layer stacks where downstream layers need a nonzero `grad_input`.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Initial substrate bug-hunt on autograd PR #5462 | Wrote a chained convergence test `conv → relu → flatten → linear → CE` with fcw initialized to 0.05 (uniform). Saw conv kernel grads come back at 1.7e-8 while FC grads were 0.09 | Symmetric fcw → uniform softmax → algebraically zero grad_input from FC → conv sees only fp32 noise. Cost: ~30 min misdiagnosis as "conv2d backward bug" | First step when diagnosing "substrate produces tiny gradients in stacks": rerun with asymmetric weight init before instrumenting backward kernels |
+| Believed the test was "ill-conditioned" but the substrate was still likely buggy | After realizing symmetric init was the cause of the magnitude weirdness, was tempted to keep blaming the substrate because real training (with kaiming init) ALSO produced loss plateau at ln(47) | The training plateau and the test plateau had DIFFERENT root causes that happened to produce the same symptom. The training plateau was caused by an upstream batch-copy bug; the test plateau was caused by symmetric init. Same fingerprint, two bugs | When multiple symptoms point to "X is broken," verify each independently. A test failure and a production failure with similar symptoms can have different causes, especially when one of the symptoms is a pathological math case |
+| Pasted `_make_tensor(shape, 0.0)` for bias and assumed it was harmless | The bias is small and not multi-channel, so I figured uniform-zero was fine | True — bias init doesn't cause the pathology because there's no symmetry to break across the bias's dimensions. The bug is specifically uniform across the *input axis* of a layer | The pathology requires uniform fill across the input dimension of a layer (so every output ends up identical). Uniform bias is fine; uniform weight matrix or kernel is not |
+| Considered `_make_asymmetric(shape, 0.05, 0.0)` as a "subtle" asymmetry | Wanted to keep the init "almost uniform" to stay close to real-world Xavier/Kaiming magnitudes | slope=0.0 IS uniform — same pathology. Need actual nonzero slope | The slope must be measurably nonzero. A good rule: `slope = base / n` where n is the number of elements in the input dimension. That makes the per-element variation comparable in scale to a real random init |
+
+## Results & Parameters
+
+### Configuration
+
+Default asymmetric-init recipe for autograd convergence tests:
+
+| Layer type | base | slope | Comment |
+|------------|------|-------|---------|
+| Linear (out=10, in=84) — output projection | 0.005 | 0.0005 | Final classifier |
+| Linear (out=120, in=256) — mid FC | 0.005 | 0.00005 | Slope scales with 1/n to keep magnitude reasonable |
+| Conv2d (6, 1, 5, 5) — first conv | 0.05 | 0.003 | Larger base for first conv |
+| Conv2d (16, 6, 5, 5) — second conv | 0.02 | 0.001 | Smaller base for downstream conv |
+
+Input data should also be asymmetric — use a per-pixel ramp `base + i*slope` instead of constant fill, so conv kernels have spatial signal to lock onto.
+
+### Expected Output
+
+- Convergence test loss decreases monotonically from the chance baseline instead of plateauing at `ln(C)`
+- Early-layer (conv/embedding) gradients come back at the same order of magnitude as later-layer gradients (no 7-orders-of-magnitude gap)
+- Manual-vs-autograd L2 gradient diff is exactly 0.0 on identical input
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | PR #5466 — `tests/projectodyssey/autograd/test_autograd_convergence.mojo` `_make_asymmetric` helper. Originally hit the pathology in test 2 (loss plateau at ln(2)=0.694) which masked a separate upstream data-copy bug. Switching weights and inputs to asymmetric init made the substrate-correctness signal visible. After also fixing the upstream batch-copy bug, all 3 convergence tiers go GREEN | — |
+
+## References
+
+- [Symmetry breaking in neural networks](https://en.wikipedia.org/wiki/Symmetry_breaking)
+- [Kaiming initialization paper](https://arxiv.org/abs/1502.01852)
+
+---
+
+## Superseded from bf16-precision-recommendation
+
+**Original date:** 2026-03-07 · **Original version:** 1.0.0
+
+```yaml
+name: bf16-precision-recommendation
+description: 'Add hardware-guarded BF16 support to dtype recommendation functions.
+  Use when: enabling BF16 for large Mojo ML models, adding Apple Silicon hardware
+  guard for BF16, or extending precision recommendation with hardware capability parameters.'
+category: tooling
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+```
+
+# BF16 Precision Recommendation with Hardware Guard
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-07 |
+| **Objective** | Enable BF16 in `recommend_precision_dtype()` for large models (>= 1000 MB) with Apple Silicon guard |
+| **Outcome** | Implemented `hardware_has_bf16` parameter, large models return `DType.bfloat16` by default, fall back to FP16 on Apple Silicon |
+| **Root Cause** | Original function returned `DType.float16` for both medium and large models — large model branch was unimplemented |
+| **Key Learning** | Add `hardware_has_bf16: Bool = True` parameter alongside existing `hardware_has_fp16`; BF16 is not supported on Apple Silicon so the guard is critical |
+
+## When to Use
+
+- Adding BF16 support to a Mojo `recommend_precision_dtype`-style function
+- Implementing hardware capability guards (Apple Silicon, legacy GPU) for BF16
+- Extending dtype recommendation APIs with new hardware parameters while preserving backward compatibility
+- Updating corresponding Mojo tests when a function's return value changes for a model size tier
+
+## Verified Workflow
+
+### Step 1: Identify the Unimplemented Branch
+
+The function had a `model_size_mb >= 1000.0` branch that still returned `DType.float16`. Confirmed by reading the source:
+
+```mojo
+else:
+    # Large model - FP16 strongly recommended
+    return DType.float16  # <-- never used BF16
+```
+
+### Step 2: Add `hardware_has_bf16` Parameter
+
+Add with default `True` so existing callers are unaffected (BF16 supported on most non-Apple hardware):
+
+```mojo
+fn recommend_precision_dtype(
+    model_size_mb: Float64,
+    hardware_has_fp16: Bool = True,
+    hardware_has_bf16: Bool = True,
+) -> DType:
+```
+
+### Step 3: Implement Large Model Branch
+
+```mojo
+else:
+    # Large model - BF16 strongly recommended for wider exponent range
+    if hardware_has_bf16:
+        return DType.bfloat16
+    else:
+        return DType.float16
+```
+
+### Step 4: Update Docstring
+
+- Add `hardware_has_bf16` to `Args:` section with Apple Silicon note
+- Update Recommendations table: "Large models (>1GB): BF16 strongly recommended (FP16 if no BF16 hardware)"
+
+### Step 5: Update Tests
+
+Three test cases for the large-model tier:
+
+```mojo
+# Large model with BF16 hardware - should recommend BF16
+var large_dtype = recommend_precision_dtype(2000.0, hardware_has_fp16=True)
+assert_equal(large_dtype, DType.bfloat16, "Large models should use BF16")
+
+# Apple Silicon guard: large model without BF16 - fall back to FP16
+var large_no_bf16_dtype = recommend_precision_dtype(
+    2000.0, hardware_has_fp16=True, hardware_has_bf16=False
+)
+assert_equal(large_no_bf16_dtype, DType.float16, "Large models without BF16 hardware should use FP16")
+
+# No FP16 or BF16 hardware: fall back to FP32
+var no_hw_dtype = recommend_precision_dtype(
+    2000.0, hardware_has_fp16=False, hardware_has_bf16=False
+)
+assert_equal(no_hw_dtype, DType.float32, "Without FP16 hardware should use FP32")
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Run tests locally via `pixi run mojo test` | Executed test file directly | GLIBC version mismatch — system GLIBC 2.31, Mojo requires 2.32+ | Tests must run in Docker/CI; local Mojo execution fails on this machine due to GLIBC constraints |
+| Run `just test-group` | Used `just` command runner | `just` not in PATH in the worktree shell | Use `pixi run mojo test <file>` directly, not `just` wrapper, or verify `just` is installed |
+
+## Results & Parameters
+
+### Final Signature
+
+```mojo
+fn recommend_precision_dtype(
+    model_size_mb: Float64,
+    hardware_has_fp16: Bool = True,
+    hardware_has_bf16: Bool = True,
+) -> DType
+```
+
+### Return Value by Configuration
+
+| model_size_mb | hardware_has_fp16 | hardware_has_bf16 | Returns |
+| --------------- | ------------------- | ------------------- | --------- |
+| < 100 | any | any | `DType.float32` |
+| 100-999 | True | any | `DType.float16` |
+| 100-999 | False | any | `DType.float32` |
+| >= 1000 | True | True | `DType.bfloat16` |
+| >= 1000 | True | False (Apple Silicon) | `DType.float16` |
+| >= 1000 | False | any | `DType.float32` |
+
+### Pre-commit Result
+
+All hooks passed: `Mojo Format`, `Check for deprecated List[Type](args) syntax`,
+`Validate Test Coverage`, `Trim Trailing Whitespace`, `Fix End of Files`, `Fix Mixed Line Endings`.
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | PR #3710 / Issue #3202 | [notes.md](../references/notes.md) |
+
+---
