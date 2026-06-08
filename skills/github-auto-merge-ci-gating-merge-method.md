@@ -3,7 +3,7 @@ name: github-auto-merge-ci-gating-merge-method
 description: "Use when: (1) a PR has mergeStateStatus CLEAN or MERGEABLE but auto-merge never fires despite all checks passing, (2) gh pr merge --auto --rebase or --squash returns an error or silently fails on a squash-only repo, (3) a PR is BLOCKED because required CI status contexts never post (workflow never triggered, paths filter excluded PR, required check name mismatch), (4) GPG-signing failures or mismatched committer emails cause commits to be unsigned and block the pr-policy gate, (5) branch protection rulesets and classic branch protection disagree and their union blocks merge, (6) a CI ruleset chicken-and-egg deadlock blocks a PR that introduces a new workflow, (7) an advisory check should not block merge but currently does because it lives in the required gate, (8) deciding which merge method a repo supports before arming auto-merge, (9) auditing required-check names after adding or removing CI jobs, (10) state:implementation-go label or pr-policy gates auto-merge arming, (11) per-issue arming-state machine is triggered on the wrong event (optimistic point vs detected merge)"
 category: ci-cd
 date: 2026-06-07
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 history: github-auto-merge-ci-gating-merge-method.history
 tags:
@@ -114,6 +114,28 @@ def test_pr_merge_uses_squash_not_rebase():
     assert 'merge_method="rebase"' not in src and 'merge_method="squash"' in src
 ```
 
+#### Arm-time GraphQL status errors (retry, do not treat as fatal)
+
+`gh pr merge --auto --squash` (the `enablePullRequestAutoMerge` mutation) can reject the arm with a transient GraphQL status error tied to the PR's current `mergeStateStatus`. These are NOT fatal — back off and retry, do not give up or force-merge:
+
+- **"Pull request is in clean status"** — API internal state has not caught up on a freshly-CLEAN PR. **Retry immediately**; the second call seconds later succeeds with no other change.
+- **"Pull request is in unstable status"** — checks are still actively settling. **Wait a few seconds, then retry**; the PR commonly resolves to `UNKNOWN` mergeStateStatus, which DOES accept the arm call.
+
+```bash
+arm_auto_merge() {  # retry through transient clean/unstable arm-time GraphQL errors
+  local pr="$1" repo="$2" i out
+  for i in 1 2 3 4 5; do
+    if out=$(gh pr merge "$pr" --repo "$repo" --auto --squash 2>&1); then return 0; fi
+    case "$out" in
+      *"clean status"*)    continue ;;            # retry immediately
+      *"unstable status"*) sleep 5; continue ;;   # let it resolve to UNKNOWN, then retry
+      *) printf '%s\n' "$out" >&2; return 1 ;;    # anything else IS fatal
+    esac
+  done
+  return 1
+}
+```
+
 #### Required-check name management
 
 GitHub uses `jobs.<id>.name:` (falling back to the job id) as the status-check CONTEXT string; the ruleset's `required_status_checks.context` must match EXACTLY. Use the bare job name (`lint`, `build`, `unit-tests`) — NOT the workflow-prefixed form `"Required Checks / lint"`. A slash is valid in `name:` but not in a job id, so `name: security/dependency-scan` is the correct way to emit a slashed context.
@@ -129,6 +151,16 @@ comm -23 /tmp/required.txt /tmp/emitted.txt   # required but NOT emitted => bloc
 When a required context never posts because the workflow did not trigger: a path-filtered `on: pull_request` workflow sees zero changed files; **force-push after rebase** (`git fetch origin && git rebase origin/main && git push --force-with-lease`) re-evaluates path filters against the new tip SHA. Do NOT use empty `--allow-empty` commits (no path diff), `workflow_dispatch` (does NOT satisfy required checks), or close+reopen (unreliable). The ONE exception: a dropped downstream `workflow_run` gate (real tests green, gates stuck `pending:0`, zero runs created) is recovered by a single empty **signed** `chore:` commit — that re-evaluates trigger scheduling. (Note these are inverse fixes — diagnose which event was dropped first.)
 
 A PR that touches only paths excluded by every workflow's `paths:` filter (`pods/**`, `**/*.md`, `scripts/**`, `justfile`) generates ZERO check events; auto-merge then waits forever even with no required checks. Fix per-PR with a manual merge, or permanently by broadening `paths:`.
+
+#### `strict_required_status_checks_policy: false` merges on stale CI
+
+The common HomericIntelligence default `strict: false` means a required context is satisfied by ANY passing run, including one recorded on a PRIOR commit SHA — GitHub does NOT require the check to have passed on the LATEST commit. Consequence: after a force-push/new commit, the newest commit's CI can still be `QUEUED`/`IN_PROGRESS` at the moment auto-merge fires, and auto-merge can merge BEFORE that newest CI finishes (the gate is green courtesy of the older SHA). This is not a bug to fix per-PR; it is the configured behavior, but be aware that "auto-merge fired" does NOT guarantee the merged tip's CI ran. Check which mode a repo uses:
+
+```bash
+gh api repos/OWNER/REPO/branches/main/protection/required_status_checks --jq .strict
+# false => prior-SHA passing checks satisfy the gate; latest commit's CI may still be QUEUED at merge
+# true  => the required checks must have passed on the PR's most recent commit (no stale-CI merge)
+```
 
 #### Two-layer branch protection (ruleset + classic)
 
@@ -207,6 +239,8 @@ Two distinct state machines gate arming:
 | Pushed an unsigned empty commit to re-trigger CI | `git commit --allow-empty` without `-S` | The same `pr-policy`/`required_signatures` gate blocks unsigned commits | Sign re-trigger commits with `-S`; `U` (untrusted local key) is fine, GitHub verifies the registered key |
 | `workflow_dispatch` to satisfy required checks | `gh workflow run <wf> --ref <branch>` | Dispatch runs do NOT satisfy branch-protection required contexts | CI must be triggered by `pull_request`; force-push after rebase to re-fire path filters |
 | Trusted `mergeStateStatus` right after force-push | Checked immediately | It lags several minutes — shows BLOCKED while CI is passing | Verify via `actions/runs?branch=<branch>` matching `head_sha` |
+| Treated an arm-time GraphQL "clean status" / "unstable status" error as fatal | Aborted (or force-merged) when `enablePullRequestAutoMerge` rejected the arm | These are transient: "clean status" is API lag on a fresh-CLEAN PR; "unstable status" is checks still settling (PR resolves to `UNKNOWN`, which accepts the arm) | "clean" → retry immediately; "unstable" → wait a few seconds and retry; only OTHER GraphQL errors are fatal |
+| Assumed auto-merge waits for the LATEST commit's CI under `strict: false` | Trusted that a fired auto-merge meant the merged tip's CI had passed | `strict_required_status_checks_policy: false` accepts passing checks from a PRIOR commit SHA, so the newest commit's CI can still be QUEUED when auto-merge fires and merges | Check `gh api .../branches/main/protection/required_status_checks --jq .strict`; under `false`, stale-CI merges are expected behavior, not a fault |
 
 ## Results & Parameters
 

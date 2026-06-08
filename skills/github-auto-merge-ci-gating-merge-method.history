@@ -2,6 +2,23 @@
 
 # History: github-auto-merge-ci-gating-merge-method
 
+## v1.1.0 (2026-06-07)
+
+Restore arm-time GraphQL status + strict-policy stale-CI nuance (nuance audit):
+
+- Add `#### Arm-time GraphQL status errors` detailed step: `enablePullRequestAutoMerge`
+  rejecting with "Pull request is in clean status" (retry immediately) vs "Pull request is
+  in unstable status" (wait a few seconds, then retry — resolves to `UNKNOWN`, which accepts
+  the arm); neither is fatal. Includes a retry helper.
+- Add `#### strict_required_status_checks_policy: false merges on stale CI` detailed step:
+  under the common HI `strict: false` default, passing checks recorded on a PRIOR commit SHA
+  satisfy the required-checks gate, so the LATEST commit's CI can still be QUEUED when
+  auto-merge fires and merges. Detect via
+  `gh api repos/OWNER/REPO/branches/main/protection/required_status_checks --jq .strict`.
+- Add two Failed Attempts rows (treating arm-time clean/unstable errors as fatal; assuming
+  `strict: false` waits for the latest commit's CI).
+- Bump version 1.0.0 -> 1.1.0.
+
 ## v1.0.0 (2026-06-07)
 
 Initial canonical, merged from 9 skills:
