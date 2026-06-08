@@ -3,7 +3,7 @@ name: skill-file-format-frontmatter-and-validation
 description: "Canonical reference for skill/plugin file format, YAML frontmatter rules, and validation failure fixes. Use when: (1) a skill PR fails CI with 'YAML frontmatter missing' or 'Failed Attempts table missing required columns', (2) fixing frontmatter parsers that use line.partition(':') or split(':',1) and silently truncate colon-containing values, (3) creating a new Claude Code plugin and need to satisfy format requirements or marketplace registration, (4) a skill description or agent field needs the agent routing pattern for Claude Code v2.1.0+, (5) debugging 'plugin has invalid manifest' or 'Unrecognized key(s)' errors after installation."
 category: tooling
 date: 2026-06-07
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 history: skill-file-format-frontmatter-and-validation.history
 tags: [yaml, frontmatter, validation, markdownlint, md033, failed-attempts, plugin-format, marketplace, agent-field, ci-cd]
@@ -145,12 +145,71 @@ raises `ScannerError`. Quote it (`"...need to: parse files"`) or write a URL/rat
 Regression tests should cover: plain value, URL, URL with port (multi-colon), numeric ratio,
 quoted colon, no frontmatter (`{}`), unclosed frontmatter (`{}`), invalid YAML (`{}` no raise).
 
+**Cross-repo test discovery.** When the target script lives in a *sibling* repo (e.g., the
+parser being fixed is in `ProjectMnemosyne` but the regression tests are committed in
+`ProjectOdyssey`), do not `import` it by package path — it is not installed. Load it directly
+with `importlib.util.spec_from_file_location()`, probing multiple candidate locations, and
+`pytest.mark.skipif` the whole module when none exist so the suite stays green on machines
+without the sibling checkout:
+
+```python
+import importlib.util
+import os
+from pathlib import Path
+import pytest
+
+_CANDIDATES = [
+    Path.home() / "ProjectMnemosyne" / "scripts" / "migrate_to_skills.py",
+    Path(__file__).parent.parent.parent / "build" / str(os.getpid())
+        / "ProjectMnemosyne" / "scripts" / "migrate_to_skills.py",
+]
+_SCRIPT_PATH = next((p for p in _CANDIDATES if p.exists()), None)
+
+pytestmark = pytest.mark.skipif(
+    _SCRIPT_PATH is None,
+    reason="Sibling-repo script not found; skipping cross-repo regression tests",
+)
+
+if _SCRIPT_PATH is not None:
+    _spec = importlib.util.spec_from_file_location("migrate_to_skills", _SCRIPT_PATH)
+    migrate_module = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(migrate_module)
+```
+
+PID-scoped builds live at `<repo_root>/build/<PID>/`, not under worktree subdirectories — so
+when searching for a sibling script check `~/ProjectMnemosyne/` and
+`<repo_root>/build/<PID>/ProjectMnemosyne/`, not `.worktrees/issue-XXXX/`.
+
 #### 3. CI validation failure patterns
 
 **Missing frontmatter.** Validator reports the file does not start with `---`. Add the
 frontmatter block at the very top of the file. When the same error appears on multiple PRs,
 the root cause is usually a file on `main` — fix `main` first, then rebase the PRs so the fix
 propagates once instead of being duplicated per branch.
+
+**Diagnosing which check failed.** Pull the failing CI run's log and grep for the validator's
+failure marker rather than scrolling the whole log:
+
+```bash
+gh run view <run-id> --log | grep "FAIL:"
+```
+
+**Rebase mechanics for skill/template PRs.** When rebasing a PR onto a fixed `main`:
+
+```bash
+git fetch origin <branch-name>
+git checkout <branch-name>
+git pull --rebase origin main
+git push --force-with-lease       # NEVER plain --force
+```
+
+Always use `git push --force-with-lease`, not `git push --force` — `--force-with-lease`
+aborts if the remote moved (e.g., a teammate pushed), so it cannot silently clobber others'
+work. During the rebase, **template files commonly conflict** when multiple PRs each add a
+new optional field to the same template (e.g.,
+`templates/experiment-skill/skills/SKILL_NAME/SKILL.md`). For optional-field additions the
+correct resolution is to **keep both changes** (union the two field additions), then
+`git add <file> && git rebase --continue`.
 
 **Failed Attempts column names.** `validate_plugins.py::validate_failed_attempts_table`
 requires all four exact header strings to be present:
@@ -209,6 +268,22 @@ Minimal valid `plugin.json`:
 }
 ```
 
+**Command frontmatter (when authoring a plugin command, not a skill).** Command files in
+`commands/` use a different, minimal frontmatter than skills: `description` plus an optional
+`allowed-tools` field that scopes which tools the command may invoke. Use the
+`Tool(matcher:*)` form to grant a tool a constrained capability:
+
+```yaml
+---
+description: What this command does
+allowed-tools: Bash(git:*), Read, Write
+---
+```
+
+Here `Bash(git:*)` permits only `git` subcommands through Bash, while `Read` and `Write`
+are granted unrestricted. Commands take `name`/`description` triggers like skills, but
+`allowed-tools` is command-only — it is not a skill frontmatter field.
+
 #### 5. skills `agent` field (Claude Code v2.1.0+)
 
 The optional `agent` frontmatter field routes a skill to a specialized agent type. Skills
@@ -238,7 +313,9 @@ repos with different agent architectures.
 | Bare angle-bracket placeholder in prose | Left `#<existing-issue-number>` unescaped in a sentence | markdownlint MD033 parses `<existing-issue-number>` as an HTML element tag and flags it | Wrap every `<placeholder>` in backticks when it appears in prose |
 | Test with bare `to: parse` colon | Wrote `description: Use when you need to: parse, validate files` as a regression test | PyYAML raises `ScannerError` — bare colon+space is genuinely invalid YAML (looks like a mapping key) | Only test valid YAML forms; quote mid-sentence colons or use URL/ratio forms |
 | Keep `Dict[str, str]` after switching parser | Left return type as `Dict[str, str]` after moving to `yaml.safe_load()` | `yaml.safe_load()` returns `Any` values (int, bool, list), not only strings | Update annotations to `Dict[str, Any]` when migrating from manual parsing to PyYAML |
-| Search worktree for sibling repo script | `find` in `.worktrees/issue-XXXX/` for `migrate_to_skills.py` | The script lives in the sibling repo (`ProjectMnemosyne`), not the worktree | For cross-repo fixes check `~/ProjectMnemosyne/` and `<repo_root>/build/<PID>/ProjectMnemosyne/` |
+| Search worktree for sibling repo script | `find` in `.worktrees/issue-XXXX/` for `migrate_to_skills.py` | The script lives in the sibling repo (`ProjectMnemosyne`), not the worktree | For cross-repo fixes check `~/ProjectMnemosyne/` and `<repo_root>/build/<PID>/ProjectMnemosyne/`; load it with `importlib.util.spec_from_file_location()` + `pytest.mark.skipif` |
+| Plain `git push --force` after rebase | Used `git push --force` to update a rebased skill PR branch | `--force` overwrites the remote unconditionally and can clobber a teammate's concurrent push | Always `git push --force-with-lease` — it aborts if the remote moved since the last fetch |
+| Resolve template conflict by picking one side | On rebase, kept only the current branch's new optional field, dropping `main`'s field | Both PRs were *adding* different optional fields to the same template; choosing one side lost the other's field | For optional-field additions in template files, keep both changes (union), then `git add` + `git rebase --continue` |
 
 ## Results & Parameters
 

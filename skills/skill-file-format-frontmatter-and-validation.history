@@ -4,6 +4,18 @@
 
 Consolidation history and verbatim originals of all superseded skills.
 
+## v1.1.0 (2026-06-07)
+
+restore allowed-tools/rebase-specifics/cross-repo-test-discovery (nuance audit pass 2)
+
+- Restored the command frontmatter `allowed-tools` field (e.g. `allowed-tools: Bash(git:*), Read, Write`)
+  used when authoring a plugin command — distinct from skill frontmatter.
+- Restored rebase specifics for skill/template PRs: `git push --force-with-lease` (never plain
+  `--force`); template files conflict on optional-field adds → keep both changes; CI diagnosis via
+  `gh run view <id> --log | grep "FAIL:"`.
+- Restored cross-repo regression-test discovery: `importlib.util.spec_from_file_location()` with
+  multiple candidate paths + `pytest.mark.skipif` when the target script lives in a sibling repo.
+
 ## v1.0.0 (2026-06-07)
 
 Consolidated 6 skills into this canonical:
