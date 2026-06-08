@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD024 -->
 # dry-refactoring-workflow — History
 
 ## v1.1.0 (2026-06-04)
@@ -91,3 +92,2071 @@ Use this workflow when you encounter:
 
 ---
 
+## v1.3.0 (2026-06-07)
+
+**Changed by:** full-corpus skill-consolidation pass (cluster PYR01)
+**Verification:** verified-ci
+
+### What changed
+
+- Absorbed 5 overlapping DRY/refactoring skills into this canonical:
+  - `centralized-path-constants` — path-constant centralization + phase routing
+  - `private-module-extraction-helper-pattern` — private leaf-module extraction
+  - `deduplicate-llm-json-extraction` — shared LLM JSON-extraction utility
+  - `dry-consolidation-workflow` — discovery + classify consolidation pass
+  - `dry-consolidate-to-canonical-refactor` — canonical-source refactor patterns
+- Added `### Quick Reference` h3 and Phase 8 (8a path constants, 8b LLM JSON dedup,
+  8c discovery/classify, 8d Pydantic type hierarchy, 8e dict-structure consolidation,
+  8f orphan relocation).
+- Extended `description` and trigger phrases to cover the new cases.
+- Added deduped Failed Attempts rows from the absorbed skills.
+- Bumped version 1.2.0 -> 1.3.0; full originals preserved below verbatim.
+
+---
+
+## Superseded from centralized-path-constants
+
+**Original date:** 2026-03-28 &nbsp; **Original version:** 2.0.0
+
+```yaml
+name: centralized-path-constants
+description: "Create central path constants module to prevent hardcoded path inconsistencies. Use when: (1) multiple files construct the same paths inline, (2) directory structure changes require updating many files, (3) a directory structure has phases (e.g., in_progress/completed) that must be routed at a single point."
+category: architecture
+date: 2026-03-28
+version: "2.0.0"
+user-invocable: false
+verification: verified-ci
+history: centralized-path-constants.history
+tags:
+  - paths
+  - refactoring
+  - consistency
+  - constants
+  - dry-principle
+  - phase-routing
+```
+
+# Centralized Path Constants
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Date** | 2026-03-28 |
+| **Objective** | Eliminate hardcoded path construction; create single source of truth for directory structure including phase-based routing |
+| **Outcome** | ✅ v1.0.0: basic centralization. v2.0.0: phase-routed paths (in_progress/completed split) |
+| **Verification** | verified-ci |
+| **History** | [changelog](./centralized-path-constants.history) |
+| **Project** | ProjectScylla |
+| **PRs** | [#137](https://github.com/HomericIntelligence/ProjectScylla/pull/137), [#1738](https://github.com/HomericIntelligence/ProjectScylla/pull/1738) |
+
+## When to Use
+
+- Multiple files construct the same paths with hardcoded strings
+- Path logic is duplicated across modules
+- Refactoring directory structure requires changes in many places
+- Resume/checkpoint logic needs to validate path existence
+- Risk of typos in path strings (e.g., `"agent"` vs `"agents"`)
+- **NEW**: The directory structure has phases (e.g., `in_progress/` vs `completed/`) — routing must be centralized or bypass violations will appear at every path construction site
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# paths.py — minimal structure
+from pathlib import Path
+import shutil
+
+# Phase constants (if using phase-split)
+IN_PROGRESS_DIR = "in_progress"
+COMPLETED_DIR = "completed"
+
+# Sub-directory constants
+AGENT_DIR = "agent"
+JUDGE_DIR = "judge"
+RESULT_FILE = "result.json"
+
+# Basic helpers
+def get_agent_dir(run_dir: Path) -> Path:
+    return run_dir / AGENT_DIR
+
+def get_judge_dir(run_dir: Path) -> Path:
+    return run_dir / JUDGE_DIR
+
+# Phase-routed helpers (keyword-only completed= for safety)
+def get_tier_dir(experiment_dir: Path, tier_id: str, *, completed: bool = False) -> Path:
+    phase = COMPLETED_DIR if completed else IN_PROGRESS_DIR
+    return experiment_dir / phase / tier_id
+
+def get_subtest_dir(experiment_dir, tier_id, subtest_id, *, completed=False):
+    return get_tier_dir(experiment_dir, tier_id, completed=completed) / subtest_id
+
+def get_run_dir(experiment_dir, tier_id, subtest_id, run_num, *, completed=False):
+    return get_subtest_dir(experiment_dir, tier_id, subtest_id, completed=completed) / f"run_{run_num:02d}"
+
+def get_experiment_dir_from_run(run_dir: Path) -> Path:
+    """Reverse derivation — 4 levels up: run -> subtest -> tier -> phase -> experiment."""
+    return run_dir.parent.parent.parent.parent
+
+def promote_run_to_completed(experiment_dir, tier_id, subtest_id, run_num) -> Path:
+    src = get_run_dir(experiment_dir, tier_id, subtest_id, run_num, completed=False)
+    dst = get_run_dir(experiment_dir, tier_id, subtest_id, run_num, completed=True)
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.move(str(src), str(dst))
+    # IMPORTANT: copy (not move) shared baseline so sibling runs can also be promoted
+    baseline = src.parent / "pipeline_baseline.json"
+    if baseline.exists():
+        shutil.copy2(str(baseline), str(dst.parent / "pipeline_baseline.json"))
+    return dst
+```
+
+### Detailed Steps
+
+#### Basic Centralization (v1.0.0 pattern)
+
+1. **Create `paths.py`** with directory name constants and helper functions
+2. **Import in callers** — replace every `run_dir / "agent"` with `get_agent_dir(run_dir)`
+3. **Use constants for filenames** — `RESULT_FILE` not `"result.json"`
+4. **Write tests** verifying helper return values
+
+#### Phase-Routed Paths (v2.0.0 addition)
+
+1. **Add `IN_PROGRESS_DIR`/`COMPLETED_DIR`** constants
+2. **Add `completed=False` parameter** (keyword-only with `*`) to all phase-sensitive helpers
+3. **Default to `in_progress`** — callers doing active work don't need to change
+4. **Callers doing read/report work** explicitly pass `completed=True`
+5. **Run pre-merge audit** to catch bypass violations before merging
+
+### Pre-Merge Audit (CRITICAL for directory structure changes)
+
+```bash
+# Find all sites that bypass paths.py and construct paths directly
+# Run before merging any PR that changes directory structure
+grep -rn "experiment_dir / \|experiment_dir/" src/ scripts/ \
+  | grep -v "paths.py" \
+  | grep -v "# noqa" \
+  | grep -v "__pycache__" \
+  | grep -v ".pyc"
+```
+
+**Expected output:** Zero hits. Any hit is a bypass violation that must be fixed.
+
+**When to run:** Before every PR that adds or changes a path-level constant in `paths.py`.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Basic string paths | Direct `run_dir / "agent"` in every file | Typos (`"agents"` vs `"agent"`) caused silent failures | Use constants from paths.py even for short strings |
+| Phase split without audit | Added in_progress/completed split but didn't audit all callers | 17 files post-merge still used `experiment_dir / tier_id` directly — silent wrong-dir reads | ALWAYS run the pre-merge audit grep before merging a directory structure change |
+| `shutil.move` for shared baseline | Moved `pipeline_baseline.json` with the first run during promotion | Second run in same subtest can't find baseline — it was moved away | Use `shutil.copy2` for files shared across sibling runs; only move the run directory itself |
+| Stale fallback after refactor | Left `elif` fallback pointing to old path | `best_subtest.json` in new `completed/` was never reached; fallback silently returned wrong data | Delete stale fallbacks entirely; don't leave "just in case" code pointing at wrong locations |
+
+## Results & Parameters
+
+### Bypass Violation Count by Category (2026-03-28 experience)
+
+When the `in_progress/completed` split was added, **17 bypass violations** were found post-merge across:
+
+| Module | Violations | Fix |
+| -------- | ----------- | ----- |
+| `tier_manager.py` | 3 | `get_tier_dir(..., completed=True)` |
+| `parallel_tier_runner.py` | 1 | `get_subtest_dir(..., completed=True)` |
+| `regenerate.py` | 3 | `get_run_dir/get_tier_dir/get_subtest_dir(completed=True)` |
+| `manage_experiment.py` | 2 | Check both `completed/` and `in_progress/` |
+| `resume_manager.py` | 2 | `get_run_dir` + frozenset update |
+| `tier_action_builder.py` | 1 | Remove stale fallback |
+| Test fixtures | 5+ | Update to use `completed/` prefix |
+
+**Lesson:** The pre-merge grep would have found all 17 in 5 seconds.
+
+### `completed=` Routing Decision Table
+
+| Site | `completed=` | Reason |
+| ------ | ------------- | -------- |
+| Active run execution (PENDING to DIFF_CAPTURED) | `False` | Work is in-flight |
+| Judging and reporting (PROMOTED_TO_COMPLETED+) | `True` | Only completed runs are judged |
+| Rehydration / resume scanning | `True` | Completed runs have stable data |
+| Aggregation, analysis, loader | `True` | Must only aggregate finished runs |
+| Repair / reconcile commands | Both | Run may be in either phase |
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectScylla | PR #137 — initial path standardization | Basic constants and helpers |
+| ProjectScylla | PRs #1738/#1739 — in_progress/completed split | Phase-routed paths, 17 post-merge bypass violations found and fixed |
+
+---
+
+## Superseded from private-module-extraction-helper-pattern
+
+**Original date:** 2026-06-04 &nbsp; **Original version:** 1.0.0
+
+```yaml
+name: private-module-extraction-helper-pattern
+description: "Extract duplicated internal function calls (especially importlib.metadata version resolution) into a private leaf module with leading-underscore naming. Use when: (1) the same function is called from multiple modules with identical arguments, (2) creating a module to centralize the call, (3) PyPI distribution names or other arbitrary constants must be stored at module level, (4) avoiding circular imports by using leaf modules instead of packages, (5) consolidating version resolution or other metadata lookups across the codebase."
+category: architecture
+date: 2026-06-04
+version: 1.0.0
+user-invocable: false
+verification: verified-ci
+tags:
+  - dry-principle
+  - private-modules
+  - code-extraction
+  - importlib-metadata
+  - helper-pattern
+  - circular-imports
+  - leaf-modules
+```
+
+# Private Module Extraction Helper Pattern
+
+Extract duplicated function calls into a private leaf module to centralize logic, reduce duplication, and avoid circular imports.
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-04 |
+| **Objective** | Consolidate duplicated `importlib.metadata.version()` calls from multiple call sites into a single private helper module that stores the PyPI distribution name as a module constant |
+| **Outcome** | ✅ Created `hephaestus/_version_lookup.py` as a leaf module; refactored two call sites in `hephaestus/__init__.py` and `hephaestus/version/__init__.py` to import from the helper; all tests pass, pre-commit hooks validated, pr-policy gate confirmed cryptographic signatures on all commits |
+| **Verification** | verified-ci |
+| **Issue** | #739 |
+| **PR** | #900+ |
+
+## When to Use
+
+- **Exact duplication**: The same function is called from 2+ modules with identical or nearly-identical arguments
+- **PyPI distribution names**: Need to resolve package version via `importlib.metadata.version()` with a literal distribution name
+- **Module-level constants**: Must store arbitrary values (like PyPI package names) that should not be guessed or normalized at runtime
+- **Avoid circular imports**: Creating a package (`_internal/__init__.py`) would trigger circular dependencies; a leaf module (`_helper.py`) avoids this
+- **Consolidate metadata lookups**: Version, author, or other package metadata accessed from multiple locations
+- **TDD extraction**: Writing tests first to define the helper's contract before refactoring call sites
+
+**Trigger phrases**:
+
+- "This version lookup is duplicated in two files"
+- "Where should I put a private helper module?"
+- "How do I store the PyPI distribution name without guessing?"
+- "Why does creating `_internal/__init__.py` cause circular imports?"
+- "Can I consolidate the version resolution logic?"
+
+## Verified Workflow
+
+### Quick Reference
+
+1. **Identify duplicated calls**:
+   ```bash
+   grep -rn "importlib.metadata.version" hephaestus/
+   # or your specific function being duplicated
+   ```
+
+2. **Create the private leaf module**:
+   ```python
+   # hephaestus/_version_lookup.py (NOT a package!)
+   """Private helper for version resolution via importlib.metadata."""
+
+   from importlib.metadata import PackageNotFoundError, version as _pkg_version
+
+   # Store as module constant — must match [project].name in pyproject.toml exactly
+   _DIST_NAME = "HomericIntelligence-Hephaestus"
+
+   def lookup_version() -> str:
+       """Resolve package version from installed metadata."""
+       try:
+           return _pkg_version(_DIST_NAME)
+       except PackageNotFoundError:
+           return "unknown"
+   ```
+
+3. **Write tests first (TDD)**:
+   ```python
+   # tests/unit/version/test_version_lookup.py
+   import pytest
+   from importlib.metadata import PackageNotFoundError
+   from unittest.mock import patch
+
+   def test_lookup_version_success():
+       """Version is returned when package is installed."""
+       from hephaestus._version_lookup import lookup_version
+       result = lookup_version()
+       assert result != "unknown"
+       assert all(c in "0123456789." for c in result)
+
+   def test_lookup_version_fallback():
+       """Returns 'unknown' if package not found."""
+       from hephaestus._version_lookup import lookup_version
+       with patch("hephaestus._version_lookup._pkg_version") as mock:
+           mock.side_effect = PackageNotFoundError("test")
+           assert lookup_version() == "unknown"
+   ```
+
+4. **Refactor call sites** one at a time:
+   ```python
+   # hephaestus/__init__.py — BEFORE
+   from importlib.metadata import PackageNotFoundError, version as _pkg_version
+   try:
+       __version__ = _pkg_version("HomericIntelligence-Hephaestus")
+   except PackageNotFoundError:
+       __version__ = "unknown"
+
+   # hephaestus/__init__.py — AFTER
+   from hephaestus._version_lookup import lookup_version
+   __version__ = lookup_version()
+   ```
+
+5. **Run tests** after each refactoring:
+   ```bash
+   pixi run pytest tests/unit/version/test_version_lookup.py -v
+   pixi run pytest tests/unit/ -v  # Full test suite
+   ```
+
+6. **Commit with cryptographic signature**:
+   ```bash
+   git commit -S -m "refactor: consolidate version resolution into _version_lookup
+
+   Extract duplicated importlib.metadata.version() calls from
+   hephaestus/__init__.py and hephaestus/version/__init__.py
+   into a new private helper module _version_lookup.py.
+
+   Key changes:
+   - New: hephaestus/_version_lookup.py (leaf module)
+   - Stores PyPI distribution name as _DIST_NAME constant
+   - Returns 'unknown' on PackageNotFoundError
+   - New: tests/unit/version/test_version_lookup.py (4 tests)
+   - Updated hephaestus/__init__.py to import lookup_version()
+   - Updated hephaestus/version/__init__.py to use helper
+
+   All tests pass. Pre-commit hooks validated. pr-policy gate
+   confirms cryptographic signature on all commits.
+
+   Closes #739
+
+   Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"
+
+   # Verify commit was signed
+   git log -1 --pretty=format:'%G?'  # Must print 'G'
+   ```
+
+### Detailed Steps
+
+#### Phase 1: Identify Duplication
+
+1. **Search for the function call**:
+   ```bash
+   # For version lookups:
+   grep -rn "importlib.metadata.version" hephaestus/ --include="*.py"
+
+   # For other duplicated calls, search by function name:
+   grep -rn "your_function" hephaestus/ --include="*.py" | grep -v test
+   ```
+
+2. **Verify the arguments are identical**:
+   - Same distribution name / string literal
+   - Same error handling (try/except vs. silent fallback)
+   - Same return type / usage context
+
+3. **Document the call sites** (record line numbers for later refactoring)
+
+#### Phase 2: Design the Helper Module
+
+1. **Decide: leaf module vs. package?**
+
+   **Use a leaf module** (`_version_lookup.py`):
+   - Single responsibility (version resolution only)
+   - No circular import risk
+   - No intermediate `__init__.py` to manage
+   - Easy to find (`grep hephaestus/_version_lookup.py`)
+
+   **Avoid a package** (`_internal/__init__.py`):
+   - If `hephaestus.utils` imports from `_internal`
+   - And `_internal` imports from `utils` (transitively or directly)
+   - → Circular import at module load time
+   - Solution: Use a leaf module outside the potential cycle
+
+2. **Extract module-level constants**:
+   - PyPI distribution name (literal `[project].name` value)
+   - Any other config that should not be guessed
+   - Add a comment explaining why the value is hardcoded
+
+3. **Define the function signature**:
+   - Input: minimal, specific arguments
+   - Output: single, clear return type
+   - Error handling: catch specific exceptions, document fallback
+
+#### Phase 3: Write Tests (TDD)
+
+Create tests in the mirrored structure **before** implementing:
+
+```bash
+mkdir -p tests/unit/version
+touch tests/unit/version/__init__.py
+touch tests/unit/version/test_version_lookup.py
+```
+
+Write comprehensive test cases:
+
+```python
+# tests/unit/version/test_version_lookup.py
+import pytest
+from importlib.metadata import PackageNotFoundError
+from unittest.mock import patch, MagicMock
+
+def test_lookup_version_returns_valid_version_string():
+    """Happy path: package is installed and version is valid."""
+    from hephaestus._version_lookup import lookup_version
+    result = lookup_version()
+    # Check it's not the fallback
+    assert result != "unknown"
+    # Check it looks like a version
+    parts = result.split(".")
+    assert len(parts) >= 2
+    assert all(p.isdigit() for p in parts)
+
+def test_lookup_version_returns_unknown_on_package_not_found():
+    """Fallback: package not installed."""
+    from hephaestus._version_lookup import lookup_version
+    with patch("hephaestus._version_lookup._pkg_version") as mock_version:
+        mock_version.side_effect = PackageNotFoundError("test")
+        assert lookup_version() == "unknown"
+
+def test_lookup_version_uses_correct_distribution_name():
+    """Verify the module uses the correct PyPI dist name."""
+    from hephaestus._version_lookup import _DIST_NAME
+    # Should be the [project].name from pyproject.toml
+    assert _DIST_NAME == "HomericIntelligence-Hephaestus"
+
+def test_lookup_version_integration():
+    """Integration: called from __init__.py, value is assigned to __version__."""
+    import hephaestus
+    # Should have gotten the version from the helper
+    assert hasattr(hephaestus, "__version__")
+    assert isinstance(hephaestus.__version__, str)
+    assert len(hephaestus.__version__) > 0
+```
+
+#### Phase 4: Implement the Helper
+
+```python
+# hephaestus/_version_lookup.py
+"""Internal helper for package version resolution via importlib.metadata.
+
+This module centralizes duplicate importlib.metadata.version() calls
+that were previously scattered across hephaestus/__init__.py and
+hephaestus/version/__init__.py.
+"""
+
+from importlib.metadata import PackageNotFoundError, version as _pkg_version
+
+# CRITICAL: This is the literal value of [project].name in pyproject.toml.
+# importlib.metadata does NOT normalize distribution names to import names.
+# If this value is wrong or guessed, lookup_version() will return "unknown".
+# UPDATE THIS CONSTANT if [project].name changes.
+_DIST_NAME = "HomericIntelligence-Hephaestus"
+
+
+def lookup_version() -> str:
+    """Resolve the installed package version from metadata.
+
+    Attempts to fetch the version from installed package metadata
+    (as populated by hatch-vcs at build time from git tags).
+    If the package is not installed or metadata cannot be found,
+    returns "unknown".
+
+    Returns:
+        Version string (e.g., "1.0.0") or "unknown" if not found.
+
+    Raises:
+        None — this function never raises. All exceptions are caught
+        and "unknown" is returned as a safe fallback.
+    """
+    try:
+        return _pkg_version(_DIST_NAME)
+    except PackageNotFoundError:
+        return "unknown"
+```
+
+#### Phase 5: Run Tests (RED → GREEN)
+
+```bash
+# Run the test file — should PASS now that we've implemented the helper
+pixi run pytest tests/unit/version/test_version_lookup.py -v
+
+# Output should show:
+# test_lookup_version_returns_valid_version_string PASSED
+# test_lookup_version_returns_unknown_on_package_not_found PASSED
+# test_lookup_version_uses_correct_distribution_name PASSED
+# test_lookup_version_integration PASSED
+```
+
+#### Phase 6: Refactor Call Sites
+
+Refactor one call site at a time, testing after each:
+
+```python
+# hephaestus/__init__.py
+# BEFORE:
+from importlib.metadata import PackageNotFoundError, version as _pkg_version
+try:
+    __version__ = _pkg_version("HomericIntelligence-Hephaestus")
+except PackageNotFoundError:
+    __version__ = "unknown"
+
+# AFTER:
+from hephaestus._version_lookup import lookup_version
+__version__ = lookup_version()
+```
+
+After refactoring the first call site:
+
+```bash
+pixi run pytest tests/unit/ -v --tb=short -x
+# Verify no regressions
+```
+
+Then refactor the second call site (same pattern), and test again.
+
+#### Phase 7: Pre-commit & Signing
+
+```bash
+# Run pre-commit hooks to ensure formatting/linting/types are correct
+pre-commit run --files hephaestus/_version_lookup.py tests/unit/version/test_version_lookup.py
+
+# Commit with mandatory cryptographic signature
+git add hephaestus/_version_lookup.py tests/unit/version/test_version_lookup.py \
+         hephaestus/__init__.py hephaestus/version/__init__.py
+
+git commit -S -m "$(cat <<'EOF'
+refactor: consolidate version resolution into _version_lookup
+
+Extract duplicated importlib.metadata.version() calls from
+hephaestus/__init__.py and hephaestus/version/__init__.py
+into a new private helper module _version_lookup.py.
+
+The helper stores the PyPI distribution name ("HomericIntelligence-Hephaestus")
+as a module constant, avoiding runtime guessing and ensuring correctness
+across all call sites.
+
+Key changes:
+- New: hephaestus/_version_lookup.py (leaf module, 25 LOC)
+- Stores _DIST_NAME constant from [project].name
+- Returns "unknown" on PackageNotFoundError
+- New: tests/unit/version/test_version_lookup.py (50 LOC, 4 tests)
+- Refactored hephaestus/__init__.py to use helper
+- Refactored hephaestus/version/__init__.py to use helper
+- All 467 tests pass; pre-commit hooks valid
+
+Closes #739
+
+Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>
+EOF
+)"
+
+# Verify the commit was actually signed
+git log -1 --pretty=format:'%G? %h %an — %s'
+# Output: G <hash> <name> — refactor: consolidate version resolution...
+```
+
+**CRITICAL**: The `git commit -S` flag is mandatory. The `pr-policy` CI gate validates every commit in the PR at the GraphQL layer. Unsigned commits will be flagged as `verification.reason: "unsigned"` and block auto-merge even if all other CI checks pass.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Create a private package `_internal/__init__.py` to group helpers | Organized version lookup in `hephaestus/_internal/_version_lookup.py` with `hephaestus/_internal/__init__.py` to group internal utilities | Importing from `_internal` in `hephaestus/__init__.py` while `_internal` tries to import from elsewhere (or transitively imports anything that touches the main package) creates circular dependencies at module load time. Python can't resolve the import order. | **Use a leaf module, not a package.** `_version_lookup.py` (no `__init__.py`, no sub-modules) avoids intermediate layers that can create cycles. Simpler structure, same functionality. |
+| Guess the PyPI distribution name at runtime from `__package__` | Tried: `_dist_name = __package__.replace("_", "-").title()` or similar normalization | `importlib.metadata.version()` does NOT normalize. It performs a PEP 503 lookup against installed `*.dist-info` directories. The import package name (`hephaestus`) is unrelated to the distribution name (`HomericIntelligence-Hephaestus`). Guessing failed with `PackageNotFoundError("HomericIntelligence-Hephaestus not found")` even though the package was installed. | **Store the distribution name as a module constant.** It is arbitrary and may differ from the import path. Document that the value must match `[project].name` in `pyproject.toml` exactly. Do not derive it. |
+| Place test in `tests/unit/test_version_lookup.py` (root of tests/unit) | Created test directly under `tests/unit/` without a sub-package | Pre-commit hook `test-file-placement` rejected it. `test_*.py` files cannot live in `tests/unit/` root — they must be in sub-directories that mirror the package structure. Enforces organization and prevents orphaned test files. | Create logical sub-directories: `tests/unit/version/test_version_lookup.py`. The sub-package structure mirrors the codebase: `hephaestus/_version_lookup.py` lives at root, so its tests go in a logical `version/` category. |
+| Refactor both call sites in a single commit without intermediate testing | Changed both `hephaestus/__init__.py` and `hephaestus/version/__init__.py` to use the new helper in one big commit | If the helper had a bug or if one call site had different semantics, the massive refactor made it impossible to isolate which change broke the tests. Debugging took longer; regression went undetected. | **Refactor one call site at a time.** After each refactoring, run the test suite. This catches regressions early and makes it clear which change introduced a problem. Small commits are also easier to review and revert if needed. |
+| Forget to include the `-S` (cryptographic sign) flag when committing | Ran `git commit -m "..."` without `-S`, pushed the branch, and created a PR | PR auto-merge was armed, but `pr-policy` CI gate validated that all commits had valid signatures. The unsigned commit was rejected at the GraphQL layer, and auto-merge failed to fire. PR sat open waiting for a re-push. | **Always use `git commit -S`** when working in repos with `pr-policy` required gates. Pre-warm GPG if needed (`gpg --batch --gen-key <key-spec>`) before dispatching sub-agents. Verify with `git log -1 --pretty=format:'%G?'` — must print `G`, not `N` or `B`. |
+
+## Results & Parameters
+
+### File Structure
+
+```
+hephaestus/
+├── __init__.py                        # Updated to use lookup_version()
+├── _version_lookup.py                 # NEW (25 LOC)
+├── version/
+│   └── __init__.py                    # Updated to use lookup_version()
+└── ... (other modules)
+
+tests/unit/
+├── version/                           # NEW directory
+│   ├── __init__.py                    # NEW (empty)
+│   └── test_version_lookup.py         # NEW (50 LOC, 4 tests)
+└── ... (other tests)
+```
+
+### Module Constants
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `_DIST_NAME` | `"HomericIntelligence-Hephaestus"` | PyPI distribution name for `importlib.metadata.version()` lookup |
+
+### Test Coverage
+
+| Test | Purpose |
+|------|---------|
+| `test_lookup_version_returns_valid_version_string` | Verify version is resolved when package installed |
+| `test_lookup_version_returns_unknown_on_package_not_found` | Verify fallback to "unknown" on PackageNotFoundError |
+| `test_lookup_version_uses_correct_distribution_name` | Verify _DIST_NAME constant matches [project].name |
+| `test_lookup_version_integration` | Verify __version__ is correctly populated in hephaestus/__init__.py |
+
+### Metrics
+
+| Metric | Value |
+|--------|-------|
+| Duplication eliminated | 2 call sites → 1 helper |
+| Code savings | ~20 lines per call site |
+| Lines added to helper | 25 |
+| Test lines added | 50 |
+| Net reduction | ~15 lines overall |
+| Test coverage | 4 comprehensive tests, 100% helper coverage |
+| Pre-commit compliance | All checks pass (formatting, linting, type checking) |
+| CI validation | All 467 tests pass; pr-policy confirms signed commits |
+
+### Commit Signature Verification
+
+```bash
+$ git log --pretty=format:'%h %G? %an — %s' | head -1
+a1b2c3d G Claude Haiku 4.5 — refactor: consolidate version resolution into _version_lookup
+
+$ git log -1 --pretty=format:'%G?'
+G   # ← Must be 'G' (good), not 'N' (no signature) or 'B' (bad signature)
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | Issue #739, PR #900+ | Extracted duplicated `importlib.metadata.version()` into `_version_lookup.py` helper; refactored hephaestus/__init__.py and hephaestus/version/__init__.py; 467 tests pass; pr-policy gate confirmed cryptographic signatures |
+
+---
+
+## Superseded from deduplicate-llm-json-extraction
+
+**Original date:** 2026-01-01 &nbsp; **Original version:** 1.0.0
+
+```yaml
+name: deduplicate-llm-json-extraction
+description: 'Skill: deduplicate-llm-json-extraction. Use when working with deduplicate
+  llm json extraction.'
+category: ci-cd
+date: 2026-01-01
+version: 1.0.0
+user-invocable: false
+```
+
+# Skill: Deduplicate LLM JSON Extraction
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-02-12 |
+| **Objective** | Fix LLM judge parsing bug with Haiku model + deduplicate 3 identical JSON extraction implementations |
+| **Outcome** | ✅ SUCCESS - Bug fixed, code deduplicated, 16 tests added, all quality checks passed |
+| **Issue** | #503 |
+| **PR** | #505 |
+| **Category** | Refactoring |
+
+## When to Use This Skill
+
+Apply this pattern when you encounter:
+
+1. **Identical or near-identical code** in multiple modules (3+ occurrences)
+2. **Bug exists in one implementation** but not others with same logic
+3. **Copy-paste propagation risk** - when fixing one, others get missed
+4. **Maintenance burden** - need to update logic in multiple places
+5. **Missing test coverage** - implementations lack comprehensive tests
+
+**Trigger signals**:
+- Finding same regex patterns in multiple files
+- Same algorithm (e.g., brace-matching) duplicated across modules
+- Bug report affects one consumer but identical code exists elsewhere
+- Code review comments about "we have this same logic in X, Y, Z"
+
+## Problem Context
+
+When running e2e experiments with `--judge-model haiku`, the LLM judge returned JSON wrapped in `<json_evaluation>` XML tags with preamble text. The parser in `scylla/e2e/llm_judge.py` only handled markdown code blocks, causing failures.
+
+**Root cause discovered**: The codebase had **3 separate implementations** of JSON extraction from LLM responses:
+
+| Location | Strategy | Handles XML? | Bug? |
+| ---------- | ---------- | -------------- | ------ |
+| `scylla/e2e/llm_judge.py:1038-1084` | Markdown code blocks only | ❌ | **YES** |
+| `scylla/judge/parser.py:267-308` | Code blocks + brace-matching | ✅ | No |
+| `scylla/judge/evaluator.py:474-519` | Code blocks + brace-matching | ✅ | No |
+
+Two implementations had the robust solution, one didn't. Classic deduplication opportunity.
+
+## Verified Workflow
+
+### Step 1: Identify Duplicate Implementations
+
+**Tools**: `grep`, `Grep` tool
+
+```bash
+# Search for similar patterns
+grep -r "json.loads" scylla/
+grep -r "```json" scylla/
+grep -r "re.search.*json" scylla/
+```
+
+**What to look for**:
+- Same regex patterns (e.g., `` r"```(?:json)?\s*(\{[\s\S]*?\})\s*```" ``)
+- Same algorithmic structure (find opening brace, match depth, extract substring)
+- Same error handling patterns
+- Comments describing same functionality
+
+### Step 2: Choose the Best Implementation as Source
+
+**Selection criteria** (in order):
+1. ✅ **Most robust** - handles the most edge cases
+2. ✅ **Best tested** - has existing test coverage
+3. ✅ **Most recent** - likely to have latest fixes
+4. ✅ **Clearest code** - easiest to understand and maintain
+
+In this case: `parser.py:267-308` was chosen (identical to `evaluator.py`, both more robust than `llm_judge.py`)
+
+### Step 3: Extract to Shared Utility Module
+
+**File naming pattern**: `<module>/utils.py` for module-level utilities
+
+**Created**: `scylla/judge/utils.py`
+
+**Key decisions**:
+- ✅ Use descriptive name: `extract_json_from_llm_response()`
+- ✅ Add comprehensive docstring with examples
+- ✅ Include all edge cases in docstring
+- ✅ Keep same signature as original functions
+
+**Template**:
+```python
+"""Shared utilities for <module>-related operations."""
+
+import <required-imports>
+
+
+def extract_json_from_llm_response(output: str) -> dict[str, Any] | None:
+    r"""Extract a JSON object from LLM output text.
+
+    Handles multiple common LLM response formats:
+    - Raw JSON objects
+    - JSON in markdown code blocks (```json or ```)
+    - JSON wrapped in XML tags with preamble text
+    - JSON with leading/trailing text
+
+    This function uses a robust brace-matching algorithm to extract JSON
+    objects even when surrounded by explanatory text or XML tags.
+
+    Args:
+        output: Raw LLM output text that may contain JSON.
+
+    Returns:
+        Parsed JSON dictionary, or None if no valid JSON object found.
+
+    Examples:
+        >>> extract_json_from_llm_response('{"score": 5}')
+        {'score': 5}
+
+        >>> extract_json_from_llm_response('```json\n{"score": 5}\n```')
+        {'score': 5}
+
+    """
+    # [Paste the most robust implementation here]
+```
+
+**Critical**: Use `r"""` for docstrings with backslashes (ruff will complain otherwise)
+
+### Step 4: Update Module Exports
+
+**Edit**: `<module>/__init__.py`
+
+```python
+from <module>.utils import extract_json_from_llm_response
+
+__all__ = [
+    # ... existing exports ...
+    # Utils
+    "extract_json_from_llm_response",
+]
+```
+
+### Step 5: Update All Consumers
+
+**Pattern for each consumer**:
+
+**Before** (full implementation):
+```python
+def _extract_json(self, output: str) -> dict[str, Any] | None:
+    """Extract JSON object from output text."""
+    # 40+ lines of duplicate logic
+    json_block = re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", output)
+    # ... brace matching ...
+    # ... error handling ...
+    return json.loads(output[start:end])
+```
+
+**After** (delegation):
+```python
+from <module>.utils import extract_json_from_llm_response
+
+def _extract_json(self, output: str) -> dict[str, Any] | None:
+    """Extract JSON object from output text."""
+    return extract_json_from_llm_response(output)
+```
+
+**For standalone functions** (like `_parse_judge_response`):
+```python
+# Before: 40+ lines of extraction + validation
+# After:
+data = extract_json_from_llm_response(response)
+if data is None:
+    raise ValueError("Judge response does not contain valid JSON...")
+# ... keep existing validation logic ...
+```
+
+### Step 6: Write Comprehensive Tests
+
+**Create**: `tests/unit/<module>/test_utils.py`
+
+**Test coverage checklist**:
+- ✅ Raw JSON (happy path)
+- ✅ JSON in markdown code blocks (`` ```json `` and `` ``` ``)
+- ✅ JSON wrapped in XML tags with preamble
+- ✅ JSON with preamble text (no tags)
+- ✅ JSON with trailing text
+- ✅ No JSON in output (returns None)
+- ✅ Malformed JSON (returns None)
+- ✅ Unbalanced braces (returns None)
+- ✅ Nested JSON objects
+- ✅ JSON with arrays
+- ✅ Complex real-world LLM responses
+- ✅ Empty string
+- ✅ Whitespace only
+- ✅ Escaped quotes in strings
+- ✅ Multiple JSON objects (extracts first)
+
+**Template**:
+```python
+"""Tests for <module> utility functions."""
+
+import pytest
+from <module>.utils import extract_json_from_llm_response
+
+
+class TestExtractJsonFromLlmResponse:
+    """Tests for extract_json_from_llm_response utility."""
+
+    def test_raw_json_happy_path(self):
+        """Test extraction of raw JSON object."""
+        output = '{"score": 5, "passed": true}'
+        result = extract_json_from_llm_response(output)
+        assert result == {"score": 5, "passed": True}
+
+    def test_json_wrapped_in_xml_tags_with_preamble(self):
+        """Test extraction from XML-wrapped JSON with preamble text."""
+        output = """Here is the evaluation result:
+<json_evaluation>
+{"score": 0.8, "passed": true, "reasoning": "Good work"}
+</json_evaluation>
+"""
+        result = extract_json_from_llm_response(output)
+        assert result == {
+            "score": 0.8,
+            "passed": True,
+            "reasoning": "Good work",
+        }
+```
+
+### Step 7: Add Integration Tests
+
+**Update**: `tests/unit/<module>/test_<consumer>.py`
+
+Add tests for the **originally failing case**:
+
+```python
+def test_parse_judge_response_handles_xml_wrapped_json(self) -> None:
+    """Test _parse_judge_response handles XML-wrapped JSON with preamble text."""
+    response = """Here is the evaluation result:
+<json_evaluation>
+{"score": 0.8, "passed": true, "reasoning": "Good work"}
+</json_evaluation>
+"""
+    result = _parse_judge_response(response)
+    assert result.score == 0.8
+    assert result.passed is True
+    assert result.reasoning == "Good work"
+```
+
+### Step 8: Verification Checklist
+
+Run in this exact order:
+
+```bash
+# 1. New utility tests
+pixi run python -m pytest tests/unit/<module>/test_utils.py -v
+
+# 2. Integration tests (updated consumer tests)
+pixi run python -m pytest tests/unit/<module>/test_<consumer>.py::<TestClass> -v
+
+# 3. Full test suite (ensure no regressions)
+pixi run python -m pytest tests/ -q
+
+# 4. Pre-commit hooks (code quality)
+pre-commit run --files <changed-files>
+```
+
+**Expected results**:
+- ✅ All new tests pass
+- ✅ All integration tests pass (including new cases)
+- ✅ Full test suite passes (or pre-existing failures documented)
+- ✅ Pre-commit hooks pass (ruff, black, mypy)
+
+### Step 9: Commit and PR
+
+**Commit message format**:
+```
+refactor(<module>): deduplicate <functionality> & fix <bug>
+
+## Problem
+[Description of bug + duplication discovery]
+
+## Solution
+Created shared `<utility_function>()` utility in `<module>/utils.py` that:
+- [Feature 1]
+- [Feature 2]
+- [Feature 3]
+
+Updated all N consumers to use the shared utility:
+- `<file1>` - fixes the original bug
+- `<file2>` - removes duplicate code
+- `<file3>` - removes duplicate code
+
+## Changes
+- NEW: <new files>
+- EDIT: <modified files>
+
+## Verification
+✓ New utility tests pass (X/X)
+✓ Integration tests pass (Y/Y)
+✓ Full test suite passes (Z/total)
+✓ Pre-commit hooks pass
+
+Closes #<issue>
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+```
+
+**PR workflow**:
+```bash
+git checkout -b fix-<description>
+git add <files>
+git commit -m "..."
+git push -u origin fix-<description>
+gh pr create --title "..." --body "..." --label "bug,refactor"
+gh pr merge --auto --rebase
+```
+
+## Failed Attempts & Lessons Learned
+
+### ❌ Attempt 1: Fix Only the Broken Implementation
+
+**What we tried**: Initially considered just fixing the bug in `llm_judge.py` by copying the brace-matching logic.
+
+**Why it failed**: Would have created a **4th** duplicate implementation. Future bugs would require fixing 4 places instead of 1.
+
+**Lesson**: When you find duplicate code during bug fixing, **always deduplicate first** rather than propagating the fix.
+
+### ⚠️ Pitfall: Updating Error Messages Without Checking Tests
+
+**What happened**: Changed error message from `"Judge response is not valid JSON"` to `"Judge response does not contain valid JSON"`.
+
+**Impact**: Broke existing test that expected the old message.
+
+**Fix**: Updated test expectations in `test_subtest_executor.py:220` to match new message.
+
+**Lesson**: When changing error messages, always grep for tests that assert on those messages:
+```bash
+grep -r "Judge response is not valid JSON" tests/
+```
+
+### ⚠️ Pitfall: Docstring Backslashes Without Raw String
+
+**What happened**: Linter (ruff) failed with `D301 Use r""" if any backslashes in a docstring`.
+
+**Why**: Docstring had `` `\n` `` in examples without using raw string prefix.
+
+**Fix**: Changed `"""` to `r"""` for the docstring.
+
+**Lesson**: Always use `r"""` for docstrings containing backslashes, even in examples.
+
+### ✅ Success: Identifying Pre-existing Test Failures
+
+**What happened**: Full test suite showed 2 failures in `executor/test_agent_container.py`.
+
+**Investigation**: Stashed changes, ran tests on main branch → same failures.
+
+**Conclusion**: Pre-existing failures unrelated to our changes.
+
+**Lesson**: Always verify test failures by checking if they exist on main branch:
+```bash
+git stash
+pixi run python -m pytest <failing-test> -q
+git stash pop
+```
+
+## Results & Parameters
+
+### Files Created
+
+| File | Lines | Purpose |
+| ------ | ------- | --------- |
+| `scylla/judge/utils.py` | 68 | Shared JSON extraction utility |
+| `tests/unit/judge/test_utils.py` | 149 | Comprehensive test suite |
+
+### Files Modified
+
+| File | Lines Changed | Purpose |
+| ------ | --------------- | --------- |
+| `scylla/judge/__init__.py` | +2 | Export new utility |
+| `scylla/e2e/llm_judge.py` | -24, +11 | Use shared utility (fixes bug) |
+| `scylla/judge/parser.py` | -41, +1 | Delegate to shared utility |
+| `scylla/judge/evaluator.py` | -46, +1 | Delegate to shared utility |
+| `tests/unit/e2e/test_subtest_executor.py` | +22 | Add integration tests |
+
+**Net change**: +273 additions, -113 deletions (160 net lines)
+
+### Test Results
+
+```
+✅ New utility tests: 16/16 passed
+✅ Integration tests: 5/5 passed
+✅ Full test suite: 1775/1777 passed
+   ⚠️  2 pre-existing failures in executor (unrelated)
+✅ Pre-commit hooks: All passed
+```
+
+### Deduplication Metrics
+
+| Metric | Value |
+| -------- | ------- |
+| **Duplicate implementations removed** | 2 |
+| **Lines of duplicate code removed** | ~87 lines |
+| **New shared utility** | 1 function |
+| **Test coverage added** | 16 tests |
+| **Consumers updated** | 3 |
+
+## Key Takeaways
+
+1. **Bug in one → Check for duplicates**: When fixing a bug, always search for duplicate implementations that may have the same issue (or the fix).
+
+2. **Deduplicate during bug fix**: Don't just fix the bug in one place — consolidate the logic to prevent future drift.
+
+3. **Choose the most robust implementation**: When deduplicating, pick the version that handles the most edge cases.
+
+4. **Write tests for the bug**: The originally failing case (XML-wrapped JSON) became a test case to prevent regression.
+
+5. **Document what each format handles**: The docstring explicitly lists all supported formats (raw JSON, markdown, XML, preamble).
+
+6. **Verify pre-existing failures**: Don't assume test failures are your fault — check if they exist on main.
+
+7. **Use raw strings for backslashes**: Always use `r"""` for docstrings containing backslash examples.
+
+## Related Skills
+
+- `find-duplicate-code` - Techniques for identifying code duplication
+- `extract-utility-functions` - Creating shared utilities
+- `comprehensive-test-coverage` - Writing thorough test suites
+- `pre-commit-hook-workflow` - Running and fixing pre-commit checks
+
+## References
+
+- Issue: https://github.com/HomericIntelligence/ProjectScylla/issues/503
+- PR: https://github.com/HomericIntelligence/ProjectScylla/pull/505
+- Commit: `cfa6869`
+
+---
+
+## Superseded from dry-consolidation-workflow
+
+**Original date:** 2026-01-20 &nbsp; **Original version:** 1.0.0
+
+```yaml
+name: dry-consolidation-workflow
+description: Complete workflow for analyzing codebase duplications and implementing
+  DRY consolidation
+category: architecture
+date: 2026-01-20
+version: 1.0.0
+tags:
+- dry-principle
+- refactoring
+- deduplication
+- code-quality
+- centralization
+```
+
+# DRY Consolidation Workflow
+
+Complete workflow for analyzing codebase duplications and implementing DRY (Don't Repeat Yourself) consolidation with centralized modules and single sources of truth.
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-01-20 |
+| **Objective** | Systematically find and eliminate code duplications while establishing centralized modules |
+| **Outcome** | ✅ Eliminated 48 lines of duplicate code, fixed 2 path violations, merged PR #201 |
+| **Project** | ProjectScylla |
+| **PR** | [#201](https://github.com/HomericIntelligence/ProjectScylla/pull/201) |
+
+## When to Use
+
+Use this workflow when:
+- Starting codebase cleanup initiative
+- Noticing duplicate functions or constants across files
+- Creating single sources of truth for shared logic
+- Standardizing path, config, or constant usage
+- Improving code maintainability and consistency
+- Implementing DRY principles systematically
+
+**Trigger phrases**: "analyze duplicates", "DRY consolidation", "eliminate duplicate code", "centralize constants", "single source of truth"
+
+## Verified Workflow
+
+### Phase 0: Search Team Knowledge First
+
+**CRITICAL**: Always start by searching existing skills to avoid repeating work.
+
+```bash
+# Use /advise to search team knowledge
+/mnemosyne:advise analyze codebase for duplicates DRY
+```
+
+**What this does**:
+- Searches ProjectMnemosyne skills marketplace
+- Returns prior learnings about consolidation patterns
+- Provides verified approaches and known failures
+- Saves time by building on team knowledge
+
+**Session finding**: Found `codebase-consolidation` and `centralized-path-constants` skills with proven workflows.
+
+### Phase 1: Discovery - Find Duplicates
+
+**1.1 Check for duplicate files by content hash**:
+```bash
+find src/ -type f \( -name "*.py" -o -name "*.mojo" \) -exec md5sum {} + | \
+  awk '{print $1}' | sort | uniq -c | sort -rn | head -20
+```
+
+**Expected output**: Count of files with identical content
+- Count = 1: All files unique (good!)
+- Count > 1: Multiple files with same content (investigate)
+
+**1.2 Find duplicate class names**:
+```bash
+grep -rh "^class [A-Z][a-zA-Z0-9_]*" src/ --include="*.py" | \
+  sed 's/(.*//' | sed 's/://' | sort | uniq -c | sort -rn | head -30
+```
+
+**1.3 Find duplicate function names**:
+```bash
+grep -rh "^def [a-z_][a-zA-Z0-9_]*" src/ --include="*.py" | \
+  sed 's/(.*//' | sed 's/://' | sort | uniq -c | sort -rn | head -30
+```
+
+**1.4 Find specific duplicates**:
+```bash
+# After identifying duplicate names, find their locations
+grep -rn "^class RunResult" src/ --include="*.py"
+grep -rn "^def _calculate_composite_score" src/ --include="*.py"
+```
+
+**1.5 Search for hardcoded strings**:
+```bash
+# Find hardcoded paths, configs, or constants
+grep -rn '"agent"\|"judge"\|"result\.json"' src/ --include="*.py" | \
+  grep -v "^[[:space:]]*#"  # Exclude comments
+```
+
+### Phase 2: Categorization - True vs Intentional
+
+For each duplicate found, read the implementations and categorize:
+
+**True Duplicates** (consolidate):
+- Identical or near-identical code
+- Same purpose, same logic
+- No reason for separate implementations
+- **Action**: Create centralized module
+
+**Intentional Variants** (document):
+- Different fields for different domains
+- Different stages of processing pipeline
+- Valid architectural separation
+- **Action**: Add cross-reference docstrings
+
+**Example categorization**:
+```python
+# True duplicate - consolidate
+# File 1: src/module_a.py
+def _is_test_config_file(file_path: str) -> bool:
+    return path == "CLAUDE.md" or path.startswith(".claude/")
+
+# File 2: src/module_b.py
+def _is_test_config_file(file_path: str) -> bool:
+    return path == "CLAUDE.md" or path.startswith(".claude/")
+
+# Intentional variant - document
+# File 1: src/executor/runner.py
+class ExecutionInfo(BaseModel):  # Pydantic with validation
+    container_id: str
+    exit_code: int
+
+# File 2: src/reporting/result.py
+@dataclass
+class ExecutionInfo:  # Lightweight for persistence
+    exit_code: int
+    duration_seconds: float
+```
+
+### Phase 3: Analysis Report - Communicate Findings
+
+Generate a structured report documenting all findings:
+
+**Report structure**:
+```markdown
+## Codebase Duplication Analysis
+
+### Summary
+- Files analyzed: X
+- Duplicate files by hash: Y
+- Duplicate class names: Z
+- Duplicate function names: W
+
+### True Duplicates (Consolidation Recommended)
+1. **function_name()** - EXACT DUPLICATE
+   - Locations: [file1:line, file2:line]
+   - Implementation: [describe]
+   - Recommendation: [consolidation approach]
+
+### Intentional Variants (Documentation Needed)
+1. **ClassName** - Different purposes
+   - Locations: [file1:line, file2:line]
+   - Analysis: [explain why different]
+   - Recommendation: [add cross-refs]
+
+### Hardcoded Violations
+1. **Path strings** - Should use centralized module
+   - Locations: [file:line]
+   - Current: `run_dir / "agent"`
+   - Recommended: `get_agent_dir(run_dir)`
+```
+
+### Phase 4: Implementation - Create Centralized Modules
+
+**4.1 Create centralized module** for true duplicates:
+
+```python
+# Example: src/package/filters.py (NEW FILE)
+"""Filtering utilities for [purpose].
+
+This module provides functions to [describe shared functionality]
+that should not be counted as [context].
+"""
+
+def is_test_config_file(file_path: str) -> bool:
+    """Check if a file is part of test configuration.
+
+    Args:
+        file_path: Relative file path
+
+    Returns:
+        True if file should be ignored.
+    """
+    path = file_path.strip()
+    return path == "CLAUDE.md" or path.startswith(".claude/")
+```
+
+**4.2 Update imports** in original files:
+
+```python
+# Before:
+# (no import, function defined inline)
+
+# After:
+from package.filters import is_test_config_file
+```
+
+**4.3 Remove duplicate functions**:
+
+```python
+# Delete the old function definition entirely
+# def _is_test_config_file(file_path: str) -> bool:
+#     """..."""
+#     return ...
+```
+
+**4.4 Update all call sites**:
+
+```python
+# Before:
+if _is_test_config_file(file_path):
+    continue
+
+# After:
+if is_test_config_file(file_path):  # Now uses centralized function
+    continue
+```
+
+**4.5 Use existing centralized modules** for hardcoded violations:
+
+```python
+# Before:
+agent_dir = run_dir / "agent"  # Hardcoded string
+
+# After:
+from package.paths import get_agent_dir
+agent_dir = get_agent_dir(run_dir)  # Uses centralized helper
+```
+
+### Phase 5: Documentation - Add Cross-References
+
+For intentional variants, add cross-reference docstrings:
+
+```python
+# In executor/runner.py
+class ExecutionInfo(BaseModel):
+    """Execution details with Pydantic validation.
+
+    This is the executor's detailed execution info.
+    For persistence variant, see: reporting/result.py:ExecutionInfo
+    """
+
+# In reporting/result.py
+@dataclass
+class ExecutionInfo:
+    """Execution details for persistence.
+
+    This is the minimal execution info for storage.
+    For detailed variant, see: executor/runner.py:ExecutionInfo
+    """
+```
+
+### Phase 6: Verification - Test Changes
+
+**6.1 Verify imports** (with proper environment):
+
+```bash
+# Use project's environment manager
+pixi run python -c "from package.filters import function_name; print('OK')"
+pixi run python -c "import package.module; print('OK')"
+```
+
+**6.2 Run full test suite**:
+
+```bash
+pixi run pytest tests/ -v --tb=short -x
+```
+
+**6.3 Check for test failures**:
+- ✅ All imports successful: Good!
+- ✅ Tests passing: No regressions
+- ❌ Test failures: Check if related to changes
+
+### Phase 7: Commit - Follow Git Workflow
+
+**7.1 Create feature branch**:
+
+```bash
+git checkout -b refactor-dry-consolidation
+```
+
+**7.2 Run pre-commit hooks**:
+
+```bash
+pre-commit run --all-files
+```
+
+**7.3 Stage and commit**:
+
+```bash
+git add src/package/filters.py src/package/module1.py src/package/module2.py
+git commit -m "refactor(scope): Consolidate duplicate functions and centralize constants"
+```
+
+**7.4 Push and create PR**:
+
+```bash
+git push -u origin refactor-dry-consolidation
+gh pr create --title "refactor: DRY consolidation" \
+  --body "[detailed summary]" \
+  --label "refactor"
+```
+
+**7.5 Enable auto-merge**:
+
+```bash
+gh pr merge --auto --rebase [PR-NUMBER]
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Discovery Commands (Copy-Paste Ready)
+
+```bash
+# Find duplicate files by content
+find src/ -type f -name "*.py" -exec md5sum {} + | \
+  awk '{print $1}' | sort | uniq -c | sort -rn | head -20
+
+# Find duplicate class names
+grep -rh "^class [A-Z]" src/ --include="*.py" | \
+  sed 's/(.*//' | sed 's/://' | sort | uniq -c | sort -rn
+
+# Find duplicate function names
+grep -rh "^def [a-z_]" src/ --include="*.py" | \
+  sed 's/(.*//' | sed 's/://' | sort | uniq -c | sort -rn
+
+# Find hardcoded strings
+grep -rn '"specific_string"' src/ --include="*.py" | grep -v "^[[:space:]]*#"
+```
+
+### Centralized Module Template
+
+```python
+# src/package/shared_module.py
+"""[Purpose] utilities for [context].
+
+This module centralizes [what functionality] to ensure
+[what benefit - consistency/maintainability/etc].
+"""
+
+def shared_function(param: type) -> type:
+    """[What it does].
+
+    Args:
+        param: [Description]
+
+    Returns:
+        [What is returned]
+    """
+    # Implementation
+    pass
+
+# Constants (UPPERCASE)
+CONSTANT_NAME = "value"
+```
+
+### Import Update Pattern
+
+```python
+# 1. Add import at top of file
+from package.shared_module import shared_function, CONSTANT_NAME
+
+# 2. Remove old duplicate function
+# (delete old def entirely)
+
+# 3. Update all call sites
+# Before: _old_function(arg)
+# After:  shared_function(arg)
+```
+
+### Verification Commands
+
+```bash
+# Verify imports
+pixi run python -c "from package.module import function; print('OK')"
+
+# Run tests
+pixi run pytest tests/ -v --tb=short -x
+
+# Check git status
+git status
+
+# Create PR
+gh pr create --title "refactor: [description]" \
+  --body "[summary]" --label "refactor"
+```
+
+### Session Metrics
+
+| Metric | Before | After | Result |
+| -------- | -------- | ------- | -------- |
+| Duplicate functions | 1 pair | 0 | ✅ 100% eliminated |
+| Path violations | 2 | 0 | ✅ 100% fixed |
+| Centralized module usage | 66% | 100% | ✅ +34% |
+| Lines of code | Baseline | -15 | ✅ Reduction |
+| Tests passing | 1,051 | 1,051 | ✅ No regressions |
+
+### Commit Message Template
+
+```
+refactor(scope): Consolidate duplicate functions and centralize constants
+
+## Changes
+
+### 1. Created centralized [module name]
+- **New file**: src/package/module.py
+- Consolidates [function] used in N locations
+- Single source of truth for [purpose]
+
+### 2. Eliminated duplicate [type]
+- Removed duplicate [name] from:
+  - src/file1.py (X lines)
+  - src/file2.py (Y lines)
+- Updated all call sites
+
+### 3. Standardized [pattern] usage
+- Updated src/file.py to use centralized helper
+- Ensures consistent use of [module]
+
+## Benefits
+- **DRY compliance**: X lines eliminated
+- **Single source of truth**: [what] centralized
+- **Maintainability**: Future changes touch one file
+- **Type safety**: Helpers prevent [what errors]
+
+## Testing
+- ✅ All imports verified
+- ✅ N tests passed
+- No regressions
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+```
+
+## Key Learnings
+
+1. **Always search team knowledge first**: Use `/advise` before starting - saved time by finding proven workflows
+2. **Categorize before consolidating**: Distinguish true duplicates from intentional variants to avoid incorrect consolidation
+3. **Verify with proper environment**: Always use project's environment manager (pixi/poetry/etc) for imports
+4. **Test immediately**: Run full test suite to catch regressions early
+5. **Document intentional variants**: Cross-reference docstrings prevent future confusion
+6. **Follow Git workflow**: Feature branch → pre-commit → PR → auto-merge ensures quality
+
+## Related Skills
+
+- `codebase-consolidation` - Systematic consolidation patterns (ProjectMnemosyne)
+- `centralized-path-constants` - Path centralization specifics (ProjectMnemosyne)
+- `shared-fixture-migration` - Config deduplication patterns (ProjectMnemosyne)
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectScylla | PR #201 - E2E framework DRY consolidation | Eliminated 48 LOC duplicates, standardized paths |
+
+---
+
+## Superseded from dry-consolidate-to-canonical-refactor
+
+**Original date:** 2026-06-04 &nbsp; **Original version:** 1.1.0
+
+```yaml
+name: dry-consolidate-to-canonical-refactor
+description: "Canonical workflow for finding code duplication and refactoring to a single canonical source: discovery via grep/AST, classifying true duplicates vs incidental similarity, bulk file migration, type-alias consolidation, decomposing oversized modules by SRP, dict structure consolidation, preserving git history via git mv. Use when: (1) noticing duplicate functions/constants across modules, (2) centralizing path or config constants, (3) decomposing a >2k-line module into SRP-aligned pieces, (4) consolidating duplicate Pydantic models or type aliases, (5) same dict structure built in multiple call sites, (6) bulk-renaming symbols across a codebase."
+category: architecture
+date: 2026-06-04
+version: "1.1.0"
+user-invocable: false
+verification: verified-local
+history: dry-consolidate-to-canonical-refactor.history
+tags: [merged, dry, consolidation, refactor, canonical-source, deduplication]
+```
+
+# DRY Consolidate to Canonical Refactor
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-06-04 |
+| **Objective** | Eliminate code duplication by identifying canonical source locations, migrating references, and deleting redundant code |
+| **Outcome** | Consolidated 17 skills covering DRY/deduplication, constant centralization, method extraction, dict structure consolidation, module relocation, and stale-code cleanup |
+
+## When to Use
+
+- Duplicate function or class definitions exist across two or more modules (`grep` finds the same `def`/`class` name in multiple files)
+- Constants or configuration values are defined inline in multiple places instead of one canonical module
+- The same dict structure (payload, shape, serialization format) is built in multiple call sites
+- A method exceeds 50–100 LOC or has cyclomatic complexity >15 and has clear section boundaries
+- Duplicate Pydantic models or dataclasses can be unified into a base class with domain-specific subtypes
+- A module sits at the wrong package level and needs relocation (orphan module)
+- Stale one-time scripts or deprecated stub files have accumulated in `scripts/` or source directories
+- Code review or audit issue asks for "centralize", "deduplicate", "extract", "relocate", or "cleanup"
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# --- DISCOVERY ---
+# Find duplicate function names across Python source
+grep -rh "^def [a-z_]" src/ --include="*.py" | sed 's/(.*//' | sort | uniq -c | sort -rn | head -30
+
+# Find duplicate class names
+grep -rh "^class [A-Z]" src/ --include="*.py" | sed 's/(.*//' | sed 's/://' | sort | uniq -c | sort -rn | head -30
+
+# Find duplicate constants (Mojo or Python)
+grep -rn "^alias CONSTANT_NAME\|^CONSTANT_NAME = " src/ --include="*.py" --include="*.mojo"
+
+# Find all callers of a function (dependency graph)
+grep -rn "from.*import.*function_name\|\.function_name(" src/ tests/ --include="*.py"
+
+# --- VERIFICATION AFTER MIGRATION ---
+grep -rn "old_module\." . --include="*.py" --include="*.md"  # should be empty
+
+# --- STALE SCRIPT AUDIT ---
+ls scripts/*.py scripts/*.sh 2>/dev/null | sort
+for script in candidate_a candidate_b; do
+  hits=$(grep -r "$script" .github/ justfile scripts/ \
+    --include="*.yml" --include="*.py" --include="*.sh" 2>/dev/null \
+    | grep -v "^scripts/${script}" | grep -v README | grep -v CHANGELOG)
+  [ -n "$hits" ] && echo "REFERENCED: $script" || echo "NO CALLERS: $script"
+done
+```
+
+### Phase 1: Discovery
+
+**1.1 Content-hash deduplication (files)**
+
+```bash
+find src/ -type f \( -name "*.py" -o -name "*.mojo" \) -exec md5sum {} + \
+  | awk '{print $1}' | sort | uniq -c | sort -rn | head -20
+```
+
+**1.2 Duplicate symbol search**
+
+```bash
+# Functions (Python)
+grep -rh "^def [a-z_][a-zA-Z0-9_]*" src/ --include="*.py" \
+  | sed 's/(.*//' | sed 's/://' | sort | uniq -c | sort -rn | head -30
+
+# Private detection helpers worth extracting
+grep -r "def _is_\|def _has_\|def _check_\|def _validate_" src/ --include="*.py"
+```
+
+**1.3 Stale file patterns to audit**
+
+Name patterns that indicate one-time-use scripts: `bisect_*`, `fix-*`, `merge_*`, `add_*_to_*`,
+`migrate_*`, `batch_*`, `document_*`, `execute_*`. Files annotated `# DEPRECATED`, `# legacy`,
+or containing only docstrings/re-export comments with zero executable logic.
+
+### Phase 2: Classify — True Duplicate vs Intentional Variant
+
+For each duplicate found, read both implementations in full before acting.
+
+| Type | Criteria | Action |
+| ------ | --------- | ------- |
+| **True duplicate** | Identical or near-identical logic, same purpose | Create/extend a canonical module; delete copies |
+| **Intentional variant** | Different fields, different pipeline stage, different domain | Add cross-reference docstrings; do NOT consolidate |
+| **Weaker vs stronger** | Same function, one validates JSON content, one checks file existence only | Keep the stronger; update callers; update test fixtures if needed |
+
+### Phase 3: Consolidation Patterns
+
+#### 3a. Function / Constant Centralization
+
+```python
+# 1. Create canonical module (or add to existing one)
+# src/package/filters.py
+"""Filtering utilities — centralized per DRY principle."""
+
+def is_test_config_file(file_path: str) -> bool:
+    """Check if path is a test-config file (exclude from coverage counts)."""
+    path = file_path.strip()
+    return path == "CLAUDE.md" or path.startswith(".claude/")
+
+# 2. In each duplicate location — replace definition with import
+from package.filters import is_test_config_file
+
+# 3. Update all call sites (remove leading underscore if it was private)
+```
+
+```mojo
+# Mojo constant centralization
+# In canonical_module.mojo — add after imports, before first struct/fn
+alias GRADIENT_CHECK_EPSILON_FLOAT32: Float64 = 3e-4
+alias GRADIENT_CHECK_EPSILON_OTHER:   Float64 = 1e-3
+
+# In importer — extend existing import block
+from shared.testing.gradient_checker import (
+    check_gradients,
+    compute_numerical_gradient,
+    GRADIENT_CHECK_EPSILON_FLOAT32,   # was defined locally; now imported
+    GRADIENT_CHECK_EPSILON_OTHER,
+)
+```
+
+#### 3b. Pydantic Type-Alias Hierarchy
+
+```python
+from pydantic import BaseModel, ConfigDict, Field
+
+class ExecutionInfoBase(BaseModel):
+    """Base execution info — common fields for all subtypes."""
+    model_config = ConfigDict(frozen=True)
+    exit_code: int = Field(..., description="Process exit code (0 = success)")
+    duration_seconds: float = Field(default=0.0)
+    timed_out: bool = Field(default=False)
+
+class ExecutorExecutionInfo(ExecutionInfoBase):
+    container_id: str = Field(...)
+    stdout: str = Field(default="")
+
+# Backward-compatible alias — old imports continue to work
+ExecutionInfo = ExecutorExecutionInfo
+
+# For frozen models, use model_copy to update fields (NOT direct assignment)
+result = result.model_copy(update={"duration_seconds": elapsed})
+```
+
+Key rules: always provide defaults for optional fields; mark deprecated base type with
+`.. deprecated::` docstring pointing to the new hierarchy.
+
+#### 3c. Extract Method (SRP Decomposition)
+
+Extract one method at a time — verify with the full test suite before the next extraction.
+
+```python
+# Naming convention for extracted privates
+def _load_checkpoint_and_config(self, checkpoint_path: Path) -> tuple[Checkpoint, Path]:
+    """Load and validate checkpoint.
+
+    Args:
+        checkpoint_path: Path to checkpoint.json.
+
+    Returns:
+        Tuple of (checkpoint, experiment_dir).
+
+    Raises:
+        ValueError: If validation fails.
+    """
+    ...
+
+# closure-to-method: when a closure uses `nonlocal`, use a mutable box
+scheduler_ref: list[Scheduler | None] = [scheduler]
+# lambda in the action dict reads scheduler_ref[0] after assignment
+```
+
+Targets: soft limit 50 LOC per method, hard limit 100 LOC. Cyclomatic complexity >15 requires split.
+
+#### 3d. Detection Utils with LRU Cache
+
+```python
+from functools import lru_cache
+from pathlib import Path
+
+@lru_cache(maxsize=128)
+def is_modular_repo(workspace: Path) -> bool:
+    """Detect Mojo/modular monorepo by sentinel files."""
+    return (workspace / "bazelw").exists() and (workspace / "mojo").is_dir()
+```
+
+**Critical**: `@lru_cache` and `unittest.mock.patch` conflict. In tests, call
+`function.cache_clear()` before each test that verifies call counts. Alternatively,
+use real filesystem via `tmp_path` and avoid mocking.
+
+#### 3e. Orphan Module Relocation
+
+```bash
+# Prefer existing sub-package (KISS/YAGNI) over creating a new one
+cp package/orphan.py package/subpackage/orphan.py   # zero content changes needed
+
+# Find all consumers
+grep -rn "from package\.orphan\|import package\.orphan" --include="*.py" .
+
+# Update every import path, then verify before deleting
+package-manager run python -c "from package.subpackage.orphan import Class; print('OK')"
+
+# Use git rm (not plain rm) to preserve file history as a rename
+git rm package/orphan.py
+```
+
+Verify zero dangling references: `grep -rn "from package\.orphan" .` must produce no output.
+
+#### 3f. Deprecated File / Stub Cleanup
+
+Safe-to-delete checklist:
+- File contains ONLY docstrings/comments, zero executable code, zero exports
+- `git status` confirms no prior automation already completed the task
+- Zero grep matches for the module name in `.mojo`/`.py` import statements
+- For Mojo stubs: a directory with `__init__.mojo` at the same level exists (Mojo resolves directory first)
+- All cross-references updated: `CLAUDE.md`, `.claude/agents/*.md`, `docs/`, `scripts/*.py`
+
+```bash
+# Cast wide net — source AND docs AND configs
+grep -r "<module_name>" . \
+  --include="*.mojo" --include="*.py" \
+  --include="*.md" --include="*.yaml" --include="*.yml" -l
+
+git rm <path/to/deprecated/file>    # stages atomically
+
+# Skip mojo-format hook if GLIBC incompatible (pre-existing infra constraint)
+SKIP=mojo-format pixi run pre-commit run --all-files
+```
+
+#### 3g. Stale Script Removal
+
+```bash
+# Confirm zero callers before deleting
+for script in candidate_a candidate_b; do
+  hits=$(grep -r "$script" .github/ justfile scripts/ \
+    --include="*.yml" --include="*.py" --include="*.sh" 2>/dev/null \
+    | grep -v "^scripts/${script}" | grep -v README | grep -v CHANGELOG)
+  [ -n "$hits" ] && echo "REFERENCED: $script" || echo "NO CALLERS: $script"
+done
+
+# Check pairs: if A references B, remove both or neither
+git rm scripts/candidate_a.py scripts/candidate_b.sh
+
+# Update scripts/README.md "Removed Scripts" section
+```
+
+#### 3h. Dynamic Discovery (Replace Hardcoded Lists)
+
+```python
+# Replace hardcoded file lists with Path.rglob()
+# Before:
+plugins_list = ["plugin-a", "plugin-b"]
+# After:
+skill_files = sorted(skills_dir.rglob("SKILL.md"))
+
+def main(argv: list[str] | None = None) -> None:  # testable main
+    ...
+
+def fix_skill_file(skill_path: Path, dry_run: bool = False) -> tuple[bool, list[str]]:
+    ...
+```
+
+#### 3i. Dict Structure Consolidation (Shared Payload)
+
+When the same dict structure is built in multiple call sites (e.g., format functions and CLI output),
+extract into a single private helper to prevent shape drift.
+
+```python
+# Before: duplicated dict construction in two places
+# In format_stats_json() — lines 186-192
+def format_stats_json(stats: dict[str, Any]) -> str:
+    serializable = {
+        "agent_type": stats.get("agent_type"),
+        "total_delegations": stats.get("total_delegations", 0),
+        "skill_refs": stats.get("skill_refs", []),
+        "timestamp": stats.get("timestamp"),
+    }
+    return json.dumps(serializable)
+
+# In main() — lines 254-260 (identical structure)
+def main() -> None:
+    stats = {"agent_type": ..., "total_delegations": ..., "skill_refs": ..., "timestamp": ...}
+    cli_output = json.dumps({
+        "agent_type": stats.get("agent_type"),
+        "total_delegations": stats.get("total_delegations", 0),
+        "skill_refs": stats.get("skill_refs", []),
+        "timestamp": stats.get("timestamp"),
+    })
+
+# After: extract to private helper
+def _serializable_stats(stats: dict[str, Any]) -> dict[str, Any]:
+    """Convert stats dict to serializable format.
+
+    Args:
+        stats: Raw statistics dictionary from agent runtime.
+
+    Returns:
+        Dictionary with JSON-serializable shape:
+        - agent_type: str (from stats)
+        - total_delegations: int >= 0 (defaults to 0)
+        - skill_refs: list[str] (defaults to [])
+        - timestamp: str (from stats, may be None)
+    """
+    return {
+        "agent_type": stats.get("agent_type"),
+        "total_delegations": stats.get("total_delegations", 0),
+        "skill_refs": stats.get("skill_refs", []),
+        "timestamp": stats.get("timestamp"),
+    }
+
+# Both call sites now use the helper
+def format_stats_json(stats: dict[str, Any]) -> str:
+    return json.dumps(_serializable_stats(stats))
+
+def main() -> None:
+    cli_output = json.dumps(_serializable_stats(stats))
+```
+
+**Key rules**:
+- Private helper name: `_<noun>_<verb>()` or `_<adjective>_<noun>()` (e.g., `_serializable_stats`, `_extract_delegation_targets`)
+- Placement: after other private helpers in the same scope, before first public function that calls it
+- Type hints: Full annotations required (`dict[str, Any]` → `dict[str, Any]`)
+- Docstring: Include Args and Returns; explain default behavior for optional fields
+- Test coverage: Add regression test asserting shape parity between all call sites
+  ```python
+  def test_format_stats_json_matches_cli_json_shape():
+      """Verify that format_stats_json and main() produce same serializable shape."""
+      stats = {"agent_type": "test", "total_delegations": 5, "skill_refs": ["s1"], "timestamp": "2026-01-01"}
+      shape_from_formatter = json.loads(format_stats_json(stats))
+      shape_from_cli = json.loads(json.dumps(_serializable_stats(stats)))
+      assert shape_from_formatter == shape_from_cli, "Dict shapes diverged between call sites"
+  ```
+
+### Phase 4: Verification
+
+```bash
+# Verify no orphaned references remain
+grep -rn "old_module_name\|_old_function_name" src/ tests/ --include="*.py"
+
+# Verify imports work
+<package-manager> run python -c "from package.canonical import Symbol; print('OK')"
+
+# Run full test suite — zero regressions required for pure refactors
+<package-manager> run pytest tests/ -v --tb=short -x
+
+# Run pre-commit hooks
+pre-commit run --all-files
+```
+
+### Phase 5: Commit and PR
+
+```bash
+git add src/package/canonical_module.py src/package/consumer1.py src/package/consumer2.py
+git commit -m "refactor(scope): consolidate duplicate functions into canonical_module
+
+- Centralize function_name into src/package/canonical_module.py
+- Update N call sites to import from canonical location
+- Remove N duplicate definitions (~X lines eliminated)
+- All Y tests pass, zero regressions
+
+Closes #<issue>"
+
+gh pr create --title "refactor: DRY consolidation — <scope>" \
+  --body "## Summary
+- Eliminated N duplicate definitions
+- Centralized in <canonical_module>
+- Y tests passing, no regressions" \
+  --label "refactor"
+
+gh pr merge --auto --squash
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Making duration_seconds required in Pydantic base | `Field(...)` (required) for optional-by-usage fields | Broke existing tests creating objects without that field | Always provide `Field(default=X)` for fields not universally required by all callers |
+| Mutating frozen Pydantic models directly | `execution_info.started_at = value` | `frozen=True` raises `FrozenInstanceError` | Use `model_copy(update={...})` for all field updates |
+| Omitting backward-compat type aliases when renaming | Renamed class globally in one pass | Broke external consumers importing the old name | Add `OldName = NewName` alias in every module; old code keeps working |
+| Mocking @lru_cache functions with patch | `@patch("module.cached_fn")` with `return_value=False` | Cache returns stale result; mock never called | Call `cached_fn.cache_clear()` before the test, or use real `tmp_path` filesystem |
+| Asserting mock outside `with patch.object(...)` block | `mock_exec.assert_called_once_with(...)` after `with` exits | `patch.object` restores original on exit; `.assert_*` no longer available | Always place mock assertions inside the `with` block |
+| `git submodule add` before `git rm` on symlink | Tried adding submodule when symlink still on disk | `git submodule add` fails if destination path exists | Always `git rm` the symlink first; confirm directory is gone before `git submodule add` |
+| `git push --delete` for >2 remote branches | Batched deletions in one push | GitHub ruleset GH013 blocks pushing >2 refs; entire batch silently fails | Use `gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/<branch>"` loop instead |
+| Grepping only source files for references | `--include="*.py"` only | Missed references in `CLAUDE.md`, `docs/`, `scripts/*.py` generating agent configs | Always grep ALL file types: `.mojo`, `.py`, `.md`, `.yaml`, `.yml` |
+| Replace-all on test fixtures | Bulk-replaced JSON strings in test fixtures | Some had different indentation; bulk edit worked but ruff reformatted | Always run `ruff format` after bulk edits before committing |
+| Deleting CLI directory before moving shared modules | `rmdir cli/` before copying `progress.py` out | Directory not empty | Copy shared modules out first, then delete the directory |
+| Mojo tuple destructuring `var (x, y) = ...` | Python-style unpacking in `var` declaration | Mojo v0.26.x does not support tuple destructuring in `var` | Use indexed access: `tensors[0]`, `tensors[1]` |
+| Placing Mojo helper after its consumers | Inserted helper at end of file | Mojo requires definition-before-use | Always insert private helpers immediately before their first caller |
+| Direct copy of ported script without adapting paths | Copied verbatim from ProjectMnemosyne to ProjectOdyssey | Default `--skills-dir` path pointed to wrong location | Always check target repo's default paths, test import patterns, and directory structure |
+| Using `gh pr list --state merged` only | Filtered to merged state | Misses CLOSED PRs and branches with no PR | Always use `--state all` to catch all terminal states |
+| Building same dict structure in multiple call sites | Left identical dict construction in format_stats_json() and main() | Shape can drift independently if new fields added in future refactors | Extract to `_serializable_stats()` helper; add regression test pinning shape parity |
+
+## Results & Parameters
+
+### Discovery Commands (Copy-Paste Ready)
+
+```bash
+# Python: duplicate functions
+grep -rh "^def [a-z_]" src/ --include="*.py" | sed 's/(.*//' | sort | uniq -c | sort -rn | head -30
+
+# Python: duplicate classes
+grep -rh "^class [A-Z]" src/ --include="*.py" | sed 's/(.*//' | sed 's/://' | sort | uniq -c | sort -rn | head -30
+
+# Mojo: duplicate constants
+grep -rn "^alias [A-Z_]*:" shared/ --include="*.mojo" | awk -F: '{print $3}' | sort | uniq -d
+
+# Map importers to find canonical module (most callers wins)
+grep -rn "from.*import.*target_function" src/ tests/ --include="*.py"
+
+# Stale script caller check
+for script in $(ls scripts/*.py | xargs -n1 basename | sed 's/\.py//'); do
+  hits=$(grep -r "$script" .github/ justfile scripts/ \
+    --include="*.yml" --include="*.py" --include="*.sh" 2>/dev/null \
+    | grep -v "^scripts/${script}" | grep -v README | grep -v CHANGELOG)
+  [ -n "$hits" ] && echo "REFERENCED: $script" || echo "NO CALLERS: $script"
+done
+```
+
+### Centralized Module Template
+
+```python
+# src/package/shared_module.py
+"""<Purpose> utilities — centralized for DRY compliance.
+
+This module provides <what functionality> that is shared across <which modules>.
+"""
+
+def shared_function(param: SomeType) -> bool:
+    """<What it does>.
+
+    Args:
+        param: <Description>.
+
+    Returns:
+        <What is returned>.
+    """
+    return <logic>
+
+CONSTANT_NAME = "value"
+```
+
+### Branch Cleanup Commands
+
+```bash
+# Enumerate all remote refs
+gh api repos/{owner}/{repo}/git/refs/heads --paginate --jq '.[].ref' | sed 's|refs/heads/||'
+
+# Classify each branch
+gh pr list --head <branch> --state all --json number,state,title
+
+# Delete remote branches (bypasses GH013 ruleset — must use REST API, not git push)
+OWNER_REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+for b in "${BRANCHES_TO_DELETE[@]}"; do
+  gh api -X DELETE "repos/${OWNER_REPO}/git/refs/heads/$b" && echo "deleted: $b" || echo "FAIL: $b"
+done
+
+git worktree prune
+git remote prune origin
+```
+
+### Verified Session Metrics
+
+| Source Skill | Outcome |
+| ------------- | ------- |
+| dry-consolidation-workflow | -48 LOC duplicates, 2 path violations fixed (ProjectScylla PR #201) |
+| audit-driven-dry-cli-cleanup | -1063 lines, 5 functions consolidated, CLI removed (ProjectScylla PR #1545) |
+| pydantic-type-consolidation | 22 new tests, backward-compat aliases, inheritance hierarchy (ProjectScylla PR #726) |
+| extract-method-refactoring | 90 LOC → 30 LOC main method, 2145 tests pass (ProjectScylla PR #709) |
+| extract-detection-utils | `repo_detection.py` with LRU cache, 14 tests, zero regressions (ProjectScylla PR #715) |
+| extract-helper-method-tdd | 4 TDD tests, 2213 tests passing, pre-commit green (ProjectScylla PR #763) |
+| orphan-module-subpackage-relocation | 6 files changed, git rename 100% similarity (ProjectScylla PR #958) |
+| stale-script-cleanup / audit-stale-scripts | 10 scripts removed, ~4571 lines deleted (ProjectOdyssey #3337) |
+| deprecated-file-stub-cleanup | Multiple stubs removed across 4 ProjectOdyssey issues |
+| dynamic-rglob-replaces-hardcoded-lists | 13 pytest tests, self-maintaining script (ProjectOdyssey PR #5113) |
+| clean-branches | 59 branches deleted via REST API loop, GH013 bypass confirmed |
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectScylla | Multiple PRs: DRY consolidation, Pydantic types, method extraction, module relocation | PRs #201, #709, #715, #726, #763, #958, #1221, #1545 |
+| ProjectOdyssey | Stale script cleanup, deprecated stub deletion, dynamic rglob | Issues #3062, #3063, #3066, #3337, #3870; PRs #3254, #5113 |
+| HomericIntelligence/Odysseus | Symlink-to-submodule conversion, .gitmodules normalization | PR #66 |
+
+---
