@@ -1,0 +1,2211 @@
+<!-- markdownlint-disable MD024 -->
+
+# stale-documentation-audit-and-broken-reference-repair — History
+
+## v1.0.0 (2026-06-07)
+
+Consolidated 10 documentation skills into one canonical covering stale-doc drift audits and broken-reference repair. Absorbed skills:
+
+- stale-documentation-audits-and-sync
+- phantom-dir-reference-fix
+- fix-broken-doc-references
+- doc-audit-policy-violations
+- getting-started-doc-audit
+- fix-tier-label-mismatches
+- placeholder-and-stub-doc-lifecycle
+- audit-monolith-documentation-resolution-pattern
+- docs-contributing-md-case-clash-redirect
+- installation-anchor-validator
+
+## Superseded from stale-documentation-audits-and-sync
+
+**Original date:** 2026-06-07 · **Original version:** 1.1.0
+
+```yaml
+name: stale-documentation-audits-and-sync
+description: "Canonical workflow for detecting and remediating stale documentation: doc-drift grep audits, stale-count fixes, metric discrepancy reconciliation, ecosystem-role drift detection, multi-file doc sync, README audit workflows, cross-doc citation drift defenses, doc-contradiction resolution. Use when: (1) running a doc-drift audit across a corpus, (2) reconciling docs to current implementation, (3) fixing stale agent/file/test counts in README, (4) catching cross-doc contradictions before publication, (5) syncing docs after a structural change."
+category: documentation
+date: 2026-06-07
+version: "1.1.0"
+user-invocable: false
+verification: verified-local
+history: stale-documentation-audits-and-sync.history
+tags: [merged, doc-drift, stale-doc, doc-sync, doc-audit, citation-drift]
+```
+
+# Stale Documentation Audits and Sync
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-18 |
+| **Objective** | Canonical workflow for auditing, detecting, and remediating stale documentation across a project corpus |
+| **Outcome** | Consolidated from 12 skills covering Future Improvements audits, count reconciliation, metric discrepancy fixes, ecosystem role drift, multi-file sync, workflow README audits, cross-doc citation drift, and contradiction resolution |
+| **Verification** | verified-local — validated across ProjectScylla, ProjectOdyssey, ProjectMnemosyne |
+
+## When to Use
+
+- A "Future Improvements" or "Future Work" section lists a feature that was already shipped
+- Documentation states a metric (test count, coverage %, file count) that doesn't match the codebase
+- `CLAUDE.md` and `pyproject.toml` contradict each other on thresholds
+- A code registry (e.g., `FIGURE_REGISTRY`, agent list) changed size but docs still reference old counts
+- Agents were deleted or converted to skills and doc counts are out of sync
+- External architecture docs describe a project's role differently than its actual implementation
+- Same ecosystem repo listing appears in multiple files and needs consistent updates
+- Workflows were added/deleted but `README.md` was not updated
+- Two project docs give contradictory guidance on the same topic (labels, branch naming, commit format)
+- Inter-citing markdown corpus has reorganized sections with stale `§`-references across files
+- An issue's fix already exists in scripts but docs lag behind
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# ── FUTURE IMPROVEMENTS DRIFT ──────────────────────────────────────────────
+# Find stale Future Improvements / Future Work across docs
+grep -rn "Future Improvements\|Future Work\|Coming Soon\|Planned\|Not Implemented" \
+  docs/ --include="*.md" | grep -v "docs/arxiv/"
+
+# Cross-reference adapters listed as Planned vs actual files
+ls <project-root>/adapters/
+
+# ── STALE NUMERIC COUNTS ────────────────────────────────────────────────────
+# Actual test count
+pixi run python -m pytest --collect-only -q tests/ 2>/dev/null | tail -3
+
+# Actual file/agent count
+find tests/ -name "test_*.py" | wc -l
+ls .claude/agents/*.md | wc -l
+
+# Coverage threshold in pyproject.toml
+grep "fail_under" pyproject.toml
+
+# Search ALL markdown files for remaining stale references (critical step)
+grep -r "<old_count>" . --include="*.md" --exclude-dir=.git
+
+# ── ECOSYSTEM ROLE DRIFT ─────────────────────────────────────────────────────
+# Build alignment matrix — audit all role references
+grep -rn "chaos\|resilience testing\|failure injection" README.md CLAUDE.md docs/
+
+# Verify repos against GitHub org API
+gh api orgs/<ORG>/repos --paginate \
+  --jq '.[] | "\(.name) -- \(.description // "no description")"' | sort
+
+# ── WORKFLOW README AUDIT ────────────────────────────────────────────────────
+# Ground truth workflow list
+ls .github/workflows/*.yml
+ls .github/workflows/*.yml | wc -l
+
+# Find inline duplication
+grep -rl "prefix-dev/setup-pixi" .github/workflows/*.yml | wc -l
+
+# ── CONTRADICTION DETECTION ──────────────────────────────────────────────────
+# Cross-reference policy between CLAUDE.md and CONTRIBUTING.md
+grep -n "label\|Never use" CLAUDE.md CONTRIBUTING.md .claude/shared/pr-workflow.md
+
+# ── CITATION DRIFT (§-REFERENCES) ────────────────────────────────────────────
+# List every §-reference across corpus
+grep -rEn "[A-Z_]+\.md *§[0-9]+(\.[0-9]+)*" <docs-dir>/ \
+  | awk -F'§' '{print $1, "§"$2}' | sort -u
+
+# Extract every §-heading in target docs
+grep -rEn "^#{2,4} §[0-9]+(\.[0-9]+)*" <docs-dir>/ | sort -u
+
+# Find unverified arXiv citations
+grep -rn 'ASSUMPTION — to validate' <docs-dir>/
+```
+
+### Phase 1: Identify the Staleness Pattern
+
+Classify the staleness before acting:
+
+| Pattern | Symptom | Primary Tool |
+| ------- | ------- | ------------ |
+| Future Improvements drift | Doc says "Planned" but `.py` exists | grep + ls + Read |
+| Stale numeric counts | README says N but actual count is M | pytest/find/grep |
+| Metric discrepancy | CLAUDE.md ≠ pyproject.toml thresholds | grep both files |
+| Agent/file count drift | CLAUDE.md count ≠ `ls .claude/agents/ \| wc -l` | ls + grep |
+| Ecosystem role drift | External docs describe wrong project role | grep + alignment matrix |
+| Multi-file inconsistency | Same table in 3 files, all different | grep across files |
+| Workflow README drift | README lists deleted/missing workflows | ls vs README table |
+| Doc contradiction | Policy in CLAUDE.md conflicts with CONTRIBUTING | grep policy term |
+| Citation §-drift | §-ref in file A points to old §-number in file B | grep §-pattern |
+| Implementation lag | Issue fix pre-exists; docs didn't follow | Read pre-commit config |
+
+### Phase 2: Verify Actual Values from Authoritative Sources
+
+**For numeric counts** — always count from code, never from other docs:
+
+```bash
+# Registry count (figures, adapters, agents)
+grep -c '"fig' scripts/generate_figures.py
+ls .claude/agents/*.md | wc -l
+find tests/ -name "*.yaml" | wc -l
+
+# For code registries, use AST for accuracy
+python3 -c "
+import ast, sys
+tree = ast.parse(open(sys.argv[1]).read())
+for node in ast.walk(tree):
+    if isinstance(node, ast.List):
+        print(f'Entries: {len(node.elts)}')
+" scripts/generate_tables.py
+```
+
+**For Future Improvements** — verify each claimed-future item in source:
+
+```bash
+ls <project-root>/adapters/          # Does the file exist?
+head -3 <project-root>/adapters/<name>.py   # Is it real code, not stub?
+grep -n "def <function>" <project-root>/<module>.py
+```
+
+**For ecosystem role** — use GitHub API as truth for repo listings:
+
+```bash
+gh api orgs/<ORG>/repos --paginate \
+  --jq '.[] | "\(.name) -- \(.description // "no description")"' | sort
+```
+
+**For citations** — WebFetch every arXiv ID against its abstract page:
+
+```text
+https://arxiv.org/abs/<NNNN.NNNNN>
+```
+
+Verify returned title and first author match the citation entry's claim.
+
+### Phase 3: Apply Minimal Targeted Fixes
+
+**Rule**: Use `Edit` tool with exact string replacement. Never rewrite whole sections.
+Use `replace_all: true` when the same stale phrase appears multiple times.
+
+#### Future Improvements fixes
+
+- Update `Planned` → `Implemented` in adapter/component status tables
+- Add missing components to ASCII diagrams
+- Move "implemented but not yet integrated" items out of "Future Work" with accurate status note
+- Remove stale numbered list item; renumber if needed
+- Add proper documented section near the component it belongs to
+
+#### Count fixes
+
+Use round numbers with `+` suffix for forward-compatibility in README:
+
+```text
+"2026+ tests"   →  "3,000+ tests"
+"115+ test files"  →  "127+ test files"
+```
+
+Use exact counts (no `+`) for deterministic values like YAML subtest counts.
+
+#### Metric discrepancy fixes
+
+```text
+CLAUDE.md: "73%+ test coverage"  →  "75%+ test coverage"
+--cov=scylla/scylla  →  --cov=scylla
+```
+
+#### Agent count fixes
+
+```bash
+# Update CLAUDE.md in two places
+# Quick Links section: "- N agents" → "- M agents"
+# Agent Hierarchy section: "All N agents" → "All M agents"
+```
+
+Annotate tracking docs with strikethrough rather than deleting entries:
+
+```markdown
+- ~~`.claude/agents/deleted-agent.md`~~ — converted to skill
+```
+
+#### Ecosystem role fixes
+
+1. Build alignment matrix (see template in Results & Parameters)
+2. Decide: update docs or add code (update docs when zero implementation exists for stale claim)
+3. Make minimal doc fix — often only ONE bullet needs updating
+4. Create ADR in `docs/dev/adr/`
+5. Add drift-detection tests (see template in Results & Parameters)
+6. File cross-repo issues for external docs you cannot PR directly
+
+#### Multi-file ecosystem sync
+
+Apply identical table to all locations. Consistency rules:
+
+- Same column headers: `Repository | Role`
+- Same descriptions for same repo across all files
+- Mark current project with `(this project)` suffix
+
+#### Workflow README audit
+
+| Finding | Action |
+| ------- | ------ |
+| File in README but not on disk | Remove from README |
+| File on disk but not in README | Add to README (read first 20 lines for `name:` and `on:`) |
+| Filename mismatch | Correct the filename |
+
+Add shell command in README so future readers can verify without trusting hardcoded count:
+
+```markdown
+`ls .github/workflows/*.yml | wc -l`
+```
+
+#### Post-Migration README Cleanup
+
+Use when a prior consolidation pass migrated workflow steps to composite actions but left the
+README describing the old inline pattern. Effort: ~15 min, low-risk (documentation only).
+
+**Step 1 — Verify migration is complete before touching README:**
+
+```bash
+# Should return 0 results if migration is complete
+grep -rn "prefix-dev/setup-pixi" .github/workflows/*.yml | grep -v README | wc -l
+
+# Positive check — verifies new composite action pattern is present (not just absence-check)
+grep -rn "uses: ./.github/actions/setup-pixi" .github/workflows/*.yml | wc -l
+```
+
+If the inline pattern is still present in `.yml` files, do the workflow migration first.
+
+**Step 2 — Find all stale prose in the README:**
+
+```bash
+grep -n "inline\|Not Yet Migrated\|Remaining Duplication\|no composite action" .github/workflows/README.md
+```
+
+There are typically 6 stale locations in a post-migration README:
+
+1. Individual workflow description bullets — e.g. "Uses inline `prefix-dev/setup-pixi`"
+2. "Remaining Duplication" section — lists workflows as not-yet-migrated
+3. "Common Patterns > Composite Actions" — says no composite actions exist
+4. "Pixi-Based Environment Setup" examples — shows old inline YAML snippet
+5. "Adding New Workflows" checklist — tells contributors to add to the duplication table
+6. Audit quick-reference commands — grep command checks for inline usage count
+
+**Step 3 — Apply targeted edits using `replace_all: true`** for phrases that appear multiple times.
+
+#### Contradiction resolution
+
+Authority order: `CLAUDE.md` > `.claude/shared/pr-workflow.md` > `CONTRIBUTING.md`
+
+Edit only the file(s) that are wrong. Never modify the canonical source.
+
+#### Citation §-drift repair
+
+When reorganizing a document's §-numbering, produce a mapping table BEFORE renaming:
+
+```text
+| Old §-number | New §-number | Notes                       |
+| ------------ | ------------ | --------------------------- |
+| §6.2.2       | §2.2         | Layer-type rule for Linear  |
+| §6.4         | §7           | Promoted to top-level       |
+```
+
+Apply via global find-replace across all citing files in one commit.
+
+#### Implementation-lag fixes
+
+```bash
+# Confirm fix exists before writing any new code
+ls scripts/<wrapper>.sh
+grep -A3 "id: <hook>" .pre-commit-config.yaml
+ls docs/dev/<topic>.md
+```
+
+If all three exist, only docs need updating (2 targeted `Edit` calls typically sufficient).
+
+### Phase 4: Validate, Commit, and PR
+
+```bash
+# Confirm only intended files changed
+git diff --stat
+
+# Run pre-commit (runs markdownlint automatically)
+pre-commit run --all-files
+
+# Commit (doc-only change)
+git add <changed-files>
+git commit -m "docs(<scope>): <description>
+
+Refs #<issue>"
+
+git push -u origin <branch>
+gh pr create --title "docs(<scope>): <description>" --body "Refs #<issue>"
+gh pr merge --auto --squash
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| ------- | -------------- | ------------- | -------------- |
+| Running `just pre-commit-all` | Used `just` command runner | `just` not in PATH | Use `pre-commit run --all-files` directly |
+| Expecting mojo-format to pass | Ran full pre-commit suite | `mojo` binary requires GLIBC 2.32+; host has older version | Pre-existing env limitation; only non-Mojo hooks matter for doc-only changes |
+| Deleting tracking doc entries outright | Removed lines for deleted agents | Lost historical context of what was converted | Use strikethrough annotation: `~~file~~` — converted to skill |
+| `pixi run npx markdownlint-cli2` pre-validation | Run markdownlint before committing | `npx` not in PATH; pixi env setup takes > 2 min | Use `git commit` — pre-commit hook runs markdownlint and gives precise line numbers |
+| `find ~/.pixi -name "markdownlint*"` | Locate markdownlint outside pixi | Ran for > 3 min without completing | Use `git commit` to trigger hook directly |
+| Closing ` ``` ` fences with `text` on same line | Kept ` ```text ` style from original README | MD031/MD040 lint failures | Always use bare ` ``` ` for closing fences |
+| Editing `.claude/agents/` in worktree | Update agent refs in restricted paths | Permission denied in don't-ask mode | Note for follow-up; don't block on restricted paths |
+| Edit before Read | Attempted Edit on files not yet read | Edit tool requires prior Read | Always Read target files before editing |
+| Fixing only the primary file for stale counts | Updated README but not docs/ or references/ | Stale occurrences survived in `docs/analysis-prompt.md` and `references/notes.md` | Always run project-wide grep after fixing primary file |
+| Two prior review cycles on citation corpus | Per-file reviewers passed individual entries | Could not see cross-document §-drift or intra-author arXiv swaps | Both failure modes need cross-corpus reviewer, not per-file reviewer |
+| Genre-tag shorthand for citations | Used "energy-based" descriptors instead of full titles | Swapped IDs were invisible to downstream readers | Always include full titles in citation entries |
+| Pattern-based scrubs for citation residue | Ran text-pattern scrubs to find stale refs | Cannot detect §-number drift or ID-to-title swaps (both are structural, not textual) | Cross-doc citation drift needs structural audit: global mapping tables + WebFetch per ID |
+| Skill invocation for commit | Used `Skill commit-commands:commit-push-pr` | Permission denied in don't-ask mode | Fall back to manual `git add && git commit && git push && gh pr create` |
+| Removing `--label` from CONTRIBUTING without checking `.claude/shared/` | Only grepped CONTRIBUTING.md | Third file (`.claude/shared/pr-workflow.md`) could also contain the contradiction | Always verify all related files before declaring fix complete |
+| Using `replace_all: false` for repeated phrases | First bullet tried individually | Context string not unique — edit tool reported string not found | When the same phrase appears multiple times, use `replace_all: true` |
+| Updating SHA-pinning documentation examples | Considered replacing `prefix-dev/setup-pixi@v0.9.3` in the SHA-pinning examples section | Those lines are intentional documentation of the pinning pattern, not actual workflow steps | Always check whether a reference is in a concept-explaining code example block vs. a step to be migrated |
+
+## Results & Parameters
+
+### Commit Format
+
+| Pattern | Commit Type |
+| ------- | ----------- |
+| Future Improvements fix | `docs(design): audit and fix stale Future Improvements entries` |
+| Count/metric fix | `docs(readme): fix test counts, file counts, and --cov path typo` |
+| Agent count fix | `fix: update stale agent count references (N → M agents)` |
+| CLAUDE.md status fix | `fix(docs): Update CLAUDE.md 'Current Status' to reflect operational state` |
+| Workflow README | `docs(ci): update workflow README to reflect post-consolidation inventory` |
+| Contradiction fix | `fix(docs): Remove --label flag from CONTRIBUTING.md PR example` |
+| Ecosystem sync | `docs(ecosystem): update repo listing from N to M repos` |
+| Implementation lag | `docs(CLAUDE.md): update <tool> hook documentation for <fix-description>` |
+
+### Drift-Detection Test Pattern (Python)
+
+```python
+"""Drift-detection tests for ecosystem role description."""
+from pathlib import Path
+import re
+import pytest
+
+PROJECT_ROOT = Path(__file__).parents[3]
+
+DOC_FILES = [
+    PROJECT_ROOT / "README.md",
+    PROJECT_ROOT / "CLAUDE.md",
+    PROJECT_ROOT / "docs" / "design" / "architecture.md",
+]
+
+FORBIDDEN_PHRASES = [
+    r"chaos\s+(?:engineering|testing)",
+    r"inject\s+failures",
+    r"resilience\s+testing",
+]
+
+@pytest.mark.parametrize("doc_path", [p for p in DOC_FILES if p.exists()])
+@pytest.mark.parametrize("pattern", FORBIDDEN_PHRASES)
+def test_no_stale_claims(doc_path: Path, pattern: str) -> None:
+    content = doc_path.read_text()
+    matches = re.findall(pattern, content, re.IGNORECASE)
+    assert not matches, f"{doc_path.name} contains forbidden phrase: {matches}"
+```
+
+### Ecosystem Alignment Matrix Template
+
+| Location | Current Description | Accurate? | Action |
+| -------- | ------------------- | --------- | ------ |
+| `README.md` | "..." | Yes/No | Update/No change |
+| `CLAUDE.md` | "..." | Yes/No | Update/No change |
+| External repo | "..." | No | File cross-repo issue |
+
+### Citation Entry Template
+
+```text
+**Citation:** Author1, Author2 et al. "Full Paper Title." *Venue*, vol/issue, year. DOI/URL.
+**arXiv ID** (if applicable): <NNNN.NNNNN>
+**Status:** [verified-via-WebFetch on YYYY-MM-DD] | [ASSUMPTION — to validate]
+```
+
+### §-Reorganization Mapping Table Template
+
+When reorganizing section numbering, produce this BEFORE renaming sections:
+
+```text
+| Old §-number | New §-number | Notes                       |
+| ------------ | ------------ | --------------------------- |
+| §6.2.2       | §2.2         | Layer-type rule for Linear  |
+| §6.3.1       | §4.1         | Energy update equation      |
+| §6.4         | §7           | Promoted to top-level       |
+```
+
+### Workflow README Table Template
+
+```markdown
+| Workflow | Trigger | Purpose | Duration |
+| -------- | ------- | ------- | -------- |
+| **Category** | | | |
+| [name.yml](#anchor) | PR, push main | Short description | < N min |
+```
+
+### Key Observations
+
+1. **ASCII diagrams and directory listings go stale faster than tables** — when a component
+   is added, the status table may be updated but the diagram is forgotten. Always check both.
+
+2. **"Implemented but not integrated" is a valid intermediate state** — don't conflate
+   "function exists" with "fully integrated". Document the distinction accurately.
+
+3. **Use `+` suffix for forward-compatibility on counts** — prefer `3,000+` over `3,016`
+   for test counts in README. Exact numbers go stale; round numbers with `+` remain accurate.
+
+4. **Exact subtest counts should not have `+`** — deterministic counts (sum of tier table = 120)
+   should be exact; remove the `+` to avoid implying uncertainty.
+
+5. **Search ALL markdown files after fixing the primary file** — stale counts commonly survive
+   in `docs/analysis-prompt.md` and `references/notes.md` after README is fixed.
+
+6. **When implementation is overwhelmingly one thing, update docs** — don't add code
+   to match stale claims when the implementation contradicts them with 69K+ lines.
+
+7. **Both citation failure modes survive multi-reviewer rotation** — §-drift and arXiv
+   ID-to-title swaps need cross-corpus audit roles, not per-file reviewers.
+
+8. **Pre-commit hook is the authoritative linter** — use `git commit` to trigger it
+   rather than running `npx markdownlint-cli2` directly.
+
+9. **Worktrees may already have partial fixes** — always read files before editing to
+   avoid re-applying changes that a prior commit already landed.
+
+10. **`--cov` path must match installed package name** — `--cov=scylla/scylla` is wrong
+    when the package is installed as `scylla`; check `pyproject.toml` to confirm.
+
+11. **MD029 ordered lists reset per logical group** — markdownlint requires each new
+    independent numbered list to start at 1. Two separate lists (e.g., "PR/push jobs" and
+    "weekly jobs") each start at 1 independently; do not continue numbering across groups.
+
+## Verified On
+
+| Project | Context | Details |
+| ------- | ------- | ------- |
+| ProjectScylla | Issues \#880, \#759, \#1112, \#1477, \#1503, \#1507 | Future Improvements audits, metric fixes, count fixes, ecosystem role reconciliation |
+| ProjectOdyssey | Issues \#3344, \#3365 | Workflow README audit, implementation-lag doc sync |
+| ProjectOdyssey | PR \#3320 (issue \#3145) | Stale agent count fix after agents converted to skills |
+| ProjectScylla | Issues \#753, \#758 | CLAUDE.md status fix, doc contradiction resolution |
+| mvillmow/Random | Predictive-Coding-in-Mojo Phase 0 | Cross-doc citation drift: 8 stale §-refs, 2 arXiv ID swaps caught |
+| ProjectOdyssey | Issue (post-migration), PR \#4847 | README-only sync after pixi composite action migration; 26 insertions, 45 deletions |
+
+---
+
+## Superseded from phantom-dir-reference-fix
+
+**Original date:** 2026-01-01 · **Original version:** 1.0.0
+
+```yaml
+name: phantom-dir-reference-fix
+description: Remove phantom directory references from documentation when a referenced
+  path does not exist in the repository.
+category: documentation
+date: 2026-01-01
+version: 1.0.0
+user-invocable: false
+```
+
+# Skill: phantom-dir-reference-fix
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-02-22 |
+| Objective | Remove phantom `tests/integration/` directory references from README.md and CONTRIBUTING.md |
+| Outcome | Success — all phantom references removed, PR #954 created and auto-merge enabled |
+| Category | docs |
+
+## When to Use
+
+Use this skill when:
+- A quality audit identifies documentation referencing directories that do not exist in the repository
+- `grep -r "tests/integration" docs/ README.md CONTRIBUTING.md` returns hits in user-facing docs
+- Contributors are misled by stale test-category descriptions or nonexistent pytest invocation paths
+- You need to correct test counts or category descriptions after test restructuring
+
+## Verified Workflow
+
+### 1. Identify all phantom references
+
+```bash
+grep -rn "tests/integration" docs/ README.md CONTRIBUTING.md
+```
+
+Check which hits are in user-facing documentation (README.md, CONTRIBUTING.md, docs/) vs. archived snapshots (docs/arxiv/ dryrun workspaces) — archived snapshots are out of scope.
+
+### 2. Fix README.md — test category bullets
+
+Remove the phantom category bullet and fold its count into the parent category:
+
+**Before:**
+```markdown
+- **Unit Tests** (67+ files): Analysis, adapters, config, executors, judges, metrics, reporting
+- **Integration Tests** (2 files): End-to-end workflow testing
+```
+
+**After:**
+```markdown
+- **Unit Tests** (70+ files): Analysis (incl. integration-style tests), adapters, config, executors, judges, metrics, reporting
+```
+
+Key: update the unit test count to absorb the integration-style tests (they live in `tests/unit/analysis/` as `test_integration.py`, `test_cop_integration.py`, `test_duration_integration.py`).
+
+### 3. Fix README.md — running tests code block
+
+Remove the nonexistent invocation:
+
+**Before:**
+```bash
+# Integration tests
+pixi run pytest tests/integration/ -v
+
+# Coverage analysis
+```
+
+**After:**
+```bash
+# Coverage analysis
+```
+
+### 4. Fix CONTRIBUTING.md — write tests comment
+
+**Before:**
+```bash
+# Create tests in tests/unit/ or tests/integration/
+```
+
+**After:**
+```bash
+# Create tests in tests/unit/
+```
+
+### 5. Fix CONTRIBUTING.md — running tests section
+
+Replace the phantom invocation with the actual location of integration-style tests:
+
+**Before:**
+```bash
+pixi run pytest tests/unit/ -v          # Unit tests only
+pixi run pytest tests/integration/ -v   # Integration tests
+```
+
+**After:**
+```bash
+pixi run pytest tests/unit/ -v          # Unit tests only
+pixi run pytest tests/unit/analysis/ -v # Includes integration-style tests
+```
+
+### 6. Verify clean
+
+```bash
+grep -r "tests/integration" docs/ README.md CONTRIBUTING.md
+# Should return no results
+```
+
+### 7. Commit and PR
+
+```bash
+git add README.md CONTRIBUTING.md
+git commit -m "fix(docs): Remove phantom tests/integration/ references"
+git push -u origin 848-auto-impl
+gh pr create --title "fix(docs): Remove phantom tests/integration/ references" --body "Closes #848"
+gh pr merge --auto --rebase
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+| Parameter | Value |
+| ----------- | ------- |
+| Files changed | `README.md`, `CONTRIBUTING.md` |
+| Lines removed | 7 |
+| Lines added | 3 |
+| Pre-commit hooks | All passed (markdown lint, trailing whitespace, end-of-file) |
+| PR | https://github.com/HomericIntelligence/ProjectScylla/pull/954 |
+| Issue | #848 |
+| Branch | `848-auto-impl` |
+
+## Key Insight
+
+Integration-style tests in ProjectScylla live inside `tests/unit/analysis/` under names like `test_integration.py`, `test_cop_integration.py`, and `test_duration_integration.py`. There is **no** dedicated `tests/integration/` directory. When documenting test categories, fold these into the unit test count with a clarifying note rather than listing them as a separate category.
+
+---
+
+## Superseded from fix-broken-doc-references
+
+**Original date:** 2026-03-19 · **Original version:** 1.0.0
+
+```yaml
+name: fix-broken-doc-references
+description: "Skill: Fix Broken Documentation References"
+category: documentation
+date: 2026-03-19
+version: "1.0.0"
+user-invocable: false
+```
+
+# Skill: Fix Broken Documentation References
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-02-19 |
+| Issue | #752 |
+| PR | #811 |
+| Category | documentation |
+| Objective | Remove broken `agents/` directory references from CLAUDE.md after directory was deleted in commit `72ab40d` |
+| Outcome | Success - all broken references removed, PR created and auto-merge enabled |
+
+## When to Use
+
+Trigger this skill when:
+
+- A directory or file is removed from the repo but still referenced in CLAUDE.md or other docs
+- `grep` finds dead links to paths that no longer exist
+- CI or contributors report confusion from broken documentation links
+- A refactor moves files and the architecture tree in CLAUDE.md becomes stale
+
+## Verified Workflow
+
+### 1. Identify all broken references
+
+```bash
+# Find all references to the removed path
+grep -rn "agents/hierarchy.md\|agents/delegation-rules.md\|agents/templates\|agents/README" CLAUDE.md
+
+# Also check broadly for the removed directory
+grep -n "/agents/" CLAUDE.md
+```
+
+### 2. Verify current actual structure
+
+```bash
+# Confirm the directory is truly gone
+ls /path/to/removed-dir 2>/dev/null || echo "Confirmed removed"
+
+# Find where the content now lives
+ls .claude/agents/  # or wherever it moved
+```
+
+### 3. Make targeted edits
+
+Four categories of fixes for the `agents/` removal case:
+
+1. **Quick Links section** - Remove bullet list items that link to removed files
+2. **Narrative references** - Replace `See [file](path)` with plain text describing current location
+3. **Documentation Rules** - Update path from removed dir to current dir
+4. **Architecture tree** - Remove the entire removed-directory block from the `text` code block
+
+### 4. Verify success criteria
+
+```bash
+# Confirm no broken refs remain
+grep -n "agents/hierarchy.md\|agents/delegation-rules.md" CLAUDE.md
+# Should return nothing
+
+# Confirm new location is mentioned
+grep -n "\.claude/agents" CLAUDE.md
+```
+
+### 5. Commit, push, and PR
+
+```bash
+git add CLAUDE.md
+git commit -m "fix(docs): Remove broken <dir>/ references from CLAUDE.md
+
+- Remove broken links to <dir>/file1 and <dir>/file2
+- Update narrative to reference current location
+- Remove <dir>/ from Repository Architecture tree
+
+Closes #<issue>"
+
+git push -u origin <branch>
+gh pr create --title "fix(docs): Remove broken <dir>/ references" \
+  --body "Closes #<issue>"
+gh pr merge --auto --rebase <pr-number>
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Actual changes made to CLAUDE.md
+
+| Location | Before | After |
+| ---------- | -------- | ------- |
+| Quick Links > Agent System | 3 bullets (including broken links) | 1 bullet (Agent Configurations only) |
+| Agent Hierarchy section | `See [agents/hierarchy.md](agents/hierarchy.md)...` | `Agent hierarchy is defined in .claude/agents/ and tests/claude-code/shared/agents/:` |
+| Documentation Rules | `**Team guides**: /agents/ (quick start, hierarchy, templates)` | `**Agent guides**: /.claude/agents/ (configurations, roles, capabilities)` |
+| Architecture tree | 5 lines for `agents/` directory | Removed entirely |
+
+### Key insight: architecture tree already had scylla/discovery/
+
+The issue mentioned adding `scylla/discovery/` to the architecture tree, but it was already present (line 401 before edits). Always verify deliverables against actual file state before acting.
+
+### Pre-commit hook behavior
+
+For Markdown-only changes, these hooks are skipped (no-files-to-check):
+
+- Ruff Format Python
+- Ruff Check Python
+- Mypy Type Check Python
+- Check Type Alias Shadowing
+- YAML Lint
+- ShellCheck
+
+These hooks pass:
+
+- Markdown Lint
+- Trim Trailing Whitespace
+- Fix End of Files
+- Check for Large Files
+- Fix Mixed Line Endings
+
+---
+
+## Superseded from doc-audit-policy-violations
+
+**Original date:** 2026-03-19 · **Original version:** 1.0.0
+
+```yaml
+name: doc-audit-policy-violations
+description: "Skill: Audit Documentation Examples for Policy Violations"
+category: documentation
+date: 2026-03-19
+version: "1.0.0"
+user-invocable: false
+```
+
+# Skill: Audit Documentation Examples for Policy Violations
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-02-21 |
+| Issue | #878 |
+| PR | #925 |
+| Category | documentation |
+| Objective | Systematically audit all markdown documentation for command examples that contradict CLAUDE.md policies |
+| Outcome | Success — audit script created, no violations found in primary docs (previous fix by #758 had already cleaned up the only known violation) |
+
+## When to Use
+
+Trigger this skill when:
+
+- A policy violation is discovered in documentation examples and you want to check whether similar violations exist elsewhere
+- A new policy rule is added to CLAUDE.md and you need to verify no existing docs contradict it
+- You want to catch doc policy drift proactively (e.g., before a major release or after a policy change)
+- Running as a CI gate to prevent future violations from being introduced
+
+## Verified Workflow
+
+### 1. Scope the audit
+
+The canonical policies to check are defined in `CLAUDE.md`. The four enforced rules:
+
+| Rule ID | Violation | Policy |
+| --------- | ----------- | -------- |
+| `no-label-in-pr-create` | `gh pr create --label` | Labels are prohibited |
+| `no-verify-in-commit` | `git commit --no-verify` | Absolutely prohibited |
+| `wrong-merge-strategy` | `gh pr merge --merge` or `--squash` | Must use `--auto --rebase` |
+| `push-direct-to-main` | `git push origin main/master` | Must use PRs |
+
+### 2. Run the audit script
+
+```bash
+# Report all violations with file:line references
+pixi run python scripts/audit_doc_examples.py
+
+# Verbose mode (shows violating line content)
+pixi run python scripts/audit_doc_examples.py --verbose
+
+# JSON output (for programmatic consumption)
+pixi run python scripts/audit_doc_examples.py --json
+```
+
+Exit code: `0` = no violations, `1` = violations found.
+
+### 3. Interpret findings
+
+The script scans only **fenced shell code blocks** (bash/sh/shell/zsh/console or untagged), never prose text, to avoid false positives from prohibition text like "Never use --no-verify".
+
+Excluded paths (archived/test-fixture content):
+
+- `docs/arxiv/`
+- `tests/claude-code/`
+- `.pixi/`
+- `build/`
+- `node_modules/`
+
+### 4. Fix any violations found
+
+For each violation:
+
+1. Read the file at the reported `file:line`
+2. Determine whether it's a real violation or a false positive (see False Positives section)
+3. If real: make the minimal fix — remove or replace the offending flag/command
+4. Re-run audit to confirm clean
+
+### 5. Add a regression test
+
+If a new violation pattern is discovered, add a test case to `tests/unit/scripts/test_audit_doc_examples.py`:
+
+```python
+def test_detects_new_violation_type(self, tmp_path: Path) -> None:
+    """Should flag <description>."""
+    md = make_md(tmp_path, "bad.md", """\
+        ```bash
+        <violating command here>
+        ```
+        """)
+    findings = scan_file(md, tmp_path)
+    assert any(f.rule == "new-rule-id" for f in findings)
+```
+
+### 6. Commit and PR
+
+```bash
+git add scripts/audit_doc_examples.py tests/unit/scripts/test_audit_doc_examples.py
+git commit -m "feat(scripts): Add doc audit script for policy violation detection
+
+Closes #<issue>"
+git push -u origin <branch>
+gh pr create --title "feat(scripts): ..." --body "Closes #<issue>"
+gh pr merge --auto --rebase
+```
+
+## False Positives
+
+### Pattern 1: Prohibited examples annotated with `# BLOCKED` or `# PROHIBITED`
+
+**Trigger**: `git push origin main  # BLOCKED - Will be rejected by GitHub` in CLAUDE.md
+
+**Why**: CLAUDE.md's "ABSOLUTELY PROHIBITED" section intentionally shows the wrong pattern with a comment explaining it's blocked. The `push-direct-to-main` rule excludes lines containing `#` (any inline comment).
+
+**Resolution**: Already handled — the pattern excludes comment-annotated lines via `(?![^#]*#)` negative lookahead.
+
+### Pattern 2: Prose inside commit message bodies
+
+**Trigger**: `CONTRIBUTING.md which included --label in the gh pr create example.` inside a multi-line `git commit -m "..."` block
+
+**Why**: A git commit message body containing the words `--label` and `gh pr create` matched the original broad regex.
+
+**Resolution**: Already handled — the `no-label-in-pr-create` rule anchors to lines that start with `gh` (possibly with leading whitespace), requiring it to look like a real command invocation.
+
+### Pattern 3: `gh issue list --label` (legitimate flag use)
+
+**Why**: `--label` is only prohibited for `gh pr create`. Using it with `gh issue list` is valid.
+
+**Resolution**: Already handled — the pattern specifically requires `gh pr create` before `--label`, not just any `gh` subcommand.
+
+## Results & Parameters
+
+### Script location
+
+`scripts/audit_doc_examples.py` — uses `scylla.automation.git_utils.get_repo_root` (NOT `from common import get_repo_root` which breaks under pytest's import path).
+
+### Test suite
+
+`tests/unit/scripts/test_audit_doc_examples.py` — 36 tests, all passing.
+
+Test classes:
+
+| Class | Tests | Coverage |
+| ------- | ------- | ---------- |
+| `TestExtractCodeBlocks` | 7 | Code block extraction |
+| `TestScanFileDetectsViolations` | 6 | All 4 rules triggered |
+| `TestScanFilePassesCleanExamples` | 7 | Compliant examples pass |
+| `TestFindingMetadata` | 4 | Severity, path, line, content |
+| `TestScanRepositoryExclusions` | 6 | Path exclusion (parametrized) |
+| `TestFormatTextReport` | 4 | Report formatting |
+| `TestFormatJsonReport` | 2 | JSON serialization |
+
+### Audit result on this repo (2026-02-21)
+
+```
+No policy violations found.
+```
+
+The only historical violation (`--label` in `CONTRIBUTING.md`) was already fixed by PR #871 (issue #758).
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+---
+
+## Superseded from getting-started-doc-audit
+
+**Original date:** 2026-03-15 · **Original version:** 1.0.0
+
+```yaml
+name: getting-started-doc-audit
+description: 'Audit and rewrite getting-started documentation stubs by sourcing real
+  commands from justfile and versions from pixi.toml, removing fabricated APIs. Use
+  when: stub files contain placeholder text, follow-up audit after installation.md
+  is written, or markdown linting fails on broken fenced code blocks.'
+category: documentation
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+```
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Skill** | getting-started-doc-audit |
+| **Category** | documentation |
+| **Trigger** | Follow-up audit of `docs/getting-started/` after one doc is written |
+| **Output** | Rewritten stubs with accurate commands, no fabricated APIs, clean markdown |
+
+## When to Use
+
+- A follow-up issue requests auditing remaining stubs in `docs/getting-started/` after
+  `installation.md` was written
+- Any file in `docs/getting-started/` contains fabricated function calls or API names that
+  don't exist in the codebase (e.g., `TensorDataset`, `Trainer`, `EarlyStopping`)
+- Fenced code blocks are malformed (duplicate delimiters, missing language tags, unclosed blocks)
+- Commands in docs reference scripts or tools that don't exist (e.g., non-existent Python scripts,
+  benchmark tools not yet implemented)
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. List files to audit
+ls docs/getting-started/
+
+# 2. Read each file to identify placeholder content
+# 3. Check real commands
+grep -E "^(train|build|test|infer)" justfile
+grep -E "mojo|version" pixi.toml
+
+# 4. Check what actually exists in the codebase
+ls shared/ papers/ scripts/
+
+# 5. Rewrite placeholder files, then lint
+pixi run npx markdownlint-cli2 docs/getting-started/*.md
+```
+
+### Step 1: Audit all files in the directory
+
+Read every file in `docs/getting-started/` and classify each as:
+
+- **Accurate** — commands and APIs are real; no rewrite needed
+- **Placeholder text** — contains fabricated API calls or stub prose
+- **Broken markdown** — malformed fenced code blocks (common: duplicate delimiters like
+  ` ```bash\n```bash ` or unclosed blocks ending in ` ```text `)
+
+The most reliable signal for fabricated APIs: check whether the imported modules or function
+calls actually exist by grepping the codebase.
+
+```bash
+# Verify API exists before keeping it in docs
+grep -r "TensorDataset" shared/ papers/
+grep -r "class Trainer" shared/
+```
+
+### Step 2: Establish ground truth from build system files
+
+**Never invent commands.** Source everything from:
+
+```bash
+# Real justfile recipes
+cat justfile | grep -E "^[a-z]"
+
+# Pinned dependency versions
+grep -E "mojo|version" pixi.toml
+
+# What directories actually exist
+ls papers/ shared/ scripts/ tools/ 2>&1
+```
+
+### Step 3: Rewrite placeholder files
+
+For each file with placeholder content:
+
+1. Keep the document's purpose and headings
+2. Replace all fabricated API calls with real ones (or remove the section entirely if
+   the feature doesn't exist yet)
+3. Replace all non-existent commands with confirmed `just` or `pixi run` commands
+4. Fix malformed fenced code blocks (one opening delimiter, one language tag, one closing delimiter)
+
+**Pattern for conceptual content over fabricated API docs**:
+
+When the APIs shown don't exist yet, rewrite the doc as a conceptual orientation:
+- What exists today (real shared library, real recipes)
+- What is still planned (clearly labeled)
+- How to use what currently exists
+
+### Step 4: Lint and fix
+
+```bash
+pixi run npx markdownlint-cli2 docs/getting-started/*.md
+```
+
+Common lint errors and fixes:
+
+| Error | Cause | Fix |
+| ------- | ------- | ----- |
+| MD001 heading-increment | h5 after h3 (h3 inside h5 block resets level) | Change inner `#####` to `####` |
+| MD040 fenced-code-language | Code block missing language tag | Add language after opening ` ``` ` |
+| MD031 blanks-around-fences | No blank line before/after code block | Add blank lines |
+
+### Step 5: Commit and PR
+
+```bash
+git add docs/getting-started/<file1>.md docs/getting-started/<file2>.md
+git commit -m "docs(getting-started): rewrite <files> with accurate commands"
+git push -u origin <branch>
+gh pr create --title "..." --body "Closes #<issue>"
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Keeping fabricated APIs | Preserved `TensorDataset`, `Trainer`, `EarlyStopping` imports in first_model.md | These types don't exist in `shared/`; docs would mislead users and fail when tried | Always grep the codebase to verify APIs before keeping them in docs |
+| Using `#####` subsections inside `####` blocks that also contain `###` headings | Kept original heading structure with h3 inner sections | Markdownlint MD001: after a `###` resets the "current level", a subsequent `#####` is seen as jumping 2 levels | Flatten inner subsections to bold text, or demote the `#####` items to `####` |
+| Referencing non-existent scripts | Kept `python scripts/validate_links.py`, `python tools/paper-scaffold/scaffold.py` in repository-structure.md | Scripts don't exist in the repo; running them fails | Check `ls scripts/` and `ls tools/` before including any script path in docs |
+| Using `mojo test tests/` command | Showed `mojo test tests/` as the test command | Project uses `just test-mojo` and `just test-group`; bare `mojo test` not configured | Always check justfile for the project's actual test recipes |
+
+## Results & Parameters
+
+**Session outcome**: 2 files rewritten, 0 markdownlint errors, PR #4828 created.
+
+**Files changed**:
+
+- `docs/getting-started/first_model.md` — full rewrite (760→252 lines net after removing
+  fabricated content)
+- `docs/getting-started/repository-structure.md` — fixed all malformed fenced code blocks,
+  replaced non-existent scripts with real `just` commands
+
+**Files with no changes needed**:
+
+- `docs/getting-started/quickstart.md` — already accurate with real commands and verified output
+- `docs/getting-started/installation.md` — written in the previous issue (#3304), already accurate
+
+**Lint validation**:
+
+```bash
+pixi run npx markdownlint-cli2 docs/getting-started/first_model.md docs/getting-started/repository-structure.md
+# Summary: 0 error(s)
+```
+
+**Mojo version in pixi.toml**: `0.26.1`
+
+**Justfile recipes used in docs** (confirmed real):
+
+```text
+train, infer, build, build-release, test-mojo, test-group, pre-commit, pre-commit-all
+```
+
+---
+
+## Superseded from fix-tier-label-mismatches
+
+**Original date:** 2026-03-03 · **Original version:** 1.0.0
+
+```yaml
+name: fix-tier-label-mismatches
+description: "Fix incorrect tier labels in ProjectScylla documentation (T3\u2192T2,\
+  \ T4\u2192T3, T5\u2192T4 pattern). Use when quality audits flag tier name/number\
+  \ mismatches in .claude/shared/metrics-definitions.md or CLAUDE.md tier table references."
+category: documentation
+date: 2026-03-03
+version: 1.0.0
+user-invocable: true
+```
+
+# Fix Tier Label Mismatches in Documentation
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Date** | 2026-03-03 |
+| **Objective** | Fix tier label mismatches in `.claude/shared/metrics-definitions.md` flagged by the March 2026 quality audit (issue #1348) |
+| **Outcome** | 19 label corrections across 4 sections; PR #1362 merged |
+| **Related Issues** | ProjectScylla #1348 (4th recurrence), #1345 (prior partial fix) |
+
+## Authoritative Tier Table (CLAUDE.md)
+
+| Tier | Name |
+| ------ | ------ |
+| T0 | Prompts |
+| T1 | Skills |
+| T2 | Tooling |
+| T3 | Delegation |
+| T4 | Hierarchy |
+| T5 | Hybrid |
+| T6 | Super |
+
+## When to Use This Skill
+
+Use this skill when:
+
+- A quality audit flags "tier label mismatch" or "incorrect tier numbers" in documentation
+- `grep -n "T[0-9]" .claude/shared/metrics-definitions.md` reveals labels like "T3 (Tooling)", "T4 (Delegation)", "T5 (Hierarchy)" — those are off-by-one from the correct table above
+- The issue title mentions "fix tier label mismatch" or "T3/T4/T5 → T2/T3/T4"
+- A prior PR partially fixed some occurrences but others remained
+
+**Triggers:**
+
+- Issue references `.claude/shared/metrics-definitions.md` with specific wrong lines
+- Quality audit marks it as "recurring" — this has appeared in multiple audits
+- The word "mismatch" appears with tier names and numbers
+
+## Verified Workflow
+
+### Phase 1: Check What the Issue Says vs What Actually Exists
+
+**Critical**: Prior partial fixes may mean the issue description's line numbers are already correct. Always read the file first.
+
+```bash
+# Scan ALL tier label occurrences in the file
+grep -n "T[0-9]" .claude/shared/metrics-definitions.md
+```
+
+The issue description said lines 239, 253, 267 were wrong — those were already fixed by PR #1345. The real remaining mismatches were elsewhere.
+
+### Phase 2: Identify All Remaining Mismatches
+
+Cross-reference each `T[0-9]` occurrence against the authoritative tier table:
+
+| Pattern That Is Wrong | Correct Replacement |
+| ---------------------- | --------------------- |
+| `T2 (Skills)` | `T1 (Skills)` |
+| `T3 (Tooling)` | `T2 (Tooling)` |
+| `T4 (Delegation)` | `T3 (Delegation)` |
+| `T5 (Hierarchy)` | `T4 (Hierarchy)` |
+| `T2 skill instructions` | `T1 skill instructions` |
+| `T3 JSON tool definitions` | `T2 JSON tool definitions` |
+| `T4/T5 coordination` | `T3/T4 coordination` |
+
+### Phase 3: Fix All Occurrences with Targeted Edits
+
+Use the `Edit` tool with exact string replacement. Never rewrite whole sections.
+
+**Sections that contained mismatches in this audit:**
+
+1. **`## Future Instrumentation` section** (subsection headers):
+   - `### 1. Tool Call Success Rate (T3 - Tooling)` → `(T2 - Tooling)`
+   - `### 2. Tool Utilization (T3 - Tooling)` → `(T2 - Tooling)`
+   - `### 3. Task Distribution Efficiency (T4 - Delegation)` → `(T3 - Delegation)`
+   - `### 4. Correction Frequency (T5 - Hierarchy)` → `(T4 - Hierarchy)`
+   - `### 5. Iterations to Success (T5 - Hierarchy)` → `(T4 - Hierarchy)`
+
+2. **`## Token Tracking` section** (header, body, and interpretation):
+   - Section header: `T2 vs T3 Analysis` → `T1 vs T2 Analysis`
+   - Body text: `T2 (Skills) and T3 (Tooling)` → `T1 (Skills) and T2 (Tooling)`
+   - `Total tokens consumed by tool schemas (T3+)` → `(T2+)`
+   - `T3 architectures load JSON schemas` → `T2 architectures`
+   - `no schema overhead (pure T2)` → `(pure T1)`
+
+3. **Component Cost table** (9 rows):
+   ```
+   T2 skill instructions    → T1 skill instructions
+   T2 domain knowledge      → T1 domain knowledge
+   T3 JSON tool definitions → T2 JSON tool definitions
+   T3 tool invocations      → T2 tool invocations
+   T3 tool results          → T2 tool results
+   T4/T5 coordination       → T3/T4 coordination
+   T4/T5 delegated agents   → T3/T4 delegated agents
+   T5 error detection       → T4 error detection
+   T5 self-reflection       → T4 self-reflection
+   ```
+
+### Phase 4: Final Verification
+
+```bash
+# Verify all remaining tier references are correct
+grep -n "T[0-9]" .claude/shared/metrics-definitions.md
+
+# Check specific lines that should be fixed
+grep -n "T[0-9]\s*(" .claude/shared/metrics-definitions.md
+```
+
+Cross-check each remaining hit against the authoritative table. Bare tier numbers in formulas (e.g., `T0`, `T1` in example data) are fine — only named references with `(Name)` parentheticals or `-` dashes need checking.
+
+### Phase 5: Commit and PR
+
+```bash
+git add .claude/shared/metrics-definitions.md
+git commit -m "fix(docs): Fix all tier label mismatches in metrics-definitions.md
+
+Fix recurring tier label mismatches across multiple sections:
+- Future Instrumentation section: T3→T2, T4→T3, T5→T4 in headers
+- Token Tracking section: T2→T1, T3→T2 throughout
+- Component Cost table: T2→T1, T3→T2, T4/T5→T3/T4, T5→T4
+
+Closes #<issue>"
+
+git push -u origin <branch>
+gh pr create --title "fix(docs): Fix all tier label mismatches in metrics-definitions.md" \
+  --body "Closes #<issue>"
+gh pr merge --auto --rebase
+```
+
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Key Observations
+
+1. **Prior partial fixes are common** — this issue recurred 4 times across March 2026 audits. Each prior fix corrected some but not all occurrences. Always do a full file scan with `grep -n "T[0-9]"`.
+
+2. **Token Tracking section is a hotspot** — the "Token Efficiency Chasm" analysis between Skills (T1) and Tooling (T2) is often written with the old numbering (T2 vs T3) because it was created before the tier renumbering.
+
+3. **Component Cost table is another hotspot** — the 9-row table mapping component types to tier numbers uses the old numbering throughout. Fix all 9 rows together in a single `Edit` call.
+
+4. **Named tier references only need fixing** — bare tier numbers in formula examples (e.g., `T0: composite_median = 0.70`) are data, not tier labels, and are correct as-is.
+
+5. **Pre-commit passes instantly** — only markdown files change, so mypy/ruff/pip-audit all skip. The commit is fast.
+
+## Results
+
+| File | Changes Applied |
+| ------ | ---------------- |
+| `.claude/shared/metrics-definitions.md` | 19 label fixes across 4 sections: Future Instrumentation headers (5), Token Tracking section (5), Component Cost table (9) |
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectScylla | Issue #1348, PR #1362 | March 2026 4th quality audit; 19 corrections applied |
+
+---
+
+## Superseded from placeholder-and-stub-doc-lifecycle
+
+**Original date:** 2026-05-19 · **Original version:** 1.0.0
+
+```yaml
+name: placeholder-and-stub-doc-lifecycle
+description: >-
+  Manage the full lifecycle of placeholder and stub documentation. Use when:
+  (1) stub files contain only placeholder text and should be deleted under YAGNI,
+  (2) a navigation index loses sections after stub deletion and needs a deferred
+  comment placeholder, (3) a design doc Future Improvements list needs structured
+  deferral annotations, (4) a placeholder doc needs rewriting with accurate codebase-
+  grounded content (quickstart, installation, README, or other guides),
+  (5) an existing installation doc needs IDE setup section or version-constraint tightening.
+category: documentation
+date: 2026-05-19
+version: 1.0.0
+user-invocable: false
+history: placeholder-and-stub-doc-lifecycle.history
+tags:
+  - placeholder
+  - stub
+  - documentation
+  - yagni
+  - deferred
+  - installation
+  - readme
+  - rewrite
+```
+
+# Placeholder and Stub Doc Lifecycle
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-19 |
+| **Objective** | Canonical skill for all placeholder/stub doc decisions: delete, defer, annotate, or rewrite |
+| **Outcome** | Union of 7 absorbed skills covering the full decision tree |
+| **Status** | Canonical (merged from M47 cluster) |
+
+## When to Use
+
+Apply this skill when encountering any placeholder or stub documentation situation:
+
+1. **Delete** — files contain only boilerplate like `Content here.` and the YAGNI principle applies
+2. **Defer (index comment)** — a navigation hub (`docs/index.md`) lost a section because stubs were
+   deleted and a follow-up issue tracks restoring it when real docs exist
+3. **Annotate deferral** — a design doc `Future Improvements` section has bare bullet items confirmed
+   unimplemented; future contributors need status/why/acceptance-criteria to avoid re-investigating
+4. **Rewrite** — a placeholder doc (quickstart, installation, README) must be replaced with accurate
+   content verified against the live codebase
+5. **Extend** — an existing real installation doc needs an IDE setup section or tighter version
+   constraints in prerequisites
+
+**Do NOT use** when:
+
+- Files are auto-generated from code (edits get overwritten)
+- Items are actively in-flight (mark WIP instead)
+- Only one or two links are missing from an index (add a TODO inline)
+
+## Verified Workflow
+
+### Decision Tree
+
+```text
+Stub file exists?
+  Yes → Does it have real content?
+    No  → Delete it (YAGNI) → update referencing files → see "Delete stubs" below
+    Yes → Does it need extending?
+      Yes → see "Extend installation docs" below
+      No  → nothing to do
+
+Navigation index lost a section after stub deletion?
+  Yes → Insert HTML comment placeholder → see "Deferred index placeholder" below
+
+Design doc has bare Future Improvements?
+  Yes → Inspect implementation files → annotate each item → see "Annotate deferral" below
+
+Placeholder needs replacing with real content?
+  Yes → Verify paths/APIs first → rewrite → see "Rewrite placeholder doc" below
+```
+
+### Delete Stubs (YAGNI)
+
+1. **Confirm stubs** — grep for placeholder text before touching anything:
+
+   ```bash
+   grep -rl "Content here\." docs/
+   ```
+
+2. **Find all references** — search every referencing file before deleting:
+
+   ```bash
+   grep -rl "stub-filename\|other-stub" docs/
+   ```
+
+3. **Delete stub files** in one command:
+
+   ```bash
+   rm docs/advanced/stub1.md docs/core/stub2.md docs/dev/stub3.md
+   ```
+
+4. **Update referencing files** — remove broken link lines; if a section becomes empty,
+   remove the whole section. Keep links to substantive files.
+
+5. **Verify no broken links remain**:
+
+   ```bash
+   grep -rl "deleted-path" docs/
+   # Should return nothing
+   ```
+
+6. **Run pre-commit** (skip environment-broken hooks):
+
+   ```bash
+   SKIP=mojo-format pixi run pre-commit run --all-files
+   ```
+
+7. **Commit message format**:
+
+   ```text
+   docs: delete N empty placeholder documentation stubs
+
+   Remove all documentation files containing only "Content here." as
+   placeholder text. Per YAGNI, documentation should be written alongside
+   feature implementation, not created as empty stubs beforehand.
+
+   Also remove all broken links to the deleted files from:
+   - docs/index.md
+   - docs/README.md
+
+   Closes #NNNN
+   ```
+
+### Deferred Index Placeholder
+
+After stub deletion removes an entire section from `docs/index.md`, insert an HTML comment
+at the section's former location:
+
+```markdown
+<!-- DEFERRED: <Section Name> section
+  The following topics were linked in docs/index.md but their source files
+  were placeholder stubs deleted in #<stub-deletion-issue>. Re-add each entry
+  once the corresponding doc is written.
+
+  - <topic-slug> (<path/to/file.md>)
+    Status: Deferred — doc not yet written
+    Why: Stub deleted in #<issue> (YAGNI)
+    Acceptance criteria: Write <path/to/file.md>; re-add link here
+
+  Tracking issue: #<follow-up-issue>
+-->
+```
+
+Key rules:
+
+- Use an HTML comment — it must not render in output, only in source
+- List **every** topic that was in the removed section
+- Include all affected sections (Advanced Topics, Dev Guides, etc.)
+- Add `Tracking issue: #<number>` at the bottom for self-referencing
+
+Verify after editing:
+
+```bash
+grep -n "\[.*\](missing-path" docs/index.md   # should return nothing
+awk 'length > 120 {print NR": "length" chars"}' docs/index.md
+```
+
+### Annotate Future Improvements
+
+1. Find the section:
+
+   ```bash
+   grep -n "Future Improvements" docs/design/*.md
+   ```
+
+2. Inspect actual implementation files (Dockerfile, scripts, source) to confirm status.
+   Look for flags/directives the item would require. If absent → Deferred. If present → Implemented.
+
+3. For each item, write three sub-bullets:
+
+   ```markdown
+   1. **Item name**: One-line description.
+
+      - **Status**: Deferred (not implemented)
+      - **Why deferred**: Concrete reason grounded in what you saw in the code.
+      - **Acceptance criteria**: Measurable conditions to implement (2–3 bullets).
+   ```
+
+4. Surface already-implemented items:
+
+   ```markdown
+   5. **Health checks**: Verify container readiness.
+
+      - **Status**: Implemented — see `docker/Dockerfile` lines 116–117.
+   ```
+
+### Rewrite Placeholder Doc
+
+Covers quickstart, installation, README, and any other stub:
+
+1. **Read in parallel** — read the placeholder, adjacent docs, and the issue:
+
+   ```bash
+   gh issue view <n> --comments
+   ```
+
+2. **Verify every path and import** before writing:
+   - Use `Glob` to verify file paths
+   - Read `__init__.mojo` or package index for actual exports
+   - Use `ls` on referenced directories
+   - Source versions from `pixi.toml`, not memory
+   - Source command names from `justfile`, not README (may be stale)
+
+3. **Write replacement content** — standard sections for installation docs:
+
+   ```text
+   # Installation
+   ## Prerequisites
+   ## Installing Pixi
+   ## Cloning the Repository
+   ## Installing Dependencies
+   ## Mojo Version Requirements
+   ## Verifying the Installation
+   ## Docker Alternative
+   ## IDE Setup        ← add when IDE guidance is missing
+   ## Troubleshooting
+   ```
+
+4. **Validate markdown** — use pre-commit (npx is often not in pixi conda env):
+
+   ```bash
+   pixi run pre-commit run markdownlint-cli2 --files <path/to/file.md>
+   ```
+
+5. **Stage only the target file**:
+
+   ```bash
+   git add docs/getting-started/installation.md
+   # Do NOT: git add .  (worktree may contain .claude-prompt-N.md)
+   ```
+
+### Extend Installation Docs (IDE Setup)
+
+When an existing installation doc lacks IDE guidance:
+
+1. Read `installation.md` + `shared/INSTALL.md` in parallel
+2. Add `## IDE Setup` immediately **before** `## Troubleshooting`
+3. Standard subsections:
+
+   ```markdown
+   ### VS Code
+
+   Install the **Mojo** extension (publisher: Modular) from the VS Code marketplace.
+
+   Add to `.vscode/settings.json`:
+
+   ```json
+   {
+       "mojo.mojoPath": "${workspaceFolder}/.pixi/envs/default/bin/mojo"
+   }
+   ```
+
+   Verify: **View → Output → Mojo Language Server**.
+
+   ### Other Editors
+
+   Point LSP to: `.pixi/envs/default/bin/mojo-lsp-server`
+
+   Formatter: `pixi run mojo format <file>`
+   ```
+
+4. Tighten prerequisites with explicit version numbers:
+
+   ```markdown
+   - **Git** >= 2.x (any modern 2.x release is sufficient)
+   - **Pixi** >= 0.24 package manager (installation steps below)
+   ```
+
+### Quick Reference
+
+| Scenario | Key command / pattern |
+| --------- | ---------------------- |
+| Confirm stubs | `grep -rl "Content here\." docs/` |
+| Find referencing files | `grep -rl "stub-name" docs/` |
+| Run pre-commit (skip broken hooks) | `SKIP=mojo-format pixi run pre-commit run --all-files` |
+| Validate single markdown file | `pixi run pre-commit run markdownlint-cli2 --files <file>` |
+| Source Mojo version | Read `pixi.toml` — use range (`>=0.26.1,<0.27`), not nightly string |
+| Source command names | Read `justfile` directly, not README |
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Deleting files without checking references first | Ran `rm` on all stubs immediately | Left broken links in `docs/README.md`, `docs/glossary.md`, and other files | Always `grep -rl` for all references before deleting |
+| Running `just pre-commit-all` | Used `pixi run just` to invoke pre-commit | `just` not in PATH in this environment | Use `pixi run pre-commit run --all-files` directly |
+| Full pre-commit suite without skipping | Ran hooks on host with GLIBC mismatch | `mojo-format` fails due to GLIBC version mismatch (environment issue, not code) | Use `SKIP=mojo-format` when hook failure is environmental |
+| `pixi run npx markdownlint-cli2 <file>` | Used npx inside pixi conda env | `npx: command not found` — not installed in conda env | Use `pixi run pre-commit run markdownlint-cli2 --files <file>` instead |
+| Running pixi markdownlint as background task | `run_in_background=true` for markdownlint | Pixi env init takes ~2 minutes, causing repeated timeouts | Run markdownlint synchronously with ≥120s timeout |
+| Documenting APIs from EXAMPLES.md | Copied import examples from shared EXAMPLES doc | EXAMPLES.md uses aspirational/planned APIs, not what is actually implemented | Always read `__init__.mojo` or package index to find real exports |
+| Hardcoding Mojo nightly version string | Wrote `0.26.1.0.dev2025122805` directly | Full nightly build strings go stale immediately | Use the version range from `pixi.toml` (`>=0.26.1,<0.27`) |
+| Using Skill tool for commit+push+PR | Invoked `commit-commands:commit-push-pr` skill | Skill tool denied in `don't ask` permission mode | Fall back to direct `git add` + `git commit` + `git push` + `gh pr create` |
+| Copying IDE section from shared/INSTALL.md | Read shared INSTALL.md hoping for IDE config to lift | Shared INSTALL.md covers Docker/pixi install, not IDE config | Write IDE Setup from scratch using standard VS Code + LSP patterns |
+| Linking to installation.md before reading it | Referenced installation.md as a real doc | The installation.md was itself a placeholder at the time | Read the target file before referencing it — never assume docs are real |
+
+## Results & Parameters
+
+### Markdownlint Rules
+
+- Language tags on all fenced code blocks (` ```bash `, ` ```toml `, ` ```text `)
+- Blank line before and after every code block
+- Blank line before and after every list
+- Lines <= 120 characters
+
+### Pixi Markdownlint (Reliable Path)
+
+```bash
+# WORKS
+pixi run pre-commit run markdownlint-cli2 --files <path/to/file.md>
+pixi run pre-commit run --all-files markdownlint-cli2
+
+# FAILS — npx not in pixi conda env
+pixi run npx markdownlint-cli2 path/to/file.md
+```
+
+### Version Range Pattern
+
+```toml
+# Read from pixi.toml — use constraint range, not nightly build string
+[dependencies]
+mojo = ">=0.26.1.0.dev2025122805,<0.27"
+# Document as: mojo >= 0.26.1, < 0.27
+```
+
+### HTML Comment — markdownlint Safe
+
+HTML comments (`<!-- ... -->`) pass `markdownlint-cli2` MD033 even with
+`allowed_elements` restrictions because comments are not HTML elements.
+
+### Files Most Likely to Reference Stubs
+
+- `docs/index.md` — main navigation hub (most links)
+- `docs/README.md` — directory tree + Next Steps
+- `docs/glossary.md` — See Also section
+- `docs/getting-started/first_model.md` — Learn More + Related Documentation
+- Topic-specific docs with cross-reference sections
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | Issue #3142, PR #3308 | Deleted 17 stub files, updated 5 referencing docs |
+| ProjectOdyssey | Issue #3312, PR #3932 | Deferred HTML comment for Core Documentation section in index |
+| ProjectOdyssey | Issue #3304, PR #3913 | Wrote complete installation.md from 11-line placeholder |
+| ProjectOdyssey | Issue #3305, PR #3917 | Replaced quickstart.md placeholder with real content |
+| ProjectOdyssey | Issue #3918, PR #4830 | Extended installation.md with IDE setup section |
+| ProjectOdyssey | Issue #3141, PR #3303 | Replaced placeholder README with codebase-grounded description |
+| ProjectScylla | Issue #881, PR #990 | Annotated Future Improvements with Status/Why/Acceptance Criteria |
+
+---
+
+## Superseded from audit-monolith-documentation-resolution-pattern
+
+**Original date:** 2026-06-05 · **Original version:** 1.0.0
+
+```yaml
+name: audit-monolith-documentation-resolution-pattern
+description: "Resolve audit nitpicks for monolithic code by documenting verified design rationale. Use when: (1) auditor questions code organization as violation of SRP, (2) splitting vs. documenting trade-off exists, (3) design decision lacks permanent record."
+category: documentation
+date: 2026-06-05
+version: "1.0.0"
+verification: verified-local
+tags: [audit, documentation, architecture-decision, monolith, nitpick]
+```
+
+# Audit Monolith Documentation Resolution Pattern
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-05 |
+| **Objective** | Resolve audit nitpicks that question code organization (monolithic scripts) by documenting verified design rationale instead of splitting. |
+| **Outcome** | Successful — issue #792 resolved via documented architecture decision; PR #984 merged with all policy gates passing. |
+| **Verification** | verified-local (end-to-end execution + PR merge; CI gates passed) |
+
+## When to Use
+
+- Audit finding questions SRP violation in monolithic code organization
+- Nitpick-level severity (not critical)
+- Splitting has tangible cost (replicating shared state, building dispatcher)
+- Design decision is sound and defensible (can be fact-verified)
+- Design lacks permanent record in repo (codebase doc gap)
+
+## Verified Workflow
+
+### Quick Reference
+
+**8-step implementation pattern:**
+
+1. Verify claims at planning time (grep-based: check actual usage, not capability)
+2. Identify the three pillars justifying the monolith (shared state, unified filter, aggregated results)
+3. Add brief Architecture comment block to source (14 lines, points to detailed doc)
+4. Create standalone architecture decision record (docs/ARCHITECTURE_FOCUS.md, ~50 lines)
+5. Include accuracy caveats (e.g., "no callers currently source this"; defensive only)
+6. Run pre-commit validation (shellcheck, linters)
+7. Smoke test the code (bash -n, --help, etc.)
+8. Verify zero external callers after commit (negative grep that fails if callers appear)
+
+### Detailed Steps
+
+**Step 1: Fact-Verify the Design at Planning Time**
+
+Don't defer verification to implementation. Use grep to check actual usage patterns:
+
+```bash
+# Example: verify no callers source the script (not just capability)
+grep -rn "source.*install\.sh\|\. .*install\.sh" scripts/ docs/ .github/ README.md CONTRIBUTING.md justfile 2>/dev/null | grep -v "install_helpers" | grep -v "^scripts/shell/install.sh:"
+```
+
+If the result is empty, the sourceable-contract claim is **defensive, not load-bearing**. Add a caveat in the doc: "Although the guard permits sourcing, **no callers currently source it**."
+
+**Step 2: Identify Three Pillars Justifying the Monolith**
+
+For scripts with shared state, list the three things that make splitting expensive:
+
+1. **Shared state** — counters, flags, globals that all sections read/increment (e.g., `_PASS`, `_FAIL`, `_WARN`, `_SKIP`)
+2. **Unified filter** — single argument or config applied uniformly (e.g., `--role worker|control|all`)
+3. **Aggregated results** — single trailing summary that combines outputs from all sections
+
+If splitting would require replicating these in N children or building a dispatcher, document that cost.
+
+**Step 3: Add Architecture Comment Block to Source**
+
+Insert 14-line comment block at the top-level (after usage/exit-codes, before main logic):
+
+```bash
+# Architecture (see docs/INSTALLER_ARCHITECTURE.md):
+#   12 numbered sections intentionally live in this one file.
+#   The SRP boundary that matters is already in scripts/shell/lib/install_helpers.sh.
+#   The sections themselves share three pieces of state:
+#     1. _PASS/_FAIL/_WARN/_SKIP counters (defined in lib/install_helpers.sh)
+#     2. The --role filter via should_check_worker / should_check_control
+#     3. The single trailing summary that aggregates results across sections
+#   A per-tool split would require replicating these in every child or
+#   threading them through a dispatcher.
+```
+
+**Step 4: Create Standalone Architecture Decision Record**
+
+File: `docs/INSTALLER_ARCHITECTURE.md` (or similar, ~50 lines)
+
+Sections:
+- **Purpose** — what the script does and where it's invoked
+- **The SRP Boundary That Exists** — what was already extracted (e.g., lib/install_helpers.sh)
+- **Why the Sections Stay Together** — the three pillars with explanations
+- **What the Script Is *Not*** — the accuracy caveat (e.g., "no callers source it; defensive guard only")
+- **Triggers That Would Justify Revisiting** — concrete conditions to split later (size, independent entry points, role-gating change, actual sourcing caller)
+
+**Step 5: Include Accuracy Caveats**
+
+If a design claim turned out to be unverified (e.g., "we keep this monolithic because callers source it for helpers"), **demote it to a caveat** in the "What the Script Is *Not*" section:
+
+> Although the source guard at install.sh:46–48 permits sourcing, **no callers currently source it**. This guard is defensive infrastructure with no actual consumer.
+
+This prevents future auditors from being misled by inherited claims.
+
+**Step 6: Run Pre-Commit Validation**
+
+```bash
+pre-commit run --files scripts/shell/install.sh docs/INSTALLER_ARCHITECTURE.md
+```
+
+Shellcheck, markdownlint, and other hooks must pass. Re-run once if auto-fixers touched files.
+
+**Step 7: Smoke Test the Code**
+
+```bash
+bash -n scripts/shell/install.sh                # Parse check
+bash scripts/shell/install.sh --help            # CLI still works
+```
+
+**Step 8: Verify Zero External Callers**
+
+After committing, run a negative grep that fails if external callers appear:
+
+```bash
+! grep -rn "source.*install\.sh" scripts/ docs/ .github/ README.md CONTRIBUTING.md justfile \
+  | grep -v "docs/INSTALLER_ARCHITECTURE.md" \
+  | grep -v "^scripts/shell/install.sh:" \
+  | grep -v "install_helpers"
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Sourceable-contract as justification | Cited the source guard (`if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; return 0`) as a reason to keep the monolith | Unverified claim — grep showed zero actual callers across the repo. The guard is defensive infrastructure, not a load-bearing design pillar. Baking an unverified claim into permanent docs would mislead future auditors. | Always verify claims before documenting them. Mechanism (capability to source) ≠ Usage (actual callers). Use grep to check real usage patterns. Include caveats: "Although X is possible, no callers currently do X." |
+| Conditional CONTRIBUTING.md edit | Plan proposed editing docs/CONTRIBUTING.md only if a "Scripts" section already exists | Resolved at planning time: a read of CONTRIBUTING.md showed no such section exists. YAGNI applies; adding a new section for a nitpick violates it. | Resolve definitional questions at planning time, not deferring to implementation. Use git to check current state before creating conditional logic. |
+| Mechanism-based verification | Attempted to verify sourceable-contract by running `bash -c 'source scripts/shell/install.sh && type has_cmd'` | Proof of mechanism (script can be sourced, functions are defined) is not proof of usage (actual callers doing so). This test proved the script *can* be sourced but said nothing about whether it *is* sourced anywhere in the repo. | Verify usage patterns with grep (searches the codebase for actual callers), not capability tests. Don't confuse "this feature is technically possible" with "this feature is actively used." |
+
+## Results & Parameters
+
+### Architecture Comment Block Template
+
+```bash
+# Architecture (see docs/INSTALLER_ARCHITECTURE.md):
+#   12 numbered sections (Section 0 … Section 11 + Summary)
+#   intentionally live in this one file. The SRP boundary that matters is
+#   already in scripts/shell/lib/install_helpers.sh, which extracts reusable
+#   primitives. The sections themselves share three pieces of state that
+#   make splitting expensive:
+#     1. _PASS/_FAIL/_WARN/_SKIP counters (defined in lib/install_helpers.sh)
+#     2. The --role filter via should_check_worker / should_check_control
+#     3. The single trailing summary that aggregates results across sections
+#   A per-tool split would require replicating these in every child or
+#   threading them through a dispatcher.
+```
+
+### Standalone Doc Sections
+
+**Purpose** — Brief statement of what the script does and where invoked
+**The SRP Boundary That Exists** — List extraction that already happened (e.g., lib/install_helpers.sh with colors, counters, has_cmd, apt_install)
+**Why Sections Stay Together** — Three paragraphs explaining each pillar (shared counters, unified filter, aggregated results)
+**What the Script Is *Not*** — Accuracy caveat with verification command (grep result showing zero callers)
+**Triggers for Revisiting** — Bullet list: size (>150 lines per section), independent entry points, per-section role-gating, verified external caller
+
+### Verification Commands (Copy-Paste Ready)
+
+```bash
+# Check 1: Architecture block present
+grep -A2 "^# Architecture" scripts/shell/install.sh
+
+# Check 2: Doc lists the three pillars
+grep -E "_PASS/_FAIL|--role filter|trailing summary" docs/INSTALLER_ARCHITECTURE.md
+
+# Check 3: Accuracy caveat present
+grep -E "no callers currently source|defensive" docs/INSTALLER_ARCHITECTURE.md
+
+# Check 4: Script syntax valid
+bash -n scripts/shell/install.sh
+
+# Check 5: No external source-callers
+! grep -rn "source.*install\.sh" scripts/ docs/ .github/ README.md CONTRIBUTING.md justfile \
+  | grep -v "docs/INSTALLER_ARCHITECTURE.md" \
+  | grep -v "^scripts/shell/install.sh:" \
+  | grep -v "install_helpers"
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | Issue #792 (audit nitpick S13) | Monolithic installer (751 lines, 12 sections). Resolved via documented architecture decision. PR #984 merged with all policy gates passing (signed commit, label, auto-merge, body format). |
+
+---
+
+## Superseded from docs-contributing-md-case-clash-redirect
+
+**Original date:** 2026-05-28 · **Original version:** 1.0.0
+
+```yaml
+name: docs-contributing-md-case-clash-redirect
+description: "Resolve CONTRIBUTING.md case-clash and circular cross-reference between root CONTRIBUTING.md and docs/contributing.md. Use when: (1) a repo has both CONTRIBUTING.md (root) and docs/contributing.md with a circular 'See also' mutual reference, (2) docs/contributing.md duplicates content from the root canonical file, (3) docs hygiene audit flags CONTRIBUTING case ambiguity on case-insensitive filesystems."
+category: documentation
+date: 2026-05-28
+version: "1.0.0"
+user-invocable: false
+verification: verified-precommit
+tags:
+  - contributing
+  - docs
+  - case-clash
+  - redirect
+  - duplication
+  - hygiene
+```
+
+# Docs CONTRIBUTING Case-Clash Redirect Pattern
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-28 |
+| **Objective** | Eliminate circular cross-reference between root CONTRIBUTING.md and docs/contributing.md |
+| **Outcome** | Success — docs copy reduced to 5-line redirect, circular reference removed |
+| **Verification** | verified-precommit |
+
+## When to Use
+
+- A repo has both `CONTRIBUTING.md` (root, canonical) and `docs/contributing.md` (case variant)
+- The two files reference each other circularly ("See also docs/…" ↔ "Canonical source is root/…")
+- `docs/contributing.md` duplicates content already covered by the root file
+- Case-insensitive filesystem (macOS) ambiguity would make both resolve to the same path
+
+## Verified Workflow
+
+> **Warning:** This workflow has been validated through pre-commit hooks only (verified-precommit) — CI-level link checking not confirmed.
+
+### Quick Reference
+
+```bash
+# Step 1: Reduce docs/contributing.md to pure redirect
+cat > docs/contributing.md << 'EOF'
+# Contributing to <ProjectName>
+
+> **Canonical source:** The root [`CONTRIBUTING.md`](../CONTRIBUTING.md) is the authoritative
+> contributing guide. All setup, code style, testing, PR process, and dependency update
+> instructions live there. This file is a redirect — please follow the link above.
+EOF
+
+# Step 2: Strip the "See also docs/contributing.md" back-reference from root CONTRIBUTING.md
+# Remove the admonition block that points to docs/contributing.md
+```
+
+### Detailed Steps
+
+1. **Read both files** — identify the circular reference pattern (mutual "See also" ↔ "Canonical source" pointers)
+2. **Decide direction**: root `CONTRIBUTING.md` is canonical; `docs/contributing.md` is the redirect
+3. **Reduce docs copy**: Replace the full content of `docs/contributing.md` with a 4-5 line redirect block containing only a heading and a blockquote pointing to the canonical root
+4. **Strip the back-reference from root**: Remove the `> **See also:** docs/contributing.md` admonition from the top of `CONTRIBUTING.md` — it is now unnecessary since the docs file is a pure redirect
+5. **Stage by name**: `git add docs/contributing.md CONTRIBUTING.md`
+6. **Verify Markdown lint** passes before committing
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Deleting docs/contributing.md | Removing the file entirely | Breaks any inbound links from docs index | Reduce to redirect instead of deleting |
+| Keeping both files with content | Leaving both files with full content | Perpetuates duplication and the circular reference problem | One must become a redirect |
+| Moving content to docs copy | Making docs/contributing.md canonical instead | docs/ is secondary navigation; root is the GitHub-visible canonical | Always keep root as canonical |
+
+## Results & Parameters
+
+Resulting `docs/contributing.md` (5 lines):
+
+```markdown
+# Contributing to ProjectName
+
+> **Canonical source:** The root [`CONTRIBUTING.md`](../CONTRIBUTING.md) is the authoritative
+> contributing guide. All setup, code style, testing, PR process, and dependency update
+> instructions live there. This file is a redirect — please follow the link above.
+```
+
+Root `CONTRIBUTING.md`: remove the `> **See also:** ...` block from the top — no other changes needed.
+
+Commit message convention: `chore(docs): resolve CONTRIBUTING case clash and add just clean recipe`
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | Issue #630 — docs hygiene PR #667 | Pre-commit markdown lint passed |
+
+---
+
+## Superseded from installation-anchor-validator
+
+**Original date:** 2026-03-15 · **Original version:** 1.0.0
+
+```yaml
+name: installation-anchor-validator
+description: 'Validate anchor fragments in markdown deep-links to an installation
+  guide. Use when: README or other docs link to specific sections of installation.md
+  and you need CI to catch broken anchors when headings are renamed or removed.'
+category: documentation
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+```
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Skill** | installation-anchor-validator |
+| **Category** | documentation |
+| **Complexity** | Low |
+| **Typical Duration** | 30–60 min |
+| **Key Tools** | Write, Edit, Bash (pytest, gh) |
+
+## When to Use
+
+- A repository has one or more markdown files linking to specific sections of an installation
+  guide (e.g., `installation.md#prerequisites`) and you want CI to catch regressions
+- Headings in an installation guide are being reorganised or renamed and you want to be
+  sure all deep-links remain valid
+- You are adding a lightweight anchor validation script alongside an existing `validate_links.py`
+  that intentionally strips anchors for file-existence checks
+- You need hermetic pytest tests that do NOT touch real repo files (TemporaryDirectory pattern)
+
+## Verified Workflow
+
+### Quick Reference
+
+| Step | Command |
+| ------ | --------- |
+| Run script | `python3 scripts/validate_installation_anchors.py README.md docs/getting-started/installation.md` |
+| Run tests | `python3 -m pytest tests/test_validate_installation_anchors.py -v` |
+| Check CI step | see `.github/workflows/link-check.yml` |
+
+### 1. Audit the current state
+
+Check what links to `installation.md` already exist and whether they have anchors:
+
+```bash
+grep -rn "installation\.md" README.md docs/ --include="*.md"
+```
+
+Most projects start with a plain link (no anchor). The validator will pass cleanly until
+a deep-link is added, at which point it catches regressions.
+
+### 2. Understand the existing validate_links.py
+
+Before creating a new script, read the existing link-validation script. It likely strips
+anchors intentionally (to check file existence only):
+
+```python
+# scripts/validate_links.py line ~77 — intentionally ignores anchors
+link_path = link.split("#")[0]
+```
+
+Do **not** modify this script — it serves a different purpose. Create a focused, additive
+script instead.
+
+### 3. Implement heading_to_anchor (GitHub slug algorithm)
+
+GitHub's anchor slug rules (implement in pure Python, no extra deps):
+
+```python
+import re
+
+def heading_to_anchor(heading: str) -> str:
+    slug = heading.lower()
+    slug = slug.replace(" ", "-")
+    slug = re.sub(r"[^a-z0-9\-]", "", slug)
+    slug = re.sub(r"-{2,}", "-", slug)
+    slug = slug.strip("-")
+    return slug
+```
+
+Key edge cases to test:
+- Backtick-wrapped text: `` `pixi install` fails `` → `pixi-install-fails`
+- Parenthesised suffixes: `Run Tests (without shell)` → `run-tests-without-shell`
+- Numbers preserved: `Step 1 Setup` → `step-1-setup`
+
+### 4. Implement extract_headings and extract_installation_links
+
+```python
+def extract_headings(content: str) -> List[str]:
+    headings = []
+    for line in content.splitlines():
+        match = re.match(r"^#{1,6}\s+(.*)", line)
+        if match:
+            headings.append(match.group(1).strip())
+    return headings
+
+def extract_installation_links(
+    content: str, source_path: str
+) -> List[Tuple[str, str, Optional[str]]]:
+    results = []
+    link_pattern = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
+    for line in content.splitlines():
+        for match in link_pattern.finditer(line):
+            target = match.group(2).strip()
+            base, _, fragment = target.partition("#")
+            if not base.endswith("installation.md"):
+                continue
+            anchor = fragment if fragment else None
+            results.append((source_path, target, anchor))
+    return results
+```
+
+### 5. Write the validate() function and CLI main()
+
+```python
+def validate(source_paths: List[Path], installation_path: Path) -> List[str]:
+    errors: List[str] = []
+    if not installation_path.exists():
+        return [f"installation.md not found: {installation_path}"]
+    installation_content = installation_path.read_text(encoding="utf-8")
+    headings = extract_headings(installation_content)
+    valid_anchors = {heading_to_anchor(h) for h in headings}
+    for source_path in source_paths:
+        if not source_path.exists():
+            errors.append(f"Source file not found: {source_path}")
+            continue
+        content = source_path.read_text(encoding="utf-8")
+        for src, target, anchor in extract_installation_links(content, str(source_path)):
+            if anchor is None:
+                continue  # plain link without anchor — always valid
+            if anchor not in valid_anchors:
+                errors.append(
+                    f"{src}: broken anchor '#{anchor}' in '{target}' "
+                    f"(valid: {sorted(valid_anchors)})"
+                )
+    return errors
+
+def main(argv: List[str]) -> int:
+    # If 2+ positional args: last = installation.md, rest = sources
+    # If 1 positional arg: treat as installation.md, scan whole repo
+    # If 0 args: use default paths
+    ...
+    errors = validate(source_paths, installation_path)
+    if errors:
+        for e in errors: logger.error(e)
+        return 1
+    logger.info("All installation.md anchor links are valid.")
+    return 0
+```
+
+### 6. Write hermetic tests (TemporaryDirectory pattern)
+
+Mirror the pattern from `tests/test_audit_shared_links.py`:
+
+```python
+_INSTALLATION_CONTENT = """\
+# Installation
+
+## Prerequisites
+
+Install required tools.
+
+## Installing Pixi
+
+Use the install script.
+"""
+
+class TestValidate:
+    def test_no_anchor_links_passes(self) -> None:
+        with TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            installation = tmp / "installation.md"
+            installation.write_text(_INSTALLATION_CONTENT)
+            readme = tmp / "README.md"
+            readme.write_text("[Guide](installation.md)\n")
+            assert validate([readme], installation) == []
+
+    def test_invalid_anchor_fails(self) -> None:
+        with TemporaryDirectory() as tmpdir:
+            ...
+            readme.write_text("[Guide](installation.md#nonexistent)\n")
+            errors = validate([readme], installation)
+            assert len(errors) == 1
+            assert "nonexistent" in errors[0]
+```
+
+### 7. Add step to CI workflow
+
+Append after the lychee step in `.github/workflows/link-check.yml`:
+
+```yaml
+- name: Validate installation.md anchor links
+  run: |
+    python3 scripts/validate_installation_anchors.py \
+      README.md \
+      docs/getting-started/installation.md
+```
+
+No secrets or user-controlled input — the step is injection-safe.
+
+### 8. Document in scripts/README.md
+
+Add the script to the directory listing AND add a full documentation section
+(with Features, Usage, Exit Codes) immediately before `validate_links.py`.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Modifying validate_links.py to check anchors | Considered extending the existing script | It intentionally strips anchors for file-existence checking; changing it would break existing callers | Create a focused additive script instead of modifying an existing one |
+| Using `--include-fragments` in lychee | Considered relying solely on lychee for anchor validation | lychee validates external URLs well but internal markdown anchor resolution is better handled with a Python script that implements GitHub's exact slug algorithm | Python gives full control over the slug algorithm and produces precise error messages |
+| Importing `common.py` in the new script | Considered reusing `get_repo_root()` from common.py | The script needed to be self-contained with `Path(__file__).resolve().parent.parent` for repo root detection; common.py import added complexity for a function not needed in tests | Only import shared modules when the benefit clearly outweighs the coupling |
+
+## Results & Parameters
+
+**Script**: `scripts/validate_installation_anchors.py`
+**Tests**: `tests/test_validate_installation_anchors.py` — 33 tests, all passing
+**Workflow**: `.github/workflows/link-check.yml` — new step appended after lychee
+
+### GitHub slug algorithm — key regex
+
+```python
+slug = heading.lower()
+slug = slug.replace(" ", "-")
+slug = re.sub(r"[^a-z0-9\-]", "", slug)  # strip non-alphanumeric except hyphen
+slug = re.sub(r"-{2,}", "-", slug)         # collapse consecutive hyphens
+slug = slug.strip("-")                     # remove leading/trailing hyphens
+```
+
+### Edge cases verified
+
+| Heading | Expected anchor |
+| --------- | ---------------- |
+| `Installation` | `installation` |
+| `Installing Pixi` | `installing-pixi` |
+| `` `pixi install` fails with channel errors `` | `pixi-install-fails-with-channel-errors` |
+| `Run Tests Directly (without interactive shell)` | `run-tests-directly-without-interactive-shell` |
+| `Step 1 Setup` | `step-1-setup` |
+
+### Test pattern — TemporaryDirectory
+
+Use `TemporaryDirectory` (not `tmp_path` alone) for compatibility with class-based
+test classes that don't use pytest fixtures:
+
+```python
+class TestValidate:
+    def test_foo(self) -> None:
+        with TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            ...
+```
+
+---
