@@ -1,0 +1,1417 @@
+<!-- markdownlint-disable MD024 -->
+
+# History: skill-file-format-frontmatter-and-validation
+
+Consolidation history and verbatim originals of all superseded skills.
+
+## v1.0.0 (2026-06-07)
+
+Consolidated 6 skills into this canonical:
+
+- yaml-frontmatter-validation
+- fix-yaml-frontmatter-colon-bug
+- frontmatter-colon-split-fix
+- ci-cd-skill-validation-failed-attempts-inline-html
+- claude-plugin-format
+- skills-agent-field
+
+## Superseded from yaml-frontmatter-validation
+
+**Original date/version**: 2026-01-08 / 1.0.0
+
+```yaml
+name: yaml-frontmatter-validation
+description: Fix CI failures caused by missing YAML frontmatter in SKILL.md files.
+  Use when plugin validation fails with 'missing YAML frontmatter' errors across multiple
+  PRs.
+category: ci-cd
+date: 2026-01-08
+version: 1.0.0
+user-invocable: false
+```
+
+# YAML Frontmatter Validation Fixes
+
+Systematic approach to diagnosing and fixing CI validation failures across multiple PRs when the root cause is missing YAML frontmatter in SKILL.md files.
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | 2026-01-08 |
+| Objective | Fix CI failures on 5 open PRs (4 with failures) caused by missing YAML frontmatter |
+| Outcome | ✅ Successfully fixed all 5 PRs - all CI now passing |
+| Strategy | Fix main branch first, then fix PR-specific issues, then rebase |
+
+## When to Use
+
+Use this skill when you encounter:
+
+1. **Multiple PRs failing with similar validation errors** - Same error appearing across different PRs suggests shared root cause
+2. **"SKILL.md missing YAML frontmatter" errors** - Validation script reports files don't start with `---`
+3. **Plugin name validation failures** - Invalid characters in plugin names (e.g., periods in `claude-code-v2.1-adoption`)
+4. **CI failures that shouldn't affect feature branches** - Errors in main branch plugins affecting all PRs
+5. **Need to fix both main and feature branches** - Systematic approach required for cascading fixes
+
+### Trigger Patterns
+
+```text
+FAIL: plugin-name
+  Errors:
+    - SKILL.md missing YAML frontmatter (must start with ---)
+```
+
+```text
+FAIL: plugin-name
+  Errors:
+    - Invalid name format 'plugin-v2.1-name' (use lowercase, numbers, hyphens)
+```
+
+## Verified Workflow
+
+### Phase 1: Analyze the Failures
+
+**What worked:**
+
+1. **List all open PRs with CI status:**
+   ```bash
+   gh pr list --state open --json number,title,headRefName,statusCheckRollup --limit 20
+   ```
+
+2. **Get failure details for each failing run:**
+   ```bash
+   gh run view <run-id> --log 2>/dev/null | grep -E "(PASS|FAIL):" | head -20
+   gh run view <run-id> --log 2>/dev/null | grep -A 10 "FAIL: plugin-name"
+   ```
+
+3. **Identify patterns:**
+   - Common failures across multiple PRs → likely main branch issue
+   - PR-specific failures → branch-specific issues
+   - Count unique failing plugins to understand scope
+
+**Example from this session:**
+- 5 open PRs, 4 with failures
+- 2 plugins failing on main: `retry-transient-errors`, `judge-criteria-enhancement`
+- 2 PR-specific issues: `claude-code-v2.1-adoption` (period in name), `global-semaphore-parallelism` (missing frontmatter)
+
+### Phase 2: Fix Main Branch First
+
+**Critical principle:** Fix shared root causes on main before touching feature branches.
+
+**What worked:**
+
+1. **Checkout main and pull latest:**
+   ```bash
+   git checkout main
+   git pull
+   ```
+
+2. **Add YAML frontmatter to each failing plugin:**
+   ```yaml
+   ---
+   name: plugin-name
+   description: "Brief description with trigger conditions. Use when..."
+   user-invocable: false
+   ---
+   ```
+
+3. **Verify fixes locally:**
+   ```bash
+   python3 scripts/validate_plugins.py 2>&1 | grep -E "(PASS|FAIL): (plugin1|plugin2)"
+   ```
+
+4. **Commit and push to main:**
+   ```bash
+   git add plugins/.../SKILL.md
+   git commit -m "fix: add missing YAML frontmatter to <plugin-names> skills"
+   git push
+   ```
+
+**Why this order matters:**
+- Fixes propagate to all branches during rebase
+- Reduces duplicate work across PRs
+- Ensures consistent fixes
+
+### Phase 3: Fix PR-Specific Issues
+
+**What worked:**
+
+For each PR with unique failures:
+
+1. **Checkout the feature branch:**
+   ```bash
+   git checkout <branch-name>
+   git pull --rebase origin main  # Pick up main branch fixes
+   ```
+
+2. **Fix PR-specific validation errors:**
+
+   **For missing frontmatter:**
+   - Add YAML frontmatter as in Phase 2
+
+   **For invalid plugin names (periods, underscores, uppercase):**
+   ```bash
+   # Update plugin.json name field
+   # Update SKILL.md frontmatter name field
+   # Rename directories
+   git mv plugins/category/old-name plugins/category/new-name
+   git mv plugins/category/new-name/skills/old-name plugins/category/new-name/skills/new-name
+
+   # Regenerate marketplace
+   python3 scripts/generate_marketplace.py
+   ```
+
+3. **Verify and commit:**
+   ```bash
+   python3 scripts/validate_plugins.py 2>&1 | grep "FAIL:"
+   git add -A
+   git commit -m "fix: <specific fix description>"
+   git push --force-with-lease
+   ```
+
+### Phase 4: Rebase Remaining PRs
+
+**What worked:**
+
+For PRs that only had main branch failures (now fixed):
+
+```bash
+git fetch origin <branch-name>
+git checkout <branch-name>
+git pull --rebase origin main
+git push --force-with-lease
+```
+
+**Handle merge conflicts:**
+- Template files often conflict (e.g., `templates/experiment-skill/skills/SKILL_NAME/SKILL.md`)
+- Keep both changes when adding new optional fields
+- Mark resolved: `git add <file> && git rebase --continue`
+
+### Phase 5: Verify All PRs
+
+**What worked:**
+
+```bash
+gh pr list --state open --json number,title,statusCheckRollup
+```
+
+Check for `"conclusion":"SUCCESS"` in all PRs.
+
+**Wait for CI if needed:**
+```bash
+sleep 30 && gh pr view <number> --json statusCheckRollup --jq '.statusCheckRollup[] | select(.workflowName == "Validate Plugins") | {status: .status, conclusion: .conclusion}'
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Validation Rules (from `scripts/validate_plugins.py`)
+
+**Plugin name requirements:**
+- Regex: `^[a-z0-9-]+$`
+- Lowercase only
+- Numbers allowed
+- Hyphens allowed
+- NO periods, underscores, uppercase
+
+**YAML frontmatter requirements:**
+```yaml
+---
+name: plugin-name  # Must match directory name
+description: "Trigger conditions..."  # 20+ chars
+user-invocable: false  # or true
+# Optional fields:
+category: ci-cd-cd-cd  # One of 8 categories
+date: YYYY-MM-DD
+agent: specialist-name
+---
+```
+
+### Fix Strategy Decision Matrix
+
+| Scenario | Action |
+| ---------- | -------- |
+| Same error on multiple PRs | Fix on main first |
+| Plugin name validation error | Rename plugin (directories + files) |
+| Missing frontmatter | Add frontmatter block at file start |
+| PR only needs main fixes | Rebase on main |
+| PR has unique failures | Fix on branch, then rebase |
+| Merge conflict in template | Keep both changes if adding optional fields |
+
+### Commands Used
+
+```bash
+# Analysis
+gh pr list --state open --json number,title,statusCheckRollup --limit 20
+gh run view <run-id> --log 2>/dev/null | grep -A 10 "FAIL:"
+
+# Local validation
+python3 scripts/validate_plugins.py 2>&1 | grep "FAIL:"
+
+# Git workflow
+git checkout main && git pull
+git checkout -b fix/<issue>
+git add <files>
+git commit -m "fix: <description>"
+git push --force-with-lease  # After rebase
+
+# Rebase
+git pull --rebase origin main
+git rebase --continue  # After resolving conflicts
+
+# Rename plugin
+git mv plugins/category/old plugins/category/new
+python3 scripts/generate_marketplace.py
+```
+
+### Session Results
+
+**Before:**
+- 5 open PRs
+- 4 PRs with failing CI
+- 6 unique failing plugins (2 on main, 4 PR-specific)
+
+**After:**
+- 5 open PRs
+- 0 PRs with failing CI ✅
+- All validations passing
+
+**Commits:**
+1. Main: `4b8b469` - Added frontmatter to 2 plugins
+2. PR #74: `1fe4ca8` - Renamed `claude-code-v2.1-adoption` → `claude-code-v21-adoption`
+3. PR #68: `8b80c67` - Added frontmatter to `global-semaphore-parallelism`
+4. PR #73, #69, #72: Rebased on main
+
+## Key Takeaways
+
+1. **Fix main first, then branches** - Shared issues on main propagate to all PRs. Fix once, rebase everywhere.
+
+2. **Use CI logs to identify patterns** - Same error across PRs = main branch issue. Unique errors = branch-specific.
+
+3. **Plugin naming is strict** - Only `[a-z0-9-]` allowed. No periods (`.`), underscores (`_`), or uppercase.
+
+4. **YAML frontmatter is mandatory** - Must start with `---` and include `name` and `description` fields.
+
+5. **Validate locally before pushing** - Run `scripts/validate_plugins.py` to catch errors before CI.
+
+6. **Force-push safely after rebase** - Use `--force-with-lease` not `--force` to avoid overwriting others' work.
+
+7. **Template conflicts are common** - When rebasing PRs that add optional fields, keep both changes in merge conflicts.
+
+8. **CI can lag behind** - Use `gh pr view <number> --json statusCheckRollup` or wait 30s to verify success.
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectMnemosyne | PR #74, #73, #72, #69, #68 | Fixed 4 failing PRs by adding frontmatter and renaming plugins. See [notes.md](../references/notes.md) for CI logs and commands. |
+
+## References
+
+- `scripts/validate_plugins.py` - Plugin validation script
+- CLAUDE.md - Plugin standards documentation
+- Related skill: `claude-plugin-format` - Plugin structure requirements
+- Related skill: `retrospective-hook-integration` - CI/CD workflow patterns
+
+---
+
+## Superseded from fix-yaml-frontmatter-colon-bug
+
+**Original date/version**: 2026-03-15 / 1.0.0
+
+```yaml
+name: fix-yaml-frontmatter-colon-bug
+description: 'Fix YAML frontmatter parsing bugs where line.partition('':'') silently
+  truncates values containing colons. Use when: migrating a manual-split frontmatter
+  parser to yaml.safe_load() following the partition-colon bug pattern.'
+category: ci-cd
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+```
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Bug Pattern** | `key, _, value = line.partition(":")` silently drops everything after the first colon |
+| **Trigger** | Script reads YAML frontmatter by splitting on `:` instead of using a YAML parser |
+| **Fix** | Replace with `yaml.safe_load()` — handles colons in values, quoted strings, invalid YAML |
+| **Scope** | Any Python script using the `partition(":")` or `split(":", 1)` pattern for YAML frontmatter |
+| **Risk** | Low — `yaml.safe_load()` returns `{}` for invalid YAML instead of raising |
+
+## When to Use
+
+- A sibling or related script has the same `line.partition(":")` bug that was fixed in a parent issue
+- A description field like `"Create PR linked to issue: #123"` is being silently truncated to `"Create PR linked to issue"`
+- You need to propagate a `yaml.safe_load()` fix from one script to another using the same pattern
+- Multiple scripts share the same manual-parsing logic and one was already fixed
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# ❌ Buggy — silently truncates values with colons
+for line in frontmatter_text.splitlines():
+    if ":" in line:
+        key, _, value = line.partition(":")
+        result[key.strip()] = value.strip().strip('"').strip("'")
+
+# ✅ Fixed — yaml.safe_load() handles colons correctly
+import yaml
+
+try:
+    parsed = yaml.safe_load(frontmatter_text)
+    result = parsed if isinstance(parsed, dict) else {}
+except yaml.YAMLError:
+    result = {}
+```
+
+### Steps
+
+1. **Find the parent fix** — read the PR or issue that first fixed this pattern (e.g., `gh pr view <N>`)
+   to understand the exact replacement used
+
+2. **Locate the sibling script** — use `find` or `grep` to find all scripts with the same
+   `line.partition(":")` pattern:
+
+   ```bash
+   grep -r 'partition.*":"' scripts/
+   grep -r "partition.*':'" scripts/
+   ```
+
+3. **Read the full file** — understand context (function name, imports, return type) before editing
+
+4. **Apply the fix** — two changes required:
+   - Add `import yaml` to the imports block (alphabetically sorted)
+   - Replace the `for line in ...` loop with the `yaml.safe_load()` pattern
+
+5. **Write regression tests** — follow the same test class structure used for the parent fix.
+   Tests should cover:
+   - Plain value (baseline)
+   - Colon in quoted value (regression case — the exact bug)
+   - Colon in unquoted value
+   - No frontmatter (returns `{}`)
+   - Unclosed frontmatter (returns `{}`)
+   - Invalid YAML (returns `{}` without raising)
+   - Multiple colons in a single value
+
+6. **Handle test file discovery** — when the script lives in an external repo
+   (e.g., `ProjectMnemosyne`), use `importlib.util.spec_from_file_location()` with
+   multiple candidate paths and `pytest.mark.skipif` if none exist:
+
+   ```python
+   _CANDIDATES = [
+       Path.home() / "ProjectMnemosyne" / "scripts" / "migrate_to_skills.py",
+       Path(__file__).parent.parent.parent / "build" / str(os.getpid())
+           / "ProjectMnemosyne" / "scripts" / "migrate_to_skills.py",
+   ]
+   _SCRIPT_PATH = next((p for p in _CANDIDATES if p.exists()), None)
+
+   pytestmark = pytest.mark.skipif(
+       _SCRIPT_PATH is None,
+       reason="Script not found; skipping",
+   )
+   ```
+
+7. **Run tests** — confirm all pass:
+
+   ```bash
+   pixi run python -m pytest tests/scripts/test_<script_name>_frontmatter.py -v
+   ```
+
+8. **Commit the fix** to the external repo on a feature branch; commit the tests to the
+   main repo on its own branch
+
+9. **Create PRs** for both repos and enable auto-merge
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Search for file in worktree | `find` in `.worktrees/issue-3929/` for `migrate_to_skills.py` | File lives in `ProjectMnemosyne` repo, not in the ProjectOdyssey worktree | Check `build/*/ProjectMnemosyne/` and `~/ProjectMnemosyne/` for sibling repo scripts |
+| Look for tracked file in git | `git ls-files \| grep migrate_to_skills` | Script is in a separate cloned repo, never committed to ProjectOdyssey | For cross-repo fixes, always look for the local checkout of the target repo first |
+| Assume `build/` in worktree | Looked for `build/` under `.worktrees/issue-3929/` | `build/` is under the main repo root, not under worktree paths | PID-scoped builds live at `<repo_root>/build/<PID>/`, not under worktree subdirectories |
+
+## Results & Parameters
+
+### Regression Test Template
+
+```python
+class TestExtractFrontmatter:
+    """Regression tests for extract_frontmatter() colon handling."""
+
+    def test_colon_in_quoted_value(self, migrate_module) -> None:
+        """Regression: description with a colon inside a quoted value must not be truncated."""
+        content = '---\nname: my-skill\ndescription: "Create PR linked to issue: #123"\n---\n# Body'
+        fm = migrate_module.extract_frontmatter(content)
+        assert fm["description"] == "Create PR linked to issue: #123"
+
+    def test_invalid_yaml_returns_empty_dict(self, migrate_module) -> None:
+        """Malformed YAML in frontmatter returns {} without raising."""
+        content = "---\n: invalid: yaml: [\n---\n# Body"
+        fm = migrate_module.extract_frontmatter(content)
+        assert fm == {}
+```
+
+### Fix Diff Pattern
+
+```diff
++import yaml
++
+ def extract_frontmatter(content: str) -> dict:
+     ...
+     frontmatter_text = content[3:end].strip()
+-    result = {}
+-    for line in frontmatter_text.splitlines():
+-        if ":" in line:
+-            key, _, value = line.partition(":")
+-            result[key.strip()] = value.strip().strip('"').strip("'")
+-    return result
++    try:
++        parsed = yaml.safe_load(frontmatter_text)
++        return parsed if isinstance(parsed, dict) else {}
++    except yaml.YAMLError:
++        return {}
+```
+
+---
+
+## Superseded from frontmatter-colon-split-fix
+
+**Original date/version**: 2026-03-15 / 1.0.0
+
+```yaml
+name: frontmatter-colon-split-fix
+description: 'Fix YAML frontmatter parsers that use manual line.split('':'', 1) instead
+  of yaml.safe_load(), which silently truncates values containing colons. Use when:
+  auditing frontmatter parsers for colon-split bugs, adding regression tests for URL/ratio
+  values in YAML fields, or fixing description fields that lose data after the first
+  colon.'
+category: testing
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+```
+
+## Overview
+
+| Property | Value |
+| ---------- | ------- |
+| **Problem** | Manual `line.split(":", 1)` parsing of YAML frontmatter silently truncates values that contain colons (URLs like `https://...`, ratios like `3:1`, quoted strings with mid-sentence colons) |
+| **Root Cause** | `split(":", 1)` splits on the *first* colon in the line, so `description: See https://example.com` becomes key=`description`, value=`See https` |
+| **Fix** | Replace manual parsing with `yaml.safe_load()` which correctly handles all YAML value types |
+| **Test Pattern** | Regression tests for each colon variant: URL, numeric ratio, quoted colon, multi-colon (URL with port) |
+| **Language** | Python + PyYAML |
+| **Context** | Found in agent config validation scripts (`validate_configs.py`, `check_frontmatter.py`, `validate_agents.py`) |
+
+## When to Use
+
+- A frontmatter parser reads YAML values using `line.split(":", 1)` or `partition(":")`
+- Description fields are being silently truncated when they contain URLs or colons
+- Adding audit tests to scripts that parse agent markdown files
+- Writing regression tests to prevent the truncation bug from returning
+- The parsed `description` value is suspiciously short or ends at a URL's `://`
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# WRONG - silently truncates "See https://example.com for details"
+# into just "See https"
+key, value = line.split(":", 1)
+
+# RIGHT - preserves full value including colons
+import yaml
+parsed = yaml.safe_load(frontmatter_text)
+```
+
+### Step 1: Identify the Bug
+
+Search for manual colon splitting in frontmatter parsers:
+
+```bash
+grep -n "split.*:" scripts/agents/*.py
+grep -n "partition.*:" scripts/agents/*.py
+```
+
+Look for patterns like:
+
+```python
+for line in frontmatter_text.split("\n"):
+    if ":" not in line:
+        continue
+    key, value = line.split(":", 1)   # ← Bug here
+    frontmatter[key] = value
+```
+
+### Step 2: Fix the Parser
+
+Replace the manual loop with `yaml.safe_load()`:
+
+```python
+# Before (buggy)
+import re
+frontmatter = {}
+frontmatter_match = re.match(r"^---\n(.*?)\n---", content, re.DOTALL)
+frontmatter_text = frontmatter_match.group(1)
+for line in frontmatter_text.split("\n"):
+    line = line.strip()
+    if not line or line.startswith("#"):
+        continue
+    if ":" not in line:
+        errors.append(f"Invalid frontmatter line (no colon): {line}")
+        continue
+    key, value = line.split(":", 1)
+    key = key.strip()
+    value = value.strip()
+    frontmatter[key] = value
+
+# After (correct)
+import re
+import yaml
+from typing import Any, Dict
+
+frontmatter: Dict[str, Any] = {}
+frontmatter_match = re.match(r"^---\n(.*?)\n---", content, re.DOTALL)
+frontmatter_text = frontmatter_match.group(1)
+try:
+    parsed = yaml.safe_load(frontmatter_text)
+except yaml.YAMLError as e:
+    errors.append(f"Invalid YAML frontmatter: {e}")
+    return errors, warnings, frontmatter
+if not isinstance(parsed, dict):
+    errors.append("Frontmatter must be a YAML mapping")
+    return errors, warnings, frontmatter
+frontmatter = parsed
+```
+
+Update type annotations to use `Dict[str, Any]` instead of `Dict[str, str]`:
+
+```python
+# Before
+def _validate_frontmatter(self, content: str) -> Tuple[List[str], List[str], Dict[str, str]]:
+
+# After
+def _validate_frontmatter(self, content: str) -> Tuple[List[str], List[str], Dict[str, Any]]:
+```
+
+### Step 3: Write Regression Tests
+
+Create a `TestFrontmatterColonValues` class (or equivalent) in the test file:
+
+```python
+class TestFrontmatterColonValues:
+    """Regression tests for colon-containing values in frontmatter.
+
+    These tests verify that the parser correctly handles YAML values that
+    contain colons without truncation.
+    """
+
+    def test_url_in_description_preserved(self):
+        """Description with a URL should not be truncated at the colon."""
+        content = """---
+name: test-agent
+description: See https://docs.example.com/api for details
+tools: Read,Write
+model: sonnet
+---
+# Content"""
+        result = parse_frontmatter(content)
+        assert result["description"] == "See https://docs.example.com/api for details"
+
+    def test_quoted_colon_preserved(self):
+        """Colon inside a quoted YAML string should be preserved whole."""
+        content = """---
+name: test-agent
+description: "Use when you need to: parse, validate, or check files"
+tools: Read,Write
+model: sonnet
+---
+# Content"""
+        result = parse_frontmatter(content)
+        assert result["description"] == "Use when you need to: parse, validate, or check files"
+
+    def test_numeric_ratio_colon_preserved(self):
+        """Numeric ratio notation (3:1) should be preserved."""
+        content = """---
+name: test-agent
+description: Handles ratio 3:1 splits for training and validation
+tools: Read,Write
+model: sonnet
+---
+# Content"""
+        result = parse_frontmatter(content)
+        assert result["description"] == "Handles ratio 3:1 splits for training and validation"
+
+    def test_url_with_port_preserved(self):
+        """URL with port number (multiple colons) should be preserved."""
+        content = """---
+name: test-agent
+description: Connect to http://localhost:8080/api for testing
+tools: Read,Write
+model: sonnet
+---
+# Content"""
+        result = parse_frontmatter(content)
+        assert result["description"] == "Connect to http://localhost:8080/api for testing"
+```
+
+### Step 4: Important YAML Nuance
+
+**Bare colons mid-sentence are invalid YAML** unless quoted. This is correct YAML behavior:
+
+```yaml
+# VALID: URL (colon followed by //)
+description: See https://example.com for details
+
+# VALID: numeric ratio (colon between numbers)
+description: Handles 3:1 splits
+
+# VALID: colon in quoted string
+description: "Use when you need to: do something"
+
+# INVALID YAML: bare colon followed by space (looks like a mapping key)
+description: Use when you need to: do something
+# ↑ PyYAML raises ScannerError here - this is correct behavior!
+```
+
+When writing regression tests, use **valid** YAML forms. Don't test for values that are genuinely invalid YAML — the parser correctly rejects them.
+
+### Step 5: Run the Tests
+
+```bash
+pixi run python -m pytest tests/agents/test_<script>.py::TestFrontmatterColonValues -v
+```
+
+All colon-variant tests should pass. If any fail, check if the test itself uses invalid YAML (bare colon followed by space) — that's a test bug, not a parser bug.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Test with bare `to: parse` colon | Wrote test: `description: Use when you need to: parse, validate, or check files` | PyYAML raises `ScannerError` — this is genuinely invalid YAML (colon+space = mapping key) | Only test valid YAML forms; bare `key: value` mid-sentence is invalid YAML, not a parser bug |
+| Keep `Dict[str, str]` type annotation | Left return type as `Dict[str, str]` after switching to `yaml.safe_load()` | `yaml.safe_load()` returns `Any` values (int, bool, list), not just strings | Update type annotations to `Dict[str, Any]` when switching from manual parsing to PyYAML |
+
+## Results & Parameters
+
+**Files Fixed in ProjectOdyssey:**
+
+```text
+tests/agents/validate_configs.py      # Main fix: yaml.safe_load() + Dict[str, Any]
+tests/agents/test_agent_utils.py      # Added TestFrontmatterColonValues regression class
+tests/agents/test_check_frontmatter.py  # New: tests for check_frontmatter.py
+tests/agents/test_validate_agents.py    # New: tests for validate_agents.py
+```
+
+**Test count:** 86 tests, all passing
+
+**Grep pattern to find the bug:**
+
+```bash
+grep -rn "split.*\":\"\|split.*':'\\|partition.*\":\"\|partition.*':'" scripts/ tests/
+```
+
+**Validation that yaml.safe_load handles URLs:**
+
+```python
+import yaml
+# All of these parse correctly:
+yaml.safe_load("description: See https://example.com for details")
+# → {'description': 'See https://example.com for details'}  ✓
+
+yaml.safe_load('description: "Use when you need to: parse files"')
+# → {'description': 'Use when you need to: parse files'}  ✓
+
+yaml.safe_load("description: Handles 3:1 ratio")
+# → {'description': 'Handles 3:1 ratio'}  ✓
+```
+
+---
+
+## Superseded from ci-cd-skill-validation-failed-attempts-inline-html
+
+**Original date/version**: 2026-05-02 / 1.0.0
+
+```yaml
+name: ci-cd-skill-validation-failed-attempts-inline-html
+description: "Fix CI failures in skill PRs caused by wrong Failed Attempts table column
+  names or inline HTML from angle-bracket placeholders. Use when: (1) a skill PR fails
+  validate/unit-tests with 'Failed Attempts table missing required columns', (2) a skill
+  PR fails markdownlint MD033 no-inline-html on a <placeholder> pattern in prose, (3)
+  writing a new skill and wanting to avoid these common validation failures."
+category: ci-cd
+date: 2026-05-02
+version: "1.0.0"
+user-invocable: false
+tags: [markdownlint, md033, inline-html, failed-attempts, skill-format, validate, unit-tests]
+```
+
+# Fix Skill PR CI Failures — Failed Attempts Table + Inline HTML
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-02 |
+| **Objective** | Fix CI failures in PRs #1498 and #1516 in ProjectMnemosyne caused by wrong Failed Attempts column names and an MD033 inline-HTML false positive |
+| **Outcome** | Both issues resolved; pre-commit hooks passed after fixes |
+
+## When to Use
+
+- A skill PR fails `validate` or `unit-tests` with message "Failed Attempts table missing required columns"
+- A skill PR fails `markdownlint` with `MD033/no-inline-html` on a `<word>` placeholder in prose
+- You are writing a new skill file and want to avoid these two common authoring mistakes
+- The same skill file exists on multiple PR branches and both need the same fix applied independently
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Validate a skill file locally before pushing
+python3 scripts/validate_plugins.py
+
+# Check markdownlint for MD033 issues
+pixi run npx markdownlint-cli2 skills/<skill-name>.md
+```
+
+**Failed Attempts table — exact required column names:**
+
+```markdown
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Attempt 1 | Description | Reason | Takeaway |
+```
+
+**Inline HTML fix — wrap angle-bracket placeholders in backticks:**
+
+```markdown
+<!-- WRONG — triggers MD033 -->
+here's the actual CI config, addresses #<existing-issue-number>.
+
+<!-- CORRECT — backticks escape the angle brackets -->
+here's the actual CI config, addresses `#<existing-issue-number>`.
+```
+
+### Detailed Steps
+
+#### Fix 1: Failed Attempts Table Column Names
+
+The `scripts/validate_plugins.py` validator enforces exact column header names. The
+check (`validate_failed_attempts_table`) requires all four of these strings to appear
+in the header row:
+
+- `Attempt`
+- `What Was Tried`
+- `Why It Failed`
+- `Lesson Learned`
+
+**Any other column naming will fail validation.** Common wrong variants:
+
+| Wrong column name | Correct column name |
+|---|---|
+| `Approach` | `Attempt` |
+| `Description` | `What Was Tried` |
+| `Correct Approach` | `Lesson Learned` |
+| 3-column table (any names) | Must be 4 columns with exact names |
+
+**Fix procedure:**
+
+1. Open the skill `.md` file
+2. Locate the `## Failed Attempts` section
+3. Replace the header row with the exact required header:
+   `| Attempt | What Was Tried | Why It Failed | Lesson Learned |`
+4. Adjust the separator row column count to match (4 columns)
+5. Reformat data rows to fit 4 columns
+6. Run `python3 scripts/validate_plugins.py` — must report zero errors for the file
+
+#### Fix 2: MD033 Inline HTML from Angle-bracket Placeholders
+
+Markdownlint rule MD033 (`no-inline-html`) treats any `<word>` pattern as an HTML
+element tag — including documentation placeholders like `<existing-issue-number>`,
+`<branch-name>`, or `<run-id>`.
+
+**Fix**: wrap every angle-bracket placeholder in backticks so markdownlint sees it as
+inline code, not HTML:
+
+```markdown
+<!-- Before (triggers MD033) -->
+Addresses #<existing-issue-number>.
+
+<!-- After (clean) -->
+Addresses `#<existing-issue-number>`.
+```
+
+This applies anywhere in prose, including list items, table cells, and inline text.
+The fix does not affect readability — readers still understand the placeholder meaning.
+
+#### Fix 3: Same File on Multiple Branches
+
+When the same skill file exists on multiple PR branches (e.g., two concurrent PRs both
+touched `skills/oss-contribution-issue-filing-pattern.md`), each branch must be fixed
+independently:
+
+1. Check out branch A, apply both fixes, commit, push
+2. Check out branch B, apply both fixes, commit, push
+3. Verify CI on each PR separately
+
+There is no shortcut — a fix committed to branch A does not appear on branch B unless
+cherry-picked or rebased.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| 3-column Failed Attempts table | Used `\| Approach \| Why It Failed \| Correct Approach \|` (3 columns, non-standard names) | `validate_plugins.py` checks for all 4 exact header strings; missing `Attempt`, `What Was Tried`, `Lesson Learned` caused rejection | Always use the exact 4-column header: `Attempt \| What Was Tried \| Why It Failed \| Lesson Learned` |
+| Bare angle-bracket placeholder in prose | Left `#<existing-issue-number>` as unescaped text in a sentence | Markdownlint MD033 parses `<existing-issue-number>` as an HTML element tag and flags it | Wrap every `<placeholder>` in backticks when it appears in prose |
+
+## Results & Parameters
+
+### Validator Column Check (from `scripts/validate_plugins.py`)
+
+```python
+# The exact check — all four must be present in the header row
+if not all(col in header for col in ["Attempt", "What Was Tried", "Why It Failed", "Lesson Learned"]):
+    errors.append("Failed Attempts table missing required columns")
+```
+
+### Expected Output After Fix
+
+```text
+$ python3 scripts/validate_plugins.py
+Validating skills...
+✓ skills/your-skill.md
+All skills valid.
+```
+
+```text
+$ pixi run npx markdownlint-cli2 skills/your-skill.md
+skills/your-skill.md: 0 error(s), 0 warning(s)
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectMnemosyne | PR #1498 and PR #1516 — `oss-contribution-issue-filing-pattern.md` | Two branches, same file, both fixes applied independently |
+
+## References
+
+- [markdownlint MD033 rule](https://github.com/DavidAnson/markdownlint/blob/main/doc/md033.md)
+- [Skill template](../templates/skill-template.md)
+- [ci-cd-pre-commit-ci-hook-failures](ci-cd-pre-commit-ci-hook-failures.md)
+- [markdownlint-troubleshooting](markdownlint-troubleshooting.md)
+
+---
+
+## Superseded from claude-plugin-format
+
+**Original date/version**: 2026-03-19 / 1.1.0
+
+```yaml
+name: claude-plugin-format
+description: "Official Claude Code plugin format requirements and marketplace registration workflow. Use when creating new plugins, debugging \"plugin has invalid manifest\" errors, registering a marketplace, or when skills/commands don't appear after installation."
+category: tooling
+date: '2026-03-19'
+version: 1.1.0
+absorbed: [claude-plugin-marketplace]
+```
+
+# Claude Code Plugin Format
+
+Official format requirements for Claude Code plugins based on debugging a marketplace that wouldn't load.
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | 2025-12-29 |
+| Objective | Fix ProjectMnemosyne marketplace to use official Claude Code plugin format |
+| Outcome | All plugins validated and working after schema compliance fixes |
+| Source | https://github.com/anthropics/claude-plugins-official |
+
+## When to Use
+
+- Creating a new Claude Code plugin from scratch
+- Getting "Unrecognized key(s) in object" validation errors
+- Skills not appearing after plugin installation
+- Commands not showing up in slash command list
+- Setting up a plugin marketplace
+- Converting custom plugins to official format
+
+## Verified Workflow
+
+### 1. Marketplace Location (CRITICAL)
+
+**Official requirement**: `.claude-plugin/marketplace.json` at repository root
+
+```bash
+# Correct location
+.claude-plugin/marketplace.json
+
+# Wrong locations (will not work)
+marketplace.json                    # Root level - NOT VALID
+.claude/marketplace.json            # Wrong directory
+plugins/marketplace.json            # Wrong directory
+```
+
+**Marketplace format**:
+```json
+{
+  "name": "ProjectMnemosyne",
+  "owner": {
+    "name": "HomericIntelligence",
+    "url": "https://github.com/HomericIntelligence"
+  },
+  "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
+  "version": "1.0.0",
+  "plugins": [
+    {
+      "name": "plugin-name",
+      "description": "...",
+      "version": "1.0.0",
+      "source": "./plugins/category/plugin-name",
+      "category": "tooling",
+      "tags": ["tag1", "tag2"]
+    }
+  ]
+}
+```
+
+### 2. Plugin Directory Structure
+
+```
+plugin-name/
+├── .claude-plugin/
+│   └── plugin.json          # ONLY plugin.json goes here
+├── commands/                 # User-invocable slash commands
+│   └── command-name.md
+├── skills/                   # Background knowledge
+│   └── skill-name/
+│       └── SKILL.md
+├── agents/                   # Optional: custom agents
+├── hooks/                    # Optional: lifecycle hooks
+│   └── hooks.json
+└── references/               # Optional: supporting docs
+    └── notes.md
+```
+
+**CRITICAL**: Only `plugin.json` goes in `.claude-plugin/`. All other directories (`commands/`, `skills/`, etc.) go at plugin root.
+
+### 3. plugin.json Schema (STRICT)
+
+**Allowed fields ONLY**:
+```json
+{
+  "name": "plugin-name",
+  "version": "1.0.0",
+  "description": "What it does. Use when: (1) trigger 1, (2) trigger 2.",
+  "author": {
+    "name": "Author Name"
+  },
+  "skills": "./skills"
+}
+```
+
+**Fields that cause validation errors**:
+- `tags` - NOT allowed in plugin.json (only in marketplace.json)
+- `category` - NOT allowed (derived from directory structure)
+- `date` - NOT allowed
+- Any other custom fields
+
+### 4. SKILL.md Frontmatter Schema (STRICT)
+
+**Allowed fields ONLY**:
+```yaml
+---
+name: skill-name
+description: What it does. Use when <specific triggers>. Use after <specific scenarios>.
+---
+```
+
+Optional fields:
+- `version: 1.0.0`
+- `license: MIT`
+
+**Fields that cause validation errors**:
+- `category` - NOT in official schema
+- `invokedBy` - NOT in official schema
+- `source` - NOT in official schema
+- `date` - NOT in official schema
+- Any other custom fields
+
+### 5. Command vs Skill Distinction
+
+**Commands** (`commands/` directory):
+- User-invocable slash commands
+- Show up as `/plugin-name:command-name`
+- Frontmatter: `description`, `allowed-tools` (optional)
+
+**Skills** (`skills/` directory):
+- Background knowledge Claude uses automatically
+- NOT user-invocable
+- Activated based on `description` triggers
+- Frontmatter: `name`, `description`
+
+### 6. Validation Script Requirements
+
+Update `validate_plugins.py` to match official schema:
+
+```python
+# Required fields per official docs
+REQUIRED_PLUGIN_FIELDS = {"name", "version", "description"}
+
+# NOT required (contrary to custom implementations)
+# category - derived from directory structure
+# date - optional metadata
+# tags - only in marketplace.json, not plugin.json
+```
+
+## Marketplace Registration
+
+After creating valid `plugin.json` and `marketplace.json` files, register and install via these CLI commands:
+
+### Step 1: Register the marketplace
+
+```bash
+# Option A: From GitHub (if auth works)
+claude plugin marketplace add https://github.com/Org/Repo
+
+# Option B: From local path (always works — use for private repos)
+claude plugin marketplace add /absolute/path/to/marketplace
+```
+
+### Step 2: Install plugins
+
+```bash
+# Install specific plugin from registered marketplace
+claude plugin install plugin-name@MarketplaceName
+
+# Multi-plugin install pattern
+claude plugin install skill-1@MarketplaceName
+claude plugin install skill-2@MarketplaceName
+```
+
+### Step 3: Verify installation
+
+```bash
+# Check marketplace is registered
+claude plugin marketplace list
+
+# Check plugins are installed (look in ~/.claude/settings.json)
+cat ~/.claude/settings.json | grep -A5 "plugins"
+```
+
+### Local vs GitHub registration distinction
+
+- **Local path registration**: Always works. Use for private repos or when GitHub auth is unavailable. Pass an absolute path.
+- **GitHub registration**: Requires GitHub auth. Convenient for team-shared marketplaces. URL format: `https://github.com/Org/Repo`.
+
+### Full marketplace directory structure (with `generate_marketplace.py` and `validate_plugins.py`)
+
+```text
+marketplace-repo/
+├── .claude-plugin/
+│   └── marketplace.json      # Required: marketplace index at THIS exact path
+├── plugins/
+│   └── <category>/
+│       └── <skill-name>/
+│           ├── .claude-plugin/
+│           │   └── plugin.json    # Minimal schema only
+│           ├── skills/<skill-name>/
+│           │   └── SKILL.md       # Knowledge document
+│           └── references/
+│               └── notes.md
+└── scripts/
+    ├── generate_marketplace.py   # Regenerate marketplace.json from plugin dirs
+    └── validate_plugins.py       # CI validation — check schema before push
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Valid plugin.json (copy-paste ready)
+```json
+{
+  "name": "my-plugin",
+  "version": "1.0.0",
+  "description": "Short description. Use when: (1) specific trigger.",
+  "author": {
+    "name": "Your Name"
+  },
+  "skills": "./skills"
+}
+```
+
+### Valid SKILL.md frontmatter (copy-paste ready)
+```yaml
+---
+name: my-skill
+description: What it does. Use when starting X, debugging Y, or implementing Z.
+---
+```
+
+### Valid command frontmatter (copy-paste ready)
+```yaml
+---
+description: What this command does
+allowed-tools: Bash(git:*), Read, Write
+---
+```
+
+### Marketplace generation script
+```python
+# Output to correct location
+output_file = ".claude-plugin/marketplace.json"
+
+# Don't require non-standard fields
+REQUIRED_PLUGIN_FIELDS = {"name", "version", "description"}
+```
+
+### Directory structure checklist
+- [ ] `.claude-plugin/marketplace.json` exists (NOT root marketplace.json)
+- [ ] plugin.json has no `tags` field
+- [ ] SKILL.md frontmatter has only `name` and `description`
+- [ ] Commands in `commands/` directory (if user-invocable)
+- [ ] Skills in `skills/` directory (if background knowledge)
+- [ ] No duplicate skills in `.claude/skills/`
+
+## Key Insights
+
+1. **Schema is strict**: Claude Code plugin validator rejects ANY unrecognized fields
+2. **Marketplace location matters**: Must be `.claude-plugin/marketplace.json`
+3. **Tags go in marketplace, not plugins**: Searchability is in the index, not individual plugins
+4. **Commands ≠ Skills**: Commands are slash commands, skills are auto-activated knowledge
+5. **Validation must match official schema**: Custom fields will break installation
+
+## References
+
+- Official plugins repo: https://github.com/anthropics/claude-plugins-official
+- Example plugin: https://github.com/anthropics/claude-plugins-official/tree/main/plugins/example-plugin
+- Plugin docs: https://code.claude.com/docs/en/plugins
+- Skills docs: https://code.claude.com/docs/en/skills
+- Marketplace docs: https://code.claude.com/docs/en/discover-plugins
+
+---
+
+## Superseded from skills-agent-field
+
+**Original date/version**: 2026-03-19 / 1.0.0
+
+```yaml
+name: skills-agent-field
+description: Pattern for specifying which agent type should execute a skill using
+  the agent field in Claude Code v2.1.0.
+category: tooling
+date: '2026-03-19'
+version: 1.0.0
+user-invocable: false
+```
+
+# Skills Agent Field Pattern
+
+Pattern for routing skills to specific agent types using the `agent` field in Claude Code v2.1.0+.
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | 2026-01-08 |
+| Objective | Document skills agent field pattern from Claude Code v2.1.0 |
+| Outcome | Verified pattern for routing skills to specialized agents |
+| Source | Claude Code CHANGELOG v2.1.0 |
+
+## When to Use
+
+- Creating skills that require specialized agent capabilities
+- Routing Mojo syntax skills to Mojo validator agents
+- Directing GitHub workflow skills to implementation engineers
+- Assigning code review skills to review specialist agents
+- Enforcing skill execution by specific agent types
+
+## Verified Workflow
+
+### 1. Basic Agent Assignment
+
+Add `agent` field to skill frontmatter:
+
+```yaml
+---
+name: mojo-syntax-validator
+description: Validate Mojo code syntax
+agent: mojo-specialist  # Route to Mojo specialist agent
+---
+```
+
+### 2. Mojo Skills → Syntax Validators
+
+```yaml
+---
+name: mojo-simd-optimize
+description: Apply SIMD optimizations to Mojo code
+agent: mojo-optimization-specialist
+category: tooling
+---
+```
+
+```yaml
+---
+name: mojo-memory-check
+description: Verify memory safety in Mojo code
+agent: mojo-memory-specialist
+category: tooling
+---
+```
+
+### 3. GitHub Skills → Implementation Engineers
+
+```yaml
+---
+name: gh-create-pr-linked
+description: Create PRs linked to GitHub issues
+agent: implementation-engineer
+category: tooling
+---
+```
+
+```yaml
+---
+name: gh-implement-issue
+description: End-to-end implementation workflow for GitHub issues
+agent: code-review-orchestrator
+category: tooling
+---
+```
+
+### 4. Quality Skills → Review Specialists
+
+```yaml
+---
+name: quality-security-scan
+description: Scan code for security vulnerabilities
+agent: security-review-specialist
+category: tooling
+---
+```
+
+```yaml
+---
+name: quality-complexity-check
+description: Analyze code complexity metrics
+agent: code-quality-specialist
+category: tooling
+---
+```
+
+### 5. Skill Routing Patterns
+
+**By Language**:
+- `mojo-*` skills → `mojo-specialist`, `mojo-validator`
+- `python-*` skills → `python-specialist`
+
+**By Task Type**:
+- `gh-*` skills → `implementation-engineer`, `code-review-orchestrator`
+- `quality-*` skills → `review-specialist`, `security-specialist`
+- `test-*` skills → `test-engineer`, `qa-specialist`
+
+**By Complexity**:
+- Simple skills → `junior-engineer`
+- Complex skills → `senior-engineer`
+- Architecture skills → `architect`
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Mojo Skills Template
+
+```yaml
+---
+name: mojo-skill-name
+description: Mojo-specific functionality
+agent: mojo-specialist
+category: tooling | testing | debugging
+tags: ["mojo", "performance", "memory-safety"]
+---
+```
+
+### GitHub Workflow Skills Template
+
+```yaml
+---
+name: gh-skill-name
+description: GitHub workflow automation
+agent: implementation-engineer
+category: tooling
+tags: ["github", "workflow", "automation"]
+---
+```
+
+### Code Review Skills Template
+
+```yaml
+---
+name: review-skill-name
+description: Code quality and review automation
+agent: review-specialist
+category: tooling | testing
+tags: ["code-review", "quality", "standards"]
+---
+```
+
+### Agent Type Naming Conventions
+
+**Specialist Agents**:
+- `{language}-specialist`: Language-specific expertise (mojo-specialist, python-specialist)
+- `{domain}-specialist`: Domain expertise (security-specialist, performance-specialist)
+
+**Role-Based Agents**:
+- `junior-engineer`: Limited tool access, simple tasks
+- `senior-engineer`: Full access, complex implementations
+- `architect`: System design, architectural decisions
+- `reviewer`: Read-only, code review and analysis
+
+**Orchestrator Agents**:
+- `code-review-orchestrator`: Coordinates PR review workflows
+- `implementation-orchestrator`: Manages multi-step implementations
+- `test-orchestrator`: Coordinates testing workflows
+
+## Key Insights
+
+1. **Agent hierarchy matters**: Design clear delegation patterns to avoid circular dependencies
+
+2. **Language-specific routing**: Use `agent` field to route language-specific skills to specialized validators
+
+3. **Role-based specialization**: Match skill complexity to agent capability level
+
+4. **Marketplace compatibility**: Skills with `agent` field work across repositories with different agent architectures
+
+5. **Optional field**: Skills without `agent` field execute on default/current agent
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectMnemosyne | Template updates and documentation | [notes.md](../references/notes.md) |
+
+## References
+
+- Claude Code v2.1.0 CHANGELOG: Skills agent field
+- Related skill: agent-hooks-pattern (agent lifecycle hooks)
+- Related skill: claude-plugin-format (plugin schema requirements)
+
+---
