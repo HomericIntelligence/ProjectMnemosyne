@@ -3,8 +3,9 @@ name: skill-consolidation-nuance-audit-workflow
 description: "Use when: (1) a bulk skill consolidation (10+ skills merged into bundles) has just completed and you need to verify no knowledge was lost, (2) a canonical skill was absorbed into a larger bundle and the bundle must preserve all failed attempts, trigger conditions, and copy-paste commands, (3) you need to run a parallel swarm audit across many source→bundle pairs and automatically generate amendment PRs for any detected gaps"
 category: tooling
 date: '2026-06-07'
-version: "1.0.0"
+version: "1.1.0"
 verification: verified-ci
+history: skill-consolidation-nuance-audit-workflow.history
 tags:
   - audit
   - consolidation
@@ -38,6 +39,38 @@ are bulk-consolidated into larger bundle files.
 - When `/advise` quality has degraded after a consolidation wave (missing commands, vague trigger
   conditions, no specific failure modes)
 - Any time a consolidation commits says "consolidate N skills into `<bundle>`" and N ≥ 10
+
+### Audit EVERY Bundle — Do Not Size-Threshold
+
+Audit **every** bundle on the merge worklist, not a size-filtered subset. It is tempting to audit
+only the "biggest" bundles (8+ skill merges, absorb-into-existing) on the assumption that small
+merges are safe. That assumption is wrong:
+
+- In a 50-bundle consolidation, pass 1 audited only the 13 highest-risk bundles and declared the
+  merges "sound." A later pass 2 audited the OTHER 37 mid-size bundles (3–7 skills each) and found
+  **22 of 36 had genuine body-not-surfaced losses** (one was an already-dissolved canonical,
+  excluded). Restricting to the biggest bundles missed ~60% of the real losses, which lived in the
+  mid-size merges.
+- LESSON: the loss rate is roughly uniform across bundle sizes; size is not a proxy for risk. Audit
+  all bundles from the merge worklist.
+
+### Materiality Bar for a "LOST" Finding (keep this — it works)
+
+A finding counts as **LOST** only when it is ALL of:
+
+1. A distinctive command, exact flag/param, named failure mode, or unique Failed-Attempts lesson
+2. ABSENT from the canonical body
+3. Such that surfacing it would **change what a reader does**
+
+These are explicitly NOT losses:
+
+- Generalization of specific content into a broader statement
+- Deduplication of content already present elsewhere in the canonical
+- DELIBERATE scope-narrowing during the merge
+
+Because every absorbed body is preserved verbatim in the `.history` `## Superseded from` blocks,
+"lost" means "not surfaced in the canonical body" — i.e. **recoverable, not destroyed**. The fix is
+always to re-surface from `.history`, never to reconstruct from memory.
 
 ## Verified Workflow
 
@@ -89,6 +122,36 @@ Launch one Haiku agent per source→bundle pair. For each agent:
 4. Emit structured JSON findings
 
 **Scale**: 25 agents in parallel runs in approximately 15 minutes.
+
+**Swarm shape (audit→fix loop, refined pass-2 form)**: The audit/fix loop is itself a swarm:
+
+- **Audit phase** — one **read-only Explore agent per bundle**, capped at **≤5 agents per wave**.
+  Each agent reads the canonical `.md` plus its `.history`, and emits a per-skill `OK`/`LOST`
+  verdict for every contributing skill followed by a single `VERDICT:` line for the bundle.
+- **Fix phase** — one **general-purpose amend agent per bundle that has a material loss**. The agent
+  restores the nuance into the canonical body (as new Detailed Steps and/or Failed-Attempts rows),
+  bumps the version **MINOR**, appends a `.history` changelog entry, and opens an auto-merge PR.
+- **Clean bundles get NO PR.** A bundle whose every contributing skill verdicts `OK` produces no
+  branch, no amend, no PR — only bundles with at least one material `LOST` are amended.
+
+This refines the earlier "Haiku per pair / Sonnet per bundle" wording: the auditor is now a
+read-only Explore agent scoped to one whole bundle (reads canonical + `.history`) rather than one
+isolated source→bundle pair, and the amender is a general-purpose agent. Both forms are valid; the
+per-bundle read-only Explore form is preferred because it reads the verbatim `.history` body
+directly, which is required to tell omission apart from generalization.
+
+### Common Loss Shapes (auditor checklist)
+
+When auditing a bundle, specifically hunt for these recurring loss shapes — they are the ones that
+most often vanish from the canonical body while remaining only in `.history`:
+
+- Exception / type mapping tables
+- Specific CLI flags (e.g. `--force-with-lease`, a `message=` keyword argument)
+- Named failure modes with their reproduction steps
+- "Permanent fix" paths dropped in favor of only the reactive/workaround fix
+- Pipeline or procedure how-tos collapsed to a single one-line pointer
+- ruff / lint rule-specific fix recipes
+- "green CI doesn't certify X" cautions
 
 #### Phase 2: Triage Findings
 
@@ -147,6 +210,11 @@ gh pr merge --auto --squash
 **Important**: Do NOT add `marketplace.json` to any amendment PR branch. The auto-update
 workflow regenerates it on merge; including it creates a merge conflict on every branch.
 
+**Pre-commit helper (run-once-and-re-stage)**: Before the real commit, have the amend agent run
+`pre-commit run --files <skill>.md <skill>.history` ONCE and then re-stage both files. The
+end-of-file fixer modifies the `.history` file on its first pass, which aborts the real commit if
+not pre-run; running it once and re-staging avoids the abort. (Same lesson as the merge pass.)
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -155,6 +223,9 @@ workflow regenerates it on merge; including it creates a merge conflict on every
 | `gh pr merge --squash --admin` on conflicting PR | Used `--admin` flag expecting it to bypass merge conflicts | `--admin` bypasses branch protection rules (required reviews, status checks) but does NOT resolve content conflicts; Git cannot merge two different file contents without human resolution | Resolve the conflict first, then merge; `--admin` is not a force-merge for content conflicts |
 | Including marketplace.json in amendment PRs | Let `git add -A` or `git add .` stage the auto-generated `marketplace.json` along with the skill file | Every amendment branch had a different `marketplace.json` state, causing merge conflicts between branches | Stage only the specific skill file by name (`git add skills/<name>.md`); use a follow-up PR to regenerate marketplace.json after all amendments merge |
 | Flagging cosmetic differences as "lost nuance" | Audit agents flagged reworded trigger conditions and paraphrased lessons as lost knowledge | This generated false positives and unnecessary amendment work; bundles correctly paraphrased the lesson without losing the substance | Only flag as "lost" when: a specific error message/command is literally absent; a trigger condition covers a genuinely different scenario; do NOT flag reformulations |
+| Audited only the 13 largest bundles, then declared the consolidation sound | A first pass covered just the 8+-skill merges and the 5 absorb-into-existing bundles, skipping the 37 mid-size (3–7 skill) bundles | A second pass over the 37 mid-size bundles found 22 of 36 had genuine body-not-surfaced losses — ~60% of the real losses lived in the merges that were skipped | Audit EVERY bundle on the merge worklist; size is not a proxy for risk and the biggest-bundles-only heuristic misses the majority of losses |
+| Treated a bundle as clean because the canonical "generalized" the content | Auditor read only the canonical body, saw the topic was covered at a higher level, and verdicted OK | Generalization is fine, but several canonicals had dropped the concrete commands/flags entirely while keeping only the abstract statement — omission was mistaken for generalization | Distinguish generalization from omission by reading the verbatim `.history` `## Superseded from` body, not just the canonical; if a concrete command/flag exists in `.history` but nowhere in the body, it is a LOSS |
+| Committed the amend without pre-running pre-commit | Staged the `.md` and `.history` then ran `git commit` directly | The end-of-file fixer hook modified the `.history` file on its first pass and aborted the commit | Run `pre-commit run --files <skill>.md <skill>.history` once, re-stage both files, then commit |
 
 ## Results & Parameters
 
@@ -245,6 +316,7 @@ git commit -m "chore: reset marketplace.json to main"
 | Project | Context | Details |
 | --------- | --------- | --------- |
 | ProjectMnemosyne | PRs #1791–#1925 second-wave consolidation audit, June 2026 — 25 audit agents, 18 amendment PRs (#2176–#2193), all CI green | verified-ci |
+| ProjectMnemosyne | 2026-06-07 two-pass audit of the 50-bundle consolidation: pass 2 covered 36 bundles, found 22 with material losses, all restored via amend swarm | nuance audit pass 2 |
 
 ## References
 

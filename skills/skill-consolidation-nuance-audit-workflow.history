@@ -1,0 +1,41 @@
+<!-- markdownlint-disable MD024 -->
+
+# skill-consolidation-nuance-audit-workflow — History
+
+## v1.1.0 (2026-06-07)
+
+- **Changed by**: two-pass audit of 50-bundle consolidation
+- **Verification**: verified-ci
+
+### What changed
+
+- Added the **audit-EVERY-bundle** rule: do not size-threshold the audit. Pass 1 (biggest 13
+  bundles only) declared the merges sound, but pass 2 over the 37 mid-size bundles found 22 of 36
+  with genuine body-not-surfaced losses (~60% of real losses lived in the skipped mid-size merges).
+- Added the **materiality bar** definition: a LOST finding requires a distinctive
+  command/flag/named-failure-mode/unique-lesson that is absent from the canonical body AND would
+  change reader action; generalization, dedup, and deliberate scope-narrowing are NOT losses;
+  everything is recoverable from the `.history` `## Superseded from` blocks.
+- Refined the **swarm shape**: one read-only Explore agent per bundle (≤5 per wave) reading
+  canonical + `.history` and emitting per-skill OK/LOST plus a VERDICT line; one general-purpose
+  amend agent per bundle with a material loss; clean bundles get no PR. Reconciled with the prior
+  Haiku-per-pair / Sonnet-per-bundle wording.
+- Added the **common-loss-shapes checklist** (exception/type mapping tables, specific CLI flags,
+  named failure modes with reproductions, dropped "permanent fix" paths, collapsed pipeline how-tos,
+  ruff/lint rule-specific recipes, "green CI doesn't certify X" cautions).
+- Added the **pre-commit run-once-and-re-stage** helper note (EOF-fixer aborts the first commit
+  unless pre-run + re-staged).
+- Added 4 new Failed-Attempts rows and a new Verified On row for the pass-2 audit.
+
+### Why
+
+- The first audit pass was over-confident: restricting coverage to the largest bundles missed the
+  majority of the genuine losses. Capturing the audit-every-bundle rule, the materiality bar, and
+  the refined swarm shape prevents the next consolidation audit from repeating the under-coverage.
+
+## v1.0.0
+
+- Initial version: parallel swarm workflow for detecting and restoring knowledge lost when
+  individual skill files are bulk-consolidated into larger bundle files. Phase 0 pre-audit check,
+  Phase 1 parallel audit swarm, Phase 2 triage, Phase 3 amendment swarm, Phase 4 PR creation with
+  auto-merge; conservative flagging criteria and audit output schema.
