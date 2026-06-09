@@ -1,4 +1,40 @@
----
+<!-- markdownlint-disable MD024 -->
+# History: automation-reuse-repo-clone-with-worktree-per-pr
+
+This file preserves prior versions of the canonical skill body.
+
+## v1.1.0 (2026-06-08)
+
+**Changed by**: ProjectHephaestus PR #1110 (worktree branch-collision reuse + dirty-decide)
+**Verification**: verified-ci
+
+**What changed**: Added a new `## When to Use` trigger, a new Verified-Workflow
+subsection, and a new `## Failed Attempts` row covering the branch-collision case
+where `git worktree add <path> <branch>` exits 128 because the branch is already
+checked out in another worktree.
+
+**Why**: ProjectHephaestus' automation loop resolves an existing PR's REAL head
+branch (which may be named after a different issue), then tried to add a new
+per-issue worktree on that same branch. `git` forbids the SAME branch checked out
+in two worktrees, so the add failed with exit 128 and blocked the entire review of
+the PR. The chosen contract is REUSE-not-force: detect that the branch is already
+held (matching the FULL `refs/heads/<name>` ref reported by
+`git worktree list --porcelain`) and reuse that worktree, registering it under the
+new issue. A reused worktree may carry a CONCURRENT session's uncommitted work, so
+the reused worktree's `reset --hard` sync is guarded behind a dirty check plus a
+bounded agent commit/stash decision (safe default: stash, never discard).
+
+## v1.0.0 (2026-06-06)
+
+Initial version — created from ProjectHephaestus PR #1045 (closed #1044):
+replaced re-cloning the SAME repo once per PR/item in a loop with a single clone
+reused across items, plus a `git worktree` per item for isolated checkouts.
+
+## Superseded body from v1.0.0
+
+**Original date/version**: 2026-06-06 / 1.0.0
+
+```yaml
 name: automation-reuse-repo-clone-with-worktree-per-pr
 description: "Use when: (1) code clones the SAME repo once per PR/branch/item inside a loop,
   (2) a fleet/batch tool re-clones a repo for every item causing redundant network+disk I/O
@@ -7,14 +43,14 @@ description: "Use when: (1) code clones the SAME repo once per PR/branch/item in
   `git clone`, (5) you need isolated per-item checkouts of one repo for rebase/conflict/agent
   work."
 category: tooling
-date: 2026-06-08
-version: "1.1.0"
+date: 2026-06-06
+version: "1.0.0"
 user-invocable: false
 verification: verified-ci
-history: automation-reuse-repo-clone-with-worktree-per-pr.history
 tags: [git-worktree, clone-reuse, fleet-sync, batch-automation, performance, per-pr-checkout,
-  idempotent-clone, dry-run-real-step, github-automation, branch-collision, worktree-reuse]
----
+  idempotent-clone, dry-run-real-step, github-automation]
+```
+
 # Automation: Reuse One Repo Clone with a Git Worktree Per PR
 
 ## Overview
@@ -41,9 +77,6 @@ full `git clone` per item is expensive network+disk I/O that scales linearly wit
   work, without the items stepping on each other's working tree or branch.
 - You are refactoring a per-item-clone hot loop and want the clone created lazily (only when an
   item actually needs a checkout — e.g. READY PRs that merge via `gh` never need one).
-- `git worktree add` fails with exit 128 because the branch is already checked out in another
-  worktree, and you need reuse-not-force: detect the collision and reuse the existing worktree
-  rather than adding a second one or `--force`-stomping the other worktree's branch.
 
 ## Verified Workflow
 
@@ -115,55 +148,6 @@ force-creates a real (idempotent) clone. Preserve such "must run for real even i
 steps when refactoring: gate the side-effecting action (agent spawn, push), not the inspection
 that the gate decision depends on.
 
-### Branch-Collision Reuse (one branch cannot live in two worktrees)
-
-`git` forbids the SAME branch checked out in two worktrees. `git worktree add <path> <branch>`
-fails with `fatal: '<branch>' is already used by worktree at '<other-path>'` (exit 128) when
-another worktree already holds `<branch>`.
-
-Concrete case in ProjectHephaestus' automation loop: it resolves an existing PR's REAL head
-branch (e.g. issue #725's PR #996 lives on branch `708-auto-impl`, named after a DIFFERENT
-issue), then `WorktreeManager.create_worktree(issue=725, branch="708-auto-impl")` tried
-`git worktree add .../issue-725 708-auto-impl` — but the `issue-708` worktree already had
-`708-auto-impl` checked out → exit 128, blocking the whole review of #725.
-
-The chosen contract is REUSE-not-force (force would stomp the OTHER worktree's branch). Before
-adding a worktree, detect whether the branch is already checked out elsewhere and reuse that
-worktree instead:
-
-```python
-def _worktree_holding_branch(self, branch_name: str) -> Path | None:
-    target_ref = f"refs/heads/{branch_name}"
-    for wt in self.list_worktrees():           # parses `git worktree list --porcelain`
-        if wt.get("branch") == target_ref:     # branch reported as the FULL ref refs/heads/<name>
-            return Path(wt["path"])
-    return None
-
-# In create_worktree(), BEFORE the add:
-existing = self._worktree_holding_branch(branch_name)
-if existing is not None and existing != worktree_path:
-    self.worktrees[issue_number] = existing    # register under THIS issue too
-    return existing                            # reuse; caller then syncs it
-```
-
-Match on the FULL `refs/heads/<name>` ref that `git worktree list --porcelain` reports, NOT the
-bare branch name. The caller then updates the reused worktree to the PR head via the existing
-`sync_worktree_to_remote_branch` (= `git fetch origin <branch>` + `git reset --hard
-origin/<branch>`) — no extra rebase code needed.
-
-**Dirty-reuse guard:** a reused worktree may carry uncommitted changes from the OTHER issue's
-in-flight (possibly CONCURRENT) session that a `reset --hard` would silently discard. The
-throwaway-worktree `reset --hard` is otherwise safe, but guard the sync with
-`is_clean_working_tree(worktree_path)` (an empty `git status --porcelain` means clean). Only
-when DIRTY, dispatch a bounded agent turn (reuse the existing `invoke_claude_with_session`
-`AGENT_ADVISE` dispatch) that inspects `git status --porcelain` + `git diff HEAD` and replies
-COMMIT (changes belong to this branch) or STASH (unrelated/uncertain). Apply the decision, then
-sync. SAFE DEFAULT on any agent failure or Codex backend = stash (`git stash push -u`), never
-discard.
-
-**Test gotcha:** on the non-collision add-path tests, patch `_worktree_holding_branch` → `None`,
-or the extra `git worktree list` call shifts those tests' mock call counts.
-
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -172,7 +156,6 @@ or the extra `git worktree list` call shifts those tests' mock call counts.
 | Clone into per-run temp dir only | Clone lived in a per-run `tempfile.TemporaryDirectory` | Nothing reused across the repo's PRs; nothing persisted across runs | Keep ONE clone per repo in a stable `clone_dir`; `git fetch --prune` on reuse instead of re-cloning |
 | Honor `--dry-run` on the conflict-resolver clone | Skipped the clone when `--dry-run` was set | Conflict inspection needs a real checkout to surface conflicts; with no clone the resolver had nothing to inspect | Force a real idempotent clone there; gate only the agent SPAWN under dry-run, not the rebase/inspection |
 | Test cleanup without pre-creating the work dir | Asserted `remove_worktree` ran by mocking `_git` and checking for a `worktree remove` call | `remove_worktree` no-ops when the path is absent, so the test never exercised removal | Pre-create the work dir in the test so the no-op guard passes and the removal path actually runs |
-| Add a second worktree on a branch already checked out | `git worktree add <path> <branch>` when the branch is held by another worktree | git forbids one branch in two worktrees → exit 128, blocking the issue | Detect via `git worktree list --porcelain` matching `refs/heads/<name>` and REUSE that worktree (register it under the new issue); guard the reused worktree's `reset --hard` behind a dirty check + agent commit/stash decision |
 
 ## Results & Parameters
 
