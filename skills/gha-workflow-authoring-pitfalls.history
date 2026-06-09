@@ -5,6 +5,47 @@
 This file preserves the full verbatim content of the skills consolidated into
 `gha-workflow-authoring-pitfalls`, kept for provenance and reference.
 
+## v1.2.0 (2026-06-08)
+
+**Changed by**: ProjectHephaestus PR #1108 (label-event job gating)
+**Verification**: verified-ci
+
+**What changed**: Added pitfall #7 "A `pull_request` trigger is workflow-wide — adding
+label/auto-merge event types to converge ONE job re-runs EVERY job". Concrete case:
+ProjectHephaestus `.github/workflows/_required.yml` added
+`labeled, unlabeled, auto_merge_enabled, auto_merge_disabled` to its `pull_request` `types:`
+list solely so two lightweight policy jobs (`pr-policy`, `auto-merge-policy`) re-converge on the
+PR's true label/auto-merge state — but because the trigger applies to the WHOLE workflow, every
+label change re-ran all 18 jobs (full unit+integration matrix py3.10-3.13, security scans, build,
+lint). An automation loop toggling `state:*` labels made this very expensive. FIX: a tiny
+`changes-gate` job emits `code_event` (true on code events / push where `github.event.action` is
+empty, false on `labeled/unlabeled/auto_merge_*`); every heavy job gets
+`needs: changes-gate` + `if: needs.changes-gate.outputs.code_event == 'true'`, jobs that already
+had `needs: lint` become `needs: [lint, changes-gate]`, and the policy jobs are left UNGATED.
+Correctness: a required job SKIPPED via `if:` still reports a neutral/success status and GitHub
+keeps the SHA's prior real result, so the `homeric-main-baseline` branch-protection required checks
+stay satisfied; `github.event.action` is empty on `push` so the `case` default keeps push-to-main
+running everything; `github.event.action` is passed via `env:` (never interpolated into `run:`) for
+workflow-injection safety. SELF-TESTED live: after the PR's initial code-event CI, adding then
+removing a throwaway label re-ran ONLY changes-gate + the 2 policy jobs (success); the 16 heavy
+jobs showed `skipped`; PR stayed CLEAN/MERGEABLE. Added a `## When to Use` trigger, a Quick
+Reference row, a detailed `changes-gate` section under Verified Workflow with the YAML and
+correctness facts, one Failed Attempts row, a Results & Parameters bullet, an extended `description`
+trigger (7), and a ProjectHephaestus Verified On row (PR #1108). Bumped version 1.1.0 → 1.2.0.
+
+### Pre-amendment body snapshot (v1.1.0)
+
+The v1.1.0 `.md` covered six pitfalls under "GitHub Actions: Workflow-Authoring Pitfalls":
+(1) forward slash in a job ID → silent whole-file parse failure; (2) `${{ … }}` in a
+composite-action input/output description gets evaluated at action-load time; (3) env-var lift for
+the workflow-injection hook on `run:` blocks; (4) document platform scope in a workflow header
+comment; (5) Edit-tool path-blocked on `.github/workflows/*.yml`; (6) GitHub Actions blocked from
+creating PRs by org policy (the `can_approve_pull_request_reviews` toggle vs the
+`default_workflow_permissions` red herring, three fixes, and the "green run is not proof"
+validation). It had a Quick Reference table, six Detailed Steps, a Failed Attempts table, a
+Results & Parameters list, and a Verified On table. version "1.1.0", date 2026-06-07,
+verification: verified-ci.
+
 ## v1.1.0 (2026-06-07)
 
 **Changed by**: session debugging `update-marketplace.yml` create-PR org block

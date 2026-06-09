@@ -1,9 +1,9 @@
 ---
 name: gha-workflow-authoring-pitfalls
-description: "Use when: (1) a workflow file is silently ignored or produces 0 jobs due to invalid YAML job IDs (forward slashes), (2) a composite-action input description contains ${{ }} expressions that get evaluated unexpectedly, (3) a security hook blocks editing a workflow run: block because of a ${{ }} injection sink — and you need the env-var-lift pattern, (4) documenting platform asymmetries (Linux-only, macOS-skipped) in workflow header comments, (5) a WorkflowDispatch or PreToolUse hook fires on an edit to .github/workflows/*.yml, (6) a workflow step fails with 'GitHub Actions is not permitted to create or approve pull requests' and you need to diagnose repo-vs-org policy and choose org-toggle vs PAT/App-token vs direct-commit."
+description: "Use when: (1) a workflow file is silently ignored or produces 0 jobs due to invalid YAML job IDs (forward slashes), (2) a composite-action input description contains ${{ }} expressions that get evaluated unexpectedly, (3) a security hook blocks editing a workflow run: block because of a ${{ }} injection sink — and you need the env-var-lift pattern, (4) documenting platform asymmetries (Linux-only, macOS-skipped) in workflow header comments, (5) a WorkflowDispatch or PreToolUse hook fires on an edit to .github/workflows/*.yml, (6) a workflow step fails with 'GitHub Actions is not permitted to create or approve pull requests' and you need to diagnose repo-vs-org policy and choose org-toggle vs PAT/App-token vs direct-commit, (7) adding labeled/unlabeled/auto_merge_* event types to a pull_request trigger re-runs ALL jobs (the trigger is workflow-wide) when you wanted only specific policy jobs to run on label events — and you need the changes-gate needs/if pattern."
 category: ci-cd
-date: 2026-06-07
-version: "1.1.0"
+date: 2026-06-08
+version: "1.2.0"
 verification: verified-ci
 user-invocable: false
 history: gha-workflow-authoring-pitfalls.history
@@ -25,6 +25,12 @@ tags:
   - create-pull-request
   - org-policy
   - github-token-permissions
+  - pull-request-trigger
+  - event-types
+  - label-event
+  - job-gating
+  - changes-gate
+  - branch-protection
 ---
 
 # GitHub Actions: Workflow-Authoring Pitfalls
@@ -33,9 +39,9 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-07 |
-| **Objective** | Consolidate the recurring GitHub Actions workflow-authoring traps: invalid job IDs, expression evaluation in composite-action descriptions, the env-var-lift fix for injection hooks, platform-scope header documentation, and editing path-blocked workflow files |
-| **Outcome** | One reference covering the five distinct gotchas, each with a copy-paste fix and the failed approaches that do NOT work |
+| **Date** | 2026-06-08 |
+| **Objective** | Consolidate the recurring GitHub Actions workflow-authoring traps: invalid job IDs, expression evaluation in composite-action descriptions, the env-var-lift fix for injection hooks, platform-scope header documentation, editing path-blocked workflow files, the org create-PR policy block, and the workflow-wide `pull_request` trigger re-running all jobs on label/auto-merge events |
+| **Outcome** | One reference covering the distinct gotchas, each with a copy-paste fix and the failed approaches that do NOT work |
 | **Verification** | verified-ci |
 
 ## When to Use
@@ -45,6 +51,7 @@ tags:
 - A `PreToolUse:Edit` hook (or `actionlint` / `zizmor` / CodeQL workflow-injection query) rejects a `run:` block change because the block contains a `${{ … }}` expression — even a trusted `steps.*.outputs.*`. → env-var-lift.
 - A CI workflow intentionally targets only some platforms (e.g. Linux-only matrix) and you need to document why without making misleading "cross-platform" claims. → platform-scope header.
 - A `PreToolUse:Edit` hook blocks the `Edit` tool on `.github/workflows/*.yml` **by path alone** (no `${{` involved). → edit-tool-blocked workaround.
+- Adding `labeled`/`unlabeled`/`auto_merge_enabled`/`auto_merge_disabled` to a `pull_request` trigger (so a policy job converges on label/auto-merge state) re-runs **ALL** jobs because the trigger is workflow-wide — you wanted only specific jobs to run on label events. → changes-gate `needs:`/`if:` pattern.
 
 ## Verified Workflow
 
@@ -58,6 +65,7 @@ tags:
 | Undocumented platform scope | Audit flags "misleading cross-platform claims" | 14-line header comment block before `name:` with Scope/CAPABILITY/EXPAND TRIGGER |
 | Edit tool path-blocked on workflows | `PreToolUse:Edit` hook error on `.github/workflows/*.yml` by path | Use `python3 -c` surgical replace via Bash, or full rewrite via `Write` |
 | Actions blocked from creating PRs | `GitHub Actions is not permitted to create or approve pull requests` at the create-PR step | Org admin enables "Allow Actions to create and approve PRs"; or pass a fine-grained PAT/App token to checkout + create-PR step; or commit direct to main |
+| Label/auto-merge event re-runs ALL jobs | Added `labeled`/`unlabeled`/`auto_merge_*` to `pull_request` `types:` so a policy job converges, but every label toggle re-runs the full matrix | Add a `changes-gate` job that emits `code_event=false` for those actions; gate heavy jobs on `needs: changes-gate` + `if: …code_event == 'true'`; leave policy jobs ungated |
 
 ```bash
 # Detection one-liners
@@ -285,6 +293,52 @@ gh pr list --head <branch> --json author   # author.login == "app/github-actions
 
 This session proved it by deliberately desyncing `marketplace.json` on a branch, dispatching, and confirming the workflow opened a real PR. Also note: the scheduled/auto regeneration job **silently goes stale** when this block is in effect — every push-triggered run fails at the PR step, but the failure is easy to miss.
 
+#### 7. A `pull_request` trigger is workflow-wide — adding label/auto-merge event types to converge ONE job re-runs EVERY job
+
+A GitHub Actions `on: pull_request: types:` list applies to the **whole workflow**, not to individual jobs. So when you add label-related event types only to make ONE job re-converge, **every** job re-runs on those events.
+
+Concrete case (`.github/workflows/_required.yml` in ProjectHephaestus): the trigger was
+
+```yaml
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review,
+            labeled, unlabeled, auto_merge_enabled, auto_merge_disabled]
+```
+
+The `labeled`/`unlabeled`/`auto_merge_*` types were added **only** so two lightweight policy jobs (`pr-policy`, `auto-merge-policy`) re-converge on the PR's true label / auto-merge state. But because the trigger is workflow-wide, every label change re-ran **all 18 jobs** — the full unit+integration test matrix (py3.10-3.13), security scans, build, lint. An automation loop that constantly toggles `state:*` labels made this very expensive.
+
+**Fix** — add a tiny `changes-gate` job that decides whether the event is a "code event", and gate the heavy jobs on it:
+
+```yaml
+  changes-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    outputs:
+      code_event: ${{ steps.decide.outputs.code_event }}
+    steps:
+      - id: decide
+        env:
+          ACTION: ${{ github.event.action }}   # passed via env:, NEVER interpolated into run: (injection-safe)
+        run: |
+          set -euo pipefail
+          case "$ACTION" in
+            labeled | unlabeled | auto_merge_enabled | auto_merge_disabled)
+              echo "code_event=false" >> "$GITHUB_OUTPUT" ;;   # push has empty action → default → true
+            *) echo "code_event=true" >> "$GITHUB_OUTPUT" ;;
+          esac
+```
+
+Each heavy job then gets `needs: changes-gate` + `if: needs.changes-gate.outputs.code_event == 'true'`. Jobs that already had `needs: lint` become `needs: [lint, changes-gate]`. The policy jobs (`pr-policy`, `auto-merge-policy`) are left **UNGATED** so they still run on label / auto-merge events.
+
+**Why this is safe (the correctness facts that make it work):**
+
+- A required job that is **SKIPPED via `if:`** still reports a neutral/success status, and GitHub **keeps the SHA's prior real result**, so branch-protection required checks (the `homeric-main-baseline` ruleset: `lint`, `unit-tests`, `integration-tests`, `security/*`, `build`, `schema-validation`, `deps/version-sync`, `pr-policy`) **stay satisfied**. Verified live: the PR stayed CLEAN/MERGEABLE after the heavy jobs skipped on the label event.
+- `github.event.action` is **empty on `push` events** → the `case` default returns `code_event=true` → push to main still runs everything.
+- Pass `github.event.action` via `env:`, **never interpolate it into the `run:` script** (workflow-injection safety — pitfall #3; a security hook flags this).
+
+**Self-test method** (how this was verified-ci): after the PR's initial CI runs once on the code event, **ADD then REMOVE** a throwaway label and inspect `gh run view <id> --json jobs`; the label-event run shows the 16 heavy jobs `skipped` and only `changes-gate` / `pr-policy` / `auto-merge-policy` `success`. Done live on PR #1108 — the 16 heavy jobs showed `skipped`, the PR stayed CLEAN/MERGEABLE.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -300,6 +354,7 @@ This session proved it by deliberately desyncing `marketplace.json` on a branch,
 | Declaring `permissions: pull-requests: write` in the workflow to let Actions open a PR | Added the permissions block, expected create-PR to succeed | Still got `GitHub Actions is not permitted to create or approve pull requests` | The workflow `permissions:` block sets token scope, not the separate repo/org create-PR toggle; it does not override that policy |
 | Raising repo create-PR permission via API | `gh api --method PUT repos/OWNER/REPO/actions/permissions/workflow -f default_workflow_permissions=write` | HTTP 409 `Conflict: "Write permissions for workflows are disabled by the organization"` | Repo can't exceed org policy; and `default_workflow_permissions` is a DIFFERENT toggle than create-PR — chasing it is a red herring |
 | Treating a green workflow run as proof the create-PR fix worked | Dispatched the workflow, saw a successful run | The create-PR step was skipped by its `if:` (no artifact change), so success was a no-op — no PR ever created | Force a real change so the step fires, then confirm a PR was actually created (`gh pr list --head <branch>` shows `app/github-actions`) |
+| Adding label/auto-merge event types to the `pull_request` trigger so policy jobs converge | Added `labeled, unlabeled, auto_merge_enabled, auto_merge_disabled` to `on.pull_request.types` so `pr-policy`/`auto-merge-policy` re-run on label/auto-merge changes | The trigger is workflow-wide → every label change re-ran all 18 jobs incl. the full test matrix (py3.10-3.13), security scans, build, lint; an automation loop toggling `state:*` labels made it very expensive | Gate heavy jobs on a `changes-gate` job that returns `code_event=false` for label/auto-merge actions (`needs:` + `if:`); leave policy jobs ungated; skipped required checks keep the SHA's prior status so branch protection stays satisfied |
 
 ## Results & Parameters
 
@@ -309,6 +364,7 @@ This session proved it by deliberately desyncing `marketplace.json` on a branch,
 - **Platform-scope header**: 14-line comment block before `name:`. Parameters to fill: `REASON`, `EXCLUDED_PLATFORMS`, `ISSUE_REF`, `CAPABILITY_CLAIM`, `EXPANSION_CONDITION`, `EXPANDED_MATRIX`, `DOC_REFERENCE`. Validate with `pre-commit run --all-files` and confirm YAML still parses.
 - **Edit-tool path block**: Workaround A (`python3 -c` replace) for targeted edits; Workaround B (`Read` + `Write`) for restructures; rename scanner-tripping identifiers if `Write` is also blocked.
 - **Actions-create-PR block**: TWO independent toggles — `can_approve_pull_request_reviews` (the create/approve-PR gate, the one you usually need) vs `default_workflow_permissions` (read/write default, overridden by a workflow's own `permissions:` block). A repo-level 409 means the ORG is the blocker. Fix order: org toggle (org-wide, also enables PR self-approval) → scoped PAT/App token on checkout + create-PR steps → direct commit to main (`contents: write` only). Validate by forcing a real artifact change so the create-PR step fires, then `gh pr list --head <branch> --json author` to confirm `app/github-actions` opened a PR — a green run alone is not proof (skipped step shows success).
+- **Workflow-wide trigger / changes-gate**: `on: pull_request: types:` applies to the ENTIRE workflow, so label/auto-merge event types added for one job re-run all jobs. Gate heavy jobs with a `changes-gate` job (`needs: changes-gate` + `if: needs.changes-gate.outputs.code_event == 'true'`); leave policy jobs (`pr-policy`, `auto-merge-policy`) ungated. Correctness invariants: a required job SKIPPED via `if:` reports neutral/success and GitHub keeps the SHA's prior real result → branch protection stays satisfied; `github.event.action` is empty on `push` → `case` default = `code_event=true` → push still runs everything; pass `github.event.action` via `env:`, never interpolate into `run:`. Validate by adding then removing a throwaway label and checking `gh run view <id> --json jobs` shows the heavy jobs `skipped` while `changes-gate`/policy jobs `success`, with the PR still CLEAN/MERGEABLE.
 - **Reference**: <https://github.blog/security/vulnerability-research/how-to-catch-github-actions-workflow-injections-before-attackers-do/>
 
 ## Verified On
@@ -322,3 +378,4 @@ This session proved it by deliberately desyncing `marketplace.json` on a branch,
 | ProjectHephaestus | Issue #794 / PR #977 — `.github/workflows/test.yml` platform-scope header | 14-line header comment block added; pre-commit passed; workflow executed successfully (verified-local) |
 | HomericIntelligence/ProjectScylla | PR #1455 / Issue #1429 — Edit-tool path block | Workarounds documented in `.claude/shared/error-handling.md` |
 | ProjectMnemosyne | 2026-06-07: `update-marketplace.yml` create-PR step 403, diagnosed org block, validated org-toggle fix by live dispatch | PR #2261 |
+| ProjectHephaestus | PR #1108 (2026-06-08) — `_required.yml` label-event re-ran all 18 jobs; added a `changes-gate` job and gated the 16 heavy jobs on `needs: changes-gate` + `if: …code_event == 'true'`, left `pr-policy`/`auto-merge-policy` ungated | SELF-TESTED live: adding then removing a label re-ran only the gate + 2 policy jobs; the 16 heavy jobs showed `skipped`; PR stayed CLEAN/MERGEABLE |
