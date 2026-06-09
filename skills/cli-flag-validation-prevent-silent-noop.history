@@ -1,12 +1,35 @@
----
+<!-- markdownlint-disable MD024 -->
+# History: cli-flag-validation-prevent-silent-noop
+
+This file preserves the amendment history and the full original content of prior versions of this skill.
+
+## v1.1.0 (2026-06-08)
+
+Added the "PR-number passed to an issue-only flag" failure mode (verified-local across THREE separate ProjectHephaestus `hephaestus-automation-loop --issues` runs):
+
+- New `## When to Use` trigger: operators pass PR numbers to a flag that expects issue numbers and the tool fails open and acts on the wrong object, or emits a confusing retry cascade instead of a clear error.
+- New `## Failed Attempts` row: passing PR numbers to `--issues` / letting unresolved numbers fall through. The per-issue GraphQL resolver `repository.issue(number: N)` resolves issues ONLY (unlike `gh issue view N`, which silently falls back to a PR), so PR numbers produce a wall of retry/backoff ERROR lines (5 attempts each), then the loop FAILS OPEN and posts a planner "# Implementation Plan" comment and a "## Plan Review" comment onto the PR (#996 was a PR, not an issue).
+- Documented the adjacent usability gotcha: `--issues` is COMMA-delimited (`--issues 725,711`), NOT space-delimited (`--issues 725 711` fails argparse with `unrecognized arguments: 711`).
+- Added a PROPOSED (not-yet-implemented) validation subsection under the Verified Workflow: at the loop's issue-resolution step (`prefetch_issue_states` / the batch `issue(number:)` query), detect numbers that do not resolve to an issue, check whether each is a PR (`gh pr view N --json number`), and ABORT with a clear message ("#996 is a pull request, not an issue. Did you mean its linked issue #725? Pass ISSUE numbers to --issues (comma-separated).") instead of retrying 5x and then acting on the PR. This applies the same fail-fast-at-parse/resolution-time principle the skill already teaches.
+
+The overall skill remains `verification: verified-local` — the FAILURE is verified-local (observed live across 3 runs); the FIX is a labeled proposal and is NOT yet implemented.
+
+## v1.0.0 (2026-06-05)
+
+Initial version. Documented the `validate_agent_flags()` pattern from ProjectHephaestus issue #773: reject incompatible flag values (e.g. `--approval`/`--sandbox=danger-full-access` with `--agent=claude`) at parse time in `main()` with a clear constraint message described from the agent's perspective, using a data-driven per-agent tuple-of-tuples structure.
+
+## Superseded v1.0.0 body (2026-06-05)
+
+**Original date/version**: 2026-06-05 / 1.0.0
+
+```yaml
 name: cli-flag-validation-prevent-silent-noop
 description: "CLI flag validation at parse time to prevent silent no-ops. When a flag value is incompatible with the selected backend (e.g., --approval with --agent=claude), reject it at parse time with a clear error message describing the constraint from the backend's perspective. Use when: (1) designing CLI tools that support multiple backends with different feature sets, (2) discovering that a flag value silently no-ops for one backend but not another, (3) operators pass incompatible flag combinations without realizing they're being ignored."
 category: tooling
-date: 2026-06-08
-version: "1.1.0"
+date: 2026-06-05
+version: "1.0.0"
 user-invocable: false
 verification: verified-local
-history: cli-flag-validation-prevent-silent-noop.history
 tags:
   - argparse
   - cli
@@ -14,9 +37,7 @@ tags:
   - silent-no-op
   - agent
   - backend-compatibility
-  - issue-vs-pr
-  - fail-open
----
+```
 
 # CLI Flag Validation - Prevent Silent No-Op
 
@@ -24,7 +45,7 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-08 (v1.1.0; originally 2026-06-05) |
+| **Date** | 2026-06-05 |
 | **Objective** | Prevent operators from passing flag values that silently no-op for a selected agent/backend. Flag incompatibilities must be caught at parse time with a clear error message describing which backend honors the flag, not which one doesn't. |
 | **Outcome** | Solution implemented in ProjectHephaestus issue #773: `validate_agent_flags()` at parse time in `main()` rejects incompatible flag values for --agent=claude before any operations run. All tests pass (verified-local); CI validation pending. |
 | **Verification** | verified-local - Unit tests verify all rejection cases + regression guard for valid combinations like --sandbox=read-only |
@@ -40,7 +61,6 @@ Trigger phrases that should route to this skill:
 - "Designing an agent/backend selection CLI"
 - "Flag validation at parse time"
 - "Silent no-op flag combinations"
-- "Operators pass PR numbers to a flag that expects issue numbers and the tool fails open and acts on the wrong object, or emits a confusing retry cascade instead of a clear error"
 
 Situations:
 
@@ -160,67 +180,6 @@ def main(argv: list[str] | None = None) -> int:
        assert agent_stage.main(argv) == 0  # Success
    ```
 
-### Proposed: reject PR numbers passed to an issue-only flag (NOT YET IMPLEMENTED)
-
-> **Status: PROPOSAL — verified-local FAILURE, unverified FIX.** The failure
-> below was observed live across THREE separate ProjectHephaestus
-> `hephaestus-automation-loop --issues` runs. The validation described here is
-> the *recommended* fix per this skill's own fail-fast principle, but it is **not
-> yet implemented** in the loop. Treat the code shape below as a design sketch.
-
-**Observed failure** (`hephaestus-automation-loop --issues 996,997` where 996/997
-are PRs, not issues):
-
-1. **Confusing failure cascade.** The per-issue GraphQL resolver runs
-   `gh api graphql ... repository.issue(number: 996)`, which returns
-   `gh: Could not resolve to an Issue with the number of 996`. The
-   `issue(number:)` GraphQL node resolves issues ONLY, not PRs — unlike
-   `gh issue view N`, which silently falls back to a PR with that number (a
-   misleading CLI-vs-GraphQL inconsistency). Result: a wall of retry/backoff
-   ERROR lines (5 attempts each, exponential backoff) per number per phase.
-2. **WORSE — silent wrong-action (the real hazard).** After the resolve errors,
-   the loop FAILS OPEN and acts on the number as if it were an issue anyway: it
-   `Posted comment to issue #996` (actually PR #996) and invoked
-   `agent=planner issue=996` / `agent=plan-reviewer-r1`. Confirmed: it posted a
-   planner `# Implementation Plan` comment AND a `## Plan Review` comment onto
-   **PR #996**. Passing PR numbers pollutes the wrong GitHub object instead of
-   failing.
-
-**Adjacent usability gotcha**: `--issues` is COMMA-delimited (`--issues 725,711`),
-NOT space-delimited. `--issues 725 711` fails argparse with
-`unrecognized arguments: 711`.
-
-**Proposed validation** at the loop's issue-resolution step (where
-`prefetch_issue_states` / the batch `issue(number:)` query runs) — detect numbers
-that do not resolve to an issue, check whether each is a PR, and ABORT with a
-clear message instead of retrying 5x and then acting on the PR:
-
-```python
-def validate_issue_numbers(numbers: list[int]) -> None:
-    """Abort if any --issues value is actually a PR, not an issue.
-
-    PROPOSAL — applies the same fail-fast-at-resolution-time principle this
-    skill teaches. Run this where issue states are first resolved, BEFORE any
-    planner/reviewer comment is posted.
-    """
-    for n in numbers:
-        if issue_resolves(n):  # repository.issue(number:n) succeeded
-            continue
-        # Not an issue. Is it a PR? `gh pr view N --json number` resolves PRs.
-        if is_pull_request(n):  # `gh pr view N --json number` returned 0
-            linked = linked_issue_for_pr(n)  # may be None
-            hint = f" Did you mean its linked issue #{linked}?" if linked else ""
-            raise SystemExit(
-                f"#{n} is a pull request, not an issue.{hint} "
-                "Pass ISSUE numbers to --issues (comma-separated)."
-            )
-        raise SystemExit(f"#{n} does not resolve to an issue or PR.")
-```
-
-This is the same fail-fast-at-parse/resolution-time principle the skill already
-teaches: reject incompatible input with a clear message describing the
-constraint, rather than retrying then silently acting on the wrong object.
-
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -229,7 +188,6 @@ constraint, rather than retrying then silently acting on the wrong object.
 | Asserting "codex honors X but claude doesn't" in error messages | Error message: "--approval only applies to agent=codex (claude does not honor it)" | When the codebase adds agent=sonnet or agent=grok in the future, the error message becomes inaccurate. Maintainer must rewrite it. The constraint logically belongs to claude, not to codex's capabilities. | Describe constraint from the agent being validated: "--agent=claude does not honor --approval (these flag values only apply to --agent=codex)". This remains maintainable as new backends are added — the claude block doesn't change; you just add new blocks for grok/sonnet. |
 | Validating late, inside run_agent() or run_claude_text() | Checked compatibility inside the agent function after significant setup (repo root resolution, file I/O, etc.) | Invalid flag combinations discovered late, after wasted work. Error message buried in stack trace. Operators see a confusing failure deep in the call stack instead of a clear parse-time rejection. | Validate at parse time in main() immediately after parse_args(). Early rejection, clear error, no wasted work. |
 | Flat conditional checks without data structure | Validation logic: `if args.agent == "claude" and args.approval != "never": parser.error(...)` | Hard to extend to new backends or flag values. Logic scattered across multiple if-statements. Adding agent=grok requires finding and updating every compatibility check. | Use a tuple-of-tuples data structure per agent listing (attr, flag, noop_values). Loop over it generically. Adding a new agent is a single data entry, not scattered code changes. |
-| Passed PR numbers to `--issues` / let unresolved numbers fall through | Operators ran `hephaestus-automation-loop --issues 996,997` where 996/997 are PRs, not issues; the loop let the unresolved numbers fall through its issue-resolution step | `repository.issue(number:)` GraphQL resolves issues ONLY (unlike `gh issue view N`, which silently falls back to a PR), so each PR number produced a 5-attempt retry/backoff ERROR cascade per phase — then the loop FAILED OPEN and posted planner `# Implementation Plan` and `## Plan Review` comments onto the PR itself (PR #996). Observed across 3 runs. | Validate at resolution time: if a number isn't an issue, check whether it's a PR (`gh pr view N --json number`) and ABORT with a clear "that's a PR, did you mean its linked issue #N" message instead of retrying then acting on the wrong object. Also note `--issues` is comma-delimited (`725,711`), not space-delimited (`725 711` fails argparse). FIX is a proposal, not yet implemented. |
 
 ## Results & Parameters
 
