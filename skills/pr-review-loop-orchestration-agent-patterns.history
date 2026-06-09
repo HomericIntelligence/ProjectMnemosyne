@@ -4,6 +4,89 @@
 
 This file preserves the full original content of the skills merged into this canonical.
 
+## v1.3.0 (2026-06-08)
+
+Amend (verified-ci): do NOT make the in-loop LLM PR reviewer enforce repo PR
+policy (`Closes #N` / deferred auto-merge / signed commits). Those are enforced
+authoritatively by the GitHub CI gates `pr-policy` (required) and
+`auto-merge-policy` (advisory). An LLM re-implementation of a hard CI gate is
+redundant AND fails OPEN to "violation", fabricating false POLICY VIOLATIONs on
+compliant PRs.
+
+**Changed by:** ProjectHephaestus PR #1112 (remove in-loop policy checks).
+**Verification:** verified-ci (shipped to ProjectHephaestus; prompt + pr_reviewer
+unit suites green, ruff + mypy 342 files clean; net +78/-345).
+
+What changed in the canonical `.md`:
+
+- **Description / When-to-Use / tags:** added the trigger — an in-loop LLM
+  reviewer posts a FALSE policy violation, or you are tempted to make the
+  reviewer re-check `Closes #N` / signed commits / auto-merge that a CI gate
+  already enforces. New tags: `ci-gate-owns-policy`, `llm-reviewer-fails-open`,
+  `false-policy-violation`, `pr-policy-gate`, `auto-merge-policy`,
+  `no-duplicate-hard-gate`.
+- **New Verified-Workflow subsection** "Policy enforcement belongs in CI gates,
+  not the in-loop LLM reviewer" documenting the principle + the PR #1112 fix.
+- **One new Failed-Attempts row** (make the in-loop LLM reviewer enforce
+  Closes/auto-merge/signed-commits via a prompt policy block + rubric D1, fed by
+  per-commit GraphQL signing fetch).
+- **One new "Verified On" row** for PR #1112.
+- Version `1.2.0` → `1.3.0`; date stays `2026-06-08`.
+
+Why:
+
+- **Learning (PR #1112):** the in-loop reviewer prompt (`prompts/pr_review.py`)
+  carried a "Policy checks (MANDATORY)" block plus a strict-rubric "D1 — Policy
+  compliance (HIGHEST PRIORITY / NOGO gate)" (`prompts/_strict_rubric.py`), fed by
+  `_fetch_signing_state()` (per-commit GraphQL) and an auto-merge state fetch in
+  `pr_reviewer.py`. These FAIL OPEN TO "VIOLATION": `_fetch_signing_state` returns
+  `[]` on ANY error and the prompt treats an empty array as a signed-commits NOGO.
+  On PR #996 the reviewer posted a FALSE `POLICY VIOLATION: Closes,
+  auto-merge-premature, signed-commits` even though the body had `Closes #725` /
+  `#726`, auto-merge was OFF, and the commit was signed (`verified=true`) — because
+  a transient/empty fetch (likely from a PR-as-issue context) produced empty data
+  blocks. The generic message also forced the human to guess which check "failed".
+- **Fix:** remove the in-loop policy enforcement entirely; let the CI gates own it.
+  `prompts/pr_review.py`: delete the "Policy checks (MANDATORY)" section + the
+  `{auto_merge_state_block}` / `{commits_signing_block}` data blocks + the `POLICY
+  VIOLATION` summary contract; drop the `auto_merge_enabled` /
+  `commits_signing_state` params from `get_pr_review_analysis_prompt` (kept the
+  `Verdict: GO/NOGO` + JSON contract, now code-quality only).
+  `prompts/_strict_rubric.py`: replace `D1 — Policy compliance` with `D1 —
+  Correctness & completeness`; note that CI gates own policy. `pr_reviewer.py`:
+  delete `_fetch_signing_state` + the signing GraphQL query; stop populating
+  `context["auto_merge_enabled"]` / `["commits_signing_state"]`; drop
+  `autoMergeRequest` from the `gh pr view --json` projection.
+- **Principle:** when a hard gate already exists in CI (a required status check),
+  an LLM re-implementation of the same gate is redundant and, because LLM-context
+  fetches fail open to "violation", produces false negatives that block good PRs.
+  Enforce policy ONCE, in the deterministic CI gate; let the LLM reviewer judge
+  code quality only.
+
+Pre-amendment `.md` body snapshot (the frontmatter + Overview being amended):
+
+```yaml
+# frontmatter (pre-amendment)
+name: pr-review-loop-orchestration-agent-patterns
+category: ci-cd
+date: 2026-06-08
+version: "1.2.0"
+user-invocable: false
+history: pr-review-loop-orchestration-agent-patterns.history
+```
+
+```text
+# Overview table (pre-amendment)
+| Verification | verified-ci |
+| Version      | 1.2.0       |
+```
+
+The pre-amendment "When to Use" had triggers (1)–(11) ending with the existing-PR
+short-circuit / assumed-`{issue}-auto-impl` items; there was NO trigger for an
+in-loop reviewer fabricating a false policy violation, and the Failed-Attempts
+table ended at the assumed-`{issue}-auto-impl`-fetch row (no policy-enforcement
+row).
+
 ## v1.2.0 (2026-06-08)
 
 Amend (verified-ci): existing-PR review handler must RE-ENTER the loop on NO-GO
