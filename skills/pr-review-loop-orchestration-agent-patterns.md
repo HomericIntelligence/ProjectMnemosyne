@@ -1,9 +1,9 @@
 ---
 name: pr-review-loop-orchestration-agent-patterns
-description: "Use when: (1) building or debugging a Python implement-review loop where an LLM sub-agent reviews a PR and a fixer agent addresses inline comments, (2) a review loop resolves threads even though no commit was produced — resolution must be gated on a real commit not the model self-report, (3) a loop ends AMBIGUOUS or NO-GO too fast before ever earning an explicit GO verdict, (4) LLM or agent-generated inline PR review comments are rejected by GitHub (HTTP 422) because they do not lie on a changed diff hunk, (5) an agent-driven CI-fix session produces no commit and the PR stays red; the correct response is a single bounded retry with unresolved review threads injected verbatim, (6) a review fix plan file concludes no changes are needed and the automation should self-cancel without opening a new PR, (7) a feature-dev:code-reviewer sub-agent cannot execute shell commands and cannot post gh pr review — wrong agent type was chosen, (8) a GitHub GraphQL PR-review mutation field selection is wrong and the automation loop fails on every call with Field X does not exist, (9) pre-commit must cover the full PR diff from the merge-base not just the most-recent-edit files before pushing, (10) an existing-PR review handler short-circuits NO-GO PRs as if they were settled (idempotency `if has_go or has_no_go: skip`) so a failed-review PR never re-enters the loop — short-circuit on GO ONLY, (11) an existing-PR worktree sync fails `git fetch origin {issue}-auto-impl` with exit 128 because the PR head branch was ASSUMED from the issue number instead of read from the PR's real `headRefName`"
+description: "Use when: (1) building or debugging a Python implement-review loop where an LLM sub-agent reviews a PR and a fixer agent addresses inline comments, (2) a review loop resolves threads even though no commit was produced — resolution must be gated on a real commit not the model self-report, (3) a loop ends AMBIGUOUS or NO-GO too fast before ever earning an explicit GO verdict, (4) LLM or agent-generated inline PR review comments are rejected by GitHub (HTTP 422) because they do not lie on a changed diff hunk, (5) an agent-driven CI-fix session produces no commit and the PR stays red; the correct response is a single bounded retry with unresolved review threads injected verbatim, (6) a review fix plan file concludes no changes are needed and the automation should self-cancel without opening a new PR, (7) a feature-dev:code-reviewer sub-agent cannot execute shell commands and cannot post gh pr review — wrong agent type was chosen, (8) a GitHub GraphQL PR-review mutation field selection is wrong and the automation loop fails on every call with Field X does not exist, (9) pre-commit must cover the full PR diff from the merge-base not just the most-recent-edit files before pushing, (10) an existing-PR review handler short-circuits NO-GO PRs as if they were settled (idempotency `if has_go or has_no_go: skip`) so a failed-review PR never re-enters the loop — short-circuit on GO ONLY, (11) an existing-PR worktree sync fails `git fetch origin {issue}-auto-impl` with exit 128 because the PR head branch was ASSUMED from the issue number instead of read from the PR's real `headRefName`, (12) an in-loop LLM PR reviewer posts a FALSE policy violation (e.g. `POLICY VIOLATION: Closes, auto-merge-premature, signed-commits` on a PR that actually has `Closes #N`, auto-merge OFF, and a signed commit) because its policy fetch failed open to violation, or you are tempted to make the reviewer re-check `Closes #N` / signed commits / auto-merge that a CI gate (`pr-policy` required, `auto-merge-policy` advisory) already enforces"
 category: ci-cd
 date: 2026-06-08
-version: "1.2.0"
+version: "1.3.0"
 user-invocable: false
 history: pr-review-loop-orchestration-agent-patterns.history
 tags:
@@ -33,6 +33,12 @@ tags:
   - pr-head-branch-resolution
   - headrefname
   - assumed-branch-name-fetch-128
+  - ci-gate-owns-policy
+  - llm-reviewer-fails-open
+  - false-policy-violation
+  - pr-policy-gate
+  - auto-merge-policy
+  - no-duplicate-hard-gate
   - homericintelligence
 ---
 
@@ -44,9 +50,9 @@ tags:
 |-------|-------|
 | **Date** | 2026-06-08 |
 | **Objective** | Build and debug a Python implement-review loop that drives LLM sub-agents to review a PR and fix its inline comments, converging on an EVIDENCE-BASED `Verdict: GO`. Covers: commit-gated thread resolution, inline-comment diff-hunk (422) validation, one-shot no-commit retry with unresolved review threads injected, agent-type selection for review tasks, GraphQL field/input validation for PR-review mutations, self-cancelling review plans, full merge-base pre-commit scope, the existing-PR short-circuit being GO-ONLY (NO-GO PRs MUST re-enter the loop), and using the PR's real `headRefName` for the worktree instead of an assumed `{issue}-auto-impl`. |
-| **Outcome** | Merged across multiple ProjectHephaestus PRs (commit-gate + verdict-GO convergence #1084; inline-comment 422 validation #1043; no-commit retry + thread injection #847; GraphQL field/input validation #906/#1006; existing-PR NO-GO re-review #1104; real PR head-branch resolution #1106) plus ProjectOdyssey and gh-tidy upstream review rounds. |
+| **Outcome** | Merged across multiple ProjectHephaestus PRs (commit-gate + verdict-GO convergence #1084; inline-comment 422 validation #1043; no-commit retry + thread injection #847; GraphQL field/input validation #906/#1006; existing-PR NO-GO re-review #1104; real PR head-branch resolution #1106; in-loop policy enforcement removed in favor of CI gates #1112) plus ProjectOdyssey and gh-tidy upstream review rounds. |
 | **Verification** | verified-ci |
-| **Version** | 1.2.0 |
+| **Version** | 1.3.0 |
 
 ## When to Use
 
@@ -60,6 +66,7 @@ tags:
 - A `gh api graphql` PR-review mutation fails on every call with `Field 'X' doesn't exist on type 'Y'` or `InputObject '<Input>' doesn't accept argument '<arg>'`.
 - You want a comprehensive multi-specialist PR review filed as structured GitHub review comments.
 - An existing-PR review loop skips NO-GO PRs as if settled (e.g. `Successful: 0 / Skipped: N`, every PR already carries a terminal label), or fails `git fetch origin {issue}-auto-impl` with `exit 128` on an assumed `{issue}-auto-impl` branch.
+- An in-loop LLM reviewer posts a FALSE policy violation, or you are tempted to make the reviewer re-check `Closes #N` / signed commits / auto-merge that a CI gate already enforces.
 
 ## Verified Workflow
 
@@ -179,6 +186,45 @@ core "converge ONLY on `Verdict: GO`; a re-open OVERRIDES a stale GO" rule:
    before the GO-ONLY fix, NO-GO PRs short-circuited before reaching the fetch, so it never
    fired for them; the GO-ONLY fix EXPOSED it. Test note: any test exercising this path MUST
    mock `get_pr_head_branch` or it makes a real `gh` call (a test took 103s before mocking).
+
+#### Policy enforcement belongs in CI gates, not the in-loop LLM reviewer
+
+Do NOT make the in-loop LLM PR reviewer enforce repo PR policy (`Closes #N` body
+line, deferred auto-merge, signed commits). Those are enforced authoritatively by
+the GitHub CI gates `pr-policy` (required status check) and `auto-merge-policy`
+(advisory). Duplicating them in the reviewer is redundant AND fragile: LLM-context
+policy fetches fail OPEN TO "violation", so a transient/empty fetch fabricates a
+false NOGO that blocks a compliant PR.
+
+Concrete failure (PR #996): the reviewer prompt had a "Policy checks (MANDATORY)"
+block plus a strict-rubric "D1 — Policy compliance" NOGO gate, fed by
+`_fetch_signing_state()` (per-commit GraphQL) and an auto-merge state fetch.
+`_fetch_signing_state` returns `[]` on ANY error and the prompt treats an empty
+array as a signed-commits NOGO. On PR #996 the reviewer posted a FALSE `POLICY
+VIOLATION: Closes, auto-merge-premature, signed-commits` even though the body had
+`Closes #725` / `#726`, auto-merge was OFF, and the commit was signed
+(`verified=true`) — because a transient/empty fetch produced empty data blocks. The
+generic message also forced the human to guess which check "failed".
+
+Fix (PR #1112) — remove the in-loop policy enforcement entirely; let CI own it:
+
+- `prompts/pr_review.py`: delete the "Policy checks (MANDATORY)" section + the
+  `{auto_merge_state_block}` / `{commits_signing_block}` data blocks + the `POLICY
+  VIOLATION` summary contract; drop the `auto_merge_enabled` /
+  `commits_signing_state` params from `get_pr_review_analysis_prompt`. Keep the
+  `Verdict: GO/NOGO` + JSON contract (now code-quality only).
+- `prompts/_strict_rubric.py`: replace `D1 — Policy compliance (HIGHEST PRIORITY /
+  NOGO gate)` with `D1 — Correctness & completeness`; add a note that CI gates own
+  policy.
+- `pr_reviewer.py`: delete `_fetch_signing_state` + the signing GraphQL query;
+  stop populating `context["auto_merge_enabled"]` / `["commits_signing_state"]`;
+  drop `autoMergeRequest` from the `gh pr view --json` projection.
+
+KEY PRINCIPLE: when a hard gate already exists in CI (a required status check), an
+LLM re-implementation of the same gate is redundant and, because LLM-context
+fetches fail open to "violation", it produces false negatives that block good PRs.
+Enforce policy ONCE, in the deterministic CI gate; let the LLM reviewer judge code
+quality only.
 
 #### Inline-comment diff-hunk 422 validation
 
@@ -359,6 +405,7 @@ recurring traps:
 | `set_trunk_branch`-style helper prints an error but doesn't exit (bash) | Helper logged the error and returned normally | The script continued past a fatal condition with bad trunk state | Every fatal branch in a helper MUST `exit 1` (or `return 1` + a checked caller). |
 | Short-circuit the existing-PR handler on GO **or** NO-GO | `_review_existing_pr` skipped re-review with `if has_go or has_no_go: return`, treating a `state:implementation-no-go` PR as terminal/settled | In a live 5-loop run all 60 existing PRs carried a terminal label (10 GO, 50 NO-GO), so every PR was skipped every loop (`Successful: 0 / Skipped: 60`) and the fallback `drive-green` phase was skipped too — NO-GO PRs were NEVER re-implemented or re-reviewed | Short-circuit on `has_go` ONLY; a NO-GO label is NOT terminal (it means review FAILED). Let NO-GO fall through into `_run_impl_review_loop` (NO-GO → resume implementer → re-review → converge-on-GO), bounded by `MAX_REVIEW_ITERATIONS`; gate a re-run on the PR head SHA advancing to avoid burning tokens on a stuck PR (PR #1104). |
 | Sync the existing-PR worktree to the assumed `{issue}-auto-impl` branch | `_review_existing_pr` set `branch_name = f"{issue_number}-auto-impl"` and called `sync_worktree_to_remote_branch` → `git fetch origin {issue}-auto-impl` | `find_pr_for_issue` can match a PR via a PR-body `Closes #N` search, so the PR head branch may belong to a DIFFERENT issue/bundle; the fetch failed `fatal: couldn't find remote ref …; exit 128` every loop (live: issue #725 → PR #996, real `headRefName` `708-auto-impl`). Latent until the GO-ONLY fix let NO-GO PRs reach the fetch | Resolve the PR's REAL head via `get_pr_head_branch(pr_number)` (`gh pr view <pr> --json headRefName`; `None` on failure) and use it for worktree create + sync + loop + result; fall back to the assumed name only on `None`. The fresh-impl path keeps the convention (it creates the branch). Tests MUST mock `get_pr_head_branch` (a real `gh` call took 103s) (PR #1106). |
+| Make the in-loop LLM reviewer enforce repo PR policy | Reviewer had a "Policy checks (MANDATORY)" prompt block + a strict-rubric `D1 — Policy compliance` NOGO gate that re-checked `Closes #N` / auto-merge / signed-commits, fed by a per-commit GraphQL signing fetch (`_fetch_signing_state`) + an auto-merge state fetch | The fetch returns `[]` on any error and the prompt treats empty = violation → fabricated false POLICY VIOLATIONs on compliant PRs. On PR #996 it posted `POLICY VIOLATION: Closes, auto-merge-premature, signed-commits` though the body had `Closes #725/#726`, auto-merge was OFF, and the commit was signed (`verified=true`) | Enforce PR policy ONCE in the deterministic CI gates (`pr-policy` required + `auto-merge-policy` advisory); the LLM reviewer judges code quality only — never duplicate a CI hard-gate in an LLM that fails open to violation. Removed the prompt block, the rubric D1 gate, `_fetch_signing_state`, and the auto-merge/signing context (PR #1112). |
 
 ## Results & Parameters
 
@@ -482,6 +529,7 @@ mutation {
 | ProjectHephaestus | PR #906 (closes #905) / PR #1006 (closes #999) | GraphQL field + input-argument validation; corrected `addPullRequestReview` selection and `addPullRequestReviewThreadReply` mutation |
 | ProjectHephaestus | PR #1104 | Existing-PR handler short-circuits on GO ONLY; NO-GO PRs re-enter `_run_impl_review_loop` instead of being skipped as settled (`_review_existing_pr` in `implementer_phase_runner.py`) |
 | ProjectHephaestus | PR #1106 | `get_pr_head_branch(pr_number)` in `_review_utils`; `_review_existing_pr` uses the PR's real `headRefName` (not the assumed `{issue}-auto-impl`) for worktree create + sync + loop; fixes `git fetch … exit 128` |
+| ProjectHephaestus | PR #1112 | Removed in-loop policy enforcement from the LLM reviewer — deleted the "Policy checks (MANDATORY)" block + `POLICY VIOLATION` contract from `prompts/pr_review.py`, the `D1 — Policy compliance` rubric gate from `prompts/_strict_rubric.py`, and `_fetch_signing_state` + auto-merge/signing context from `pr_reviewer.py`. CI gates `pr-policy` (required) + `auto-merge-policy` (advisory) own policy; reviewer judges code quality only. Fixes false POLICY VIOLATION on compliant PR #996. Net +78/-345; prompt + pr_reviewer suites green, ruff + mypy 342 files clean |
 | HomericIntelligence/AchaeanFleet | 11 Dependabot PRs, 2026-05-31 | `feature-dev:code-reviewer` read-only blocker discovered; agent-type selection rule |
 | ProjectOdyssey | PR #3343 (issue #3152) / PR #3109 (issue #3033) | Self-cancelling review plan no-op; comprehensive multi-specialist PR review orchestration |
 | gh-tidy (HaywardMorihara/gh-tidy) | PRs #63/#67/#68/#69 | Upstream bash PR review rounds; logic/safety traps (verified-local) |
