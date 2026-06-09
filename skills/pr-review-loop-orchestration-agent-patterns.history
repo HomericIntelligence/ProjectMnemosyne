@@ -4,6 +4,78 @@
 
 This file preserves the full original content of the skills merged into this canonical.
 
+## v1.4.0 (2026-06-08)
+
+Amend (verified-ci): the "zero threads != GO" rule applies to the LOOP's
+TERMINATION condition, not only to the verdict parser. The in-loop implementer
+review cycle (`_run_impl_review_loop` in `implementer_phase_runner.py`) VIOLATED
+the rule at the code level — it converged (`break`) when the reviewer posted zero
+threads REGARDLESS of verdict, and force-applied `state:skip` after a single
+iteration-0 non-GO. A non-GO pass with no posted threads (and nothing re-opened)
+must now RE-REVIEW up to `MAX_REVIEW_ITERATIONS`; `state:skip` is applied ONLY on
+TRUE iteration exhaustion.
+
+**Changed by:** ProjectHephaestus PR #1114 (zero-thread non-GO re-reviews;
+`state:skip` only on exhaustion).
+**Verification:** verified-ci (shipped to ProjectHephaestus as PR #1114; 81
+implementer-suite tests pass, ruff + mypy 342 files clean; PR CLEAN/MERGEABLE).
+
+What changed in the canonical `.md`:
+
+- **When-to-Use:** added the trigger — an in-loop implementer review cycle
+  converges/`break`s when the reviewer posts zero threads even though the verdict
+  is AMBIGUOUS or NO-GO, or applies `state:skip` after a single iteration-0 non-GO.
+- **Verified-Workflow:** added a note to the convergence section recording that the
+  rule governs the loop's TERMINATION condition (not just the parser), with the
+  concrete `_run_impl_review_loop` fix and the two-zero-progress-cases distinction.
+- **One new Failed-Attempts row** (`if not posted_thread_ids and not reopened:
+  break` + force `state:skip` on a single AMBIGUOUS).
+- **One new "Verified On" row** for PR #1114.
+- Version `1.3.0` → `1.4.0`; date stays `2026-06-08`.
+
+Why:
+
+- **THE BUG:** `_run_impl_review_loop` had `if pr_number is not None and not
+  posted_thread_ids and not reopened: break` — it converged on zero posted threads
+  REGARDLESS of verdict. Observed live (issue #725 → PR #996): a malformed review
+  (only a `POLICY VIOLATION:` summary line, no `Verdict:` line → `parse_review_verdict`
+  returned AMBIGUOUS) posted 0 threads, so the loop TERMINATED at R0
+  (`Verdict=AMBIGUOUS Grade=? threads=0`) and applied `state:skip` — the PR was
+  never re-reviewed or implemented. This was the false-POLICY-VIOLATION (pre-#1112)
+  feeding the zero-thread-converge bug.
+- **THE FIX (PR #1114):** (1) a non-GO pass with no posted threads (and nothing
+  re-opened) no longer breaks — it RE-REVIEWS on the next iteration (no threads to
+  address, so the address step is skipped via `continue`), bounded by
+  `MAX_REVIEW_ITERATIONS`. GO still converges immediately; a POSTED-THREAD NO-GO
+  still runs the address step and still stops if the address step resolves nothing
+  (`if not addressed: break` — unchanged and correct). (2) `state:skip` is applied
+  ONLY on TRUE iteration exhaustion (`iterations_run >= MAX_REVIEW_ITERATIONS and
+  last_verdict != "GO"`), NOT on a single iteration-0 AMBIGUOUS/NO-GO. The previous
+  code force-skipped on `is_ambiguous` after ONE iteration — removed, because with
+  fix (1) a persistent AMBIGUOUS now re-reviews to exhaustion and the exhaustion
+  gate catches it.
+- **PRINCIPLE:** "zero threads != GO" applies to the loop's TERMINATION condition,
+  not just to the verdict parser. A zero-thread non-GO pass must give the reviewer
+  `MAX_REVIEW_ITERATIONS` chances (a transient/garbage review must not strand a
+  fixable PR after R0); auto-skip belongs at TRUE exhaustion only. Distinguish the
+  two zero-progress cases: (a) zero THREADS posted + non-GO → re-review (reviewer
+  may be transiently broken); (b) threads posted but the ADDRESS step resolved
+  nothing → break (genuine no-progress on real findings).
+
+### Pre-amendment body snapshot (v1.3.0, convergence section)
+
+The convergence paragraph in the v1.3.0 `.md` stated the rule abstractly only:
+
+> Converge ONLY on an explicit `Verdict: GO`. Do not converge on "reviewer posted
+> zero threads" — a zero-thread pass with verdict AMBIGUOUS or NO-GO ends the loop
+> too fast. Parse the verdict explicitly (last line, not substring) and require the
+> literal `GO`.
+
+…with the `state:skip` note: "gate the auto-apply on TRUE iteration exhaustion,
+not on a single iteration-0 non-GO." v1.3.0 had NO record that the in-loop
+`_run_impl_review_loop` actually violated this at the code level; this amendment
+adds the concrete verified-ci instance and fix.
+
 ## v1.3.0 (2026-06-08)
 
 Amend (verified-ci): do NOT make the in-loop LLM PR reviewer enforce repo PR
