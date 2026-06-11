@@ -2,8 +2,8 @@
 name: git-commit-signing-failures-and-setup
 description: "Diagnose and fix commit signing failures that block PR merge under required_signatures / pr-policy gates. Use when: (1) a PR shows mergeStateStatus BLOCKED with all CI green and mergeable MERGEABLE — suspect unsigned or unverified commits, (2) GPG commit.gpgsign=true produces commits GitHub reports as verified=false with reason=no_user because the author email has no matching UID on the signing key, (3) sub-agent shells inherit commit.gpgsign=true but silently fail to sign due to un-warmed gpg-agent or wrong default key, (4) setting up commit signing on a fresh remote/headless/CI host for the first time using SSH signing keys, (5) git push is rejected with 'push declined due to email privacy restrictions' even though signing appears correct, (6) the pr-policy required-check gate reports unsigned commits even though local git log shows signatures"
 category: tooling
-date: 2026-06-07
-version: "1.0.0"
+date: 2026-06-11
+version: "1.0.1"
 user-invocable: false
 history: git-commit-signing-failures-and-setup.history
 tags:
@@ -28,7 +28,7 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-07 |
+| **Date** | 2026-06-11 |
 | **Objective** | Diagnose and remediate commit-signing failures that block PR merge under `required_signatures` / `pr-policy` gates (silent unsigned commits, email/key-UID mismatch producing `no_user`, un-warmed gpg-agent in sub-shells, GraphQL lag), AND set up GitHub-valid signing from scratch on a fresh remote/headless host using SSH signing keys |
 | **Outcome** | Successful — re-authored and re-signed blocked PRs across multiple repos (Keystone #552, Hephaestus #1021/#1026/#1071, #900) flipping commits to `verified: true`; set up first-time SSH signing on headless host `aeolus` and confirmed `verification.verified == true` via REST |
 | **Verification** | verified-ci |
@@ -417,3 +417,4 @@ git config --global user.email "<numeric-id>+<login>@users.noreply.github.com"
 | ProjectHephaestus | 2026-06-04 Issue #739, PR #900+ | DRY refactor required all commits to pass pr-policy; all signed with `-S`, pr-policy confirmed `signature.state=VALID` per commit via GraphQL, auto-merge fired after pr-policy passed |
 | ProjectHephaestus | 2026-06-06, PRs #1021 / #1026 | Global `~/.gitconfig` `user.email` was `mvillmow+bot@users.noreply.github.com`; GPG key `F0A2530669A31A2E` (subkey `7FD616C4744A8A7C`) was bound only to `4211002+mvillmow@users.noreply.github.com`. Commits showed `%G?`=`G` locally but GitHub returned `no_user` and pr-policy failed. Discovered the `+bot` variant cannot be a verified email (patching the key UID was a dead end). Fixed by `git config user.email 4211002+mvillmow@...` + `git commit --amend --reset-author -S`; added a defensive guard in `fleet_sync.get_resign_email()` validating resign email vs key UIDs (`FLEET_SKIP_EMAIL_KEY_CHECK=1` bypass). Also hit bare-`-S` foreign-key (`%G?`=`E`) and silent commit-abort-from-hook leaving HEAD unchanged |
 | ProjectHephaestus | 2026-06-07, PR #1071 (issue #1070) | Fleet automation `fleet_sync.py` `list_prs()` had no author filter; `rebase_and_resign()` rewrote a Dependabot bump, STRIPPING the native web-flow signature; the amend ran in a sub-shell with a cold gpg-agent so it landed `reason=unsigned`. Fixed by scoping discovery with `--author @me`, warming gpg-agent before any re-sign amend, and exempting `dependabot[bot]` from pr-policy Check 1 (`Closes #N`) while keeping Checks 2/3. Verified via REST `reason=valid`; merged to main |
+| ProjectHephaestus | 2026-06-11, PR #946 (issue #755) | Forensics code-only fix (malformed COREDUMP_MAX_BYTES handling) failed pr-policy Check 3 "every commit is signed": commit `189110e2` returned GitHub GraphQL `signature.isValid:false`. Re-signed via `git rebase origin/main --exec 'git commit --amend --no-edit -S'`; final merged commit `ab5ab4de` returned REST `verification.verified:true reason:valid` (PGP), committer email `4211002+mvillmow@users.noreply.github.com` matching the key UID. Confirms Example C pattern; auto-merge fired after pr-policy passed. |

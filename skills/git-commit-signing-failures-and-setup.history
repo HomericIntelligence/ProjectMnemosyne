@@ -4,6 +4,24 @@
 
 Supersession history for the merged canonical skill `git-commit-signing-failures-and-setup`.
 
+## v1.0.1 (2026-06-11)
+
+**Changed by:** ProjectHephaestus PR #946 (issue #755) — pr-policy signing gate recurrence
+**Verification:** verified-ci
+
+### What changed
+
+- Added one "Verified On" row for ProjectHephaestus PR #946 (issue #755): a code-only forensics fix that failed `pr-policy / Check 3: every commit is signed` and was remediated by re-signing (final commit `ab5ab4de` `verified:true reason:valid`).
+- Bumped version 1.0.0 → 1.0.1, updated date to 2026-06-11.
+
+### Why
+
+Confirming instance of the already-documented Example C pr-policy signing-gate pattern; no new failure mode. Patch bump per /learn semver rules (new "Verified On" data, no workflow/recommendation change).
+
+### Previous version (v1.0.0) snapshot
+
+See git history at the parent commit; content unchanged except the additions above.
+
 ## v1.0.0 (2026-06-07)
 
 Initial merge consolidating 3 commit-signing skills into one canonical:
