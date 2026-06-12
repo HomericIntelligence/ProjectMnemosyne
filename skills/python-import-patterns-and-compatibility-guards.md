@@ -1,9 +1,9 @@
 ---
 name: python-import-patterns-and-compatibility-guards
-description: "Use when: (1) a child module would create circular dependencies by importing the parent at module level — use function-local imports to defer the lookup and keep the import graph acyclic; (2) extending a public SDK surface with peer classes using lazy-loading __init__.py infrastructure (lazy exports pattern via __getattr__) to prevent eager-load regressions when adding new peers to __all__; (3) code uses a stdlib module added in a later Python version (tomllib in 3.11+, ExceptionGroup in 3.11+) and the CI matrix includes older Python — add a version-gated try/except import guard so the module remains importable; (4) adding cross-OS CI matrix and Windows jobs fail with ModuleNotFoundError for POSIX-only stdlib modules (curses, fcntl, grp, tzdata) — add conditional import guards and ensure tzdata is listed as an optional Windows dependency; (5) a hardcoded surface-pinning test (set(__all__) == literal) fails on CI with 'Extra items in the left set' because a peer export landed on main via an independent PR while your branch was open — fix the stale test literal, not the (correct) source, and use env -i / git stash / grep-the-CI-log to separate real failures from live-session environment noise."
+description: "Use when: (1) a child module would create circular dependencies by importing the parent at module level — use function-local imports to defer the lookup and keep the import graph acyclic; (2) extending a public SDK surface with peer classes using lazy-loading __init__.py infrastructure (lazy exports pattern via __getattr__) to prevent eager-load regressions when adding new peers to __all__; (3) code uses a stdlib module added in a later Python version (tomllib in 3.11+, ExceptionGroup in 3.11+) and the CI matrix includes older Python — add a version-gated try/except import guard so the module remains importable; (4) adding cross-OS CI matrix and Windows jobs fail with ModuleNotFoundError for POSIX-only stdlib modules (curses, fcntl, grp, tzdata) — add conditional import guards and ensure tzdata is listed as an optional Windows dependency; (5) a hardcoded surface-pinning test (set(__all__) == literal) fails on CI with 'Extra items in the left set' because a peer export landed on main via an independent PR while your branch was open — fix the stale test literal, not the (correct) source, and use env -i / git stash / grep-the-CI-log to separate real failures from live-session environment noise; (6) a branch widening a lazy SDK surface (_LAZY_EXPORTS/__all__/__getattr__ in __init__.py) goes DIRTY/CONFLICTING on rebase because a sibling PR already landed the identical export — resolve by keeping ONE copy of the shared entry, and FIRST check mergeStateStatus=DIRTY when a PR reads as CI-failing but no test actually failed."
 category: architecture
 date: 2026-06-11
-version: "1.1.0"
+version: "1.2.0"
 user-invocable: false
 history: python-import-patterns-and-compatibility-guards.history
 tags:
@@ -26,6 +26,9 @@ tags:
   - merge-skew
   - test-vs-source
   - environment-noise
+  - merge-conflict
+  - rebase
+  - mergestate-dirty
 ---
 
 # Python Import Patterns and Compatibility Guards
@@ -45,6 +48,7 @@ tags:
 - **Lazy exports (SDK surface)**: Extending a public package `__all__` with peer classes from submodules, adding `TYPE_CHECKING` imports, preventing eager-load regressions, or avoiding architectural restructuring when widening the public surface.
 - **Version-gated stdlib guard**: A CI matrix includes Python 3.10 and code does a bare import of a 3.11+ stdlib module (`tomllib`, `ExceptionGroup`); `pytest` collection fails with `ModuleNotFoundError` on the lowest Python in the matrix.
 - **Windows / POSIX-only stdlib guard**: Adding a cross-OS CI matrix where Windows jobs fail with `ModuleNotFoundError` for `curses`/`fcntl`/`termios`/`grp`/`pwd`, or `zoneinfo.ZoneInfo` raises `ZoneInfoNotFoundError` on Windows (needs `tzdata`).
+- **Lazy-export add/add rebase conflict**: A branch widens the lazy SDK surface (`_LAZY_EXPORTS` + `__all__` + `__getattr__`) and goes `DIRTY`/`CONFLICTING` because a *sibling PR already landed the identical export* on main. The PR reads as "CI failing" but the logs show only runner/setup steps and **no test actually failed** — the merge conflict itself is the blocker. Resolve by keeping ONE copy of the shared entry.
 - **Stale surface-pin test (branch-divergence / merge-skew)**: A hardcoded surface-pinning test (`assert set(__all__) == {literal}`) fails on CI with `Extra items in the left set: '<Symbol>'`, where `<Symbol>` is a *legitimate* peer export that landed on `main` via an independent PR while your feature branch was open. The production `__init__.py` is correct; the test literal went stale. You need to decide whether the test or the source is wrong, then fix only the stale party — and to do that you must separate the real CI failure from environment noise that only appears when the local suite runs inside a live automation session.
 
 ## Verified Workflow
@@ -105,6 +109,18 @@ grep -rn "^import tomllib" hephaestus/ scripts/ tests/   # expect 0 after fix
 grep -rn "^import \(curses\|fcntl\|termios\|grp\|pwd\)" hephaestus/  # each needs a guard
 ```
 
+```bash
+# (6) LAZY-EXPORT ADD/ADD REBASE CONFLICT — "CI failing" but no test failed
+gh pr view <N> --json mergeStateStatus --jq .mergeStateStatus   # DIRTY → conflict, not a test
+git fetch origin main && git rebase origin/main                 # conflict localises to __init__.py
+git show origin/main:hephaestus/automation/__init__.py | grep PRReviewer  # confirm main has it
+#   → keep ONE copy of the shared _LAZY_EXPORTS entry; key ORDER is irrelevant (set()-based tests)
+git rebase --continue
+pixi run python -m pytest tests/ && pre-commit run --all-files  # ruff-format may reflow old lines
+git commit -S -m "..."                                          # GPG (not SSH); key-email committer
+git push --force-with-lease origin HEAD:<branch>                # rebase rewrote history
+```
+
 ### Detailed Steps
 
 #### A. Function-local imports to avoid coupling / circular deps
@@ -150,6 +166,18 @@ grep -rn "^import \(curses\|fcntl\|termios\|grp\|pwd\)" hephaestus/  # each need
    ```
 7. **Validate**: `pixi run pytest tests/unit/automation/ -v && pixi run ruff check ... && pixi run mypy ...`.
 8. **Prefer a subset assertion (`expected - set(__all__)`) over strict equality (`set(__all__) == expected`)** for the pin. A subset assertion (`missing = expected - set(__all__); assert not missing`) catches *removed* peers (the regression you care about) but tolerates a new peer being added on `main` via an independent PR. A strict-equality pin breaks every open branch the moment any peer lands elsewhere (see section B′). If you must keep strict equality, treat the literal as a manifest that has to be re-synced on rebase.
+
+#### B2. Resolving a lazy-export add/add rebase conflict (sibling PR landed the same widening first)
+
+Symptom: the PR reads as "CI failing", but `gh run view` shows only runner/setup steps and **no test failure**. The real blocker is a merge conflict, not a test.
+
+1. **Diagnose before touching CI.** When a PR is reported CI-failing with no failing test in the logs, run `gh pr view <N> --json mergeStateStatus` FIRST. `DIRTY` (or `CONFLICTING`) means a merge conflict — not a test — blocks the merge. Don't re-run CI; rebase.
+2. **Fetch and rebase** onto the advanced main: `git fetch origin main && git rebase origin/main`. The conflict localises to `__init__.py`'s `_LAZY_EXPORTS` dict where both branches added the *same* export line (e.g. both added `"PRReviewer": "hephaestus.automation.pr_reviewer"`).
+3. **Keep ONE copy.** Both sides want the identical line — delete the duplicate, keep a single entry. Verify main already carries it: `git show origin/main:hephaestus/automation/__init__.py | grep PRReviewer`.
+4. **Don't fight dict key ORDER.** The surface-pinning tests use `set()` equality and `<=` subset checks (see `test_public_surface_pins_expected_symbols`), so `_LAZY_EXPORTS` / `__all__` key order does not affect pass/fail. A richer branch-side `EXPECTED_PUBLIC_SYMBOLS` identity test coexists with main's test — no dedup needed.
+5. **Continue and re-verify**: `git rebase --continue`, then run the FULL suite (`pixi run python -m pytest tests/`) — a surface change can ripple. Then `pre-commit run --all-files`: **ruff-format may reformat a line that was fine on the old base** (e.g. collapse a multi-line f-string assertion). Re-run pre-commit until clean and commit the format fix with `git commit -S` (committer email MUST be the GPG key's email, e.g. `4211002+mvillmow@users.noreply.github.com`, or pr-policy signing fails; use the default GPG format, NOT SSH — SSH-signed commits can trip a false-NOGO in the automation reviewer when local git can't verify them without an `allowedSignersFile`).
+6. **Push needs `--force-with-lease`** because the rebase rewrote history.
+7. **Stale/duplicate-issue smell**: if main *already* contains the change your branch was trying to make, the branch may be partly redundant — but its test improvements can still be worth keeping. Keep the richer tests, drop only the now-duplicate production change.
 
 #### B′. Repairing a stale surface-pin test after a parallel-PR peer landed
 
@@ -232,6 +260,11 @@ General pattern + known backports:
 | Pin the surface with strict equality | `assert set(automation.__all__) == {hardcoded literal}` authored on the feature branch | `AuditReviewer` landed on `main` via independent PR #1067 while the branch was open; CI failed on ALL Py legs with `Extra items in the left set: 'AuditReviewer'`. The source `__all__` was correct; the test literal went stale (branch-divergence / merge-skew) | A strict-equality pin breaks every open branch the instant a peer lands elsewhere. Prefer a subset assertion (`expected - set(__all__)`) that catches removals but tolerates parallel additions; if you keep equality, re-sync the literal on rebase |
 | "Fix" the stale pin by editing the source | Considered removing `AuditReviewer` from `__all__` to satisfy the failing equality assertion | Would have silently shrunk the public SDK surface — `AuditReviewer` is a legitimate peer export added by #1067 | Decide test-vs-source BEFORE editing: `git log -p -1 -- __init__.py` proved the symbol was a real, separately-landed export. Fix the stale TEST literal, never the correct source |
 | Trust the local suite over the CI log | Saw 3 local failures and assumed all 3 were caused by my change | 2 were live-session environment noise: `HEPH_*_MODEL` env vars set in the session, and live `gh` auth leaking real PR data past a mock. Only 1 (`test_public_surface_pins_expected_symbols`) was the genuine CI failure | When local shows MORE failures than CI, verify each against the CI log. `env -i HOME=$HOME PATH=$PATH pytest` isolates env-var leakage; `git stash` isolates pre-existing failures; `gh run view --log \| grep <test>` is the decisive tiebreaker (those 2 PASSED in CI) |
+| Re-run CI on a "CI failing" lazy-export PR with no failing test | Assumed a flaky/red check and triggered `gh run rerun` | The blocker was a merge conflict (`mergeStateStatus=DIRTY`), not a test; logs showed only runner setup | When a PR reads CI-failing but no test failed, check `gh pr view <N> --json mergeStateStatus` FIRST — `DIRTY` means rebase, not re-run |
+| Treat the duplicated `_LAZY_EXPORTS` entry as a real merge of two different lines | Tried to keep both sides of the add/add conflict | Both branches added the *identical* export (sibling PR #968 landed it first); keeping both yields a duplicate key | Keep ONE copy; verify with `git show origin/main:<__init__> \| grep <symbol>` |
+| Reorder `_LAZY_EXPORTS`/`__all__` keys to "match main" during the conflict | Fought over dict key ordering to make tests pass | Surface tests use `set()` equality / `<=` subset, so order never affected pass/fail — wasted effort | Order-insensitive surface tests mean you only need set-membership correct, not key order |
+| Commit the resolved rebase without re-running pre-commit | Assumed code clean on the old base stays clean post-rebase | `ruff-format` reflowed a multi-line f-string assertion onto one line on the new base → pre-commit failed | Always re-run `pre-commit run --all-files` after a rebase; ruff-format is base-sensitive |
+| `git push` the rebased branch normally | Plain push after a history-rewriting rebase | Non-fast-forward rejection (rebase rewrote history) | Push rebased branches with `--force-with-lease` |
 | Bare `import tomllib` assuming 3.11+ matrix | Used stdlib `tomllib` directly | Matrix also ran 3.10; collection failed with `ModuleNotFoundError: No module named 'tomllib'` | Always check the lowest Python in the matrix before using newer stdlib modules |
 | `try/except ImportError` instead of version guard | `try: import tomllib except ImportError: import tomli as tomllib` | Works at runtime but mypy cannot statically narrow the type; false positive on 3.11+ | Use `sys.version_info >= (3, 11)` — mypy treats it as a narrowing predicate |
 | Skip declaring the backport dependency | Did not add `tomli; python_version < '3.11'` | `tomli` absent in fresh CI env → `ModuleNotFoundError: No module named 'tomli'` | Declare backports as conditional deps in both `pyproject.toml` and `pixi.toml` |
@@ -373,6 +406,7 @@ def test_entry_point_importable(module_path: str) -> None:
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | PR #633 — correlation_id propagation | Function-local import of `get_current_correlation_id` in `hephaestus/utils/helpers.py:170-172`; lint passes with no `noqa` |
+| ProjectHephaestus | Issue #799 / PR #988 — lazy-export add/add rebase conflict | Branch `799-auto-impl` widened `_LAZY_EXPORTS`/`__all__` in `hephaestus/automation/__init__.py`; main had already added the same `"PRReviewer"` entry via #968/#775 → PR read CI-failing but `mergeStateStatus=DIRTY` was the real blocker. Rebased onto origin/main (only `__init__.py` conflicted; `test_package_imports.py` rebased clean), kept ONE `"PRReviewer"` copy, set()-based surface tests ignored key order. Full suite 4136 passed / 19 skipped; pre-commit reflowed one f-string line; GPG-signed. **verified-local** |
 | ProjectHephaestus | Issue #775 / PR #968 — widen automation SDK surface | Exposed PlanReviewer, AddressReviewer, CIDriver (+Options) via `__all__`/`_LAZY_EXPORTS`/`_PHASE_ENTRYPOINTS`; surface-pinning test; 1081 automation tests pass |
 | ProjectHephaestus | Issue #775 / PR #968 vs #1067 — stale surface-pin repair | `test_public_surface_pins_expected_symbols` failed on every Py leg with `Extra items in the left set: 'AuditReviewer'`; `AuditReviewer` was a legitimate peer added on `main` by independent PR #1067. Fixed the stale test literal (one-line add, alphabetised), zero source change. `verified-local` — CI re-run confirmation pending. 2 sibling local failures (`HEPH_*_MODEL` env leak; live `gh` auth past a mock) proven environmental via `env -i` + `git stash` + grep-the-CI-log |
 | ProjectHephaestus | PR #657 — fix broken main CI | `sys.version_info` guard for `tomllib`/`tomli` in `tests/unit/ci/test_bandit_config.py`; conditional deps in `pyproject.toml`/`pixi.toml`; 2590 tests pass |
