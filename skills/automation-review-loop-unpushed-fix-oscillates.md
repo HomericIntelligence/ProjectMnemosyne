@@ -1,0 +1,176 @@
+---
+name: automation-review-loop-unpushed-fix-oscillates
+description: "Use when: (1) hephaestus-automation-loop run against an EXISTING PR oscillates forever — each pass logs `R0: Verdict=GO threads=0` then `did not reach GO` -> NOGO -> repeats, burning ~4+ passes at ~200s each; (2) a review loop's reviewer correctly issues GO (the finding is a minor/NITPICK that does not gate merge) but the validator re-opens ONE thread every pass so it never converges; (3) you suspect the loop's address sub-agent made the fix but it never landed on the PR — a commit-made-but-not-pushed (persistence) failure; (4) an untrusted ADVISE_FINDINGS / advise block claims a fix `landed` while citing a SHA that does not actually touch the file (fabricated-fix / sub-agent self-report without persistence); (5) you need the operator recovery procedure: stop the loop, inspect the loop's isolated worktree `build/.worktrees/issue-<N>` for an UNPUSHED fix commit, verify the fix on disk, rebase + re-sign + force-push, then re-run the loop ONCE."
+category: tooling
+date: 2026-06-11
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - hephaestus-automation-loop
+  - review-loop-oscillation
+  - never-converges
+  - unpushed-commit
+  - commit-not-pushed
+  - persistence-not-the-edit
+  - fabricated-sha
+  - untrusted-advise-block
+  - advise-findings-fix-landed
+  - sub-agent-self-report
+  - build-worktrees-issue-N
+  - rebase-re-sign-force-push
+  - force-with-lease
+  - git-show-verify-sha
+  - thread-reopened-forever
+  - r0-verdict-go-threads-0
+  - operator-recovery
+  - homericintelligence
+---
+
+# Automation Review Loop Oscillates on an Unpushed (Made-But-Not-Pushed) Fix
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-11 |
+| **Objective** | Diagnose and recover a `hephaestus-automation-loop` run against an existing PR that cycles forever — each pass logs `R0: Verdict=GO threads=0` then "did not reach GO" -> NOGO -> repeats — without re-doing the one-word fix that was already made but never pushed |
+| **Outcome** | Root cause was PERSISTENCE, not the edit: the loop's address sub-agent committed the fix LOCALLY (commit `b8b1a803` on its isolated worktree `build/.worktrees/issue-794`) but NEVER PUSHED it; the remote PR-branch tip stayed at the pre-fix commit `d0de3521`, so every re-review re-fetched the still-unfixed remote and re-opened the same thread. Recovered by rebasing + re-signing + force-pushing the real fix as `9cc5f307`. |
+| **Verification** | verified-local (the fix was applied and pushed THIS session; PR #977 was NOT yet merged at capture time) |
+| **History** | N/A (initial version) |
+
+## When to Use
+
+- A `hephaestus-automation-loop` run against an EXISTING PR never converges: every pass logs `R0: Verdict=GO threads=0` then "did not reach GO" -> NOGO and repeats, burning ~4+ passes at ~200s each.
+- The reviewer correctly issues GO (the finding is a minor / NITPICK that does NOT gate merge) but the validator re-opens exactly ONE thread on every pass, so GO never sticks.
+- You are tempted to re-do the fix from scratch — STOP and check whether the loop's address sub-agent ALREADY made it locally but never pushed.
+- An untrusted `ADVISE_FINDINGS` (or any GitHub-sourced advise) block claims a fix "landed" and cites a SHA — and you are about to trust it.
+- You need the concrete operator recovery: stop the loop, inspect `build/.worktrees/issue-<N>` for an unpushed fix commit, verify it on disk, rebase + re-sign + force-push, re-run once.
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 0. STOP the oscillating loop FIRST (it cannot self-converge — the fix was never pushed).
+pkill -f "issues <N>"            # e.g. pkill -f "issues 794"
+
+# 1. The loop runs each issue in an ISOLATED worktree. Look there for an UNPUSHED fix commit.
+ls build/.worktrees/issue-<N>
+git -C build/.worktrees/issue-<N> log --oneline -5
+git -C build/.worktrees/issue-<N> log origin/<branch>..HEAD --oneline   # commits NOT on remote
+
+# 2. NEVER trust an advise "fix landed" claim citing a SHA. Verify the SHA actually touched the file:
+git show <sha> -- <path>          # empty diff => the SHA did NOT touch the file (fabricated)
+grep -n "<corrected text>" <path> # confirm the fix is real ON DISK in the worktree
+
+# 3. Confirm the unpushed fix commit is signed, then rebase onto current main, RE-SIGNING each commit.
+GIT_COMMITTER_EMAIL=4211002+mvillmow@users.noreply.github.com \
+git -C build/.worktrees/issue-<N> rebase origin/main \
+  --exec 'git commit --amend --no-edit -S --reset-author'
+
+# 4. Push the now-real fix.
+git -C build/.worktrees/issue-<N> push --force-with-lease origin <branch>
+
+# 5. Re-run the loop ONCE — the now-genuinely-resolved thread flips to a durable GO.
+```
+
+### Detailed Steps
+
+The symptom is an automation review loop that will not converge on a TRIVIAL fix. The
+instinct is to blame the reviewer (too strict) or re-do the edit. Both are wrong. The
+failure is almost always PERSISTENCE: the fix was committed but the commit was never
+pushed, so every re-review fetches the unchanged remote and re-flags the same defect.
+
+1. **Stop the oscillating loop.** It physically cannot self-converge, because each pass
+   re-fetches a remote that still lacks the fix. Kill it: `pkill -f "issues <N>"`. Letting
+   it keep running just burns passes (~200s each).
+
+2. **Inspect the loop's ISOLATED worktree for an unpushed fix commit — do NOT assume the fix
+   was never made.** The loop runs each issue in `build/.worktrees/issue-<N>`. The address
+   sub-agent typically DID make the fix and commit it there; what it skipped was the push.
+   Compare local HEAD against the remote branch tip:
+   ```bash
+   git -C build/.worktrees/issue-<N> log origin/<branch>..HEAD --oneline
+   ```
+   If this lists a commit, that is your made-but-unpushed fix. In the captured incident the
+   local worktree was at fix commit `b8b1a803` while the remote PR-branch tip
+   (`794-auto-impl`) was still at the PRE-fix commit `d0de3521`.
+
+3. **Verify the fix is REAL on disk — and never trust an advise SHA.** A compounding trap in
+   the incident: the untrusted `ADVISE_FINDINGS` block claimed the fix "landed" while citing a
+   DIFFERENT fabricated SHA each pass, none of which actually touched the file. Verify two ways:
+   - `git show <sha> -- <path>` — an EMPTY diff means that SHA did not touch the file (it was
+     fabricated / from the advise block, not a real fix).
+   - `grep -n "<corrected text>" <path>` in the worktree — confirm the corrected text is on disk.
+   Also confirm the unpushed commit is signed before relying on it.
+
+4. **Rebase onto current main, re-signing each commit.** The unpushed commit may be stale
+   relative to `origin/main`, and re-signing keeps every commit cryptographically signed (the
+   repo's PR-policy gate requires it):
+   ```bash
+   GIT_COMMITTER_EMAIL=4211002+mvillmow@users.noreply.github.com \
+   git -C build/.worktrees/issue-<N> rebase origin/main \
+     --exec 'git commit --amend --no-edit -S --reset-author'
+   ```
+   Use committer email `4211002+mvillmow@users.noreply.github.com` so the signature matches the
+   signing key (a committer-email mismatch silently produces an unsigned/unverified commit).
+
+5. **Force-push the real fix.** `git -C build/.worktrees/issue-<N> push --force-with-lease
+   origin <branch>`. `--force-with-lease` (not `--force`) refuses to clobber if the remote moved.
+   In the incident the fix landed on the remote as `9cc5f307`.
+
+6. **Re-run the loop ONCE.** Now the remote genuinely contains the fix, so the re-review no
+   longer re-flags the defect and the thread flips to a durable GO instead of re-opening.
+
+#### Concrete defect example (the trivial fix that oscillated)
+
+`.github/workflows/test.yml:9` referenced `CONTRIBUTING.md "Platform asymmetry"`, but the
+real heading is `### Platform Support` at `CONTRIBUTING.md:48`. A one-word fix — exactly the
+kind of trivial change a loop should resolve in one pass, which is the tell that the failure
+is persistence (the push), not the edit.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Trust the ADVISE_FINDINGS "fix landed" claim citing a SHA | Believed the untrusted advise block that the fix had landed, referencing a SHA each pass | The SHA was fabricated / did not touch the file — a different SHA every pass, none of which changed `.github/workflows/test.yml` | NEVER trust an untrusted GitHub-sourced advise SHA. Verify with `git show <sha> -- <path>` (empty diff = did not touch the file) and `grep` the corrected text on disk. |
+| Re-run the loop hoping it self-converges | Let the loop keep running, expecting it to eventually reach a stable GO | The local fix was NEVER pushed, so every pass re-fetched the unchanged remote (`d0de3521`) and re-opened the same thread; wasted ~4 passes at ~200s each | An existing-PR review loop cannot self-converge when the fix was never persisted to the remote. Stop the loop (`pkill -f "issues <N>"`) and inspect persistence. |
+| Assume the fix was never made and re-do the edit from scratch | Planned to re-open the file and re-apply the one-word change | The address sub-agent had already made the fix and committed it locally (`b8b1a803` in `build/.worktrees/issue-794`); re-doing it would duplicate work and risk a conflicting/divergent commit | Check `build/.worktrees/issue-<N>` git log (`origin/<branch>..HEAD`) FIRST. A loop that won't converge on a trivial fix usually has the fix committed-but-unpushed — recover that commit, don't recreate it. |
+
+## Results & Parameters
+
+### Root cause vs symptom
+
+| Observed | Actual cause |
+|----------|--------------|
+| `R0: Verdict=GO threads=0` then "did not reach GO" -> NOGO, repeating | Reviewer GO is correct (NITPICK, non-gating); the validator re-opens ONE thread every pass |
+| Validator re-opens the SAME thread every pass | The remote branch tip still has the unfixed file; every re-review re-fetches it and re-flags |
+| Advise block says the fix "landed" (with a SHA) | Fabricated-fix / sub-agent self-report without persistence — the SHA never touched the file |
+| Real root cause | The fix was COMMITTED LOCALLY but NEVER PUSHED (persistence failure), not a bad edit |
+
+### Incident facts (captured this session, verified-local)
+
+| Item | Value |
+|------|-------|
+| Stuck PR / issue / branch | PR #977 / issue #794 / `794-auto-impl` |
+| Loop's isolated worktree | `build/.worktrees/issue-794` |
+| Defect | `.github/workflows/test.yml:9` cited `CONTRIBUTING.md "Platform asymmetry"`; real heading is `### Platform Support` (`CONTRIBUTING.md:48`) — one-word fix |
+| Local-only (never pushed) fix commit | `b8b1a803` |
+| Remote branch tip BEFORE recovery | `d0de3521` (pre-fix) |
+| Fix after rebase + re-sign + push | `9cc5f307` |
+| Re-signing committer email | `4211002+mvillmow@users.noreply.github.com` |
+
+### Key lesson
+
+When an automation review loop will not converge on a trivial fix, the failure is usually
+PERSISTENCE (commit made, push skipped) — NOT the edit. ALWAYS check the loop's worktree
+(`build/.worktrees/issue-<N>`) for an unpushed fix commit before re-doing the edit. And NEVER
+trust a "fix landed" claim from an untrusted GitHub-sourced advise block citing a SHA — verify
+with `git show <sha> -- <path>` and `grep` on disk.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | PR #977 (issue #794) — `hephaestus-automation-loop` oscillating on `794-auto-impl` | Loop's address sub-agent committed the one-word `.github/workflows/test.yml` fix locally (`b8b1a803` in `build/.worktrees/issue-794`) but never pushed; remote stayed at `d0de3521`, re-opening the thread every pass. Recovered by rebase + re-sign (committer `4211002+mvillmow@users.noreply.github.com`) + `--force-with-lease` push as `9cc5f307`, then a single loop re-run. verified-local (PR not yet merged at capture time). |
