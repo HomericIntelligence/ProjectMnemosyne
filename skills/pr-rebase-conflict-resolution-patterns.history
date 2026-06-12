@@ -1,6 +1,24 @@
 <!-- markdownlint-disable MD024 -->
 # pr-rebase-conflict-resolution-patterns — History
 
+## v1.2.0 (2026-06-11)
+
+**Changed by:** ProjectHephaestus PR #967 (issue #768) add/add already-merged rebase
+
+**Verification:** verified-local (resolved branch passed the full local test suite — `pixi run python -m pytest tests/` → 4134 passed / 19 skipped — and `pre-commit run --all-files` exit 0; the corrected commit was NOT pushed, so no CI confirmation)
+
+**What changed:**
+
+- Added a new **Failed Attempts** row: "Force-pushing a near-no-op after an add/add already-merged rebase." It captures the failure mode where a PR's *entire* substantive change (here: removing emoji from `scripts/compare_benchmarks.py` plus a regression test `tests/unit/scripts/test_compare_benchmarks_no_emoji.py`) had independently landed on `origin/main` via a sibling PR. The rebase then produced `CONFLICT (add/add)` on the duplicated new test file (both branches created the same new file), and after resolution the PR's only residual diff was a 4-line comment correction — a near-no-op.
+- The row is placed immediately after the existing "Trusting a stale automated fix plan ('already merged')" row and explicitly marked as its **INVERSE**: that row is about DISTRUSTING a false "already merged" claim; this one is about independently CONFIRMING the change genuinely landed via a sibling PR, reconciling the add/add duplicate (take main's merged file as base, re-apply only the genuine residual delta), checking `git diff origin/main...HEAD --stat` for a trivial/empty residual, and surfacing the superseded near-no-op to the human rather than silently shipping it.
+- Added a **When to Use** bullet and frontmatter `description` trigger (10) for the add/add already-merged-via-sibling scenario.
+- Added tags `already-merged-sibling` and `add-add-conflict`.
+- Added a **Verified On** row for ProjectHephaestus PR #967 (issue #768) documenting the resolution, the key-matched committer-email re-sign (`4211002+mvillmow@users.noreply.github.com`, else GitHub reports `no_user`), and the verified-local evidence.
+
+**Why:** The existing skill covered the *distrust-a-stale-claim* direction but not the inverse — when the "already merged" claim is genuinely TRUE because a sibling PR landed the identical change. The add/add conflict is the diagnostic signature of that duplication, and the danger is silently force-pushing a no-op PR instead of recognizing it as superseded. Re-signing with the key-UID-matched committer email is required in this repo so the replayed commit verifies on GitHub.
+
+**Snapshot reference:** The full prior v1.1.0 skill content is preserved in the existing history entries below (and in git history); this entry records only the v1.2.0 delta rather than re-pasting the full ~32KB skill.
+
 ## v1.1.0 (2026-06-07)
 
 Restore re-sign-after-rebase nuance (nuance audit): rebasing strips GPG/SSH commit signatures, so replayed commits must be re-signed (`git rebase --exec "git commit --amend --no-edit -S --no-verify" <base>`); local `git log --format='%G?'` may show `U` even for validly-signed commits — GitHub's REST `commit.verification.verified` is authoritative. Added a `### B2. Re-sign replayed commits` subsection and a Failed Attempts row.
