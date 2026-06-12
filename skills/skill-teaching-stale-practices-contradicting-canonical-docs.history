@@ -1,12 +1,56 @@
+<!-- markdownlint-disable MD024 MD040 -->
+# skill-teaching-stale-practices-contradicting-canonical-docs — History
+
+## v1.1.0 (2026-06-11)
+
+**Changed by:** PR #1014 reached green CI; verification upgraded
+verified-local → verified-ci
+**Verification:** verified-ci
+
+**What changed:**
+
+- Frontmatter `verification: verified-local` → `verified-ci`; added a
+  `history:` field pointing to this file; `version: "1.0.0"` → `"1.1.0"`;
+  `date: 2026-06-05` → `2026-06-11`.
+- Overview table: Date `2026-06-05` → `2026-06-11`; Verification upgraded to
+  `verified-ci`; Outcome row now states that PR #1014 reached green CI after a
+  rebase resolved a modify/delete conflict on the deleted `references/notes.md`
+  — the wholesale-rewrite + delete-supporting-files approach is validated
+  end-to-end.
+- Added a short Verified-Workflow subsection, "Deleting a supporting file can
+  resurface as a rebase conflict": `git rm`-ing a stale supporting file can
+  later surface as a **modify/delete** rebase conflict when main independently
+  modifies that same file; resolve by re-confirming the base copy is still
+  stale, then `git rm`. Cross-references `pr-rebase-conflict-resolution-patterns`.
+- Verified On: ProjectHephaestus row updated from "PR #1014 pending CI" to PR
+  #1014 reached green CI (pre-commit 32/32 hooks + 4134 tests green).
+
+**Why it changed:** When v1.0.0 was written, PR #1014 (the
+github-actions-python-cicd rewrite that deleted the stale
+`references/notes.md`) was still pending CI. The PR subsequently went BLOCKED
+with `mergeStateStatus=DIRTY`, `mergeable=CONFLICTING` and **no failing
+checks** — main had MODIFIED `references/notes.md` while the PR DELETED it, a
+modify/delete conflict that was the sole blocker. Re-confirming the base copy
+was still stale and resolving by `git rm` produced a clean rebase, with
+`pre-commit run --all-files` (32/32 hooks) and `pixi run python -m pytest
+tests/` (4134 passed, 19 skipped, 85.81% coverage) green. The deletion-as-part
+-of-a-rewrite approach this skill teaches is now confirmed end-to-end, so the
+verification is upgraded verified-local → verified-ci. This is the skill's
+first amendment, hence the creation of this history file.
+
+## v1.0.0 (2026-06-05)
+
+Initial version. Full original content preserved below for reference.
+
+````markdown
 ---
 name: skill-teaching-stale-practices-contradicting-canonical-docs
 description: "When a skill or guide teaches practices contradicting CLAUDE.md or other canonical docs, wholesale rewrite (not patching) is required to prevent contradiction persistence. Use when: (1) a skill teaches deprecated tools (flake8, black, requirements.txt, setup.py) contradicting CLAUDE.md Language Preference, (2) a skill references stale Python versions (3.8–3.9) contradicting current baseline (3.10+), (3) supporting files (session logs, references) contain the same stale practices as the main skill file, (4) patching individual sections would leave dangerous contradictions elsewhere, (5) stale guidance could mislead downstream consumers before they discover the newer canonical docs."
 category: tooling
-date: 2026-06-11
-version: "1.1.0"
+date: 2026-06-05
+version: "1.0.0"
 user-invocable: false
-verification: verified-ci
-history: skill-teaching-stale-practices-contradicting-canonical-docs.history
+verification: verified-local
 tags: [skill-quality, contradiction-resolution, canonical-docs, wholesale-rewrite, skill-maintenance]
 ---
 
@@ -16,10 +60,10 @@ tags: [skill-quality, contradiction-resolution, canonical-docs, wholesale-rewrit
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-11 |
+| **Date** | 2026-06-05 |
 | **Objective** | Establish pattern for fixing skills that teach practices contradicting canonical docs (CLAUDE.md, project standards) |
-| **Outcome** | Successful wholesale rewrite of github-actions-python-cicd skill from stale flake8/black/Python 3.8–3.9 to current stack (pixi/ruff/Python 3.10–3.13); PR #1014 reached green CI after a rebase that resolved a modify/delete conflict on the deleted `references/notes.md` — the wholesale-rewrite + delete-supporting-files approach is validated end-to-end |
-| **Verification** | verified-ci (ProjectHephaestus issue #720, PR #1014 reached green CI: pre-commit all-hooks green, 4134 tests pass, modify/delete conflict resolved on rebase) |
+| **Outcome** | Successful wholesale rewrite of github-actions-python-cicd skill from stale flake8/black/Python 3.8–3.9 to current stack (pixi/ruff/Python 3.10–3.13) |
+| **Verification** | verified-local (implemented in ProjectHephaestus issue #720, PR #1014 pending CI) |
 
 ## When to Use
 
@@ -100,11 +144,11 @@ pre-commit run markdownlint-cli2 --files skills/github-actions-python-cicd/SKILL
    # Check ENTIRE directory for stale tokens (critical — catches hidden files)
    ! grep -rnE 'flake8|black|requirements.txt|setup.py|src/' skills/github-actions-python-cicd/
    # Exit 0 ✓ (no stale tokens found)
-   
+
    # Positive match: confirm correct version/pattern is present
    grep -n 'ruff check' skills/github-actions-python-cicd/SKILL.md
    grep -n 'python-version.*3\.1[0-3]' skills/github-actions-python-cicd/SKILL.md
-   
+
    # Format gate
    pre-commit run markdownlint-cli2 --files skills/github-actions-python-cicd/SKILL.md
    ```
@@ -113,19 +157,6 @@ pre-commit run markdownlint-cli2 --files skills/github-actions-python-cicd/SKILL
    - Title: `feat: rewrite github-actions-python-cicd skill to match CLAUDE.md stack`
    - Body: List every verification command that passed
    - Rationale: Explain why wholesale rewrite was necessary vs. patching
-
-### Deleting a supporting file can resurface as a rebase conflict
-
-`git rm`-ing a stale supporting file (e.g. `references/notes.md`) is not the
-end of it: if main independently MODIFIES that same file before your PR
-merges, the rebase produces a **modify/delete conflict**
-(`CONFLICT (modify/delete): <path> deleted in <commit> and modified in
-HEAD`). Resolve it the same way you decided to delete in the first place —
-re-confirm the base/main copy is still the stale content
-(`git show origin/main:<path> | grep -niE '<stale-tokens>'`), then `git rm
-<path>` and `GIT_EDITOR=true git rebase --continue`. This is exactly what
-blocked PR #1014 until rebased. See `pr-rebase-conflict-resolution-patterns`
-for the modify/delete rebase resolution.
 
 ## Failed Attempts
 
@@ -231,4 +262,5 @@ When you encounter a skill contradicting canonical docs, apply this checklist:
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectHephaestus | Issue #720: github-actions-python-cicd skill modernization | Rewritten 438 lines → 242 lines; deleted stale supporting files; all verifications pass; PR #1014 reached green CI after a rebase resolved a modify/delete conflict on the deleted `references/notes.md` (pre-commit 32/32 hooks + 4134 tests green) |
+| ProjectHephaestus | Issue #720: github-actions-python-cicd skill modernization | Rewritten 438 lines → 242 lines; deleted stale supporting files; all verifications pass; PR #1014 pending CI |
+````

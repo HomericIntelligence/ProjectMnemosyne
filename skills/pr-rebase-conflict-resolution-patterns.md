@@ -1,9 +1,9 @@
 ---
 name: pr-rebase-conflict-resolution-patterns
-description: "Use when: (1) a PR branch is CONFLICTING or DIRTY after main advances and needs rebasing, (2) a mass rebase of 10+ PRs is needed after a major refactor causes conflicts across the queue, (3) a stacked PR goes DIRTY when its prerequisite merges and the base must be retargeted — later CI/lint fix commits on the dependent branch are orphaned and must be cherry-picked, (4) a Safety Net hook blocks git checkout --theirs / --ours during automated rebase conflict resolution, (5) a file was completely rewritten on one branch and small targeted edits exist on the other, (6) a parallel swarm produced overlapping PRs that conflict on the same paths and one must be rebased onto the other, (7) a feature PR conflicts after a sibling refactor merges and edits must be ported to the new file structure, (8) a TypeScript or other language-level shadowing bug appears only after a rebase because two branches independently added identically-named locals to the same scope, (9) numerical or optimizer PRs conflict when main merged its own version of a shared module and API signatures changed, (10) a PR's substantive change independently landed on main via a sibling PR so a rebase produces an add/add conflict on a duplicated new file and the PR becomes a near-no-op residual"
+description: "Use when: (1) a PR branch is CONFLICTING or DIRTY after main advances and needs rebasing, (2) a mass rebase of 10+ PRs is needed after a major refactor causes conflicts across the queue, (3) a stacked PR goes DIRTY when its prerequisite merges and the base must be retargeted — later CI/lint fix commits on the dependent branch are orphaned and must be cherry-picked, (4) a Safety Net hook blocks git checkout --theirs / --ours during automated rebase conflict resolution, (5) a file was completely rewritten on one branch and small targeted edits exist on the other, (6) a parallel swarm produced overlapping PRs that conflict on the same paths and one must be rebased onto the other, (7) a feature PR conflicts after a sibling refactor merges and edits must be ported to the new file structure, (8) a TypeScript or other language-level shadowing bug appears only after a rebase because two branches independently added identically-named locals to the same scope, (9) numerical or optimizer PRs conflict when main merged its own version of a shared module and API signatures changed, (10) a PR's substantive change independently landed on main via a sibling PR so a rebase produces an add/add conflict on a duplicated new file and the PR becomes a near-no-op residual, (11) a PR is DIRTY with all CI checks green/passing — the merge conflict itself is the sole blocker (rebase, do not hunt for a failing job), (12) a rebase hits a modify/delete conflict on a file the PR intentionally deletes — confirm the base copy is still stale then git rm"
 category: ci-cd
 date: 2026-06-11
-version: "1.2.0"
+version: "1.3.0"
 user-invocable: false
 history: pr-rebase-conflict-resolution-patterns.history
 tags: [git, rebase, merge-conflict, pr, batch, stacked-pr, cherry-pick, safety-net, parallel-swarm, serial-merge-train, full-rewrite, shadow-variable, tdz, numeric-equivalence, clang-format, cmake, pixi-lock, force-with-lease, auto-merge, already-merged-sibling, add-add-conflict]
@@ -36,6 +36,8 @@ tags: [git, rebase, merge-conflict, pr, batch, stacked-pr, cherry-pick, safety-n
 - A numerical/optimizer PR conflicts because main merged its own version of a shared module and the API signature changed — must adapt call-sites while proving numeric equivalence.
 - A C++ rebase touches both source and `CMakeLists.txt`; or a deletion commit replays and over-removes active code.
 - A PR's substantive change independently landed on main via a sibling PR, so a rebase produces an add/add conflict on a duplicated new file and the PR becomes a near-no-op residual (only a trivial delta remains vs main).
+- A PR is `DIRTY`/`CONFLICTING` with **all CI checks green/passing** — the merge conflict itself is the sole blocker; rebase, do not hunt for a failing job (`gh pr view N --json mergeStateStatus,mergeable,statusCheckRollup`).
+- A rebase hits a **modify/delete conflict on a file the PR intentionally deletes** (`CONFLICT (modify/delete): <path> deleted in <commit> and modified in HEAD`) — confirm the base copy is still the stale content the PR removes, then `git rm`.
 - Common trigger phrases: "fix these failing PRs", "rebase all branches onto main", "mass rebase after merge wave", "stacked PR went dirty", "Safety Net blocked git checkout".
 
 ## Verified Workflow
@@ -48,6 +50,10 @@ gh pr list --state open --json number --jq 'length'      # 0 → cleanup task, n
 gh run list --branch main --limit 3 --json status,conclusion,workflowName \
   --jq '.[] | "\(.workflowName): \(.status)/\(.conclusion)"'   # main RED → fix main FIRST
 git cherry origin/main <branch>     # 0 lines → branch already merged (squash artifact); skip
+
+# DIRTY/CONFLICTING with EVERY check green = the conflict IS the blocker (no phantom failing job):
+gh pr view N --json mergeStateStatus,mergeable,statusCheckRollup
+#   mergeStateStatus=DIRTY, mergeable=CONFLICTING, all rollup SUCCESS → rebase, do NOT chase CI
 gh api repos/OWNER/REPO --jq '{allow_squash_merge,allow_rebase_merge,allow_merge_commit}'
 
 # ─── 1. CLASSIFY ───
@@ -157,6 +163,13 @@ git checkout --ours marketplace.json                    # main has the union; PR
 
 `git checkout --ours/--theirs/--`, `git restore`, `git reset --hard`, `git branch -D`, `git worktree remove --force`, `rm -rf <fixed-path>`, and even commit-message text containing `git restore --theirs` are blocked. Safety Net custom rules can only ADD restrictions, not bypass built-ins. Workarounds: `git show :2:/:3:` writes (conflict take); `git reset --keep` (not `--hard`); `git branch -d` (not `-D`); `git worktree remove` (not `--force`); `git stash`/`stash drop` to discard artifact edits (NOT mid-rebase with unmerged paths — git refuses); `mktemp -d` (not pre-cleaning a fixed path); write commit messages via `git commit -F /tmp/msg.txt`; escalate `git checkout --ours` to the main conversation (sub-agents share the hook environment).
 
+#### C2. Post-rebase verification checklist (run before claiming clean)
+
+- **No conflict markers survive** in any rewritten file: `grep -nE '^(<<<<<<<|=======|>>>>>>>)' <file>` returns nothing.
+- **Distinguish stale-practice-being-taught from anti-pattern-being-warned-against by reading surrounding context, not raw grep counts.** A rewritten file that intentionally teaches "❌ flake8" / "Never use `src/`" will still match `grep flake8|src/`; those are correct anti-pattern examples, not residue. Read the surrounding lines before treating a token hit as a failure — raw counts mislead.
+- **Run the REAL gate, not just formatting hooks**: `pre-commit run --all-files` (all hooks, not a single markdownlint) AND the full test suite (`pixi run python -m pytest tests/`). A clean rebase with green formatting can still ship broken code.
+- **Local `git log --format='%G?'`=`U`/`N` after a rebase is a FALSE NEGATIVE** when the environment lacks an `allowedSignersFile` for the SSH key — the commit IS signed and GitHub verifies it server-side. Trust GitHub REST `.commit.verification.verified`, not local `%G?` (see § B2).
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -184,6 +197,9 @@ git checkout --ours marketplace.json                    # main has the union; PR
 | `clang-format -i src.cpp CMakeLists.txt` | Formatted a build file during resolution | Mangled CMake → CONFIGURE parse error (not where you'd suspect) | Format only the C/C++ files you edited, by name; resolve CMake by hand/regen |
 | Pushing a hand-resolved C++ merge without a local build | Let CI find errors | CI surfaces one slow error per round; missed a sibling signature change | Build locally first — one build surfaces every error (CMake parse + signature) at once |
 | Dropping the PR's duplicate optimizer module / loosening a failing test | Kept main's copy; relaxed a bound to go green | API signature differs → broke dependent code; loosened test guards nothing; compiling ≠ correct | Adapt call-site to main's API + document numeric equivalence; fix asserts with derived values; defer provably-broken math |
+| Hunting for a failing CI job on a DIRTY PR | Re-ran/inspected checks on a PR stuck BLOCKED with `mergeStateStatus=DIRTY`, `mergeable=CONFLICTING` | Every check was already green — the **merge conflict itself** was the blocker, no job to fix | `gh pr view N --json mergeStateStatus,mergeable,statusCheckRollup`; DIRTY+all-green → rebase, do not chase CI (ProjectHephaestus PR #1014) |
+| `git rm` on a modify/delete conflict without checking the base copy | Blindly deleted the file to keep the PR's intent | If main legitimately ADDED content to that file, the deletion silently discards it | A modify/delete is a decision about intent: first `git show origin/main:<path> \| grep -niE '<stale-tokens>'` to confirm the base is still stale, THEN `git rm` + `GIT_EDITOR=true git rebase --continue` |
+| Treating raw grep token counts as conflict residue after a rewrite | Failed a rewritten skill because `grep flake8` still matched | The matches were intentional anti-pattern examples ("❌ flake8", "Never use `src/`"), not stale practice | Read surrounding context — distinguish a practice being WARNED-against from one being TAUGHT; counts mislead |
 | `--theirs` for every file in drop-and-redo | Took the PR's pre-sibling version of cross-cutting files | Silently reverted siblings' substantive changes | `--theirs` is safe only for incidental upstream changes; else drop-and-redo |
 | Hand-merging a 1000+ line facade-vs-monolith conflict | Resolved markers by hand | Hundreds of moved lines interleaved with ~50 feature lines; not auditable | Abort, reset to main, `git apply` clean files, hand-port delta onto sub-modules |
 | Validating `marketplace.json` count mid-rebase | Expected the final entry count during commit 8/11 | Mid-rebase tree is a snapshot, not the final state | Only validate the final count after `git rebase` completes |
@@ -248,6 +264,7 @@ git commit --allow-empty -S -m "chore: re-trigger CI"
 | ProjectNestor | 8 hot-file-sharing PRs via SERIAL MERGE TRAIN (#83/#87/#94/#97/#99/#101); PR #101 clang-format-CMake mangling + local-build-before-push | verified-ci |
 | ProjectHephaestus | 30+ PR myrmidon waves; pixi task path / ruff S101 / caplog propagation; transitive-CVE pin #881 unblocked #879; PR #394 drop-and-redo (f-string conversion deferred) | verified-ci |
 | ProjectHephaestus | 2026-06-11, PR #967 (issue #768): Emoji-removal fix + test had independently landed on main via a sibling PR; rebase produced `CONFLICT (add/add)` on `tests/unit/scripts/test_compare_benchmarks_no_emoji.py`. Resolved by taking main's merged file + re-applying only a 4-line comment correction; residual diff vs main was trivial (PR became near-no-op). Re-signed the replayed commit with key-matched committer email (`4211002+mvillmow@users.noreply.github.com`) so GitHub would not report `no_user`. verified-local: 4134 passed/19 skipped + pre-commit clean; not pushed. | verified-local |
+| ProjectHephaestus | PR #1014/#720 DIRTY-with-all-green diagnosis + modify/delete resolution on an intentionally-deleted `references/notes.md` (rebase clean, pre-commit 32/32 hooks + 4134 tests green) | verified-ci |
 | ProjectHermes | ~30 PRs sharing server.py/config.py/publisher.py via batch take-HEAD; PR 120 incomplete-implementation; CLEAN-but-un-armed arming #645/#648 | verified-ci |
 | AchaeanFleet | Wave 2+3 rebase of 21 DIRTY PRs (Dockerfiles/ci.yml); PR #661 TS7022/TS2448 shadow/TDZ fix; #690 self-inflicted CI_BLOCKER removal via detached worktree | verified-ci |
 | Myrmidons | 13 stacked-PR EOF-fixer cascade (~39 trivial conflicts, sed loop); shellcheck swarm in `.claude/worktrees/agent-*` (git -C + detached-HEAD branch -f); 0-open-PR squash-artifact detection | verified-ci / verified-local |
