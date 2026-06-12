@@ -2,6 +2,52 @@
 
 # stale-documentation-audit-and-broken-reference-repair — History
 
+## v1.1.0 (2026-06-12)
+
+**Changed by:** ProjectHephaestus #1208 R1 (post-NOGO replan)
+
+**Verification:** unverified (planning artifact — no edits applied, no `pixi run pytest`, no CI run).
+The CI-checkout root cause was verified-by-inspection (`test.yml` showed a bare `actions/checkout`
+with no `with:` block); the end-to-end fix is NOT verified.
+
+Additive (MINOR). Added a new §10 to the Verified Workflow — "Drift-detection test fragility —
+anti-patterns and CI-effective resolutions (Proposed)" — documenting BOTH the fragility
+anti-patterns of a drift-detection test AND their concrete, CI-effective resolutions:
+
+- **Silent-skip → hard-fail + fetch-tags (headline fix):** a drift test that `pytest.skip()`s on a
+  missing git tag is a silent no-op in CI. Root cause: a bare `actions/checkout` does a shallow,
+  tag-less fetch so `git describe --tags` returns None. Resolution = both halves: add
+  `fetch-depth: 0` + `fetch-tags: true` to the checkout step (mirror an existing release/auto-tag
+  workflow) AND replace `pytest.skip` with `pytest.fail` (belt-and-suspenders).
+- **`==`-to-latest-tag race → `>=`/"does not trail":** assert `documented_tuple >= canonical_tuple`
+  (reuse the repo's parser) so a freshly-pushed newer tag doesn't instantly red `main`, but a
+  genuinely-stale doc still fails.
+- **TDD RED must assert NON-SKIP:** run `pytest -rs`, require `1 failed` (not `1 skipped`/`1
+  passed`); GREEN steps require `0 skipped`; prove load-bearing by flipping the doc back to stale
+  and asserting non-zero exit.
+- **Verified helper detail:** `_version_from_git_tag` strips the leading `v` (returns `"0.9.5"`);
+  verify return form before assuming like-for-like comparison.
+- **Reviewer-confirmed non-issue:** a new `tests/unit/docs/` dir with no source package does NOT
+  trip a one-directional test-structure mirror check (`src − test` flags only source dirs missing a
+  test dir); a no-loose-files check is satisfied because the test lives in a subpackage.
+
+Also: bumped frontmatter `version` 1.0.0 → 1.1.0, set `date` 2026-06-12, added
+`verification: unverified`, extended tags (drift-detection-test, ci-effective, version-currency),
+added 4 Failed Attempts rows, a CI-effective version-currency test snippet in Results & Parameters,
+and a "Verified On" row for ProjectHephaestus #1208 R1.
+
+### Snapshot superseded — v1.0.0 frontmatter
+
+```yaml
+name: stale-documentation-audit-and-broken-reference-repair
+category: documentation
+date: 2026-06-07
+version: "1.0.0"
+user-invocable: false
+history: stale-documentation-audit-and-broken-reference-repair.history
+tags: [doc-drift, stale-doc, broken-references, phantom-dir, placeholder, stub, anchor-validation, tier-labels, doc-audit, doc-sync, merged]
+```
+
 ## v1.0.0 (2026-06-07)
 
 Consolidated 10 documentation skills into one canonical covering stale-doc drift audits and broken-reference repair. Absorbed skills:

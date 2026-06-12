@@ -2,11 +2,12 @@
 name: stale-documentation-audit-and-broken-reference-repair
 description: "Use when: (1) running a doc-drift audit across a corpus — detecting stale counts, metric discrepancies, cross-doc contradictions, ecosystem-role drift; (2) removing phantom directory references from documentation when a path no longer exists; (3) fixing broken documentation references (dead links, stale headings); (4) auditing documentation examples for policy violations; (5) auditing and rewriting getting-started stubs by sourcing real commands from justfile and versions from pixi.toml; (6) fixing incorrect tier labels or version numbers in docs that have drifted from implementation; (7) managing the full lifecycle of placeholder and stub documentation — deletion under YAGNI, deferred-comment placeholders, rewriting with accurate codebase-grounded content; (8) resolving audit nitpicks for monolithic code by documenting verified design rationale; (9) resolving CONTRIBUTING.md case-clashes and circular cross-references in docs/; (10) validating anchor fragments in markdown deep-links to detect broken headings."
 category: documentation
-date: 2026-06-07
-version: "1.0.0"
+date: 2026-06-12
+version: "1.1.0"
 user-invocable: false
+verification: unverified
 history: stale-documentation-audit-and-broken-reference-repair.history
-tags: [doc-drift, stale-doc, broken-references, phantom-dir, placeholder, stub, anchor-validation, tier-labels, doc-audit, doc-sync, merged]
+tags: [doc-drift, stale-doc, broken-references, phantom-dir, placeholder, stub, anchor-validation, tier-labels, doc-audit, doc-sync, drift-detection-test, ci-effective, version-currency, merged]
 ---
 
 # Stale Documentation Audit and Broken Reference Repair
@@ -235,6 +236,70 @@ Scan only fenced shell code blocks (never prose, to avoid matching prohibition t
 `build/`). Anchor command rules to line starts and exclude `#`-commented lines (intentional
 "BLOCKED" demonstrations are not violations). Add a regression test per new pattern.
 
+#### 10. Drift-detection test fragility — anti-patterns and CI-effective resolutions (Proposed)
+
+> **⚠️ Proposed (unverified).** The resolutions below come from ProjectHephaestus #1208
+> planning round R1 (a re-plan after R0 got NOGO for shipping a no-op drift guard). The
+> CI-checkout root cause was **verified by inspection** (reading `test.yml` showed a bare
+> `actions/checkout` step). The end-to-end fix (test actually runs+passes in CI with the new
+> checkout config) is **NOT** verified — no edits were applied, no `pixi run pytest`, no CI run.
+> Treat as a design blueprint, not a CI-green claim.
+
+A drift-detection regression test (§1, Results & Parameters) is only worth shipping if it can
+actually **go red in CI**. Three fragility anti-patterns make a drift guard a silent no-op; each
+has a concrete resolution.
+
+##### Making the drift guard CI-effective (resolutions)
+
+**(a) Silent-skip → hard-fail + fetch-tags (THE headline fix).** A test that calls
+`pytest.skip()` when it cannot resolve the git tag is a silent no-op gate: it shows green in CI
+while guarding nothing. **Root cause (verified-by-inspection):** GitHub Actions `actions/checkout`
+with a **bare** `uses:` (no `with:` block) does a shallow, single-commit, **tag-less** fetch, so a
+helper that shells `git describe --tags` returns `None`. **Resolution — take BOTH halves
+(belt-and-suspenders):**
+
+1. Add `fetch-depth: 0` and `fetch-tags: true` to the test job's checkout step. Mirror an existing
+   workflow in the repo that already does this (e.g. an auto-tag / release workflow) rather than
+   inventing config.
+2. Replace `pytest.skip(...)` with `pytest.fail(...)` carrying remediation text. If the checkout
+   config ever regresses, the test goes **RED loudly** instead of green-but-skipped.
+
+> **Lesson: a guard that silently skips is not a guard.** Never use `pytest.skip` for the absence
+> of the very authority (here, the git tag) that the test exists to check.
+
+**(b) `==`-to-latest-tag race → `>=` / "does not trail" comparison.** Asserting
+`documented == latest_tag` reds `main` the instant a *new* tag is pushed — before anyone edits the
+doc — reintroducing the manual chore the drift test was meant to kill. **Resolution:** assert the
+documented version is **not strictly older** than the latest tag
+(`documented_tuple >= canonical_tuple`). A freshly-pushed newer tag does **not** instantly fail,
+but a genuinely-stale doc (e.g. `0.9.2` vs `0.9.5`) still fails. Reuse the repo's existing
+version-tuple parser; do not hand-roll the comparison.
+
+**(c) Verified helper detail (worked):** the repo's `_version_from_git_tag(repo_root)` **strips the
+leading `v`** (returns `"0.9.5"`, not `"v0.9.5"`), matching the doc's printed form. Verify the
+return form before assuming the comparison is like-for-like — a `v`-prefixed tuple parse vs a
+bare-version doc string would mis-compare.
+
+**(d) TDD RED step must assert NON-SKIP, not just "fails".** Because of the skip trap, a developer
+can see a green run that is actually a SKIP and conclude the test passed. **Resolution:** run the
+RED step with `pytest -rs` and require the summary line read `1 failed` (NOT `1 skipped` / `1
+passed`); the GREEN / sanity steps require `0 skipped`. To prove the guard is load-bearing, add a
+verification snippet that temporarily flips the doc back to the stale version and asserts a
+**non-zero** exit.
+
+```bash
+# RED must be a genuine FAIL, not a SKIP (the skip trap masquerades as green)
+pixi run pytest -rs tests/unit/docs/test_version_currency.py | tail -3   # expect "1 failed", 0 skipped
+# Prove it is load-bearing: flip the doc back to the stale version → non-zero exit
+git stash && <revert doc to stale 0.9.2> && pixi run pytest -q tests/unit/docs/...; echo "exit=$?"  # expect non-zero
+```
+
+**(e) Reviewer-confirmed non-issue (record so future plans don't re-litigate):** placing a *new*
+test dir like `tests/unit/docs/` with **no** corresponding source package does **not** trip a
+one-directional test-structure mirror check — `src_packages − test_packages` only flags **source**
+dirs MISSING a test dir, not test-only dirs. A no-loose-files check is also satisfied because the
+test lives inside a subpackage, not at the test-root.
+
 ### Validate, Commit, and PR
 
 ```bash
@@ -267,6 +332,10 @@ gh pr merge --auto --rebase
 | Full pre-commit suite without skipping | Ran all hooks on a host with a GLIBC mismatch | `mojo-format` fails on GLIBC < 2.32 (environment, not code) | Use `SKIP=mojo-format`; only non-Mojo hooks matter for doc-only changes |
 | Deleting `docs/contributing.md` to resolve the case-clash | Removed the file entirely | Breaks inbound links from the docs index | Reduce to a redirect; keep root as canonical |
 | Per-file reviewers for citation corpus | Reviewed each entry individually | Could not see cross-document §-drift or arXiv ID-to-title swaps | Both failure modes need a cross-corpus structural audit, not per-file review |
+| `pytest.skip(...)` when the git tag can't be resolved (drift test) | Skipped the drift assertion if `git describe --tags` returned None | A bare `actions/checkout` does a shallow tag-less fetch → the test silently SKIPPED in CI, guarding nothing while showing green (R0 NOGO) | A guard that silently skips is not a guard; `pytest.fail(...)` + add `fetch-depth: 0` / `fetch-tags: true` to the checkout step (belt-and-suspenders) |
+| `assert documented == latest_tag` for version currency | Required the doc version to equal the latest git tag exactly | Reds `main` the instant a NEW tag is pushed, before anyone edits the doc — reintroduces the manual chore the test was meant to kill | Assert "does not trail": `documented_tuple >= canonical_tuple` (a newer tag passes; a genuinely-stale doc still fails); reuse the repo's version-tuple parser |
+| RED step that only checks "the run failed" | Treated any non-pass as a successful RED | A SKIP also isn't a pass, so a silent-skip masquerades as a satisfied RED step | Run `pytest -rs`; require the summary be `1 failed` (NOT `1 skipped`/`1 passed`); GREEN steps require `0 skipped` |
+| Comparing a `v`-prefixed tag tuple to a bare doc version | Assumed `git describe` form matched the doc's printed form | `_version_from_git_tag` strips the leading `v` (returns `"0.9.5"`) — a `v`-prefixed parse would mis-compare | Verify the helper's return form before assuming the comparison is like-for-like |
 
 ## Results & Parameters
 
@@ -303,6 +372,36 @@ def test_no_stale_claims(doc: Path, pattern: str) -> None:
     assert not matches, f"{doc.name} contains forbidden phrase: {matches}"
 ```
 
+### Version-currency drift test — CI-effective form (Proposed, unverified)
+
+For a *version-currency* drift guard (doc version vs latest git tag), the naive form is a no-op in
+CI. Apply the §10 resolutions: **never `pytest.skip` on a missing tag** (that is exactly the
+authority under test), assert **does-not-trail** (`>=`) not `==`, and ensure CI checkout fetches
+tags.
+
+```python
+def test_documented_version_not_stale() -> None:
+    canonical = _version_from_git_tag(REPO_ROOT)  # strips leading "v" → "0.9.5"
+    if canonical is None:
+        # HARD FAIL, never skip: a tag-less checkout (bare actions/checkout) must surface loudly.
+        pytest.fail(
+            "Could not resolve the latest git tag — the CI checkout step likely lacks "
+            "fetch-depth: 0 / fetch-tags: true. This guard is a no-op without tags."
+        )
+    documented = parse_version_tuple(read_documented_version())     # reuse repo's parser
+    assert parse_version_tuple(canonical) <= documented, (          # doc must NOT trail the tag
+        f"Documented version {documented} trails latest tag {canonical}; bump the doc."
+    )
+```
+
+```yaml
+# CI: the test job's checkout MUST fetch tags (mirror the repo's auto-tag/release workflow)
+- uses: actions/checkout@<pinned>
+  with:
+    fetch-depth: 0
+    fetch-tags: true
+```
+
 ### Reliable markdownlint invocation
 
 ```bash
@@ -331,4 +430,5 @@ pixi run npx markdownlint-cli2 <file>
 | ProjectOdyssey | Issues #3344, #3365; PR #3320; PR #4847 | Workflow README audit, agent-count fix, post-migration README sync |
 | ProjectOdyssey | Issues #3142/#3308, #3304/#3913, #3305/#3917, #3918/#4830, #3141/#3303, #3914/#4828, #3915/#4829 | Stub deletion, installation/quickstart rewrite, IDE-setup extend, getting-started audit, anchor validator |
 | ProjectHephaestus | Issue #792 (PR #984); Issue #630 (PR #667) | Monolith-rationale ADR; CONTRIBUTING case-clash redirect |
+| ProjectHephaestus | Issue #1208 R1 (post-NOGO replan) — **Proposed/unverified** | Drift-guard CI-effectiveness: silent-skip→hard-fail+fetch-tags, `==`→`>=` currency, RED-must-not-skip; CI-checkout root cause verified-by-inspection, end-to-end fix unverified |
 | mvillmow/Random | Predictive-Coding-in-Mojo Phase 0 | Cross-doc citation drift: 8 stale §-refs, 2 arXiv ID swaps caught |
