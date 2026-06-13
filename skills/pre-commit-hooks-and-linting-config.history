@@ -1,6 +1,59 @@
 <!-- markdownlint-disable MD024 -->
 # pre-commit-hooks-and-linting-config -- History
 
+## v1.9.0 (2026-06-12) -- Add commit-msg-stage hooks + `default_install_hook_types` gap
+
+**Changed by:** ProjectHephaestus PR #1240 (issue #1209) — Conventional Commits commit-msg gate
+**Verification:** verified-local (commit-msg hook proven to fire locally — exit 1 on a bad
+subject, exit 0 on a good one; the companion CI Check 3 had not yet run against a live PR's
+commits at the time of writing)
+
+### What changed
+
+- Bumped frontmatter `version` 1.8.0 → 1.9.0 and `date` → 2026-06-12.
+- Added tags: `commit-msg`, `default-install-hook-types`, `conventional-commits`.
+- Extended the `description` "Use when:" list with triggers (13) and (14): a `stages: [commit-msg]`
+  hook is inert because `default_install_hook_types` is unset / plain `pre-commit install` only
+  wires the `pre-commit` stage; and verifying a commit-msg hook (which `--all-files` does NOT run).
+- Added 2 new "When to Use" bullets mirroring those triggers.
+- Added a new Detailed Steps subsection
+  "`commit-msg-stage hooks and default_install_hook_types`" documenting three verified facts:
+  (1) plain `pre-commit install` only wires the `pre-commit` stage — fix with top-level
+  `default_install_hook_types: [pre-commit, commit-msg]` placed just before `repos:`;
+  (2) `pre-commit run --all-files` does NOT run commit-msg-stage hooks — verify via
+  `pre-commit run <id> --hook-stage commit-msg --commit-msg-filename <file>` (bad→exit≠0,
+  good→exit 0); (3) use `language: system` + bare `python3` (not `pixi run`), and with
+  `pass_filenames: true` pre-commit passes the commit-message FILE PATH as the only arg.
+- Added 5 new Failed Attempts rows: the inert-hook-under-plain-install trap, the
+  `--all-files`-doesn't-run-commit-msg trap, the Ruff D301 raw-docstring fix
+  (`r"""..."""` for an escaped `\n` in a usage example; auto-fix hidden behind
+  `--unsafe-fixes`), the unstaged-config abort ("Your pre-commit configuration is unstaged"),
+  and the `core.hooksPath`-blocked-install row (install being blocked does NOT block
+  `--hook-stage` verification).
+- Added a Verified On row for ProjectHephaestus PR #1240 (issue #1209).
+
+### Why
+
+ProjectHephaestus issue #1209 mechanized Conventional Commits (DoD row 5) with a local
+commit-msg-stage hook plus a CI check. The skill already documented many pre-commit patterns
+but had a GAP: it never covered the `commit-msg` stage or `default_install_hook_types`. A hook
+declared with `stages: [commit-msg]` is silently inert under the documented plain
+`pre-commit install`, and a `--all-files`-only verification reports green without ever firing
+the hook — two traps that would let an inert/untested commit-msg gate ship. Driving the hook
+via `--hook-stage commit-msg --commit-msg-filename` proved it correctly blocks
+`[FIX] bad subject` (exit 1) and passes `fix: good subject` (exit 0).
+
+### Prior state (v1.8.0)
+
+v1.8.0 was the consolidation of 53 narrow skills into this canonical guide (ruff/mypy/
+clang-format/yamllint/actionlint/golangci-lint/bandit/hadolint/shellcheck/markdownlint
+patterns, single-source-of-truth versioning, CI/local parity, the ruff-format trap, full-PR-diff
+pre-commit scope, `.editorconfig`, and the toolchain-forced-churn review carve-out). That full
+content is preserved verbatim in git history and in the v1.8.0 entry below; this entry adds the
+commit-msg-stage material on top of it without removing anything.
+
+---
+
 ## v1.8.0 (2026-06-07) -- Absorb 4 lint/quality skills (ruff-format trap, PR-diff scope, editorconfig, toolchain-churn review exemption)
 
 Consolidated 4 overlapping skills into this canonical (LQ05 cluster):
