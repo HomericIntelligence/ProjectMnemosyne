@@ -22,10 +22,15 @@ description: >-
   complete by addressing technical debt accumulated during rapid development,
   (13) planning god-class decomposition — state ownership migration, cross-call
   coupling when only some methods are extracted, delegation stub type loss, constant
-  re-export breakage, and test_omit_allowlist.py CI traps.
+  re-export breakage, and test_omit_allowlist.py CI traps,
+  (14) extracting a provider-conditional dispatch (two-branch if/else over a bool
+  predicate) into a private helper method — choosing a method over a Protocol/Strategy
+  when there are exactly two branches, unifying heterogeneous return types at the
+  extraction boundary (e.g. AgentRunResult → subprocess.CompletedProcess), and risks
+  around CalledProcessError absorption, returncode field existence, and noqa:C901 removal.
 category: architecture
 date: 2026-06-13
-version: "1.4.0"
+version: "1.5.0"
 user-invocable: false
 history: python-module-decomposition-and-refactor-patterns.history
 tags:
@@ -53,6 +58,11 @@ tags:
   - cross-call-coupling
   - constant-re-export
   - coverage-omit-allowlist
+  - provider-dispatch
+  - return-type-unification
+  - agentrunresult
+  - completedprocess
+  - boolean-predicate-dispatch
 ---
 
 # Python Module Decomposition and Refactor Patterns
@@ -64,7 +74,7 @@ tags:
 | **Date** | 2026-06-13 |
 | **Objective** | Decompose oversized Python modules/classes into focused, independently testable units using SRP, TDD, and DRY principles |
 | **Outcome** | Synthesized from 13+ verified skills; covers function-level extraction, class-based extraction, circular import fixes, immutability refactoring, extensibility-driven decomposition, CLI entry-point extraction with preserved patch routing, top-level symbol extraction to break sibling module cycles, CC>15 pipeline-step extraction, scanner-to-subdirectory scoping, context-manager double-counter fixes, safe legacy-code deletion, substrate-read-before-estimate discipline, post-parallel phase cleanup, and god-class decomposition planning risks (state ownership, cross-call coupling, constant re-export, delegation stub type loss, coverage omit-allowlist traps) |
-| **Trigger** | Files >800 lines, circular import errors, mixed-concern methods, C901/CC>15 complexity, extensibility requirements, CLI main() extraction, deferred imports inside function bodies preventing static analysis, broad scanners needing subdirectory scope, stale callers after context-manager refactors, dead fallback files, pessimistic refactor estimates, technical debt after parallel phases, planning a multi-collaborator god-class decomposition |
+| **Trigger** | Files >800 lines, circular import errors, mixed-concern methods, C901/CC>15 complexity, extensibility requirements, CLI main() extraction, deferred imports inside function bodies preventing static analysis, broad scanners needing subdirectory scope, stale callers after context-manager refactors, dead fallback files, pessimistic refactor estimates, technical debt after parallel phases, planning a multi-collaborator god-class decomposition, extracting a two-branch provider-conditional dispatch with heterogeneous return types |
 
 ## When to Use
 
@@ -86,6 +96,7 @@ Apply this skill when any of the following is true:
 - A `TODO.md`/roadmap/audit estimates **"thousands of LOC" or weeks** for a substrate rewrite — read the substrate first to avoid a 3-5x pessimistic estimate
 - You are in the **cleanup phase** after parallel Test/Implementation/Package phases and need to address accumulated technical debt before merge
 - You are **planning a god-class decomposition** (3,000+ lines, 40+ methods, multiple collaborator targets) and need to reason about state ownership migration, cross-call coupling, delegation stub typing, constant re-export risks, and CI omit-allowlist traps before writing any code
+- A function contains a **two-branch if/else over a boolean predicate** (e.g., `is_codex(agent)`) where each branch invokes a different external agent/subprocess API returning heterogeneous types, and you want to extract it into a unified private helper method without introducing a Protocol/Strategy class
 
 ## Verified Workflow
 
@@ -110,6 +121,7 @@ Decision tree:
   Estimating a big rewrite              → Read substrate FIRST (Phase 17)
   Cleanup after parallel phases         → Finalization checklist (Phase 18)
   Planning god-class decomposition      → Planning risk audit (Phase 19)
+  Two-branch bool-predicate dispatch    → Provider-dispatch extraction (Phase 20)
 
 Universal rule for mock patches after any move:
   Patch where the name is LOOKED UP at call time — not where it was defined.
@@ -1002,6 +1014,110 @@ tests pass. Include the allowlist update in the same PR as the new module — ne
 - [ ] If yes: plan includes pyproject.toml omit update + test file update in same PR
 ```
 
+### Phase 20: Provider-Conditional Dispatch Extraction — Two-Branch Bool-Predicate Pattern
+
+Use when a function or method contains a **two-branch `if/else` over a boolean predicate**
+(e.g., `is_codex(self.options.agent)`) where each branch calls a different external agent
+or subprocess API that returns **heterogeneous types**, and the branching logic is threaded
+through an oversized function.
+
+**Decision: method vs. Protocol/Strategy**
+
+| Signal | Decision |
+| ------- | ---------- |
+| Exactly two branches over a scalar bool | Private helper method (not a Protocol) |
+| More than two providers likely in the future | Protocol/Strategy class |
+| Both branches accept identical inputs | Method (no dispatch object needed) |
+| Branches already tested through existing mocks | Method (tests need no edits) |
+
+A Protocol is over-engineering for exactly two branches tested via existing mocks. The
+extract boundary is the only place that knows about the type difference.
+
+**Return-type unification at the extraction boundary**
+
+When the two branches return different types (e.g., `AgentRunResult` for codex vs. an
+implicit `None` success for claude), wrap to a common type at the boundary:
+
+```python
+def _invoke_agent_session(
+    self,
+    session_id: str,
+    prompt: str,
+    timeout: int,
+) -> subprocess.CompletedProcess[str]:
+    """Invoke codex or claude agent; return unified CompletedProcess."""
+    if is_codex(self.options.agent):
+        result: AgentRunResult = run_codex_session(session_id, prompt, timeout=timeout)
+        return subprocess.CompletedProcess(
+            args=[], returncode=result.returncode,
+            stdout=result.stdout or "", stderr=result.stderr or "",
+        )
+    else:
+        invoke_claude_with_session(session_id, prompt, timeout=timeout)
+        return subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
+```
+
+**Critical: `CalledProcessError` absorption**
+
+If the codex path can raise `CalledProcessError` (e.g., from `run_codex_session`), absorb it
+into the return code INSIDE the helper — never let it escape, because callers now treat
+non-zero returncode as the sole error signal:
+
+```python
+try:
+    result = run_codex_session(session_id, prompt, timeout=timeout)
+    return subprocess.CompletedProcess(args=[], returncode=result.returncode, ...)
+except subprocess.CalledProcessError as e:
+    return subprocess.CompletedProcess(args=[], returncode=e.returncode, ...)
+# TimeoutExpired propagates intentionally (caller handles separately)
+```
+
+**Head-advancement as sole success signal (caller contract)**
+
+After extraction, callers that ignore the returned `CompletedProcess` and only check
+`_head_advanced()` are correct IF AND ONLY IF head-advancement is the sole success signal.
+Verify before assuming this — if the original code checked `CalledProcessError` as a
+**distinct** failure mode (not just "non-zero returncode"), the absorbed-error approach
+changes semantics.
+
+**Duplicate post-agent block extraction (`_push_ci_fix` pattern)**
+
+When two provider branches share an **identical post-agent block** (e.g., head-advance
+check → retry → pushability check → push), extract it to a second private helper:
+
+```python
+def _push_ci_fix(self, head_before: str, session_id: str, worktree: Path) -> bool:
+    """Shared post-agent push logic; returns True if pushed."""
+    if not self._head_advanced(head_before):
+        return False
+    if not self._retry_no_commit_once(session_id, worktree):
+        return False
+    if not self._ci_fix_head_is_pushable():
+        return False
+    self._push_ci_fix_branch()
+    return True
+```
+
+**Verification checklist for this pattern**
+
+```markdown
+## Provider-Dispatch Extraction Checklist (Phase 20)
+
+- [ ] Confirmed exactly 2 branches (no hidden third provider)
+- [ ] Both branches accept identical inputs (no branch-specific parameters)
+- [ ] `AgentRunResult` (or equivalent) has a `returncode` field — READ the class definition
+- [ ] `CalledProcessError` from codex path absorbed into returncode, not re-raised
+- [ ] `TimeoutExpired` intentionally propagates (confirm via caller's except clause)
+- [ ] Caller uses head-advancement as sole success signal (not returncode check)
+- [ ] Hardcoded `returncode=0` on claude path is correct (claude raises on failure)
+- [ ] `# noqa: C901` on the original function can be removed — re-run `ruff --select C901`
+      after extraction to confirm (do NOT assume removal is safe without measuring)
+- [ ] Duplicate post-agent block is character-identical in both branches (diff them)
+- [ ] Test classes `TestInvokeAgentSession` and `TestPushCiFix` added
+- [ ] All existing test patches target same module namespace (no patch retargeting needed
+      if helpers remain in same file)
+```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -1039,6 +1155,11 @@ tests pass. Include the allowlist update in the same PR as the new module — ne
 | **Moving a constant to a new module without grepping external callers** | Plan moved `FAILING_CHECK_CONCLUSIONS` from `ci_driver.py` to new `ci_check_inspector.py` | External callers doing `from hephaestus.automation.ci_driver import FAILING_CHECK_CONCLUSIONS` get ImportError; CI may not catch until integration tests run | Grep all external callers before moving any constant; if callers exist, keep in place or re-export with explicit `as X` alias from both locations (Phase 19 Step 4) |
 | **Ignoring delegation stub line overhead in line count projections** | Estimated final line count as original minus extracted lines only | 18 extracted methods × 5 stub lines = 90 additional lines not counted; projected 2,200 became 2,252 — tighter than the ≤2,200 criterion | Always add delegation stub overhead (≈ 5 lines × num_extracted_methods) and new import blocks to line count projections (Phase 19 Step 5) |
 | **Assuming test_omit_allowlist.py doesn't exist without checking** | Plan mentioned updating coverage omit lists "if the guard exists" without verifying first | `test_omit_allowlist.py` existed and failed CI when new modules weren't added to the omit list | Always `find tests/ -name "test_omit_allowlist.py"` before adding modules; include omit list update in same PR as new module (Phase 19 Step 6) |
+| **Hardcoding `returncode=0` on success path without reading `AgentRunResult`** | Plan assumed `run_codex_session` returns `AgentRunResult` and constructed `CompletedProcess(returncode=0)` on success | If `run_codex_session` returns `AgentRunResult` with a non-zero returncode on partial failure, hardcoding 0 silently discards the failure signal | Read the `AgentRunResult` class definition before writing the wrapper; use `result.returncode` not `0` (Phase 20) |
+| **Assuming `AgentRunResult.returncode` field exists without verifying** | Plan annotated wrapper with `subprocess.CompletedProcess[str]` and accessed `result.returncode`, assuming field name from `CompletedProcess` analogy | If the field is named differently (e.g., `.exit_code`), mypy passes (type annotation is fine) but runtime raises `AttributeError` | Read the `AgentRunResult` class definition; do not infer field names from analogous types (Phase 20) |
+| **Assuming `# noqa: C901` can be removed without re-measuring complexity** | Plan removed the noqa suppressor as part of extraction, assuming post-refactor CC was below threshold | Outer `try/except` around sync + snapshot + prompt-build still contributes branches; if those remain, ruff re-flags the method | Run `ruff check --select C901 <file>.py` after extraction to confirm removal is safe; do not assume (Phase 20 Step 5) |
+| **Treating head-advancement as sole success signal without verifying original code** | After extraction, plan assumed caller only checks `_head_advanced()` after `_invoke_agent_session` | Original codex branch at line 2709 also checked `CalledProcessError` as a distinct failure mode; absorbed-error approach changes semantics if callers relied on that distinct signal | Verify the original error-handling contract before assuming return-value check can be dropped; if the original differentiated `CalledProcessError` from "ran successfully but no head advance", the absorbed approach loses that distinction (Phase 20) |
+| **Assuming duplicate post-agent blocks are identical without diffing** | Plan said lines 2722–2743 and 2777–2798 in `_run_ci_fix_session` were "character-identical" based on visual inspection | Even one extra blank line or minor spacing difference invalidates "identical"; extracting non-identical blocks silently changes behavior | Diff the two blocks explicitly (`diff <(sed -n '2722,2743p' ci_driver.py) <(sed -n '2777,2798p' ci_driver.py)`) before claiming they are character-identical (Phase 20) |
 
 ## Results & Parameters
 
@@ -1109,3 +1230,4 @@ Revised LOC estimate: ~X (vs TODO "~Y"); justification: ~Z% already in substrate
 | ProjectOdyssey | PR #5457 — Phase 0 substrate read revised a TODO "~5000 LOC" estimate to ~1400; actual landed +937 LOC (CI green) | Superseded `architecture-estimate-rewrite-read-substrate-first` (Phase 17) |
 | HomericIntelligence ecosystem | Cleanup-phase coordination after parallel Test/Implementation/Package phases (KISS/DRY/SOLID finalization before merge) | Superseded `phase-cleanup` (Phase 18) |
 | ProjectHephaestus | Issue #1179 — planning decomposition of `CIDriver` (ci_driver.py, 3,338 lines, 51 methods) into 4 collaborator modules; substrate read revealed `implementer_phase_runner.py` was 1,308 lines not 2,633 (stale audit); 6 planning risks identified including split-ownership on `_viewer_login`, cross-call coupling in `CIFixOrchestrator`, unverified mypy strict mode for `*args/**kwargs` stubs, ungrepped external callers of `FAILING_CHECK_CONCLUSIONS`, delegation stub LOC overhead tightening line count target, and unverified `test_omit_allowlist.py` (unverified — plan not yet executed) | New Phase 19: God-Class Decomposition Planning Risk Audit (v1.4.0) |
+| ProjectHephaestus | Issue #1196 — planning refactor of `_retry_no_commit_once` (164 lines, codex/claude branches threaded through) and `_run_ci_fix_session` (two identical 17-line post-agent blocks); plan: extract `_invoke_agent_session` (not Protocol; two-branch bool-predicate; wraps `AgentRunResult` → `CompletedProcess`) + `_push_ci_fix` (duplicate post-agent block); 5 unverified risks: `AgentRunResult.returncode` field existence, `CalledProcessError` absorption loses codex error signal, head-advancement as sole success signal, `# noqa: C901` removal safety, duplicate block character-identity (unverified — plan not yet executed) | New Phase 20: Provider-Conditional Dispatch Extraction (v1.5.0) |
