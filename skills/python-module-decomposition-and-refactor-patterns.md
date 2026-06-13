@@ -45,10 +45,19 @@ description: >-
   wrapping injected callables so patch.object remains effective after extraction, updating
   attribute access in sibling test files after cache migration, updating companions tuples in
   phase-wiring tests when AGENT_* constants move to extracted modules, and patching each
-  module's imported run separately when a method chain splits across module boundaries.
+  module's imported run separately when a method chain splits across module boundaries,
+  (18) verifying keyword-only method signatures (`*` separator in def line) before writing
+  delegation stubs — fabricated positional signatures for keyword-only methods raise TypeError
+  at runtime and pass AST name-presence checks silently,
+  (19) mapping `_gh_call` patch sites to destination modules via test-class bucket analysis
+  when splitting a symbol across 4+ modules — range-grep spot-checks miss sites, class-boundary
+  bucketing is the only reliable approach for multi-module splits,
+  (20) tracing delegation chains through sub-modules before adding _gh_call patches to a
+  migration table — if the existing test already patches a sub-module (e.g. _review_utils._gh_call),
+  the patch does not need to move regardless of where the method moves.
 category: architecture
 date: 2026-06-13
-version: "1.10.0"
+version: "1.11.0"
 user-invocable: false
 history: python-module-decomposition-and-refactor-patterns.history
 tags:
@@ -91,6 +100,11 @@ tags:
   - sibling-test-attribute-access
   - companions-tuple
   - cross-module-patching
+  - keyword-only-signature
+  - gh-call-patch-migration
+  - test-class-bucket-analysis
+  - delegation-chain-pre-check
+  - review-utils-delegation
 ---
 
 # Python Module Decomposition and Refactor Patterns
@@ -101,8 +115,8 @@ tags:
 | ------- | ------- |
 | **Date** | 2026-06-13 |
 | **Objective** | Decompose oversized Python modules/classes/functions into focused, independently testable units using SRP, TDD, and DRY principles |
-| **Outcome** | Synthesized from 15+ verified skills; covers function-level extraction, class-based extraction, circular import fixes, immutability refactoring, extensibility-driven decomposition, CLI entry-point extraction with preserved patch routing, top-level symbol extraction to break sibling module cycles, CC>15 pipeline-step extraction, scanner-to-subdirectory scoping, context-manager double-counter fixes, safe legacy-code deletion, substrate-read-before-estimate discipline, post-parallel phase cleanup, god-class decomposition planning risks (state ownership, cross-call coupling, constant re-export, delegation stub type loss, coverage omit-allowlist traps, shared mutable dict write-back, methods shared across multiple collaborators, test fixture pre-seeding after cache extraction, method body read before assignment, __init__.py export conditionality verification), exception-contract verification before documenting wrapper behavior, three Phase 20 implementation-time traps (exception-boundary removal unmasks StopIteration from exhausted side_effect mocks; returncode-guard obligation at every call site of an absorbed-exception helper; agent mock type determines downstream subprocess.run consumption), god-function decomposition planning rules (arithmetic chain verification, docstring budget, for-loop body sizing, return type tracing, N-tuple completeness, captured variable audit, approach table completeness, AST-measure discipline), and god-class narrow-callable DIP execution (lambda wrapping for patch.object compatibility, cross-module import patching when method chains split, sibling test attribute path updates after cache migration, companions tuple updates in phase-wiring tests) |
-| **Trigger** | Files >800 lines, circular import errors, mixed-concern methods, C901/CC>15 complexity, extensibility requirements, CLI main() extraction, deferred imports inside function bodies preventing static analysis, broad scanners needing subdirectory scope, stale callers after context-manager refactors, dead fallback files, pessimistic refactor estimates, technical debt after parallel phases, planning a multi-collaborator god-class decomposition, extracting a two-branch provider-conditional dispatch with heterogeneous return types, documenting exception contracts for wrapper methods, planning god-function decomposition (individual functions > 80L), planning delegation-stub extraction where extracted methods populate shared dicts or caches read by the host class, executing a god-class decomposition using narrow-callable injection (DIP) where bare bound-method references to injected callables break patch.object |
+| **Outcome** | Synthesized from 15+ verified skills; covers function-level extraction, class-based extraction, circular import fixes, immutability refactoring, extensibility-driven decomposition, CLI entry-point extraction with preserved patch routing, top-level symbol extraction to break sibling module cycles, CC>15 pipeline-step extraction, scanner-to-subdirectory scoping, context-manager double-counter fixes, safe legacy-code deletion, substrate-read-before-estimate discipline, post-parallel phase cleanup, god-class decomposition planning risks (state ownership, cross-call coupling, constant re-export, delegation stub type loss, coverage omit-allowlist traps, shared mutable dict write-back, methods shared across multiple collaborators, test fixture pre-seeding after cache extraction, method body read before assignment, __init__.py export conditionality verification), exception-contract verification before documenting wrapper behavior, three Phase 20 implementation-time traps (exception-boundary removal unmasks StopIteration from exhausted side_effect mocks; returncode-guard obligation at every call site of an absorbed-exception helper; agent mock type determines downstream subprocess.run consumption), god-function decomposition planning rules (arithmetic chain verification, docstring budget, for-loop body sizing, return type tracing, N-tuple completeness, captured variable audit, approach table completeness, AST-measure discipline), god-class narrow-callable DIP execution (lambda wrapping for patch.object compatibility, cross-module import patching when method chains split, sibling test attribute path updates after cache migration, companions tuple updates in phase-wiring tests), keyword-only method signature verification before writing stubs (fabricated positional signatures pass AST checks silently but raise TypeError at runtime), _gh_call multi-module split attribution via test-class boundary bucketing (range-grep spot-checks are insufficient for 4+ destination modules; class-boundary bucket analysis is required), and delegation-chain pre-check before adding _gh_call patches to migration tables (if existing test patches a sub-module like _review_utils._gh_call, that patch does not move regardless of where the method relocates) |
+| **Trigger** | Files >800 lines, circular import errors, mixed-concern methods, C901/CC>15 complexity, extensibility requirements, CLI main() extraction, deferred imports inside function bodies preventing static analysis, broad scanners needing subdirectory scope, stale callers after context-manager refactors, dead fallback files, pessimistic refactor estimates, technical debt after parallel phases, planning a multi-collaborator god-class decomposition, extracting a two-branch provider-conditional dispatch with heterogeneous return types, documenting exception contracts for wrapper methods, planning god-function decomposition (individual functions > 80L), planning delegation-stub extraction where extracted methods populate shared dicts or caches read by the host class, executing a god-class decomposition using narrow-callable injection (DIP) where bare bound-method references to injected callables break patch.object, writing delegation stubs for methods with keyword-only parameters (`*` separator), planning migration of a symbol patched in 10+ test sites across multiple test classes when the symbol will move to 4+ destination modules, or verifying whether an existing test's _gh_call patch already targets a sub-module (making migration unnecessary for that test) |
 
 ## When to Use
 
@@ -129,6 +143,9 @@ Apply this skill when any of the following is true:
 - You are **planning god-class delegation extraction** where methods being moved to a collaborator populate shared mutable state (dicts, caches) that the host class reads elsewhere, where a method is used by multiple collaborator groups (assign to host, not one group), or where test fixtures pre-seed cache attributes on the host that will no longer be in scope after extraction
 - You are **executing a god-class decomposition with narrow-callable injection (DIP)** and need to wire collaborators using injected callables — including: using lambda wrapping (not bare method references) to preserve patch.object effectiveness, updating sibling test files that directly access attributes now living on a collaborator, updating companions tuples in phase-wiring tests when AGENT_* constants move to extracted modules, and patching each module's `run` import independently when a pre/post-agent SHA read splits across module boundaries
 - A class's **sibling test files access internal attributes directly** (e.g., `driver._viewer_login`) that will move to an extracted collaborator — grep test files before and after extraction to update attribute paths
+- A method being extracted has a **`*` (keyword-only) separator** in its `def` line — the stub def must also use `*`, and the forwarding call must use `keyword=value` for every param; AST name-presence checks pass even for wrong-signature stubs
+- A shared symbol (e.g., `_gh_call`) is **patched in 10+ test sites across one file** and will move to **4+ destination modules** — use test-class boundary bucketing (grep `^class` start lines, bucket each patch line) rather than range-grep spot-checks to attribute every patch site to its destination
+- An extracted method's **existing test already patches a sub-module** (e.g., `_review_utils._gh_call`) — verify the patch string before adding the site to the migration table; if the patch already targets the sub-module, it does not need to move regardless of where the method relocates
 
 ## Verified Workflow
 
@@ -157,6 +174,9 @@ Decision tree:
   Planning god-function decomposition   → Function-size planning rules (Phase 21)
   God-class delegation w/ shared state → Shared-state write-back rules (Phase 22)
   God-class execution w/ DIP injection → Narrow-callable injection rules (Phase 23)
+  Keyword-only method stub writing      → Verify `*` in def line before any stub (Phase 24)
+  _gh_call split to 4+ modules          → Test-class bucket analysis (Phase 25)
+  _gh_call patch already sub-module?   → Delegation chain pre-check (Phase 26)
 
 Universal rule for mock patches after any move:
   Patch where the name is LOOKED UP at call time — not where it was defined.
@@ -1804,6 +1824,174 @@ for the constant; without it, the test only scans the primary module and fails.
 - [ ] ci_driver.py line count meets target (−28% or better)
 ```
 
+### Phase 24: Keyword-Only Method Signature Verification
+
+**Problem**: During R5 planning for issue #1289, `_retry_no_commit_once` was given a fabricated
+positional signature in the plan (including a fabricated `acquired_slot` parameter). The real
+method at `ci_driver.py:2296` uses `*` (keyword-only) with params:
+
+```python
+def _retry_no_commit_once(
+    self,
+    *,
+    issue_number: int,
+    pr_number: int,
+    worktree_path: Path,
+    pr_head_branch: str,
+    pre_agent_sha: str,
+    session_id: str,
+    max_retries: int = 2,
+) -> bool:
+```
+
+Forwarding a keyword-only method with positional args raises `TypeError` at runtime.
+The AST-check in Criterion 6 (method name presence) only checks whether the method name
+exists in the stub — it does **not** verify signature correctness. A wrong-but-present stub
+passes the check silently.
+
+**Rule**: For every method being extracted, read the actual `def` line and the complete
+parameter list (including whether `*` appears as the first param after `self`) before writing
+any stub. Never infer keyword-only status from call-site context alone.
+
+**Stub template for keyword-only methods**:
+
+```python
+# In host class (delegation stub):
+def _retry_no_commit_once(
+    self,
+    *,
+    issue_number: int,
+    pr_number: int,
+    worktree_path: Path,
+    pr_head_branch: str,
+    pre_agent_sha: str,
+    session_id: str,
+    max_retries: int = 2,
+) -> bool:
+    return self._collaborator._retry_no_commit_once(
+        issue_number=issue_number,
+        pr_number=pr_number,
+        worktree_path=worktree_path,
+        pr_head_branch=pr_head_branch,
+        pre_agent_sha=pre_agent_sha,
+        session_id=session_id,
+        max_retries=max_retries,
+    )
+```
+
+#### Phase 24 Checklist
+
+```markdown
+## Keyword-Only Stub Checklist (Phase 24)
+
+### Before writing any stub
+- [ ] Read the actual `def` line in the source file — not a plan summary, the real line
+- [ ] Check: does `*` appear as a standalone parameter before named params?
+- [ ] If yes: stub def MUST use `*` too; forwarding call MUST use `keyword=value` for every param
+- [ ] Verify no fabricated params (params not in the real def) appear in the stub
+- [ ] Verify no params from the real def are missing from the stub
+
+### AST check limitation
+- [ ] Criterion 6 (name-presence check) passes for wrong-signature stubs — it ONLY checks the method name
+- [ ] Signature correctness is your responsibility; the check will not catch it
+```
+
+### Phase 25: `_gh_call` Multi-Module Split Attribution via Test-Class Boundaries
+
+**Problem**: When `_gh_call` is patched in 26+ places across one test file, and the symbol
+moves to 4+ destination modules, "17-way split" estimates and range-grep spot-checks are
+both insufficient. Two range greps only cover 2 of 26 sites — the remaining 24 sites are
+unaccounted for.
+
+**Fix**: Map every patch site to its test class by:
+
+1. Get class start lines:
+
+```bash
+grep -n "^class " tests/unit/automation/test_ci_driver.py
+```
+
+2. Get all patch sites:
+
+```bash
+grep -n "ci_driver\._gh_call" tests/unit/automation/test_ci_driver.py
+```
+
+3. Bucket each patch line into the class whose start-line is the **largest ≤ the patch line**.
+   Each test class tests one method; each method goes to one collaborator module.
+   The bucket directly gives the destination module.
+
+4. Verify the total across all buckets equals the total patch count before finalizing.
+
+**Verification after migration**:
+
+```bash
+# Only the N lines that stay in ci_driver should remain; all others must be gone
+grep -n "ci_driver\._gh_call" tests/unit/automation/test_ci_driver.py | \
+  grep -v "^<line1>:\|^<line2>:..." && echo "FAIL" || echo "PASS"
+```
+
+**Rule**: Never estimate `_gh_call` migration scope from a count of methods or a range-based
+spot-grep. Always bucket every patch line by class boundary to determine its destination.
+
+#### Phase 25 Checklist
+
+```markdown
+## _gh_call Multi-Module Split Checklist (Phase 25)
+
+### Before planning migration
+- [ ] `grep -n "^class " test_file.py` — record all class name + start-line pairs
+- [ ] `grep -n "symbol_being_moved\._gh_call" test_file.py` — collect ALL patch lines with line numbers
+- [ ] For each patch line: find the class whose start-line is largest ≤ patch line number
+- [ ] Tally sites per bucket (per destination module)
+- [ ] Sum all buckets — must equal total patch count; if not, a site was missed
+
+### After migration
+- [ ] Re-run the grep — zero sites targeting old module should remain (except intentional ones)
+- [ ] Run the full test suite — every test class that had patches must still pass
+```
+
+### Phase 26: Delegation Chain Through Sub-Modules — Pre-Check Before Patch Migration
+
+**Finding**: `_find_pr_for_issue` in `ci_driver.py` already delegates internally to
+`_review_utils.find_pr_for_issue`, which in turn calls `_review_utils._gh_call` — NOT
+`ci_driver._gh_call`. The test (`TestBodySearch`, line 1561) patches
+`hephaestus.automation._review_utils._gh_call`.
+
+Moving `_find_pr_for_issue` to a collaborator does **not** require migrating any `_gh_call`
+patch for this method's tests — the symbol never lived in `ci_driver`'s namespace at the
+test level.
+
+**Rule**: Before adding a method's `_gh_call` patch sites to the migration table, read the
+patch string in the test. If the existing test already patches a sub-module (e.g.,
+`_review_utils._gh_call`), that patch does not need to move regardless of where the method
+moves.
+
+**Pre-check command**:
+
+```bash
+# For a method under consideration, find all its test class's patches:
+grep -n "ci_driver\._gh_call\|_review_utils\._gh_call\|other_submodule\._gh_call" \
+  tests/unit/automation/test_ci_driver.py | \
+  awk -F: '$1 >= CLASS_START && $1 <= CLASS_END'
+```
+
+If the output shows `_review_utils._gh_call` (not `ci_driver._gh_call`), the patch site
+belongs to the sub-module and stays put.
+
+#### Phase 26 Checklist
+
+```markdown
+## Delegation Chain Pre-Check Checklist (Phase 26)
+
+### For each method identified for migration
+- [ ] Read the method body — does it delegate to a sub-module function (e.g., `_review_utils.X`)?
+- [ ] If yes: check the test's patch string — does it patch `ci_driver._gh_call` or `_review_utils._gh_call`?
+- [ ] If the test patches the sub-module directly: this patch site does NOT belong in the migration table
+- [ ] Only add `ci_driver._gh_call` patches (not sub-module patches) to the migration count for this method
+- [ ] Document the delegation chain in the plan: `_find_pr_for_issue → _review_utils.find_pr_for_issue → _review_utils._gh_call`
+```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -1871,6 +2059,9 @@ for the constant; without it, the test only scans the primary module and fails.
 | **Forgetting `_viewer_login` attribute access in sibling test files** | Moved `_viewer_login` from `CIDriver` to `PRDiscovery` without updating `test_ci_driver_author_scope.py` which accessed `driver._viewer_login` directly | mypy reported `"CIDriver" has no attribute "_viewer_login"`; 6 mypy errors; tests failed | After moving any instance attribute to a collaborator, grep all test files for `driver.<attr>` and update to `driver._collaborator.<attr>` (Phase 23, Rule 3) |
 | **`companions=()` not updated in phase-wiring test** | `AGENT_CI_DRIVER` import moved to extracted collaborators (`ci_fix_orchestrator.py`, `post_merge_processor.py`) but `test_phase_agent_wiring.py` still had `("ci_driver.py", "AGENT_CI_DRIVER", ())` with empty companions tuple | Test checks the combined source of module + companions for the AGENT_* import; empty companions meant only `ci_driver.py` was scanned, which no longer has the import | When an `AGENT_*` constant moves to an extracted collaborator, add that collaborator filename to the `companions` tuple in `test_phase_agent_wiring.py` (Phase 23, Rule 4) |
 | **Logger patches targeting old module after extraction** | Left `patch("hephaestus.automation.ci_driver.logger")` for a warning that now emits from `pr_discovery.logger` | Mock showed 0 calls — warning emitted from extracted module's logger | After extracting a module, grep all test files for `ci_driver.logger` patches and update to `<new_module>.logger` (Phase 4) |
+| **Fabricated positional signature for keyword-only method** | Plan gave `_retry_no_commit_once` a positional signature including a fabricated `acquired_slot` param; the real method at ci_driver.py:2296 uses `*` (keyword-only) with 7 actual params | Forwarding via positional args raises `TypeError` at runtime; AST Criterion 6 checks name presence only — wrong-but-present stub passes silently | Before writing any stub, read the actual `def` line; if `*` appears, stub def must also use `*` and the forwarding call must use `keyword=value` for every param (Phase 24) |
+| **Range-grep spot-check insufficient for multi-module _gh_call split** | Used two range-grep checks to estimate `_gh_call` migration scope when the symbol moved to 4+ destination modules across 26 patch sites | Only 2 of 26 sites were covered; 24 sites were unaccounted for, making the migration table incomplete | Grep all patch sites with line numbers; bucket each line into its test class by finding the largest class-start ≤ patch-line; each class → one method → one destination module; verify bucket totals equal the total site count (Phase 25) |
+| **Adding _gh_call patch for delegating method without checking its sub-module chain** | Added `_find_pr_for_issue`'s test to the `ci_driver._gh_call` migration table without reading the test's patch string | The test already patched `_review_utils._gh_call` — not `ci_driver._gh_call`; the symbol never lived in `ci_driver`'s namespace at the test level, so the migration was unnecessary | Before adding any method's patch sites to a migration table, read the actual patch string in the test; if it targets a sub-module, that site does not move regardless of where the method relocates (Phase 26) |
 
 ## Results & Parameters
 
@@ -1948,3 +2139,4 @@ Revised LOC estimate: ~X (vs TODO "~Y"); justification: ~Z% already in substrate
 | ProjectHephaestus | Issue #1180 — planning decomposition of 7 god-functions across 4 files in `hephaestus/automation/` (R0→R3 planning cycle): R0 NOGO (waived 128L `_implement_issue` as "marginal"); R1 NOGO (claimed reduction with no extraction step); R2 NOGO (6-tuple dropped `reopened`, approach table missing two helpers); R3 approved; 8 planning rules identified: (1) arithmetic chain non-negotiable — no waivers; (2) docstring lines count toward function span; (3) for-loop body > 40L is a standalone extraction candidate; (4) helpers absorbing the only call to a data-fetching function must return the fetched data; (5) orchestrator N-tuple must cover ALL post-call variables; (6) every captured variable in an extracted body is a missing parameter; (7) approach table must list ALL helpers per target; (8) AST-measure before planning — never trust issue-cited line numbers (unverified — plan not yet executed) | New Phase 21: God-Function Decomposition Planning Rules (v1.8.0) |
 | ProjectHephaestus | Issue #1289 — planning second decomposition pass of `ci_driver.py` (3,358 lines) using Dependency Inversion + delegation stubs to preserve `patch.object` test targets; 4 collaborators proposed (`PRDiscovery`, `CICheckInspector`, `CIFixOrchestrator`, `ArmingOrchestrator`); 6 additional planning risks identified: (1) `shared_pr_issues` write-back not designed — `_discover_prs` moving to `PRDiscovery` populates dict that arming fan-out reads on CIDriver; (2) `_tracked_worktree_changes` used by both `CICheckInspector` and `CIFixOrchestrator` — cross-collaborator coupling if assigned to one; (3) test fixture pre-seeding of `driver._viewer_login` stops working after cache migrates to collaborator; (4) method bodies not read before assigning to collaborators (`_arm_all_unarmed_open_prs` etc. assigned by name only); (5) conditional `__init__.py` export step not resolved at plan time — `__init__.py` not read; (6) line count projection used 25-line average for method bodies without reading actual lengths — no fallback plan if target not reached after PRDiscovery (unverified — implementation not yet started) | New Phase 22: God-Class Delegation Shared-State Write-Back Rules (v1.9.0) |
 | ProjectHephaestus | PR #1292 (Issue #1179) — executed CIDriver god-class decomposition using narrow-callable injection (DIP): ci_driver.py 3,338 → 2,404 lines (−28%); 4 collaborators extracted (`pr_discovery.py` 260L, `ci_check_inspector.py` 130L, `ci_fix_orchestrator.py` 530L, `post_merge_processor.py` 230L); 4 implementation traps discovered: (1) bare bound-method references to injected callables bypass `patch.object` — all injected callables must be lambda-wrapped; (2) pre/post-SHA split after orchestrator extraction requires patching BOTH `ci_fix_orchestrator.run` and `ci_driver.run` independently; (3) `_viewer_login` attribute migration generated 6 mypy errors in sibling test files — all attribute access paths must be updated; (4) `AGENT_CI_DRIVER` move to extracted module broke `test_phase_agent_wiring.py` — companions tuple required update; 146 existing tests + 22 new tests pass; all CI gates passed (verified-ci) | New Phase 23: God-Class Narrow-Callable DIP Execution Pattern (v1.10.0) |
+| ProjectHephaestus | Issue #1289 R5 planning session — 3 new pre-implementation verification rules discovered: (1) `_retry_no_commit_once` at ci_driver.py:2296 uses keyword-only `*` separator; plan gave it a fabricated positional signature including non-existent `acquired_slot` param — AST Criterion 6 would pass silently but runtime raises `TypeError`; fix: read actual `def` line before any stub; (2) `_gh_call` patched in 26 sites across one test file moving to 4+ destination modules — two range-grep spot-checks only covered 2 of 26 sites; fix: bucket all patch lines by test-class start-line boundary; (3) `_find_pr_for_issue` tests already patch `_review_utils._gh_call` (not `ci_driver._gh_call`) because the method already delegates through `_review_utils`; these sites do not need migration regardless of where the method moves; fix: read the patch string before adding any site to the migration table (plan not yet executed) | New Phases 24–26: Keyword-Only Sig Verification, _gh_call Bucket Analysis, Delegation Chain Pre-Check (v1.11.0) |

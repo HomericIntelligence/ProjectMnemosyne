@@ -1,6 +1,57 @@
 <!-- markdownlint-disable MD024 -->
 # python-module-decomposition-and-refactor-patterns — History
 
+## v1.11.0 (2026-06-13)
+
+**Changed by:** /learn from ProjectHephaestus issue #1289 R5 planning session (CIDriver god-class decomposition — planning-time verification rules)
+**Verification:** unverified (planning session findings; implementation not yet executed)
+
+### What changed
+
+Added Phases 24–26 covering three pre-implementation verification rules discovered during the
+R5 planning session for issue #1289:
+
+**Phase 24: Keyword-Only Method Signature Verification**
+
+A method identified for extraction (`_retry_no_commit_once`, ci_driver.py:2296) had a
+fabricated positional signature in the plan, including a non-existent `acquired_slot` param.
+The real method uses `*` (keyword-only) with 7 named params. Forwarding via positional args
+raises `TypeError` at runtime. The AST Criterion 6 (name-presence check) passes silently for
+wrong-signature stubs — it only checks the method name, not its signature.
+
+Rule: Read the actual `def` line before writing any stub. If `*` appears, the stub def must
+also use `*`, and the forwarding call must use `keyword=value` for every param.
+
+**Phase 25: `_gh_call` Multi-Module Split Attribution via Test-Class Boundaries**
+
+`_gh_call` is patched in 26 places across one test file, moving to 4+ destination modules.
+Two range-grep spot-checks only covered 2 of 26 sites. The correct approach: grep all
+patch sites with line numbers, then bucket each patch line into the test class whose
+start-line is the largest ≤ the patch line. Each class tests one method; each method goes
+to one collaborator; the bucket directly gives the destination module. Verify total across
+all buckets equals the total site count.
+
+**Phase 26: Delegation Chain Through Sub-Modules — Pre-Check Before Patch Migration**
+
+`_find_pr_for_issue` already delegates internally to `_review_utils.find_pr_for_issue`,
+which calls `_review_utils._gh_call`. The test (`TestBodySearch`, L1561) patches
+`hephaestus.automation._review_utils._gh_call` — not `ci_driver._gh_call`. Moving the
+method to a collaborator does not require migrating this patch. Rule: read the patch string
+before adding any site to the migration table; if it already targets a sub-module, it stays
+where it is.
+
+Also added:
+- 3 new rows to Failed Attempts table (keyword-only signature fabrication, range-grep
+  insufficient for multi-module split, delegation chain pre-check omitted)
+- 3 new use-case descriptions in frontmatter (18–20)
+- 5 new tags (keyword-only-signature, gh-call-patch-migration, test-class-bucket-analysis,
+  delegation-chain-pre-check, review-utils-delegation)
+- 3 new When-to-Use bullets
+- 3 new Quick Reference decision-tree entries
+- 1 new Verified On row
+
+---
+
 ## v1.10.0 (2026-06-13)
 
 **Changed by:** /learn from ProjectHephaestus PR #1292 (issue #1179 — CIDriver god-class decomposition execution using narrow-callable DIP injection)
