@@ -3,6 +3,12 @@
 
 This file preserves previous versions of the skill before amendments.
 
+## v1.1.0 (2026-06-13)
+
+Corrected the discriminator from `not r.post_loop_phases` to `not r.is_post_loop` and updated line citations from `:1337`/`:1501` to `:1525`/`:1695`. Documented the fix and key risks. Still marked `unverified` — implementation plan only, not CI-confirmed.
+
+See v1.2.0 (this version) for the verified-ci outcome after PR #1278 merged.
+
 ## v1.0.0 (2026-06-12)
 
 Initial version. Used `not r.post_loop_phases` as the post-loop discriminator and cited `loop_runner.py:1337` as the canonical filter reference. Both were incorrect — the correct discriminator is `not r.is_post_loop` and the correct line is 1525. See the Failed Attempts section of v1.1.0 for the full analysis.
