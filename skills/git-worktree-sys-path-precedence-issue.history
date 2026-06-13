@@ -1,10 +1,20 @@
+## Archive Entry
+
+- **version**: 1.0.0
+- **date**: 2026-06-13
+- **changed-by**: Session — issue #1189 python-version-consistency DRY refactor
+- **verification**: verified-local
+- **what-changed**: Added pixi console script stale-binary pattern and `inspect.getfile()` diagnosis step
+- **why**: Console script shebang points to main worktree's installed package; `pixi run python -c` is the correct workaround
+
+### Previous version snapshot (v1.0.0, 2026-06-06)
+
 ---
 name: git-worktree-sys-path-precedence-issue
-description: "Document the sys.path ordering issue in workspace-based git worktrees where the main project directory comes before the worktree in Python's module search path, causing subprocess-spawned entry points (console scripts) to import modules from the main repo instead of the worktree, even though the editable install (.pth file) correctly points to the worktree. Code changes work in direct Python imports but fail in subprocess invocations. Also covers the pixi console script stale-binary failure mode where the script shebang points to the main worktree's installed package. Use when: (1) running console scripts via subprocess that load stale code from the main repo, (2) debugging entry points that work in direct Python imports but fail via pixi run or subprocess.run(), (3) code changes in a git worktree work when imported directly but fail when invoked as a console script, (4) sys.path shows main project directory before worktree path, (5) pixi run hephaestus-* returns old output after editing source in a worktree."
+description: "Document the sys.path ordering issue in workspace-based git worktrees where the main project directory comes before the worktree in Python's module search path, causing subprocess-spawned entry points (console scripts) to import modules from the main repo instead of the worktree, even though the editable install (.pth file) correctly points to the worktree. Code changes work in direct Python imports but fail in subprocess invocations. Use when: (1) running console scripts via subprocess that load stale code from the main repo, (2) debugging entry points that work in direct Python imports but fail via pixi run or subprocess.run(), (3) code changes in a git worktree work when imported directly but fail when invoked as a console script, (4) sys.path shows main project directory before worktree path."
 category: tooling
-date: 2026-06-13
-version: "1.1.0"
-history: git-worktree-sys-path-precedence-issue.history
+date: 2026-06-06
+version: "1.0.0"
 user-invocable: false
 verification: verified-local
 tags:
@@ -27,10 +37,10 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-13 |
+| **Date** | 2026-06-06 |
 | **Objective** | Understand why console script entry points load stale code from the main project repo instead of from the current git worktree, even though editable installs and direct imports work correctly |
-| **Outcome** | Two distinct failure modes identified: (1) sys.path precedence issue where the main project directory is listed BEFORE the worktree path in Python's module search order — code changes work in direct Python imports but fail when invoked via subprocess entry points; (2) pixi console script stale-binary issue where the script shebang hardcodes the main worktree's Python interpreter, so `pixi run hephaestus-*` runs stale code even though `pixi run python -c "import ..."` loads the correct worktree files. |
-| **Verification** | verified-local — (1) Discovered and validated locally during Issue #724 implementation (added -V/--version flag to 44 console scripts). (2) Confirmed during Issue #1189 python-version-consistency DRY refactor: `hephaestus-check-python-version --json` returned old JSON without new `ci_checks` key even after modifying `validation/python_version.py` in the worktree. |
+| **Outcome** | Discovered sys.path precedence issue where the main project directory is listed BEFORE the worktree path in Python's module search order. Code changes work in direct Python imports but fail when invoked via subprocess entry points. Root cause is the .pth file search path ordering, not the editable install itself. |
+| **Verification** | verified-local — Discovered and validated locally during Issue #724 implementation (added -V/--version flag to 44 console scripts). Subprocess invocations from worktrees consistently loaded stale code; pixi run and direct Python imports both worked correctly. Solution approaches tested locally (PYTHONPATH export and pixi run context) but CI was not examined. |
 
 ## When to Use
 
@@ -39,7 +49,6 @@ tags:
 - Workspace-based git monorepos using pixi and editable installs (`pip install -e .`) where worktrees share `.pixi/envs/default` with the parent checkout
 - Debugging why console scripts report old function behavior, old version strings, or missing recent code additions despite the worktree containing the updated files
 - Building automation tools or test suites that spawn console scripts as subprocess commands from within a git worktree
-- `pixi run hephaestus-*` returns old output after you edited Python source files in a git worktree
 
 Do NOT use this skill when:
 
@@ -52,12 +61,6 @@ Do NOT use this skill when:
 ### Quick Reference
 
 ```bash
-# 0. Diagnose which file is actually loaded (NEW — do this first)
-pixi run python -c "import hephaestus.validation.python_version as m; import inspect; print(inspect.getfile(m))"
-# If the path shown is NOT in the current worktree directory, the editable install is stale.
-# Example bad output: /home/mvillmow/Projects/ProjectHephaestus/hephaestus/validation/python_version.py
-# Example good output: /home/mvillmow/Projects/ProjectHephaestus/build/.worktrees/issue-1189/hephaestus/validation/python_version.py
-
 # 1. Check what sys.path subprocess sees (run from worktree)
 python3 -c 'import sys; print(sys.path)'
 # Expected: Should show worktree path early, but often shows main project FIRST
@@ -69,37 +72,22 @@ cat .pixi/envs/default/lib/python*/site-packages/_editable_impl_*.pth
 
 # 3. Confirm direct import works (from worktree)
 pixi run python -c "import hephaestus; print(hephaestus.__version__)"
-# Works — loads from worktree
+# Works ✓ (loads from worktree)
 
-# 4. Test console script that may be stale (from worktree)
-pixi run hephaestus-check-python-version --json
-# May return old JSON from main worktree's installed package
+# 4. Test subprocess invocation that fails (from worktree)
+pixi run hephaestus-agent-stage --version
+# May load stale code from main repo ✗
 
-# 5. Reliable alternative to console scripts in worktrees: invoke via python -c
-pixi run python -c "from hephaestus.validation.python_version import main; main()" -- --json
-# Bypasses the console script binary shebang entirely; always loads from current editable install
+# 5. Solution: Use pixi run (same environment context as parent)
+pixi run hephaestus-agent-stage --version
+# Loads from worktree ✓
 
 # 6. Alternative solution: Prepend worktree to PYTHONPATH (explicit)
 export PYTHONPATH="/path/to/worktree:$PYTHONPATH"
 pixi run hephaestus-agent-stage --version
-
-# 7. Fix for worktree with its own pixi env: refresh the editable install
-pixi run dev-install
 ```
 
 ### Detailed Steps
-
-**Step 0 — Diagnose which file is actually loaded (start here).**
-
-Before investigating sys.path ordering, confirm whether `pixi run python -c` itself loads from the right file:
-
-```bash
-# Substitute your module path as appropriate
-pixi run python -c "import hephaestus.validation.python_version as m; import inspect; print(inspect.getfile(m))"
-```
-
-- If the path shown is inside the current worktree directory: direct imports are fine; the problem is the console script binary specifically (Failure Mode 2 below).
-- If the path shown is the main project directory: sys.path ordering is the issue (Failure Mode 1 below).
 
 **Step 1 — Detect the symptom.**
 
@@ -113,7 +101,7 @@ echo "print('MARKER FROM WORKTREE')" >> hephaestus/__init__.py
 # Via subprocess, invoke the console script
 pixi run hephaestus-agent-stage --version
 # Output: Old version from main repo (not the worktree modification)
-# If you see the old code, the console script binary is stale
+# ✗ If you see the old code, sys.path is loading from main repo
 ```
 
 **Step 2 — Inspect sys.path order in subprocess context.**
@@ -127,7 +115,7 @@ Look for:
 - `/home/mvillmow/Projects/ProjectHephaestus` (main repo) — appears EARLY
 - `/home/mvillmow/Projects/ProjectHephaestus/build/.worktrees/issue-724` (worktree) — appears LATER
 
-If main repo path comes BEFORE worktree path, that's Failure Mode 1.
+If main repo path comes BEFORE worktree path, that's the issue.
 
 **Step 3 — Verify the .pth file points to the worktree.**
 
@@ -138,47 +126,15 @@ find .pixi/envs/default/lib/python*/site-packages/ -name '_editable_impl_*.pth' 
 #                   (the worktree path, NOT the main repo)
 ```
 
-If the .pth file is correct but sys.path still has main repo first, the issue is path precedence (Failure Mode 1). If the .pth file shows the MAIN repo path, the editable install was created in the main checkout and has not been refreshed for this worktree (Failure Mode 2).
+If the .pth file is correct but sys.path still has main repo first, the issue is path precedence.
 
 **Step 4 — Understand why this happens.**
 
-**Failure Mode 1 — sys.path ordering:**
 When `pip install -e .` runs, it creates a `.pth` file that gets prepended to the Python path. However, if you are running Python from a directory context (worktree) while the parent repo is also in sys.path (from earlier setup), Python's import system may search the parent first depending on how the module search order is constructed.
 
 The key insight: **The editable install .pth file is correct, but the main project directory is ALSO in sys.path due to environment inheritance or explicit path configuration.**
 
-**Failure Mode 2 — Console script shebang points to main worktree:**
-The `pixi run hephaestus-*` console script binary has a shebang that was generated when `pip install -e .` was run in the MAIN worktree. The shebang hardcodes `/path/to/main-worktree/.pixi/envs/default/bin/python`. Even though `pixi run python -c "import hephaestus ..."` loads from the current worktree (via the .pth file), the console script binary's Python interpreter starts with the main worktree's environment.
-
-Diagnosis: The `inspect.getfile()` one-liner (Step 0) shows correct worktree path for direct `python -c` but the console script returns stale output.
-
-**Step 5 — Apply Solution 1: Use pixi run python -c (preferred for worktrees).**
-
-When testing changes in a worktree, bypass the console script binary entirely and invoke the module's main function directly:
-
-```bash
-# Instead of: pixi run hephaestus-check-python-version --json
-# Use:
-pixi run python -c "from hephaestus.validation.python_version import main; main()" -- --json
-```
-
-This always loads from the current editable install without being affected by the console script shebang.
-
-In automation Python code:
-
-```python
-import subprocess
-result = subprocess.run(
-    ['pixi', 'run', 'python', '-c',
-     'from hephaestus.validation.python_version import main; main()', '--', '--json'],
-    cwd='/path/to/worktree',
-    capture_output=True,
-    text=True
-)
-print(result.stdout)  # Loads from worktree
-```
-
-**Step 6 — Apply Solution 2: Use pixi run <script> via subprocess (preferred for automation).**
+**Step 5 — Apply Solution 1: Use pixi run (preferred).**
 
 When you invoke subprocess commands through `pixi run`, you preserve the same Python environment context (same sys.path, same .pixi/envs/default). This avoids the path precedence issue entirely:
 
@@ -198,10 +154,10 @@ result = subprocess.run(
     capture_output=True,
     text=True
 )
-print(result.stdout)  # Loads from worktree
+print(result.stdout)  # Loads from worktree ✓
 ```
 
-**Step 7 — Apply Solution 3: Explicit PYTHONPATH (if pixi run is not available).**
+**Step 6 — Apply Solution 2: Explicit PYTHONPATH (if pixi run is not available).**
 
 If you must use raw subprocess invocation (not pixi run), prepend the worktree to PYTHONPATH:
 
@@ -209,7 +165,7 @@ If you must use raw subprocess invocation (not pixi run), prepend the worktree t
 # From worktree or parent, set PYTHONPATH explicitly
 export PYTHONPATH="/home/mvillmow/Projects/ProjectHephaestus/build/.worktrees/issue-724:$PYTHONPATH"
 /path/to/bin/hephaestus-agent-stage --version
-# Loads from worktree
+# Loads from worktree ✓
 ```
 
 In Python:
@@ -229,20 +185,10 @@ result = subprocess.run(
     capture_output=True,
     text=True
 )
-print(result.stdout)  # Loads from worktree
+print(result.stdout)  # Loads from worktree ✓
 ```
 
-**Step 8 — Fix: Run dev-install in the worktree (if worktree has its own pixi env).**
-
-If the worktree has (or can have) its own pixi environment, refreshing the editable install fixes the console script shebang:
-
-```bash
-cd /path/to/worktree
-pixi run dev-install
-# Regenerates the console script binary with the correct shebang for this worktree
-```
-
-**Step 9 — Verify the fix.**
+**Step 7 — Verify the fix.**
 
 After applying the solution, re-run the console script and check that it now loads from the worktree:
 
@@ -260,18 +206,12 @@ pixi run hephaestus-agent-stage --version
 | Running console script directly without pixi | Executed `/path/to/.pixi/envs/default/bin/hephaestus-agent-stage` as a raw subprocess | Still loaded from main repo; the issue is that the Python interpreter inside that executable was started with a sys.path that included the main repo before the worktree | The problem is not the shell invocation; it's the Python process's environment and sys.path ordering. Pixi run context preserves the environment better. |
 | Setting PYTHONPATH in shell before invoking subprocess | Exported `PYTHONPATH=/path/to/worktree:$PYTHONPATH` in bash, then called subprocess | subprocess.run() did NOT inherit the shell's exported PYTHONPATH; only env passed explicitly to subprocess gets it | When using subprocess.run() in Python, env vars are NOT inherited from the parent shell unless explicitly passed via the `env=` parameter; `os.environ.copy()` is required. |
 | Checking only the main .pth file | Examined `.pth` file in main repo's site-packages | Missed that the worktree was using the SAME `.pixi/envs/default` and the .pth file there was also pointing to the worktree (correctly) | Both the main repo and worktree share `.pixi/envs/default`; the .pth file is correct in both cases. The issue is NOT the .pth target but the sys.path ordering. |
-| Used `pixi run hephaestus-*` console script to test worktree changes | Ran `pixi run hephaestus-check-python-version --json` after modifying `validation/python_version.py` in a worktree; expected to see new `ci_checks` key in output | Console script shebang points to the MAIN worktree's installed Python; `pixi run python -c "import hephaestus.validation.python_version as m; import inspect; print(inspect.getfile(m))"` confirmed the file loaded was from the main repo, not the worktree | Use `pixi run python -c "from hephaestus.X import main; main()"` instead of console script binaries when testing changes inside a worktree. The console script binary itself is stale even when direct imports work. |
 
 ## Results & Parameters
 
 ### Diagnostic Commands (Copy-Paste Ready)
 
 ```bash
-# Step 0: Diagnose which file is actually loaded (do this first)
-pixi run python -c "import hephaestus.validation.python_version as m; import inspect; print(inspect.getfile(m))"
-# Replace 'hephaestus.validation.python_version' with the module you changed.
-# If the path is NOT in the current worktree directory, the editable install is stale.
-
 # From a git worktree, check what sys.path subprocess sees
 python3 -c 'import sys; [print(i, path) for i, path in enumerate(sys.path)]'
 # Output example:
@@ -280,7 +220,7 @@ python3 -c 'import sys; [print(i, path) for i, path in enumerate(sys.path)]'
 #   2 /home/mvillmow/Projects/ProjectHephaestus/build/.worktrees/issue-724
 #   3 /path/to/.pixi/envs/default/lib/python3.14t/site-packages
 #   ...
-# Main repo at [1], worktree at [2] = PROBLEM
+# ↑ Main repo at [1], worktree at [2] = PROBLEM
 
 # Check which directory the editable install .pth file points to
 find .pixi/envs/default/lib/python*/site-packages/ -name '_editable_impl_*.pth' -exec cat {} \;
@@ -312,8 +252,8 @@ def add_version_arg(parser: argparse.ArgumentParser) -> None:
     parser.add_argument('-V', '--version', action='version', version=version_str)
 
 # Test in the same Python process:
-pixi run python -c "from hephaestus.cli import add_version_arg; print('Import works')"
-# Output: Import works (code from worktree loaded)
+pixi run python -c "from hephaestus.cli import add_version_arg; print('✓ Import works')"
+# Output: ✓ Import works (code from worktree loaded)
 
 # Test via subprocess console script:
 pixi run hephaestus-agent-stage --version
@@ -322,25 +262,6 @@ pixi run hephaestus-agent-stage --version
 ```
 
 The fix applied: All console-script invocations in automation were changed from raw `subprocess.run()` to `pixi run <script>` to preserve the environment context.
-
-### Example: Issue #1189 Reproduction
-
-During the implementation of Issue #1189 (python-version-consistency DRY refactor), after editing `validation/python_version.py` to add a `ci_checks` key to the JSON output:
-
-```bash
-# In the worktree, ran the console script:
-pixi run hephaestus-check-python-version --json
-# Output: old JSON without 'ci_checks' key — stale code from main worktree
-
-# Diagnosed with inspect.getfile():
-pixi run python -c "import hephaestus.validation.python_version as m; import inspect; print(inspect.getfile(m))"
-# Output: /home/mvillmow/Projects/ProjectHephaestus/hephaestus/validation/python_version.py
-# (main worktree path — NOT the issue-1189 worktree)
-
-# Workaround: invoke via python -c instead of console script:
-pixi run python -c "from hephaestus.validation.python_version import main; main()" -- --json
-# Output: new JSON with 'ci_checks' key — correct worktree code loaded
-```
 
 ### sys.path Inspection Pattern
 
@@ -380,21 +301,14 @@ Does your code run subprocess commands from a git worktree?
 ├─ YES
 │  ├─ Is the command a console script (entry point)?
 │  │  ├─ YES
-│  │  │  ├─ Are you testing changes and need the worktree's code?
-│  │  │  │  ├─ YES → Use pixi run python -c "from hephaestus.X import main; main()"
-│  │  │  │  │         (bypasses stale console script shebang entirely)
-│  │  │  │  └─ NO (production automation, not testing)
-│  │  │  │     ├─ Can you use `pixi run <script>` (in same directory context)?
-│  │  │  │     │  ├─ YES → Solution 2: Use pixi run (PREFERRED for automation)
-│  │  │  │     │  └─ NO → Solution 3: Export PYTHONPATH explicitly
-│  │  │  │     └─ Does the worktree have its own pixi env?
-│  │  │  │        ├─ YES → Run pixi run dev-install to regenerate console script binary
-│  │  │  │        └─ NO → Accept limitation, test via python -c
+│  │  │  ├─ Can you use `pixi run <script>` (in same directory context)?
+│  │  │  │  ├─ YES → Solution 1: Use pixi run (PREFERRED)
+│  │  │  │  └─ NO → Solution 2: Export PYTHONPATH explicitly
 │  │  │  └─ Is the script defined in [project.scripts]?
-│  │  │     ├─ YES → Same issue applies
+│  │  │     ├─ YES → Same issue applies, use pixi run
 │  │  │     └─ NO → Check if it's a shell wrapper or compiled binary
 │  │  └─ NO (raw Python invocation)
-│  │     └─ Direct import in subprocess context — apply Solution 3 (PYTHONPATH)
+│  │     └─ Direct import in subprocess context — apply Solution 2 (PYTHONPATH)
 │  └─ NO → Not affected by this issue
 └─ NO → Not affected by this issue
 ```
@@ -404,7 +318,6 @@ Does your code run subprocess commands from a git worktree?
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | Issue #724: Add -V/--version flag to 44 console scripts | 2026-06-06 — Discovered during implementation that `pixi run hephaestus-agent-stage --version` loaded stale code from main repo in a git worktree. Direct imports worked correctly. Root cause: sys.path ordering with main repo before worktree. Solution: Use `pixi run` for all subprocess invocations of console scripts. Verified locally (pixi run works, direct subprocess fails). CI not examined in detail. |
-| ProjectHephaestus | Issue #1189: python-version-consistency DRY refactor | 2026-06-13 — Discovered that `pixi run hephaestus-check-python-version --json` returned old JSON without the new `ci_checks` key even after modifying `validation/python_version.py` in the worktree. Diagnosed with `inspect.getfile()` — file path pointed to main worktree. Workaround: `pixi run python -c "from hephaestus.validation.python_version import main; main()" -- --json`. |
 
 ## References
 
