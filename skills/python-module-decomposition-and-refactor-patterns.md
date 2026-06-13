@@ -34,10 +34,16 @@ description: >-
   body sizing (extract if > 40L), return type tracing when a helper absorbs the only call
   site to a data-fetching function, N-tuple completeness for orchestrator helpers, explicit
   parameter audit for captured variables, approach-table completeness (ALL helpers listed),
-  and AST-measure-before-planning discipline to avoid stale line numbers.
+  and AST-measure-before-planning discipline to avoid stale line numbers,
+  (16) god-class delegation pattern planning: shared mutable dict write-back when a discovered
+  method moves to a collaborator, methods called by multiple collaborators (assign to host not
+  one collaborator), test fixture pre-seeding of cache attributes after extraction (pre-seeding
+  driver._cache doesn't affect collaborator._cache), reading method bodies before assigning
+  them to collaborators (name-only assignment is insufficient), and verifying __init__.py
+  export conditionality before planning conditional export steps.
 category: architecture
 date: 2026-06-13
-version: "1.8.0"
+version: "1.9.0"
 user-invocable: false
 history: python-module-decomposition-and-refactor-patterns.history
 tags:
@@ -84,8 +90,8 @@ tags:
 | ------- | ------- |
 | **Date** | 2026-06-13 |
 | **Objective** | Decompose oversized Python modules/classes/functions into focused, independently testable units using SRP, TDD, and DRY principles |
-| **Outcome** | Synthesized from 14+ verified skills; covers function-level extraction, class-based extraction, circular import fixes, immutability refactoring, extensibility-driven decomposition, CLI entry-point extraction with preserved patch routing, top-level symbol extraction to break sibling module cycles, CC>15 pipeline-step extraction, scanner-to-subdirectory scoping, context-manager double-counter fixes, safe legacy-code deletion, substrate-read-before-estimate discipline, post-parallel phase cleanup, god-class decomposition planning risks (state ownership, cross-call coupling, constant re-export, delegation stub type loss, coverage omit-allowlist traps), exception-contract verification before documenting wrapper behavior, three Phase 20 implementation-time traps (exception-boundary removal unmasks StopIteration from exhausted side_effect mocks; returncode-guard obligation at every call site of an absorbed-exception helper; agent mock type determines downstream subprocess.run consumption), and god-function decomposition planning rules (arithmetic chain verification, docstring budget, for-loop body sizing, return type tracing, N-tuple completeness, captured variable audit, approach table completeness, AST-measure discipline) |
-| **Trigger** | Files >800 lines, circular import errors, mixed-concern methods, C901/CC>15 complexity, extensibility requirements, CLI main() extraction, deferred imports inside function bodies preventing static analysis, broad scanners needing subdirectory scope, stale callers after context-manager refactors, dead fallback files, pessimistic refactor estimates, technical debt after parallel phases, planning a multi-collaborator god-class decomposition, extracting a two-branch provider-conditional dispatch with heterogeneous return types, documenting exception contracts for wrapper methods, planning god-function decomposition (individual functions > 80L) |
+| **Outcome** | Synthesized from 15+ verified skills; covers function-level extraction, class-based extraction, circular import fixes, immutability refactoring, extensibility-driven decomposition, CLI entry-point extraction with preserved patch routing, top-level symbol extraction to break sibling module cycles, CC>15 pipeline-step extraction, scanner-to-subdirectory scoping, context-manager double-counter fixes, safe legacy-code deletion, substrate-read-before-estimate discipline, post-parallel phase cleanup, god-class decomposition planning risks (state ownership, cross-call coupling, constant re-export, delegation stub type loss, coverage omit-allowlist traps, shared mutable dict write-back, methods shared across multiple collaborators, test fixture pre-seeding after cache extraction, method body read before assignment, __init__.py export conditionality verification), exception-contract verification before documenting wrapper behavior, three Phase 20 implementation-time traps (exception-boundary removal unmasks StopIteration from exhausted side_effect mocks; returncode-guard obligation at every call site of an absorbed-exception helper; agent mock type determines downstream subprocess.run consumption), and god-function decomposition planning rules (arithmetic chain verification, docstring budget, for-loop body sizing, return type tracing, N-tuple completeness, captured variable audit, approach table completeness, AST-measure discipline) |
+| **Trigger** | Files >800 lines, circular import errors, mixed-concern methods, C901/CC>15 complexity, extensibility requirements, CLI main() extraction, deferred imports inside function bodies preventing static analysis, broad scanners needing subdirectory scope, stale callers after context-manager refactors, dead fallback files, pessimistic refactor estimates, technical debt after parallel phases, planning a multi-collaborator god-class decomposition, extracting a two-branch provider-conditional dispatch with heterogeneous return types, documenting exception contracts for wrapper methods, planning god-function decomposition (individual functions > 80L), planning delegation-stub extraction where extracted methods populate shared dicts or caches read by the host class |
 
 ## When to Use
 
@@ -109,6 +115,7 @@ Apply this skill when any of the following is true:
 - You are **planning a god-class decomposition** (3,000+ lines, 40+ methods, multiple collaborator targets) and need to reason about state ownership migration, cross-call coupling, delegation stub typing, constant re-export risks, and CI omit-allowlist traps before writing any code
 - A function contains a **two-branch if/else over a boolean predicate** (e.g., `is_codex(agent)`) where each branch invokes a different external agent/subprocess API returning heterogeneous types, and you want to extract it into a unified private helper method without introducing a Protocol/Strategy class
 - You are **planning god-function decomposition** — individual functions exceeding the project's line-length threshold (e.g., > 80L) and need arithmetic chain verification, docstring budget accounting, for-loop body sizing, return type tracing for absorbed call sites, N-tuple completeness for orchestrator helpers, captured variable auditing, and approach-table completeness before writing any code
+- You are **planning god-class delegation extraction** where methods being moved to a collaborator populate shared mutable state (dicts, caches) that the host class reads elsewhere, where a method is used by multiple collaborator groups (assign to host, not one group), or where test fixtures pre-seed cache attributes on the host that will no longer be in scope after extraction
 
 ## Verified Workflow
 
@@ -135,6 +142,7 @@ Decision tree:
   Planning god-class decomposition      → Planning risk audit (Phase 19)
   Two-branch bool-predicate dispatch    → Provider-dispatch extraction (Phase 20)
   Planning god-function decomposition   → Function-size planning rules (Phase 21)
+  God-class delegation w/ shared state → Shared-state write-back rules (Phase 22)
 
 Universal rule for mock patches after any move:
   Patch where the name is LOOKED UP at call time — not where it was defined.
@@ -1420,6 +1428,185 @@ or prior-draft numbers without re-verification.
 - [ ] Arithmetic chain closes at ≤ 80L for every target
 ```
 
+### Phase 22: God-Class Delegation — Shared-State Write-Back Rules
+
+Use when a method being extracted to a collaborator class populates shared mutable state
+(dicts, caches) that the host class reads after the method returns. Apply BEFORE writing
+any extraction code.
+
+**Warning:** These rules have been identified in planning sessions but not yet validated
+end-to-end with CI. Treat as a design reference, not a verified recipe.
+
+#### Rule 1: Identify every dict/cache written by the candidate method group
+
+```bash
+grep -n "self\.<attr>\[" <target_file>.py    # dict population
+grep -n "self\.<attr> =" <target_file>.py    # cache writes
+```
+
+For each written attribute, check who reads it:
+
+```bash
+grep -n "self\.<attr>" <target_file>.py | grep -v "def \|#"
+```
+
+If the attribute is read by methods NOT being extracted, you have a write-back problem.
+
+#### Rule 2: Choose a write-back strategy for shared mutable dicts
+
+Three viable patterns — choose before writing the extraction:
+
+**Pattern A: Return and assign in stub**
+
+```python
+# Collaborator returns the populated dict
+class PRDiscovery:
+    def _discover_prs(self, ...) -> dict[int, Any]:
+        result: dict[int, Any] = {}
+        # ... populate result ...
+        return result
+
+# Delegation stub in host captures and assigns
+class CIDriver:
+    def _discover_prs(self, ...) -> dict[int, Any]:
+        result = self._pr_discovery._discover_prs(...)
+        self.shared_pr_issues = result   # write-back
+        return result
+```
+
+**Pattern B: Inject a setter callable**
+
+```python
+class PRDiscovery:
+    def __init__(self, set_shared_pr_issues: Callable[[dict[int, Any]], None]) -> None:
+        self._set_shared_pr_issues = set_shared_pr_issues
+
+    def _discover_prs(self, ...) -> None:
+        result: dict[int, Any] = {}
+        # ... populate result ...
+        self._set_shared_pr_issues(result)
+
+# In CIDriver.__init__:
+self._pr_discovery = PRDiscovery(
+    set_shared_pr_issues=lambda d: setattr(self, "shared_pr_issues", d)
+)
+```
+
+**Pattern C: Pass the dict as a mutable parameter**
+
+```python
+class PRDiscovery:
+    def _discover_prs(self, shared_pr_issues: dict[int, Any], ...) -> None:
+        shared_pr_issues.update(...)   # mutates in place
+
+# In delegation stub:
+def _discover_prs(self, ...) -> None:
+    self._pr_discovery._discover_prs(self.shared_pr_issues, ...)
+```
+
+Choose Pattern A when the method fully replaces the dict (not incremental).
+Choose Pattern B when you want the collaborator to be fully decoupled from the host.
+Choose Pattern C when the dict is populated incrementally across multiple calls.
+
+#### Rule 3: Methods called by multiple collaborator groups stay on the host
+
+If a method is used by TWO OR MORE of the planned collaborator classes, it must stay on
+the host class (or be extracted to a separate shared utility). Assigning it to one
+collaborator forces the other to call `self._host._shared_method()`, which:
+
+1. Reintroduces tight coupling to the host class internals
+2. Makes the "receiving" collaborator unable to be unit-tested without the host
+3. Violates the SRP that motivated the extraction
+
+```bash
+# For each shared method candidate, check all call sites:
+grep -n "self\._tracked_worktree_changes\|self\._head_advanced" <target_file>.py | grep -v "def "
+# If the method appears in lines claimed by BOTH CICheckInspector AND CIFixOrchestrator:
+# → keep it on CIDriver (delegation stub optional)
+```
+
+#### Rule 4: Test fixture pre-seeding after cache extraction
+
+When a cache attribute (e.g., `_viewer_login`) migrates from the host to a collaborator,
+existing tests that pre-seed the host attribute will silently stop working:
+
+```python
+# Test pre-seeds host attribute — worked before extraction:
+driver._viewer_login = "mvillmow"   # pre-seeded
+
+# After extraction: driver._viewer_login doesn't exist; collaborator has its own cache
+# driver._pr_discovery._viewer_login is the cache now
+# The pre-seeded value never reaches the collaborator
+```
+
+**Fix options:**
+
+1. Keep the cache on the host and inject a provider callable into the collaborator:
+
+```python
+class PRDiscovery:
+    def __init__(self, viewer_login_provider: Callable[[], str]) -> None:
+        self._viewer_login_provider = viewer_login_provider
+
+    def _resolve_viewer_login(self) -> str:
+        return self._viewer_login_provider()
+```
+
+The host keeps `_viewer_login`; tests pre-seed it; the collaborator calls the provider.
+
+2. OR update all test fixtures to pre-seed the collaborator attribute instead.
+
+Option 1 is preferred when tests cannot be edited (e.g., when preserving patch.object targets).
+
+#### Rule 5: Read method bodies before assigning to collaborators
+
+Grep output and method names alone are insufficient to determine which collaborator a
+method belongs to. Before finalizing any assignment:
+
+```bash
+# Read the actual body (not just the signature line)
+sed -n '<start>,<end>p' <target_file>.py
+# OR:
+python3 -c "
+import ast, textwrap
+src = open('<target_file>.py').read()
+tree = ast.parse(src)
+for node in ast.walk(tree):
+    if isinstance(node, ast.FunctionDef) and node.name == '_target_method':
+        lines = src.splitlines()[node.lineno-1:node.end_lineno]
+        print('\n'.join(lines))
+"
+```
+
+Any method assigned without reading its body may:
+
+- Reference state owned by a different collaborator than the assignment suggests
+- Call methods that belong to a different collaborator group
+- Contain conditional logic that makes it a shared utility, not a group-specific method
+
+#### Phase 22 Planning Checklist
+
+```markdown
+## God-Class Delegation Shared-State Checklist (Phase 22)
+
+### Per extracted method group
+- [ ] List all dict/cache attributes written by the candidate methods
+- [ ] For each attribute: grep who reads it outside the candidate group
+- [ ] If read outside: choose write-back pattern (A/B/C) BEFORE extraction
+- [ ] List all methods called by the candidate methods that are NOT in the group
+- [ ] For each cross-group call: check if it's also used by another collaborator
+      → if yes, keep it on host class; do not assign it to any one collaborator
+- [ ] For each cache attribute migrating out: audit test fixtures that pre-seed it on the host
+      → decide: inject provider callable OR update all fixtures
+- [ ] Read the body of every method before assigning it to a collaborator (not just signature/grep)
+
+### Pre-plan (do before writing extraction code)
+- [ ] Read automation/__init__.py to verify whether CIDriver is already exported
+      (do not write conditional "if exported; else skip" without reading first)
+- [ ] If line count projection is needed: read top-10 longest method bodies directly
+      and sum actual lines rather than using average estimates
+```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -1476,6 +1663,12 @@ or prior-draft numbers without re-verification.
 | **Extracted helper body used `worktree_path` from enclosing scope — not in parameter list** | `_build_ci_fix_prompt` extraction plan did not include `worktree_path` in the parameter list, even though the f-string body referenced it | When extracted, `worktree_path` is not in scope — `NameError` at runtime | Audit every name in the extracted body against the proposed parameter list; any captured variable from the enclosing scope must be added as an explicit parameter (Phase 21, Rule 6) |
 | **Approach table omitted helpers for `_run_impl_review_loop` (R2)** | The Approach table row for `_run_impl_review_loop` listed only one helper; `_process_review_iteration` and `_run_address_step_if_needed` were missing | Reviewer flagged both helpers as absent from the table; arithmetic chain was therefore also missing | After drafting the approach table, re-read each function and confirm ALL helpers are listed; do not declare a row complete until the arithmetic chain closes at ≤ 80L (Phase 21, Rule 7) |
 | **Used issue-cited line numbers without re-measuring (R0–R2)** | Plans carried forward stale line numbers from the issue body: `_drive_issue` at line 711 (actual: 731), `_run_ci_fix_session` at 2590 (actual: 2610) | 20-line drift made post-extraction arithmetic chains wrong; helpers were sized to wrong baselines | Run AST measurement on the actual file at plan time; record measured line numbers explicitly; never trust issue-cited or prior-draft line numbers (Phase 21, Rule 8) |
+| **Moving `_discover_prs` to collaborator without designing write-back for `shared_pr_issues`** | Plan extracted `PRDiscovery._discover_prs` but did not address how the populated `shared_pr_issues` dict would reach `CIDriver`'s arming fan-out logic | After extraction the collaborator updates its own local variable, not `CIDriver.shared_pr_issues`; the arming logic reads the host's attribute which is never updated | When extracting a method that populates a dict read by the host class: choose one write-back pattern (return+assign in stub, injected setter callable, or mutable dict parameter) and design it before writing any extraction code (Phase 22, Rule 2) |
+| **Assigning `_tracked_worktree_changes` to one collaborator when it is used by two** | Plan assigned `_tracked_worktree_changes` to `CICheckInspector`; `CIFixOrchestrator` also calls it | `CIFixOrchestrator` must call `self._ci_check_inspector._tracked_worktree_changes()` — cross-collaborator coupling that defeats the SRP goal | Methods called by multiple collaborator groups must stay on the host class (or be extracted to a shared utility); do not assign shared methods to any single collaborator (Phase 22, Rule 3) |
+| **Pre-seeding `driver._viewer_login` in tests after `PRDiscovery` extraction** | Tests pre-seeded `driver._viewer_login = "mvillmow"` to short-circuit viewer-login resolution | After extraction, the relevant cache lives at `driver._pr_discovery._viewer_login`; pre-seeding the host attribute has no effect — the collaborator still calls `gh api /user` | When extracting a method that maintains a cache: either keep the cache on the host and inject a provider callable, OR update all test fixtures to pre-seed the collaborator's attribute (Phase 22, Rule 4) |
+| **Assigning method bodies to collaborators based on name/grep without reading the body** | `_arm_all_unarmed_open_prs`, `_check_arming_on_drive_start`, `_arming_state_path/load/save/clear` were assigned to `ArmingOrchestrator` based on method name and grep output only | Bodies not read; may reference state or call methods that break the injection model | Read every method body before assigning it to a collaborator; grep output and names alone are insufficient — the body may reveal state dependencies or cross-group calls that change the assignment (Phase 22, Rule 5) |
+| **Writing conditional `__init__.py` export step without reading `__init__.py`** | Plan said "if `automation/__init__.py` already exports `CIDriver`; otherwise skip" — conditionality not resolved at plan time | `__init__.py` content was not read during planning; whether to add exports and where was left ambiguous | Read `__init__.py` directly before planning any export step; never leave "if/else export" conditionality unresolved in the plan (Phase 22, Phase 22 Checklist) |
+| **Estimating line count target achievability without reading method bodies** | Plan estimated 37 methods × ~25 lines avg = ~814 net savings, projecting ci_driver.py to ~2,544 lines with no fallback plan if wrong | Method body lengths were not read; if average is <25 lines, target may not be reached after PRDiscovery alone | For line count projections: read the top-N longest method bodies directly (using AST measurement) and sum actual lines rather than applying an average estimate; if projection is near the threshold, include a fallback plan (Phase 22 Checklist) |
 
 ## Results & Parameters
 
@@ -1550,3 +1743,4 @@ Revised LOC estimate: ~X (vs TODO "~Y"); justification: ~Z% already in substrate
 | ProjectHephaestus | Issue #1196 Phase 20 reviewer NOGO — reviewer verified source: `AgentRunResult` (runtime.py:28–34) has `stdout`/`stderr`/`session_id` fields (NO `returncode`); `run_codex_session` raises `CalledProcessError` at runtime.py:397–403 on non-zero exit; `resume_codex_session` same behavior; POLA violation caught: docstring claimed "never raises CalledProcessError" without verifying wrapped functions; corrected pattern: wrap BOTH codex calls in `try/except CalledProcessError`, use `CompletedProcess(returncode=0)` (synthetic, only reachable without exception), document `TimeoutExpired` as sole propagating exception | Phase 20 correction: exception-contract verification before wrapper docstrings (v1.6.0) |
 | ProjectHephaestus | Issue #1196 Phase 20 implementation — extracted `_invoke_agent_session` + `_push_ci_fix` into `ci_driver.py`; removed `# noqa: C901` from `_run_ci_fix_session`; added 11 new tests (`TestInvokeAgentSession` 8 tests, `TestPushCiFix` 3 tests); 157 tests in `test_ci_driver.py` pass; ruff + mypy clean; three implementation traps discovered: (1) outer `except Exception` was masking `StopIteration` from exhausted mock `side_effect` lists — removal exposed latent miscounting in `test_codex_ci_fix_session_skips_push_when_head_did_not_advance` (needed 3rd `run` side_effect for `clean_status`); (2) caller of `_invoke_agent_session` in `_retry_no_commit_once` lacked `if retry_result.returncode != 0: return False` — no-commit marker was being written incorrectly; (3) mock for `invoke_claude_with_session` in retry test had to be changed from `return_value=...` to `raise CalledProcessError` to avoid consuming excess `run` side_effects; CI gate pending (verified-local) | Phase 20 implementation traps: exception-boundary removal unmasks StopIteration, returncode-guard obligation at call sites, agent-mock type determines downstream `run` consumption (v1.7.0) |
 | ProjectHephaestus | Issue #1180 — planning decomposition of 7 god-functions across 4 files in `hephaestus/automation/` (R0→R3 planning cycle): R0 NOGO (waived 128L `_implement_issue` as "marginal"); R1 NOGO (claimed reduction with no extraction step); R2 NOGO (6-tuple dropped `reopened`, approach table missing two helpers); R3 approved; 8 planning rules identified: (1) arithmetic chain non-negotiable — no waivers; (2) docstring lines count toward function span; (3) for-loop body > 40L is a standalone extraction candidate; (4) helpers absorbing the only call to a data-fetching function must return the fetched data; (5) orchestrator N-tuple must cover ALL post-call variables; (6) every captured variable in an extracted body is a missing parameter; (7) approach table must list ALL helpers per target; (8) AST-measure before planning — never trust issue-cited line numbers (unverified — plan not yet executed) | New Phase 21: God-Function Decomposition Planning Rules (v1.8.0) |
+| ProjectHephaestus | Issue #1289 — planning second decomposition pass of `ci_driver.py` (3,358 lines) using Dependency Inversion + delegation stubs to preserve `patch.object` test targets; 4 collaborators proposed (`PRDiscovery`, `CICheckInspector`, `CIFixOrchestrator`, `ArmingOrchestrator`); 6 additional planning risks identified: (1) `shared_pr_issues` write-back not designed — `_discover_prs` moving to `PRDiscovery` populates dict that arming fan-out reads on CIDriver; (2) `_tracked_worktree_changes` used by both `CICheckInspector` and `CIFixOrchestrator` — cross-collaborator coupling if assigned to one; (3) test fixture pre-seeding of `driver._viewer_login` stops working after cache migrates to collaborator; (4) method bodies not read before assigning to collaborators (`_arm_all_unarmed_open_prs` etc. assigned by name only); (5) conditional `__init__.py` export step not resolved at plan time — `__init__.py` not read; (6) line count projection used 25-line average for method bodies without reading actual lengths — no fallback plan if target not reached after PRDiscovery (unverified — implementation not yet started) | New Phase 22: God-Class Delegation Shared-State Write-Back Rules (v1.9.0) |
