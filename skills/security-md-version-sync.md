@@ -32,6 +32,8 @@ tags:
 - You are performing a version bump and want to ensure all version-referencing files are updated
 - Users report confusion about whether their version receives security support
 
+**Distinct trigger — see `security-md-version-sync-planning-gaps` instead when**: SECURITY.md has the right floor (`>=3.10`) but omits the tested ceiling, lacks a `pyproject.toml` canonical source reference, or is missing a cross-reference to `COMPATIBILITY.md`. This skill covers the *supported-versions table*; the planning-gaps skill covers the *prose paragraph* above the table.
+
 ## Verified Workflow
 
 > **Note:** Verified at pre-commit level — no unit tests needed for this documentation-only change.

@@ -1,11 +1,11 @@
 ---
 name: security-md-version-sync-planning-gaps
-description: "Plan and verify SECURITY.md Python interpreter version range accuracy. Use when: (1) SECURITY.md states only a floor version (e.g. 'Python >= 3.10') without a ceiling, (2) the CI matrix adds or drops a Python version and docs need updating, (3) auditing whether security/policy docs reflect the full tested range rather than just the minimum."
+description: "Fix SECURITY.md Python version precision: floor-only claims, missing tested ceiling, absent pyproject.toml reference, or missing COMPATIBILITY.md cross-reference. Use when: (1) SECURITY.md states only a floor version (e.g. 'Python >= 3.10') without a ceiling or canonical source reference, (2) the CI matrix adds or drops a Python version and docs need updating, (3) auditing whether security/policy docs reflect the full tested range rather than just the minimum, (4) SECURITY.md prose lacks a cross-reference to COMPATIBILITY.md."
 category: documentation
 date: 2026-06-13
-version: "1.0.0"
+version: "2.0.0"
 user-invocable: false
-verification: unverified
+verification: verified-precommit
 tags:
   - security
   - versioning
@@ -14,6 +14,8 @@ tags:
   - SECURITY.md
   - ci-matrix
   - policy-doc
+  - pyproject-toml
+  - compatibility
 ---
 
 # SECURITY.md Python Version Range Planning Gaps
@@ -23,20 +25,24 @@ tags:
 | Field | Value |
 | ------- | ------- |
 | **Date** | 2026-06-13 |
-| **Objective** | Ensure SECURITY.md accurately states both the floor AND ceiling of supported Python versions, triangulating pyproject.toml, CI matrix, and pixi.toml simultaneously |
-| **Outcome** | Planning session only — implementation not yet verified |
-| **Verification** | unverified |
+| **Objective** | Ensure SECURITY.md accurately states both the floor AND ceiling of supported Python versions, includes a canonical source reference, and cross-references COMPATIBILITY.md |
+| **Outcome** | Successful — verified pre-commit; PR #1204 open (ProjectHephaestus) |
+| **Verification** | verified-precommit |
 
 ## When to Use
 
-- When planning fixes to SECURITY.md or other policy docs that state only a Python version floor (e.g. `Python >= 3.10`) without the tested ceiling
-- When a CI matrix changes (new Python version added or dropped) and policy docs need updating
-- When auditing whether security/policy docs accurately reflect the supported version range vs. just the minimum
+- When SECURITY.md states only a Python version floor (e.g. `Python >= 3.10`) without the tested ceiling
+- When SECURITY.md prose has no reference to `pyproject.toml` as the canonical source of `requires-python`
+- When SECURITY.md lacks a cross-reference to `COMPATIBILITY.md`
+- When the CI matrix adds or drops a Python version and policy docs need updating
+- When auditing whether security/policy docs reflect the full tested range vs. just the minimum
 - When `COMPATIBILITY.md` and `SECURITY.md` may both be stale simultaneously
+
+**Distinguish from `security-md-version-sync`**: That skill covers the *supported-versions table* (0.9.x / <0.9 rows). This skill covers the *prose paragraph* above the table — specifically precision and source attribution of the Python interpreter version claim.
 
 ## Verified Workflow
 
-> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
+> **Note:** Verified at pre-commit level for doc-only changes. No unit tests needed.
 
 ### Quick Reference
 
@@ -50,9 +56,14 @@ grep -n "python-version" .github/workflows/test.yml | head -20
 # 3. Check pixi.toml ceiling
 grep "python" pixi.toml | head -5
 
-# 4. Verify SECURITY.md fix (flexible pattern — avoid order-dependent greps)
-grep -n "3\.10\|3\.13\|3\.14" SECURITY.md
-# Prefer this over: grep -n "3\.10.*3\.13\|3\.13.*3\.10" SECURITY.md  (order-dependent, brittle)
+# 4. Verify stale text is gone and new text is present
+grep -n "Python >= 3.10 required" SECURITY.md && echo "FAIL: stale text present" || echo "PASS: stale text removed"
+grep -n "3\.10\|3\.13" SECURITY.md   # flexible — not order-dependent
+grep -n "pyproject.toml" SECURITY.md
+grep -n "COMPATIBILITY.md" SECURITY.md
+
+# 5. Run pre-commit (skip mojo-format which may fail on GLIBC mismatch)
+SKIP=mojo-format pre-commit run --all-files
 ```
 
 ### Detailed Steps
@@ -67,13 +78,30 @@ Triangulate these three canonical sources simultaneously:
 
 4. **Existing policy docs** (`COMPATIBILITY.md`, `SECURITY.md`) — compare against sources 1–3 to identify staleness.
 
-5. **Update SECURITY.md** — change a floor-only claim like `Python >= 3.10` to state the full tested range (e.g. `Python 3.10 through 3.13`). The claim should surface the ceiling, not just the floor.
+5. **Update the SECURITY.md prose paragraph** — not just the table rows. The paragraph above the supported-versions table should state:
+   - The floor + tested range (e.g. `Python 3.10–3.13`)
+   - The `pyproject.toml` field as canonical source (`requires-python = ">=3.10"`)
+   - A cross-reference to `COMPATIBILITY.md` for the full policy
 
-6. **Cross-check COMPATIBILITY.md** — do not assume it is accurate; verify its version list independently against the CI matrix.
+6. **Leave the supported-versions table unchanged** — the table (0.9.x / <0.9 rows) is a separate concern covered by `security-md-version-sync`.
 
-7. **Run pre-commit hooks** — `pre-commit run --all-files` to confirm markdown formatting is clean.
+7. **Cross-check COMPATIBILITY.md** — do not assume it is accurate; verify its version list independently against the CI matrix.
 
-8. **Commit with conventional format** — `docs(security): surface Python ceiling in supported versions`
+8. **Run pre-commit hooks** — `SKIP=mojo-format pre-commit run --all-files` to confirm markdown formatting is clean.
+
+9. **Commit with conventional format** — `docs(security): <description>`
+
+### Pre-commit Guidance for Doc-Only Changes
+
+When pre-commit hooks fail on a doc-only change:
+
+1. Run `SKIP=mojo-format pre-commit run --all-files` — skip `mojo-format` if you're on a system with GLIBC mismatch (common on WSL2 non-matching kernels).
+2. Markdownlint, YAML lint, and repo-specific hooks (e.g. `check-version-single-source`) all pass for doc-only SECURITY.md edits.
+3. If `ruff` or `mypy` hooks fail, verify they also fail on `main` WITHOUT your change before concluding they are pre-existing failures:
+
+```bash
+git stash && SKIP=mojo-format pre-commit run --all-files && git stash pop
+```
 
 ### Known Automation Gap
 
@@ -86,20 +114,58 @@ No pre-commit hook enforces `SECURITY.md` / `pyproject.toml` Python version sync
 | Assuming test.yml is the only CI matrix file | Treating `test.yml:64` as the complete source of the tested range | `_required.yml` uses only Python 3.12 for its steps — could be mistaken for a narrowing of the tested range | Always check all workflow files in `.github/workflows/`; a narrower subset job does not change the main matrix range |
 | Order-dependent verification grep | `grep -n "3\.10.*3\.13\|3\.13.*3\.10" SECURITY.md` | Will miss the fix if the text uses a different ordering or format such as "3.10 through 3.13" | Use flexible individual-version greps instead of order-dependent compound patterns |
 | Taking COMPATIBILITY.md at face value | Assuming `COMPATIBILITY.md:13` was recently updated and accurate | Both `SECURITY.md` and `COMPATIBILITY.md` can be stale simultaneously — neither validates the other | Always verify policy docs independently against the CI matrix, not against each other |
+| Running full pre-commit on GLIBC-mismatch host | Running `pre-commit run --all-files` without skipping `mojo-format` | `mojo-format` fails with GLIBC mismatch on WSL2 / mismatched kernels | Use `SKIP=mojo-format pre-commit run --all-files` for doc-only changes on such hosts |
 
 ## Results & Parameters
 
-### Version Claim Pattern
+### Replacement Prose Pattern
 
-Replace floor-only claims:
+Use this template in the paragraph above the supported-versions table:
 
 ```markdown
-<!-- Before: floor-only, misleading by omission -->
-Supported Python versions: >= 3.10
-
-<!-- After: full tested range, explicit ceiling -->
-Supported Python versions: 3.10, 3.11, 3.12, and 3.13 (tested in CI)
+ProjectHephaestus supports **Python 3.10–3.13** (`requires-python = ">=3.10"` in
+`pyproject.toml`; CI exercises 3.10, 3.11, 3.12, and 3.13). See
+[COMPATIBILITY.md](COMPATIBILITY.md) for the full compatibility policy.
 ```
+
+Key elements:
+- Floor + ceiling range (e.g. `3.10–3.13`)
+- The `pyproject.toml` field name AND value as canonical source
+- CI exercises list (enumerate all tested versions)
+- Cross-reference to `COMPATIBILITY.md`
+
+### Verification Commands
+
+```bash
+# Stale floor-only text gone
+grep -n "Python >= 3.10 required" SECURITY.md && echo "FAIL" || echo "PASS"
+
+# Tested range present (both ends)
+grep -n "3\.10" SECURITY.md | grep -q . && echo "PASS: floor present" || echo "FAIL: floor missing"
+grep -n "3\.13" SECURITY.md | grep -q . && echo "PASS: ceiling present" || echo "FAIL: ceiling missing"
+
+# Canonical source reference present
+grep -n "pyproject.toml" SECURITY.md | grep -q . && echo "PASS: pyproject.toml referenced" || echo "FAIL: missing"
+
+# Cross-reference to COMPATIBILITY.md present
+grep -n "COMPATIBILITY.md" SECURITY.md | grep -q . && echo "PASS: COMPATIBILITY.md cross-referenced" || echo "FAIL: missing"
+```
+
+### Version Claim Pattern (Before / After)
+
+```markdown
+<!-- Before: floor-only, misleading by omission, no canonical source, no cross-reference -->
+Python >= 3.10 required.
+
+<!-- After: full tested range, canonical source, cross-reference -->
+ProjectHephaestus supports **Python 3.10–3.13** (`requires-python = ">=3.10"` in
+`pyproject.toml`; CI exercises 3.10, 3.11, 3.12, and 3.13). See
+[COMPATIBILITY.md](COMPATIBILITY.md) for the full compatibility policy.
+```
+
+### Fix Scope: Prose Paragraph, Not Table
+
+The supported-versions *table* (version rows like `0.9.x / Yes`) is separate and stays unchanged. Only the *prose paragraph* above the table needs updating. Do not confuse these two targets.
 
 ### Triangulation Checklist
 
@@ -114,7 +180,7 @@ Supported Python versions: 3.10, 3.11, 3.12, and 3.13 (tested in CI)
 ### Commit Message Template
 
 ```
-docs(security): surface Python ceiling in supported versions
+docs(security): align Python version range with pyproject + CI matrix
 
 Closes #<issue-number>
 ```
@@ -124,7 +190,8 @@ Closes #<issue-number>
 A pre-commit hook or CI step that:
 1. Extracts the python-version matrix from `test.yml`
 2. Checks that `SECURITY.md` mentions both the lowest and highest version in that matrix
-3. Fails with a diff showing the gap
+3. Checks that `SECURITY.md` references `pyproject.toml` and `COMPATIBILITY.md`
+4. Fails with a diff showing the gap
 
 This would complement the existing `check-version-single-source` hook.
 
@@ -132,4 +199,5 @@ This would complement the existing `check-version-single-source` hook.
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectHephaestus | Planning session 2026-06-13 | Not yet implemented — plan only |
+| ProjectHephaestus | Planning session 2026-06-13 | v1.0.0 — plan only, unverified |
+| ProjectHephaestus | Issue #1204 — SECURITY.md Python version precision fix 2026-06-13 | v2.0.0 — pre-commit passed; PR #1204 open; commit `docs(security): align Python version range with pyproject + CI matrix` |
