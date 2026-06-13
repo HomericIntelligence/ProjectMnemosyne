@@ -2,6 +2,26 @@
 
 # stale-documentation-audit-and-broken-reference-repair — History
 
+## v1.2.0 (2026-06-13)
+
+Added stale line-number citation audit and issue-body claim verification patterns
+from ProjectHephaestus issue #1222 (PR #1299):
+
+- New "When to Use" bullet: a follow-up issue cites a specific incorrect claim that was
+  already fixed on main — verify current file state before acting; only stale cross-references
+  may remain
+- New "When to Use" bullet: a doc or test file references another file by line number — the
+  cited line numbers may have shifted independently across files that reference the same construct
+- New row in pattern classification table: "Line-number citation drift" and "Issue-body
+  fabricated claim"
+- Extended Quick Reference bash block for stale line-number citation workflow (3-step grep pattern)
+- Two new Failed Attempts rows:
+  1. "Trusting issue body claim of specific incorrect string" — planned to edit text the issue
+     said was wrong but that text no longer existed in main (prior PR had already fixed it)
+  2. "Searching only the issue-reported stale line-number value" — only grepped for `137-141`
+     but the test file carried a different stale value (`127-129`) from independent update history
+- New Verified On row: ProjectHephaestus #1222 / PR #1299
+
 ## v1.1.0 (2026-06-13)
 
 Added ADR LoC drift pattern from ProjectHephaestus issue #1177 (PR #1281):
