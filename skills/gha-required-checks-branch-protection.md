@@ -1,9 +1,9 @@
 ---
 name: gha-required-checks-branch-protection
-description: "Use when: (1) PRs are permanently BLOCKED because a required status-check context is a job gated by if: github.event_name != 'pull_request' (skipped != satisfied), (2) consolidating duplicate CI jobs into a reusable workflow so _required.yml is a thin aggregator, (3) validating GitHub branch protection API responses and writing synthetic tests for bash enforcement scripts, (4) a summary aggregator job pattern is needed to replace N individual required contexts with one that handles skip semantics correctly, (5) adding a RESULTS-loop aggregator gate to _required.yml with a guard test asserting all non-excluded jobs are wired into needs."
+description: "Use when: (1) PRs are permanently BLOCKED because a required status-check context is a job gated by if: github.event_name != 'pull_request' (skipped != satisfied), (2) consolidating duplicate CI jobs into a reusable workflow so _required.yml is a thin aggregator, (3) validating GitHub branch protection API responses and writing synthetic tests for bash enforcement scripts, (4) a summary aggregator job pattern is needed to replace N individual required contexts with one that handles skip semantics correctly, (5) adding a RESULTS-loop aggregator gate to _required.yml with a guard test asserting all non-excluded jobs are wired into needs, (6) guard test needs a provable negative path to catch silently-inverted conditions, (7) job key vs context name disambiguation for branch protection contexts, (8) GET-before-PUT mitigation for destructive branch protection API, (9) requirements deviation must be disclosed explicitly in implementation plans."
 category: ci-cd
 date: 2026-06-13
-version: "1.2.0"
+version: "1.3.0"
 user-invocable: false
 history: gha-required-checks-branch-protection.history
 tags:
@@ -30,9 +30,9 @@ tags:
 | Field | Value |
 | ------- | ------- |
 | **Date** | 2026-06-13 |
-| **Objective** | Make required status checks satisfiable and maintainable: handle skip-vs-success semantics with a `summary` aggregator, consolidate duplicate jobs into a reusable `workflow_call` workflow, validate branch-protection API writes with read-back, smoke-test workflow structure, and add a RESULTS-loop gate with guard test |
-| **Outcome** | Consolidated guidance covering five interacting concerns; specific cases preserved as examples |
-| **Verification** | verified-ci (core patterns); unverified (RESULTS-loop gate — planning phase only) |
+| **Objective** | Make required status checks satisfiable and maintainable: handle skip-vs-success semantics with a `summary` aggregator, consolidate duplicate jobs into a reusable `workflow_call` workflow, validate branch-protection API writes with read-back, smoke-test workflow structure, add a RESULTS-loop gate with guard test, and document guard-test negative-path, job-key vs context-name disambiguation, destructive PUT mitigation, and requirements-deviation disclosure |
+| **Outcome** | Consolidated guidance covering nine interacting concerns; specific cases preserved as examples |
+| **Verification** | verified-ci (core patterns); unverified (RESULTS-loop gate, sections F–I — planning phase only) |
 
 ## When to Use
 
@@ -242,6 +242,121 @@ This guard test catches new jobs added to `_required.yml` that are not wired int
 | Jobs with own required context (e.g., `pr-policy`) | NO | Already has own branch-protection entry |
 | The gate itself (`required-checks-gate`) | NO | Would create circular `needs:` |
 
+#### F. Guard test with provable negative path (revised pattern — unverified)
+
+> **Warning:** This refinement is a planning-phase capture from ProjectHephaestus issue #1315 NOGO review. Treat as a hypothesis until CI confirms.
+
+The v1.2.0 guard test used a static assertion on the live workflow. A NOGO review identified that this doesn't prove the guard *can* catch a gap — a silently-inverted condition (e.g., `gate_needs - all_jobs` instead of `all_jobs - gate_needs`) would still pass the positive test. Fix: extract a pure helper `_unwired_jobs(wf, excluded)` that can be unit-tested independently with a synthetic workflow dict.
+
+```python
+def _unwired_jobs(wf: dict, excluded: frozenset[str]) -> set[str]:
+    """Return job keys not wired into the gate's needs: list.
+
+    Args:
+        wf: Parsed workflow dict (from yaml.safe_load).
+        excluded: Job keys that are not expected to be wired (gate itself,
+                  advisory jobs, jobs with their own required context).
+
+    Returns:
+        Set of job keys that should be in gate's needs: but are not.
+    """
+    all_jobs = set(wf.get("jobs", {}).keys())
+    gate_needs = set(wf["jobs"]["required-checks-gate"].get("needs", []))
+    return (all_jobs - excluded) - gate_needs
+```
+
+Three tests required — all three must be present for the guard to be self-verifying:
+
+```python
+EXCLUDED = frozenset({"auto-merge-policy", "pr-policy", "required-checks-gate"})
+
+def test_all_required_jobs_wired_positive():
+    """Positive: live workflow has no unwired jobs."""
+    wf = yaml.safe_load(Path(".github/workflows/_required.yml").read_text())
+    assert _unwired_jobs(wf, EXCLUDED) == set(), (
+        f"Gate missing jobs: {_unwired_jobs(wf, EXCLUDED)}"
+    )
+
+def test_unwired_jobs_detects_gap():
+    """Negative: synthetic wf with a dummy-job not in needs → helper returns it."""
+    synthetic = {
+        "jobs": {
+            "required-checks-gate": {"needs": ["lint", "unit-tests"]},
+            "lint": {},
+            "unit-tests": {},
+            "dummy-job": {},   # not in needs
+        }
+    }
+    result = _unwired_jobs(synthetic, EXCLUDED)
+    assert result == {"dummy-job"}, f"Expected {{'dummy-job'}}, got {result}"
+
+def test_unwired_jobs_excluded_not_flagged():
+    """Excluded jobs (pr-policy, auto-merge-policy) are never flagged."""
+    synthetic = {
+        "jobs": {
+            "required-checks-gate": {"needs": ["lint"]},
+            "lint": {},
+            "pr-policy": {},
+            "auto-merge-policy": {},
+        }
+    }
+    result = _unwired_jobs(synthetic, EXCLUDED)
+    assert result == set(), f"Excluded jobs should not be flagged, got {result}"
+```
+
+The negative-path test (second) is the critical addition — it proves the helper *can* detect a gap, not just that the current workflow happens to pass.
+
+#### G. Job key vs. context name disambiguation
+
+`needs:` in GitHub Actions uses job *keys* — the YAML map key in the `jobs:` block. Branch protection `required_status_checks` contexts use the job `name:` field (the display name). These are usually identical when `name:` is not set explicitly (GitHub defaults the context to the job key). They **diverge** when `name:` contains characters like slashes.
+
+| Scenario | Job key | `name:` field | Context registered |
+| -------- | -------- | ------------- | ------------------ |
+| No explicit `name:` | `security-dependency-scan` | (absent) | `security-dependency-scan` |
+| Slash in `name:` | `security-dependency-scan` | `security/dependency-scan` | `security/dependency-scan` |
+| Gate job (always identical) | `required-checks-gate` | `required-checks-gate` | `required-checks-gate` |
+
+**Practical rule:** when setting up branch protection contexts, read the actual context name from a recent CI check-run (`gh api repos/$ORG/$REPO/check-runs --jq '.check_runs[].name'`), not from the job key in the YAML. For the `required-checks-gate` itself, the key and name are always identical because it is defined without a slash.
+
+#### H. Destructive PUT mitigation pattern
+
+`gh api PUT /repos/{owner}/{repo}/branches/main/protection` is a **full-replacement** call — it overwrites ALL protection settings, including fields not mentioned in the payload. A missing field in the payload can silently zero out existing protections (e.g., drop required reviewers).
+
+Required safety pattern:
+
+1. **GET first** — snapshot every current field before touching anything:
+   ```bash
+   gh api "repos/{owner}/{repo}/branches/main/protection" | tee /tmp/protection-before.json
+   ```
+2. **Review the snapshot** — especially `required_pull_request_reviews` (reviewer count, dismiss_stale, codeowner reviews) and `required_status_checks.contexts`.
+3. **Construct the payload by merging** — copy existing field values into the PUT payload; only change the specific field(s) you intend to modify.
+4. **Only PUT after manual field merge** — never construct a PUT payload from scratch without reading the current state first.
+5. **Use `enforce_admins: false`** — setting `true` removes admin emergency escape valves (admins can no longer force-push to fix emergencies). Only use `true` if the threat model explicitly requires it.
+6. **Note org-level rulesets are NOT affected** — org-level rulesets (e.g., `required_review_thread_resolution`, `required_status_checks` from a ruleset) are configured separately via `gh api repos/{owner}/{repo}/rulesets` and are NOT overwritten by branch-level PUT. Do not confuse the two APIs.
+
+**Preferred alternative for isolated field changes:** use `PATCH` on a sub-resource when available:
+```bash
+# PATCH only the required_status_checks sub-resource (non-destructive to other fields)
+gh api -X PATCH repos/$ORG/$REPO/branches/main/protection/required_status_checks \
+  --input /tmp/patch.json
+```
+
+#### I. Requirements deviation disclosure pattern
+
+When an implementation plan's approach deviates from the issue's literal text — for example, dropping two `test` contexts from the required list because they are covered by the gate, or changing the set of required reviewers from what the issue specified — the plan MUST explicitly call out the deviation.
+
+**Required disclosure format (in the plan or PR body):**
+
+> **Deviation from issue text:** The issue requested contexts `["lint", "unit-tests", "integration-tests"]` as required checks. This plan instead requires only `["required-checks-gate"]` because the gate's `needs:` already covers all three. This drops `lint` and `unit-tests` as direct required contexts. **Flagged for issue-author confirmation.**
+
+Burying a deviation as an implied consequence of the gate pattern = NOGO. Reviewers will flag it as undisclosed scope change. The pattern applies to any deviation:
+- Dropping contexts from the required list (even when logically equivalent via the gate)
+- Changing the review count
+- Skipping fields the issue mentioned
+- Substituting a different API endpoint than the issue specified
+
+The disclosure is cheap (one sentence); the NOGO cycle it prevents is expensive.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -255,6 +370,9 @@ This guard test catches new jobs added to `_required.yml` that are not wired int
 | Wrote smoke tests without reading the workflow | Assumed step names from memory; checked `continue-on-error` across the whole file | Real step name differed; the advisory step legitimately has `continue-on-error: true`, so a global check always fails | Read the workflow first; scope step assertions with a DOTALL step-boundary lookahead |
 | Left coverage validator unchanged after matrix→steps migration | Migrated the job to sequential steps without updating `validate_test_coverage.py` | `parse_ci_matrix()` navigated to `strategy.matrix.test-group`, found 0 groups, reported every file uncovered | Add a sequential-steps fallback; collapse `"\\\n"` continuations before regex |
 | Used `needs.*.result` wildcard in `if:` expression | Tried `if: needs.*.result != 'failure'` to avoid listing each job explicitly | GitHub Actions does not support `needs.*.result` wildcard expressions in `if:` conditions — the expression is rejected at parse time | List each job individually in env vars or use the RESULTS bash-loop pattern; wildcards are not supported in `needs.*` expressions |
+| Guard test without negative path | Static assertion `_unwired_jobs(live_wf, EXCLUDED) == set()` only | Doesn't prove the guard detects gaps — a silently-inverted condition (e.g., `gate_needs - all_jobs` instead of `all_jobs - gate_needs`) still passes the positive test | Extract `_unwired_jobs()` helper; add explicit negative-path test with synthetic wf dict containing a `dummy-job` not in `needs:` |
+| `enforce_admins: true` in PUT payload | Set to `true` to "harden" branch protection | Removes admin emergency escape valves; admins can no longer force-push to fix emergencies | Use `false` unless threat model explicitly requires hardened admin lockout |
+| Requirements deviation left implicit | Plan dropped two `test` contexts from required list without flagging the deviation | Reviewer flagged as undisclosed scope change (NOGO finding) | Always call out deviations from issue literal text explicitly in the plan or PR body; flag for issue-author confirmation |
 
 ## Results & Parameters
 
@@ -335,6 +453,7 @@ VERIFY_RULES_FIXTURE="$f" bash scripts/verify-branch-protection.sh   # expect no
 | ProjectOdyssey | `fix/pixi-env-isolation-signed` branch | Coverage-validator sequential-steps fallback; verified-precommit |
 | ProjectMnemosyne | Local branch, yamllint passed | Reusable-workflow `_required.yml`/`_checks.yml` split; verified-precommit |
 | ProjectHephaestus | Issue #1315 planning phase | RESULTS-loop aggregator + guard test pattern; **unverified** — not yet implemented or CI-verified |
+| ProjectHephaestus | Issue #1315 NOGO review cycle (2026-06-13) | Guard-test negative-path (`_unwired_jobs` helper + 3-test pattern), job-key vs context-name disambiguation, GET-before-PUT mitigation, requirements-deviation disclosure pattern; **unverified** — planning phase captures |
 
 ## References
 

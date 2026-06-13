@@ -2,6 +2,36 @@
 
 # gha-required-checks-branch-protection — History
 
+## v1.3.0 (2026-06-13)
+
+Documents guard-test negative-path pattern, job-key vs context-name disambiguation,
+destructive PUT mitigation, and requirements-deviation disclosure from ProjectHephaestus
+issue #1315 NOGO review cycle.
+
+- Added section F: Guard test with provable negative path — extracted `_unwired_jobs(wf,
+  excluded)` pure helper; 3-test pattern (positive, negative with synthetic dummy-job,
+  excluded-not-flagged). The negative-path test proves the helper can detect gaps, not
+  just that the current workflow happens to pass.
+- Added section G: Job key vs. context name disambiguation table — `needs:` uses YAML job
+  keys; branch protection contexts use the job `name:` field. They diverge when `name:`
+  contains slashes (e.g., `security/dependency-scan`). Practical rule: read actual context
+  names from `gh api .../check-runs`, not from the YAML job key.
+- Added section H: Destructive PUT mitigation pattern — GET-before-PUT snapshot, manual
+  field merge, `enforce_admins: false` default, note that org-level rulesets are NOT
+  affected by branch-level PUT. Preferred alternative: use PATCH on sub-resources.
+- Added section I: Requirements deviation disclosure pattern — any deviation from the
+  issue's literal text (dropping contexts, changing reviewer count, substituting API) must
+  be called out explicitly in the plan or PR body with "Flagged for issue-author
+  confirmation." Implicit deviations = NOGO.
+- Added three new Failed Attempts rows: guard test without negative path, `enforce_admins:
+  true` in PUT payload, requirements deviation left implicit.
+- Updated description frontmatter with four new trigger scenarios (F–I).
+- Updated Overview Objective and Verification fields.
+- Updated Verified On table with NOGO review cycle entry.
+- Source: ProjectHephaestus issue #1315 NOGO review session (2026-06-13).
+
+---
+
 ## v1.2.0 (2026-06-13)
 
 Add RESULTS-loop aggregator gate pattern and guard test (planning phase, unverified)
