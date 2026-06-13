@@ -1,5 +1,20 @@
 # parallel-agent-myrmidon-swarm-orchestration — History
 
+## v1.1.0 (2026-06-13)
+
+**Changed by:** SHA-pin swarm session 2026-06-13 (13-repo parallel dispatch)
+**Verification:** verified-local
+
+### What changed
+- Added Failed Attempt #20: Haiku agents ignore provided canonical SHA maps and query their own
+- Added Failed Attempt #21: BLOCKED mergeStateStatus misinterpreted as failure
+- Added 13-repo SHA-pin swarm 2026-06-13 to Verified Swarm Configurations table
+
+### Why
+13-repo parallel SHA-pin swarm revealed that Haiku agents will override canonical SHA maps with their own API lookups, producing wrong version SHAs. Also clarified that GitHub's BLOCKED merge state = CI pending, not failure.
+
+---
+
 ## v1.0.0 (2026-05-18) — Merge of 20 skills
 
 **Changed by:** Skill-merge swarm (Phase C Wave 2, M9 / #1781)

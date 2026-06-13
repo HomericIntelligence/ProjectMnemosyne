@@ -2,8 +2,8 @@
 name: parallel-agent-myrmidon-swarm-orchestration
 description: "Canonical guide to parallel-agent and Myrmidon swarm orchestration: wave-based dispatch, hierarchical tier assignment (Opus L0 → Sonnet L1/L2 → Haiku L4), agent prompt patterns, dispatcher discipline, multi-repo coordination. Use when: (1) dispatching 5+ parallel agents on independent tasks, (2) coordinating a multi-repo swarm operation, (3) designing tier assignments (Opus vs Sonnet vs Haiku), (4) ensuring deterministic dispatch without orchestrator hand-holding."
 category: tooling
-date: 2026-05-18
-version: "1.0.0"
+date: 2026-06-13
+version: "1.1.0"
 user-invocable: false
 verification: verified-local
 history: parallel-agent-myrmidon-swarm-orchestration.history
@@ -28,7 +28,7 @@ tags: [merged, myrmidon, swarm, parallel-agent, l0-orchestrator, wave-execution]
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-05-18 |
+| **Date** | 2026-06-13 |
 | **Objective** | Canonical reference for parallel-agent and Myrmidon swarm patterns across the HomericIntelligence ecosystem |
 | **Outcome** | Consolidated from 20 skills covering dispatch, tier assignment, stall recovery, bulk issue triage, audit coverage, submodule cleanup, and corpus correction |
 | **Verification** | verified-local |
@@ -382,6 +382,8 @@ dynamic branching based on discovered state.
 | 17 | Making `ExitPlanMode` call after producing review document | Plan-mode tooling expects an implementation plan; reviewers confused | `ExitPlanMode` is for IMPLEMENTATION plans only. Present review findings as regular markdown. |
 | 18 | Anonymous agent IDs on relaunch after dirty recovery | Old planner IDs reused; workspace showed one planner assigned to multiple tasks | After dirty recovery, always relaunch with explicit `--agent-id` values |
 | 19 | Recovering stale Liza task claims without cleaning Git state | Liza still showed tasks assigned; git worktrees/branches remained | Recover tasks first (`liza recover-task`), then verify `git worktree list` is clean before relaunch |
+| 20 | Gave Haiku agent a canonical SHA map but it looked up its own SHAs | Haiku agents sometimes ignore provided canonical maps and query GitHub APIs for SHAs — got upload-artifact v4.7.1 instead of v7.0.1, setup-python v5.7.0 instead of v6.2.0 | Add explicit instruction: `"DO NOT look up SHAs — use ONLY the values from the canonical SHA map in this prompt. Never query GitHub APIs for SHAs."` as first line after `IMPORTANT: DO NOT PLAN` |
+| 21 | Treated BLOCKED mergeStateStatus as PR failure | BLOCKED means CI checks are pending/running, not that the PR failed — caused unnecessary re-investigation | BLOCKED = waiting on CI; FAILURE = actual check failed; only act on FAILURE |
 
 ## Results & Parameters
 
@@ -398,6 +400,7 @@ dynamic branching based on discovered state.
 | ProjectTelemachy bulk triage 2026-04-25 | 9 Haiku agents | Wave A+B + Phase 0 simultaneous | 9 PRs, 0 stall, ~2h wall-clock |
 | Corpus correction 2026-04-13 | 66 files, 8 batches | All batches parallel | 100% correction rate with inline audit markers |
 | ProjectAgamemnon drain 2026-05-17 | 14 PRs | Phase A drain + B/C/D waves | All 14 merged, no rebase chaos |
+| 13-repo SHA-pin swarm 2026-06-13 | 13 repos, 13 agents | 1 single-wave (file-disjoint repos) | All 13 PRs created; Haiku SHA override pitfall discovered |
 
 ### Stall Recovery Heuristics
 
