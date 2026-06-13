@@ -1,11 +1,12 @@
 ---
 name: shell-script-integration-test-tier-coverage
-description: "Pattern for ensuring integration tests cover all preference tiers in shell scripts with N-tier fallback logic. Use when: (1) a shell script has N-tier fallback/preference logic but tests only cover the first N-1 tiers, (2) adding a test for a bash script that uses bash-function-override injection (export a mock `gh` function), (3) reviewing test coverage gaps in `scripts/choose_merge_flag.sh` or similar tiered-preference scripts, (4) constructing JSON bodies for each tier of a jq-driven preference selector."
+description: "Pattern for ensuring integration tests cover all preference tiers in shell scripts with N-tier fallback logic. Use when: (1) a shell script has N-tier fallback/preference logic but tests only cover the first N-1 tiers, (2) adding a test for a bash script that uses bash-function-override injection (export a mock `gh` function via a Python pytest helper), (3) reviewing test coverage gaps in `scripts/choose_merge_flag.sh` or similar tiered-preference scripts, (4) constructing flat REST JSON bodies for each tier of a jq-driven preference selector."
 category: testing
 date: 2026-06-13
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
-verification: unverified
+verification: verified-ci
+history: shell-script-integration-test-tier-coverage.history
 tags:
   - shell
   - bash
@@ -15,6 +16,8 @@ tags:
   - tier-coverage
   - jq
   - bash-function-override
+  - pytest
+  - python
 ---
 
 # Shell Script Integration Test Tier Coverage
@@ -25,8 +28,8 @@ tags:
 |-------|-------|
 | **Date** | 2026-06-13 |
 | **Objective** | Add missing integration test for the `--merge` fallback path in `scripts/choose_merge_flag.sh` (ProjectHephaestus issue #1277) |
-| **Outcome** | Plan produced; test designed but not run |
-| **Verification** | unverified — planning session only, tests not executed |
+| **Outcome** | Success — single new pytest function added; all 7 tests pass locally and in CI |
+| **Verification** | verified-ci — PR #1305 submitted, CI green |
 
 ## When to Use
 
@@ -34,132 +37,157 @@ Trigger this skill when:
 
 1. A shell script uses an if-elif/case chain with N preference tiers and tests only cover N-1 of them
 2. The uncovered tier is a fallback (the "last resort" branch hit when all higher-priority conditions are false)
-3. The existing test file uses a `_run_with_mock_gh(json_body)` helper that injects `gh` as a bash function override
+3. The existing test file uses a `_run_with_mock_gh(json_body)` Python helper that injects `gh` as a bash function override
 4. You need to construct a JSON body that targets a specific branch in `choose_merge_flag.sh` by setting boolean flags
-5. You encounter the pattern: `if rebaseMergeAllowed → --rebase; elif squashMergeAllowed → --squash; else → --merge`
-6. Auditing test coverage for any script that dispatches on GitHub's `mergeCommitAllowed` / `squashMergeAllowed` / `rebaseMergeAllowed` fields
+5. You encounter the pattern: `if allow_rebase_merge → --rebase; elif allow_squash_merge → --squash; else → --merge`
+6. Auditing test coverage for any script that dispatches on GitHub REST API's `allow_rebase_merge` / `allow_squash_merge` / `allow_merge_commit` fields
 
 ## Verified Workflow
-
-> **Warning:** This workflow is unverified — it was designed in a planning session but not run. Treat as a hypothesis until CI confirms.
 
 ### 1. Enumerate all branches in the script under test
 
 Read the script (e.g., `scripts/choose_merge_flag.sh`) and list every branch:
 
 ```
-Tier 1 (~line 20): if rebaseMergeAllowed   → output "--rebase"
-Tier 2 (~line 26): elif squashMergeAllowed → output "--squash"
-Tier 3 (~line 32): else                    → output "--merge"
+Tier 1: if allow_rebase_merge   → output "--rebase"
+Tier 2: elif allow_squash_merge → output "--squash"
+Tier 3: else                    → output "--merge"
 ```
 
 Count the branches, then count the existing test functions. Missing tiers = add one test per gap.
 
-### 2. Check the existing test file for the `_run_with_mock_gh` helper
+### 2. Understand the Python `_run_with_mock_gh` helper
 
-In `tests/integration/test_choose_merge_flag.sh` (or equivalent), locate `_run_with_mock_gh`:
+The test file (`tests/integration/test_choose_merge_flag_sh.py`) uses a **Python** function (not bash), which constructs a bash heredoc and runs it via `subprocess.run`:
 
-```bash
-_run_with_mock_gh() {
-    local json_body="$1"
-    # Injects gh as a bash function that echoes the fixed JSON body,
-    # then sources/runs the script under test
-    gh() { echo "$json_body"; }
-    export -f gh
-    bash scripts/choose_merge_flag.sh
-}
+```python
+def _run_with_mock_gh(json_body: str, repo: str = "owner/repo") -> subprocess.CompletedProcess:
+    """Run choose_merge_flag with a mock gh function returning json_body."""
+    script = f"""
+gh() {{
+    case "$1" in
+        api) printf '%s\\n' '{json_body}' ;;
+        *) command gh "$@" ;;
+    esac
+}}
+export -f gh
+. {SNIPPET}
+choose_merge_flag {repo}
+"""
+    return subprocess.run(
+        ["bash", "-c", script],
+        capture_output=True,
+        text=True,
+    )
 ```
 
-No new infrastructure is needed — just add a new test function that calls this helper with a different JSON body.
+Key details:
+- `json_body` is a flat REST JSON string (not nested GraphQL)
+- `export -f gh` makes the bash function override visible to the sourced script
+- The helper returns `subprocess.CompletedProcess` — check `.returncode` and `.stdout.strip()`
+- No new infrastructure needed — just call this helper with a different JSON body
 
 ### 3. Construct the JSON body for the missing tier
 
-Toggle the three boolean flags to route execution into the desired branch:
+The script consumes **GitHub REST API** response format (flat keys), NOT GraphQL nested format:
 
-```json
-// Tier 1: rebase only — rebaseMergeAllowed: true, others false
-{"data":{"repository":{"pullRequest":{"mergeStateStatus":"CLEAN","baseRepository":{"mergeCommitAllowed":false,"squashMergeAllowed":false,"rebaseMergeAllowed":true}}}}}
+```python
+# Tier 1: rebase preferred — all allowed, rebase wins
+body = '{"allow_rebase_merge":true,"allow_squash_merge":true,"allow_merge_commit":true}'
+# Expected: result.stdout.strip() == "--rebase"
 
-// Tier 2: squash only — squashMergeAllowed: true, rebase false
-{"data":{"repository":{"pullRequest":{"mergeStateStatus":"CLEAN","baseRepository":{"mergeCommitAllowed":false,"squashMergeAllowed":true,"rebaseMergeAllowed":false}}}}}
+# Tier 2: squash fallback — rebase not allowed
+body = '{"allow_rebase_merge":false,"allow_squash_merge":true,"allow_merge_commit":false}'
+# Expected: result.stdout.strip() == "--squash"
 
-// Tier 3: merge only — mergeCommitAllowed: true, rebase+squash false
-{"data":{"repository":{"pullRequest":{"mergeStateStatus":"CLEAN","baseRepository":{"mergeCommitAllowed":true,"squashMergeAllowed":false,"rebaseMergeAllowed":false}}}}}
+# Tier 3: merge fallback — rebase and squash not allowed
+body = '{"allow_rebase_merge":false,"allow_squash_merge":false,"allow_merge_commit":true}'
+# Expected: result.stdout.strip() == "--merge"
+
+# Error case: no methods allowed
+body = '{"allow_rebase_merge":false,"allow_squash_merge":false,"allow_merge_commit":false}'
+# Expected: result.returncode == 1, "allows no merge methods" in result.stderr
 ```
 
 ### 4. Add one test function per missing tier
 
 Follow the exact shape of existing test functions — no scaffolding changes required:
 
-```bash
-test_merge_fallback() {
-    local json_body='{"data":{"repository":{"pullRequest":{"mergeStateStatus":"CLEAN","baseRepository":{"mergeCommitAllowed":true,"squashMergeAllowed":false,"rebaseMergeAllowed":false}}}}}'
-    result=$(_run_with_mock_gh "$json_body")
-    assert_equals "--merge" "$result" "merge fallback tier"
-}
+```python
+def test_shell_helper_selects_merge_when_rebase_and_squash_disallowed() -> None:
+    """Falls back to merge commit when both rebase and squash are not permitted."""
+    body = '{"allow_rebase_merge":false,"allow_squash_merge":false,"allow_merge_commit":true}'
+    result = _run_with_mock_gh(body)
+    assert result.returncode == 0
+    assert result.stdout.strip() == "--merge"
 ```
 
-Register it in the test runner (if the file has an explicit list of test functions to call).
+No test runner registration needed — pytest auto-discovers all `test_*` functions.
 
-### 5. Verify CI gating before assuming the test blocks merge
-
-Check `.github/workflows/` to confirm whether `pixi run pytest tests/integration/` (or equivalent) is a **required** CI job:
+### 5. Verify locally before pushing
 
 ```bash
-grep -r "tests/integration\|pytest.*integration\|integration.*pytest" .github/workflows/
+pixi run pytest tests/integration/test_choose_merge_flag_sh.py -v
 ```
 
-If integration tests are advisory-only, the new test won't block a broken PR automatically.
+All 7 tests should pass. The integration test file is small and fast (pure subprocess, no live `gh` calls).
 
 ### Quick Reference
 
 | Goal | What to do |
 |------|------------|
 | Find uncovered tiers | Read script + count if/elif/else branches; count existing test functions |
-| Target Tier 1 (rebase) | `rebaseMergeAllowed: true`, others false |
-| Target Tier 2 (squash) | `squashMergeAllowed: true`, rebase false |
-| Target Tier 3 (merge) | `mergeCommitAllowed: true`, rebase+squash false |
-| Add test | One new function; reuse `_run_with_mock_gh` helper — no new infra |
+| Target Tier 1 (rebase) | `allow_rebase_merge: true`, others false |
+| Target Tier 2 (squash) | `allow_squash_merge: true`, rebase false |
+| Target Tier 3 (merge) | `allow_merge_commit: true`, rebase+squash false |
+| Add test | One new `test_*` function; reuse `_run_with_mock_gh` helper — no new infra |
 | No script changes | New tier test is test-only; the script under test is untouched |
-| CI gating | Grep `.github/workflows/` — integration tests may be advisory not required |
+| JSON format | Flat REST keys (`allow_rebase_merge`), NOT nested GraphQL |
+| Assert output | `result.stdout.strip() == "--merge"` (strip trailing newline) |
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| (none yet) | Plan only — no attempts run | N/A | Skill is unverified; update when the test is actually executed |
+| 1 | Used nested GraphQL JSON format: `{"data":{"repository":{"pullRequest":...}}}` | Script reads REST API flat response (`allow_rebase_merge`), not GraphQL nested format | Always check the actual `gh api` call in the script (`gh api repos/{repo}`) to determine which JSON schema applies |
+| 2 | Assumed test file was bash (`test_choose_merge_flag.sh`) | Test file is Python pytest (`test_choose_merge_flag_sh.py`) — `_run_with_mock_gh` is a Python function wrapping `subprocess.run` | Check file extension and language before writing test code |
+| 3 | Assumed bash-style registration needed | pytest auto-discovers `test_*` functions — no explicit runner list | No `test_runner.sh` or function list needed; just name the function `test_*` |
 
 ## Results & Parameters
 
-### Known fragility: single quotes in JSON inside bash here-docs
+### Actual implementation (verified CI, PR #1305)
 
-The `_run_with_mock_gh` helper passes a JSON body as a bash string. If the JSON body ever contains single quotes (e.g., a string value with an apostrophe), single-quote shell interpolation will break. For fixed payloads with boolean values this is not a risk, but it is a latent fragility to watch if the JSON schema changes.
-
-**Mitigation**: use a temporary file for the JSON body if it must contain single quotes:
-
-```bash
-_tmpfile=$(mktemp)
-printf '%s' "$json_body" > "$_tmpfile"
-# pass file path instead of inline string
+```python
+def test_shell_helper_selects_merge_when_rebase_and_squash_disallowed() -> None:
+    """Falls back to merge commit when both rebase and squash are not permitted."""
+    body = '{"allow_rebase_merge":false,"allow_squash_merge":false,"allow_merge_commit":true}'
+    result = _run_with_mock_gh(body)
+    assert result.returncode == 0
+    assert result.stdout.strip() == "--merge"
 ```
 
-### CI environment assumptions (unverified)
+- 7 total tests in the file after adding this one
+- All pass locally and in CI
+- No new imports, no new fixtures, no helper changes
 
-- `bash` and `jq` must be available in CI (assumed from existing tests passing — not independently verified)
-- The bash function override injection pattern (`export -f gh`) must work consistently across bash versions in CI
-- Whether `pixi run pytest tests/integration/` is a required CI gate is unverified — check `.github/workflows/` before assuming the new test blocks merge
+### Known fragility: single quotes in JSON inside bash f-string
+
+The `_run_with_mock_gh` helper interpolates `json_body` into an f-string that becomes a bash heredoc. If `json_body` ever contains single quotes (e.g., a string value with an apostrophe), the bash function body breaks. For boolean-only payloads this is not a risk, but watch if the JSON schema changes.
+
+**Mitigation**: use a temporary file for the JSON body if it must contain single quotes.
 
 ### Pattern generalisation
 
 This pattern applies to any shell script with N-tier preference logic and a `_run_with_mock_<tool>` injection helper:
 
 1. Enumerate all branches
-2. Map each branch to the JSON/env-var configuration that routes into it
-3. Add one test function per uncovered branch, reusing the existing helper
-4. Verify CI gating independently
+2. Determine the JSON/env-var format the script actually consumes (REST vs GraphQL vs env vars)
+3. Map each branch to the configuration that routes into it
+4. Add one Python test function per uncovered branch, reusing the existing helper
+5. Run locally to confirm, then push
 
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectHephaestus | Planning session for issue #1277 (2026-06-13) | Plan only; test designed but not run; skill is unverified |
+| ProjectHephaestus | Issue #1277 — add `--merge` fallback path test (2026-06-13) | PR #1305; 7/7 tests pass; single new pytest function `test_shell_helper_selects_merge_when_rebase_and_squash_disallowed` |
