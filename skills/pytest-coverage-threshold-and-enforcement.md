@@ -1,9 +1,9 @@
 ---
 name: pytest-coverage-threshold-and-enforcement
-description: "Use when: (1) establishing [tool.coverage.report].fail_under as the single source of truth by removing redundant --cov-fail-under from CI and pyproject.toml addopts; (2) configuring multiple coverage report formats (xml, html, lcov) for CI and local use; (3) CI coverage % is lower than local because GitHub computes coverage against the merge-preview tree (PR HEAD merged with main HEAD) — adding entries to coverage.run.omit for files not on the branch IS the correct fix; (4) aggregate coverage gates hide under-tested critical modules — enforce per-file floors via parse_module_coverage() + coverage.toml + CI step; (5) some modules are intentionally omitted from measurement (live CLI/TTY) and need an integration backstop to catch import-time regressions; (6) pytest.importorskip() guards hide easy coverage wins — install optional deps and write targeted branch tests; (7) tuning coverage thresholds to match actual baselines and avoid false CI failures; (8) generate_coverage.sh fails in CI with wrong paths, cmake source dir errors, lcov gcov version mismatch on Ubuntu 24.04, or geninfo 'unable to create link .gcda'; (9) coverage is raised by adding targeted tests for uncovered branches plus unlocking skipped optional-dependency test groups."
+description: "Use when: (1) establishing [tool.coverage.report].fail_under as the single source of truth by removing redundant --cov-fail-under from CI and pyproject.toml addopts; (2) configuring multiple coverage report formats (xml, html, lcov) for CI and local use; (3) CI coverage % is lower than local because GitHub computes coverage against the merge-preview tree (PR HEAD merged with main HEAD) — adding entries to coverage.run.omit for files not on the branch IS the correct fix; (4) aggregate coverage gates hide under-tested critical modules — enforce per-file floors via parse_module_coverage() + coverage.toml + CI step; (5) some modules are intentionally omitted from measurement (live CLI/TTY) and need an integration backstop to catch import-time regressions; (6) pytest.importorskip() guards hide easy coverage wins — install optional deps and write targeted branch tests; (7) tuning coverage thresholds to match actual baselines and avoid false CI failures; (8) generate_coverage.sh fails in CI with wrong paths, cmake source dir errors, lcov gcov version mismatch on Ubuntu 24.04, or geninfo 'unable to create link .gcda'; (9) coverage is raised by adding targeted tests for uncovered branches plus unlocking skipped optional-dependency test groups; (10) planning a coverage threshold consolidation — verify actual coverage %, confirm consistency-checker accepts addopts absence, check whether CI uses --override-ini=addopts= before deciding where the real gate lives."
 category: testing
-date: 2026-06-07
-version: "1.0.0"
+date: 2026-06-13
+version: "1.1.0"
 user-invocable: false
 history: pytest-coverage-threshold-and-enforcement.history
 tags:
@@ -27,10 +27,10 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-07 |
-| **Objective** | Configure, tune, and enforce pytest/coverage thresholds — single source of truth, per-module floors, merge-preview reconciliation, integration backstops for omitted modules, optional-dep unlocks, and lcov/geninfo CI fixes |
-| **Outcome** | Success — consolidated knowledge for establishing `fail_under` as canonical, raising real coverage, and keeping CI gates green and honest |
-| **Verification** | verified-ci |
+| **Date** | 2026-06-13 |
+| **Objective** | Configure, tune, and enforce pytest/coverage thresholds — single source of truth, per-module floors, merge-preview reconciliation, integration backstops for omitted modules, optional-dep unlocks, and lcov/geninfo CI fixes; planning pattern for threshold consolidation |
+| **Outcome** | Success — consolidated knowledge for establishing `fail_under` as canonical, raising real coverage, and keeping CI gates green and honest; v1.1.0 adds planning-phase pre-conditions and the --override-ini=addopts= CI pattern |
+| **Verification** | verified-ci (existing); unverified (v1.1.0 planning additions from ProjectHephaestus issue #1198) |
 | **History** | [changelog](./pytest-coverage-threshold-and-enforcement.history) |
 
 ## When to Use
@@ -46,12 +46,33 @@ tags:
 - Some modules are intentionally omitted (live CLI/TTY/process spawning) and you need an integration backstop to catch import-time regressions and prevent silent omit-list growth
 - Coverage seems low for mature code and `pytest -v` shows many SKIPPED tests guarded by `pytest.importorskip()`
 - `generate_coverage.sh` (lcov/geninfo) fails in CI: wrong paths after `cd $BUILD_DIR`, cmake source dir errors, gcov version mismatch on Ubuntu 24.04 + Clang, or geninfo "unable to create link .gcda"
+- **Planning a threshold consolidation**: project has duplicate `--cov-fail-under` in addopts AND `[tool.coverage.report].fail_under` and you want to eliminate the duplicate — verify actual coverage % before touching either value
+- **Determining the real CI gate**: CI uses `--override-ini="addopts="` (clears ALL addopts including `--cov=` and `--cov-report=`) — addopts removal has zero effect on CI; the explicit `--cov-fail-under` flag in the CI workflow is the actual gate
+- **Verifying addopts removal is safe**: check that the project's consistency-checker (`check_addopts_cov_fail_under()`) accepts addopts absence before removing the flag
 
 ## Verified Workflow
+
+> **Note:** Steps I–II below are planning pre-conditions added in v1.1.0 (ProjectHephaestus issue #1198, unverified). Steps A–H are verified-ci.
 
 ### Quick Reference
 
 ```bash
+# --- 0. Pre-planning: measure actual coverage FIRST ---
+pixi run pytest tests/unit --cov=hephaestus --cov-report=term-missing 2>&1 | tail -5
+# Record the TOTAL % line before touching any threshold value.
+
+# --- 0b. Identify all threshold locations ---
+grep -n "cov-fail-under\|fail_under" pyproject.toml .github/workflows/*.yml
+
+# --- 0c. Determine where CI's real gate lives ---
+grep -n "override-ini\|addopts" .github/workflows/*.yml
+# If --override-ini="addopts=" is present, CI clears ALL addopts — the real gate
+# is the explicit --cov-fail-under flag on the CI pytest line, NOT addopts.
+
+# --- 0d. Verify consistency-checker accepts addopts absence ---
+grep -n "check_addopts_cov_fail_under\|cov-fail-under" tests/unit/test_doc_config.py
+# Look for an assertion that returns [] when flag is absent — safe to remove.
+
 # --- 1. Single source of truth: find & remove redundant flags ---
 grep -rn "cov-fail-under" pyproject.toml .github/workflows/
 grep -n "fail_under" pyproject.toml
@@ -90,6 +111,35 @@ lcov --capture --directory . --output-file "$COVERAGE_INFO" \
 ```
 
 ### Detailed Steps
+
+#### I. Planning pre-conditions before changing any threshold (v1.1.0, unverified)
+
+> **Warning:** This section documents a planning session for ProjectHephaestus issue #1198. It has not been validated end-to-end in CI. Treat as a hypothesis until CI confirms.
+
+Before touching `fail_under` or `--cov-fail-under` anywhere:
+
+1. **Measure actual coverage first** — run `pixi run pytest tests/unit --cov=<pkg> --cov-report=term-missing 2>&1 | tail -5` and record the TOTAL % line. Setting any new floor without this number risks flipping CI from passing to failing.
+
+2. **Map all threshold locations** — at minimum: `pyproject.toml addopts`, `[tool.coverage.report] fail_under`, and every CI workflow file. Two locations can drift silently.
+
+3. **Determine where CI's real gate lives** — if CI uses `--override-ini="addopts="`, it clears ALL addopts (including `--cov=<pkg>` and `--cov-report=term-missing`), not just `--cov-fail-under`. In that case:
+   - Removing `--cov-fail-under` from addopts has **zero effect on CI**
+   - The real CI gate is the explicit `--cov-fail-under=N` flag on the CI pytest invocation line
+   - The critical change is updating that CI flag, NOT the addopts line
+
+4. **Verify the consistency-checker accepts addopts absence** — projects may have a `check_addopts_cov_fail_under()` function (often in `test_doc_config.py`) that validates addopts contents. Check whether it requires the flag to be present or merely validates its value when present. In ProjectHephaestus `test_doc_config.py:176`, the assertion checks `check_addopts_cov_fail_under()` returns `[]` when the flag is absent — confirming removal is safe.
+
+5. **Decision table for new floor value**:
+   - Actual coverage ≥ target (e.g., ≥ 90%): set `fail_under = target` in `[tool.coverage.report]` and update CI flag to match
+   - 80% ≤ actual < 90%: set `fail_under = actual` (rounded down), plan incremental raises
+   - Actual < 80% (below existing floor): **do not remove the addopts flag yet**; investigate why coverage dropped first
+
+6. **Check CLAUDE.md** — if a `check_claude_md_threshold()` validator exists, it may require a threshold mention in CLAUDE.md; grep the file before concluding no doc change is needed.
+
+**Key insight for ProjectHephaestus**: The CI `--override-ini="addopts="` in `_required.yml` clears ALL addopts. CI coverage collection is driven entirely by explicit flags on the pytest line in `_required.yml`. Therefore:
+- Removing `--cov-fail-under=80` from addopts at `pyproject.toml:201`: no-op for CI
+- The real gate change: update `--cov-fail-under=80` at `.github/workflows/_required.yml:585`
+- The `fail_under` field in `[tool.coverage.report]` becomes the local gate (runs without `--override-ini`)
 
 #### A. Establish `fail_under` as the single source of truth
 
@@ -232,6 +282,9 @@ lcov --capture --directory . --output-file "$COVERAGE_INFO" \
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 | ------- | -------------- | ------------- | -------------- |
+| Planning without measuring first | Planning to raise fail_under from 80 to 90 before running tests | If actual coverage < new floor, the threshold change flips CI from passing to failing | Always run `pytest --cov` and record total % BEFORE planning any threshold change |
+| Assuming addopts removal affects CI | Removing `--cov-fail-under` from addopts assuming CI would notice | CI uses `--override-ini="addopts="` which clears ALL addopts; addopts removal has zero CI effect | Check whether CI uses `--override-ini="addopts="` before concluding addopts removal matters to CI |
+| Skipping CLAUDE.md threshold check | Assuming no doc update needed during planning | `check_claude_md_threshold()` may error on missing coverage mention; grep CLAUDE.md before concluding | Trace `check_claude_md_threshold()` end-to-end; if it errors on absence, add threshold mention |
 | Removing the flag only | Removed `--cov-fail-under` from `addopts` without raising `fail_under` or updating checks | A pre-commit consistency-check script expected the flag in `addopts` | Always update consistency-check scripts that validate `addopts` contents |
 | Setting a floor without measuring | Would have set `fail_under=50` per an issue suggestion | Left a 27% gap below actual 77.42% — no real protection | Measure actual coverage first, then set the floor ~2% below baseline |
 | Off-by-one threshold | Set `fail_under=73` when actual was 72.89% | CI failed immediately by 0.11% | Set the floor strictly below measured coverage, not equal to it |
@@ -329,3 +382,4 @@ Diagnostic order (each bug masks the next): (1) BUILD_DIR absolute vs relative; 
 | ProjectHephaestus | Issue #623 | Optional-dep unlock `[dev,schema]` + targeted tests; schema.py 56% → 94.81% |
 | ProjectHephaestus | PR #603, PR #606 (2026-05-27) | Merge-preview coverage gate diagnosis; omit-list entry for main-only `loop_runner.py` unblocked CI |
 | ProjectKeystone | PR #340 (2026-04-24) | Fixed all 4 sequential lcov/geninfo CI bugs; coverage script ran to completion |
+| ProjectHephaestus | Issue #1198 planning (2026-06-13) | **Unverified** — planning session for coverage threshold consolidation (raise enforced floor from 80% to 90%); identified `--override-ini="addopts="` makes addopts removal a CI no-op; confirmed `check_addopts_cov_fail_under()` accepts addopts absence (test_doc_config.py:176); real CI gate is `_required.yml:585`; implementation not run, actual coverage % not measured |

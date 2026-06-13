@@ -1,6 +1,30 @@
 <!-- markdownlint-disable MD024 -->
 # pytest-coverage-threshold-and-enforcement — History
 
+## v1.1.0 (2026-06-13)
+
+**Amendment**: Added planning-phase pre-conditions from ProjectHephaestus issue #1198 (coverage threshold consolidation planning session).
+
+### New content added
+
+- Description clause (10): planning a coverage threshold consolidation
+- "When to Use" bullets: planning a threshold consolidation, determining where the real CI gate lives when `--override-ini="addopts="` is used, verifying addopts removal is safe via consistency-checker
+- Quick Reference: steps 0–0d (pre-planning: measure actual coverage, map threshold locations, check `--override-ini`, verify checker accepts absence)
+- Section I: Planning pre-conditions before changing any threshold (decision table for floor value, CLAUDE.md check, key insight on `--override-ini` making addopts removal a CI no-op)
+- Failed Attempts: 3 new rows (planning without measuring first, assuming addopts removal affects CI, skipping CLAUDE.md threshold check)
+- Verified On: ProjectHephaestus issue #1198 planning entry (unverified)
+
+### Verification level
+
+`unverified` for all v1.1.0 additions — captures a planning session only; actual coverage % was not measured and implementation was not run. All v1.0.0 content remains `verified-ci`.
+
+### Source
+
+- Issue: ProjectHephaestus #1198
+- Session date: 2026-06-13
+
+---
+
 ## v1.0.0 (2026-06-07)
 
 Merged the following 9 skills into the canonical:
