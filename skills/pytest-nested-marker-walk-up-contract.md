@@ -1,118 +1,171 @@
 ---
 name: pytest-nested-marker-walk-up-contract
-description: "Documents planning patterns for nested-marker test coverage of walk-up path resolvers. Use when: (1) writing tests for functions that walk directory trees looking for marker files (e.g., .git, pyproject.toml), (2) pinning first-match-up (innermost-wins) contracts against regressions, (3) testing nested-repo scenarios where a seed path may sit inside a sub-repo nested under a parent repo."
+description: "Pin the first-match-up (innermost-wins) contract of walk-up path resolvers using pytest tmp_path. Use when: (1) testing a function that walks up from a seed path returning the first ancestor containing a filesystem marker (.git, pyproject.toml, config file), (2) tests must assert equality against a resolved path returned by the SUT (Path(start_path).resolve() pattern), (3) building the nested-marker matrix (outer/inner with same or mixed markers) to pin innermost-wins semantics, (4) CI runs on macOS or symlinked-tmpdir Linux where bare tmp_path subpaths differ from their resolved form."
 category: testing
 date: 2026-06-13
-version: "1.0.0"
+version: "2.0.0"
 user-invocable: false
-verification: unverified
-tags: ["pytest", "walk-up", "get_repo_root", "nested-marker", "tmp_path", "first-match"]
+verification: verified-ci
+tags:
+  - pytest
+  - tmp_path
+  - path-resolution
+  - walk-up
+  - nested-markers
+  - get_repo_root
+  - innermost-wins
+  - first-match-up
+  - symlink
+  - resolve
 ---
 
-# pytest-nested-marker-walk-up-contract
+# pytest: Nested Marker Walk-Up Contract
 
 ## Overview
 
 | Field | Value |
 |-------|-------|
 | **Date** | 2026-06-13 |
-| **Objective** | Pin the walk-up resolver's first-match-up (innermost-wins) contract with nested-marker test layouts to prevent regressions when a seed path sits inside a sub-repo nested under a parent repo |
-| **Outcome** | Planning complete — four test cases designed; not yet executed |
-| **Verification** | unverified (plan only, tests not run, CI not observed) |
-| **History** | N/A (initial version) |
+| **Objective** | Pin the first-match-up (innermost-wins) contract of `get_repo_root()` for nested filesystem marker scenarios |
+| **Outcome** | Four tests cover the full nested-marker matrix; 4058 tests pass, coverage 85.57% |
+| **Verification** | verified-ci |
+| **History** | v1.0.0 was plan-only/unverified; v2.0.0 promotes to verified-ci and fixes critical assertion bug (`inner` → `inner.resolve()`) |
+| **Project** | ProjectHephaestus |
+| **Issue** | [#1267](https://github.com/HomericIntelligence/ProjectHephaestus/issues/1267) |
+| **PR** | [#1307](https://github.com/HomericIntelligence/ProjectHephaestus/pull/1307) |
 
 ## When to Use
 
-- You are writing or reviewing tests for a function that walks up a directory tree looking for marker files (`.git`, `pyproject.toml`, `WORKSPACE`, etc.)
-- You need to pin the "innermost-wins" / "first-match-up" contract — i.e., the walk terminates at the nearest ancestor that has the marker, not the outermost one
-- You are guarding against regressions where a seed path inside a nested sub-repo might incorrectly resolve to the outer parent repo root
-- The function under test is `get_repo_root()` in `hephaestus/utils/helpers.py` (lines 99–127) or any analogous walk-up resolver
-- You need exhaustive cross-combination coverage of multiple supported marker types
+- A function walks upward from a seed path and returns the first ancestor containing a marker (`.git`, `pyproject.toml`, `setup.cfg`, any sentinel file)
+- The SUT calls `Path(start_path).resolve()` before walking — return value is always a resolved path
+- Need to pin the "innermost-wins" contract when the same marker type exists in both a parent and child directory
+- Need to cover mixed-marker scenarios (outer has `.git`, inner has `pyproject.toml`, and vice versa)
+- CI runs on macOS or any environment where `$TMPDIR` is a symlink (macOS: `/var/folders/...` → `/private/var/folders/...`)
 
 ## Verified Workflow
-
-> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
 
 ### Quick Reference
 
 ```python
-# Minimal inline layout construction — no shared fixture needed
-def test_nested_git_over_git(tmp_path):
+def test_nested_git_stops_at_inner_git(self, tmp_path):
+    """Inner .git wins over outer .git — first-match-up (innermost) semantics."""
     outer = tmp_path / "outer"
     inner = outer / "inner"
     (outer / ".git").mkdir(parents=True)
     (inner / ".git").mkdir(parents=True)
+    seed = inner / "src" / "module"
+    seed.mkdir(parents=True)
+    assert get_repo_root(seed) == inner.resolve()  # NOT inner — must resolve()
+
+def test_nested_pyproject_stops_at_inner_pyproject(self, tmp_path):
+    """Inner pyproject.toml wins over outer pyproject.toml."""
+    outer = tmp_path / "outer"
+    inner = outer / "inner"
+    outer.mkdir(parents=True)
+    inner.mkdir(parents=True)
+    (outer / "pyproject.toml").write_text("[project]\n")
+    (inner / "pyproject.toml").write_text("[project]\n")
     seed = inner / "src"
     seed.mkdir(parents=True)
-    assert get_repo_root(seed) == inner
+    assert get_repo_root(seed) == inner.resolve()
+
+def test_nested_pyproject_stops_at_inner_when_outer_has_git(self, tmp_path):
+    """Inner pyproject.toml wins over outer .git."""
+    outer = tmp_path / "outer"
+    inner = outer / "inner"
+    (outer / ".git").mkdir(parents=True)
+    inner.mkdir(parents=True)
+    (inner / "pyproject.toml").write_text("[project]\n")
+    seed = inner / "src"
+    seed.mkdir(parents=True)
+    assert get_repo_root(seed) == inner.resolve()
+
+def test_nested_git_stops_at_inner_when_outer_has_pyproject(self, tmp_path):
+    """Inner .git wins over outer pyproject.toml."""
+    outer = tmp_path / "outer"
+    inner = outer / "inner"
+    outer.mkdir(parents=True)
+    (outer / "pyproject.toml").write_text("[project]\n")
+    (inner / ".git").mkdir(parents=True)
+    seed = inner / "src"
+    seed.mkdir(parents=True)
+    assert get_repo_root(seed) == inner.resolve()
 ```
 
 ### Detailed Steps
 
-1. **Identify the existing test class boundary** — read `tests/unit/utils/test_general_utils.py` to find the enclosing class (e.g., `TestGetRepoRoot` at lines 132–157 as of the planning session; line numbers may shift if file was edited).
+1. **Audit the SUT for `resolve()` calls** before writing tests:
+   ```python
+   # If the SUT has this pattern:
+   start = Path(start_path).resolve()  # or Path(...).resolve() anywhere before the walk
+   # Then ALL expected paths in assertions must also be .resolve()d
+   ```
+   In `hephaestus/utils/helpers.py:117` this is `current = Path(start_path).resolve()`.
 
-2. **Add four new test methods** covering every cross-combination of the two supported markers (`.git` directory and `pyproject.toml` file):
+2. **Build the nested directory structure** inline (no fixtures needed):
+   - Create `outer` and `outer/inner` with `mkdir(parents=True)`
+   - Place the marker in both outer and inner
+   - Create `seed` as a subdirectory under `inner` — the walk must pass through `inner` before reaching `outer`
 
-   | Test Method | Outer Marker | Inner Marker | Seed Location | Expected Result |
-   |-------------|--------------|--------------|---------------|-----------------|
-   | `test_nested_git_over_git` | `.git` dir | `.git` dir | `inner/src/` | `inner/` |
-   | `test_nested_pyproject_over_pyproject` | `pyproject.toml` file | `pyproject.toml` file | `inner/src/` | `inner/` |
-   | `test_nested_git_over_pyproject` | `.git` dir | `pyproject.toml` file | `inner/src/` | `inner/` |
-   | `test_nested_pyproject_over_git` | `pyproject.toml` file | `.git` dir | `inner/src/` | `inner/` |
+3. **Create markers correctly**:
+   - `.git` as a bare **directory**: `(inner / ".git").mkdir(parents=True)` — the resolver uses `.exists()`, NOT `git.is_valid_repo()`
+   - `pyproject.toml` as a file: `(inner / "pyproject.toml").write_text("[project]\n")`
+   - Do NOT call `git init` — it creates extra files and is slower; `.exists()` suffices
 
-3. **Build layouts inline with `tmp_path`** — do not extract to a shared fixture. Each test constructs its own `outer/.git` (or `outer/pyproject.toml`) and `outer/inner/.git` (or `outer/inner/pyproject.toml`) from scratch. This keeps tests self-contained and avoids fixture coupling.
+4. **Cover the full nested-marker matrix** (4 combinations for 2-marker resolvers):
 
-4. **Place the seed one level below the inner marker** (`inner/src`) — this confirms the walk terminates at `inner/`, not `outer/`, and that the resolver doesn't over-walk past the first match.
+   | Test | Outer marker | Inner marker | Asserts stops at |
+   |------|-------------|--------------|-----------------|
+   | `test_nested_git_stops_at_inner_git` | `.git` | `.git` | `inner.resolve()` |
+   | `test_nested_pyproject_stops_at_inner_pyproject` | `pyproject.toml` | `pyproject.toml` | `inner.resolve()` |
+   | `test_nested_pyproject_stops_at_inner_when_outer_has_git` | `.git` | `pyproject.toml` | `inner.resolve()` |
+   | `test_nested_git_stops_at_inner_when_outer_has_pyproject` | `pyproject.toml` | `.git` | `inner.resolve()` |
 
-5. **Assert `get_repo_root(seed) == inner`** (not `outer`) for all four cases.
+5. **Use explicit methods** (not `parametrize`) when the existing test class uses explicit methods — keeps failure messages readable and is consistent with the established style.
 
-6. **Run tests locally** before pushing:
+6. **Grep for duplicates** before inserting:
    ```bash
-   pixi run pytest tests/unit/utils/test_general_utils.py::TestGetRepoRoot -v
+   grep -n "nested\|outer.*inner\|inner.*outer\|inner\.git\|inner.*pyproject" tests/unit/utils/test_general_utils.py
+   # Expected: zero hits (or hits only in unrelated test classes)
    ```
 
-7. **Verify no existing nested-marker test already exists** before adding:
+7. **Run the full test class** to verify no regressions:
    ```bash
-   grep -n "nested\|outer.*inner\|inner.*outer" tests/unit/utils/test_general_utils.py
+   pixi run pytest tests/unit/utils/test_general_utils.py::TestGetRepoRoot -v
    ```
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| Shared fixture for layout construction | Extract `outer`/`inner` directory setup into a `@pytest.fixture` | Fixtures complicate the test by introducing indirection and coupling multiple tests to one setup shape; different marker combos need different structures | Build layouts inline in each test method; `tmp_path` is already a pytest fixture, no extra layer needed |
-| Single "representative" test | Cover only `git+git` nesting and skip pyproject combos | Misses cross-marker interaction bugs where the resolver treats `.git` and `pyproject.toml` with different priority logic | All four cross-combinations are required for full contract coverage |
-| Seed placed at `inner/` directly | Pass `inner/` (the marker directory) as the seed | If the walk starts at a directory that IS the marker level, it may trivially return `inner/` without exercising the walk-termination logic | Place seed one level below inner marker (`inner/src`) to force the walk to actually traverse upward |
+| `assert get_repo_root(seed) == inner` (no `.resolve()`) | Compared resolved return against unresolved `tmp_path` subpath | Passes on non-symlinked CI (Ubuntu) but fails on macOS where `$TMPDIR=/var/folders/...` resolves to `/private/var/folders/...` | Always call `.resolve()` on expected paths when the SUT calls `Path(...).resolve()` |
+| `git init` to create `.git` | Called `subprocess.run(["git", "init", str(inner)])` to create a proper repo | Adds latency, creates extra files (`.git/config`, `.git/HEAD`, etc.), and is fragile if git is not on PATH in all CI environments | Use `(path / ".git").mkdir(parents=True)` — the resolver checks `.exists()` only |
+| Copy existing `test_finds_git_repo` assertion style (`== mock_git_repo` without `.resolve()`) | Used the existing test as a template without auditing for `.resolve()` | The existing test passes only because Ubuntu CI `$TMPDIR` is not a symlink — it's a latent fragility, not a pattern to copy | Always audit the SUT for `.resolve()` calls; don't trust an existing test's assertion style without checking |
+| `parametrize` over the 4 cases | Converted 4 methods to a single `@pytest.mark.parametrize` | Inconsistent with the existing `TestGetRepoRoot` class style (explicit `def test_*` methods); adds indirection for minimal gain | Prefer explicit methods when the existing class already uses that pattern; KISS |
+| Shared fixture for layout construction | Extract `outer`/`inner` directory setup into a `@pytest.fixture` | Different marker combos need different structures; fixtures complicate without adding value | Build layouts inline in each test method; `tmp_path` is already a pytest fixture |
 
 ## Results & Parameters
 
-### Inline Layout Pattern
+- **Test count**: 4 new methods in `TestGetRepoRoot`
+- **Full suite result**: 4058 passed, 21 skipped, coverage 85.57% (ProjectHephaestus)
+- **Insertion point**: After `test_uses_cwd_when_none`, inside `TestGetRepoRoot`, before the next class
+- **Marker creation**: `(path / ".git").mkdir(parents=True)` for dir markers, `.write_text(...)` for file markers
+- **Assertion pattern**: `assert get_repo_root(seed) == inner.resolve()` — always resolve expected
+- **Seed depth**: `seed = inner / "src" / "module"; seed.mkdir(parents=True)` — at least 2 levels below inner so the walk is non-trivial
 
-```python
-# For .git marker: create a directory named .git (no need for a real git repo)
-(outer / ".git").mkdir(parents=True)
-# get_repo_root() checks .exists() only, not whether it is a real git repo
+## Critical Insight: resolve() Symmetry
 
-# For pyproject.toml marker: create an empty file
-(outer / "pyproject.toml").touch()
-```
+The SUT (`get_repo_root()`) calls `Path(start_path).resolve()` at line 117 before walking. This means:
 
-### Confirmed Behavior of `get_repo_root()` (helpers.py:99–127)
+1. The return value is always a resolved (symlink-free) absolute path
+2. Any assertion comparing against an unresolved `tmp_path` subpath will be fragile
+3. On macOS, `pytest`'s `tmp_path` may be under `/var/folders/...` which is a symlink to `/private/var/folders/...`
+4. `inner.resolve()` in the test mirrors the SUT's own resolve call — this is the correct pattern
 
-- Uses `Path(start_path).resolve()` before walking — resolves symlinks
-- Walks upward via `.parent` until a `.git` dir or `pyproject.toml` file is found
-- Returns the **first** (innermost) ancestor that has a marker — does NOT continue to outer
-- Returns `None` (or raises) if neither marker is found before reaching filesystem root
-
-### Risk Notes
-
-- `(outer / ".git").mkdir(parents=True)` creates a **directory** named `.git`, not a real git repo. Confirm `get_repo_root()` checks `.exists()` only, not `.is_dir()` vs `.is_file()` specifically — as of planning session, inspection confirmed `.exists()` is used.
-- `Path(start_path).resolve()` can follow symlinks on some CI environments and escape `tmp_path`. This is a low-probability risk but worth noting for debugging if tests behave unexpectedly on CI.
-- Confirm no existing test already covers nested markers before adding the four new cases (`grep -n "nested" tests/unit/utils/test_general_utils.py`).
-- Line numbers for the existing `TestGetRepoRoot` class boundary (132–157 as of planning) may have shifted; always re-read the file before inserting new methods.
+The existing test `test_finds_git_repo` uses `== mock_git_repo` without `.resolve()` and passes only because Ubuntu CI's `$TMPDIR` is not a symlink. That is a latent fragility — do NOT copy that pattern.
 
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectHephaestus | Planning session for issue #1267 — adding nested-marker test coverage | Plan only; tests not executed |
+| ProjectHephaestus | Issue #1267 / PR #1307 | 4 nested-marker tests added; 4058 tests pass; coverage 85.57%; verified-ci |
