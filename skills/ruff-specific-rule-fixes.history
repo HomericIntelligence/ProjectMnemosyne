@@ -5,6 +5,33 @@
 This file preserves the full verbatim content of the skills consolidated into
 `ruff-specific-rule-fixes.md`, along with the version history of the canonical.
 
+## v1.2.0 (2026-06-13)
+
+**Changed by:** Session — ProjectHephaestus issue #1313 (ruff floor bump 0.1.x to 0.15)
+**Verification:** verified-local
+
+### What changed
+
+- Added Pattern D (retroactive floor-bump violations) to Verified Workflow covering: D1 ruff-format implicit string-concat collapse, D2 E501 overruns (shell printf in f-string via bash line continuation; one-line docstring expansion), D3 mypy unused-ignore removal + correct generic parameter addition, D4 discovery workflow.
+- Extended "When to Use" with floor-bump and unused-ignore trigger conditions.
+- Added 4 new Failed Attempts entries for floor-bump-specific pitfalls.
+- Added ProjectHephaestus issue #1313 entry to Verified On table.
+- Updated version to 1.2.0, added tags: E501, line-length, type-ignore, unused-ignore, floor-bump, toolchain-upgrade, retroactive-violation, mypy, f-string, shell-continuation.
+
+## v1.1.0 (2026-06-13)
+
+**Changed by:** Session — issue #1189 python-version-consistency DRY refactor
+**Verification:** verified-local
+
+### What changed
+
+- Added RUF022 (`__all__` not sorted) and I001 (import block un-sorted) patterns
+- Added `ruff check --fix` as preferred resolution path for `[*]`-fixable rules
+
+### Why
+
+Manual reordering of `__all__` and import blocks with `as` aliases fails because ruff/isort uses the aliased name for ordering, not the original symbol name. Three errors were fixed in one pass across two files using `pixi run ruff check --fix`.
+
 ## v1.0.0 (2026-06-07)
 
 Initial consolidation. Merged 4 overlapping skills into the general canonical:

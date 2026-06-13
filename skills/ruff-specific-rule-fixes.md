@@ -1,9 +1,9 @@
 ---
 name: ruff-specific-rule-fixes
-description: "Patterns for fixing specific Ruff lint rule violations and addressing systemic linter policy failures. Use when: (1) fixing Ruff S101 violations in production code by replacing bare assert guards with explicit RuntimeError raises, (2) fixing Ruff C901 cyclomatic complexity violations by extracting helper functions, (3) fixing Ruff RUF022 (__all__ not sorted) or I001 (import block un-sorted) — both are [*]-fixable; never manually reorder because isort uses the alias name not the original symbol, always use `ruff check --fix`, (4) the same policy violation reappears in two or more independent documents or configs — indicating the linter/validator that should enforce the policy is absent or misconfigured (root-cause fix: add the lint rule, not re-fix every instance), (5) deciding between adding a noqa suppression, fixing the violation, or promoting the rule to error-level enforcement."
+description: "Patterns for fixing specific Ruff lint rule violations and addressing systemic linter policy failures. Use when: (1) fixing Ruff S101 violations in production code by replacing bare assert guards with explicit RuntimeError raises, (2) fixing Ruff C901 cyclomatic complexity violations by extracting helper functions, (3) fixing Ruff RUF022 (__all__ not sorted) or I001 (import block un-sorted) — both are [*]-fixable; never manually reorder because isort uses the alias name not the original symbol, always use `ruff check --fix`, (4) the same policy violation reappears in two or more independent documents or configs — indicating the linter/validator that should enforce the policy is absent or misconfigured (root-cause fix: add the lint rule, not re-fix every instance), (5) deciding between adding a noqa suppression, fixing the violation, or promoting the rule to error-level enforcement, (6) main goes red after a ruff/mypy version-floor bump — E501 line-length overruns, ruff-format implicit-string-concat collapses, or unused-ignore mypy errors appear retroactively in files that previously passed CI, (7) a # type: ignore[tag] comment becomes an unused-ignore error after a mypy or ruff floor bump."
 category: tooling
 date: 2026-06-13
-version: "1.1.0"
+version: "1.2.0"
 user-invocable: false
 history: ruff-specific-rule-fixes.history
 tags:
@@ -26,6 +26,16 @@ tags:
   - import-sort
   - isort
   - autofix
+  - E501
+  - line-length
+  - type-ignore
+  - unused-ignore
+  - floor-bump
+  - toolchain-upgrade
+  - retroactive-violation
+  - mypy
+  - f-string
+  - shell-continuation
 ---
 
 # Ruff Specific Rule Fixes
@@ -47,6 +57,8 @@ tags:
 - The **same policy violation** appears in 2+ independent files/configs — the linter that should enforce the policy is absent, misconfigured, or wrong-direction.
 - You are deciding between a `# noqa` suppression, fixing the violation, or promoting the rule to error-level enforcement.
 - You are tempted to open N parallel PRs to fix N violating files — pause and check the linter first.
+- **main goes red after a ruff/mypy version-floor bump** (e.g., ruff 0.1.x to 0.15): E501 line-length overruns, ruff-format implicit-string-concat collapses, or `# type: ignore[tag]` comments become unused-ignore errors in files that previously passed CI.
+- A `# type: ignore[tag]` comment fires mypy error `[unused-ignore]` after a mypy floor bump — the annotation was covering a type error that no longer exists in the new mypy version.
 
 ## Verified Workflow
 
@@ -251,6 +263,118 @@ systemic one. The linter/validator that should enforce the policy is the FIRST s
 
 7. **If META is also wrong** (e.g. CLAUDE.md says `--rebase` but branch protection disables rebase merge), the deployed config is ground truth — fix META first, then linter, then dependents. Confirm via `gh api repos/<owner>/<repo>/branches/<branch>/protection`.
 
+#### Pattern D — Fix retroactive violations after a ruff/mypy floor bump
+
+When a PR raises the ruff or mypy version floor (e.g., `ruff >= 0.15` from `0.1.x`), files
+that passed CI when they were merged can suddenly violate rules the new toolchain enforces more
+strictly. These violations are **not regressions in the file** — they are retroactive enforcement.
+
+**Three common retroactive violation types:**
+
+**D1 — ruff-format implicit string-concat collapse (two-literal to one-literal)**
+
+ruff 0.15 auto-collapses adjacent implicit two-literal concatenations. Symptom: ruff-format
+reports "would reformat" even after you run `ruff check --fix`.
+
+```python
+# BEFORE (implicit two-literal concat that ruff 0.15 collapses):
+pyproject.write_text(
+    "[project]\n"
+    "name = 'foo'\n"
+)
+
+# AFTER (join into one literal — verify identical bytes, no missing \n):
+pyproject.write_text(
+    "[project]\nname = 'foo'\n"
+)
+```
+
+Verify: the joined string produces identical bytes — check that `\n` separators between
+fragments are preserved and that no content is lost.
+
+**D2 — E501 line-length overruns**
+
+E501 fires when a line exceeds `line-length` (commonly 100 chars). Two sub-patterns:
+
+*Shell `printf` inside a Python f-string (use bash line continuation):*
+
+```python
+# BEFORE (110-char line inside triple-quoted f-string):
+script = f"""
+printf '%s\\t%s\\n' "$A" "$B_with_a_very_long_variable_name_that_pushes_past_100_chars_here"
+"""
+
+# AFTER (bash line continuation \<newline> inside the f-string):
+script = f"""
+printf '%s\\t%s\\n' "$A" \\
+  "$B_with_a_very_long_variable_name_that_pushes_past_100_chars_here"
+"""
+```
+
+Key insight: a backslash-newline inside a Python triple-quoted f-string is literal `\<newline>`;
+bash interprets it as line continuation. The shell command is semantically identical.
+Verify by running the generated script in a bash subshell after the change.
+
+*One-line docstring exceeding the limit:*
+
+```python
+# BEFORE (106-char single-line docstring):
+def foo():
+    """Very long docstring that exceeds the 100-character line-length limit in pyproject.toml."""
+
+# AFTER (two-line form):
+def foo():
+    """Very long docstring that exceeds the 100-character line-length
+    limit in pyproject.toml."""
+```
+
+**D3 — mypy `[unused-ignore]` on a `# type: ignore[tag]` comment**
+
+When mypy's type inference improves in a new version, it may solve a type error it previously
+could not. The `# type: ignore[tag]` annotation is now unused and mypy fires `[unused-ignore]`.
+
+```python
+# BEFORE (mypy 1.x could not infer the generic, so [type-arg] was needed):
+result: subprocess.CompletedProcess = subprocess.run(...)  # type: ignore[type-arg]
+
+# AFTER (two-part fix):
+#   1. Remove the stale comment
+#   2. Add the correct generic parameter (text=True implies stdout/stderr are str)
+result: subprocess.CompletedProcess[str] = subprocess.run(...)
+```
+
+Determining the correct type argument:
+
+- `text=True` or `encoding=...` passed to `subprocess.run` means `[str]`
+- `text=False` (the default) means `[bytes]`
+
+Confirm with `pixi run mypy <file>` — must report zero errors including `[unused-ignore]`.
+
+**D4 — Root cause pattern and discovery workflow**
+
+These violations merged under the old floor and passed CI at the time. The floor-bump PR is
+what makes them visible. All four violation types can appear together; fix them in one PR.
+
+```bash
+# Discover all retroactive violations after a floor bump:
+pixi run ruff format --check .   # find format violations (D1)
+pixi run ruff check .            # find lint violations including E501 (D2)
+pixi run mypy                    # find unused-ignore errors (D3)
+
+# Apply auto-fixable repairs:
+pixi run ruff format .           # apply D1 format fixes
+pixi run ruff check --fix .      # apply auto-fixable lint fixes
+
+# Manually fix remaining E501 overruns and unused-ignore comments.
+# Then verify clean:
+pixi run ruff format --check .
+pixi run ruff check .
+pixi run mypy
+```
+
+Important: the `lint` job MUST be a required CI check. If it is advisory-only, retroactive
+violations merge silently (as happened with PR #1308 when `lint` was not required).
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -264,6 +388,10 @@ systemic one. The linter/validator that should enforce the policy is the FIRST s
 | Flip only the validator, not its tests | Planned to update validator code but leave its test suite | Validator tests still asserted the wrong direction — the linter PR itself fails CI | Validator source + its tests are one atomic change; flip both together |
 | Single-direction regression test | Wrote a test asserting only "accepts `--squash`" | A future agent with the same wrong-direction model could re-flip the assertion and ship it | Pair tests: assert correct accepted AND wrong rejected, to prevent silent drift |
 | Manual reorder of `__all__` with `as` aliases | Tried to alphabetize `__all__` entries and import block by hand when ruff reported RUF022 + I001 | isort orders by the **alias** name (the `as <name>` part), not the original symbol — naive alphabetical order of original names produces a different sequence that ruff still rejects | Always use `pixi run ruff check --fix <files>` for RUF022 and I001; these are `[*]`-fixable and the sort order is non-obvious when `as` aliases are present |
+| Only run `ruff check` after floor bump, missed ruff-format violations | Ran `pixi run ruff check .` and saw no output; assumed the repo was clean post-bump | `ruff check` (lint) and `ruff format --check` (formatter) are separate tools; a two-literal implicit concat collapse is a FORMAT violation, not a lint violation | Always run BOTH `ruff format --check .` AND `ruff check .` after a floor bump |
+| Remove `# type: ignore[type-arg]` without adding the type parameter | Deleted the stale comment but left `subprocess.CompletedProcess` without a type argument | Bare `subprocess.CompletedProcess` without `[str]` still causes a mypy `type-arg` error in strict mode, creating a different failure | Always pair unused-ignore removal with the correct generic parameter; use `text=True` to `[str]`, `text=False` to `[bytes]` |
+| Break the shell printf line with Python string continuation | Used Python line continuation (backslash at end of a string-literal line) inside an f-string | Python line continuation splits the Python source string, not the shell command; the resulting shell string is malformed | Use bash line continuation (backslash + newline as literal content inside the triple-quoted f-string); Python passes it through literally and bash interprets it as line continuation |
+| Treat floor-bump violations as belonging to the bump PR | Tried to retroactively amend the original files that introduced violations | The violations pre-exist in files merged under the old floor; the bump PR is not the commit that introduced them | Create a new dedicated fix PR against main; do not rewrite the floor-bump PR history |
 
 ## Results & Parameters
 
@@ -308,3 +436,4 @@ WRONG ORDER (fails CI):           CORRECT ORDER:
 | ProjectHephaestus | C901 multi-pass — extracted `_draw_workers/_separator/_logs` from `_refresh_display()`, 69 lines -> 3 methods, 8 -> 23 tests, removed `# noqa: C901` | PR #1050 (issue #804) |
 | ProjectHephaestus | Linter-as-root-cause — strict audit caught 2 skill files violating `--squash`-only merge policy; root cause was a wrong-direction validator | PRs #863, #865, #866, #867 |
 | ProjectHephaestus | RUF022 + I001 — `__all__` sort and import-block sort in `hephaestus/validation/` after python-version-consistency DRY refactor; 3 errors fixed in one `ruff check --fix` pass across 2 files | Issue #1189 |
+| ProjectHephaestus | Floor-bump retroactive violations (ruff 0.1.x to 0.15, PR #1294) — 4 violations across 3 test files: (D1) implicit two-literal concat collapse in `test_check_python_version_consistency.py:321-324`; (D2a) E501 in `test_choose_merge_flag_sh.py:60` fixed with bash `\<newline>` continuation inside f-string; (D2b) E501 in `test_planner_loop.py:681` one-line docstring expanded; (D3) unused `# type: ignore[type-arg]` in `test_choose_merge_flag_sh.py:30` removed and `[str]` generic added. Verified-local (pixi run mypy + ruff format --check + ruff check all clean). Issue #1313 |
