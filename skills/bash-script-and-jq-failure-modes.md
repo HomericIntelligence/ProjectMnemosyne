@@ -1,9 +1,9 @@
 ---
 name: bash-script-and-jq-failure-modes
-description: "Diagnose and fix silent failures in bash scripting and jq under strict error-checking modes. Use when: (1) a bash script with set -euo pipefail exits unexpectedly mid-loop or mid-function, (2) grep finds no matches and kills the script via pipefail, (3) bash arrays crash with 'unbound variable' despite being declared, (4) exit 127 appears and all binaries are installed, (5) jq // operator silently drops boolean false values, (6) jq fails with syntax errors on array concatenation with conditionals, (7) Claude Code Bash cwd drifts from Read/Edit absolute paths in multi-worktree sessions, (8) a bash function with set -m + set +e silently aborts mid-execution after a single-command (...) subshell finishes with no error log and no continuation past the subshell."
+description: "Diagnose and fix silent failures in bash scripting and jq under strict error-checking modes. Use when: (1) a bash script with set -euo pipefail exits unexpectedly mid-loop or mid-function, (2) grep finds no matches and kills the script via pipefail, (3) bash arrays crash with 'unbound variable' despite being declared, (4) exit 127 appears and all binaries are installed, (5) jq // operator silently drops boolean false values, (6) jq fails with syntax errors on array concatenation with conditionals, (7) Claude Code Bash cwd drifts from Read/Edit absolute paths in multi-worktree sessions, (8) a bash function with set -m + set +e silently aborts mid-execution after a single-command (...) subshell finishes with no error log and no continuation past the subshell, (9) a gh api call whose stdout is piped directly to jq silently fails when gh emits stderr warnings or debug lines mixed into the command substitution output."
 category: debugging
-date: 2026-05-26
-version: "1.1.0"
+date: 2026-06-13
+version: "1.2.0"
 verification: verified-local
 user-invocable: false
 history: bash-script-and-jq-failure-modes.history
@@ -28,6 +28,12 @@ tags:
   - exec-optimization
   - silent-abort
   - orchestrator-rewrite
+  - stderr-isolation
+  - mktemp
+  - trap-return
+  - gh-mock
+  - export-f
+  - integration-test
 ---
 
 # Bash Script and jq Failure Modes Under Strict Error-Checking
@@ -36,9 +42,9 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-05-19 |
+| **Date** | 2026-06-13 |
 | **Objective** | Consolidate known failure modes in bash scripting and jq processing under set -euo pipefail and related strict modes |
-| **Outcome** | Synthesised from 6 verified skills; all patterns confirmed in CI or local runs |
+| **Outcome** | Synthesised from 6 verified skills + 2 additional patterns (stderr isolation, mock-gh); all patterns confirmed in CI or local runs |
 | **Theme** | Shell/jq behavior under error-checking modes silently produces wrong behavior, requiring the same class of defensive fixes |
 
 ## When to Use
@@ -51,6 +57,8 @@ tags:
 - jq fails with `syntax error, unexpected '+', expecting '}'` on array concatenation with conditionals
 - `Read` shows content that `grep` in Bash cannot find — or a commit lands on the wrong branch — in a multi-worktree session
 - A bash function with `set -m` + `set +e` silently aborts mid-execution after a single-command `(...)` subshell finishes, with no error log and no continuation past the subshell — bash trace shows execution jumping to the parent loop. The defang-with-`set +e` pattern is NOT sufficient against this trigger.
+- A bash function runs `raw=$(gh api ... 2>&1)` and then pipes `raw` to `jq`: `jq` silently fails because a gh deprecation warning, rate-limit notice, or `GH_DEBUG` trace line was prepended to the JSON body, making it invalid. Symptom: downstream variable is empty even though `gh api` returned valid JSON for the call itself.
+- You need to write integration tests for a bash function that calls `gh api`, but you cannot control the real GitHub API in tests.
 
 Do NOT use when:
 
@@ -103,6 +111,31 @@ jq -n --argjson files "$files_json" '{ files: $files }'
 cd /abs/path/to/main/worktree && pwd
 git rev-parse --show-toplevel
 git worktree list
+
+# --- GH STDERR ISOLATION: capture stderr separately with mktemp + RETURN trap ---
+# WRONG — any gh warning/debug line prepends to JSON body, breaking jq:
+raw=$(gh api repos/{owner}/{repo}/pulls 2>&1)
+
+# CORRECT — isolate stderr to a temp file, never mixed into stdout:
+_err_file=$(mktemp)
+trap "rm -f '$_err_file'" RETURN
+raw=$(gh api repos/{owner}/{repo}/pulls 2>"$_err_file")
+if [[ $? -ne 0 ]]; then
+  echo "gh api failed: $(cat "$_err_file")" >&2
+  return 1
+fi
+flag=$(printf '%s' "$raw" | jq -r '.[] | ...')   # jq sees clean JSON only
+
+# --- MOCK GH IN INTEGRATION TESTS (subprocess.run bash -c) ---
+# Define gh as an exported bash function; source the script; call the function:
+# Python:
+# script = """
+# gh() { case "$1" in api) printf '%s\n' '{"merge_method": "squash"}' ;; esac }
+# export -f gh
+# . /abs/path/to/script.sh
+# choose_merge_flag owner repo
+# """
+# result = subprocess.run(["bash", "-c", script], capture_output=True, text=True)
 ```
 
 ### Failure Mode 1: Exit 127 — Orphaned Shell Function
@@ -306,6 +339,116 @@ Concrete symptom signature (from ProjectHephaestus `scripts/run_automation_loop.
 
 2. **Rewrite the orchestrator in Python.** When 3+ interacting safety mechanisms (`set -euo pipefail` + `set -m` + `set +e` defang + ERR/EXIT traps + RETURN traps + single-command subshells) accumulate, the rewrite-to-Python option becomes lower-risk than another patch. The Python equivalent uses `subprocess.run` inside a plain `for phase in ALL_PHASES` loop — phase isolation is then **structural**, not behavioral, and no shell-option landmine can silently skip iterations. See ProjectHephaestus `hephaestus/automation/loop_runner.py` for the verified replacement pattern.
 
+### Failure Mode 8: `2>&1` Mixing gh stderr into jq Input — Silent jq Failure
+
+When a bash function captures `gh api` output with `raw=$(gh api ... 2>&1)` and pipes `raw` to `jq`, any line written to gh's stderr (deprecation warnings, rate-limit notices, `GH_DEBUG` trace lines) is prepended to the JSON body. `jq` then sees invalid JSON and fails silently — the downstream variable is empty, and the script falls through to a "no valid merge method" error path even though the GitHub API returned valid JSON.
+
+**Root cause:** `2>&1` redirects stderr into stdout before the command substitution captures stdout. Every non-JSON line gh emits becomes part of `raw`.
+
+**Fix — `mktemp` + `RETURN` trap:**
+
+```bash
+my_function() {
+  local _err_file
+  _err_file=$(mktemp)
+  trap "rm -f '$_err_file'" RETURN   # RETURN fires on function exit, not process exit
+
+  local raw
+  raw=$(gh api repos/{owner}/{repo}/pulls 2>"$_err_file")
+  if [[ $? -ne 0 ]]; then
+    echo "gh api error: $(cat "$_err_file")" >&2
+    return 1
+  fi
+
+  # jq sees only stdout — no stderr contamination possible
+  local flag
+  flag=$(printf '%s' "$raw" | jq -r '...')
+}
+```
+
+**Why `RETURN` trap (not `EXIT`):** In sourced bash scripts and functions, `RETURN` fires when the function returns. `EXIT` fires when the whole shell exits — using `EXIT` in a sourced context would leave temp files around for the whole shell lifetime.
+
+**Why `mktemp` (not `/tmp/gh.err`):** A hard-coded name like `/tmp/gh.err` collides across concurrent or nested callers. `mktemp` allocates a unique file per invocation.
+
+**Error surfacing:** `cat "$_err_file"` in the error path shows exactly what gh wrote to stderr — useful for diagnosing rate-limit headers or deprecation notices.
+
+**TDD RED-GREEN recipe for verifying the fix:**
+
+1. Write a test that injects a mock `gh` emitting a warning line before JSON output.
+2. Confirm the test **fails** against the unfixed `2>&1` code (RED).
+3. Apply the `mktemp` + `RETURN` trap fix.
+4. Confirm the test passes (GREEN).
+
+### Failure Mode 9: Writing Integration Tests for bash Functions That Call `gh`
+
+Functions that call `gh api` cannot be tested against the real GitHub API in CI without credentials. The `export -f` bash feature lets you inject a mock `gh` as a bash function visible to a sourced script.
+
+**Pattern — mock `gh` in `subprocess.run(["bash", "-c", ...])`:**
+
+```python
+import subprocess
+
+def test_choose_merge_flag_squash_only():
+    script = r"""
+gh() {
+  case "$1" in
+    api)
+      # Return squash-only repo settings — no squash merge disabled
+      printf '%s\n' '{"allow_squash_merge": true, "allow_merge_commit": false, "allow_rebase_merge": false}'
+      ;;
+    *)
+      printf 'mock-gh: unhandled command %s\n' "$1" >&2
+      return 1
+      ;;
+  esac
+}
+export -f gh
+
+. /abs/path/to/scripts/choose_merge_flag.sh
+
+choose_merge_flag "owner" "repo"
+"""
+    result = subprocess.run(
+        ["bash", "-c", script],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    assert result.stdout.strip() == "--squash"
+```
+
+**Key rules:**
+- `export -f gh` exports the bash function so the sourced script sees it as `gh`.
+- `export -f` works since bash 2.x — it is NOT a bash 4.2+ feature (that's `declare -A` associative arrays).
+- Pass JSON body as a `printf '%s\n' '...'` data argument, NOT as the format string — avoids `%s` interpolation bugs in the JSON.
+- Use `printf '%s\n'` not `echo` for the JSON body — avoids `-n` / backslash interpretation edge cases.
+- Test stderr contamination specifically: make the mock `gh` emit a warning line first, then JSON on the next line, to guard against regressions to `2>&1`.
+
+**Regression guard test for the `2>&1` bug:**
+
+```python
+def test_choose_merge_flag_ignores_gh_stderr_warnings():
+    """Guard: gh stderr warnings must NOT corrupt jq input."""
+    script = r"""
+gh() {
+  case "$1" in
+    api)
+      # Emit a deprecation warning to stderr FIRST, then JSON to stdout
+      printf 'Warning: This endpoint is deprecated.\n' >&2
+      printf '%s\n' '{"allow_squash_merge": true, "allow_merge_commit": false, "allow_rebase_merge": false}'
+      ;;
+  esac
+}
+export -f gh
+
+. /abs/path/to/scripts/choose_merge_flag.sh
+choose_merge_flag "owner" "repo"
+"""
+    result = subprocess.run(["bash", "-c", script], capture_output=True, text=True)
+    assert result.returncode == 0, f"stderr: {result.stderr}"
+    assert result.stdout.strip() == "--squash"
+```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -327,6 +470,9 @@ Concrete symptom signature (from ProjectHephaestus `scripts/run_automation_loop.
 | Grep with relative path | Used `grep PATTERN .github/workflows/file.yml` to confirm change | Relative path resolved against stale cwd; returned no match | Always use absolute paths in Bash when cross-checking Edit results |
 | Blame the Edit tool | Suspected Edit was silently no-oping or operating on a cached buffer | Edit had worked correctly — divergence was in the verifier, not the editor | When two tools disagree, suspect cwd before suspecting tool bugs |
 | `set -m` + single-command `(...)` subshell exec-optimization | Defang errexit inside the function via `set +e` + `trap 'set -e' RETURN`; expected `rc=$?` to capture exit and `phase_done` to fire | bash trace shows no commands execute after the subshell completes — control returns directly to the outer parent loop. `set -m` puts the subshell in its own process group, and bash optimises single-command subshells via exec-replace, so the subshell PID dies with the command's rc and the parent's continuation context is lost. `set +e` does not help because nothing runs after the subshell to be defanged. | Diagnose with `bash -x` + ERR/EXIT traps inside the function: if `phase_start` banners appear but `phase_done` banners NEVER appear (even with stderr captured), the function body is not running past the subshell. Don't add more `set +e` — restructure to avoid the single-command subshell (e.g., extract into a real function), or replace the bash orchestrator entirely. |
+| `raw=$(gh api ... 2>&1)` piped to jq | Captured gh output with `2>&1` to merge stderr into stdout, then passed to `jq -r` | Any gh deprecation warning, rate-limit notice, or `GH_DEBUG` trace line is prepended to the JSON body; jq sees invalid JSON and fails silently; downstream variable is empty; script falls through to an error path even though the API returned valid JSON | Never use `2>&1` before piping to jq; isolate stderr to a temp file via `_err_file=$(mktemp); trap "rm -f '$_err_file'" RETURN; raw=$(gh api ... 2>"$_err_file")` |
+| `/tmp/gh.err` hard-coded temp file | Used a shared `/tmp/gh.err` file to capture gh stderr | Namespace collision from concurrent callers or nested invocations of the same function overwrites each other's stderr; mktemp allocates a unique file per call | Use `mktemp` for per-invocation uniqueness; never use a static global temp-file name in a reusable bash function |
+| `printf '%s\n' "$json_body"` as format string | Used `printf "$json_body"` (no format-string separation) in mock gh function | Any `%s`, `%d`, etc. inside the JSON string is interpreted as a printf format specifier; corrupts JSON output | Always pass JSON as a data argument: `printf '%s\n' '{"key": "value"}'` — the format string is a literal `%s\n` |
 
 ## Results & Parameters
 
@@ -414,3 +560,4 @@ git rev-parse --show-toplevel
 | ai-maestro (23blocks-OS) | Issue #272 — install-agent-cli.sh jq syntax error on older jq | jq array concatenation compatibility |
 | HomericIntelligence/ProjectOdyssey | Multi-worktree session — stray commit cf710fb4 on ci-pipe-handler-cores-gate branch | Bash cwd drift from Edit/Read absolute paths |
 | HomericIntelligence/ProjectHephaestus | Session 2026-05-26 — `scripts/run_automation_loop.sh` `process_repo` silently aborting after planner subshell (phases 2-6 skipped 75/75 invocations); replaced with `hephaestus/automation/loop_runner.py` | `set -m` + single-command subshell exec-optimization silent abort |
+| HomericIntelligence/ProjectHephaestus | PR #1275 / Issue #1125 (2026-06-13) — `scripts/choose_merge_flag.sh` used `raw=$(gh api ... 2>&1)`; any gh deprecation warning prepended to JSON body; jq silently failed; `flag` was empty causing exit 1 even with valid JSON. Fixed with `mktemp` + `RETURN` trap. Integration tests added using `export -f gh` mock pattern. All 6 tests pass. | gh stderr/stdout isolation (`2>&1` → `mktemp` + `RETURN` trap) + `export -f gh` mock for subprocess integration tests |

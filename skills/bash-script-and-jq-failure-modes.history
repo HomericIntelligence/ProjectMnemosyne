@@ -1,5 +1,16 @@
 ## Version History
 
+### v1.2.0 (2026-06-13)
+- Added Failure Mode 8: `2>&1` mixing gh stderr into jq input — any gh deprecation warning, rate-limit notice, or GH_DEBUG trace line is prepended to JSON body, causing silent jq failure and empty downstream variables.
+- Added Failure Mode 9: Writing integration tests for bash functions that call `gh api` using `export -f gh` mock pattern in `subprocess.run(["bash", "-c", ...])` tests.
+- Added two new "When to Use" triggers: (a) `gh api 2>&1` → jq silent failure; (b) need to mock `gh` in integration tests.
+- Added fix pattern: `_err_file=$(mktemp); trap "rm -f '$_err_file'" RETURN; raw=$(gh api ... 2>"$_err_file")`.
+- Documented why `RETURN` trap (not `EXIT`) is correct in sourced bash contexts, and why `mktemp` is required over a static `/tmp/gh.err` global path.
+- Added Quick Reference snippets for both patterns.
+- Added three new Failed Attempts rows: `2>&1` before jq, `/tmp/gh.err` collision, `printf "$json_body"` format-string interpolation.
+- Added new tags: stderr-isolation, mktemp, trap-return, gh-mock, export-f, integration-test.
+- Verified on: HomericIntelligence/ProjectHephaestus PR #1275, Issue #1125 (2026-06-13) — all 6 integration tests pass locally.
+
 ### v1.1.0 (2026-05-26)
 - Added Failure Mode 7: `set -m` (job control) + single-command `(...)` subshell exec-optimization causing silent abort with no error trace.
 - Added "Diagnostic recipe: silent abort after single-command subshell" subsection with ERR/EXIT/RETURN trap recipe.
