@@ -2,8 +2,8 @@
 name: dependency-manifest-single-source-of-truth
 description: "Use when: (1) Python dependencies are declared in multiple manifests (pixi.toml, pyproject.toml, requirements*.txt) with divergent version constraints, (2) aligning floor constraints (e.g., >=9.0 vs >=9.0.0) or upper-cap constraints (e.g., <2 vs <3) across manifests for packages with API-incompatible major versions, (3) removing a duplicated version field from pixi.toml [workspace] that pyproject.toml already owns, (4) implementing semantic-version-aware (PEP 440) regression guards that detect manifest drift in CI, (5) ensuring pip-install users and pixi dev-env users see the same tested package versions."
 category: ci-cd
-date: 2026-06-07
-version: "1.0.0"
+date: 2026-06-13
+version: "1.1.0"
 user-invocable: false
 history: dependency-manifest-single-source-of-truth.history
 tags:
@@ -28,7 +28,7 @@ Keep Python dependency declarations consistent across `pixi.toml`, `pyproject.to
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-07 |
+| **Date** | 2026-06-13 |
 | **Objective** | Eliminate dependency declaration drift (floors, upper-caps, duplicated version fields) across multiple manifests and enforce consistency with semantic-version-aware regression guards |
 | **Outcome** | Successful — single source of truth per concern, drift-detection scripts/tests, and PEP 440 comparison that catches `9.0` vs `9.0.0` representation skew |
 | **Verification** | verified-ci |
@@ -237,6 +237,44 @@ altair = ">=5.0,<6"   # BAD  — downgrades to 5.5.0 (TypedDict(closed=True) bre
 altair = ">=5.0,<7"   # GOOD — keeps 6.0.0
 ```
 
+#### 7a. Reuse existing `_find_dep` across new test classes (DRY)
+
+When adding a new `TestXxxConsistency` class to an existing test file, do not copy-paste the
+`_find_dep` static method. Call the already-defined version on the sibling class:
+
+```python
+class TestRuffConsistency:
+    """Verify ruff floor is consistent across manifests."""
+
+    @staticmethod
+    def _find_dep(specifier_string: str, pkg_name: str) -> str | None:
+        # Delegate to the sibling class — no duplication needed
+        return TestPytestConsistency._find_dep(specifier_string, pkg_name)
+```
+
+Cross-class static-method delegation is valid Python. A reviewer will flag a verbatim copy
+as a P4 DRY violation.
+
+#### 7b. Locate the correct pixi.toml section before writing the guard
+
+Tool-chain packages (ruff, mypy, pytest) may live in different `[feature.*]` sections. Verify
+with a grep before writing the test assertion — do NOT assume the section name:
+
+```bash
+grep -n "ruff" pixi.toml
+# ruff lives under [feature.shared.dependencies], NOT [feature.lint.dependencies]
+```
+
+The section determines the TOML key path used in the test:
+`pixi["feature"]["shared"]["dependencies"]["ruff"]`.
+
+#### 7c. No pixi re-solve needed when the lock already satisfies the new floor
+
+When raising a floor (e.g., ruff `>=0.1.0` → `>=0.15`) and the current lock already
+resolves a version ≥ the new floor, `pixi install` is a no-op. There is no need to run
+`pixi update ruff` or `pixi lock` unless the new constraint explicitly excludes the locked
+version.
+
 #### 7. Lock it in (regression test + optional pre-commit)
 
 Place the guard under your tests tree (e.g.,
@@ -270,6 +308,9 @@ pre-commit hook that runs it whenever a manifest changes:
 | `parents[4]` for repo root in tests | Computed project root from test file depth | In a git worktree this resolved to `.worktrees/`, not the project root | Verify depth with `Path(...).parents[i]` loop; here `parents[3]` was correct |
 | `from scripts.X import Y` / `sys.path.insert` | Import check scripts as a package | `scripts/` has no `__init__.py`; pytest import machinery conflicts with sys.path hacks | Load with `importlib.util.spec_from_file_location()` for scripts without `__init__.py` |
 | Hand-inspecting manifests | Manual verification of consistency | Error-prone; inconsistencies surface only after release | Regression tests lock consistency in permanently |
+| Defining a new `_find_ruff_dep` static method | Plan draft defined `_find_ruff_dep` as a verbatim copy of `TestPytestConsistency._find_dep` with `"ruff"` hardcoded | DRY violation — `_find_dep` already accepts a `name` parameter; reviewer flagged as MAJOR P4/DRY finding | Call the existing `TestPytestConsistency._find_dep(dev_deps, "ruff")` directly from the new class; cross-class static delegation is valid Python |
+| Hardcoded sentinel floor test | `assert floor >= Version("0.15")` in a test body | Goes stale silently when the lock bumps to 0.16.x without updating the test | Use a cross-manifest consistency test (`pyproject_floor == pixi_shared_floor`) instead — self-updating and non-tautological |
+| Running a single test file with coverage gate | `pixi run pytest tests/unit/scripts/test_dependency_floor_consistency.py` alone | Triggers `fail-under=80` coverage gate because only a tiny slice of hephaestus is exercised | Use `--no-cov` when running a single file in isolation; rely on the full suite for coverage reporting |
 
 ## Results & Parameters
 
@@ -366,3 +407,4 @@ pixi run python -c "import altair; print(altair.__version__)"  # verify installe
 | ProjectHephaestus | Issue #748, PR #934 | mypy upper-cap unified to `<2` across pyproject + pixi dev/lint features; regression test added |
 | ProjectHephaestus | Issue #785 | pytest 9.x / pytest-cov 7.x tight floors; PEP 440 semantic-version regression guard |
 | ProjectScylla | Issue #1119, PR #1170 | Added `<next-major>` upper bounds to 11 unbounded `[pypi-dependencies]`; 3209 tests pass |
+| ProjectHephaestus | Issue #1201, PR #1294 | Raised ruff floor `>=0.1.0` → `>=0.15` in both pyproject.toml and pixi.toml (`[feature.shared.dependencies]`); added `TestRuffConsistency` class reusing `TestPytestConsistency._find_dep`; 8 tests pass (2 new + 6 pre-existing); no pixi re-solve needed |

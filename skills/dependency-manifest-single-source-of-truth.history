@@ -2,6 +2,24 @@
 
 # History: dependency-manifest-single-source-of-truth
 
+## v1.1.0 (2026-06-13)
+
+Amended with learnings from ProjectHephaestus issue #1201 (ruff floor bump `>=0.1.0` → `>=0.15`, PR #1294).
+
+**New workflow sections added:**
+
+- 7a: Reuse existing `_find_dep` across new test classes (DRY) — cross-class static delegation pattern
+- 7b: Locate the correct pixi.toml section before writing the guard — `grep -n "ruff" pixi.toml` first
+- 7c: No pixi re-solve needed when the lock already satisfies the new floor
+
+**New failed attempts:**
+
+- Defining a new `_find_ruff_dep` static method (DRY violation; reuse the existing helper)
+- Hardcoded sentinel floor test (`assert floor >= Version("0.15")` goes stale silently)
+- Running a single test file with coverage gate (triggers `fail-under=80`; use `--no-cov` in isolation)
+
+**Updated:** verification → `verified-ci`, date → 2026-06-13, added Verified On row for issue #1201.
+
 ## v1.0.0 (2026-06-07)
 
 Initial canonical merge. Superseded the following 6 skills:
