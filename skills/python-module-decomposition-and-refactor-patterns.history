@@ -1,6 +1,33 @@
 <!-- markdownlint-disable MD024 -->
 # python-module-decomposition-and-refactor-patterns — History
 
+## v1.4.0 (2026-06-13)
+
+**Changed by:** /learn from ProjectHephaestus issue #1179 (CIDriver god-class decomposition planning)
+**Verification:** unverified (plan not yet executed; CI not run)
+
+### What changed
+
+Added Phase 19: God-Class Decomposition Planning Risk Audit — six planning-time checks
+to run before writing any extraction code on a large (3,000+ line, 40+ method) class:
+
+1. Read actual substrate files (wc -l); issue LOC estimates are routinely stale after prior decomposition PRs
+2. Audit state ownership — fields used exclusively by extracted methods must migrate with them (e.g., `_viewer_login` → `PRDiscovery`)
+3. Map cross-call coupling — extracted group must not call unextracted helpers without a resolution strategy
+4. Verify mypy config before proposing `*args/**kwargs` delegation stubs — strict mode requires typed stubs
+5. Grep external callers before moving constants/module-level symbols — silent import breakage otherwise
+6. Calculate delegation stub LOC overhead in line count projections (~5 lines × num_extracted_methods)
+7. Check `test_omit_allowlist.py` before adding new modules to guarded packages
+
+Also added 7 new Failed Attempts rows, updated description trigger (13), tags (5 new),
+date, version, and Verified On row for ProjectHephaestus issue #1179. Bumped 1.3.0 → 1.4.0.
+
+### Why
+
+Planning a 3,338-line class decomposition revealed systematic planning risks not covered
+by Phase 17 (substrate-read for LOC estimation). The six risks are orthogonal to the
+existing phases and occur in planning, before any code is written.
+
 ## v1.3.0 (2026-06-07)
 
 **Changed by:** Skill-consolidation pass (cluster PYR02)
