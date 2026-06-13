@@ -1,0 +1,29 @@
+# python-path-resolution-cwd-resolve-contract — History
+
+## v1.1.0 (2026-06-13)
+
+**Changed by:** Issue #1309 plan review — P3/TDD gap finding
+**Verification:** unverified
+
+### What changed
+- Added new Failed Attempts row: isinstance-only check as regression guard
+- Added new When to Use trigger: TDD regression guard planning for path helpers
+- Added Results & Parameters example: insufficient vs required assertion
+- Added history frontmatter field
+
+### Why
+The initial v1.0.0 skill captured the Path.cwd().resolve() fix but omitted the critical
+TDD lesson: isinstance(result, Path) alone does not prove the resolved-path contract and
+passes both before and after the fix on Linux. The plan reviewer identified this as a
+major P3/TDD gap (NOGO grade C). The corrected plan adds assert result.is_absolute()
+as the required regression guard.
+
+### Previous version (v1.0.0) snapshot
+
+[See initial commit in PR #2489 — skills/python-path-resolution-cwd-resolve-contract.md]
+
+---
+
+## v1.0.0 (2026-06-13)
+
+**Initial version.**
