@@ -1,6 +1,31 @@
 <!-- markdownlint-disable MD024 -->
 # pytest-coverage-threshold-and-enforcement — History
 
+## v1.2.0 (2026-06-13)
+
+**Amendment**: Added per-module branch-rate floor margin rule from ProjectHephaestus issue #1197, PR #1288.
+
+### New content added
+
+- Description clause (11): setting per-module branch-rate floor values — choose margin 3-4pp below actual
+- "When to Use" bullet: setting per-module floor values in coverage.toml — `floor = floor(actual - 3)` to `floor(actual - 4)`
+- New subsection "Per-module floor margin rule (v1.2.0)" in Results & Parameters: the 3-4pp margin rule, Cobertura XML no `hephaestus/` prefix, CI enforcer `branch_rate if > 0 else line_rate`, three ProjectHephaestus example floors, `validation/schema.py` apparent inconsistency explained
+- Failed Attempts: new row for setting floor within 0.75pp of actual (`automation/models.py` 68% floor for 68.75% actual, rejected by reviewer)
+- Verified On: ProjectHephaestus issue #1197 / PR #1288 entry (verified-ci)
+- Overview Outcome and Verification updated to mention v1.2.0
+
+### Verification level
+
+`verified-ci` — PR #1288 merged; three new per-module floors confirmed working in CI.
+
+### Source
+
+- Issue: ProjectHephaestus #1197
+- PR: ProjectHephaestus #1288
+- Session date: 2026-06-13
+
+---
+
 ## v1.1.0 (2026-06-13)
 
 **Amendment**: Added planning-phase pre-conditions from ProjectHephaestus issue #1198 (coverage threshold consolidation planning session).
