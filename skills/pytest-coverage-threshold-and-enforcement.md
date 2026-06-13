@@ -1,9 +1,9 @@
 ---
 name: pytest-coverage-threshold-and-enforcement
-description: "Use when: (1) establishing [tool.coverage.report].fail_under as the single source of truth by removing redundant --cov-fail-under from CI and pyproject.toml addopts; (2) configuring multiple coverage report formats (xml, html, lcov) for CI and local use; (3) CI coverage % is lower than local because GitHub computes coverage against the merge-preview tree (PR HEAD merged with main HEAD) — adding entries to coverage.run.omit for files not on the branch IS the correct fix; (4) aggregate coverage gates hide under-tested critical modules — enforce per-file floors via parse_module_coverage() + coverage.toml + CI step; (5) some modules are intentionally omitted from measurement (live CLI/TTY) and need an integration backstop to catch import-time regressions; (6) pytest.importorskip() guards hide easy coverage wins — install optional deps and write targeted branch tests; (7) tuning coverage thresholds to match actual baselines and avoid false CI failures; (8) generate_coverage.sh fails in CI with wrong paths, cmake source dir errors, lcov gcov version mismatch on Ubuntu 24.04, or geninfo 'unable to create link .gcda'; (9) coverage is raised by adding targeted tests for uncovered branches plus unlocking skipped optional-dependency test groups; (10) planning a coverage threshold consolidation — verify actual coverage %, confirm consistency-checker accepts addopts absence, check whether CI uses --override-ini=addopts= before deciding where the real gate lives."
+description: "Use when: (1) establishing [tool.coverage.report].fail_under as the single source of truth by removing redundant --cov-fail-under from CI and pyproject.toml addopts; (2) configuring multiple coverage report formats (xml, html, lcov) for CI and local use; (3) CI coverage % is lower than local because GitHub computes coverage against the merge-preview tree (PR HEAD merged with main HEAD) — adding entries to coverage.run.omit for files not on the branch IS the correct fix; (4) aggregate coverage gates hide under-tested critical modules — enforce per-file floors via parse_module_coverage() + coverage.toml + CI step; (5) some modules are intentionally omitted from measurement (live CLI/TTY) and need an integration backstop to catch import-time regressions; (6) pytest.importorskip() guards hide easy coverage wins — install optional deps and write targeted branch tests; (7) tuning coverage thresholds to match actual baselines and avoid false CI failures; (8) generate_coverage.sh fails in CI with wrong paths, cmake source dir errors, lcov gcov version mismatch on Ubuntu 24.04, or geninfo 'unable to create link .gcda'; (9) coverage is raised by adding targeted tests for uncovered branches plus unlocking skipped optional-dependency test groups; (10) planning a coverage threshold consolidation — verify actual coverage %, confirm consistency-checker accepts addopts absence, check whether CI uses --override-ini=addopts= before deciding where the real gate lives; (11) setting per-module branch-rate floor values in coverage.toml — choose margin 3-4pp below actual to avoid brittle thresholds that fail CI on unrelated PRs."
 category: testing
 date: 2026-06-13
-version: "1.1.0"
+version: "1.2.0"
 user-invocable: false
 history: pytest-coverage-threshold-and-enforcement.history
 tags:
@@ -29,8 +29,8 @@ tags:
 | ------- | ------- |
 | **Date** | 2026-06-13 |
 | **Objective** | Configure, tune, and enforce pytest/coverage thresholds — single source of truth, per-module floors, merge-preview reconciliation, integration backstops for omitted modules, optional-dep unlocks, and lcov/geninfo CI fixes; planning pattern for threshold consolidation |
-| **Outcome** | Success — consolidated knowledge for establishing `fail_under` as canonical, raising real coverage, and keeping CI gates green and honest; v1.1.0 adds planning-phase pre-conditions and the --override-ini=addopts= CI pattern |
-| **Verification** | verified-ci (existing); unverified (v1.1.0 planning additions from ProjectHephaestus issue #1198) |
+| **Outcome** | Success — consolidated knowledge for establishing `fail_under` as canonical, raising real coverage, and keeping CI gates green and honest; v1.1.0 adds planning-phase pre-conditions and the --override-ini=addopts= CI pattern; v1.2.0 adds per-module floor margin rule (3-4pp below actual) |
+| **Verification** | verified-ci (existing); unverified (v1.1.0 planning additions from ProjectHephaestus issue #1198); verified-ci (v1.2.0 floor margin rule from ProjectHephaestus issue #1197, PR #1288) |
 | **History** | [changelog](./pytest-coverage-threshold-and-enforcement.history) |
 
 ## When to Use
@@ -49,6 +49,7 @@ tags:
 - **Planning a threshold consolidation**: project has duplicate `--cov-fail-under` in addopts AND `[tool.coverage.report].fail_under` and you want to eliminate the duplicate — verify actual coverage % before touching either value
 - **Determining the real CI gate**: CI uses `--override-ini="addopts="` (clears ALL addopts including `--cov=` and `--cov-report=`) — addopts removal has zero effect on CI; the explicit `--cov-fail-under` flag in the CI workflow is the actual gate
 - **Verifying addopts removal is safe**: check that the project's consistency-checker (`check_addopts_cov_fail_under()`) accepts addopts absence before removing the flag
+- **Setting per-module floor values in coverage.toml**: use `floor = floor(actual_branch_rate - 3)` to `floor(actual_branch_rate - 4)` — never within 1-2pp of the measured value; a too-tight margin causes CI failures for unrelated PRs that add any uncovered branch
 
 ## Verified Workflow
 
@@ -301,6 +302,7 @@ lcov --capture --directory . --output-file "$COVERAGE_INFO" \
 | No omit-list guard | Relied on manual coverage-report review | A module was added to the omit list silently; report still looked fine | Add a frozen-set guard test; allowlist growth must require explicit review |
 | Tests without installing the optional dep | Wrote tests assuming `jsonschema` was importable | `pytest.importorskip` still skipped them; coverage unchanged | Install the optional dep in CI first; guards block unguarded runs |
 | Assuming all uncovered code is reachable | Tried to hit every uncovered line | Some branches are genuinely unreachable (ImportError guards, conditional jumps) | Distinguish "unreachable" from "unexecuted"; don't chase impossible paths |
+| Per-module floor set within 0.75pp of actual | Set `automation/models.py` floor to 68% when measured branch-rate was 68.75% — only 0.75pp margin | PR reviewer rejected immediately: any new uncovered branch in models.py would fail CI for unrelated PRs | Rule: `floor = floor(actual_branch_rate - 3)` to `floor(actual_branch_rate - 4)`; never set a per-module floor within 1-2pp of the measured value |
 | Relative BUILD_DIR in lcov script | Used `BUILD_DIR=build/x86.coverage.debug` directly | After `cd`, all derived coverage paths were wrong | Canonicalize BUILD_DIR to absolute at script startup |
 | `cmake ... ..` after cd | Used `..` as the cmake source dir inside BUILD_DIR | `..` resolved to BUILD_DIR's parent, not PROJECT_ROOT | Pass `"$PROJECT_ROOT"` explicitly |
 | `--ignore-errors negative,mismatch` only | Added `mismatch` to suppress the gcov format error | `B33*` vs `4.8*` still fatal with lcov 2.0 | Add `version` to the ignore list |
@@ -325,6 +327,26 @@ lcov --capture --directory . --output-file "$COVERAGE_INFO" \
 | html | Detailed local analysis | `htmlcov/index.html` |
 | xml | Codecov + per-module Cobertura parsing | `coverage.xml` |
 | lcov `.info` | C/C++ coverage via lcov/geninfo | `$COVERAGE_INFO` |
+
+### Per-module floor margin rule (v1.2.0)
+
+**Rule**: `floor = floor(actual_branch_rate - 3)` to `floor(actual_branch_rate - 4)` (3-4 percentage points below measured, rounded down to nearest whole number).
+
+- Never set a floor within 1-2pp of the measured branch-rate — any new uncovered branch will fail CI for unrelated PRs.
+- CI enforcer uses `branch_rate if branch_rate > 0 else line_rate` (files with no branches report `branch_rate=0` and fall back to `line_rate`).
+- Cobertura XML `<class filename="...">` path format has **no** `hephaestus/` prefix (e.g., `automation/models.py`, NOT `hephaestus/automation/models.py`).
+
+**ProjectHephaestus issue #1197 examples (verified-ci)**:
+
+| Module | Measured branch-rate | Floor set | Margin |
+| ------ | -------------------- | --------- | ------ |
+| `automation/arming_state.py` | ~100% | 98% | ~2pp |
+| `automation/dependency_resolver.py` | ~77% | 74% | ~3pp |
+| `automation/models.py` | 68.75% | 65% | 3.75pp |
+
+Note: `automation/models.py` was initially set to 68% (0.75pp margin) — rejected by reviewer; lowered to 65%.
+
+**Apparent inconsistency**: `validation/schema.py` floor is 80% in `coverage.toml` but the module hits 94%+ in CI because CI installs `[dev,schema]` extras (unlocking jsonschema-guarded tests). A local XML without those extras shows ~52%. The floor must be calibrated against the CI measurement, not the local no-extras run.
 
 ### Per-module floor config & expected output
 
@@ -383,3 +405,4 @@ Diagnostic order (each bug masks the next): (1) BUILD_DIR absolute vs relative; 
 | ProjectHephaestus | PR #603, PR #606 (2026-05-27) | Merge-preview coverage gate diagnosis; omit-list entry for main-only `loop_runner.py` unblocked CI |
 | ProjectKeystone | PR #340 (2026-04-24) | Fixed all 4 sequential lcov/geninfo CI bugs; coverage script ran to completion |
 | ProjectHephaestus | Issue #1198 planning (2026-06-13) | **Unverified** — planning session for coverage threshold consolidation (raise enforced floor from 80% to 90%); identified `--override-ini="addopts="` makes addopts removal a CI no-op; confirmed `check_addopts_cov_fail_under()` accepts addopts absence (test_doc_config.py:176); real CI gate is `_required.yml:585`; implementation not run, actual coverage % not measured |
+| ProjectHephaestus | Issue #1197, PR #1288 (2026-06-13) | **verified-ci** — per-module floor margin rule: set 3-4pp below actual; `automation/models.py` floor initially 68% (0.75pp margin, reviewer rejected); lowered to 65% (3.75pp margin, merged); three new floors added: `automation/arming_state.py@98`, `automation/dependency_resolver.py@74`, `automation/models.py@65`; confirmed Cobertura XML paths have no `hephaestus/` prefix |
