@@ -1,6 +1,38 @@
 <!-- markdownlint-disable MD024 -->
 # pre-commit-hooks-and-linting-config -- History
 
+## v2.0.0 (2026-06-13) -- Strengthen markdownlint dedup with load-bearing .claude/ and doc-drift findings (issue #1199)
+
+**Source:** ProjectHephaestus issue #1199 implementation plan — additional verified facts from pre-scan and tracked-file audit
+
+**What changed:**
+
+- Added triggers (14) and (15) to `description` and `When to Use`: (14) `.claude/` exclude may be
+  load-bearing — `git ls-files .claude/ | grep '\.md$'` returned `.claude/security/guidelines.md`
+  and `.claude/workflows/development.md` in ProjectHephaestus; (15) post-delete doc-drift cleanup
+  required for files naming the removed job.
+- Rewrote the `.claude/` exclusion note in the Detailed Steps section from "defensive but harmless"
+  to a load-bearing determination workflow with the `git ls-files` command to distinguish
+  load-bearing vs defensive cases.
+- Expanded the Safe deletion checklist from 6 to 8 steps: added step 4 (`.claude/` load-bearing
+  check) and step 7 (doc-drift update for DoD and README).
+- Updated "Unverified" note: docs/*.md pre-scan = 0 violations verified; .claude/ exclusion
+  confirmed load-bearing; doc-drift targets identified.
+- Added 2 new `Failed Attempts` rows:
+  - "Treat `.claude/` exclude as purely defensive" → load-bearing pattern
+  - "Delete CI job without updating docs that reference the job by name" → doc-drift pattern
+
+**Key new verified facts:**
+
+- `git ls-files .claude/ | grep '\.md$'` → `.claude/security/guidelines.md` + `.claude/workflows/development.md` (both tracked; exclusion is load-bearing in ProjectHephaestus)
+- `docs/*.md` (15 files): markdownlint-cli2 returns 0 errors → scope expansion is safe
+- `docs/DEFINITION_OF_DONE.md:31` cites `CI job \`markdownlint\`` (must be updated)
+- `.github/README.md:44` names `markdownlint` in aggregated-checks list (must be updated)
+
+**Verification level:** partially verified — pre-scan + file audit done; job deletion not yet implemented
+
+---
+
 ## v1.9.0 (2026-06-13) -- Add markdownlint CI job dedup pattern (issue #1199 planning learnings)
 
 **Source:** ProjectHephaestus issue #1199 implementation plan (unverified — plan not yet implemented)
