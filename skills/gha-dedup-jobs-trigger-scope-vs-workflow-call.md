@@ -1,0 +1,141 @@
+---
+name: gha-dedup-jobs-trigger-scope-vs-workflow-call
+description: "Use when: (1) two GitHub Actions workflows run the SAME job on every PR (double-billed runner minutes) and you are deciding HOW to de-duplicate — before reflexively reaching for workflow_call extraction, (2) planning a CI DRY-deduplication issue and need a decision rule between trigger-scoping vs workflow_call extraction vs outright deletion, (3) a 'duplicate' workflow ALSO carries a unique schedule:/workflow_dispatch trigger that naive deletion would silently kill, (4) you must confirm whether a duplicated job NAME is even a required branch-protection context before assuming a deletion is safe."
+category: ci-cd
+date: 2026-06-12
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags:
+  - github-actions
+  - workflow-deduplication
+  - dry
+  - workflow-call
+  - trigger-scope
+  - pull-request-trigger
+  - schedule-trigger
+  - workflow-dispatch
+  - required-status-checks
+  - branch-protection
+  - rulesets
+  - runner-cost
+  - kiss
+  - planning
+---
+
+# GitHub Actions: De-Duplicating Jobs — Trigger-Scope vs workflow_call vs Deletion
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-06-12 |
+| **Objective** | Pick the RIGHT fix when two workflows run identical jobs on every PR: a decision rule among (a) trigger-scoping the `on:` block, (b) `workflow_call` extraction, and (c) outright deletion — instead of defaulting to extraction |
+| **Outcome** | For ProjectHephaestus issue #1182 (`security.yml` vs `_required.yml` both running `pip-audit`/`sast` on every PR), the KISS fix is to **narrow `security.yml`'s triggers** (drop `pull_request`, keep `schedule` + `workflow_dispatch`) — zero new files, preserves the unique weekly scan, ends the double-run. Captured as a planning artifact. |
+| **Verification** | unverified — planning artifact only; the plan was NOT executed or confirmed in CI |
+
+## When to Use
+
+- Two workflow files run the **same job** (e.g. `pip-audit`, SAST/`sast`, lint, test) on every PR, so each PR burns double the runner minutes, and you are deciding **how** to de-duplicate.
+- You are scoping/planning a CI DRY-deduplication issue and want a decision rule **before** reaching for `workflow_call` extraction (the usual advice — but not always correct).
+- A workflow that looks like a pure duplicate **also** has a unique `schedule:` cron or `workflow_dispatch` trigger that a naive delete would silently remove (a regression hidden behind the word "duplicate").
+- You need to confirm **which job names are actually required** branch-protection contexts before assuming deleting/scoping a workflow is safe.
+
+## Verified Workflow
+
+> **Warning (Proposed Workflow):** This workflow has NOT been validated end-to-end in CI. It is a planning artifact derived from scoping ProjectHephaestus issue #1182; treat every step as a hypothesis until a real CI run confirms it. Verification level: `unverified`. Re-run the `gh api .../rulesets` check at implementation time — rulesets can change between planning and execution.
+
+### Quick Reference
+
+```text
+DECISION RULE — three fixes, pick by structure (not by reflex):
+
+1. OUTRIGHT DELETE the duplicate workflow
+   ONLY IF it has NO unique triggers/jobs
+   AND its job names are NOT required branch-protection contexts.
+
+2. TRIGGER-SCOPE (narrow the `on:` block)
+   WHEN the duplicate workflow has UNIQUE triggers (schedule / workflow_dispatch)
+   BUT its PR-time jobs are pure duplicates that satisfy NO required check.
+   → drop `pull_request`, keep `schedule` + `workflow_dispatch`. Zero new files.
+
+3. workflow_call EXTRACTION
+   WHEN BOTH workflows genuinely must run the SAME job on OVERLAPPING events
+   AND the bodies are (or should be) identical — i.e. you can't just drop a trigger.
+```
+
+```bash
+# Which workflows have a UNIQUE trigger (so deletion would lose something)?
+grep -rl "schedule:" .github/workflows/
+grep -rl "workflow_dispatch:" .github/workflows/
+
+# Which job NAMES are ACTUALLY required contexts? (run at IMPLEMENTATION time, not just plan time)
+gh api repos/$ORG/$REPO/rulesets --jq '.[].id' | while read id; do
+  gh api repos/$ORG/$REPO/rulesets/$id \
+    --jq '.rules[]?|select(.type=="required_status_checks").parameters.required_status_checks[].context'
+done | sort -u
+```
+
+### Detailed Steps
+
+The concrete case: `security.yml` and `_required.yml` BOTH ran identical `pip-audit` (dependency scan) and `sast` jobs on every `pull_request`. The instinct is "extract a `workflow_call` callee." That is wrong here. Work the decision rule:
+
+1. **Map WHICH events actually overlap.** The duplication existed **only** on the `pull_request` event. `security.yml` also had a weekly `schedule:` cron **and** `workflow_dispatch` that `_required.yml` lacked. So `security.yml` is NOT a pure duplicate — it carries a unique scheduled scan. `grep -rl "schedule:" .github/workflows/` surfaces this; do it before calling anything a "duplicate."
+
+2. **Confirm WHICH job names are required contexts.** A `gh api .../rulesets` check proved the required contexts were the **`_required.yml`** job names (`security/dependency-scan`, `security/secrets-scan`), NOT the `security.yml` job names. So `security.yml`'s PR-time jobs satisfied **zero** branch-protection checks — pure wasted runner minutes. (Job-name-vs-required-context mismatch is the same class of trap as the slash-in-job-id pitfall; never assume the name you see is the name that's required.)
+
+3. **Check whether the bodies are even identical** (they were NOT here). `security.yml` installed pixi inline via `prefix-dev/setup-pixi` (with a load-bearing anti-stale-cache comment) while `_required.yml` used a `./.github/actions/setup-pixi-env` composite action. A shared `workflow_call` callee would force **one** setup mechanism on both workflows — more surface area and a behavior change, against KISS/YAGNI.
+
+4. **Apply the KISS fix — trigger-scope.** Narrow `security.yml`'s `on:` block to only the events `_required.yml` doesn't cover: drop `pull_request`, keep `schedule` + `workflow_dispatch`. Zero new files, the unique weekly scan survives, the double-run ends, and no required context changes (the required ones live in `_required.yml`).
+
+   ```yaml
+   # security.yml — BEFORE (double-runs pip-audit/sast on every PR, satisfies no required check)
+   on:
+     pull_request:
+     schedule:
+       - cron: "0 6 * * 1"   # weekly — UNIQUE, _required.yml lacks this
+     workflow_dispatch:
+
+   # security.yml — AFTER (PR-time duplication gone; unique scheduled scan preserved)
+   on:
+     schedule:
+       - cron: "0 6 * * 1"
+     workflow_dispatch:
+   ```
+
+5. **Gotcha to confirm before dropping the trigger.** A `pull_request` entry under `on:` fires the **whole** workflow, not one job — so before removing it, confirm no OTHER job in `security.yml` secretly depended on the PR trigger (i.e. relied on running on PRs for some non-duplicate reason). If one does, you cannot simply drop the trigger; reconsider extraction for that job only.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| ------- | -------------- | ------------- | -------------- |
+| Default to `workflow_call` extraction | Reflexively planned to extract the shared `pip-audit`/`sast` jobs into a reusable `_checks.yml` callee and wire both workflows to it | The two job bodies were NOT byte-identical (inline `prefix-dev/setup-pixi` with a load-bearing anti-stale-cache comment vs a `./.github/actions/setup-pixi-env` composite); a shared callee forces ONE setup mechanism on both plus new file + caller wiring | Over-engineering. Trigger-scoping solved it with zero new files. Only extract when both workflows genuinely need the SAME job on OVERLAPPING events and bodies are/should be identical |
+| Outright delete `security.yml` as a "duplicate" | Planned to delete the whole workflow since its PR jobs duplicated `_required.yml` | `security.yml` also had a weekly `schedule:` cron + `workflow_dispatch` that `_required.yml` lacked — deletion would silently kill the weekly scheduled scan (a regression) | `grep -rl "schedule:" .github/workflows/` to find UNIQUE triggers before deleting anything called a "duplicate"; delete only if it has NO unique triggers/jobs |
+| Assume the duplicate jobs satisfy required checks | Assumed `security.yml`'s `pip-audit`/`sast` jobs were load-bearing required contexts, so any change is risky | `gh api .../rulesets` showed the required contexts were the `_required.yml` job names (`security/dependency-scan`, `security/secrets-scan`), NOT `security.yml`'s — its PR jobs satisfied ZERO required checks (pure waste) | Verify with `gh api repos/$ORG/$REPO/rulesets` which job NAMES are actually required BEFORE assuming a deletion/scope-change is unsafe — and re-run it at implementation time, rulesets drift |
+| Drop the PR trigger without auditing the rest of the workflow | Planned to remove `pull_request` from `on:` assuming only the duplicate jobs ran on PRs | `pull_request` under `on:` fires the ENTIRE workflow — another job could secretly depend on the PR trigger | Confirm no other job in the workflow relies on the PR trigger before scoping it away; the trigger is workflow-wide |
+
+## Results & Parameters
+
+### Quick Reference
+
+- **Three fixes, by structure:** outright-delete (no unique triggers AND not a required context) < trigger-scope (unique triggers, PR jobs are non-required duplicates) < `workflow_call` extraction (both workflows need the same job on overlapping events, bodies identical). Pick the leftmost that applies — it's the KISS option.
+- **`security.yml` / `_required.yml` (issue #1182):** duplication was `pull_request`-only; `security.yml` had a unique weekly `schedule:` + `workflow_dispatch`; required contexts (`security/dependency-scan`, `security/secrets-scan`) were `_required.yml`'s job names; bodies differed (inline `prefix-dev/setup-pixi` vs `setup-pixi-env` composite). Chosen fix: trigger-scope `security.yml` to `schedule` + `workflow_dispatch`. Zero new files.
+- **Verification commands that mattered:** `grep -rl "schedule:" .github/workflows/` (find unique triggers) and `gh api repos/$ORG/$REPO/rulesets --jq '...required_status_checks[].context'` (confirm which job NAMES are actually required before assuming a deletion is safe).
+
+### Uncertain assumptions / risks (re-check before implementing)
+
+- **Not executed/verified in CI.** Verification level is `unverified` — this is a planning artifact only. Confirm on a real PR/run that the double-run actually stops and the scheduled scan still fires.
+- **`gh api .../rulesets` output was read at plan time.** Rulesets can change. Re-run the rulesets query at implementation time before assuming `security.yml`'s jobs are non-required.
+- **Whether the weekly scheduled scan is genuinely WANTED** (vs. acceptable to delete outright) was assumed, not confirmed with a human. The plan preserved it conservatively (trigger-scope rather than delete).
+- **The workflow-wide trigger is the gotcha being exploited.** `pull_request` applies to the whole workflow; confirm no other job in `security.yml` secretly depended on the PR trigger before dropping it.
+
+### Related skills
+
+- `gha-workflow-authoring-pitfalls` — pitfall #7 (a `pull_request` trigger is workflow-wide; the `changes-gate` `needs:`/`if:` pattern for gating heavy jobs on label/auto-merge events). This skill is the planning-time decision rule for the inverse problem: which workflow should own the PR trigger at all.
+- `gha-required-checks-branch-protection` — the verified `workflow_call`-extraction + summary-aggregator pattern, i.e. option 3 of the decision rule above. Reach for that skill once you've decided extraction is the right fix.
+
+## References
+
+- [GitHub Actions: Events that trigger workflows — `pull_request`, `schedule`, `workflow_dispatch`](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows)
+- [GitHub Actions: Reusing workflows (`workflow_call`)](https://docs.github.com/en/actions/using-workflows/reusing-workflows)
+- [GitHub: Managing rulesets and required status checks](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets)
