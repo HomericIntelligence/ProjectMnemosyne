@@ -1,0 +1,112 @@
+---
+name: testing-dual-patch-multiple-call-paths
+description: "When a function is called from multiple modules (driver AND collaborator), tests must patch BOTH call sites or side_effect lists are consumed incorrectly. Use when: (1) a driver delegates to a collaborator but also calls the same function directly, (2) tests show StopIteration on a side_effect list, (3) mock call counts are wrong after adding a collaborator layer."
+category: testing
+date: 2026-06-13
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: []
+---
+
+# Testing: Dual Patch for Multiple Call Paths
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-13 |
+| **Objective** | Fix tests where `side_effect` lists are exhausted incorrectly due to multiple call paths |
+| **Outcome** | Successful — CI gate passes with dual patches applied |
+| **Verification** | verified-ci |
+
+## When to Use
+
+- After adding a collaborator class that calls the same function the driver still calls directly
+- When a test fails with `StopIteration` on a `side_effect` list unexpectedly
+- When mock `assert_called_with` or `call_count` checks produce wrong results
+- When a delegating wrapper architecture introduces a new call path through the same symbol
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# When gh_pr_checks is called from BOTH ci_driver's poll loop AND ci_check_inspector:
+
+@patch("ci_driver.gh_pr_checks", side_effect=[result_for_driver_call])
+@patch("ci_check_inspector.gh_pr_checks", side_effect=[result_for_inspector_call])
+def test_poll_loop(self, mock_inspector_checks, mock_driver_checks):
+    # Each patch intercepts calls from its own module's namespace
+    ...
+```
+
+### Detailed Steps
+
+1. **Identify all call paths** — for each function being mocked, trace every module that imports it:
+   ```bash
+   grep -rn "from.*import gh_pr_checks\|import.*gh_pr_checks" hephaestus/automation/
+   ```
+
+2. **Count expected calls per path** — determine how many times each path calls the function:
+   - Driver's poll loop: N calls (one per poll iteration)
+   - Collaborator: M calls (one per collaborator invocation)
+
+3. **Create separate patches for each path**:
+   ```python
+   # Path 1: driver calls gh_pr_checks directly in its poll loop
+   @patch("ci_driver.gh_pr_checks", side_effect=[...N items...])
+
+   # Path 2: collaborator ci_check_inspector calls gh_pr_checks
+   @patch("ci_check_inspector.gh_pr_checks", side_effect=[...M items...])
+   ```
+
+4. **Order matters for decorator stacking** — Python decorators apply bottom-up, so the function arguments are in reverse order:
+   ```python
+   @patch("ci_driver.gh_pr_checks")          # outermost decorator → last arg
+   @patch("ci_check_inspector.gh_pr_checks")  # innermost decorator → first arg
+   def test(self, mock_inspector, mock_driver):
+       ...
+   ```
+
+5. **Verify call counts** after the test:
+   ```python
+   assert mock_driver.call_count == expected_driver_calls
+   assert mock_inspector.call_count == expected_inspector_calls
+   ```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Single patch on `ci_driver.gh_pr_checks` | Patched only the driver's binding | Collaborator `ci_check_inspector` imported `gh_pr_checks` independently; collaborator calls used the real function | Each module creates its own binding; one patch only intercepts calls through that module's namespace |
+| Single `side_effect` list with N+M items | Tried to cover all calls with one mock | Mock was never called for collaborator path (wrong namespace), so side_effect had leftover items causing assertion failures | You cannot intercept calls in another module's namespace from a single patch |
+| Patching at the source (`subprocess.run`) | Patched the original function rather than module bindings | Both modules inherited the patch correctly but other subprocess calls in the test also got intercepted | Prefer patching at the import binding level, not at the source |
+
+## Results & Parameters
+
+```python
+# Full example: testing driver poll loop that delegates to ci_check_inspector
+
+class TestCIDriverPollLoop(unittest.TestCase):
+
+    @patch("ci_driver.gh_pr_checks", side_effect=[
+        {"status": "pending"},   # first driver poll
+        {"status": "success"},   # second driver poll
+    ])
+    @patch("ci_check_inspector.gh_pr_checks", side_effect=[
+        {"status": "pending"},   # inspector's check
+    ])
+    def test_poll_exits_on_success(self, mock_inspector_checks, mock_driver_checks):
+        driver = CIDriver(...)
+        driver.poll_until_complete(pr_number=42)
+
+        assert mock_driver_checks.call_count == 2
+        assert mock_inspector_checks.call_count == 1
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | PR #1292 (issue #1179) — decompose CIDriver into 4 collaborators | verified-ci |
