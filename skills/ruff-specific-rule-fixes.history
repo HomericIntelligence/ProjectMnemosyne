@@ -877,3 +877,14 @@ If you discover that the linter was wrong-direction AND the META source (CLAUDE.
 - Related: [[verify-audit-findings-before-acting]] — verification step generalizes to "verify the linter too, not just the findings."
 
 ---
+## v1.0.0 → v1.1.0 (2026-06-13)
+**Changed by:** Session — issue #1189 python-version-consistency DRY refactor
+**Verification:** verified-local
+### What changed
+- Added RUF022 (`__all__` not sorted) and I001 (import block un-sorted) patterns
+- Added `ruff check --fix` as preferred resolution path for `[*]`-fixable rules
+### Why
+Manual reordering of `__all__` and import blocks with `as` aliases fails because ruff/isort uses the aliased name for ordering, not the original symbol name. Three errors were fixed in one pass across two files using `pixi run ruff check --fix`.
+### Previous version snapshot
+(Full content preserved in the existing history entries above; this amendment adds new patterns on top of v1.0.0.)
+---

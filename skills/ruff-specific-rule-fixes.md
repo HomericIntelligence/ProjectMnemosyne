@@ -1,9 +1,9 @@
 ---
 name: ruff-specific-rule-fixes
-description: "Patterns for fixing specific Ruff lint rule violations and addressing systemic linter policy failures. Use when: (1) fixing Ruff S101 violations in production code by replacing bare assert guards with explicit RuntimeError raises, (2) fixing Ruff C901 cyclomatic complexity violations by extracting helper functions, (3) the same policy violation reappears in two or more independent documents or configs — indicating the linter/validator that should enforce the policy is absent or misconfigured (root-cause fix: add the lint rule, not re-fix every instance), (4) deciding between adding a noqa suppression, fixing the violation, or promoting the rule to error-level enforcement."
+description: "Patterns for fixing specific Ruff lint rule violations and addressing systemic linter policy failures. Use when: (1) fixing Ruff S101 violations in production code by replacing bare assert guards with explicit RuntimeError raises, (2) fixing Ruff C901 cyclomatic complexity violations by extracting helper functions, (3) fixing Ruff RUF022 (__all__ not sorted) or I001 (import block un-sorted) — both are [*]-fixable; never manually reorder because isort uses the alias name not the original symbol, always use `ruff check --fix`, (4) the same policy violation reappears in two or more independent documents or configs — indicating the linter/validator that should enforce the policy is absent or misconfigured (root-cause fix: add the lint rule, not re-fix every instance), (5) deciding between adding a noqa suppression, fixing the violation, or promoting the rule to error-level enforcement."
 category: tooling
-date: 2026-06-07
-version: "1.0.0"
+date: 2026-06-13
+version: "1.1.0"
 user-invocable: false
 history: ruff-specific-rule-fixes.history
 tags:
@@ -20,6 +20,12 @@ tags:
   - policy-enforcement
   - root-cause
   - pre-commit
+  - RUF022
+  - I001
+  - __all__
+  - import-sort
+  - isort
+  - autofix
 ---
 
 # Ruff Specific Rule Fixes
@@ -28,8 +34,8 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-07 |
-| **Objective** | Fix specific Ruff rule violations (S101 assert-in-production, C901 cyclomatic complexity) and recognize when repeated policy violations mean the linter itself is the root cause |
+| **Date** | 2026-06-13 |
+| **Objective** | Fix specific Ruff rule violations (S101 assert-in-production, C901 cyclomatic complexity, RUF022 `__all__`-sort, I001 import-sort) and recognize when repeated policy violations mean the linter itself is the root cause |
 | **Outcome** | Verified — S101 guards converted across 20+ sites (PRs #1142, #1211), C901 extractions verified (PRs #1546, #1050), wrong-direction linter root-cause pattern verified-CI (PRs #863/#865/#866/#867) |
 | **Verification** | verified-ci |
 
@@ -37,6 +43,7 @@ tags:
 
 - Ruff reports **S101** (`use of assert`) in production code — `assert x is not None  # noqa: S101` precondition guards that must always run (Python's `-O` flag disables `assert`).
 - Ruff or a custom hook reports **C901** (`<function> is too complex (N > 10)`) — adding conditional blocks pushed a function over the cyclomatic-complexity limit.
+- Ruff reports **RUF022** (`__all__` is not sorted) or **I001** (import block is un-sorted) — both are marked `[*]` fixable by ruff itself.
 - The **same policy violation** appears in 2+ independent files/configs — the linter that should enforce the policy is absent, misconfigured, or wrong-direction.
 - You are deciding between a `# noqa` suppression, fixing the violation, or promoting the rule to error-level enforcement.
 - You are tempted to open N parallel PRs to fix N violating files — pause and check the linter first.
@@ -51,6 +58,12 @@ grep -rn "noqa: S101\|assert.*is not None" <src-path>/
 
 # C901 — locally reproduce the complexity check
 pre-commit run --all-files            # ruff C901 + custom CC hook
+
+# RUF022 (__all__ not sorted) / I001 (import block un-sorted) — both [*]-fixable
+# NEVER manually reorder: isort sorts by the 'as' alias name, not the original symbol
+pixi run ruff check --fix <file1> <file2>
+# Running --fix on just the affected files is safe and idempotent.
+# Three errors were fixed in one pass across two files (issue #1189).
 
 # Linter-as-root-cause — count distinct files violating the SAME rule
 audit_output | grep "Rule: <rule-id>" | awk '{print $2}' | sort -u | wc -l
@@ -250,6 +263,7 @@ systemic one. The linter/validator that should enforce the policy is the FIRST s
 | Fix linter and dependent files in one PR | Considered bundling validator + all doc fixes into one mega-PR | Linter and doc changes have different test surfaces; bundling makes CI feedback ambiguous | Keep the linter fix as its own atomic PR; dependent fixes land afterward |
 | Flip only the validator, not its tests | Planned to update validator code but leave its test suite | Validator tests still asserted the wrong direction — the linter PR itself fails CI | Validator source + its tests are one atomic change; flip both together |
 | Single-direction regression test | Wrote a test asserting only "accepts `--squash`" | A future agent with the same wrong-direction model could re-flip the assertion and ship it | Pair tests: assert correct accepted AND wrong rejected, to prevent silent drift |
+| Manual reorder of `__all__` with `as` aliases | Tried to alphabetize `__all__` entries and import block by hand when ruff reported RUF022 + I001 | isort orders by the **alias** name (the `as <name>` part), not the original symbol — naive alphabetical order of original names produces a different sequence that ruff still rejects | Always use `pixi run ruff check --fix <files>` for RUF022 and I001; these are `[*]`-fixable and the sort order is non-obvious when `as` aliases are present |
 
 ## Results & Parameters
 
@@ -293,3 +307,4 @@ WRONG ORDER (fails CI):           CORRECT ORDER:
 | ProjectScylla | C901 — extracted `_restore_judgment()` / `_restore_run_result()` from `_restore_run_context()`, CC 11 -> ~7 | PR #1546 |
 | ProjectHephaestus | C901 multi-pass — extracted `_draw_workers/_separator/_logs` from `_refresh_display()`, 69 lines -> 3 methods, 8 -> 23 tests, removed `# noqa: C901` | PR #1050 (issue #804) |
 | ProjectHephaestus | Linter-as-root-cause — strict audit caught 2 skill files violating `--squash`-only merge policy; root cause was a wrong-direction validator | PRs #863, #865, #866, #867 |
+| ProjectHephaestus | RUF022 + I001 — `__all__` sort and import-block sort in `hephaestus/validation/` after python-version-consistency DRY refactor; 3 errors fixed in one `ruff check --fix` pass across 2 files | Issue #1189 |
