@@ -3369,3 +3369,1557 @@ Migrated from plugins/uncategorized/skills/phase-cleanup/ on 2026-01-02.
 ```
 
 ---
+
+## Version 1.8.0 (archived 2026-06-13 for issue #1289 amendment)
+---
+name: python-module-decomposition-and-refactor-patterns
+description: >-
+  Use when: (1) a Python module or class exceeds 800–1000 lines and contains
+  identifiable method clusters with distinct responsibilities, (2) extracting
+  method groups into dedicated collaborator classes or sub-modules via TDD,
+  (3) fixing circular import errors caused by partially-initialized modules or
+  eager __init__.py re-exports, (4) refactoring class methods to purely
+  functional/immutable style, (5) preparing a codebase for extensibility
+  through extraction, parameterization, and protocol-based abstraction,
+  (6) extracting a CLI entry point or main() out of a module while preserving
+  existing patch-based tests without edits (reverse-delegation pattern),
+  (7) reducing cyclomatic complexity (CC>15) by extracting helper steps from
+  oversized pipeline methods carrying `# noqa: C901`, (8) refactoring a broad
+  repository-wide scanner to target a single subdirectory using
+  Path.is_relative_to() allow-lists, (9) detecting and fixing double-increment
+  bugs caused by incomplete context-manager refactors where callers still hold
+  stale manual counter management, (10) safely removing legacy dead-code files
+  marked as fallback/reference-only after verifying zero real callers,
+  (11) reading the existing substrate code before estimating a large refactor
+  to avoid 3-5x LOC over-estimation, (12) finalizing code after parallel phases
+  complete by addressing technical debt accumulated during rapid development,
+  (13) planning god-class decomposition — state ownership migration, cross-call
+  coupling when only some methods are extracted, delegation stub type loss, constant
+  re-export breakage, and test_omit_allowlist.py CI traps,
+  (14) extracting a provider-conditional dispatch (two-branch if/else over a bool
+  predicate) into a private helper method — choosing a method over a Protocol/Strategy
+  when there are exactly two branches, unifying heterogeneous return types at the
+  extraction boundary (e.g. AgentRunResult → subprocess.CompletedProcess), wrapping
+  BOTH codex calls in try/except CalledProcessError, and verifying all exception contracts
+  before documenting which exceptions propagate out of the wrapper,
+  (15) planning god-function decomposition (functions > 80L that are oversized per project
+  threshold) — arithmetic chain verification per target, docstring budget counting, for-loop
+  body sizing (extract if > 40L), return type tracing when a helper absorbs the only call
+  site to a data-fetching function, N-tuple completeness for orchestrator helpers, explicit
+  parameter audit for captured variables, approach-table completeness (ALL helpers listed),
+  and AST-measure-before-planning discipline to avoid stale line numbers.
+category: architecture
+date: 2026-06-13
+version: "1.8.0"
+user-invocable: false
+history: python-module-decomposition-and-refactor-patterns.history
+tags:
+  - python
+  - refactoring
+  - srp
+  - tdd
+  - dry
+  - circular-imports
+  - module-decomposition
+  - collaborator-extraction
+  - extensibility
+  - cli-extraction
+  - patch-routing
+  - entry-point
+  - cyclomatic-complexity
+  - pipeline-extraction
+  - scanner-scoping
+  - context-manager
+  - dead-code
+  - estimation
+  - phase-cleanup
+  - god-class
+  - state-ownership
+  - cross-call-coupling
+  - constant-re-export
+  - coverage-omit-allowlist
+  - provider-dispatch
+  - return-type-unification
+  - agentrunresult
+  - completedprocess
+  - boolean-predicate-dispatch
+  - mock-side-effect-exhaustion
+  - stopiteration-exception-boundary
+  - returncode-guard
+  - noqa-c901-removal-verification
+---
+
+# Python Module Decomposition and Refactor Patterns
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-06-13 |
+| **Objective** | Decompose oversized Python modules/classes/functions into focused, independently testable units using SRP, TDD, and DRY principles |
+| **Outcome** | Synthesized from 14+ verified skills; covers function-level extraction, class-based extraction, circular import fixes, immutability refactoring, extensibility-driven decomposition, CLI entry-point extraction with preserved patch routing, top-level symbol extraction to break sibling module cycles, CC>15 pipeline-step extraction, scanner-to-subdirectory scoping, context-manager double-counter fixes, safe legacy-code deletion, substrate-read-before-estimate discipline, post-parallel phase cleanup, god-class decomposition planning risks (state ownership, cross-call coupling, constant re-export, delegation stub type loss, coverage omit-allowlist traps), exception-contract verification before documenting wrapper behavior, three Phase 20 implementation-time traps (exception-boundary removal unmasks StopIteration from exhausted side_effect mocks; returncode-guard obligation at every call site of an absorbed-exception helper; agent mock type determines downstream subprocess.run consumption), and god-function decomposition planning rules (arithmetic chain verification, docstring budget, for-loop body sizing, return type tracing, N-tuple completeness, captured variable audit, approach table completeness, AST-measure discipline) |
+| **Trigger** | Files >800 lines, circular import errors, mixed-concern methods, C901/CC>15 complexity, extensibility requirements, CLI main() extraction, deferred imports inside function bodies preventing static analysis, broad scanners needing subdirectory scope, stale callers after context-manager refactors, dead fallback files, pessimistic refactor estimates, technical debt after parallel phases, planning a multi-collaborator god-class decomposition, extracting a two-branch provider-conditional dispatch with heterogeneous return types, documenting exception contracts for wrapper methods, planning god-function decomposition (individual functions > 80L) |
+
+## When to Use
+
+Apply this skill when any of the following is true:
+
+- A class file exceeds **1000 lines** and contains 3+ independent method clusters
+- A class exceeds its **800-line guideline** and has identifiable method groups sharing only a subset of class state
+- A Python module has **4+ logical clusters** of functions with distinct responsibilities
+- A method has a **`# noqa: C901`** suppression or is >100 lines mixing 3+ distinct logical steps
+- Python raises **`ImportError: cannot import name 'X' from partially initialized module`** on startup
+- `package/__init__.py` **eagerly re-exports CLI modules** that import back into the same package
+- A method **mutates `self.attribute` and also returns it**, breaking an otherwise immutable class API
+- You need to **prepare a codebase for a new pluggable feature** requiring protocol-based abstraction
+- Sibling modules (e.g., `implementer_cli`, `implementer_phase_runner`) have **deferred back-pointer imports inside function bodies** that mask circular dependencies from static analysis tools and complicate test patching
+- A pipeline function runs **4+ sequential stages**, carries a `# noqa: C901` suppression, and has **CC>15** (or above the project threshold)
+- A scanner/linter/auditing script uses a **deny-list (`EXCLUDED_PREFIXES`)** and you want to scope it to a single subdirectory via an allow-list
+- A counter/semaphore/ref-count test asserting `== 1` now observes `2` **after a context-manager refactor** (stale manual `+1/-1` left in a caller)
+- A code file declares itself **"kept for reference / fallback only"** but has zero real callers and leaves stale back-references in production code
+- A `TODO.md`/roadmap/audit estimates **"thousands of LOC" or weeks** for a substrate rewrite — read the substrate first to avoid a 3-5x pessimistic estimate
+- You are in the **cleanup phase** after parallel Test/Implementation/Package phases and need to address accumulated technical debt before merge
+- You are **planning a god-class decomposition** (3,000+ lines, 40+ methods, multiple collaborator targets) and need to reason about state ownership migration, cross-call coupling, delegation stub typing, constant re-export risks, and CI omit-allowlist traps before writing any code
+- A function contains a **two-branch if/else over a boolean predicate** (e.g., `is_codex(agent)`) where each branch invokes a different external agent/subprocess API returning heterogeneous types, and you want to extract it into a unified private helper method without introducing a Protocol/Strategy class
+- You are **planning god-function decomposition** — individual functions exceeding the project's line-length threshold (e.g., > 80L) and need arithmetic chain verification, docstring budget accounting, for-loop body sizing, return type tracing for absorbed call sites, N-tuple completeness for orchestrator helpers, captured variable auditing, and approach-table completeness before writing any code
+
+## Verified Workflow
+
+### Quick Reference
+
+```text
+Decision tree:
+  >1000-line class with method clusters → Cluster Extraction (function-level)
+  >800-line class with method groups    → Collaborator Extraction (TDD, class-based)
+  >1000-line module with 4+ functions   → Module Decomposition (re-export or update import sites)
+  Single complex method (C901, >100L)   → Single-Responsibility Extraction (collaborator)
+  Circular ImportError on startup       → Symbol Extraction to leaf module
+  Deferred imports mask cycles          → Top-Level Symbol Extraction (Phase 12)
+  Immutable API inconsistency           → Local-variable + early-return fix
+  Extensibility blocked by coupling     → Extract-Parameterize-Protocol pattern
+  Extract CLI main() while keeping      → Reverse-Delegation Pattern (Phase 11) OR
+    existing patch.object tests intact    Top-Level Extraction (Phase 12)
+  CC>15 pipeline method (# noqa: C901)  → Pipeline-Step Extraction (Phase 13)
+  Broad scanner → one subdirectory      → Allow-list scope helper (Phase 14)
+  Counter == 2 after ctx-manager move   → Audit callers, drop stale +1/-1 (Phase 15)
+  Dead "fallback only" file, 0 callers  → Safe Legacy Deletion (Phase 16)
+  Estimating a big rewrite              → Read substrate FIRST (Phase 17)
+  Cleanup after parallel phases         → Finalization checklist (Phase 18)
+  Planning god-class decomposition      → Planning risk audit (Phase 19)
+  Two-branch bool-predicate dispatch    → Provider-dispatch extraction (Phase 20)
+  Planning god-function decomposition   → Function-size planning rules (Phase 21)
+
+Universal rule for mock patches after any move:
+  Patch where the name is LOOKED UP at call time — not where it was defined.
+  WRONG: patch("pkg.old_module.symbol")
+  RIGHT: patch("pkg.new_module.symbol")
+
+  EXCEPTION — Reverse-Delegation (CLI extraction):
+  When tests already patch.object(original, "helper") and you cannot edit them,
+  have the new module resolve helpers THROUGH the original module namespace so
+  the lookup site stays on the original. See Phase 11.
+```
+
+### Phase 1: Measure and Map (Read, Do Not Write)
+
+```bash
+wc -l <target_file>.py   # confirm size
+grep -n "^def \|^class " <target_file>.py   # list all functions/classes
+# Find largest methods
+python3 -c "
+import ast
+with open('<target_file>.py') as f:
+    src = f.read()
+tree = ast.parse(src)
+funcs = []
+for node in ast.walk(tree):
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        end = node.end_lineno or node.lineno
+        funcs.append((end - node.lineno + 1, node.lineno, node.name))
+for size, lineno, name in sorted(funcs, reverse=True)[:15]:
+    print(f'{size:4d} lines  line {lineno:4d}  {name}')
+"
+```
+
+Group functions/methods by responsibility. Good decomposition boundaries:
+
+| Signal | Extraction boundary |
+| ------- | -------------------- |
+| Methods share a common external dependency (one API only) | Extract together |
+| Methods share state only via parameters, not `self` | Extract as module-level functions |
+| Functions share a common prefix (`_build_*`, `_finalize_*`) | Extract to one module |
+| A method has `# noqa: C901` or is >100 lines | Extract to collaborator class |
+| The cluster has 2+ `self` attributes that always travel together | Collaborator class (not functions) |
+
+**Stop criterion (YAGNI)**: Check `wc -l` after each extraction; stop when the target line count is met.
+
+### Phase 2: Choose Extraction Strategy
+
+**Function-level extraction** (preferred when state is passed as parameters):
+
+```python
+# New module: package/follow_up.py
+def run_follow_up_issues(
+    session_id: str, worktree_path: Path, issue_number: int,
+    state_dir: Path, status_tracker: StatusTracker | None = None,
+) -> None: ...
+
+# Parent: thin delegation wrapper preserves public interface
+def _run_follow_up_issues(self, session_id, worktree_path, issue_number, slot_id=None):
+    run_follow_up_issues(session_id, worktree_path, issue_number,
+                         self.state_dir, self.status_tracker, slot_id)
+```
+
+**Class-based extraction** (use when 2+ `self` attributes always travel together):
+
+```python
+class TierActionBuilder:
+    def __init__(self, tier_id, config, tier_manager, save_tier_result_fn: Callable, ...):
+        ...  # receives only what it needs — never the full host reference
+
+# Delegation in host class:
+def _build_tier_actions(self, tier_id, ...):
+    return TierActionBuilder(tier_id=tier_id, config=self.config, ...).build()
+```
+
+**Design rule**: Methods should return `(config, checkpoint)` tuples rather than mutating `self` —
+makes unit tests trivial and enables explicit data flow.
+
+### Phase 3: Create New Module (Self-Contained, No Parent Imports)
+
+The new module must be **self-contained** — it cannot import from the original module
+(circular import risk). If it needs a type defined in the original, use `TYPE_CHECKING`:
+
+```python
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from original_module import MyModel  # type-check only
+
+def my_function() -> MyModel:
+    from original_module import MyModel  # runtime import (lazy)
+    return MyModel(...)
+```
+
+**Critical for circular imports**: Use `TYPE_CHECKING` for collaborator type hints that would
+create a cycle. Using `object` as the type causes `"object" has no attribute '...'` mypy errors.
+
+### Phase 4: Fix Existing Tests — Update Mock Patch Targets
+
+Every `patch("old.module.func")` must change to `patch("new.module.func")`:
+
+```bash
+grep -rn 'patch("package.old_module.' tests/
+```
+
+**Common mistake**: Only updating the direct test file but missing patch targets in unrelated
+test files that also mock functions from the decomposed module.
+
+```python
+# BEFORE: patched where the code lived
+patch("scylla.automation.implementer.run")
+
+# AFTER: patch where the code now lives
+patch("scylla.automation.follow_up.run")
+```
+
+Also update logger patches — warnings logged by an extracted class still target the old module:
+
+```python
+# After extracting CheckpointFinalizer, update:
+patch("scylla.e2e.runner.logger") → patch("scylla.e2e.checkpoint_finalizer.logger")
+```
+
+### Phase 5: Module Decomposition — Re-export vs. Update Import Sites
+
+**Choose "update import sites"** when: import sites are < 20, imports are lazy (inside function
+bodies), and you want to avoid the re-export anti-pattern.
+
+**Choose "re-export from original"** when: the module is a public API with many external
+consumers or you cannot enumerate all import sites. Use explicit `as X` form (required by mypy):
+
+```python
+# In original file — explicit re-export (mypy requires `as X` syntax)
+from scylla.e2e.stage_finalization import (
+    stage_cleanup_worktree as stage_cleanup_worktree,  # re-exported
+    stage_finalize_run as stage_finalize_run,           # re-exported
+)
+```
+
+Without `as X`, mypy raises `Module does not explicitly export attribute` errors.
+
+### Phase 6: Fix Circular Import Errors
+
+**Step 0**: Check `__init__.py` for eager CLI re-exports — the most common hidden trigger:
+
+```python
+# PROBLEMATIC: __init__.py loads CLI modules that import back into the package
+from hephaestus.github.fleet_sync import main as fleet_sync
+
+# FIXED: remove eager re-exports; callers import CLI modules directly
+```
+
+**Diagnosis flow**:
+
+```text
+1. Read the full ImportError traceback — map chain A → B → C → A
+2. Identify the shared symbol being imported across the cycle boundary
+3. Ask: is this symbol lightweight (no heavy deps)?
+   YES → extract to new leaf module
+   NO  → consider lazy import OR restructure dependencies
+```
+
+**Leaf module pattern**:
+
+```python
+# shutdown.py — leaf module with zero heavy deps
+import threading
+_shutdown_event = threading.Event()
+
+class ShutdownInterruptedError(Exception): ...
+def is_shutdown_requested() -> bool: ...
+def request_shutdown() -> None: ...
+```
+
+**Backward-compat re-export in the original module** (use `# noqa: F401`):
+
+```python
+# runner.py
+from scylla.e2e.shutdown import (  # noqa: F401
+    ShutdownInterruptedError,
+    is_shutdown_requested,
+    request_shutdown,
+)
+```
+
+### Phase 7: Immutable Method Refactor
+
+When a method mutates `self.attribute` but all sibling methods return updated tuples:
+
+```python
+# BEFORE — dual-write pattern (mutation + return)
+self.checkpoint = reset_zombie_checkpoint(self.checkpoint, checkpoint_path)
+return self.config, self.checkpoint
+
+# AFTER — local variable + early return (immutable)
+if is_zombie(...):
+    reset_checkpoint = reset_zombie_checkpoint(self.checkpoint, checkpoint_path)
+    return self.config, reset_checkpoint   # early return, self.checkpoint untouched
+return self.config, self.checkpoint
+```
+
+Lock in the contract with a test assertion:
+
+```python
+original_checkpoint = rm.checkpoint
+config, checkpoint = rm.handle_zombie(checkpoint_path, experiment_dir)
+assert rm.checkpoint is original_checkpoint  # self must NOT change
+```
+
+### Phase 8: Extensibility via Extract-Parameterize-Protocol
+
+```python
+# Protocol for pluggable behavior
+class SubtestProvider(Protocol):
+    def discover_subtests(self, tier_id: TierID) -> list[SubTestConfig]: ...
+
+# Default implementation (backward-compatible)
+class FileSystemSubtestProvider:
+    def __init__(self, shared_dir: Path) -> None:
+        self.shared_dir = shared_dir
+    def discover_subtests(self, tier_id, ...) -> list[SubTestConfig]: ...
+
+# Client accepts protocol, defaults to existing behavior
+class TierManager:
+    def __init__(self, tiers_dir: Path, subtest_provider: SubtestProvider | None = None):
+        if subtest_provider is None:
+            subtest_provider = FileSystemSubtestProvider(shared_dir)
+        self.subtest_provider = subtest_provider
+```
+
+**Extract Before Delete** (never delete until extraction is complete and merged):
+
+```text
+PR1: Create library with reusable logic  (extraction)
+PR2: Delete old code                     (only after PR1 merged)
+PR3: Consolidate duplication
+PR4: Extract protocol interface
+```
+
+### Phase 9: Run Pre-commit (Expect Two Passes)
+
+```bash
+SKIP=audit-doc-policy pre-commit run --files \
+  <package>/implementer.py \
+  <package>/follow_up.py \
+  tests/unit/<package>/test_follow_up.py
+
+# First run: ruff auto-fixes imports and ordering
+# Second run: all hooks pass — this is normal
+```
+
+**Common mypy issues after extraction**:
+
+| Error | Fix |
+| ------- | ----- |
+| `"object" has no attribute "update_slot"` | Import the concrete type; use `TYPE_CHECKING` guard |
+| `Missing type parameters for generic type "dict"` | Use `dict[str, Any]` not bare `dict` |
+| `Item "None" of "X \| None" has no attribute "Y"` | Add `assert obj is not None` before access |
+| `Unexpected keyword argument "cost_of_pass"` | It's a `@property` — remove from constructor |
+| `Module does not explicitly export attribute` | Use `from module import X as X` for re-exports |
+| `F841 Local variable assigned to but never used` | Remove the unused variable entirely |
+| `Module "original" does not explicitly export attribute "SYMBOL"` (after reverse-delegation) | The new module accesses `_impl.SYMBOL` but SYMBOL was a plain `from x import SYMBOL` in original — add `from x import SYMBOL as SYMBOL` to original |
+
+### Phase 10: Verify
+
+```bash
+wc -l <package>/<file>.py            # must meet target
+python -c "from <package>.<module> import <cls>; print('OK')"
+pytest tests/unit/<package>/ -q      # all tests pass
+```
+
+### Phase 11: CLI Entry-Point Extraction — Reverse-Delegation Pattern
+
+Use when extracting `main()` / `_parse_args()` / CLI helpers out of a module into a new
+sibling module, **but existing tests already call `original.main()` and patch collaborators
+on the original module** (e.g. `patch.object(implementer, "gh_list_open_issues")`). Editing
+those tests is not acceptable (they serve as characterization tests).
+
+**The problem with a naive move**: The moved `main` looks up its collaborators in the NEW
+module's namespace. Patches applied on `original` no longer intercept — the mock is never
+triggered.
+
+**Reverse-delegation fix (zero test edits)**:
+
+In the new CLI module, have `main` resolve its patchable collaborators THROUGH the original
+module's namespace — a lazy import inside the function body avoids import cycles and keeps the
+lookup site on the original:
+
+```python
+# new_module.py (e.g. implementer_cli.py)
+from __future__ import annotations
+
+
+def main(argv: list[str] | None = None) -> int:
+    # Import lazily to avoid cycles; keeps lookup site on original module
+    # so patch.object(implementer, "helper") keeps intercepting these calls.
+    from . import implementer as _impl
+
+    args = _impl._parse_args(argv)        # resolved on original → patches work
+    repo_root = _impl.get_repo_root()     # resolved on original → patches work
+    issues = _impl.gh_list_open_issues(repo_root)
+    ui = _impl.CursesUI(issues)
+    return _impl.IssueImplementer(ui).run()
+```
+
+**Re-export with explicit `as` aliases in the original module**:
+
+Re-export the moved callables from the original with `as X` (redundant alias form). This:
+1. Keeps `pkg.original:main` console-script entry point resolving (setuptools looks up
+   `original.main`, which now re-exports it).
+2. Satisfies mypy `implicit_reexport=false` — the `as X` form is the recognized explicit
+   re-export idiom; ruff treats it as intentional so no `# noqa` is needed.
+3. Keeps `original.main` / `original._parse_args` importable for existing test `import`
+   statements.
+
+```python
+# original module (e.g. implementer.py) — add at the bottom of imports
+from .implementer_cli import (
+    main as main,
+    _parse_args as _parse_args,
+    _setup_logging as _setup_logging,
+)
+```
+
+**Corollary mypy gotcha — re-exporting transitive symbols**:
+
+If the moved function accesses `original.SYMBOL` where `SYMBOL` was a plain
+`from x import SYMBOL` in the original, mypy raises:
+`Module "original" does not explicitly export attribute "SYMBOL"`.
+
+Fix by re-importing those symbols in the original with explicit `as` aliases:
+
+```python
+# implementer.py — make implicitly-used symbols explicit re-exports too
+from .git_utils import get_repo_root as get_repo_root
+from .github_api import gh_list_open_issues as gh_list_open_issues
+```
+
+**Coverage omit-allowlist guard**:
+
+If the project has a frozen coverage omit-allowlist guarded by tests (e.g.
+`tests/unit/validation/test_omit_allowlist.py` and `tests/integration/test_orchestration_smoke.py`),
+adding a new orchestration/entry-point module requires updating BOTH the pyproject omit list
+AND those guard tests (counts + module lists) in the same PR, or CI fails.
+
+**Issue-scoping gotcha**:
+
+When the umbrella issue (e.g. "decompose God Class") is mostly done and the PR only covers one
+slice, the required pr-policy CI gate hard-requires `Closes #N` on its own line — `Refs #N` alone
+blocks CI. Resolution: file a narrow tracking sub-issue for the specific slice, put
+`Closes #<sub-issue>` + `Refs #<umbrella>` in the PR body. The umbrella stays open; CI passes.
+
+**Verification checklist for reverse-delegation extraction**:
+
+```bash
+# 1. Run pre-existing tests UNCHANGED — they ARE the characterization tests
+pytest tests/unit/<package>/test_<original>.py -v   # all N tests pass
+
+# 2. Import-cycle guard
+python -c "from <package>.<new_cli_module> import main; print('OK')"
+python -c "from <package>.<original> import main; print('OK')"
+
+# 3. Console-script entry-point smoke test
+<package>-cli --help   # or: python -m <package>.<original> --help
+
+# 4. Full suite
+pytest tests/ -q
+```
+
+**Results (ProjectHephaestus PR #674)**:
+
+| Metric | Value |
+| -------- | ------- |
+| `implementer.py` before | 872 lines |
+| `implementer.py` after | 702 lines (−19%) |
+| New `implementer_cli.py` | 236 lines |
+| Pre-existing tests unchanged | 45 pass |
+| New tests added | 6 |
+| Full automation suite | 780 tests pass |
+| ruff + mypy | clean (288 files) |
+| Verification level | verified-local |
+
+### Phase 12: Top-Level Symbol Extraction — Breaking Sibling-Module Cycles
+
+Use when two sibling modules (e.g., `implementer_cli.py`, `implementer_phase_runner.py`) have
+circular dependencies masked by **deferred back-pointer imports inside function bodies**.
+This pattern prevents static analysis tools (mypy, ruff, import-graph linters) from detecting
+the cycle, and complicates test patching by requiring patches on the wrong lookup site.
+
+**The problem**: Function-local imports like `from . import implementer` inside function bodies
+in sibling modules mask the cycle from static analysis:
+
+```python
+# implementer_phase_runner.py — BEFORE (deferred import)
+def _implement_issue(self):
+    from . import implementer as _impl  # ← deferred, inside function body
+    _impl.is_plan_review_go(...)        # ← patches must target implementer, not here
+```
+
+**Why this is problematic**:
+
+1. **Static analysis blind**: AST-based import graph tools don't see `from . import implementer`
+   because it's inside a function. The cycle remains invisible.
+2. **Test patching mismatch**: Tests must patch `implementer.is_plan_review_go()`, but the
+   call site is in `implementer_phase_runner.py`. This breaks encapsulation.
+3. **Brittle AST guards**: Regression tests must use AST walking + ID tracking to catch
+   future deferred imports, adding maintenance burden.
+
+**Solution: Extract patchable symbols to module-level imports with `# noqa: F401`**:
+
+Instead of deferring imports, import directly from the true source module at the top of the
+file. Use `# noqa: F401` for symbols that are imported purely for test patchability (not used
+in code):
+
+```python
+# implementer_phase_runner.py — AFTER (top-level extraction)
+from .review_state import is_plan_review_go  # ← top-level, visible to static analysis
+from .session_naming import (               # ← patchable in tests
+    AGENT_ADVISE,
+    AGENT_IMPLEMENTER,
+    current_trunk_githash,
+)  # noqa: F401  # ← used only in tests; re-export for patch routing
+
+# Later, inside _implement_issue:
+def _implement_issue(self):
+    if is_plan_review_go(...):  # ← direct import, clean code
+        ...
+```
+
+**Key decisions**:
+
+1. **Where to extract from**: Import from the **true source module** (`review_state.py`,
+   `session_naming.py`), not from an intermediate re-export.
+2. **Patching location**: Tests patch at `implementer_phase_runner.is_plan_review_go` because
+   that's where the name is **looked up at call time**.
+3. **noqa usage**: Use `# noqa: F401` only for symbols that are re-exported purely for test
+   patchability. If the symbol is used in the module, omit the noqa.
+
+**Implementation steps**:
+
+1. **Identify patchable symbols**: Grep test files for `patch("module.symbol")` to find what
+   needs to be patchable.
+2. **Extract to top-level imports**: Move deferred imports from function bodies to module-level.
+3. **Remove the `_impl_module` property** (if used): Dynamic lookup via `self._impl.symbol` is
+   no longer needed; use direct imports.
+4. **Add regression test with AST guards**: Create a test that verifies no runtime back-pointer
+   imports exist in sibling modules (prevents future deferred imports).
+5. **Retarget existing test patches**: Update any patches that target the old location.
+
+**Regression test (AST-based guard)**:
+
+```python
+# test_implementer_no_cycle.py
+import ast
+from pathlib import Path
+
+def _is_backpointer_import(node: ast.AST) -> bool:
+    """Detect deferred imports that would re-introduce #714 cycle."""
+    if isinstance(node, ast.ImportFrom):
+        if node.module is None and node.level == 1:
+            return any(a.name == "implementer" for a in node.names)
+        if node.module == "implementer" and node.level == 1:
+            return True
+    return False
+
+def test_no_runtime_backpointer_to_implementer() -> None:
+    """Verify no deferred back-pointer imports inside function bodies."""
+    src = (Path(__file__).parent / "implementer_phase_runner.py").read_text()
+    tree = ast.parse(src)
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            for sub in ast.walk(node):
+                assert not _is_backpointer_import(sub), (
+                    f"Deferred import re-introduces #714 cycle"
+                )
+```
+
+**Comparison: Reverse-Delegation (Phase 11) vs. Top-Level Extraction (Phase 12)**
+
+| Aspect | Reverse-Delegation (Phase 11) | Top-Level Extraction (Phase 12) |
+|--------|-------------------------------|--------------------------------|
+| **Deferred imports** | Yes (`from . import X` in function body) | No (all imports at module-level) |
+| **Static analysis visibility** | No — cycle is hidden from AST tools | Yes — cycle visible, detectable |
+| **Test patching** | Patches on original module (preserved test compatibility) | Patches on runner module (cleaner separation) |
+| **Code readability** | Less clear: symbol resolution via `_impl.X` | More clear: direct `symbol` use |
+| **Maintenance burden** | Low (works for CLI extraction) | Low (top-level is standard Python) |
+| **Use case** | Extracting `main()` when tests already patch original | Breaking sibling-module cycles with function-local dispatch |
+| **Example** | `implementer_cli.main()` imports `implementer` to resolve helpers | `implementer_phase_runner` imports symbols directly from source modules |
+
+**When to choose Phase 12 over Phase 11**:
+
+- The cycle is between **sibling modules** (not parent→child as with CLI extraction)
+- Tests already patch the **runner/executor module**, not the original
+- **Static analysis** must detect the import graph (for linting, dependency audit)
+- You want to **eliminate function-local imports entirely** for clarity
+
+**Results (ProjectHephaestus PR #714)**:
+
+| Metric | Value |
+| -------- | ------- |
+| `implementer_phase_runner.py` deferred imports removed | 3 locations (lines ~843, ~1302, ~1576) |
+| Patchable symbols extracted to top-level | 9 symbols (is_plan_review_go, fetch_issue_info, invoke_claude_with_session, get_repo_slug, AGENT_ADVISE, AGENT_IMPLEMENTER, review_state, find_pr_for_issue, current_trunk_githash) |
+| `_impl_module` property removed | Yes |
+| Test patches retargeted | 6+ patches (from implementer.*to implementer_phase_runner.*) |
+| Regression test added | test_implementer_no_cycle.py with AST guards |
+| All automation tests pass | Yes (verified-ci) |
+| CI gates pass | Yes |
+| Verification level | verified-ci |
+
+### Phase 13: Pipeline-Step Extraction — CC>15 Reduction
+
+Use when a module-level function runs **4+ sequential pipeline stages** (each with an
+"if tool not installed → skip" and "if step failed → return" branch), carries a
+`# noqa: C901` suppression, and exceeds the project's complexity threshold.
+
+**1. Identify the repeated step shape** — each inline stage is a 6–10 line "if tool missing →
+return na; run subprocess; if failed → return" block inside the pipeline function.
+
+**2. Extract each step into a `_run_<pipeline>_<stage>_step` helper returning a 3-tuple**:
+
+```python
+def _run_mojo_build_step(workspace: Path, is_modular: bool) -> tuple[bool, bool, str]:
+    if not shutil.which("magic" if is_modular else "mojo"):
+        return False, True, ""          # passed, na, output
+    result = _run_subprocess(["mojo", "build", ...], workspace)
+    return result.passed, False, result.output
+```
+
+The 3-tuple contract is consistent everywhere: `(passed: bool, na: bool, output: str)`.
+The pipeline function unpacks and early-returns:
+
+```python
+passed, na, output = _run_mojo_build_step(workspace, is_modular)
+if na:
+    return BuildPipelineResult(build=StepResult(passed=False, output="", na=True), ...)
+if not passed:
+    return BuildPipelineResult(build=StepResult(passed=False, output=output), ...)
+```
+
+**3. Extract shared steps once** (no pipeline prefix) when two pipelines share an identical
+stage such as pre-commit — one `_run_precommit_step(workspace, env=None) -> (bool, bool, str)`
+helper, not one per pipeline.
+
+**4. Split large orchestrators into two phases** — context gathering vs. retry execution:
+
+```python
+def run_llm_judge(...) -> JudgeResult:
+    judge_start = time.time()
+    judge_prompt, _pipeline_result = _gather_judge_context(...)   # file reads, rubric, pipeline
+    return _execute_judge_with_retry(judge_prompt, model, workspace, judge_dir, judge_start, language)
+```
+
+**5. Promote inline imports to module level** before extracting — otherwise each extracted
+helper needs its own inline import. **6. Verify** with
+`ruff check --select C901 <file>.py` → "All checks passed!", then remove `# noqa: C901`.
+**7. Fix RUF059** by prefixing unused unpacked tuple fields with `_`
+(`passed, _na, _output = ...`); keep the name un-prefixed when it IS used in an assertion.
+**8. Each step helper gets 3 unit tests**: tool-not-installed (`na=True`),
+tool-installed-fails, tool-installed-passes.
+
+### Phase 14: Scope a Broad Scanner to a Single Subdirectory
+
+Use when a scanner/linter/auditing script uses a growing deny-list (`EXCLUDED_PREFIXES`)
+and you want to restrict it to one directory. **Allow-list beats deny-list**: deny-lists
+grow forever (`.pixi/`, `build/`, `node_modules/`, …) and break on every new top-level dir.
+
+```python
+# BEFORE: deny-list (fragile, grows over time)
+EXCLUDED_PREFIXES = (".pixi/", "build/", "node_modules/", "tests/claude-code/")
+def scan_repository(repo_root: Path) -> list[Finding]:
+    for py in sorted(repo_root.rglob("*.py")):
+        rel = str(py.relative_to(repo_root)).replace("\\", "/")
+        if any(rel.startswith(p) for p in EXCLUDED_PREFIXES):
+            continue
+        ...
+
+# AFTER: allow-list helper (correct by construction, independently testable)
+def _is_scylla_file(path: Path, root: Path) -> bool:
+    """Return True if path is a .py file under the scylla/ directory."""
+    return path.suffix == ".py" and path.is_relative_to(root / "scylla")
+
+def scan_repository(repo_root: Path) -> list[Finding]:
+    for py in sorted(repo_root.rglob("*.py")):
+        if not _is_scylla_file(py, repo_root):
+            continue
+        ...
+```
+
+`Path.is_relative_to()` needs Python 3.9+. For older runtimes, wrap `relative_to()` in
+`try/except ValueError`. **Export the helper** so tests import it directly. Add
+`TestIsScyllaFile` (accept in-scope `.py`, reject out-of-scope dir, reject non-`.py`) and
+`TestScanRepositoryScope` (in-scope file with a fragment is found; out-of-scope file is not).
+
+**Critical migration step**: existing tests that wrote fixtures at `tmp_path / "bad.py"` now
+return zero findings (root is outside scope). Move fixtures into the scoped dir and update
+hard-coded path assertions (`"bad.py"` → `"scylla/bad.py"`).
+
+### Phase 15: Fix Double-Counter from a Stale Caller After a Context-Manager Refactor
+
+Use when a counter/semaphore/ref-count test asserting `== 1` now observes `2` after a
+refactor introduced a context manager that owns the lifecycle. This is an **incomplete
+migration** sub-case: the context manager owns the `+1/-1`, but a caller still does it manually.
+
+```python
+# Context manager owns lifecycle (correct):
+@contextmanager
+def _inflight_context(self):
+    self._inflight += 1
+    try:
+        yield
+    finally:
+        self._inflight -= 1
+
+# Callee adopts it (correct):
+def _handle_webhook(self, ...):
+    with self._inflight_context():
+        ...
+
+# STALE caller — double-increment bug:
+def receive_webhook(self, ...):
+    self._inflight += 1          # BUG: duplicates context manager → REMOVE
+    self._handle_webhook(...)
+    self._inflight -= 1          # BUG: duplicates context manager → REMOVE
+```
+
+**Workflow**: (1) find the new `@contextmanager`; (2) confirm the callee uses it;
+(3) `grep -rn "_handle_webhook" src/ tests/` to find **every** caller; (4) audit each for
+manual `self._inflight [+-]= 1` pairs; (5) delete the stale lines; (6) re-run
+`pytest -k inflight -v`. **General principle**: a refactor that moves lifecycle into a
+context manager / RAII / try-finally is INCOMPLETE until you grep the whole codebase for
+prior manual lifecycle code in callers. Search production code, not just the failing test.
+
+### Phase 16: Safe Legacy Dead-Code Deletion
+
+Use after extraction is complete and a file declares itself "kept for reference / fallback
+only" but has zero real callers (the completion step of any decomposition). Never delete
+before the replacement is verified — follow Extract → Verify → Delete.
+
+1. **Confirm the legacy declaration** (`head -20 <file>`: "kept for reference / fallback
+   only" or "Deprecated in favor of `<replacement>`") and **identify the tested replacement**.
+2. **Verify zero real callers** (the critical step) — grep invocations across `*.py`, `*.sh`,
+   `*.md`, `.github/`; expect zero matches except the file itself and its own tests:
+   ```bash
+   grep -r "run_automation_loop\.sh" --include="*.py" --include="*.sh" --include="*.md" .
+   grep -r "from legacy_module import\|import legacy_module" --include="*.py" .
+   ```
+3. **Rewrite stale back-references** — comments that point at the file (without calling it)
+   become self-contained explanations of *why* the code works, not *where* to read more.
+4. **Delete the file and its exclusive tests**; update README/docs that list it.
+5. **Comprehensive verification** — full unit + integration + shell suites, ruff, mypy, and a
+   final grep proving zero remaining references. **Commit with rationale** quoting the file's
+   own "fallback only" header (a YAGNI anti-pattern) and listing deleted files + scrubbed refs.
+
+### Phase 17: Read the Substrate Before Estimating a Rewrite
+
+Use before estimating a large refactor — TODO.md / roadmap / audit LOC estimates are
+commonly **3-5x pessimistic** because they don't credit infrastructure that already exists.
+This is a prerequisite to any module-decomposition decision.
+
+1. **Resist trusting the TODO.** Treat "Phase X: ~N000 LOC" as a pessimistic upper bound,
+   not a target.
+2. **Inventory the substrate** — `find src/ -path "*<subsystem>*" | xargs wc -l`.
+3. **Read each substrate file in full** (not skim). Record, with `file.ext:line` citations:
+   public functions that already work, invariants relied on (e.g., "forward execution order
+   = topo order"), state already polymorphic enough for the extension, and existing dispatch
+   tables/registries.
+4. **Cite line numbers as evidence** — no "X already works" without a citation.
+5. **List actual gaps** with the minimum-needed signature each — separates real new code
+   from wiring.
+6. **Revised estimate = new code only.** If existing infra handles 70%, estimate is ~30% of
+   the TODO number. Re-classify audit "CRITICAL: missing" as "incomplete, N% gap" when the
+   substrate exists.
+7. **Validate by landing** the smallest end-to-end slice and comparing actual LOC to the
+   revised estimate (verified case: TODO said "~5000 LOC", revised ~1400, actual +937).
+
+### Phase 18: Cleanup / Finalization After Parallel Phases
+
+Use as the finalization phase after parallel Test/Implementation/Package work completes,
+to address technical debt accumulated during rapid parallel development before merge.
+
+**Workflow**: (1) collect TODOs/FIXMEs/bugs from all parallel outputs; (2) refactor —
+remove duplication (DRY), simplify complexity (KISS), improve naming; (3) update docs to
+match implementation; (4) final quality gates (format, lint, test, coverage); (5) verify
+merge-ready.
+
+```bash
+grep -r "TODO\|FIXME\|HACK" src/         # collect debt
+<formatter> <src> <tests>                # format
+<test-runner> <tests>                    # all green
+<build> 2>&1 | grep -i warning && echo "WARN" || echo "clean"   # zero-warnings policy
+git status                               # no uncommitted changes
+```
+
+**Cleanup checklist**: no TODOs/FIXMEs (or tracked in an issue), duplication removed,
+complex functions simplified, naming consistent, docs updated, all tests passing, code
+formatted, zero compiler warnings, coverage at/above floor, ready for review. Cleanup is the
+final polishing gate before PR approval and merge.
+
+### Phase 19: God-Class Decomposition — Planning Risk Audit
+
+Use when a class exceeds ~3,000 lines and 40+ methods, and you are designing a plan to
+extract multiple collaborator classes in one or more PRs. Apply this phase BEFORE writing
+any extraction code to catch the six most common planning-time errors.
+
+**Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
+
+#### Step 0: Read the actual substrate files — never trust issue LOC estimates
+
+Issue bodies and audit reports regularly state stale line counts. A prior decomposition
+PR (e.g., a method cluster already extracted in a previous PR) may have cut the target
+by 30–50% without the issue being updated.
+
+```bash
+wc -l <target_file>.py          # authoritative line count
+git log --oneline --follow -- <target_file>.py | head -20  # prior decomposition PRs
+```
+
+If the file is significantly shorter than the issue body claims, re-scope the plan
+to avoid planning unnecessary work. **Always record the actual measured line count
+in your plan, not the estimate from the audit.**
+
+#### Step 1: Audit state ownership before proposing extraction boundaries
+
+For every class field referenced by the candidate method group:
+
+```bash
+# Find all attribute reads/writes in the file
+grep -n "self\.<field_name>" <target_file>.py
+```
+
+A field that is **read and written exclusively by the extracted methods** must **migrate**
+with those methods to the new collaborator class. If the field stays on the original class
+but the collaborator writes to it, you create a split-ownership bug:
+
+```python
+# WRONG — field stays on original, collaborator mutates it
+class PRDiscovery:
+    def __init__(self, driver: CIDriver):
+        self._driver = driver   # writes to driver._viewer_login — split ownership
+
+# RIGHT — field migrates to the collaborator
+class PRDiscovery:
+    def __init__(self):
+        self._viewer_login: str | None = None  # owned here, where it's used
+```
+
+**Ownership checklist per candidate field:**
+
+| Question | Answer → Action |
+|----------|----------------|
+| Is the field written ONLY by extracted methods? | Yes → migrate the field |
+| Is the field read by both original and extracted methods? | Yes → keep on original, pass as parameter |
+| Is the field the cache for a method that's being extracted? | Yes → migrate both |
+
+#### Step 2: Map cross-call coupling before finalizing extraction boundaries
+
+When you extract a method group (e.g., `CIFixOrchestrator`), grep for every method
+called BY that group across the whole target file:
+
+```bash
+grep -n "self\._<method>" <target_file>.py | grep -v "def _<method>"
+```
+
+For each call that lands in a method NOT being extracted:
+
+- Option A: Move the called method too (cleanest)
+- Option B: Pass it as a callback/dependency in `__init__`
+- Option C: Accept the coupling temporarily and document it with a `# TODO: decouple`
+
+Cross-call coupling defeats the SRP purpose of extraction unless resolved. The highest-risk
+coupling is when extracted methods need worktree/push-guard helpers that weren't extracted
+with them — the extracted class ends up calling `self._driver._push_changes()` and is
+tightly coupled to the original class's internals.
+
+#### Step 3: Verify mypy config before proposing delegation stubs
+
+Before proposing `*args, **kwargs` delegation stubs with `# noqa: ANN002,ANN003`:
+
+```bash
+grep -n "strict" pyproject.toml mypy.ini .mypy.ini setup.cfg 2>/dev/null
+grep -rn "\[mypy-.*automation" pyproject.toml mypy.ini .mypy.ini 2>/dev/null
+```
+
+If `strict = true` and no per-module override exists for the automation package,
+typed stubs are required. Propose typed stubs that mirror the exact signature of the
+collaborator method, not `*args, **kwargs`:
+
+```python
+# AVOID — loses type info under strict mypy
+def run_ci_fix_session(self, *args: Any, **kwargs: Any) -> ...:  # noqa: ANN002,ANN003
+    return self._orchestrator.run_ci_fix_session(*args, **kwargs)
+
+# PREFER — preserves type info
+def run_ci_fix_session(self, session_config: CIFixConfig, timeout: int = 300) -> CIFixResult:
+    return self._orchestrator.run_ci_fix_session(session_config, timeout)
+```
+
+#### Step 4: Grep external callers before moving constants or module-level symbols
+
+Before proposing to move a constant (e.g., `FAILING_CHECK_CONCLUSIONS`) to a new module:
+
+```bash
+grep -rn "from hephaestus.automation.ci_driver import FAILING_CHECK_CONCLUSIONS" .
+grep -rn "ci_driver.FAILING_CHECK_CONCLUSIONS" .
+grep -rn "FAILING_CHECK_CONCLUSIONS" . --include="*.py" | grep -v "ci_driver.py"
+```
+
+If external callers exist, **do not move the constant**. Instead:
+- Keep it in the original location and import it from there in the new module
+- OR export it from both (`from ci_driver import FAILING_CHECK_CONCLUSIONS as FAILING_CHECK_CONCLUSIONS`
+  in the new module), using the explicit `as X` form for mypy compliance
+
+Moving a constant without re-exporting it is a silent breaking change — external callers
+get an `ImportError` that CI may not catch until integration tests run.
+
+#### Step 5: Calculate delegation stub overhead in line count projections
+
+Plan estimates frequently undercount lines because they ignore delegation stubs.
+Every delegated method in the original class adds ~5 lines (docstring + signature + body):
+
+```python
+def run_ci_fix_session(
+    self, session_config: CIFixConfig, timeout: int = 300,
+) -> CIFixResult:
+    """Delegate to CIFixOrchestrator."""
+    return self._orchestrator.run_ci_fix_session(session_config, timeout)
+```
+
+**Formula for projected final line count:**
+
+```text
+projected = original_lines
+          - extracted_method_lines        # removed from original
+          + delegation_stub_lines         # added (≈ 5 × num_extracted_methods)
+          + new_import_lines              # ≈ 4–8 per new module
+```
+
+If your extraction target is ≤N lines, verify the projection satisfies it:
+
+```text
+e.g., 3,338 lines - 1,200 extracted + (18 methods × 5 stubs) + (4 modules × 6 imports)
+    = 3,338 - 1,200 + 90 + 24 = 2,252 lines  →  tight against a ≤2,200 target
+```
+
+Adjust extraction boundaries if the projection is within 10% of the threshold.
+
+#### Step 6: Check test_omit_allowlist.py before adding new modules
+
+When a new module will be added to the `hephaestus/automation/` package:
+
+```bash
+find tests/ -name "test_omit_allowlist.py" -o -name "*omit*" 2>/dev/null
+grep -rn "omit" pyproject.toml | grep -i "coverage\|omit"
+```
+
+If `test_omit_allowlist.py` exists, every new module in the omit-guarded package must be:
+1. Added to the `[tool.coverage.report]` omit list in `pyproject.toml`
+2. Added to the allowlist assertion in `test_omit_allowlist.py`
+
+Missing this step causes CI failures on `test_omit_allowlist.py` even when all other
+tests pass. Include the allowlist update in the same PR as the new module — never split it.
+
+#### Planning Risk Audit Checklist
+
+```markdown
+## God-Class Decomposition Planning Checklist (Phase 19)
+
+### Pre-plan (do before writing the plan)
+- [ ] Read actual file: `wc -l <file>.py` = N lines (not the audit estimate)
+- [ ] Check git log for prior decomposition PRs that may have already reduced the file
+- [ ] Identify all class fields; for each field used by extraction candidates, determine
+      ownership (migrate vs. keep vs. parameter)
+
+### Per extraction boundary
+- [ ] Grep for cross-call coupling: what methods in original does the extracted group call?
+- [ ] Decision for each cross-call: move together | callback | accept + TODO
+
+### Before proposing stubs
+- [ ] Check mypy strict setting + per-module overrides
+- [ ] If strict: propose typed stubs, not `*args, **kwargs`
+
+### Before moving constants/exports
+- [ ] Grep external callers for every constant/symbol proposed to move
+- [ ] If callers exist: keep in place or re-export with explicit `as X` alias
+
+### Line count projection
+- [ ] Compute: original - extracted + (stubs × 5) + (new imports × 6) ≤ target?
+
+### CI trap check
+- [ ] Does `tests/unit/test_omit_allowlist.py` exist?
+- [ ] If yes: plan includes pyproject.toml omit update + test file update in same PR
+```
+
+### Phase 20: Provider-Conditional Dispatch Extraction — Two-Branch Bool-Predicate Pattern
+
+Use when a function or method contains a **two-branch `if/else` over a boolean predicate**
+(e.g., `is_codex(self.options.agent)`) where each branch calls a different external agent
+or subprocess API that returns **heterogeneous types**, and the branching logic is threaded
+through an oversized function.
+
+**Decision: method vs. Protocol/Strategy**
+
+| Signal | Decision |
+| ------- | ---------- |
+| Exactly two branches over a scalar bool | Private helper method (not a Protocol) |
+| More than two providers likely in the future | Protocol/Strategy class |
+| Both branches accept identical inputs | Method (no dispatch object needed) |
+| Branches already tested through existing mocks | Method (tests need no edits) |
+
+A Protocol is over-engineering for exactly two branches tested via existing mocks. The
+extract boundary is the only place that knows about the type difference.
+
+**Return-type unification at the extraction boundary**
+
+When the two branches return different types (e.g., `AgentRunResult` for codex vs. an
+implicit `None` success for claude), wrap to a common type at the boundary.
+
+**CRITICAL: read the wrapped function's exception contract FIRST.** `run_codex_session`
+raises `subprocess.CalledProcessError` on non-zero exit (verified: runtime.py:397–403) and
+`subprocess.TimeoutExpired` on timeout. `AgentRunResult` has fields `stdout`, `stderr`,
+`session_id` — NO `returncode` field (verified: runtime.py:28–34). This changes the pattern:
+both codex calls (fresh and resume) must be wrapped, and `CompletedProcess(returncode=0)` on
+the success path is synthetic (only reachable if no exception was raised):
+
+```python
+def _invoke_agent_session(
+    self,
+    session_id: str,
+    prompt: str,
+    timeout: int,
+) -> subprocess.CompletedProcess[str]:
+    """Invoke codex or claude agent; return unified CompletedProcess.
+
+    CalledProcessError from codex is absorbed into returncode.
+    TimeoutExpired is the only exception that propagates to callers.
+    """
+    if is_codex(self.options.agent):
+        try:
+            result: AgentRunResult = run_codex_session(session_id, prompt, timeout=timeout)
+            # returncode=0 is synthetic — only reachable if run_codex_session did not raise
+            return subprocess.CompletedProcess(
+                args=[], returncode=0,
+                stdout=result.stdout or "", stderr=result.stderr or "",
+            )
+        except subprocess.CalledProcessError as exc:
+            return subprocess.CompletedProcess(
+                args=[], returncode=exc.returncode, stdout="", stderr="",
+            )
+        # TimeoutExpired propagates intentionally
+    else:
+        invoke_claude_with_session(session_id, prompt, timeout=timeout)
+        return subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
+```
+
+**Critical: `CalledProcessError` absorption**
+
+`run_codex_session` DOES raise `CalledProcessError` on non-zero exit — this is verified
+behavior, not an assumption. Absorb it into the return code INSIDE the helper — never let
+it escape, because callers now treat non-zero returncode as the sole error signal. Wrap
+ALL codex calls (both fresh and resume) in `try/except CalledProcessError`:
+
+```python
+try:
+    result = run_codex_session(session_id, prompt, timeout=timeout)
+    return subprocess.CompletedProcess(args=[], returncode=0, ...)
+    # returncode=0 synthetic: CalledProcessError would have been raised before this line
+except subprocess.CalledProcessError as exc:
+    return subprocess.CompletedProcess(args=[], returncode=exc.returncode, ...)
+# TimeoutExpired propagates intentionally (caller handles separately)
+```
+
+**Docstring must document which exceptions still propagate**
+
+After absorbing `CalledProcessError`, document explicitly in the docstring that
+`TimeoutExpired` is the only exception that propagates. This is verified by reading
+the wrapped functions — do NOT claim "never raises X" without reading the exception
+contracts of every function the wrapper calls.
+
+**Head-advancement as sole success signal (caller contract)**
+
+After extraction, callers that ignore the returned `CompletedProcess` and only check
+`_head_advanced()` are correct IF AND ONLY IF head-advancement is the sole success signal.
+Verify before assuming this — if the original code checked `CalledProcessError` as a
+**distinct** failure mode (not just "non-zero returncode"), the absorbed-error approach
+changes semantics.
+
+**Duplicate post-agent block extraction (`_push_ci_fix` pattern)**
+
+When two provider branches share an **identical post-agent block** (e.g., head-advance
+check → retry → pushability check → push), extract it to a second private helper:
+
+```python
+def _push_ci_fix(self, head_before: str, session_id: str, worktree: Path) -> bool:
+    """Shared post-agent push logic; returns True if pushed."""
+    if not self._head_advanced(head_before):
+        return False
+    if not self._retry_no_commit_once(session_id, worktree):
+        return False
+    if not self._ci_fix_head_is_pushable():
+        return False
+    self._push_ci_fix_branch()
+    return True
+```
+
+**Implementation-time traps (verified during execution of Phase 20 for issue #1196)**
+
+Three additional hazards surface only during actual test execution, not during planning:
+
+**Trap 1: Mock `side_effect` exhaustion uncovered by exception-boundary removal**
+
+When the original oversized method had an outer `except Exception` catch-all, exhausted mock
+`side_effect` lists caused `StopIteration` to be silently swallowed. After extracting the
+helper and removing the outer `except Exception`, pre-existing tests that provided only N-1
+`side_effects` start failing with raw `StopIteration` instead of the intended assertion.
+
+```python
+# WRONG: pre-existing test only provides 2 side_effects for a path that now calls run 3×
+with patch("subprocess.run", side_effect=[result1, result2]):  # StopIteration on 3rd call
+    driver._retry_no_commit_once(...)
+
+# RIGHT: count EVERY subprocess.run call including those inside nested helper methods
+with patch("subprocess.run", side_effect=[result1, result2, clean_status]):  # all 3 covered
+    driver._retry_no_commit_once(...)
+```
+
+**Count rule:** every time you modify a function or add a helper it calls, count every
+`subprocess.run` (or other mocked call) the test path exercises, including those inside
+NEW helper methods the test now reaches transitively. The `except Exception` was masking
+`StopIteration`; its removal surfaces the latent miscounting.
+
+**Trap 2: Returncode guard required at every call site**
+
+Because `_invoke_agent_session` absorbs `CalledProcessError` into `returncode != 0` instead
+of re-raising, callers MUST check the returncode immediately. Without the guard, execution
+continues as if the agent succeeded even when it failed:
+
+```python
+# WRONG: caller ignores returncode — continues executing after agent failure
+result = self._invoke_agent_session(session_id, prompt, timeout)
+# ... continues executing as if agent succeeded
+
+# RIGHT: guard at every call site
+result = self._invoke_agent_session(session_id, prompt, timeout)
+if result.returncode != 0:
+    return False   # abort early; do not write no-commit marker or advance head
+```
+
+This is the direct consequence of the "absorbed exception → returncode signal" contract: the
+helper cannot both absorb the exception AND raise it. The caller owns the check.
+
+**Trap 3: C901 `# noqa` removal requires re-measurement, not assumption**
+
+After extracting the helpers, the remaining method may still have enough branches (try/except,
+if/else, early returns) to exceed the complexity threshold. Remove `# noqa: C901` only after
+running:
+
+```bash
+ruff check --select C901 hephaestus/automation/ci_driver.py
+# Must output "All checks passed!" before removing the annotation
+```
+
+Do not assume extraction made the method simple enough; measure it.
+
+**Verification checklist for this pattern**
+
+```markdown
+## Provider-Dispatch Extraction Checklist (Phase 20)
+
+- [ ] Confirmed exactly 2 branches (no hidden third provider)
+- [ ] Both branches accept identical inputs (no branch-specific parameters)
+- [ ] READ the wrapped function's class definition — grep for it; verify actual field names
+      (e.g., AgentRunResult has stdout/stderr/session_id but NO returncode field)
+- [ ] READ exception contracts of ALL wrapped functions — verify which raise CalledProcessError
+      (run_codex_session raises at non-zero exit; resume_codex_session same behavior)
+- [ ] BOTH codex calls (fresh and resume) wrapped in try/except CalledProcessError
+- [ ] CalledProcessError absorbed into returncode=exc.returncode, not re-raised
+- [ ] returncode=0 on codex success path is synthetic (only reachable if no exception raised)
+- [ ] TimeoutExpired intentionally propagates (document this in docstring)
+- [ ] Docstring states which exceptions propagate; never claim "never raises X" without
+      reading every wrapped function's exception contract
+- [ ] Caller uses head-advancement as sole success signal (not returncode check)
+- [ ] Hardcoded `returncode=0` on claude path is correct (claude raises on failure)
+- [ ] Every call site of the new helper has an immediate `if result.returncode != 0: return`
+      guard (absorbed exceptions require caller-side returncode check — Trap 2)
+- [ ] `# noqa: C901` on the original function can be removed — re-run `ruff --select C901`
+      after extraction to confirm (do NOT assume removal is safe without measuring — Trap 3)
+- [ ] Duplicate post-agent block is character-identical in both branches (diff them)
+- [ ] Test classes `TestInvokeAgentSession` and `TestPushCiFix` added
+- [ ] All existing test patches target same module namespace (no patch retargeting needed
+      if helpers remain in same file)
+- [ ] RECOUNT every mocked call in pre-existing tests that reach the helper transitively;
+      remove-outer-except-Exception exposes previously-swallowed StopIteration (Trap 1)
+```
+
+### Phase 21: God-Function Decomposition — Function-Size Planning Rules
+
+Use when decomposing individual functions that exceed the project's line-length threshold (> 80L
+by convention). This phase is the function-level analogue to Phase 19 (god-class), covering the
+eight planning rules that caused reviewer NOGO across the R0→R3 planning cycle for issue #1180
+(7 god-functions across 4 files in `hephaestus/automation/`).
+
+**Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
+
+#### Rule 1: Arithmetic chain verification is non-negotiable
+
+Write an explicit arithmetic chain for EVERY target function:
+
+```text
+<helper_name>: <X> lines sig+doc + <Y> lines body = <Z> total
+```
+
+If any target shows > 80L without a helper covering it, the plan is incomplete.
+No marginal waivers ("borderline" or "acceptable overage" are not valid justifications).
+
+**What failed (R0):** Plan waived `_implement_issue` at 128L as "marginal overage" — reviewer gave NOGO.
+**What failed (R1):** Plan claimed `_implement_issue` was reduced but included no extraction step — NOGO.
+
+#### Rule 2: Docstring budget counts toward function span
+
+Before computing post-extraction size, check whether the function has a long docstring:
+
+```bash
+# Find docstring span for a function
+python3 -c "
+import ast, pathlib
+src = pathlib.Path('<file>.py').read_text()
+tree = ast.parse(src)
+for node in ast.walk(tree):
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == '<func>':
+        print(f'Function starts: {node.lineno}, body[0] ends: {node.body[0].end_lineno}')
+"
+```
+
+If the docstring exceeds ~15 lines, either:
+- Subtract the docstring lines from the post-extraction size estimate, OR
+- Plan to trim the docstring explicitly as part of the extraction step.
+
+**Example:** `_address_issue` had a 24-line docstring (lines 477–504). Plans that ignored it
+calculated the post-extraction count wrong.
+
+#### Rule 3: For-loop body sizing — extract if > 40L
+
+When a function contains a for/while loop whose body exceeds ~40L, that loop body is a
+standalone extraction candidate. Do not plan to extract just the outer scaffold.
+
+**Example:** `_run_ci_fix_session` (250L) needed 5 helpers, not 1–2. The CI polling while-loop
+body and the codex/claude dispatch arms were each > 40L.
+
+```text
+Decision rule:
+  loop body > 40L  → extract the body as a standalone helper
+  loop body ≤ 40L  → may inline (but verify with arithmetic chain)
+```
+
+#### Rule 4: Return type tracing when helper absorbs the only call site
+
+Before finalizing a helper's return type, trace every call to every function that will be
+inside the extracted helper:
+
+```bash
+# Find all call sites for a function about to be absorbed
+grep -n "<func_name>" <target_file>.py
+```
+
+If the helper absorbs the ONLY call site to a data-fetching function (e.g. `fetch_issue_info`),
+the CALLER still needs that data. Return it as an extra tuple element — do NOT assume the
+caller can re-fetch it.
+
+**Example:** `_prepare_worktree_for_existing_pr` absorbed the only `fetch_issue_info` call.
+R0/R1 plans returned `tuple[Path, str]` — the caller then had no `issue.title`/`issue.body`
+for the review loop, causing a `NameError`.
+
+#### Rule 5: N-tuple return completeness for complex orchestrators
+
+When extracting a sub-orchestrator that returns multiple values, trace every variable the
+slim parent uses AFTER the helper call. All must be in the return tuple.
+
+**Verification procedure:**
+
+```python
+# Manually list all variables the slim parent reads after the helper call
+# Example: after _process_review_iteration(), what does _run_impl_review_loop() use?
+# → last_verdict, last_grade, review_text, posted_thread_ids,
+#   go_blocked_by_automation, reopened, should_break
+# = 7-tuple; R2 plan had 6 (dropped 'reopened') → NameError in zero-thread continue check
+```
+
+**Rule:** draft the tuple skeleton FIRST, then write the helper signature. Never finalize a
+helper signature until you have enumerated every consumer variable on the call side.
+
+#### Rule 6: Explicit parameter audit for captured variables
+
+When extracting a helper from a long function, the extracted body may reference variables
+from the enclosing scope that are NOT in the proposed parameter list. Audit every name
+reference in the extracted body:
+
+```bash
+# Quick scope audit: list all names in the extracted block that are not local assignments
+python3 -c "
+import ast, textwrap
+src = '''<paste extracted block here>'''
+tree = ast.parse(textwrap.dedent(src))
+names = {n.id for n in ast.walk(tree) if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load)}
+assigned = {n.targets[0].id for n in ast.walk(tree) if isinstance(n, ast.Assign)
+            and isinstance(n.targets[0], ast.Name)}
+print('Possibly-captured:', names - assigned)
+"
+```
+
+Any name that is not a Python builtin and not in the proposed parameter list is a missing parameter.
+
+**Example:** `_build_ci_fix_prompt` used `worktree_path` from the enclosing scope in an f-string.
+When extracted, the variable is not in scope — it must be an explicit parameter.
+
+#### Rule 7: Approach table must list ALL helpers per target
+
+The Approach table row for each target function MUST list ALL helpers that will be extracted
+from it, not just the first or most obvious one.
+
+| Target | Helpers | Post-extraction size |
+|--------|---------|---------------------|
+| `_run_impl_review_loop` | `_process_review_iteration`, `_run_address_step_if_needed` | 52L |
+
+**What failed (R2):** Reviewer found `_process_review_iteration` and `_run_address_step_if_needed`
+missing from the Approach table for `_run_impl_review_loop`.
+
+**Rule:** After drafting the approach table, re-read each function and ask "what else will be extracted?"
+Do not declare a row complete until the arithmetic chain closes at ≤ 80L.
+
+#### Rule 8: AST-measure before planning — never trust issue line numbers
+
+Issue bodies and prior plan drafts regularly state stale line numbers. Always re-measure
+at plan time using AST:
+
+```bash
+python3 -c "
+import ast, pathlib
+src = pathlib.Path('<target>.py').read_text()
+tree = ast.parse(src)
+funcs = []
+for node in ast.walk(tree):
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        end = node.end_lineno or node.lineno
+        funcs.append((end - node.lineno + 1, node.lineno, node.name))
+for size, lineno, name in sorted(funcs, reverse=True)[:20]:
+    print(f'{size:4d} lines  line {lineno:4d}  {name}')
+"
+```
+
+**Example:** Issue #1180 cited `_drive_issue` at line 711 — actual: 731.
+`_run_ci_fix_session` cited at 2590 — actual: 2610. These 20-line drifts caused
+post-extraction arithmetic chains to be wrong.
+
+**Rule:** Run the AST measurement on the actual file at plan time. Record the measured
+line numbers and function sizes explicitly in the plan. Never carry forward issue-cited
+or prior-draft numbers without re-verification.
+
+#### God-Function Planning Checklist (Phase 21)
+
+```markdown
+## God-Function Decomposition Planning Checklist (Phase 21)
+
+### Pre-plan (do before writing the plan)
+- [ ] AST-measure every oversized function: `python3 -c "import ast ..."` (Rule 8)
+- [ ] Record measured line numbers and function sizes — never trust issue-cited numbers
+- [ ] List every function > 80L as a candidate target
+
+### Per target function
+- [ ] Write arithmetic chain: `X lines sig+doc + Y lines body = Z total` (Rule 1)
+- [ ] If Z > 80 without a helper listed: plan is incomplete — add an extraction step
+- [ ] Check docstring length; if > 15L, subtract from budget or plan to trim (Rule 2)
+- [ ] Identify every for/while loop; if body > 40L, add it as a standalone helper (Rule 3)
+
+### Per helper extracted
+- [ ] Trace all functions absorbed by the helper — is any the ONLY call site to a
+      data-fetching function? If yes, return the fetched data in the tuple (Rule 4)
+- [ ] For orchestrator helpers: enumerate ALL variables the slim parent reads after
+      the call; all must be in the return tuple (Rule 5)
+- [ ] Audit every name reference in the extracted body against the parameter list;
+      any captured variable from enclosing scope must be an explicit parameter (Rule 6)
+
+### Approach table review
+- [ ] For each target row, confirm ALL helpers are listed (not just the first one) (Rule 7)
+- [ ] Arithmetic chain closes at ≤ 80L for every target
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| **`object` type for status_tracker** | Used `status_tracker: object \| None` to avoid importing `StatusTracker` | mypy: `"object" has no attribute "update_slot"` — `object` is too broad | Import the concrete type; use `TYPE_CHECKING` guard for circular-import risk |
+| **Bare `dict` in type annotations** | Wrote `list[dict]` in helper function signatures | mypy `type-arg` error: generic type needs params | Use `list[dict[str, Any]]` consistently; add `from typing import Any` |
+| **Forgetting to update existing test patch paths** | Left old `patch("pkg.implementer.run")` for methods moved to `follow_up.py` | Mocks never triggered: `AssertionError: Called 0 times` | Always grep for module-level patches in existing tests when extracting code |
+| **Extracting all clusters before checking line count** | Planned to extract all clusters unconditionally | Premature — target met after first extraction; over-engineered the rest | Apply YAGNI: check `wc -l` after each extraction; stop when target is met |
+| **Using `object` type for collaborator type hints** | Typed workspace_manager as `object` to avoid circular imports | mypy: `"object" has no attribute "create_worktree"` | Use `TYPE_CHECKING` guard: `if TYPE_CHECKING: from .module import Type` |
+| **Inlining delegation shells that tests mock** | Removed thin delegation wrappers to reduce line count | Tests used `patch.object(runner, "_write_pid_file")` — `AttributeError` on 9 tests | Retain thin delegation wrappers when existing tests mock them by name |
+| **Patching old logger after extraction** | Left `patch("pkg.runner.logger")` after warning moved to extracted class | Mock showed 0 calls — warning emitted from extracted module's logger | After each extraction, grep tests for old module logger patches and update |
+| **Mutating self instead of returning** | Initial collaborator design modified `self.config` / `self.checkpoint` in place | Hard to test — must inspect object internals; creates hidden coupling | Return `(config, checkpoint)` tuples for clean, testable API |
+| **Lazy imports inside function bodies (circular fix)** | Moved `from pkg.runner import is_shutdown_requested` inside function bodies | Did not fix error — symbol referenced during module-level code in intermediate module | Lazy imports only help if symbol is used at call time; use leaf module extraction instead |
+| **Patching old module location after symbol move** | Left `patch("pkg.runner.is_shutdown_requested")` after moving to `shutdown.py` | Patches registered on old location; callers looked up new location — mock never invoked | After moving a symbol, update ALL patches to target the new module |
+| **Deleting only `__init__.py` re-exports without moving symbol** | Removed CLI entries from `__init__.py` but left import edge in `fleet_sync.py` | Import edge remained intact; future code paths can re-trigger the same cycle | Eliminate the layering violation at the source (move to leaf module) |
+| **Trying to refactor everything in one PR** | Single large PR with all extraction changes | Too many changes to review; hard to isolate breaks; difficult rollback | Split into focused PRs following dependency order (extract → verify → delete) |
+| **Deleting scripts before creating library** | Considered deleting old code first, then extracting | Would break workflows during transition; no way to verify extraction matches original | Always follow: Extract → Verify → Delete pattern |
+| **Linter reverting collaborator changes** | Committed SubtestProvider extraction without checking linter state | Black ran between commit and next work session; reverted changes | Always `git status` before starting new work; verify imports immediately after refactoring |
+| **Naive move of main() breaks patch.object tests** | Moved `main()` directly to new CLI module; existing tests used `patch.object(implementer, "gh_list_open_issues")` | New `main` looked up `gh_list_open_issues` in new module namespace — patch on old module never intercepted; mocks showed 0 calls | Use Reverse-Delegation: new `main` imports original lazily (`from . import implementer as _impl`) and calls `_impl.helper()` so lookup stays on the original (Phase 11) |
+| **Bare re-export without `as` alias in original** | Added `from .implementer_cli import main` (no `as main`) to original module | mypy `implicit_reexport=false`: `Module "implementer" does not explicitly export attribute "main"`; console-script entry-point also failed to resolve | Use `from .implementer_cli import main as main` — the redundant alias is the recognized re-export idiom for both mypy and ruff |
+| **Forgetting transitive symbol re-exports** | Moved `main` called `_impl.get_repo_root()` but `get_repo_root` was a plain `from .git_utils import get_repo_root` in original | mypy: `Module "implementer" does not explicitly export attribute "get_repo_root"` | Re-import every symbol the new module accesses via `_impl.X` with explicit `as X` alias in the original: `from .git_utils import get_repo_root as get_repo_root` |
+| **Missing coverage omit-allowlist update** | Added new `implementer_cli.py` orchestration module without updating pyproject omit list or guard tests | `test_omit_allowlist.py` and `test_orchestration_smoke.py` failed: counts mismatch + module not in expected list | Update the omit list in `pyproject.toml` AND both guard test files in the same PR as the new module |
+| **Using `Refs #N` only on partial-fix PR** | Opened PR for one CLI-extraction slice with `Refs #468` (umbrella) but no `Closes #N` | pr-policy CI gate hard-requires literal `Closes #N` line; PR was blocked | File a narrow sub-issue for the specific slice, put `Closes #<sub>` + `Refs #<umbrella>` in PR body — umbrella stays open, CI passes |
+| **Using reverse-delegation for sibling-module cycles** | Applied Phase 11 (lazy `from . import implementer as _impl` in function bodies) to break cycle between `implementer_phase_runner` and `implementer` | Deferred imports inside function bodies mask the cycle from static analysis tools (AST-based linters, import-graph audits); regression tests need fragile AST ID-tracking to detect reintroduction | For sibling-module cycles (not parent→child), use Phase 12 (top-level imports with `# noqa: F401`) instead; static analysis visibility + simpler code is worth retargeting a few test patches |
+| **Assuming the context manager refactor was complete** | Introduced `_inflight_context()` in `_handle_webhook` and opened the PR without auditing callers | `receive_webhook()` still did manual `self._inflight += 1 / -= 1`, double-incrementing; `test_inflight_increments_during_publish` saw `[2]` not `[1]` | A refactor that moves lifecycle into a context manager is INCOMPLETE until every caller is grepped and stale manual `+1/-1` is removed (Phase 15) |
+| **Debugging a doubled counter only in the test file** | Searched the test for the assertion failure to find the root cause | The bug was in production code (`receive_webhook`), not the test | When counter values are unexpectedly doubled, grep production code for stale lifecycle management, not just tests |
+| **Deny-list to scope a scanner** | Kept adding directories to `EXCLUDED_PREFIXES` to narrow a repo-wide scan | Deny-lists grow forever and break on every new top-level dir; root-level test fixtures also slipped through | Use a `Path.is_relative_to()` allow-list helper (Phase 14); it's smaller, correct-by-construction, and independently testable |
+| **Forgetting fixture migration after scoping a scanner** | Scoped the scanner to `scylla/` but left existing tests writing fixtures at `tmp_path/"bad.py"` | Root-level fixtures are now out of scope — tests returned zero findings and failed | After narrowing scanner scope, move every test fixture into the scoped dir and update hard-coded path assertions (`"bad.py"` → `"scylla/bad.py"`) |
+| **Trusting a TODO/audit LOC estimate without reading the substrate** | Took `TODO.md` "Phase 2: ~5000 LOC" and an audit's "CRITICAL: autograd missing" as authoritative effort | Existing tape/registry/SavedTensors infra already covered ~70%; estimate was 3-5x too high and conflated "documented" with "missing" | Read every substrate file in full with line-cited evidence BEFORE estimating (Phase 17); re-classify "missing" as "incomplete, N% gap" |
+| **Deleting legacy code before verifying zero callers** | Assumed a "fallback only" file was dead and considered deleting it on the strength of its header alone | "Fallback only" claims are not self-enforcing — the codebase may still depend on it in non-obvious ways; dead code passes all CI | Systematically grep all callers across `*.py/*.sh/*.md/.github/` first, rewrite stale back-references as self-contained comments, then delete and run full suites (Phase 16) |
+| **Trusting issue LOC estimates for a god-class plan** | Used issue body's "2,633 lines" for `implementer_phase_runner.py` to scope the extraction plan | File was actually 1,308 lines (already decomposed via PR #712) — planned 1,325 unnecessary lines of work | Always `wc -l` the actual substrate file before planning; issue LOC estimates are routinely stale after prior decomposition PRs (Phase 19 Step 0) |
+| **Leaving `_viewer_login` on original class after extracting its owner** | Plan extracted `PRDiscovery` but left the `_viewer_login` cache field on `CIDriver` | `PRDiscovery` writes to a field on a different object — split-ownership bug; the collaborator cannot be unit-tested independently | Audit every class field before finalizing extraction boundaries; fields used exclusively by extracted methods must migrate with them (Phase 19 Step 1) |
+| **Extracting method group without extracting the methods it calls** | Extracted `CIFixOrchestrator` but left `_head_advanced`, `_ci_fix_head_is_pushable`, `_tracked_worktree_changes` on `CIDriver` | Extracted class must call `self._driver._head_advanced()` — tightly coupled to original class internals; defeats SRP purpose of extraction | Map cross-call coupling before finalizing extraction boundaries; resolve by moving called methods too, using callbacks, or documenting temporary coupling (Phase 19 Step 2) |
+| **Proposing `*args, **kwargs` stubs without checking mypy config** | Plan used `# noqa: ANN002,ANN003` delegation stubs assuming per-module mypy relaxation | `pyproject.toml` uses `strict = true` with no `[mypy-hephaestus.automation.*]` override — strict mypy rejects untyped stubs | Check mypy config before proposing delegation stub patterns; if strict, write fully typed stubs mirroring collaborator signatures (Phase 19 Step 3) |
+| **Moving a constant to a new module without grepping external callers** | Plan moved `FAILING_CHECK_CONCLUSIONS` from `ci_driver.py` to new `ci_check_inspector.py` | External callers doing `from hephaestus.automation.ci_driver import FAILING_CHECK_CONCLUSIONS` get ImportError; CI may not catch until integration tests run | Grep all external callers before moving any constant; if callers exist, keep in place or re-export with explicit `as X` alias from both locations (Phase 19 Step 4) |
+| **Ignoring delegation stub line overhead in line count projections** | Estimated final line count as original minus extracted lines only | 18 extracted methods × 5 stub lines = 90 additional lines not counted; projected 2,200 became 2,252 — tighter than the ≤2,200 criterion | Always add delegation stub overhead (≈ 5 lines × num_extracted_methods) and new import blocks to line count projections (Phase 19 Step 5) |
+| **Assuming test_omit_allowlist.py doesn't exist without checking** | Plan mentioned updating coverage omit lists "if the guard exists" without verifying first | `test_omit_allowlist.py` existed and failed CI when new modules weren't added to the omit list | Always `find tests/ -name "test_omit_allowlist.py"` before adding modules; include omit list update in same PR as new module (Phase 19 Step 6) |
+| **Hardcoding `returncode=0` on success path without reading `AgentRunResult`** | Plan assumed `run_codex_session` returns `AgentRunResult` and constructed `CompletedProcess(returncode=0)` on success | Verified: `run_codex_session` raises `CalledProcessError` on non-zero exit (runtime.py:397–403); it does NOT return an `AgentRunResult` with a returncode on failure. `returncode=0` on the success path is actually correct AND synthetic (only reachable if no exception was raised) — but the reasoning in the plan was wrong; it should be justified by the exception contract, not by reading `AgentRunResult` | Read the wrapped function's exception contract first (`run_codex_session` raises `CalledProcessError` on failure — never returns); `returncode=0` on the codex success path is correct because exceptions have already been absorbed (Phase 20) |
+| **Assuming `AgentRunResult.returncode` field exists without verifying** | Plan annotated wrapper with `subprocess.CompletedProcess[str]` and accessed `result.returncode`, assuming field name from `CompletedProcess` analogy | Verified: `AgentRunResult` (runtime.py:28–34) has fields `stdout`, `stderr`, `session_id` — NO `returncode` field; accessing `result.returncode` would raise `AttributeError` at runtime | Read the actual dataclass definition before accessing any field; grep for `class AgentRunResult` to confirm the exact field names; never infer fields from analogous types (Phase 20) |
+| **Docstring claims wrapper never raises X without verifying wrapped functions** | Wrote a docstring claiming `_invoke_agent_session` "never raises CalledProcessError" before verifying the exception contracts of `run_codex_session` and `resume_codex_session` | Reviewer caught POLA violation: `run_codex_session` DOES raise `CalledProcessError` on non-zero exit (runtime.py:397–403); the docstring was factually wrong | Always grep for the implementation of every function the wrapper calls and read its exception contract before writing "never raises X" in a docstring; reviewers will always verify this (Phase 20) |
+| **Assuming `# noqa: C901` can be removed without re-measuring complexity** | Plan removed the noqa suppressor as part of extraction, assuming post-refactor CC was below threshold | Outer `try/except` around sync + snapshot + prompt-build still contributes branches; if those remain, ruff re-flags the method | Run `ruff check --select C901 <file>.py` after extraction to confirm removal is safe; do not assume (Phase 20 Step 5) |
+| **Treating head-advancement as sole success signal without verifying original code** | After extraction, plan assumed caller only checks `_head_advanced()` after `_invoke_agent_session` | Original codex branch at line 2709 also checked `CalledProcessError` as a distinct failure mode; absorbed-error approach changes semantics if callers relied on that distinct signal | Verify the original error-handling contract before assuming return-value check can be dropped; if the original differentiated `CalledProcessError` from "ran successfully but no head advance", the absorbed approach loses that distinction (Phase 20) |
+| **Assuming duplicate post-agent blocks are identical without diffing** | Plan said lines 2722–2743 and 2777–2798 in `_run_ci_fix_session` were "character-identical" based on visual inspection | Even one extra blank line or minor spacing difference invalidates "identical"; extracting non-identical blocks silently changes behavior | Diff the two blocks explicitly (`diff <(sed -n '2722,2743p' ci_driver.py) <(sed -n '2777,2798p' ci_driver.py)`) before claiming they are character-identical (Phase 20) |
+| **Left pre-existing test side_effects unchanged after removing outer `except Exception`** | After removing the catch-all `except Exception` from the oversized method, kept old tests that provided N-1 `side_effect` values for mocked `subprocess.run` | `StopIteration` from the exhausted mock bubbled up as a test failure; the outer `except Exception` had been silently swallowing it | Count every `subprocess.run` call the test path exercises — including those inside newly extracted helper methods — after any exception-boundary change (Phase 20, Trap 1) |
+| **Did not add `if result.returncode != 0: return False` after calling `_invoke_agent_session`** | Caller continued executing after the helper returned a non-zero `CompletedProcess` because the absorbed `CalledProcessError` didn't re-raise | No-commit marker was written and execution continued as if the agent session succeeded — incorrect behavior | A helper that absorbs exceptions into returncode transfers the error-check responsibility to the caller; add `if result.returncode != 0: return <error_value>` immediately after every call site (Phase 20, Trap 2) |
+| **Set mock agent to `return_value=MagicMock()` (success) when testing a path that should fail early** | In `test_returns_false_when_head_not_advanced_and_retry_fails`, mock `invoke_claude_with_session` to return normally (no exception) expecting `_retry_no_commit_once` to fail | Agent succeeded, then `_retry_no_commit_once` consumed more `subprocess.run` side_effects than provided, triggering `StopIteration` | Change the agent mock to raise `CalledProcessError` so `_invoke_agent_session` returns non-zero immediately and the retry loop exits without consuming additional `run` calls (Phase 20, Trap 1+2 interaction) |
+| **Assumed `# noqa: C901` could be removed without measuring post-refactor complexity** | Removed the annotation at the same time as the helper extraction, assuming the extraction was sufficient | The extracted method may still exceed the complexity threshold due to remaining try/except, if/else, and early-return branches | Run `ruff check --select C901 <file>.py` after extraction; remove `# noqa: C901` only after confirming "All checks passed!" (Phase 20, Trap 3) |
+| **Waiving a 128L function as "marginal overage" without an extraction step (R0)** | Plan for issue #1180 noted `_implement_issue` at 128L was "a marginal overage" and did not include an extraction step | Reviewer gave NOGO: no waivers on the 80L threshold; 128L is not marginal — it requires an extraction plan | Write an explicit arithmetic chain for every target; if any target shows > 80L without a helper, the plan is incomplete. No marginal waivers. (Phase 21, Rule 1) |
+| **Claiming a target was reduced without listing the extraction step (R1)** | R1 plan stated `_implement_issue` was reduced but listed no new helper and no arithmetic chain | Reviewer gave NOGO: the reduction was claimed but not demonstrated; no helper = no reduction | Arithmetic chain verification is non-negotiable: `X lines sig+doc + Y lines body = Z total` must appear for every target, with the helper explicitly named (Phase 21, Rule 1) |
+| **Ignoring docstring lines when computing post-extraction size** | Plans for `_address_issue` computed post-extraction count without subtracting its 24-line docstring (lines 477–504) | Post-extraction arithmetic chains were wrong; the function appeared to fit when it did not | Before computing post-extraction size, find the docstring span and subtract those lines from the budget, or plan to trim the docstring explicitly (Phase 21, Rule 2) |
+| **Planning 1–2 helpers for a 250L function with a 40L+ loop body (R0/R1)** | `_run_ci_fix_session` (250L) was planned with 1–2 helpers; CI polling while-loop body and codex/claude dispatch arms were not counted as extraction candidates | The loop bodies alone exceeded 40L each; reviewers caught that the plan undercounted required helpers | When a for/while loop body exceeds ~40L, that body is a standalone extraction candidate; plan for it explicitly (Phase 21, Rule 3) |
+| **Helper return type omitted the absorbed fetch call's data (R0/R1)** | `_prepare_worktree_for_existing_pr` was planned with return type `tuple[Path, str]` despite absorbing the only `fetch_issue_info` call | The caller still needed `issue.title` and `issue.body` for the review loop but had no way to get them — would cause `NameError` at runtime | Trace every function absorbed by a helper; if it absorbs the only call to a data-fetching function, return the fetched data as an extra tuple element (Phase 21, Rule 4) |
+| **Orchestrator helper return tuple dropped 'reopened' variable (R2)** | `_process_review_iteration` was specified with a 6-tuple: `(last_verdict, last_grade, review_text, posted_thread_ids, go_blocked_by_automation, should_break)` — `reopened` was omitted | The slim parent's zero-thread continue check used `reopened` — `NameError` at that code path | Enumerate ALL variables the slim parent reads after the helper call; a 7-tuple was needed. Draft the tuple skeleton before writing the helper signature (Phase 21, Rule 5) |
+| **Extracted helper body used `worktree_path` from enclosing scope — not in parameter list** | `_build_ci_fix_prompt` extraction plan did not include `worktree_path` in the parameter list, even though the f-string body referenced it | When extracted, `worktree_path` is not in scope — `NameError` at runtime | Audit every name in the extracted body against the proposed parameter list; any captured variable from the enclosing scope must be added as an explicit parameter (Phase 21, Rule 6) |
+| **Approach table omitted helpers for `_run_impl_review_loop` (R2)** | The Approach table row for `_run_impl_review_loop` listed only one helper; `_process_review_iteration` and `_run_address_step_if_needed` were missing | Reviewer flagged both helpers as absent from the table; arithmetic chain was therefore also missing | After drafting the approach table, re-read each function and confirm ALL helpers are listed; do not declare a row complete until the arithmetic chain closes at ≤ 80L (Phase 21, Rule 7) |
+| **Used issue-cited line numbers without re-measuring (R0–R2)** | Plans carried forward stale line numbers from the issue body: `_drive_issue` at line 711 (actual: 731), `_run_ci_fix_session` at 2590 (actual: 2610) | 20-line drift made post-extraction arithmetic chains wrong; helpers were sized to wrong baselines | Run AST measurement on the actual file at plan time; record measured line numbers explicitly; never trust issue-cited or prior-draft line numbers (Phase 21, Rule 8) |
+
+## Results & Parameters
+
+### Extraction outcome benchmarks
+
+| Source | Before | After | Reduction | New files |
+| ------- | ------- | ------- | --------- | --------- |
+| `implementer.py` (function-level) | 1,221 | 837 | −31% | `retrospective.py`, `follow_up.py`, `pr_manager.py` |
+| `implementer.py` (CLI extraction, reverse-delegation) | 872 | 702 | −19% | `implementer_cli.py` (236 lines) |
+| `runner.py` (class-based, 3 collaborators) | 1,527 | 1,105 | −28% | `TierActionBuilder`, `ParallelTierRunner`, `ExperimentResultWriter` |
+| `runner.py` (single method → `ResumeManager`) | 1,638 | 1,509 | −8% | `resume_manager.py` (175 lines, 98.5% coverage) |
+| `llm_judge.py` (module decomposition) | 1,488 | 142 | −90% | `build_pipeline.py`, `judge_context.py`, `judge_execution.py`, `judge_artifacts.py` |
+| `stages.py` + `run_report.py` (re-export) | 1,534 + 1,385 | 855 + 289 | −44% / −79% | 4 new modules |
+| Extensibility refactor (6 PRs) | — | — | −415 net | `discovery/`, `subtest_provider.py`, `TestFixture` |
+
+### New test benchmarks
+
+```text
+cluster-extraction (implementer.py): 37 new unit tests, 336 automation tests pass
+collaborator-extraction (runner.py):  69 new unit tests (27 + 19 + 23); 3,326 total pass
+single-responsibility (ResumeManager): 26 new unit tests; 3,211 total pass
+circular-import fix:   4 mock patches updated; CI passed (ProjectScylla + ProjectHephaestus)
+immutable refactor:    3 lines changed; 30 tests pass
+pipeline-step extraction (llm_judge): 28 new tests; 4,591 pass; 3 # noqa: C901 removed
+scanner-scoping (check_docstring_fragments): 12 scope tests; 4,333 pass
+context-manager double-counter (Hermes): test went [2]→[1] after dropping stale +1/-1
+legacy-code deletion: 587-LOC bash driver + 480 LOC tests removed; 1,093 + 26 tests pass
+substrate-read estimate (Odyssey #5457): TODO ~5000 LOC → revised ~1400 → actual +937
+```
+
+### Pipeline-step return-tuple contract (Phase 13)
+
+```text
+(passed: bool, na: bool, output: str)
+  na=True  → tool not installed (step skipped)
+  passed=False, na=False → step ran and failed (output has stderr)
+  passed=True  → step succeeded
+```
+
+### Substrate-read checklist before estimating (Phase 17)
+
+```markdown
+## Phase 0 — Substrate Read (complete BEFORE estimating)
+Files read in full: path/to/substrate.ext (N LOC) — what works: …
+What already works (with line citations): substrate.ext:123 — feature A
+What is actually missing (min signatures only): op_foo(x) -> y — not implemented
+Revised LOC estimate: ~X (vs TODO "~Y"); justification: ~Z% already in substrate.
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectScylla | PR #1444 — `implementer.py` 1221→837 (function-level cluster extraction) | Superseded `cluster-extraction-to-modules` |
+| ProjectScylla | PR #1230 — `runner.py` 1527→1105 (3 collaborator classes, TDD) | Superseded `collaborator-extraction-tdd` |
+| ProjectScylla | PR #1145 — `runner.py` `ResumeManager` single-method extraction | Superseded `single-responsibility-extraction` |
+| ProjectScylla | PR #1446 — `llm_judge.py` 1488→142 module decomposition | Superseded `module-decomposition-pattern` |
+| ProjectScylla | PR #1850 — circular import fix (`shutdown.py` leaf extraction) | Superseded `python-circular-import-symbol-extraction` |
+| ProjectHephaestus | PR #308 — `__init__.py` eager re-export circular import fix | Superseded `python-circular-import-symbol-extraction` |
+| ProjectScylla | PR #1311 — `ResumeManager.handle_zombie` immutable refactor | Superseded `immutable-method-refactor` |
+| ProjectScylla | PRs #356–#361 — extensibility refactor (discovery lib, SubtestProvider, TestFixture) | Superseded `refactor-for-extensibility` |
+| ProjectHephaestus | PR #674 — `implementer.py` 872→702 lines; new `implementer_cli.py` (236 lines); reverse-delegation preserves 45 pre-existing tests unchanged; 780 automation tests pass; ruff+mypy clean (verified-local) | CLI entry-point extraction with preserved patch routing (Phase 11) |
+| ProjectHephaestus | PR #714 — `implementer_phase_runner.py` breaks cycle with top-level symbol extraction; 9 patchable symbols extracted; 3 deferred imports removed; regression test added (test_implementer_no_cycle.py with AST guards); all automation tests pass; CI gates pass (verified-ci) | Top-level symbol extraction for sibling-module cycles (Phase 12); comparison with reverse-delegation approach |
+| ProjectScylla | PR #1457 (Issue #1430) — three `llm_judge.py` functions CC>15→CC≤8 via pipeline-step extraction; 3 `# noqa: C901` removed; 28 new tests; 4591 tests pass | Superseded `pipeline-step-extraction` (Phase 13) |
+| ProjectScylla | PR #1440 (Issue #1399) — docstring-fragment scanner scoped to `scylla/` via `_is_scylla_file()` allow-list; 12 scope tests; 4333 tests pass | Superseded `scope-scanner-to-subdirectory` (Phase 14) |
+| ProjectHermes | PR #522 — `receive_webhook()` double-incremented `_inflight` after `_handle_webhook` adopted `_inflight_context()`; test expected `[1]` got `[2]`; fix removed stale manual counter management | Superseded `refactor-context-manager-double-counter-stale-caller` (Phase 15) |
+| ProjectHephaestus | PR #745 — deleted 587-line legacy `run_automation_loop.sh` + helper + 480 lines of tests; scrubbed 8 stale back-references across 4 files; 1093 tests + 26 shell tests pass | Superseded `legacy-code-deletion-safe-removal-pattern` (Phase 16) |
+| ProjectOdyssey | PR #5457 — Phase 0 substrate read revised a TODO "~5000 LOC" estimate to ~1400; actual landed +937 LOC (CI green) | Superseded `architecture-estimate-rewrite-read-substrate-first` (Phase 17) |
+| HomericIntelligence ecosystem | Cleanup-phase coordination after parallel Test/Implementation/Package phases (KISS/DRY/SOLID finalization before merge) | Superseded `phase-cleanup` (Phase 18) |
+| ProjectHephaestus | Issue #1179 — planning decomposition of `CIDriver` (ci_driver.py, 3,338 lines, 51 methods) into 4 collaborator modules; substrate read revealed `implementer_phase_runner.py` was 1,308 lines not 2,633 (stale audit); 6 planning risks identified including split-ownership on `_viewer_login`, cross-call coupling in `CIFixOrchestrator`, unverified mypy strict mode for `*args/**kwargs` stubs, ungrepped external callers of `FAILING_CHECK_CONCLUSIONS`, delegation stub LOC overhead tightening line count target, and unverified `test_omit_allowlist.py` (unverified — plan not yet executed) | New Phase 19: God-Class Decomposition Planning Risk Audit (v1.4.0) |
+| ProjectHephaestus | Issue #1196 — planning refactor of `_retry_no_commit_once` (164 lines, codex/claude branches threaded through) and `_run_ci_fix_session` (two identical 17-line post-agent blocks); plan: extract `_invoke_agent_session` (not Protocol; two-branch bool-predicate; wraps `AgentRunResult` → `CompletedProcess`) + `_push_ci_fix` (duplicate post-agent block); 5 unverified risks: `AgentRunResult.returncode` field existence, `CalledProcessError` absorption loses codex error signal, head-advancement as sole success signal, `# noqa: C901` removal safety, duplicate block character-identity (unverified — plan not yet executed) | New Phase 20: Provider-Conditional Dispatch Extraction (v1.5.0) |
+| ProjectHephaestus | Issue #1196 Phase 20 reviewer NOGO — reviewer verified source: `AgentRunResult` (runtime.py:28–34) has `stdout`/`stderr`/`session_id` fields (NO `returncode`); `run_codex_session` raises `CalledProcessError` at runtime.py:397–403 on non-zero exit; `resume_codex_session` same behavior; POLA violation caught: docstring claimed "never raises CalledProcessError" without verifying wrapped functions; corrected pattern: wrap BOTH codex calls in `try/except CalledProcessError`, use `CompletedProcess(returncode=0)` (synthetic, only reachable without exception), document `TimeoutExpired` as sole propagating exception | Phase 20 correction: exception-contract verification before wrapper docstrings (v1.6.0) |
+| ProjectHephaestus | Issue #1196 Phase 20 implementation — extracted `_invoke_agent_session` + `_push_ci_fix` into `ci_driver.py`; removed `# noqa: C901` from `_run_ci_fix_session`; added 11 new tests (`TestInvokeAgentSession` 8 tests, `TestPushCiFix` 3 tests); 157 tests in `test_ci_driver.py` pass; ruff + mypy clean; three implementation traps discovered: (1) outer `except Exception` was masking `StopIteration` from exhausted mock `side_effect` lists — removal exposed latent miscounting in `test_codex_ci_fix_session_skips_push_when_head_did_not_advance` (needed 3rd `run` side_effect for `clean_status`); (2) caller of `_invoke_agent_session` in `_retry_no_commit_once` lacked `if retry_result.returncode != 0: return False` — no-commit marker was being written incorrectly; (3) mock for `invoke_claude_with_session` in retry test had to be changed from `return_value=...` to `raise CalledProcessError` to avoid consuming excess `run` side_effects; CI gate pending (verified-local) | Phase 20 implementation traps: exception-boundary removal unmasks StopIteration, returncode-guard obligation at call sites, agent-mock type determines downstream `run` consumption (v1.7.0) |
+| ProjectHephaestus | Issue #1180 — planning decomposition of 7 god-functions across 4 files in `hephaestus/automation/` (R0→R3 planning cycle): R0 NOGO (waived 128L `_implement_issue` as "marginal"); R1 NOGO (claimed reduction with no extraction step); R2 NOGO (6-tuple dropped `reopened`, approach table missing two helpers); R3 approved; 8 planning rules identified: (1) arithmetic chain non-negotiable — no waivers; (2) docstring lines count toward function span; (3) for-loop body > 40L is a standalone extraction candidate; (4) helpers absorbing the only call to a data-fetching function must return the fetched data; (5) orchestrator N-tuple must cover ALL post-call variables; (6) every captured variable in an extracted body is a missing parameter; (7) approach table must list ALL helpers per target; (8) AST-measure before planning — never trust issue-cited line numbers (unverified — plan not yet executed) | New Phase 21: God-Function Decomposition Planning Rules (v1.8.0) |
