@@ -1,0 +1,55 @@
+<!-- markdownlint-disable MD024 -->
+
+# required-check-noop-fix-via-tested-script — History
+
+## v1.1.0 (2026-06-12)
+
+Reviewer NOGO (Grade D) → GO-quality revision. The v1.0.0 plan *flagged* four
+items as "uncertain risks"; the reviewer NOGO'd because those risks were in fact
+real defects in the shipping fix, and a GO plan must RESOLVE them, not merely
+note them. This revision encodes the resolutions as concrete Failed-Attempts
+rows and promotes the two install/verification defects to headline findings.
+
+What changed:
+
+- **Lesson 1 (headline):** `pip install -e "." --no-deps` + a script that imports
+  the package = latent `ModuleNotFoundError`. The enforcement line imports
+  `hephaestus.utils.helpers`, which does `from packaging.requirements import ...`
+  at module top; `packaging` is a DECLARED CORE DEP (`pyproject.toml:29`) that
+  `--no-deps` skips. The v1.0.0 claim "only needs the repo checkout" was FALSE.
+  Fix: drop `--no-deps` (use `pip install -e "."`). Trace the full import chain
+  (`script → scripts_lib → utils.helpers → packaging`) before claiming no deps.
+- **Lesson 2 (headline):** Verifying in the full pixi env proves nothing about a
+  CI step using bare `pip install -e .` + bare `python`. v1.0.0 verified with
+  `pixi run --environment default python3` (has all deps) — a DIFFERENT env than
+  the one that ships. Verification must reproduce the EXACT install + interpreter
+  of the CI step: clean `python3 -m venv` with the identical `pip install` line.
+- **Lesson 3:** Reframed "maybe delete the redundant job" → "make the pinned gate
+  real." (a) The DoD named a THREE-file contract (pyproject → pixi.toml →
+  pixi.lock); the reused checker omits pixi.lock — restore the leg with
+  `pixi lock --check`. (b) `gh api .../rulesets/<id>` showed `deps/version-sync`
+  is a PINNED required status check; deleting the job without de-listing the
+  context BLOCKS every PR forever (the `ci-driver-blocked-required-context-drift`
+  failure mode). Ruleset mutation is an admin API change, out of scope for a code
+  PR. So: keep the gate, make it assert all three named files.
+- **Lesson 4:** Deleted the dead `if [ -f VERSION ]` branch retained "in case a
+  VERSION file is ever added" (YAGNI). The live checker provides the real exit-1
+  path.
+- Added `### NOGO → revision` findings subsection capturing what WORKED in the
+  revision (full import-chain trace, ruleset required-check query, clean-venv
+  CI-mirrored verification + synthetic-violation proof, restored pixi.lock leg).
+- Added `history:` frontmatter field; bumped `version` 1.0.0 → 1.1.0; date stays
+  2026-06-12.
+
+---
+
+## v1.0.0 (2026-06-12)
+
+Original skill from the first /learn pass for HomericIntelligence/ProjectHephaestus
+issue #1181 (PR #2390 in ProjectMnemosyne). Captured the initial implementation
+plan: fix the no-op `deps/version-sync` required check by delegating enforcement
+to the existing tested `scripts/check_version_single_source.py` instead of
+re-encoding the invariant in workflow bash (DRY). Flagged five durable insights
+including the `--no-deps` import surface and stale audit line numbers as
+*uncertain risks*. Verification level `unverified` (plan only, never executed).
+This version was subsequently NOGO'd at Grade D — see v1.1.0.
