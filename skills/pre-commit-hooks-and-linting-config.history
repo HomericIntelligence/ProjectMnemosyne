@@ -1,6 +1,35 @@
 <!-- markdownlint-disable MD024 -->
 # pre-commit-hooks-and-linting-config -- History
 
+## v1.9.0 (2026-06-13) -- Add markdownlint CI job dedup pattern (issue #1199 planning learnings)
+
+**Source:** ProjectHephaestus issue #1199 implementation plan (unverified — plan not yet implemented)
+
+**What changed:**
+
+- Added new trigger (13) to `description` and `When to Use`: removing a duplicate standalone
+  markdownlint CI job when `lint` already runs `pre-commit --all-files`.
+- Added new `Detailed Steps` section: "Removing a duplicate standalone markdownlint CI job
+  (dedup to pre-commit)" with two mandatory preconditions: (1) verify the job is NOT a
+  required-check context via `gh api repos/{owner}/{repo}/rulesets` BEFORE deleting, (2)
+  pre-scan newly-in-scope files with `--fix` then re-check for residual violations.
+- Added 2 new `Failed Attempts` rows covering the two most dangerous assumptions:
+  - Deleting a CI job without checking branch-protection required contexts
+  - Widening hook scope assuming `--fix` handles all violations
+
+**Key risks captured:**
+
+- Removing a required-check CI job causes ci-driver-blocked-required-context-drift.
+- `markdownlint-cli2 --fix` is a no-op for MD060 and MD013 long-line rules.
+- Fragile grep-count verification criterion: a step-name change elsewhere in the file
+  invalidates a count-based assertion.
+- `.claude/` hook exclusion is harmless (pre-commit only scans tracked files) but should not
+  be removed without confirming `.claude/` is gitignored.
+
+**Verification level:** `unverified` — learnings from planning, not from a completed implementation.
+
+---
+
 ## v1.8.0 (2026-06-07) -- Absorb 4 lint/quality skills (ruff-format trap, PR-diff scope, editorconfig, toolchain-churn review exemption)
 
 Consolidated 4 overlapping skills into this canonical (LQ05 cluster):
