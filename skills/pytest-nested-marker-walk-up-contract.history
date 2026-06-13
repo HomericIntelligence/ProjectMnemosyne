@@ -1,0 +1,22 @@
+## v1.0.0 — 2026-06-13 (unverified, plan only)
+
+Initial version created during planning session for ProjectHephaestus issue #1267.
+Designed the four-test nested-marker matrix but did not execute the tests.
+Critical bug: Quick Reference showed `assert get_repo_root(seed) == inner` without `.resolve()`.
+Verification: unverified (plan only, tests not run, CI not observed).
+
+---
+
+## v2.0.0 — 2026-06-13 (verified-ci)
+
+Promoted to verified-ci after PR #1307 merged to ProjectHephaestus (4058 passed, 85.57% coverage).
+
+Key changes from v1.0.0:
+- Fixed critical assertion bug: `== inner` → `== inner.resolve()` throughout Quick Reference and all code examples
+- Added "Critical Insight: resolve() Symmetry" section explaining why `.resolve()` is required on both sides
+- Expanded Failed Attempts table with 3 additional entries (no-resolve, git-init, copy-existing-style, parametrize)
+- Added verified-ci outcome and PR/Issue links
+- Tags expanded: added path-resolution, innermost-wins, first-match-up, symlink, resolve
+- Description updated to include symlinked-tmpdir CI environments as an explicit use-case trigger
+- Seed depth recommendation strengthened to 2 levels below inner (not just 1)
+- Added Step 7 (run full test class) to Detailed Steps
