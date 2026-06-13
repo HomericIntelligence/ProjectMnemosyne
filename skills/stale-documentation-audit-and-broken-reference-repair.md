@@ -1,9 +1,9 @@
 ---
 name: stale-documentation-audit-and-broken-reference-repair
-description: "Use when: (1) running a doc-drift audit across a corpus — detecting stale counts, metric discrepancies, cross-doc contradictions, ecosystem-role drift; (2) removing phantom directory references from documentation when a path no longer exists; (3) fixing broken documentation references (dead links, stale headings); (4) auditing documentation examples for policy violations; (5) auditing and rewriting getting-started stubs by sourcing real commands from justfile and versions from pixi.toml; (6) fixing incorrect tier labels or version numbers in docs that have drifted from implementation; (7) managing the full lifecycle of placeholder and stub documentation — deletion under YAGNI, deferred-comment placeholders, rewriting with accurate codebase-grounded content; (8) resolving audit nitpicks for monolithic code by documenting verified design rationale; (9) resolving CONTRIBUTING.md case-clashes and circular cross-references in docs/; (10) validating anchor fragments in markdown deep-links to detect broken headings."
+description: "Use when: (1) running a doc-drift audit across a corpus — detecting stale counts, metric discrepancies, cross-doc contradictions, ecosystem-role drift; (2) removing phantom directory references from documentation when a path no longer exists; (3) fixing broken documentation references (dead links, stale headings); (4) auditing documentation examples for policy violations; (5) auditing and rewriting getting-started stubs by sourcing real commands from justfile and versions from pixi.toml; (6) fixing incorrect tier labels or version numbers in docs that have drifted from implementation; (7) managing the full lifecycle of placeholder and stub documentation — deletion under YAGNI, deferred-comment placeholders, rewriting with accurate codebase-grounded content; (8) resolving audit nitpicks for monolithic code by documenting verified design rationale; (9) resolving CONTRIBUTING.md case-clashes and circular cross-references in docs/; (10) validating anchor fragments in markdown deep-links to detect broken headings; (11) an issue claims a file contains a specific string — verify it before trusting the claim; (12) a doc or test comment references a line number in another file that may have shifted."
 category: documentation
-date: 2026-06-07
-version: "1.1.0"
+date: 2026-06-13
+version: "1.2.0"
 user-invocable: false
 history: stale-documentation-audit-and-broken-reference-repair.history
 tags: [doc-drift, stale-doc, broken-references, phantom-dir, placeholder, stub, anchor-validation, tier-labels, doc-audit, doc-sync, merged]
@@ -15,9 +15,9 @@ tags: [doc-drift, stale-doc, broken-references, phantom-dir, placeholder, stub, 
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-07 |
-| **Objective** | Canonical workflow for auditing stale documentation and repairing broken references: drift audits, phantom-dir/dead-link removal, placeholder lifecycle, getting-started rewrites, tier-label fixes, anchor validation, ADR LoC figure updates |
-| **Outcome** | Consolidated from 10 skills covering doc-drift audits, broken-reference repair, policy-violation audits, placeholder/stub lifecycle, monolith-rationale docs, CONTRIBUTING case-clash, and anchor validation; v1.1.0 adds ADR LoC drift pattern |
+| **Date** | 2026-06-13 |
+| **Objective** | Canonical workflow for auditing stale documentation and repairing broken references: drift audits, phantom-dir/dead-link removal, placeholder lifecycle, getting-started rewrites, tier-label fixes, anchor validation, ADR LoC figure updates, stale line-number citations |
+| **Outcome** | Consolidated from 10 skills covering doc-drift audits, broken-reference repair, policy-violation audits, placeholder/stub lifecycle, monolith-rationale docs, CONTRIBUTING case-clash, and anchor validation; v1.1.0 adds ADR LoC drift pattern; v1.2.0 adds stale line-number citation audit and issue-body claim verification |
 | **Verification** | verified-ci |
 
 ## When to Use
@@ -35,6 +35,8 @@ tags: [doc-drift, stale-doc, broken-references, phantom-dir, placeholder, stub, 
 - Both `CONTRIBUTING.md` and `docs/contributing.md` exist with a circular cross-reference
 - README/docs deep-link to specific installation headings and you need CI to catch broken anchors
 - An ADR file (e.g. `docs/adr/`) cites LoC figures or percentage metrics that have drifted as the codebase grew since the ADR was authored; `CLAUDE.md` or other doc files repeat the same stale counts
+- An issue claims a file "contains" a specific string — grep for that exact string before trusting the claim (issue bodies may have been written against an older version of main)
+- A doc or test file references another file by line number (e.g. `install.sh:137–141`) — the cited line numbers may have shifted independently across files that reference the same construct
 
 ## Verified Workflow
 
@@ -75,6 +77,14 @@ find hephaestus/automation -name '*.py' | xargs wc -l | tail -1  # subpackage Lo
 # Then grep for ALL copies of the stale figure across the corpus:
 grep -rn "19,726\|19\.7k\|41,034" docs/ CLAUDE.md README.md    # replace with real old values
 
+# ── STALE LINE-NUMBER CITATIONS ──────────────────────────────────────────────
+# Step 1: Before trusting the issue body, grep for the exact claimed-incorrect string
+grep -n "claimed incorrect string" path/to/file.md  # returns nothing → claim is stale
+# Step 2: Find the actual current line of the referenced construct
+grep -n "guard_pattern\|function_name" path/to/source.sh
+# Step 3: Search for ALL stale variants — docs and test files updated independently
+grep -rn "old_ref_1\|old_ref_2" docs/ tests/ --include="*.md" --include="*.bats" --include="*.sh"
+
 # ── ANCHOR VALIDATION ────────────────────────────────────────────────────────
 python3 scripts/validate_installation_anchors.py README.md docs/getting-started/installation.md
 
@@ -103,6 +113,8 @@ Classify the staleness, then verify against an authoritative source before editi
 | Doc contradiction | Policy conflict across files | grep policy term |
 | Citation §-drift | §-ref points to old §-number | global mapping table + WebFetch per arXiv ID |
 | ADR LoC drift | ADR cites old `N LoC / M% of codebase`; codebase has grown | `find … -name '*.py' \| xargs wc -l \| tail -1` — re-measure at implementation time |
+| Line-number citation drift | Doc/test cites `file.sh:N–M`; construct moved after code churn | `grep -n <guard_pattern> <file>` to find current line; then `grep -rn "old_N\|old_M"` across all referencing files |
+| Issue-body fabricated claim | Issue says file "contains" a string that no longer exists in main | `grep -n "<exact claimed string>" <file>` before planning; returns nothing → issue written against older main |
 
 Fix patterns: `Planned → Implemented` in status tables; round counts with `+` for forward
 compatibility (`"2026+ tests" → "3,000+ tests"`) but exact counts (no `+`) for deterministic
@@ -294,6 +306,8 @@ gh pr merge --auto --rebase
 | Running `pixi run ruff check docs/ CLAUDE.md` for doc-only changes | Ran ruff on markdown files expecting linting feedback | `ruff` does not lint `.md` files; the command is a no-op and produces no signal | Skip `ruff check` for doc-only changes; use `pixi run pre-commit run markdownlint-cli2 --files <file.md>` instead |
 | Deleting `docs/contributing.md` to resolve the case-clash | Removed the file entirely | Breaks inbound links from the docs index | Reduce to a redirect; keep root as canonical |
 | Per-file reviewers for citation corpus | Reviewed each entry individually | Could not see cross-document §-drift or arXiv ID-to-title swaps | Both failure modes need a cross-corpus structural audit, not per-file review |
+| Trusting issue body claim of specific incorrect string | Planned to remove text the issue said was "incorrect" in a doc | That exact text no longer existed in main — a prior PR had already fixed it; issue body was written against an older version | Grep for the exact claimed string before planning any edit; if grep returns nothing the issue premise is stale |
+| Searching only the issue-reported stale line-number value | Only grepped for `137-141` (the value cited in the issue) | The test file had a *different* stale value (`127-129`) from independent update history; missed it entirely | Search for all plausible old values across all referencing files — doc and test files may carry different stale numbers from independent update histories |
 
 ## Results & Parameters
 
@@ -359,4 +373,5 @@ pixi run npx markdownlint-cli2 <file>
 | ProjectOdyssey | Issues #3142/#3308, #3304/#3913, #3305/#3917, #3918/#4830, #3141/#3303, #3914/#4828, #3915/#4829 | Stub deletion, installation/quickstart rewrite, IDE-setup extend, getting-started audit, anchor validator |
 | ProjectHephaestus | Issue #792 (PR #984); Issue #630 (PR #667) | Monolith-rationale ADR; CONTRIBUTING case-clash redirect |
 | ProjectHephaestus | Issue #1177 (PR #1281) | Stale LoC figures in ADR + CLAUDE.md after `automation/` grew; re-measured on-disk (`26,125 / 48,498 = 53.9%`); doc-only fix; all CI passed |
+| ProjectHephaestus | Issue #1222 (planning session) | Stale guard line-number citations in docs/INSTALLER_ARCHITECTURE.md and test comments after install.sh code churn; issue body described already-fixed content; 2 files had different stale values (137-141 vs 127-129) from independent update history; verified-local |
 | mvillmow/Random | Predictive-Coding-in-Mojo Phase 0 | Cross-doc citation drift: 8 stale §-refs, 2 arXiv ID swaps caught |
