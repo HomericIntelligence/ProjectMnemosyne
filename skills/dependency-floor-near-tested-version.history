@@ -1,0 +1,97 @@
+# dependency-floor-near-tested-version — History
+
+## v1.1.0 (2026-06-13)
+
+**Changed by:** Issue #1201 plan review (NOGO → GO after DRY fix)
+**Verification:** unverified
+
+### What changed
+- Fixed stale `_find_ruff_dep` copy-paste pattern in Results & Parameters — replaced with `TestPytestConsistency._find_dep(dev_deps, "ruff")` reuse
+- Added "Copying `_find_dep` as new per-class helper" row to Failed Attempts table
+- Renamed section from "Verified Workflow" to "Proposed Workflow" (was incorrectly titled)
+- Added docstring note about `[feature.shared]`-only coverage gap
+- Bumped version to 1.1.0, added history frontmatter field
+
+### Why
+The v1.0.0 skill's Results & Parameters code template showed a `_find_ruff_dep` static method that was a verbatim copy of `TestPytestConsistency._find_dep`. The plan reviewer correctly flagged this as a DRY violation (NOGO). The approved approach calls `TestPytestConsistency._find_dep(dev_deps, "ruff")` directly since that method already accepts a `name` parameter for reuse.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: dependency-floor-near-tested-version
+description: "Pattern for raising a tool's version floor to match the tested minor version. Use when: (1) a dependency floor is much lower than the CI-resolved version, (2) adding a cross-manifest consistency regression guard for a dev tool."
+category: ci-cd
+date: 2026-06-13
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags: []
+---
+
+# Dependency Floor Near Tested Version
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-13 |
+| **Objective** | Raise a dev tool's floor (e.g., `ruff>=0.1.0`) to match the tested minor (`>=0.15`) and add a cross-manifest regression guard |
+| **Outcome** | Plan produced; implementation pending |
+| **Verification** | unverified |
+
+## When to Use
+
+- A dependency floor in `pyproject.toml` or `pixi.toml` is much lower than what the lock resolves
+- A dev tool (ruff, mypy, pytest) has no cross-manifest consistency test
+- A pip-install `.[dev]` consumer could land on a version with different default behavior than CI enforces
+
+## Verified Workflow
+
+> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
+
+### Quick Reference
+
+```bash
+# 1. Confirm what the lock resolves
+grep "name: ruff" pixi.lock
+# 2. Update both manifests together
+# 3. No lock re-solve needed if lock already satisfies the new floor
+# 4. Add TestRuffConsistency
+# 5. Run verification
+pixi run pytest tests/unit/scripts/test_dependency_floor_consistency.py -v
+pixi run ruff check hephaestus scripts tests
+```
+
+### Detailed Steps
+
+1. Grep the lock to confirm the resolved version
+2. Check all pixi.toml locations
+3. Raise the floor in both manifests
+4. Add TestXxxConsistency class — Use `_find_xxx_dep` static method (not `startswith`)
+5. Verify the lock is still valid
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Hardcoded sentinel test | `assert floor >= Version("0.15")` | Goes stale silently when lock bumps | Use only cross-manifest comparison |
+| `dep.startswith("ruff")` | Simple prefix check | Would match `ruff-lsp` | Use PEP 508 specifier splitting |
+| Separate pre-commit script | `scripts/check_ruff_floor_consistency.py` + hook | Disproportionate; unit tests already run in CI | Existing gate is sufficient |
+
+## Results & Parameters
+
+**Test class pattern** — showed `_find_ruff_dep` static method (stale — see v1.1.0)
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | Issue #1201 planning | ruff floor >=0.1.0 → >=0.15; lock at 0.15.12 |
+```
+
+---
+
+## v1.0.0 (2026-06-13)
+
+**Initial version.**
