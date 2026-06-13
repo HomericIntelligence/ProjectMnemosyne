@@ -11,7 +11,7 @@ description: >-
   inconsistencies.
 category: architecture
 date: 2026-06-13
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 verification: unverified
 tags:
@@ -26,6 +26,9 @@ tags:
   - sentinel-pattern
   - test-stubs
   - planning-risks
+  - arithmetic-verification
+  - control-flow-signals
+  - scope-validation
 ---
 
 # Architecture: God-Function Decomposition — Planning Risks
@@ -234,19 +237,208 @@ Document the expected behavior explicitly in the plan:
 
 ---
 
+## Risk 7: Arithmetic Verification Before Claiming Line-Count Targets (R1 Learning)
+
+**What happened**: R0 plan claimed `_run_ci_fix_session` would reach "~190 lines" after
+extracting a sync helper, yet also claimed AC1 (≤80L orchestrator) would pass. The numbers
+were contradictory. R1 explicitly counted the subtractions:
+
+```
+250L  (starting length)
+− 30L (extract sync helper)
+− 25L (extract prompt helper)
+− 27L (remove duplicate push tail)
+= 168L remaining → still over the 80L cap
+```
+
+Two more extractions were required: `_invoke_codex_ci_fix` (45L) + `_invoke_claude_ci_fix`
+(72L). Only after all 5 helpers does the orchestrator reach ~55L.
+
+**The failure mode**: Claiming a target line count without performing the subtraction chain
+leads the reviewer to approve a plan that provably cannot meet its acceptance criterion.
+The reviewer is expected to verify the arithmetic; a wrong number fails the NOGO gate.
+
+**Rule**: For each function that must reach ≤N lines, write the subtraction chain explicitly
+in the plan before stating the result:
+
+```
+<function>: <current>L
+  − <helper_1>: <extracted_lines>L
+  − <helper_2>: <extracted_lines>L
+  = <remaining>L (target ≤ <cap>L)
+```
+
+**Only claim the target is met after the subtraction proves it.** If the remaining count
+is still over the cap, plan additional extractions before finalizing.
+
+---
+
+## Risk 8: Control-Flow Sentinel Return Values — Enumerate All Signal States
+
+**What happened**: R1's `_run_address_step_if_needed` helper encodes three distinct
+control-flow signals in its return value:
+
+- `None` — continue the loop (nothing needed this iteration)
+- `([], False)` — break out of the loop (final iteration, no prior addressed)
+- `(prior_addressed, addressed)` — normal result (caller processes and continues)
+
+The caller must handle all three. In R0, only the "normal" and "break" cases were
+documented; the `None`-continue path was implicit. A reviewer reading the plan could
+not safely verify the caller handled all three paths correctly.
+
+**The failure mode**: If the caller has `if result is None: continue` but the function
+only documents two return values, any future refactor that adds a fourth sentinel will
+silently fall through to the wrong branch.
+
+**Rule**: When a helper encodes control-flow signals in return values (not just data),
+enumerate **all signal states** in the docstring — not just the happy path:
+
+```python
+def _run_address_step_if_needed(
+    iteration: int,
+    max_iterations: int,
+    ...
+) -> tuple[list, bool] | None:
+    """Run one address step if the loop should continue.
+
+    Returns:
+        None: This iteration requires no action — caller should continue the loop.
+        ([], False): Final iteration reached — caller should break the loop.
+        (prior_addressed, addressed): Normal result — caller updates state and continues.
+
+    All three cases MUST be handled by the caller. Missing a case silently
+    falls through to the wrong branch.
+    """
+```
+
+And in the plan's caller replacement block, show all three `if/elif/else` branches
+explicitly — not just the common case.
+
+---
+
+## Risk 9: Scope Against Actual Disk State, Not Issue-Cited State (R1 Learning)
+
+**What happened**: Issue #1180 verified "functions exist at cited line numbers with stated
+lengths". R1 found via AST measurement:
+
+- `_implement_issue`: issue said 354L → AST showed 128L (in `implementer_phase_runner.py`)
+- `_run_impl_review_loop`: issue said `implementer_phase_runner.py:1513` → AST showed it
+  lives at `_review_phase.py:374`, 130L
+
+R0 treated the issue's AST evidence as authoritative. R1 re-measured and discovered
+significant drift.
+
+**The failure mode**: A plan scoped to issue-cited sizes will extract helpers from the
+wrong locations (if the function moved) or waive functions that are actually over the cap
+(if the function shrank) or plan too few extractions (if the function grew).
+
+**Rule**: **Always run the AST measurement yourself before planning**, even if the issue
+includes a measurement:
+
+```python
+python3 -c "
+import ast
+src = open('hephaestus/automation/implementer_phase_runner.py').read()
+tree = ast.parse(src)
+for node in ast.walk(tree):
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        size = node.end_lineno - node.lineno + 1
+        if size > 80:
+            print(f'{node.name}: {node.lineno}–{node.end_lineno} ({size}L)')
+" | sort -t'(' -k2 -rn
+```
+
+Treat the issue's line numbers as **starting hints** — confirm or correct them before
+writing a single extraction step. If your measurement contradicts the issue, note the
+discrepancy in the plan and proceed from disk reality.
+
+---
+
+## Failed Attempts
+
+### R0: Waiving Functions at 128–130L as "Marginal"
+
+**What was tried**: R0 plan waived `_implement_issue` (128L) and `_run_impl_review_loop`
+(130L) as "marginal" overages, arguing YAGNI applied since these were close to the 80L cap.
+
+**Why it failed**: The reviewer rejected this. 128L is 60% over the 80L cap. YAGNI does
+not excuse under-scoping when a function is explicitly named in the issue and is over the
+stated threshold. Functions named in the issue + over 80L must all be addressed; "marginal"
+is not a valid waiver ground unless the function is already below the cap.
+
+**Lesson**: **Do not waive on "marginal" grounds.** If a function is named in the issue
+and measured over 80L, it is in scope. The only valid waiver is: measured size ≤ cap on disk.
+
+---
+
+### R0: Wrong Signature in `_finalize_address_state` (Sentinel vs Real Argument)
+
+**What was tried**: R0's `_finalize_address_state` helper was defined with `replies={}`
+(empty dict sentinel) where the original code passed the actual `replies` dict collected
+during the address loop.
+
+**Why it failed**: A helper that silently drops data (the real `replies`) is worse than no
+extraction. The extracted helper would pass `{}` to `_resolve_addressed_threads`, causing
+all reply-based thread resolution to be skipped silently. The reviewer caught this because
+the replacement block showed `replies={}` hardcoded, not the variable.
+
+**Lesson**: Before extracting, read every argument the extracted code passes to its
+callees. **Never substitute a sentinel for a real argument** unless you have verified the
+downstream function treats the sentinel identically to the real value. Show the argument
+mapping explicitly in the plan:
+
+```text
+Original: _resolve_addressed_threads(addressed, replies=replies, ...)
+Extracted helper call: _finalize_address_state(addressed, replies, ...)
+  → helper passes: _resolve_addressed_threads(addressed, replies=replies, ...)
+```
+
+---
+
+### R0: New Helpers Defined but Call Sites Not Shown in Replacement Blocks
+
+**What was tried**: R0 defined `_finalize_address_state` in the "New helpers" section but
+the replacement code block for the address loop inlined the same state-finalization logic
+directly, never calling the helper.
+
+**Why it failed**: The inconsistency meant either (a) the helper is dead code, or (b) the
+replacement block is wrong and should call the helper. In either case, an implementer
+following the plan would produce incorrect code. The reviewer rejected this as "plan is
+internally inconsistent."
+
+**Lesson**: For each new helper defined in the plan, **explicitly show its call site in
+the same plan section**. Run a self-check: search the plan document for each helper name.
+If it appears only in its own definition and nowhere else, flag it. Ship only plans where
+every defined helper has at least one shown call site.
+
+---
+
 ## Planning Checklist for God-Function Decomposition
 
 Before submitting or approving a god-function decomposition plan:
 
 ```text
 [ ] For each function named in the issue:
-    [ ] Re-read the function on disk — cite file:start-end and actual LOC
-    [ ] If waiving extraction: cite the disk evidence in the plan
+    [ ] Run AST measurement yourself — do NOT trust the issue's cited size
+    [ ] Cite file:start-end and actual LOC from your own measurement
+    [ ] If waiving extraction: cite the disk evidence (measured size ≤ cap)
+    [ ] "Marginal" overage is NOT a valid waiver — if over cap, it is in scope
     [ ] If the issue's file+line doesn't match disk: note the discrepancy
+
+[ ] For each function that must reach ≤N lines:
+    [ ] Write the explicit subtraction chain (current − helper1 − helper2 = remaining)
+    [ ] Only claim the target is met if the arithmetic proves it
+    [ ] If remaining > cap after planned extractions: plan additional helpers
 
 [ ] For each new helper defined in the plan:
     [ ] Confirm at least one call site appears in the plan's replacement blocks
     [ ] If no call site shown: delete the helper or add the call
+    [ ] Show the argument mapping explicitly (original arg → helper arg → downstream)
+    [ ] Never substitute a sentinel for a real argument without verifying equivalence
+
+[ ] For each helper that encodes control-flow signals in its return value:
+    [ ] Enumerate ALL signal states in the docstring (not just the happy path)
+    [ ] Show all branches (if/elif/else) in the caller's replacement block
 
 [ ] For each extracted poll/retry loop:
     [ ] Document the full sentinel return contract (what each return value means)
@@ -269,4 +461,5 @@ Before submitting or approving a god-function decomposition plan:
 
 | Project | Context |
 | --------- | --------- |
-| ProjectHephaestus | Planning session for issue #1180 — decompose 5 god-functions in `hephaestus/automation/`; `_implement_issue` cited as 354 lines in issue, found as 127 lines on disk; `_run_impl_review_loop` cited at `ci_driver.py:1513`, found at `_review_phase.py:374-503`; `_finalize_address_state` defined in plan but not called in replacement block; test file existence unverified; `_poll_ci_until_concluded` sentinel contract risk identified |
+| ProjectHephaestus (R0) | Planning session for issue #1180 — decompose 5 god-functions in `hephaestus/automation/`; `_implement_issue` cited as 354 lines in issue, found as 127 lines on disk; `_run_impl_review_loop` cited at `ci_driver.py:1513`, found at `_review_phase.py:374-503`; `_finalize_address_state` defined in plan but not called in replacement block; test file existence unverified; `_poll_ci_until_concluded` sentinel contract risk identified |
+| ProjectHephaestus (R1) | Second planning iteration for issue #1180 after R0 NOGO review; AST re-measurement confirmed `_implement_issue` is 128L not 354L and `_run_impl_review_loop` is at `_review_phase.py:374`; arithmetic subtraction chain revealed `_run_ci_fix_session` needs 5 helpers (not 3) to reach ≤80L; `_run_address_step_if_needed` sentinel return pattern documented with all 3 control-flow states; R0 waiver-on-"marginal" grounds rejected — 128L = 60% over cap and is in scope |
