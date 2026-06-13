@@ -1,6 +1,48 @@
 <!-- markdownlint-disable MD024 -->
 # python-module-decomposition-and-refactor-patterns — History
 
+## v1.4.0 (2026-06-12)
+
+**Changed by:** ProjectHephaestus PR #1269 (issue #1178) — `ArmingStateStore` extraction
+**Verification:** verified-local (CI validation pending)
+
+### What changed
+
+- Added Phase 19: Resolve host dependencies via a live zero-argument provider when the
+  attribute is reassigned after `__init__` (WRONG captured-snapshot vs. RIGHT
+  `lambda: self.state_dir` code pair; `from collections.abc import Callable` detail; the
+  pre-extraction grep check for post-`__init__` reassignment; the "run the FULL host
+  suite" rule; the "precedent-captured-by-value doesn't prove safety" caveat).
+- Added one Failed Attempt row: "Collaborator captured host attribute by value at
+  construction".
+- Added Quick Reference decision-tree entry for the post-construction-reassignment case.
+- Added a Verified On row: ProjectHephaestus PR #1269 (Issue #1178), first `ci_driver.py`
+  slice 3363→3338, `ArmingStateStore` extracted.
+- Added tags `state-provider` and `attribute-reassignment`. Bumped MINOR 1.3.0 → 1.4.0.
+
+### Why
+
+When a collaborator captures a host attribute by value at construction time
+(`ArmingStateStore(self.state_dir)`), it breaks silently if the host's attribute is
+reassigned after `__init__`. The dominant trigger is characterization-test fixtures that
+do `d.state_dir = tmp_path` to redirect on-disk I/O into a temp dir. The collaborator
+keeps pointing at the original directory, so a sibling cluster of pre-existing host tests
+fails with confusing `Called 0 times` / `file not found` assertions even though the new
+collaborator's own unit tests pass. Resolving the dependency through a zero-arg provider
+(`lambda: self.state_dir`) makes the collaborator track the reassignment while still
+exposing exactly one attribute — honoring the existing "never the full host" rule.
+
+### Evidence
+
+ProjectHephaestus PR #1269 (issue #1178), first decomposition slice of `ci_driver.py`
+(3363→3338 lines). The captured-snapshot version broke 4 `TestArmingSweep` tests
+(`_run_drive_green_learnings ... Called 0 times`) while the 8 new `test_arming_state.py`
+tests passed; switching to a `lambda: self.state_dir` provider fixed all 4 and added a
+regression test (`test_provider_resolved_live_not_at_construction`). 228 ci_driver + guard
+tests pass; ruff + mypy clean (383 files). Not yet confirmed in CI → verified-local.
+
+The prior v1.3.0 snapshot is preserved in the entry below.
+
 ## v1.3.0 (2026-06-07)
 
 **Changed by:** Skill-consolidation pass (cluster PYR02)

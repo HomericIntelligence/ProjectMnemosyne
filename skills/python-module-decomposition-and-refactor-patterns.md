@@ -21,8 +21,8 @@ description: >-
   to avoid 3-5x LOC over-estimation, (12) finalizing code after parallel phases
   complete by addressing technical debt accumulated during rapid development.
 category: architecture
-date: 2026-06-05
-version: "1.3.0"
+date: 2026-06-12
+version: "1.4.0"
 user-invocable: false
 history: python-module-decomposition-and-refactor-patterns.history
 tags:
@@ -45,6 +45,8 @@ tags:
   - dead-code
   - estimation
   - phase-cleanup
+  - state-provider
+  - attribute-reassignment
 ---
 
 # Python Module Decomposition and Refactor Patterns
@@ -100,6 +102,8 @@ Decision tree:
   Dead "fallback only" file, 0 callers  → Safe Legacy Deletion (Phase 16)
   Estimating a big rewrite              → Read substrate FIRST (Phase 17)
   Cleanup after parallel phases         → Finalization checklist (Phase 18)
+  Collaborator needs a host attr that   → Pass a zero-arg provider, not a
+    tests reassign after __init__         captured snapshot (Phase 19)
 
 Universal rule for mock patches after any move:
   Patch where the name is LOOKED UP at call time — not where it was defined.
@@ -797,6 +801,71 @@ complex functions simplified, naming consistent, docs updated, all tests passing
 formatted, zero compiler warnings, coverage at/above floor, ready for review. Cleanup is the
 final polishing gate before PR approval and merge.
 
+### Phase 19: Resolve Host Dependencies via a Live Provider When the Attribute Is Reassigned Post-Construction
+
+Use when extracting a collaborator (Phase 2 class-based extraction) that needs a host
+attribute which is **reassigned after `__init__`** — the dominant trigger is a pytest
+fixture that constructs the host and then redirects on-disk I/O into a temp dir
+(`d.state_dir = tmp_path`). If the collaborator captures the attribute **by value** at
+construction time, it keeps pointing at the pre-reassignment value, so reads/writes land
+in the wrong place while the collaborator's own unit tests still pass.
+
+**The trap**: extraction looks behavior-preserving and the new collaborator's tests are
+green, but a DIFFERENT cluster of pre-existing host tests fails with confusing
+`Called 0 times` / `file not found` assertions — because the collaborator and the test
+write to divergent directories.
+
+**WRONG — captures a snapshot at construction:**
+
+```python
+# host:
+self._store = ArmingStateStore(self.state_dir)   # value frozen here
+
+# collaborator:
+class ArmingStateStore:
+    def __init__(self, state_dir: Path) -> None:
+        self.state_dir = state_dir                # snapshot; never tracks reassignment
+```
+
+**RIGHT — resolve through a zero-argument provider:**
+
+```python
+from collections.abc import Callable
+
+# host:
+self._store = ArmingStateStore(lambda: self.state_dir)   # live, lazily resolved
+
+# collaborator:
+class ArmingStateStore:
+    def __init__(self, state_dir_provider: Callable[[], Path]) -> None:
+        self._state_dir_provider = state_dir_provider     # call it on EVERY access
+    def _path(self, n: int) -> Path:
+        return self._state_dir_provider() / f"...{n}.json"
+```
+
+A `lambda: self.state_dir` still honors the existing rule "the collaborator receives only
+what it needs, never the full host" — it exposes exactly one attribute, lazily, not the
+whole `self`.
+
+**Detection / prevention:**
+
+```bash
+# Before extracting, grep the host's tests for POST-construction reassignment of the
+# attribute you are about to hand to the collaborator:
+grep -n "\.state_dir = " tests/.../test_<host>.py
+```
+
+If the fixture reassigns it after `__init__`, you MUST use a provider (or re-point the
+collaborator) — not a captured value.
+
+- **Run the FULL host test suite, not just the new collaborator's tests.** The new tests
+  passing is not sufficient; the breakage surfaces in a sibling cluster (here, the
+  startup-sweep tests that glob the directory and load each record).
+- **A precedent that captured by value does NOT prove your case is safe.** The sibling
+  `implementer_state.py` collaborator in the same repo captures `state_dir` by value and is
+  safe ONLY because its tests pass `state_dir` at construction rather than reassigning it
+  post-init. Check the actual test access pattern, not the precedent's shape.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -827,6 +896,7 @@ final polishing gate before PR approval and merge.
 | **Forgetting fixture migration after scoping a scanner** | Scoped the scanner to `scylla/` but left existing tests writing fixtures at `tmp_path/"bad.py"` | Root-level fixtures are now out of scope — tests returned zero findings and failed | After narrowing scanner scope, move every test fixture into the scoped dir and update hard-coded path assertions (`"bad.py"` → `"scylla/bad.py"`) |
 | **Trusting a TODO/audit LOC estimate without reading the substrate** | Took `TODO.md` "Phase 2: ~5000 LOC" and an audit's "CRITICAL: autograd missing" as authoritative effort | Existing tape/registry/SavedTensors infra already covered ~70%; estimate was 3-5x too high and conflated "documented" with "missing" | Read every substrate file in full with line-cited evidence BEFORE estimating (Phase 17); re-classify "missing" as "incomplete, N% gap" |
 | **Deleting legacy code before verifying zero callers** | Assumed a "fallback only" file was dead and considered deleting it on the strength of its header alone | "Fallback only" claims are not self-enforcing — the codebase may still depend on it in non-obvious ways; dead code passes all CI | Systematically grep all callers across `*.py/*.sh/*.md/.github/` first, rewrite stale back-references as self-contained comments, then delete and run full suites (Phase 16) |
+| **Collaborator captured host attribute by value at construction** | `ArmingStateStore(self.state_dir)` — store kept `self.state_dir = state_dir` from `__init__` | The `driver` test fixture reassigns `d.state_dir = tmp_path` AFTER `__init__`; the store still pointed at the pre-reassignment dir, so 4 sibling startup-sweep tests wrote/read divergent dirs (`Called 0 times`), even though the new collaborator's own 8 unit tests passed | Resolve host deps through a zero-arg provider (`lambda: self.state_dir`, stored as `Callable[[], Path]`) so the collaborator tracks reassignment; grep tests for post-`__init__` attribute reassignment before extracting; run the FULL host suite, not just the new tests (Phase 19) |
 
 ## Results & Parameters
 
@@ -896,3 +966,4 @@ Revised LOC estimate: ~X (vs TODO "~Y"); justification: ~Z% already in substrate
 | ProjectHephaestus | PR #745 — deleted 587-line legacy `run_automation_loop.sh` + helper + 480 lines of tests; scrubbed 8 stale back-references across 4 files; 1093 tests + 26 shell tests pass | Superseded `legacy-code-deletion-safe-removal-pattern` (Phase 16) |
 | ProjectOdyssey | PR #5457 — Phase 0 substrate read revised a TODO "~5000 LOC" estimate to ~1400; actual landed +937 LOC (CI green) | Superseded `architecture-estimate-rewrite-read-substrate-first` (Phase 17) |
 | HomericIntelligence ecosystem | Cleanup-phase coordination after parallel Test/Implementation/Package phases (KISS/DRY/SOLID finalization before merge) | Superseded `phase-cleanup` (Phase 18) |
+| ProjectHephaestus | PR #1269 (Issue #1178) — first `ci_driver.py` decomposition slice 3363→3338; `ArmingStateStore` extracted from `CIDriver`; captured-snapshot `ArmingStateStore(self.state_dir)` broke 4 `TestArmingSweep` tests while the 8 new `test_arming_state.py` tests passed; fixed via `lambda: self.state_dir` provider + regression test `test_provider_resolved_live_not_at_construction`; 228 ci_driver+guard tests pass; ruff+mypy clean (verified-local, CI pending) | Live-provider for collaborator host deps reassigned post-construction (Phase 19) |
