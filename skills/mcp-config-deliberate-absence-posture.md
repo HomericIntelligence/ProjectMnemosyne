@@ -1,15 +1,18 @@
 ---
 name: mcp-config-deliberate-absence-posture
-description: "How to handle a repo audit finding that flags 'no MCP server configuration'. Use when: (1) an audit reports missing .mcp.json / mcpServers, (2) deciding whether to add live MCP server entries vs document a deliberate absence, (3) distinguishing Claude Code plugin marketplaces from MCP servers."
+description: "How to respond to a repo audit finding of 'no MCP server configuration'. Use when: (1) an audit reports a missing .mcp.json / mcpServers key, (2) deciding whether to add live MCP servers vs an empty placeholder, (3) distinguishing Claude Code plugin marketplaces from MCP servers. Recommends a TRACKED .mcp.json with empty mcpServers:{} — NOT a git-ignored file or a .example twin."
 category: tooling
 date: 2026-06-12
-version: "1.0.0"
+version: "2.0.0"
 user-invocable: false
 verification: unverified
-tags: [mcp, claude-code, config, audit, documentation]
+history: mcp-config-deliberate-absence-posture.history
+tags: [mcp, claude-code, config, audit, documentation, mcp-json]
 ---
 
 # MCP Config: Deliberate-Absence Posture
+
+**History:** [changelog](./mcp-config-deliberate-absence-posture.history)
 
 ## Overview
 
@@ -17,109 +20,121 @@ tags: [mcp, claude-code, config, audit, documentation]
 |-------|-------|
 | **Date** | 2026-06-12 |
 | **Objective** | Decide the correct response to a repo audit finding of "no MCP server configuration / missing `.mcp.json` / no `mcpServers`" without breaking Claude Code tool startup. |
-| **Outcome** | An audit "no MCP configuration" finding is often a FALSE GAP: the referenced "MCP-style integration" is usually a Claude Code PLUGIN MARKETPLACE, not a Model Context Protocol server. The KISS/YAGNI-correct fix is to DOCUMENT the deliberate absence and ship an inert `.mcp.example.json` template — NOT to fabricate live `mcpServers` entries pointing at servers that aren't installed/reachable. |
-| **Verification** | `unverified` — planning learning from ProjectHephaestus issue #1186; the plan was produced but NOT executed or merged. |
+| **Outcome** | Ship a **tracked, project-scoped `.mcp.json` with an empty `{"mcpServers": {}}` map** — the canonical, version-controlled, non-breaking shape per the official Claude Code MCP docs. Do NOT git-ignore the file and do NOT add a parallel `.mcp.example.json` twin. |
+| **Verification** | `unverified` — planning learning from ProjectHephaestus issue #1186. The MCP *behaviour facts* are quoted from the official Claude Code docs; the repo edits are GO-pending, not implemented or merged. |
 
 ### Key Insight
 
-- An audit finding of "no MCP configuration" is often a **false gap**. "MCP-style
-  integrations" in an ecosystem frequently turn out to be Claude Code **plugin
-  marketplaces** (a different mechanism, e.g. the Mnemosyne marketplace) — NOT
-  Model Context Protocol servers. Verify what the integration actually is before
-  adding MCP config.
-- The KISS/YAGNI-correct fix is usually to **document the deliberate absence**
-  and ship an inert `.mcp.example.json` template, NOT to fabricate live
-  `mcpServers` entries pointing at servers that aren't installed or reachable.
-  Claude Code auto-loads `.mcp.json` and starts every listed server on session
-  load, so a fabricated block breaks tool startup.
+- The official Claude Code MCP docs say a project-scoped `.mcp.json` **"is
+  designed to be checked into version control, ensuring all team members have
+  access to the same MCP tools and services."** The tracked file IS the shareable
+  mechanism — a parallel `.mcp.example.json` is redundant and inverts the
+  documented convention.
+- An empty `{"mcpServers": {}}` is a valid, canonical, inert shape that satisfies
+  an audit's "mcpServers key exists" requirement while starting zero servers.
+- "MCP-style integration" references in an ecosystem are frequently Claude Code
+  **plugin marketplaces** (a different mechanism, e.g. the Mnemosyne marketplace)
+  or NATS/HTTP-REST integrations — NOT MCP servers. Verify the mechanism before
+  wiring anything.
 
 ## When to Use
 
-- An audit (e.g. `repo-analyze`) reports a missing `.mcp.json` or absent `mcpServers` block.
-- You are deciding whether to add live MCP server entries vs. document a deliberate absence.
+- An audit (e.g. `repo-analyze`) reports a missing `.mcp.json` or absent `mcpServers` key.
+- You are deciding whether to add live MCP server entries vs. an empty placeholder.
 - You need to distinguish a Claude Code plugin marketplace from an MCP server before wiring anything.
 - A repo references an "MCP-style integration" and you must confirm the actual mechanism.
 
 ## Verified Workflow
 
-> **Warning (Proposed Workflow):** This workflow has NOT been validated
-> end-to-end. It is a planning learning from issue #1186 — the plan was produced
-> but not implemented or merged. Treat every step as a hypothesis until CI
-> confirms. Verification level: `unverified`.
+> **Warning:** This is a planning-derived workflow, not executed end-to-end. The
+> MCP *behaviour facts* below are quoted from the official Claude Code docs; the
+> repo edits themselves are unverified until CI confirms.
 
 ### Quick Reference
 
+```text
+1. grep repo for `mcpServers` — zero real hits => no MCP usage today (false gap).
+2. Identify the REAL substrate (plugin marketplace / NATS / HTTP REST). None is MCP.
+3. Create a TRACKED `.mcp.json` at repo root: {"mcpServers": {}}.
+4. Document the posture (runbook + AGENTS-style doc): non-blocking + approval-gated.
+5. Add a structural regression test (exists + valid JSON + mcpServers is a dict).
+   Do NOT assert the map is empty.
+6. Keep every fenced code block at top document level (markdownlint MD031).
+
+Rule of thumb: ship a TRACKED `.mcp.json` with an empty map — never git-ignore it,
+never add a `.mcp.example.json` twin.
 ```
-1. grep repo for `mcpServers` / `.mcp.json`.
-   - Hits only in audit-skill checklists  -> no real MCP usage (false gap).
-2. Identify the REAL cross-process substrate (NATS event bus, HTTP REST).
-   - These are NOT MCP.
-3. Trace the "MCP-style" reference to its source.
-   - Plugin marketplace vs MCP server? (usually marketplace).
-4. Ship inert template + docs + regression test (see below).
-5. gitignore the active `.mcp.json` so local-only servers aren't committed broken.
 
-Rule of thumb: ship `.mcp.example.json` (inert), never an active `.mcp.json`.
-```
+### Core facts (doc-verified)
 
-Detailed steps:
+These are the durable, official-doc-verified learnings (code.claude.com/docs/en/mcp):
 
-1. `grep` the repo for `mcpServers` / `.mcp.json`. If the only hits are inside
-   audit-skill checklists, there is no real MCP usage — the finding is a false gap.
-2. Identify the **real** cross-process integration substrate (e.g. a NATS event
-   bus, HTTP REST). These are not MCP and should not be re-expressed as MCP servers.
-3. Trace the "MCP-style" reference back to its source and confirm whether it is a
-   Claude Code **plugin marketplace** or an actual **MCP server**.
-4. Ship the deliberate-absence artifacts:
-   - `.mcp.example.json` — an inert template with empty `{"mcpServers": {}}`.
-   - `docs/mcp.md` — rationale for the deliberate absence and opt-in instructions.
-   - An `AGENTS.md` subsection pointing to the rationale.
-   - A regression test asserting (a) the template is valid JSON, and (b) **if** an
-     active `.mcp.json` exists, every `command` is on `PATH` (via `shutil.which`).
-5. `gitignore` the active `.mcp.json` so local-only servers are never committed in
-   a broken state.
+1. Project-scoped `.mcp.json` **"is designed to be checked into version control,
+   ensuring all team members have access to the same MCP tools and services."** →
+   ship it TRACKED; do NOT git-ignore it; do NOT add a parallel
+   `.mcp.example.json` (redundant — the tracked file IS the shareable mechanism).
+2. **"MCP startup is … non-blocking by default"**; unreachable servers **"continue
+   to connect in the background."** Only a server with `alwaysLoad: true` blocks
+   startup, capped at a 5-second connect timeout.
+3. **"Claude Code prompts for approval before using project-scoped servers from
+   `.mcp.json`."** → an unreachable/unknown server is approval-gated, NOT
+   silently-breaking.
+4. An empty `{"mcpServers": {}}` is a valid, canonical, inert shape that satisfies
+   an audit's "mcpServers key exists" requirement while starting zero servers.
+5. "MCP-style integration" references are frequently Claude Code **plugin
+   marketplaces** (a different mechanism) or NATS/HTTP-REST integrations — NOT MCP
+   servers. Verify the mechanism before wiring.
+
+### Detailed steps
+
+1. `grep` the repo for `mcpServers`. If there are zero real hits (only
+   audit-checklist prose), there is no MCP usage today.
+2. Identify the real integration substrate (plugin marketplaces, NATS, HTTP REST).
+   None of these is MCP.
+3. Create a **TRACKED** `.mcp.json` at repo root containing `{"mcpServers": {}}`.
+4. Document the posture in a runbook + AGENTS-style doc; explain non-blocking +
+   approval-gated startup so future contributors know that adding a server is safe.
+5. Add a structural regression test: `.mcp.json` exists + valid JSON + `mcpServers`
+   is a dict; every declared server has a string `command` or `url`. Do NOT assert
+   the map is empty (so adding a real server later needs no test edit).
+6. When writing the runbook, keep every fenced code block at the **top document
+   level** with blank lines around it — never nest a fence inside a
+   numbered/bulleted list item (markdownlint MD031 is commonly enabled via
+   `default: true` and is a PR-blocking gate).
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| Fabricate a live MCP block | Add a live `mcpServers` block copied from another ecosystem repo | Claude Code starts every listed server on session load; unreachable commands break tool startup | Never ship config pointing at servers not installed in THIS environment (per knowledge-base `claude-config-branch-audit` "What Failed"). |
-| Commit an active config file | Ship `.mcp.json` (active) instead of `.mcp.example.json` | The active file auto-loads and triggers connection attempts on every session | Use the inert `.example` suffix for templates; gitignore any active `.mcp.json`. |
-| Trust the audit's vocabulary | Assume the audit's "MCP-style integration" reference means an MCP server | It was actually a Claude Code plugin marketplace (Mnemosyne), a different mechanism | Verify the mechanism (marketplace vs MCP server) before wiring anything. |
+| Git-ignored file + `.example` twin | Git-ignore `.mcp.json` and ship a parallel `.mcp.example.json` template | Inverts the documented convention that project `.mcp.json` is checked into version control for team sharing; the `.example` twin is redundant | Ship the tracked `.mcp.json` directly with an empty map. |
+| "Breaks startup" justification | Justify the `.example` approach with "an active `.mcp.json` with unreachable commands breaks tool startup" | False per docs — MCP startup is non-blocking by default; unreachable servers connect in the background and are approval-gated | Verify runtime behaviour against official docs before using it as a design premise. |
+| Trust the audit's vocabulary | Assume the audit's "MCP-style integration" reference means an MCP server | It was a Claude Code plugin marketplace (Mnemosyne), a different mechanism | Distinguish marketplaces / NATS / REST from MCP before wiring. |
+| Fence nested in a list | Nest a ```json fence inside a numbered list in the runbook | markdownlint MD031 (blanks-around-fences) is live under `default: true` and blocks the PR | Keep fences top-level with surrounding blank lines. |
 
 ## Results & Parameters
 
-**Verified on:** ProjectHephaestus, issue #1186 planning session (plan produced,
-not yet implemented or merged). Verification level: `unverified`.
+**Verified on:** ProjectHephaestus issue #1186 planning session — R0 plan (NOGO,
+wrong premises) corrected to R1 plan after fetching the official Claude Code MCP
+docs. Verification level: `unverified`.
 
-### Recommended artifacts
+### Canonical config
 
-| Artifact | Purpose |
-|----------|---------|
-| `.mcp.example.json` | Inert template, empty `{"mcpServers": {}}` — copy to `.mcp.json` to opt in. |
-| `docs/mcp.md` | Rationale for the deliberate absence + opt-in instructions. |
-| `AGENTS.md` subsection | Pointer to the MCP rationale for agents. |
-| Regression test | Asserts template is valid JSON, and any active `.mcp.json` has every `command` on PATH. |
-| `.gitignore` entry for `.mcp.json` | Prevents committing local-only/broken server configs. |
+The canonical empty, inert, audit-satisfying shape:
 
-### Unverified assumptions / reviewer risks
+```json
+{"mcpServers": {}}
+```
+
+### Reviewer-risk / unverified items
 
 These are the highest-value durable content — capture and re-confirm before relying on them.
 
-- **ASSUMPTION (unverified):** Claude Code auto-loads root `.mcp.json` and starts
-  every listed server on session start. This drove the `.example`-vs-active
-  decision but was NOT verified against Claude Code docs in-session. A reviewer
-  should confirm against current Claude Code MCP loading behavior.
-- **ASSUMPTION (unverified):** `docs/index.md` exists and links other docs the same
-  way — the plan edits it but the exact link format/section was not confirmed.
-- **ASSUMPTION (unverified):** markdownlint config permits the `docs/mcp.md`
-  structure (a nested fenced code block inside a list item — a known markdownlint
-  friction point, MD031 / fenced-code-in-list). **Reviewer risk:** the
-  illustrative ```json block nested inside the numbered "Opting in" list may trip
-  markdownlint, which is a repo-wide PR-blocking gate.
-- **ASSUMPTION (unverified):** the regression test's
-  `Path(__file__).resolve().parents[2]` resolves to repo root from `tests/unit/` —
-  standard for this repo but confirm the depth.
-- **RISK:** `test ! -f .mcp.json` as an "acceptance criterion" encodes "deliberate
-  absence" as a permanent invariant; if a future contributor legitimately adds MCP,
-  this test must be **updated, not deleted**.
+- The MCP *behaviour facts* are doc-quoted and trustworthy; the repo **EDITS** are
+  unverified until CI.
+- **markdownlint MD031** status is repo-specific — always check the repo's
+  `.markdownlint.*` for whether MD031 is overridden before nesting fences.
+- The regression test's repo-root resolution
+  (`Path(__file__).resolve().parents[N]`) depends on test depth — confirm `N` for
+  the target repo.
+- The structural test must NOT encode "MCP forever absent"; assert existence +
+  well-formedness, never emptiness.
