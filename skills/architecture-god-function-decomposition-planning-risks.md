@@ -11,8 +11,9 @@ description: >-
   inconsistencies.
 category: architecture
 date: 2026-06-13
-version: "1.1.0"
+version: "1.2.0"
 user-invocable: false
+history: architecture-god-function-decomposition-planning-risks.history
 verification: unverified
 tags:
   - python
@@ -29,6 +30,10 @@ tags:
   - arithmetic-verification
   - control-flow-signals
   - scope-validation
+  - pipeline-stages
+  - loop-body-measurement
+  - docstring-budget
+  - return-type-tracing
 ---
 
 # Architecture: God-Function Decomposition — Planning Risks
@@ -430,6 +435,60 @@ discrepancy in the plan and proceed from disk reality.
 
 ## Failed Attempts
 
+### R1: Single Helper Insufficient for `_run_implementation_and_review` (130L)
+
+**What was tried**: R1 plan extracted only `_run_advise_and_implement` (37L), leaving 98L.
+Claimed the target (≤80L) was met.
+
+**Why it failed**: 98L > 80L. The function has 2 distinct pipeline stages (implement + review).
+A second extraction `_run_review_loop_and_label` (43L) was needed to reach 58L.
+
+**Lesson**: When a function has 2+ distinct pipeline stages, count them all before choosing
+helpers. One extraction rarely suffices for functions > 120L.
+
+---
+
+### R1: `_run_impl_review_loop` Needed 2 Helpers, Not 1
+
+**What was tried**: R1 extracted only `_run_address_step_if_needed` (22L), leaving 118L
+(target 80L).
+
+**Why it failed**: 118L still over the cap. The for-loop body itself (53L) needed extraction
+as `_process_review_iteration` to reach 68L.
+
+**Lesson**: Measure the loop body separately from its header + finalize block. A for-loop
+whose body exceeds 40L is itself a god-pattern. Use:
+`loop_body_lines = (loop_end - loop_start + 1)`.
+
+---
+
+### R1: `_address_issue` Arithmetic Was Wildly Off
+
+**What was tried**: R1 initially claimed 2 extractions leaving 74L. Actual subtraction gave 136L.
+
+**Why it failed**: The docstring (27L) was not counted in the function's line total.
+A 27L docstring contributes 17% of a 159L function's span. Required 3 extractions + docstring trim.
+
+**Lesson**: Count the docstring as part of the function span. Subtract it from budget or
+plan to trim it before allocating extraction budget.
+
+---
+
+### R1: `_prepare_worktree_for_existing_pr` Return Type Changed Mid-Plan
+
+**What was tried**: Plan initially specified return type `tuple[Path, str]`. Mid-planning,
+discovered `issue.title`/`issue.body` were also needed by the caller for the review loop.
+
+**Why it failed**: The helper absorbed the only call to `fetch_issue_info`. The caller now
+needed those fields back but the return type did not include them.
+
+**Lesson**: Before specifying a helper's return type, trace every variable the caller uses
+after the call. If the helper consumed the only call to a data-fetching function, the
+return tuple must include those fields.
+
+---
+
+
 ### R0: Waiving Functions at 128–130L as "Marginal"
 
 **What was tried**: R0 plan waived `_implement_issue` (128L) and `_run_impl_review_loop`
@@ -580,3 +639,4 @@ for node in ast.walk(tree):
 | --------- | --------- |
 | ProjectHephaestus (R0) | Planning session for issue #1180 — decompose 5 god-functions in `hephaestus/automation/`; `_implement_issue` cited as 354 lines in issue, found as 127 lines on disk; `_run_impl_review_loop` cited at `ci_driver.py:1513`, found at `_review_phase.py:374-503`; `_finalize_address_state` defined in plan but not called in replacement block; test file existence unverified; `_poll_ci_until_concluded` sentinel contract risk identified |
 | ProjectHephaestus (R1) | Second planning iteration for issue #1180 after R0 NOGO review; AST re-measurement confirmed `_implement_issue` is 128L not 354L and `_run_impl_review_loop` is at `_review_phase.py:374`; arithmetic subtraction chain revealed `_run_ci_fix_session` needs 5 helpers (not 3) to reach ≤80L; `_run_address_step_if_needed` sentinel return pattern documented with all 3 control-flow states; R0 waiver-on-"marginal" grounds rejected — 128L = 60% over cap and is in scope |
+| ProjectHephaestus | Issue #1180 R2 plan (2026-06-13) — 3rd TASK/PLAN/REVIEW cycle; all 7 target functions scoped to ≤80L |
