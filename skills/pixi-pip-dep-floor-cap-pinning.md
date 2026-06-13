@@ -3,7 +3,7 @@ name: pixi-pip-dep-floor-cap-pinning
 description: "Use when: (1) pixi.toml has pip listed as `\"*\"` (unbounded) in [dependencies] while all other deps are pinned, (2) planning a floor/cap constraint for conda-managed pip to guard PEP 660 editable-install compatibility, (3) adding a regression test to ensure pip stays within a safe range after a version bump, (4) checking whether pixi.lock needs to be committed after constraining pip."
 category: ci-cd
 date: 2026-06-13
-version: "1.1.0"
+version: "1.2.0"
 user-invocable: false
 history: pixi-pip-dep-floor-cap-pinning.history
 tags:
@@ -28,7 +28,7 @@ tags:
 | **Date** | 2026-06-13 |
 | **Objective** | Constrain the `pip` entry in `pixi.toml [dependencies]` from unbounded `"*"` to a `>=floor,<cap` range that guarantees PEP 660 editable-install compatibility while preventing silent breakage from major pip upgrades |
 | **Outcome** | Proposed plan for GitHub issue #1202 — `pip = ">=23.0,<27"` — derived from the installed pip version (26.1.2) and the PEP 660 stable-support floor (23.0); regression test class `TestPipPinning` to be added to `tests/unit/scripts/test_dependency_floor_consistency.py` |
-| **Verification** | unverified (plan revised in R1; not yet applied to CI) |
+| **Verification** | verified-ci (PR #1295 — all CI gates green; pixi.lock unchanged; 9/9 tests passed) |
 
 ## When to Use
 
@@ -40,7 +40,7 @@ tags:
 
 ## Verified Workflow
 
-> **WARNING**: This workflow was proposed in R0 and revised in R1 (2026-06-13). It has NOT yet been applied to CI. Treat as "Proposed Workflow" until issue #1202 merges.
+> **VERIFIED**: This workflow was applied in ProjectHephaestus PR #1295 (merged 2026-06-13). All CI gates passed; pixi.lock was unchanged (pip 26.1.2 already satisfies `>=23.0,<27`). 9/9 tests passed.
 
 ### Quick Reference
 
@@ -258,4 +258,4 @@ pixi run pytest tests/unit/scripts/test_dependency_floor_consistency.py::TestPip
 | Project | Context | Details |
 | --------- | --------- | --------- |
 | ProjectHephaestus | Issue #1202 — pip `"*"` → `">=23.0,<27"` (R0) | pip 26.1.2 confirmed via `pixi list`; R0 plan received NOGO (missing lockfile step, inline substring check, one-sided cap) |
-| ProjectHephaestus | Issue #1202 — R1 revision | Lockfile step made explicit, `_floor`/`_upper_cap` helpers mandated, two-sided cap assertion added; not yet merged to CI |
+| ProjectHephaestus | Issue #1202 — PR #1295 (merged 2026-06-13) | Lockfile step explicit, `_floor`/`_upper_cap` helpers used, two-sided cap assertion verified; all 9 CI tests passed; pixi.lock unchanged (pip 26.1.2 already in range) |

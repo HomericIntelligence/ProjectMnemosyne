@@ -231,3 +231,13 @@ pixi run pytest tests/unit/scripts/test_dependency_floor_consistency.py::TestPip
 | Project | Context | Details |
 | --------- | --------- | --------- |
 | ProjectHephaestus | Issue #1202 — pip `"*"` → `">=23.0,<27"` | pip 26.1.2 confirmed via `pixi list`; plan written 2026-06-13; not yet merged |
+
+## v1.2.0 — 2026-06-13
+
+**Amendment**: Mark skill verified-ci after PR #1295 merged.
+
+**Changes**:
+- Version bumped 1.1.0 → 1.2.0
+- Overview Verification field updated: `unverified` → `verified-ci (PR #1295, all CI gates green)`
+- Verified Workflow WARNING block replaced with VERIFIED block: PR #1295 applied the workflow; pixi.lock was unchanged; 9/9 tests passed
+- Verified On table updated: R1 row updated to reflect PR #1295 merged 2026-06-13 with all CI gates green
