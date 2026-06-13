@@ -2,10 +2,11 @@
 name: automation-loop-post-loop-filter-omission
 description: "Use when: (1) diagnosing why loops_run reports an inflated loop count after early-exit fires, (2) a caller re-aggregates a raw result list without applying the same filter the inner function already uses, (3) auditing max()/sum() aggregations over mixed per-loop + post-loop result collections."
 category: debugging
-date: 2026-06-12
-version: "1.0.0"
+date: 2026-06-13
+version: "1.1.0"
 user-invocable: false
 verification: unverified
+history: automation-loop-post-loop-filter-omission.history
 tags: [automation, loop-runner, post-loop, filter-omission, early-exit, aggregation, loops-run]
 ---
 
@@ -15,12 +16,12 @@ tags: [automation, loop-runner, post-loop, filter-omission, early-exit, aggregat
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-12 |
+| **Date** | 2026-06-13 |
 | **Objective** | Fix `loops_run` reporting an inflated count when early-exit fires during a multi-loop run that includes post-loop stages |
 | **Outcome** | Plan produced, not yet implemented or CI-confirmed |
 | **Verification** | unverified |
 | **Source** | ProjectHephaestus issue #1153 |
-| **History** | N/A (initial version) |
+| **History** | automation-loop-post-loop-filter-omission.history |
 
 ## When to Use
 
@@ -39,23 +40,23 @@ loops_run = max((r.loop_idx for r in results), default=0)
 
 `_run_post_loop_stages` appends `RepoResult` records to the same `results` list and **unconditionally sets `loop_idx=cfg.loops`** on each record. When early-exit fires on loop 1 of 5 and the drive-green post-loop stage runs, `loops_run` aggregates over all records including the post-loop ones and reports `5` instead of `1`.
 
-The inner function `run_loop` itself already applies the correct filter at `loop_runner.py:1337`:
+The inner function `run_loop` itself already applies the correct filter at `loop_runner.py:1525`:
 
 ```python
-loop_results = [r for r in all_results if not r.post_loop_phases]
+per_loop_results = [r for r in all_results if not r.is_post_loop]
 ```
 
 The caller (`main`) re-aggregates the same raw `results` list without applying that filter.
 
 ## Root Cause Pattern
 
-An internal function correctly filters its result set before aggregating; the caller re-aggregates the same raw list without applying the same filter. The discriminator field `post_loop_phases` was explicitly designed for this purpose — the comment at lines 230–232 calls out this exact use case.
+An internal function correctly filters its result set before aggregating; the caller re-aggregates the same raw list without applying the same filter. The dedicated boolean `is_post_loop: bool = False` (defined at `loop_runner.py:234`) was introduced precisely for this purpose — the dataclass comment at lines 231–233 explains that `post_loop_phases=[]` cannot distinguish post-loop records from crashed or all-skipped per-loop records.
 
-**General pattern to watch for**: When you see `max(x.field for x in collection)` in a caller function, check whether the inner function that produced `collection` applied a filter before its own equivalent aggregation. If so, the caller must apply the same filter.
+**General pattern to watch for**: When you see `max(x.field for x in collection)` in a caller function, check whether the inner function that produced `collection` applied a filter before its own equivalent aggregation. If so, the caller must apply the same filter using the same discriminator.
 
 ## Fix
 
-Add the `if not r.post_loop_phases` predicate to mirror the filter already present inside `run_loop`:
+Add the `if not r.is_post_loop` predicate to mirror the filter already present inside `run_loop`:
 
 ```python
 # Before (line 1695):
@@ -63,16 +64,16 @@ loops_run = max((r.loop_idx for r in results), default=0)
 
 # After:
 loops_run = max(
-    (r.loop_idx for r in results if not r.post_loop_phases),
+    (r.loop_idx for r in results if not r.is_post_loop),
     default=0,
 )
 ```
 
-This mirrors the identical filter at `loop_runner.py:1337`.
+This mirrors the canonical filter at `loop_runner.py:1525`.
 
 ## Key Risks
 
-1. **Empty `post_loop_phases` list** — If `_run_post_loop_stages` ever produces a record with `post_loop_phases=[]` (e.g., all stages skipped), the new filter misclassifies it as a per-loop record. The discriminator relies on list **non-emptiness**, not a dedicated boolean flag. Verify that `_run_post_loop_stages` always appends at least one entry to `post_loop_phases` before returning.
+1. **`is_post_loop` is the correct discriminator** — `is_post_loop: bool = False` is defined at `loop_runner.py:234` and set unconditionally to `True` at `loop_runner.py:1395` when `_run_post_loop_stages` constructs a record. Do NOT use `post_loop_phases` non-emptiness as the discriminator — that field is empty for crashed or all-skipped repos, making it ambiguous (see Failed Attempts).
 
 2. **`failures` aggregation is unaffected** — `failures = [r for r in results if r.any_failure]` at line 1697 iterates over ALL records including post-loop. This is **correct behavior** — post-loop stage failures must be counted. The fix only touches `loops_run`.
 
@@ -85,19 +86,25 @@ This mirrors the identical filter at `loop_runner.py:1337`.
 ```python
 def test_loops_run_excludes_post_loop_records(tmp_path, monkeypatch):
     """loops_run must not count post-loop RepoResult records."""
-    from hephaestus.automation.loop_runner import LoopConfig, RepoResult
+    from hephaestus.automation.loop_runner import LoopConfig, PhaseResult, RepoResult
 
     cfg = LoopConfig(loops=5, projects_dir=tmp_path)
 
-    # Simulate: early-exit fired after loop 1, then post-loop ran
+    # Simulate: early-exit fired after loop 1, then post-loop ran.
+    # is_post_loop=True is REQUIRED — post_loop_phases alone is ambiguous
+    # for crashed/all-skipped repos where post_loop_phases=[] too.
     per_loop_record = RepoResult(repo="r1", loop_idx=1)
-    post_loop_record = RepoResult(repo="r1", loop_idx=cfg.loops)
-    post_loop_record.post_loop_phases.append("drive-green")
+    post_loop_record = RepoResult(
+        repo="r1",
+        loop_idx=cfg.loops,
+        is_post_loop=True,
+        post_loop_phases=[PhaseResult(phase="drive-green")],
+    )
 
     results = [per_loop_record, post_loop_record]
 
     loops_run = max(
-        (r.loop_idx for r in results if not r.post_loop_phases),
+        (r.loop_idx for r in results if not r.is_post_loop),
         default=0,
     )
     assert loops_run == 1, f"Expected 1, got {loops_run}"
@@ -105,29 +112,29 @@ def test_loops_run_excludes_post_loop_records(tmp_path, monkeypatch):
 
 ## Verified Workflow
 
+> **Note**: This workflow is proposed and unverified — it has not been run against CI.
+
 ### Quick Reference
 
 ```bash
 # Confirm the unfiltered aggregation exists:
 grep -n "loops_run" hephaestus/automation/loop_runner.py
 
-# Confirm the inner filter for comparison:
-grep -n "post_loop_phases" hephaestus/automation/loop_runner.py | head -20
+# Confirm is_post_loop definition:
+grep -n "is_post_loop" hephaestus/automation/loop_runner.py | head -20
 ```
 
 ### Detailed Steps
 
 1. **Locate the aggregation** — Find `loops_run = max(...)` at `loop_runner.py:1695` in the `main()` function.
 
-2. **Compare to inner filter** — The `run_loop` function at `loop_runner.py:1337` already filters: `loop_results = [r for r in all_results if not r.post_loop_phases]`. The caller must mirror this.
+2. **Compare to inner filter** — The `run_loop` function at `loop_runner.py:1525` already filters: `per_loop_results = [r for r in all_results if not r.is_post_loop]`. The caller must mirror this using the same boolean flag.
 
-3. **Apply the fix** — Add `if not r.post_loop_phases` to the generator expression inside `max(...)`.
+3. **Apply the fix** — Add `if not r.is_post_loop` to the generator expression inside `max(...)`. Do NOT use `if not r.post_loop_phases` — see Failed Attempts.
 
-4. **Verify `_run_post_loop_stages`** — Confirm it always appends at least one entry to `post_loop_phases`. If it can produce records with `post_loop_phases=[]`, introduce a dedicated boolean flag instead.
+4. **Add the mixed-case test** — `test_main_loops_run_early_exit` must cover the scenario where post-loop records (with `is_post_loop=True`) are present alongside per-loop records.
 
-5. **Add the mixed-case test** — `test_main_loops_run_early_exit` must cover the scenario where post-loop records are present alongside per-loop records.
-
-6. **Run checks**:
+5. **Run checks**:
    ```bash
    pixi run pytest tests/unit/automation/ -q --no-cov
    pixi run ruff check hephaestus/automation/loop_runner.py
@@ -137,7 +144,7 @@ grep -n "post_loop_phases" hephaestus/automation/loop_runner.py | head -20
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| (None yet — plan only) | This skill documents a planned fix; the section will be populated once implementation is attempted | N/A | N/A |
+| v1.0.0 planning pass | Used `not r.post_loop_phases` as the discriminator, claiming it "mirrored `loop_runner.py:1337`" (a rate-budget sleep — unrelated line). Fix was `if not r.post_loop_phases` in the generator. | (1) `post_loop_phases=[]` is ambiguous — crashed and all-skipped repos produce per-loop records with empty `post_loop_phases`, so the filter would misclassify them as post-loop. (2) The cited line 1337 was wrong; the real filter is at 1525. (3) The regression test fixture only set `post_loop_phases=[...]` without `is_post_loop=True`, so it would not guard the real bug under the correct fix. The reviewer caught all three issues. | Always use the dedicated `is_post_loop` boolean. Never rely on list-emptiness when a boolean flag exists for the same purpose. Verify cited line numbers before documenting. |
 
 ## Results & Parameters
 
@@ -149,16 +156,17 @@ grep -n "post_loop_phases" hephaestus/automation/loop_runner.py | head -20
 | No early-exit, all 5 loops ran, post-loop ran | `5` (correct) | `5` (correct) |
 | No post-loop stages | `N` (correct) | `N` (correct) |
 
-### Discriminator Field
+### Discriminator Fields
 
 | Field | Type | Semantics |
 |-------|------|-----------|
-| `post_loop_phases` | `list[str]` | Non-empty → record is a post-loop record; empty → per-loop record |
+| `is_post_loop` | `bool` | **Correct discriminator.** `True` iff this record was produced by `_run_post_loop_stages`. Defined at `loop_runner.py:234`, set at `loop_runner.py:1395`. |
+| `post_loop_phases` | `list` | **Wrong discriminator.** Non-empty only when stages ran — ambiguous for crashed/all-skipped records that also have `post_loop_phases=[]`. |
 
 ### Net Change (Planned)
 
-- `hephaestus/automation/loop_runner.py`: ~3 LOC (add `if not r.post_loop_phases` predicate to `loops_run` generator)
-- `tests/unit/automation/test_loop_runner_early_exit.py` (or equivalent): +1 new test method for mixed per-loop + post-loop results
+- `hephaestus/automation/loop_runner.py`: ~3 LOC (change `if not r.post_loop_phases` → `if not r.is_post_loop` in `loops_run` generator)
+- `tests/unit/automation/test_loop_runner_early_exit.py` (or equivalent): +1 new test method for mixed per-loop + post-loop results (fixture must include `is_post_loop=True`)
 
 ## Verified On
 

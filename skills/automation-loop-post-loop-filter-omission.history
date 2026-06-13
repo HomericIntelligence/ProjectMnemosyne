@@ -1,0 +1,35 @@
+<!-- markdownlint-disable MD024 -->
+# History: automation-loop-post-loop-filter-omission
+
+This file preserves previous versions of the skill before amendments.
+
+## v1.0.0 (2026-06-12)
+
+Initial version. Used `not r.post_loop_phases` as the post-loop discriminator and cited `loop_runner.py:1337` as the canonical filter reference. Both were incorrect — the correct discriminator is `not r.is_post_loop` and the correct line is 1525. See the Failed Attempts section of v1.1.0 for the full analysis.
+
+### v1.0.0 full content
+
+```markdown
+---
+name: automation-loop-post-loop-filter-omission
+description: "Use when: (1) diagnosing why loops_run reports an inflated loop count after early-exit fires, (2) a caller re-aggregates a raw result list without applying the same filter the inner function already uses, (3) auditing max()/sum() aggregations over mixed per-loop + post-loop result collections."
+category: debugging
+date: 2026-06-12
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags: [automation, loop-runner, post-loop, filter-omission, early-exit, aggregation, loops-run]
+---
+
+# Automation Loop: Post-Loop Filter Omission Bug
+
+The inner function `run_loop` itself already applies the correct filter at `loop_runner.py:1337`:
+
+    loop_results = [r for r in all_results if not r.post_loop_phases]
+
+Fix: Add the `if not r.post_loop_phases` predicate to mirror the filter already present inside `run_loop`.
+
+Key risk documented: If `_run_post_loop_stages` ever produces a record with `post_loop_phases=[]` (e.g., all stages skipped), the new filter misclassifies it as a per-loop record.
+
+Regression test fixture used `post_loop_phases=[...]` without `is_post_loop=True`.
+```
