@@ -1,10 +1,12 @@
+## v1.0.0 — 2026-06-13 (plan-phase only; PR implementation pending)
+
 ---
 name: ci-gha-dead-guard-removal
 description: "Use when: (1) a GHA workflow has a detect step that checks file presence and emits skip=true/false, and the guarded files are always committed — the detect+guard pattern is dead code; (2) a workflow step has `if: steps.detect.outputs.skip == 'false'` but the detection can never emit skip=true for this repo; (3) you need to verify whether a detect-and-guard scaffold in a reusable or caller workflow is load-bearing before removing it."
 category: ci-cd
 date: 2026-06-13
-version: "1.1.0"
-verification: verified
+version: "1.0.0"
+verification: unverified
 user-invocable: false
 tags:
   - github-actions
@@ -30,7 +32,7 @@ tags:
 | **Output** | Simplified workflow YAML with detect step deleted and all `if:` guards stripped |
 | **Language** | YAML (GHA workflow files) — no Python code changes |
 | **Build required** | No — pure YAML edit; YAML syntax check is the only local verification needed |
-| **Verification** | verified (PR #1287, CI passed) |
+| **Verification** | unverified |
 
 ## When to Use
 
@@ -62,7 +64,7 @@ print('YAML syntax OK')
 git commit -S -m "ci: remove dead detect+guard scaffolding from pixi-check and justfile-check"
 gh pr create --title "ci: remove dead skip-if-absent guards in _required.yml" \
   --body "$(printf 'Remove dead file-presence detect steps and skip guards.\n\nCloses #<issue-number>\n')"
-gh pr merge --auto --squash
+gh pr merge --auto --rebase
 ```
 
 ### Detailed Steps
@@ -231,4 +233,4 @@ gh search code "uses: <org>/<repo>/.github/workflows/_required.yml" --limit 10
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectHephaestus | Issue #1200 — remove dead skip-if-absent guards in `_required.yml` (PR #1287, merged 2026-06-13) | Deleted both detect steps (`Skip if no pixi.toml` and `Skip if no justfile`) and all four downstream `if: steps.detect.outputs.skip == 'false'` guards. 22 lines removed, 0 added. CI passed. Atomic edit per job: delete detect step + strip all its `if:` guards in one operation. YAML syntax check (`python3 -c "import yaml; yaml.safe_load(...)"`) before commit. Post-deletion grep verified 0 remnants of `steps.detect.outputs.skip` and `Skip if no`. |
+| ProjectHephaestus | Issue #1200 (plan phase only) — remove dead skip-if-absent guards in `_required.yml` | Planning confirmed `pixi.toml` and `justfile` are always committed; detect steps in `pixi-check` and `justfile-check` jobs are provably dead code; PR implementation pending |
