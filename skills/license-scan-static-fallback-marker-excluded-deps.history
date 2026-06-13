@@ -1,3 +1,22 @@
+## v1.1.0 — 2026-06-13
+
+---
+name: license-scan-static-fallback-marker-excluded-deps
+description: "Static fallback license map for deps excluded by platform/version markers in CI. Use when: (1) a license-scan gate skips marker-gated deps silently, (2) adding a new Windows-only or old-Python-only dep to a project with a single-leg CI license job, (3) extending check_license_compatibility.py to classify unreachable deps."
+category: ci-cd
+date: 2026-06-13
+version: "1.1.0"
+user-invocable: false
+verification: unverified
+tags: []
+---
+
+# License Scan Static Fallback for Marker-Excluded Deps (v1.1.0)
+
+Amended from v1.0.0 to add staleness-mitigation tests. Superseded by v2.0.0 which adds verified-ci status and scopes the NOTICE value check to per-package lines.
+
+---
+
 ## v1.0.0 — 2026-06-13
 
 ---

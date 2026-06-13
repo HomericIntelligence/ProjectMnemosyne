@@ -3,10 +3,10 @@ name: license-scan-static-fallback-marker-excluded-deps
 description: "Static fallback license map for deps excluded by platform/version markers in CI. Use when: (1) a license-scan gate skips marker-gated deps silently, (2) adding a new Windows-only or old-Python-only dep to a project with a single-leg CI license job, (3) extending check_license_compatibility.py to classify unreachable deps."
 category: ci-cd
 date: 2026-06-13
-version: "1.1.0"
+version: "2.0.0"
 user-invocable: false
-verification: unverified
-tags: []
+verification: verified-ci
+tags: ["license", "pep508", "markers", "fallback", "ci-coverage", "tomli", "tzdata", "fail-closed", "static-map", "staleness-mitigation"]
 history: license-scan-static-fallback-marker-excluded-deps.history
 ---
 
@@ -18,9 +18,9 @@ history: license-scan-static-fallback-marker-excluded-deps.history
 |-------|-------|
 | **Date** | 2026-06-13 |
 | **Objective** | Classify distributed deps whose platform/version markers exclude them from the single CI leg (Python 3.13 / Linux), preventing silent license-coverage holes |
-| **Outcome** | Static `STATIC_FALLBACK_LICENSES` dict added to scan script; unknown marker-excluded deps now exit(2) instead of silently skipping; staleness-mitigation tests added |
-| **Verification** | unverified — plan only, not yet executed in CI |
-| **History** | v1.0.0 archived in `license-scan-static-fallback-marker-excluded-deps.history` |
+| **Outcome** | `STATIC_FALLBACK_LICENSES` dict added to scan script; unknown marker-excluded deps now exit(2) instead of silently skipping; staleness-mitigation tests added with correct per-package NOTICE scoping |
+| **Verification** | verified-ci — PR #1304 on ProjectHephaestus, all tests pass |
+| **History** | v1.0.0 and v1.1.0 archived in `license-scan-static-fallback-marker-excluded-deps.history` |
 
 ## When to Use
 
@@ -28,9 +28,7 @@ history: license-scan-static-fallback-marker-excluded-deps.history
 - Adding a new dep gated by `python_version < 'X'` (e.g. `tomli`) or `platform_system == 'Windows'` (e.g. `tzdata`) to a project with single-leg license CI
 - Extending `scripts/check_license_compatibility.py` pattern to ensure all distributed deps are always classified, never silently dropped
 
-## Proposed Workflow
-
-> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
+## Verified Workflow
 
 ### Quick Reference
 
@@ -71,10 +69,70 @@ else:
    - `test_tzdata_fallback_classifies_correctly` -- same pattern for tzdata/Apache-2.0
    - `test_unknown_markered_dep_exits_nonzero` -- unknown dep with no fallback -> `SystemExit(2)`
    - `test_static_fallback_covers_all_markered_out_distributed_deps` -- live coverage assertion: every `installable_now=False` dep in `distributed_requirements(None)` is in `STATIC_FALLBACK_LICENSES`
-7. Add **staleness-mitigation tests** (new in v1.1.0):
+7. Add **staleness-mitigation tests** — both are required:
    - `test_static_values_match_installed_metadata` — parametrized over `STATIC_FALLBACK_LICENSES` keys; decorated with `@pytest.mark.skipif(not importlib.util.find_spec(pkg), ...)` so it skips when dep not installed (marker excludes it on the CI leg); when installed (e.g. Python 3.10 / Windows), asserts `set(STATIC_FALLBACK_LICENSES[pkg]) & set(resolve_license(md.metadata(pkg)))` is non-empty. Catches license drift when the dep IS available.
-   - `test_static_values_match_notice` — runs unconditionally on every Python/platform; reads the `NOTICE` file from the repo root, asserts each key in `STATIC_FALLBACK_LICENSES` appears in `notice_text.lower()` AND each SPDX value appears in `notice_text`. Enforces NOTICE as authoritative source without needing the dep installed.
+   - `test_static_values_match_notice` — runs unconditionally on every Python/platform; reads the `NOTICE` file from the repo root; **scope the SPDX value assertion to lines mentioning the package** (see Critical Gotcha below). Enforces NOTICE as authoritative source without needing the dep installed.
 8. Rename existing `test_uninstalled_other_python_dep_skipped_not_failed` -> `test_uninstalled_other_python_dep_with_fallback_classifies_not_fails` (behavior changed: no longer silently skips).
+
+### Critical Gotcha — Scope NOTICE value assertion to per-package lines
+
+The naive `assert spdx_id in notice_text` is **too loose**: the same SPDX ID can appear on a *different* package's NOTICE line, causing false passes.
+
+**Example bug**: `tzdata`'s static fallback is `Apache-2.0`. `packaging` also carries `Apache-2.0` and appears earlier in NOTICE. The full-file check `assert "Apache-2.0" in notice_text` passes even if tzdata's NOTICE entry is wrong or deleted.
+
+```python
+# WRONG — too loose: Apache-2.0 from `packaging` satisfies tzdata's check
+assert spdx_id in notice_text
+
+# RIGHT — scope to lines mentioning the package
+pkg_lines = [line for line in notice_text.splitlines() if pkg.lower() in line.lower()]
+assert any(spdx_id in line for line in pkg_lines), (
+    f"STATIC_FALLBACK_LICENSES[{pkg!r}] = {spdx_ids!r} but SPDX id "
+    f"{spdx_id!r} not found on any NOTICE line mentioning {pkg!r} — "
+    "update one to match the other."
+)
+```
+
+Always scope cross-check assertions to lines associated with the target entity, never to the full file text.
+
+### Copy-paste ready staleness-mitigation tests
+
+```python
+class TestStaticFallbackStaleness:
+    """Staleness-mitigation tests that catch value drift in STATIC_FALLBACK_LICENSES."""
+
+    @pytest.mark.parametrize("pkg", list(STATIC_FALLBACK_LICENSES.keys()))
+    def test_static_values_match_installed_metadata(self, pkg):
+        """Skip when dep not installed; assert intersection non-empty when installed."""
+        if importlib.util.find_spec(pkg) is None:
+            pytest.skip(f"{pkg!r} not installed on this platform/Python (marker excluded)")
+        actual_ids = set(resolve_license(md.metadata(pkg)))
+        static_ids = set(STATIC_FALLBACK_LICENSES[pkg])
+        assert static_ids & actual_ids, (
+            f"STATIC_FALLBACK_LICENSES[{pkg!r}] = {static_ids!r} but "
+            f"installed metadata reports {actual_ids!r} — update STATIC_FALLBACK_LICENSES "
+            "or check if the dep changed its license declaration."
+        )
+
+    def test_static_values_match_notice(self):
+        """Unconditional: each key and its SPDX values must appear on a NOTICE line mentioning the package."""
+        notice_path = Path(__file__).parent.parent.parent / "NOTICE"
+        notice_text = notice_path.read_text(encoding="utf-8")
+        for pkg, spdx_ids in STATIC_FALLBACK_LICENSES.items():
+            # Scope to lines mentioning this package — full-file check is too loose
+            # (e.g. "Apache-2.0" appears on packaging's line, would satisfy tzdata's check)
+            pkg_lines = [line for line in notice_text.splitlines() if pkg.lower() in line.lower()]
+            assert pkg_lines, (
+                f"STATIC_FALLBACK_LICENSES key {pkg!r} not found in NOTICE — "
+                "add the package to NOTICE or remove it from the fallback map."
+            )
+            for spdx_id in spdx_ids:
+                assert any(spdx_id in line for line in pkg_lines), (
+                    f"STATIC_FALLBACK_LICENSES[{pkg!r}] = {spdx_ids!r} but SPDX id "
+                    f"{spdx_id!r} not found on any NOTICE line mentioning {pkg!r} — "
+                    "update one to match the other."
+                )
+```
 
 ## Failed Attempts
 
@@ -83,7 +141,7 @@ else:
 | Option A: second CI matrix leg | Add python-version: "3.10" leg to license-scan job | Adds ~3 min CI wall-clock; still leaves tzdata/Windows gap (no Windows runner) | A second Python leg handles `tomli` but cannot classify Windows-only deps on Linux CI -- static map is necessary for platform markers |
 | Silent skip with note | Print "classified on another CI matrix row" and `continue` | No such row exists; silent skip is a permanent coverage hole for future license changes | Never skip a distributed dep without classifying it; if not installable, classify via static map or exit(2) |
 | Validated only keys not values | Coverage test asserted `pkg in STATIC_FALLBACK_LICENSES` but did not cross-check SPDX values | Wrong SPDX values (e.g. `"BSD-3-Clause"` instead of `"MIT"`) would pass the membership test silently | Also validate values: `test_static_values_match_installed_metadata` (when dep available) and `test_static_values_match_notice` (always) |
-| NOTICE not checked as authoritative source | v1.0.0 results table listed `tomli` source as "PyPI metadata" implying NOTICE was not checked | tomli IS documented in NOTICE:58 (MIT); the script's own docstring names NOTICE as the authoritative source | Always cross-reference NOTICE first; PyPI is a fallback when a dep is not in NOTICE |
+| NOTICE check too loose: `assert spdx_id in notice_text` | Full-file SPDX check in `test_static_values_match_notice` | `packaging`'s Apache-2.0 entry in NOTICE satisfied tzdata's check — false pass | Scope value assertions to lines mentioning the package name; full-file text search decouples value from key |
 
 ## Results & Parameters
 
@@ -97,45 +155,29 @@ else:
 **Key invariant enforced by coverage test:**
 
 ```
-∀ pkg: installable_now=False ⟹ pkg ∈ STATIC_FALLBACK_LICENSES
+all pkg: installable_now=False => pkg in STATIC_FALLBACK_LICENSES
 ```
 
-This prevents any future marker-gated dep from silently escaping license classification.
-
-**Staleness-mitigation invariants (new in v1.1.0):**
+**Staleness-mitigation invariants (v2.0.0 — per-package scoped):**
 
 ```
 # Values correct when dep is installed (Python 3.10 / Windows):
-set(STATIC_FALLBACK_LICENSES[pkg]) & set(resolve_license(md.metadata(pkg))) ≠ ∅
+set(STATIC_FALLBACK_LICENSES[pkg]) & set(resolve_license(md.metadata(pkg))) != {}
 
-# NOTICE is authoritative; must match unconditionally:
-∀ pkg ∈ STATIC_FALLBACK_LICENSES: pkg.lower() ∈ notice_text.lower()
-∀ spdx ∈ STATIC_FALLBACK_LICENSES[pkg]: spdx ∈ notice_text
+# NOTICE is authoritative; value must appear on a line mentioning the package:
+for pkg, spdx_ids in STATIC_FALLBACK_LICENSES.items():
+    pkg_lines = [line for line in notice_text.splitlines() if pkg.lower() in line.lower()]
+    for spdx_id in spdx_ids:
+        assert any(spdx_id in line for line in pkg_lines)
 ```
 
 **Files changed:**
 
 - `scripts/check_license_compatibility.py`: +`STATIC_FALLBACK_LICENSES` dict, modified `scan()` silent-skip branch (set `ids=fallback`, fall through), updated docstring
-- `tests/unit/scripts/test_check_license_compatibility.py`: +`TestStaticFallback` (6 tests total: 4 original + 2 staleness-mitigation), renamed existing test
-
-## Verified Workflow
-
-> **Note:** This workflow has not been executed end-to-end. Steps are based on a planning session for issue #1258. Mark as verified once CI confirms the implementation.
-
-1. **Identify marker-excluded deps**: Run `distributed_requirements(None)` and filter entries where `installable_now=False`. Collect package names.
-2. **Cross-check NOTICE file**: For each excluded dep, look up the license in the repo's `NOTICE` file. `tomli` is at NOTICE:58 (MIT); `tzdata` is at NOTICE:28 (Apache-2.0). Do NOT rely on PyPI alone — the script's docstring names NOTICE as authoritative.
-3. **Add `STATIC_FALLBACK_LICENSES` dict**: Add a module-level `STATIC_FALLBACK_LICENSES: dict[str, list[str]]` constant to `scripts/check_license_compatibility.py`, keyed by lowercased package name, with SPDX identifiers as values.
-4. **Patch `scan()` silent-skip branch**: Replace the `continue` that skips `installable_now=False` deps with: set `ids = fallback` and fall through to the existing `is_compatible()` call. Do NOT duplicate the `is_compatible()` call inside the fallback branch — falling through reuses the same code path.
-5. **Update module docstring**: Add the new exit path to the `FAILS LOUDLY` section.
-6. **Add regression test**: Write `test_static_fallback_covers_all_markered_out_distributed_deps` to assert that all marker-excluded deps are covered by `STATIC_FALLBACK_LICENSES`. This catches any future gated dep that lacks a fallback entry before it reaches CI.
-7. **Add unit tests for fallback path**: Patch `md.metadata` to raise `PackageNotFoundError` and assert the fallback licenses are returned; separately test that an unknown dep causes `SystemExit(2)`.
-8. **Add staleness-mitigation tests**:
-   - `test_static_values_match_installed_metadata`: parametrized over `STATIC_FALLBACK_LICENSES` keys; skips when dep not installed; asserts value intersection non-empty when installed.
-   - `test_static_values_match_notice`: unconditional; reads `NOTICE`; asserts each key (lowercased) and each SPDX value is present in NOTICE text.
-9. **Run CI**: Confirm the license-scan job passes on Python 3.13 / Ubuntu 24.04 and that previously-skipped deps now appear in the scan output.
+- `tests/unit/scripts/test_check_license_compatibility.py`: +`TestStaticFallback` (6 tests: 4 unit + 2 staleness-mitigation with per-package NOTICE scoping), renamed existing test
 
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectHephaestus | Issue #1258 planning | Plan only -- implementation pending |
+| ProjectHephaestus | Issue #1258, PR #1304 | All tests pass. Reviewer-caught fix: `test_static_values_match_notice` scoped to per-package NOTICE lines (commit d9dcde04). |
