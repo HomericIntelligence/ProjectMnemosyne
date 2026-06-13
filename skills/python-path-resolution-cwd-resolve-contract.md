@@ -3,7 +3,7 @@ name: python-path-resolution-cwd-resolve-contract
 description: "Path resolution contract for get_repo_root and similar helpers: Path.cwd() must always be followed by .resolve(), and test assertions comparing resolved paths must call .resolve() on expected values. Use when: (1) implementing path-returning helpers, (2) writing tests for functions that return resolved paths, (3) diagnosing symlink-fragile test failures."
 category: testing
 date: 2026-06-13
-version: "1.1.0"
+version: "1.2.0"
 user-invocable: false
 verification: verified-local
 history: python-path-resolution-cwd-resolve-contract.history
@@ -109,4 +109,4 @@ grep -n "assert result ==" tests/unit/utils/test_general_utils.py
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectHephaestus | Issue #1309 follow-up to #1267 | `hephaestus/utils/helpers.py:117`, `tests/unit/utils/test_general_utils.py:140,152` |
+| ProjectHephaestus | Issue #1309 / PR #1316 | `hephaestus/utils/helpers.py:117`, `tests/unit/utils/test_general_utils.py:140,152,157`; all 8 `TestGetRepoRoot` tests pass; full unit suite green (exit code 0) |

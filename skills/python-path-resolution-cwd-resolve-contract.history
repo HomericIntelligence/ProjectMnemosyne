@@ -1,5 +1,20 @@
 # python-path-resolution-cwd-resolve-contract — History
 
+## v1.2.0 (2026-06-13)
+
+**Changed by:** Issue #1309 / PR #1316 implementation — post-implementation verification
+**Verification:** verified-local
+
+### What changed
+- Updated `Verified On` table: confirmed all 8 `TestGetRepoRoot` tests pass; full unit suite green (exit code 0) on PR #1316
+- Added line 157 (`test_uses_cwd_when_none` assertion) to the verified file locations
+- Bumped version to 1.2.0 to record post-implementation verification completion
+
+### Why
+The v1.1.0 skill was recorded as "unverified" because it was written during the plan-review phase before implementation. PR #1316 implemented the fix and confirmed verified-local: all 8 tests in `TestGetRepoRoot` pass, full unit suite exits 0. The skill is now confirmed correct and the verification field reflects this.
+
+---
+
 ## v1.1.0 (2026-06-13)
 
 **Changed by:** Issue #1309 plan review — P3/TDD gap finding
