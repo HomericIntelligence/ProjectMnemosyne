@@ -1,6 +1,56 @@
 <!-- markdownlint-disable MD024 -->
 # python-module-decomposition-and-refactor-patterns — History
 
+## v1.6.0 (2026-06-13)
+
+**Changed by:** /learn from ProjectHephaestus issue #1196 Phase 20 reviewer NOGO (exception-contract POLA violation)
+**Verification:** reviewer-verified (source read from runtime.py; CI not run)
+
+### What changed
+
+Corrected Phase 20 based on POLA defect caught by reviewer during NOGO:
+
+1. **Corrected the code example** for `_invoke_agent_session`: the original showed `result.returncode`
+   which would raise `AttributeError` at runtime — `AgentRunResult` (runtime.py:28–34) has only
+   `stdout`, `stderr`, `session_id` fields. The corrected pattern wraps BOTH codex calls (fresh and
+   resume) in explicit `try/except CalledProcessError`, uses `CompletedProcess(returncode=0)` as a
+   synthetic success value (only reachable if no exception was raised), and documents `TimeoutExpired`
+   as the only propagating exception.
+
+2. **Added "Docstring must document which exceptions still propagate" section** — rule: never write
+   "never raises X" in a docstring without reading the exception contracts of every function the
+   wrapper calls.
+
+3. **Updated the Phase 20 verification checklist** — replaced the single `AgentRunResult.returncode`
+   field check with: (a) read class definition to verify actual field names, (b) read exception
+   contracts of ALL wrapped functions, (c) confirm BOTH codex calls are wrapped, (d) `returncode=0`
+   on success path is synthetic with explanation, (e) docstring states which exceptions propagate.
+
+4. **Updated two existing Failed Attempts rows** for accuracy:
+   - `returncode=0` row: corrected reasoning — `returncode=0` IS correct but for exception-contract
+     reasons (CalledProcessError is absorbed; 0 is only reachable without exception), not because
+     `AgentRunResult` carries a returncode
+   - `AgentRunResult.returncode` row: added verified evidence (`AgentRunResult` fields confirmed
+     from runtime.py:28–34)
+
+5. **Added new Failed Attempts row**: "Docstring claims wrapper never raises X without verifying
+   wrapped functions" — POLA violation caught in review; always read exception contracts of every
+   function the wrapper calls before writing "never raises" claims.
+
+6. Updated description (trigger 14 reworded), Overview outcome/trigger, Verified On (new v1.6.0 row).
+
+### Why
+
+The reviewer NOGO identified a POLA violation in the Phase 20 plan: the docstring claimed
+`_invoke_agent_session` "never raises CalledProcessError" without verifying that `run_codex_session`
+DOES raise it (runtime.py:397–403). This is a systematic pattern failure — writing "never raises X"
+without reading the wrapped function's contract. The correction generalizes to a rule: always grep
+for and read every function the wrapper calls before documenting its exception behavior.
+
+The `AgentRunResult.returncode` field also did not exist (verified runtime.py:28–34), requiring
+the entire success-path reasoning to be corrected from "use result.returncode" to "returncode=0
+is synthetic, only reachable without an exception."
+
 ## v1.5.0 (2026-06-13)
 
 **Changed by:** /learn from ProjectHephaestus issue #1196 (ci_driver.py provider-dispatch refactor planning)

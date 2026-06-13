@@ -26,11 +26,12 @@ description: >-
   (14) extracting a provider-conditional dispatch (two-branch if/else over a bool
   predicate) into a private helper method — choosing a method over a Protocol/Strategy
   when there are exactly two branches, unifying heterogeneous return types at the
-  extraction boundary (e.g. AgentRunResult → subprocess.CompletedProcess), and risks
-  around CalledProcessError absorption, returncode field existence, and noqa:C901 removal.
+  extraction boundary (e.g. AgentRunResult → subprocess.CompletedProcess), wrapping
+  BOTH codex calls in try/except CalledProcessError, and verifying all exception contracts
+  before documenting which exceptions propagate out of the wrapper.
 category: architecture
 date: 2026-06-13
-version: "1.5.0"
+version: "1.6.0"
 user-invocable: false
 history: python-module-decomposition-and-refactor-patterns.history
 tags:
@@ -73,8 +74,8 @@ tags:
 | ------- | ------- |
 | **Date** | 2026-06-13 |
 | **Objective** | Decompose oversized Python modules/classes into focused, independently testable units using SRP, TDD, and DRY principles |
-| **Outcome** | Synthesized from 13+ verified skills; covers function-level extraction, class-based extraction, circular import fixes, immutability refactoring, extensibility-driven decomposition, CLI entry-point extraction with preserved patch routing, top-level symbol extraction to break sibling module cycles, CC>15 pipeline-step extraction, scanner-to-subdirectory scoping, context-manager double-counter fixes, safe legacy-code deletion, substrate-read-before-estimate discipline, post-parallel phase cleanup, and god-class decomposition planning risks (state ownership, cross-call coupling, constant re-export, delegation stub type loss, coverage omit-allowlist traps) |
-| **Trigger** | Files >800 lines, circular import errors, mixed-concern methods, C901/CC>15 complexity, extensibility requirements, CLI main() extraction, deferred imports inside function bodies preventing static analysis, broad scanners needing subdirectory scope, stale callers after context-manager refactors, dead fallback files, pessimistic refactor estimates, technical debt after parallel phases, planning a multi-collaborator god-class decomposition, extracting a two-branch provider-conditional dispatch with heterogeneous return types |
+| **Outcome** | Synthesized from 13+ verified skills; covers function-level extraction, class-based extraction, circular import fixes, immutability refactoring, extensibility-driven decomposition, CLI entry-point extraction with preserved patch routing, top-level symbol extraction to break sibling module cycles, CC>15 pipeline-step extraction, scanner-to-subdirectory scoping, context-manager double-counter fixes, safe legacy-code deletion, substrate-read-before-estimate discipline, post-parallel phase cleanup, god-class decomposition planning risks (state ownership, cross-call coupling, constant re-export, delegation stub type loss, coverage omit-allowlist traps), and exception-contract verification before documenting wrapper behavior |
+| **Trigger** | Files >800 lines, circular import errors, mixed-concern methods, C901/CC>15 complexity, extensibility requirements, CLI main() extraction, deferred imports inside function bodies preventing static analysis, broad scanners needing subdirectory scope, stale callers after context-manager refactors, dead fallback files, pessimistic refactor estimates, technical debt after parallel phases, planning a multi-collaborator god-class decomposition, extracting a two-branch provider-conditional dispatch with heterogeneous return types, documenting exception contracts for wrapper methods |
 
 ## When to Use
 
@@ -1036,7 +1037,14 @@ extract boundary is the only place that knows about the type difference.
 **Return-type unification at the extraction boundary**
 
 When the two branches return different types (e.g., `AgentRunResult` for codex vs. an
-implicit `None` success for claude), wrap to a common type at the boundary:
+implicit `None` success for claude), wrap to a common type at the boundary.
+
+**CRITICAL: read the wrapped function's exception contract FIRST.** `run_codex_session`
+raises `subprocess.CalledProcessError` on non-zero exit (verified: runtime.py:397–403) and
+`subprocess.TimeoutExpired` on timeout. `AgentRunResult` has fields `stdout`, `stderr`,
+`session_id` — NO `returncode` field (verified: runtime.py:28–34). This changes the pattern:
+both codex calls (fresh and resume) must be wrapped, and `CompletedProcess(returncode=0)` on
+the success path is synthetic (only reachable if no exception was raised):
 
 ```python
 def _invoke_agent_session(
@@ -1045,13 +1053,24 @@ def _invoke_agent_session(
     prompt: str,
     timeout: int,
 ) -> subprocess.CompletedProcess[str]:
-    """Invoke codex or claude agent; return unified CompletedProcess."""
+    """Invoke codex or claude agent; return unified CompletedProcess.
+
+    CalledProcessError from codex is absorbed into returncode.
+    TimeoutExpired is the only exception that propagates to callers.
+    """
     if is_codex(self.options.agent):
-        result: AgentRunResult = run_codex_session(session_id, prompt, timeout=timeout)
-        return subprocess.CompletedProcess(
-            args=[], returncode=result.returncode,
-            stdout=result.stdout or "", stderr=result.stderr or "",
-        )
+        try:
+            result: AgentRunResult = run_codex_session(session_id, prompt, timeout=timeout)
+            # returncode=0 is synthetic — only reachable if run_codex_session did not raise
+            return subprocess.CompletedProcess(
+                args=[], returncode=0,
+                stdout=result.stdout or "", stderr=result.stderr or "",
+            )
+        except subprocess.CalledProcessError as exc:
+            return subprocess.CompletedProcess(
+                args=[], returncode=exc.returncode, stdout="", stderr="",
+            )
+        # TimeoutExpired propagates intentionally
     else:
         invoke_claude_with_session(session_id, prompt, timeout=timeout)
         return subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
@@ -1059,18 +1078,27 @@ def _invoke_agent_session(
 
 **Critical: `CalledProcessError` absorption**
 
-If the codex path can raise `CalledProcessError` (e.g., from `run_codex_session`), absorb it
-into the return code INSIDE the helper — never let it escape, because callers now treat
-non-zero returncode as the sole error signal:
+`run_codex_session` DOES raise `CalledProcessError` on non-zero exit — this is verified
+behavior, not an assumption. Absorb it into the return code INSIDE the helper — never let
+it escape, because callers now treat non-zero returncode as the sole error signal. Wrap
+ALL codex calls (both fresh and resume) in `try/except CalledProcessError`:
 
 ```python
 try:
     result = run_codex_session(session_id, prompt, timeout=timeout)
-    return subprocess.CompletedProcess(args=[], returncode=result.returncode, ...)
-except subprocess.CalledProcessError as e:
-    return subprocess.CompletedProcess(args=[], returncode=e.returncode, ...)
+    return subprocess.CompletedProcess(args=[], returncode=0, ...)
+    # returncode=0 synthetic: CalledProcessError would have been raised before this line
+except subprocess.CalledProcessError as exc:
+    return subprocess.CompletedProcess(args=[], returncode=exc.returncode, ...)
 # TimeoutExpired propagates intentionally (caller handles separately)
 ```
+
+**Docstring must document which exceptions still propagate**
+
+After absorbing `CalledProcessError`, document explicitly in the docstring that
+`TimeoutExpired` is the only exception that propagates. This is verified by reading
+the wrapped functions — do NOT claim "never raises X" without reading the exception
+contracts of every function the wrapper calls.
 
 **Head-advancement as sole success signal (caller contract)**
 
@@ -1105,9 +1133,16 @@ def _push_ci_fix(self, head_before: str, session_id: str, worktree: Path) -> boo
 
 - [ ] Confirmed exactly 2 branches (no hidden third provider)
 - [ ] Both branches accept identical inputs (no branch-specific parameters)
-- [ ] `AgentRunResult` (or equivalent) has a `returncode` field — READ the class definition
-- [ ] `CalledProcessError` from codex path absorbed into returncode, not re-raised
-- [ ] `TimeoutExpired` intentionally propagates (confirm via caller's except clause)
+- [ ] READ the wrapped function's class definition — grep for it; verify actual field names
+      (e.g., AgentRunResult has stdout/stderr/session_id but NO returncode field)
+- [ ] READ exception contracts of ALL wrapped functions — verify which raise CalledProcessError
+      (run_codex_session raises at non-zero exit; resume_codex_session same behavior)
+- [ ] BOTH codex calls (fresh and resume) wrapped in try/except CalledProcessError
+- [ ] CalledProcessError absorbed into returncode=exc.returncode, not re-raised
+- [ ] returncode=0 on codex success path is synthetic (only reachable if no exception raised)
+- [ ] TimeoutExpired intentionally propagates (document this in docstring)
+- [ ] Docstring states which exceptions propagate; never claim "never raises X" without
+      reading every wrapped function's exception contract
 - [ ] Caller uses head-advancement as sole success signal (not returncode check)
 - [ ] Hardcoded `returncode=0` on claude path is correct (claude raises on failure)
 - [ ] `# noqa: C901` on the original function can be removed — re-run `ruff --select C901`
@@ -1155,8 +1190,9 @@ def _push_ci_fix(self, head_before: str, session_id: str, worktree: Path) -> boo
 | **Moving a constant to a new module without grepping external callers** | Plan moved `FAILING_CHECK_CONCLUSIONS` from `ci_driver.py` to new `ci_check_inspector.py` | External callers doing `from hephaestus.automation.ci_driver import FAILING_CHECK_CONCLUSIONS` get ImportError; CI may not catch until integration tests run | Grep all external callers before moving any constant; if callers exist, keep in place or re-export with explicit `as X` alias from both locations (Phase 19 Step 4) |
 | **Ignoring delegation stub line overhead in line count projections** | Estimated final line count as original minus extracted lines only | 18 extracted methods × 5 stub lines = 90 additional lines not counted; projected 2,200 became 2,252 — tighter than the ≤2,200 criterion | Always add delegation stub overhead (≈ 5 lines × num_extracted_methods) and new import blocks to line count projections (Phase 19 Step 5) |
 | **Assuming test_omit_allowlist.py doesn't exist without checking** | Plan mentioned updating coverage omit lists "if the guard exists" without verifying first | `test_omit_allowlist.py` existed and failed CI when new modules weren't added to the omit list | Always `find tests/ -name "test_omit_allowlist.py"` before adding modules; include omit list update in same PR as new module (Phase 19 Step 6) |
-| **Hardcoding `returncode=0` on success path without reading `AgentRunResult`** | Plan assumed `run_codex_session` returns `AgentRunResult` and constructed `CompletedProcess(returncode=0)` on success | If `run_codex_session` returns `AgentRunResult` with a non-zero returncode on partial failure, hardcoding 0 silently discards the failure signal | Read the `AgentRunResult` class definition before writing the wrapper; use `result.returncode` not `0` (Phase 20) |
-| **Assuming `AgentRunResult.returncode` field exists without verifying** | Plan annotated wrapper with `subprocess.CompletedProcess[str]` and accessed `result.returncode`, assuming field name from `CompletedProcess` analogy | If the field is named differently (e.g., `.exit_code`), mypy passes (type annotation is fine) but runtime raises `AttributeError` | Read the `AgentRunResult` class definition; do not infer field names from analogous types (Phase 20) |
+| **Hardcoding `returncode=0` on success path without reading `AgentRunResult`** | Plan assumed `run_codex_session` returns `AgentRunResult` and constructed `CompletedProcess(returncode=0)` on success | Verified: `run_codex_session` raises `CalledProcessError` on non-zero exit (runtime.py:397–403); it does NOT return an `AgentRunResult` with a returncode on failure. `returncode=0` on the success path is actually correct AND synthetic (only reachable if no exception was raised) — but the reasoning in the plan was wrong; it should be justified by the exception contract, not by reading `AgentRunResult` | Read the wrapped function's exception contract first (`run_codex_session` raises `CalledProcessError` on failure — never returns); `returncode=0` on the codex success path is correct because exceptions have already been absorbed (Phase 20) |
+| **Assuming `AgentRunResult.returncode` field exists without verifying** | Plan annotated wrapper with `subprocess.CompletedProcess[str]` and accessed `result.returncode`, assuming field name from `CompletedProcess` analogy | Verified: `AgentRunResult` (runtime.py:28–34) has fields `stdout`, `stderr`, `session_id` — NO `returncode` field; accessing `result.returncode` would raise `AttributeError` at runtime | Read the actual dataclass definition before accessing any field; grep for `class AgentRunResult` to confirm the exact field names; never infer fields from analogous types (Phase 20) |
+| **Docstring claims wrapper never raises X without verifying wrapped functions** | Wrote a docstring claiming `_invoke_agent_session` "never raises CalledProcessError" before verifying the exception contracts of `run_codex_session` and `resume_codex_session` | Reviewer caught POLA violation: `run_codex_session` DOES raise `CalledProcessError` on non-zero exit (runtime.py:397–403); the docstring was factually wrong | Always grep for the implementation of every function the wrapper calls and read its exception contract before writing "never raises X" in a docstring; reviewers will always verify this (Phase 20) |
 | **Assuming `# noqa: C901` can be removed without re-measuring complexity** | Plan removed the noqa suppressor as part of extraction, assuming post-refactor CC was below threshold | Outer `try/except` around sync + snapshot + prompt-build still contributes branches; if those remain, ruff re-flags the method | Run `ruff check --select C901 <file>.py` after extraction to confirm removal is safe; do not assume (Phase 20 Step 5) |
 | **Treating head-advancement as sole success signal without verifying original code** | After extraction, plan assumed caller only checks `_head_advanced()` after `_invoke_agent_session` | Original codex branch at line 2709 also checked `CalledProcessError` as a distinct failure mode; absorbed-error approach changes semantics if callers relied on that distinct signal | Verify the original error-handling contract before assuming return-value check can be dropped; if the original differentiated `CalledProcessError` from "ran successfully but no head advance", the absorbed approach loses that distinction (Phase 20) |
 | **Assuming duplicate post-agent blocks are identical without diffing** | Plan said lines 2722–2743 and 2777–2798 in `_run_ci_fix_session` were "character-identical" based on visual inspection | Even one extra blank line or minor spacing difference invalidates "identical"; extracting non-identical blocks silently changes behavior | Diff the two blocks explicitly (`diff <(sed -n '2722,2743p' ci_driver.py) <(sed -n '2777,2798p' ci_driver.py)`) before claiming they are character-identical (Phase 20) |
@@ -1231,3 +1267,4 @@ Revised LOC estimate: ~X (vs TODO "~Y"); justification: ~Z% already in substrate
 | HomericIntelligence ecosystem | Cleanup-phase coordination after parallel Test/Implementation/Package phases (KISS/DRY/SOLID finalization before merge) | Superseded `phase-cleanup` (Phase 18) |
 | ProjectHephaestus | Issue #1179 — planning decomposition of `CIDriver` (ci_driver.py, 3,338 lines, 51 methods) into 4 collaborator modules; substrate read revealed `implementer_phase_runner.py` was 1,308 lines not 2,633 (stale audit); 6 planning risks identified including split-ownership on `_viewer_login`, cross-call coupling in `CIFixOrchestrator`, unverified mypy strict mode for `*args/**kwargs` stubs, ungrepped external callers of `FAILING_CHECK_CONCLUSIONS`, delegation stub LOC overhead tightening line count target, and unverified `test_omit_allowlist.py` (unverified — plan not yet executed) | New Phase 19: God-Class Decomposition Planning Risk Audit (v1.4.0) |
 | ProjectHephaestus | Issue #1196 — planning refactor of `_retry_no_commit_once` (164 lines, codex/claude branches threaded through) and `_run_ci_fix_session` (two identical 17-line post-agent blocks); plan: extract `_invoke_agent_session` (not Protocol; two-branch bool-predicate; wraps `AgentRunResult` → `CompletedProcess`) + `_push_ci_fix` (duplicate post-agent block); 5 unverified risks: `AgentRunResult.returncode` field existence, `CalledProcessError` absorption loses codex error signal, head-advancement as sole success signal, `# noqa: C901` removal safety, duplicate block character-identity (unverified — plan not yet executed) | New Phase 20: Provider-Conditional Dispatch Extraction (v1.5.0) |
+| ProjectHephaestus | Issue #1196 Phase 20 reviewer NOGO — reviewer verified source: `AgentRunResult` (runtime.py:28–34) has `stdout`/`stderr`/`session_id` fields (NO `returncode`); `run_codex_session` raises `CalledProcessError` at runtime.py:397–403 on non-zero exit; `resume_codex_session` same behavior; POLA violation caught: docstring claimed "never raises CalledProcessError" without verifying wrapped functions; corrected pattern: wrap BOTH codex calls in `try/except CalledProcessError`, use `CompletedProcess(returncode=0)` (synthetic, only reachable without exception), document `TimeoutExpired` as sole propagating exception | Phase 20 correction: exception-contract verification before wrapper docstrings (v1.6.0) |
