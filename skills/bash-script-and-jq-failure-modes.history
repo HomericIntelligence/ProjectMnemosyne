@@ -1,5 +1,30 @@
 ## Version History
 
+### v1.2.0 (2026-06-12)
+
+**Changed by:** Issue #1122 planning session — `scripts/choose_merge_flag.sh` stderr/stdout separation bug
+**Verification:** unverified — planning session only; fix not yet executed in CI
+
+#### What changed
+- Added Failure Mode 8: `raw=$(gh api ... 2>&1)` merges gh stderr into JSON capture; any non-JSON line (deprecation banner, debug trace, update notice) corrupts the blob and causes jq to fail or return empty, producing a false "no merge methods allowed" exit-1.
+- Added Failure Mode 9: mock-gh bash function pattern (`gh() { ... }; export -f gh; source script.sh`) for hermetic integration tests of shell scripts that call `gh` by name. Includes critical note about `{{`/`}}` escaping in Python f-strings.
+- Added two new entries to Quick Reference: `2>&1` correction pattern and mock-gh function pattern.
+- Added two new "When to Use" triggers for `2>&1` corruption and mock-gh integration testing.
+- Added two new Failed Attempts rows: `raw=$(gh api ... 2>&1)` piped into jq, and including `$raw` in the error message after removing `2>&1`.
+- Updated description, date (2026-06-12), tags, version.
+- Added Verified On entry for ProjectHephaestus issue #1122 (marked unverified — planning only).
+
+#### Uncertain assumptions (reviewer notes)
+- `.[0] // ""` jq expression safety when all three merge-flag fields are `false`: assessed as safe (operates on string/null not boolean) by code reading only — not executed locally to confirm.
+- `export -f gh` + `source script.sh` mock-gh pattern confirmed from team KB but not run locally before plan was written; `{{`/`}}` escaping in Python f-strings critical and untested.
+- Whether gh always writes error detail to stderr on all failure modes (network timeout, rate-limit): assumed yes for standard HTTP errors; not verified for all failure paths.
+
+#### Previous version (v1.1.0) snapshot
+
+See v1.1.0 entry below for the full previous skill content.
+
+---
+
 ### v1.1.0 (2026-05-26)
 - Added Failure Mode 7: `set -m` (job control) + single-command `(...)` subshell exec-optimization causing silent abort with no error trace.
 - Added "Diagnostic recipe: silent abort after single-command subshell" subsection with ERR/EXIT/RETURN trap recipe.
