@@ -1,9 +1,9 @@
 ---
 name: stale-documentation-audit-and-broken-reference-repair
-description: "Use when: (1) running a doc-drift audit across a corpus — detecting stale counts, metric discrepancies, cross-doc contradictions, ecosystem-role drift; (2) removing phantom directory references from documentation when a path no longer exists; (3) fixing broken documentation references (dead links, stale headings); (4) auditing documentation examples for policy violations; (5) auditing and rewriting getting-started stubs by sourcing real commands from justfile and versions from pixi.toml; (6) fixing incorrect tier labels or version numbers in docs that have drifted from implementation; (7) managing the full lifecycle of placeholder and stub documentation — deletion under YAGNI, deferred-comment placeholders, rewriting with accurate codebase-grounded content; (8) resolving audit nitpicks for monolithic code by documenting verified design rationale; (9) resolving CONTRIBUTING.md case-clashes and circular cross-references in docs/; (10) validating anchor fragments in markdown deep-links to detect broken headings."
+description: "Use when: (1) running a doc-drift audit across a corpus — detecting stale counts, metric discrepancies, cross-doc contradictions, ecosystem-role drift; (2) removing phantom directory references from documentation when a path no longer exists; (3) fixing broken documentation references (dead links, stale headings); (4) auditing documentation examples for policy violations; (5) auditing and rewriting getting-started stubs by sourcing real commands from justfile and versions from pixi.toml; (6) fixing incorrect tier labels or version numbers in docs that have drifted from implementation; (7) managing the full lifecycle of placeholder and stub documentation — deletion under YAGNI, deferred-comment placeholders, rewriting with accurate codebase-grounded content; (8) resolving audit nitpicks for monolithic code by documenting verified design rationale; (9) resolving CONTRIBUTING.md case-clashes and circular cross-references in docs/; (10) validating anchor fragments in markdown deep-links to detect broken headings; (11) resolving a count-drift audit issue whose own stated numbers (\"X vs Y\") may themselves be stale — re-derive the count from the enforced code artifact (a parsed array or a passing frozen-allowlist test) rather than either side quoted in the issue."
 category: documentation
-date: 2026-06-07
-version: "1.0.0"
+date: 2026-06-12
+version: "1.1.0"
 user-invocable: false
 history: stale-documentation-audit-and-broken-reference-repair.history
 tags: [doc-drift, stale-doc, broken-references, phantom-dir, placeholder, stub, anchor-validation, tier-labels, doc-audit, doc-sync, merged]
@@ -106,6 +106,31 @@ Add a self-verifying command to the doc so future readers can re-check:
 
 **Example** — agent count drift after agents converted to skills: update both the Quick Links
 bullet (`- N agents` → `- M agents`) and the Agent Hierarchy line (`All N agents` → `All M agents`).
+
+**The audit issue's own numbers can be stale (confidence: unverified — planning learning, not
+executed end-to-end).** When a count-drift audit issue states the conflict as "X vs Y", treat
+BOTH X and Y as suspect prose. Re-derive the count from the authoritative *code* artifact — a
+parsed array or, best of all, a passing **frozen-allowlist test** (an enumerated set + a count
+comment that is mechanically enforced). The frozen test is stronger ground truth than any prose
+comment or doc, because it fails CI if the real count drifts; prefer it as the tiebreaker.
+
+- *Example* — ProjectHephaestus #1191 stated "6 excluded automation modules vs 11". The real
+  enforced source was `pyproject.toml [tool.coverage.run].omit` (12 `hephaestus/automation/*.py`
+  entries) and the passing guard `tests/unit/validation/test_omit_allowlist.py` (`expected_modules`
+  set of 12 + "12 automation modules" comment). Both numbers in the issue were wrong; the true
+  count was a *third* number entirely (12). The "11" was a stale inline comment at
+  `pyproject.toml:244`, with a third stale "11" copy in
+  `tests/integration/test_orchestration_smoke.py` docstring/comments — whose own `OMITTED_MODULES`
+  list nonetheless had 12 entries.
+- **Grep the whole corpus for paraphrased counts**, not just `docs/`. Inline comments and module
+  docstrings that restate the length of a nearby list are a recurring drift source and hide in
+  test files: `grep -rn "11 modules\|All 11 \|the 11 automation" pyproject.toml docs/ tests/`.
+  Fix every copy in one PR — fixing only the issue's named file (e.g. ROADMAP) leaves the other
+  stale copies to re-trigger the same audit finding.
+- **Regression-guard decision:** add a doc-grep test only when *no* enforced guard already exists.
+  In #1191, `test_omit_allowlist.py` already enforces the 12-count, so a brittle prose-matching
+  doc-grep test was correctly declined. A prose-matching test is warranted only when there is no
+  mechanically enforced ground truth.
 
 Optionally add a drift-detection regression test (see Results & Parameters) and an ADR.
 
@@ -267,6 +292,8 @@ gh pr merge --auto --rebase
 | Full pre-commit suite without skipping | Ran all hooks on a host with a GLIBC mismatch | `mojo-format` fails on GLIBC < 2.32 (environment, not code) | Use `SKIP=mojo-format`; only non-Mojo hooks matter for doc-only changes |
 | Deleting `docs/contributing.md` to resolve the case-clash | Removed the file entirely | Breaks inbound links from the docs index | Reduce to a redirect; keep root as canonical |
 | Per-file reviewers for citation corpus | Reviewed each entry individually | Could not see cross-document §-drift or arXiv ID-to-title swaps | Both failure modes need a cross-corpus structural audit, not per-file review |
+| Trusted the audit issue's stated count ("6 vs 11") | Took the issue's two numbers as the only candidates | Both were stale prose; the enforced `omit` array + passing frozen test (`test_omit_allowlist.py`) showed the true count was 12 | Re-derive from the executable/enforced artifact (frozen-list test or parsed array), never from either side quoted in the issue (confidence: unverified) |
+| Would have fixed only the issue's named file (ROADMAP) | Planned to edit just the file the issue called out | Two more stale "11" copies survive in the `pyproject.toml:244` comment and the `test_orchestration_smoke.py` docstring, and would re-trigger the same audit finding | Corpus-wide grep for paraphrased counts and fix every copy in one PR (confidence: unverified) |
 
 ## Results & Parameters
 
@@ -331,4 +358,5 @@ pixi run npx markdownlint-cli2 <file>
 | ProjectOdyssey | Issues #3344, #3365; PR #3320; PR #4847 | Workflow README audit, agent-count fix, post-migration README sync |
 | ProjectOdyssey | Issues #3142/#3308, #3304/#3913, #3305/#3917, #3918/#4830, #3141/#3303, #3914/#4828, #3915/#4829 | Stub deletion, installation/quickstart rewrite, IDE-setup extend, getting-started audit, anchor validator |
 | ProjectHephaestus | Issue #792 (PR #984); Issue #630 (PR #667) | Monolith-rationale ADR; CONTRIBUTING case-clash redirect |
+| ProjectHephaestus | Issue #1191 (planning only — unverified) | Count-drift "6 vs 11": both issue numbers stale; enforced `omit` array + frozen test `test_omit_allowlist.py` showed true count 12; re-derive-from-artifact lesson |
 | mvillmow/Random | Predictive-Coding-in-Mojo Phase 0 | Cross-doc citation drift: 8 stale §-refs, 2 arXiv ID swaps caught |
