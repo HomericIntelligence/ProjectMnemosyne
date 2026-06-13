@@ -1,9 +1,9 @@
 ---
 name: stale-documentation-audit-and-broken-reference-repair
-description: "Use when: (1) running a doc-drift audit across a corpus — detecting stale counts, metric discrepancies, cross-doc contradictions, ecosystem-role drift; (2) removing phantom directory references from documentation when a path no longer exists; (3) fixing broken documentation references (dead links, stale headings); (4) auditing documentation examples for policy violations; (5) auditing and rewriting getting-started stubs by sourcing real commands from justfile and versions from pixi.toml; (6) fixing incorrect tier labels or version numbers in docs that have drifted from implementation; (7) managing the full lifecycle of placeholder and stub documentation — deletion under YAGNI, deferred-comment placeholders, rewriting with accurate codebase-grounded content; (8) resolving audit nitpicks for monolithic code by documenting verified design rationale; (9) resolving CONTRIBUTING.md case-clashes and circular cross-references in docs/; (10) validating anchor fragments in markdown deep-links to detect broken headings."
+description: "Use when: (1) running a doc-drift audit across a corpus — detecting stale counts, metric discrepancies, cross-doc contradictions, ecosystem-role drift; (2) removing phantom directory references from documentation when a path no longer exists; (3) fixing broken documentation references (dead links, stale headings); (4) auditing documentation examples for policy violations; (5) auditing and rewriting getting-started stubs by sourcing real commands from justfile and versions from pixi.toml; (6) fixing incorrect tier labels or version numbers in docs that have drifted from implementation; (7) managing the full lifecycle of placeholder and stub documentation — deletion under YAGNI, deferred-comment placeholders, rewriting with accurate codebase-grounded content; (8) resolving audit nitpicks for monolithic code by documenting verified design rationale; (9) resolving CONTRIBUTING.md case-clashes and circular cross-references in docs/; (10) validating anchor fragments in markdown deep-links to detect broken headings; (11) ensuring pixi-only setup docs prefix every pixi-env tool (pre-commit, pytest, mypy, ruff) with `pixi run` so a bare invocation does not fail with `command not found` on a clean machine."
 category: documentation
-date: 2026-06-07
-version: "1.0.0"
+date: 2026-06-12
+version: "1.1.0"
 user-invocable: false
 history: stale-documentation-audit-and-broken-reference-repair.history
 tags: [doc-drift, stale-doc, broken-references, phantom-dir, placeholder, stub, anchor-validation, tier-labels, doc-audit, doc-sync, merged]
@@ -15,7 +15,7 @@ tags: [doc-drift, stale-doc, broken-references, phantom-dir, placeholder, stub, 
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-07 |
+| **Date** | 2026-06-12 |
 | **Objective** | Canonical workflow for auditing stale documentation and repairing broken references: drift audits, phantom-dir/dead-link removal, placeholder lifecycle, getting-started rewrites, tier-label fixes, anchor validation |
 | **Outcome** | Consolidated from 10 skills covering doc-drift audits, broken-reference repair, policy-violation audits, placeholder/stub lifecycle, monolith-rationale docs, CONTRIBUTING case-clash, and anchor validation |
 | **Verification** | verified-ci |
@@ -34,6 +34,7 @@ tags: [doc-drift, stale-doc, broken-references, phantom-dir, placeholder, stub, 
 - An audit nitpick questions a monolithic file's organization and needs a documented rationale
 - Both `CONTRIBUTING.md` and `docs/contributing.md` exist with a circular cross-reference
 - README/docs deep-link to specific installation headings and you need CI to catch broken anchors
+- A pixi-only repo's setup docs invoke a pixi-env tool (`pre-commit`, `pytest`, `mypy`, `ruff`) bare — without `pixi run` — so it fails with `command not found` on a clean machine
 
 ## Verified Workflow
 
@@ -235,6 +236,49 @@ Scan only fenced shell code blocks (never prose, to avoid matching prohibition t
 `build/`). Anchor command rules to line starts and exclude `#`-commented lines (intentional
 "BLOCKED" demonstrations are not violations). Add a regression test per new pattern.
 
+#### 10. Pixi-only setup docs: prefix env tools with `pixi run`
+
+In a pixi-managed repo, command blocks in setup docs (README "Development setup",
+CONTRIBUTING, getting-started) must prefix every pixi-env-provided tool
+(`pre-commit`, `pytest`, `mypy`, `ruff`, etc.) with `pixi run`. A BARE invocation
+(`pre-commit install`) fails with `command not found` on a clean machine: after only
+`pixi install`, the env's `.pixi/envs/default/bin` is NOT on the user's PATH — the
+tool is a pixi dependency, not a globally-installed one. This is a doc-DRIFT /
+DRY-consistency bug: one setup doc carries the bare form while the canonical sources
+(other docs, install scripts) already use `pixi run`.
+
+1. Find every setup-doc command block that invokes a pixi-env tool without `pixi run`:
+
+   ```bash
+   grep -rnE '^[[:space:]]*(pre-commit|pytest|mypy|ruff)\b' README.md CONTRIBUTING.md docs/ --include='*.md'
+   ```
+
+2. Identify the canonical form already used by the other setup docs / install scripts
+   (the truth — do NOT invent the command). Example from this session:
+   `CONTRIBUTING.md` and `scripts/shell/install_hooks.sh` both already had
+   `pixi run pre-commit install`; the README had the bare form.
+
+3. Edit the drifted doc to match the canonical form verbatim (prefix with `pixi run`).
+
+4. Verify all setup docs agree (positive grep) AND no bare form remains (negative grep):
+
+   ```bash
+   grep -n "pixi run pre-commit install" README.md CONTRIBUTING.md scripts/shell/install_hooks.sh   # match in each
+   grep -n "^pre-commit install" README.md                                                          # expect NO output (exit 1)
+   ```
+
+5. Validate the docs-only change with the only relevant gate (no test file needed for
+   docs-only):
+
+   ```bash
+   pixi run pre-commit run markdownlint-cli2 --files README.md
+   ```
+
+**Key insight** — a bare env-tool in setup docs is the documentation-time twin of the
+runtime "wrong binary on PATH" failure already documented in `pixi-runtime-env-gotchas`
+(cross-reference it). The fix is DRY: bring the drifted copy into agreement with the
+canonical sources. Do NOT add a CI drift-guard for a one-line fix (YAGNI).
+
 ### Validate, Commit, and PR
 
 ```bash
@@ -267,6 +311,7 @@ gh pr merge --auto --rebase
 | Full pre-commit suite without skipping | Ran all hooks on a host with a GLIBC mismatch | `mojo-format` fails on GLIBC < 2.32 (environment, not code) | Use `SKIP=mojo-format`; only non-Mojo hooks matter for doc-only changes |
 | Deleting `docs/contributing.md` to resolve the case-clash | Removed the file entirely | Breaks inbound links from the docs index | Reduce to a redirect; keep root as canonical |
 | Per-file reviewers for citation corpus | Reviewed each entry individually | Could not see cross-document §-drift or arXiv ID-to-title swaps | Both failure modes need a cross-corpus structural audit, not per-file review |
+| Trusting the audit issue's line numbers verbatim | The issue cited README.md:58-61, CONTRIBUTING.md:43, install_hooks.sh:41 in scripts/ | Coordinates had drifted: real lines were README.md:60, CONTRIBUTING.md:61, scripts/shell/install_hooks.sh:9 | Always Read the file and re-grep on disk before editing; audit line numbers go stale — verify, don't trust |
 
 ## Results & Parameters
 
@@ -331,4 +376,5 @@ pixi run npx markdownlint-cli2 <file>
 | ProjectOdyssey | Issues #3344, #3365; PR #3320; PR #4847 | Workflow README audit, agent-count fix, post-migration README sync |
 | ProjectOdyssey | Issues #3142/#3308, #3304/#3913, #3305/#3917, #3918/#4830, #3141/#3303, #3914/#4828, #3915/#4829 | Stub deletion, installation/quickstart rewrite, IDE-setup extend, getting-started audit, anchor validator |
 | ProjectHephaestus | Issue #792 (PR #984); Issue #630 (PR #667) | Monolith-rationale ADR; CONTRIBUTING case-clash redirect |
+| ProjectHephaestus | Issue #1215 (PR #1243) | Pixi-only setup-doc fix: `README.md:60` `pre-commit install` → `pixi run pre-commit install`, matching `CONTRIBUTING.md:61` and `scripts/shell/install_hooks.sh:9` (verified-ci) |
 | mvillmow/Random | Predictive-Coding-in-Mojo Phase 0 | Cross-doc citation drift: 8 stale §-refs, 2 arXiv ID swaps caught |

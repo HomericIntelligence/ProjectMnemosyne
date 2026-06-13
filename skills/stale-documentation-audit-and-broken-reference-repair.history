@@ -2,6 +2,38 @@
 
 # stale-documentation-audit-and-broken-reference-repair — History
 
+## v1.1.0 (2026-06-12)
+
+**Changed by:** ProjectHephaestus #1215 / PR #1243 — pixi-run-prefix in setup docs.
+
+**Verification:** verified-ci (markdownlint pre-commit gate passed; docs-only repo edit
+verified against the canonical sources on disk).
+
+**What changed:**
+
+- Added When-to-Use trigger (11) and a `## Verified Workflow → Detailed Steps`
+  subsection "#### 10. Pixi-only setup docs: prefix env tools with `pixi run`" — the
+  5-step find/identify-canonical/edit/verify(positive+negative grep)/markdownlint
+  workflow.
+- New Failed Attempt: trusting the audit issue's line numbers verbatim — coordinates
+  had drifted; always Read + re-grep on disk before editing.
+- Cross-reference to `pixi-runtime-env-gotchas` (the runtime twin of this
+  documentation-time failure) + the DRY/YAGNI key insight (agree with canonical
+  sources; do not add a CI drift-guard for a one-line fix).
+- New `## Verified On` row: ProjectHephaestus #1215 (PR #1243) — `README.md:60`
+  `pre-commit install` → `pixi run pre-commit install`, matching `CONTRIBUTING.md:61`
+  and `scripts/shell/install_hooks.sh:9`.
+- Bumped Overview Date to 2026-06-12.
+
+**Why:** In a pixi-managed repo, a bare pixi-env tool in setup docs
+(`pre-commit install`) fails with `command not found` on a clean machine — after only
+`pixi install`, `.pixi/envs/default/bin` is not on the user's PATH. This is a
+doc-DRIFT / DRY-consistency bug when one setup doc carries the bare form while the
+canonical sources already use `pixi run`.
+
+**Snapshot:** the prior v1.0.0 content is preserved verbatim in the v1.0.0 entry below;
+no previous-version snapshot is duplicated here.
+
 ## v1.0.0 (2026-06-07)
 
 Consolidated 10 documentation skills into one canonical covering stale-doc drift audits and broken-reference repair. Absorbed skills:
