@@ -1,6 +1,43 @@
 <!-- markdownlint-disable MD024 -->
 # python-module-decomposition-and-refactor-patterns — History
 
+## v1.5.0 (2026-06-13)
+
+**Changed by:** /learn from ProjectHephaestus issue #1196 (ci_driver.py provider-dispatch refactor planning)
+**Verification:** unverified (plan not yet executed; CI not run)
+
+### What changed
+
+Added Phase 20: Provider-Conditional Dispatch Extraction — covers the two-branch bool-predicate
+pattern where a function dispatches to two different external agent APIs (e.g., codex vs. claude)
+returning heterogeneous types:
+
+1. Decision table: private method (not Protocol/Strategy) when exactly 2 branches, bool predicate,
+   identical inputs, tested via existing mocks
+2. Return-type unification at the extraction boundary: wrap `AgentRunResult` → `subprocess.CompletedProcess[str]`
+3. `CalledProcessError` absorption pattern with intentional `TimeoutExpired` propagation
+4. Head-advancement as sole success signal contract (verify before assuming)
+5. `_push_ci_fix` pattern for extracting duplicate post-agent blocks
+6. Phase 20 verification checklist (9 items)
+
+Added 5 new Failed Attempts rows covering unverified risks from issue #1196 planning:
+- Hardcoding `returncode=0` without reading `AgentRunResult` class
+- Assuming `AgentRunResult.returncode` field name without reading the class
+- Assuming `# noqa: C901` can be removed without re-measuring complexity
+- Treating head-advancement as sole success signal without verifying original error-handling
+- Assuming duplicate blocks are character-identical without diffing
+
+Also: updated description (trigger 14), tags (5 new), Trigger row, When-to-Use bullet,
+Quick Reference (Phase 20), Verified On (new row for issue #1196). Bumped 1.4.0 → 1.5.0.
+
+### Why
+
+Issue #1196 planning identified a distinct extraction scenario not covered by existing phases:
+decoupling provider-conditional dispatch (two-branch bool predicate) from oversized functions,
+with the specific complication of heterogeneous return types that must be unified at the
+extraction boundary. The 5 planning risks are specific to this pattern and not captured
+by Phase 13 (pipeline-step extraction) or Phase 19 (god-class decomposition).
+
 ## v1.4.0 (2026-06-13)
 
 **Changed by:** /learn from ProjectHephaestus issue #1179 (CIDriver god-class decomposition planning)
