@@ -1,6 +1,45 @@
 <!-- markdownlint-disable MD024 -->
 # python-module-decomposition-and-refactor-patterns — History
 
+## v1.5.0 (2026-06-13)
+
+**Changed by:** Issue #1179 R1 planning session (CIDriver god-class decomposition, ProjectHephaestus)
+**Verification:** unverified
+
+### What changed
+
+- Bumped version 1.3.0 → 1.5.0 (skipping 1.4.0 which was never published)
+- Updated description trigger (13): extracting collaborators from a coverage-omitted orchestration class
+- Added new tags: `coverage-omit`, `narrow-callable-injection`, `dip`, `sibling-test-files`
+- Added Phase 19: Coverage Omit-Allowlist Checklist — atomic three-file update required BEFORE creating new modules
+- Added Phase 20: Narrow-Callable Injection (DIP Without Bidirectional Coupling) — pattern from `ArmingStateStore`
+- Added Phase 21: Sibling Test File Discovery for Delegation Stubs — grep ALL `test_<module>*.py` files
+- Added 3 new Quick Reference decision tree entries (Phases 19-21)
+- Added 4 new Failed Attempts rows from R0 NOGO findings
+
+### Why
+
+R0 plan for issue #1179 (CIDriver god-class decomposition) was NOGO'd for two MAJOR findings:
+
+1. Wrong coverage omit guidance — proposed "add to source OR omit" as alternatives; only "add to omit"
+   is correct for orchestration modules; all 3 guard files must be updated atomically before the new
+   file is created
+2. Used wrong guard file path (`tests/unit/test_omit_allowlist.py` — does not exist; correct path is
+   `tests/unit/validation/test_omit_allowlist.py`)
+
+R0 also missed: narrow-callable injection (passed full driver `self` creating bidirectional coupling)
+and 3 sibling test files containing 62 additional patch refs beyond the primary `test_ci_driver.py`.
+
+### Previous version (v1.3.0) snapshot
+
+Version 1.3.0 (2026-06-05/07) covered 18 phases and was synthesized from 13 skills. See the
+v1.3.0 section below for the full content. Key content present in v1.3.0 that this version
+extends:
+- Phase 11 already had a brief "Coverage omit-allowlist guard" note (not the atomic three-file
+  checklist); Phase 19 adds the complete pattern
+- Phase 2 / collaborator-extraction-tdd already had the "never pass full host reference" DIP
+  principle; Phase 20 adds the named narrow-callable injection pattern with concrete code example
+
 ## v1.3.0 (2026-06-07)
 
 **Changed by:** Skill-consolidation pass (cluster PYR02)

@@ -19,10 +19,13 @@ description: >-
   marked as fallback/reference-only after verifying zero real callers,
   (11) reading the existing substrate code before estimating a large refactor
   to avoid 3-5x LOC over-estimation, (12) finalizing code after parallel phases
-  complete by addressing technical debt accumulated during rapid development.
+  complete by addressing technical debt accumulated during rapid development,
+  (13) extracting collaborators from a coverage-omitted orchestration class
+  requiring atomic guard-file updates before new module creation.
 category: architecture
-date: 2026-06-05
-version: "1.3.0"
+date: 2026-06-13
+version: "1.5.0"
+verification: unverified
 user-invocable: false
 history: python-module-decomposition-and-refactor-patterns.history
 tags:
@@ -45,6 +48,10 @@ tags:
   - dead-code
   - estimation
   - phase-cleanup
+  - coverage-omit
+  - narrow-callable-injection
+  - dip
+  - sibling-test-files
 ---
 
 # Python Module Decomposition and Refactor Patterns
@@ -53,10 +60,10 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-05 |
+| **Date** | 2026-06-13 |
 | **Objective** | Decompose oversized Python modules/classes into focused, independently testable units using SRP, TDD, and DRY principles |
-| **Outcome** | Synthesized from 13 verified skills; covers function-level extraction, class-based extraction, circular import fixes, immutability refactoring, extensibility-driven decomposition, CLI entry-point extraction with preserved patch routing, top-level symbol extraction to break sibling module cycles, CC>15 pipeline-step extraction, scanner-to-subdirectory scoping, context-manager double-counter fixes, safe legacy-code deletion, substrate-read-before-estimate discipline, and post-parallel phase cleanup |
-| **Trigger** | Files >800 lines, circular import errors, mixed-concern methods, C901/CC>15 complexity, extensibility requirements, CLI main() extraction, deferred imports inside function bodies preventing static analysis, broad scanners needing subdirectory scope, stale callers after context-manager refactors, dead fallback files, pessimistic refactor estimates, technical debt after parallel phases |
+| **Outcome** | Synthesized from 13 verified skills; covers function-level extraction, class-based extraction, circular import fixes, immutability refactoring, extensibility-driven decomposition, CLI entry-point extraction with preserved patch routing, top-level symbol extraction to break sibling module cycles, CC>15 pipeline-step extraction, scanner-to-subdirectory scoping, context-manager double-counter fixes, safe legacy-code deletion, substrate-read-before-estimate discipline, post-parallel phase cleanup, coverage-omit-allowlist guard, narrow-callable injection (DIP), and sibling test file discovery |
+| **Trigger** | Files >800 lines, circular import errors, mixed-concern methods, C901/CC>15 complexity, extensibility requirements, CLI main() extraction, deferred imports inside function bodies preventing static analysis, broad scanners needing subdirectory scope, stale callers after context-manager refactors, dead fallback files, pessimistic refactor estimates, technical debt after parallel phases, extracting collaborators from coverage-omitted orchestration class |
 
 ## When to Use
 
@@ -77,6 +84,7 @@ Apply this skill when any of the following is true:
 - A code file declares itself **"kept for reference / fallback only"** but has zero real callers and leaves stale back-references in production code
 - A `TODO.md`/roadmap/audit estimates **"thousands of LOC" or weeks** for a substrate rewrite — read the substrate first to avoid a 3-5x pessimistic estimate
 - You are in the **cleanup phase** after parallel Test/Implementation/Package phases and need to address accumulated technical debt before merge
+- You are **extracting collaborators from a coverage-omitted orchestration class** (e.g., `ci_driver.py`) — new modules inherit the "live CLI required" property and require atomic guard-file updates before creating the new files
 
 ## Verified Workflow
 
@@ -100,6 +108,9 @@ Decision tree:
   Dead "fallback only" file, 0 callers  → Safe Legacy Deletion (Phase 16)
   Estimating a big rewrite              → Read substrate FIRST (Phase 17)
   Cleanup after parallel phases         → Finalization checklist (Phase 18)
+  New module from coverage-omitted class → Omit-allowlist checklist (Phase 19) — update all 3 guard files FIRST
+  Collaborator needs back-calls to driver → Narrow-callable injection (Phase 20) — never pass full self
+  God-class has multiple test files     → Sibling test file discovery (Phase 21) — grep ALL test_<module>*.py
 
 Universal rule for mock patches after any move:
   Patch where the name is LOOKED UP at call time — not where it was defined.
@@ -797,6 +808,92 @@ complex functions simplified, naming consistent, docs updated, all tests passing
 formatted, zero compiler warnings, coverage at/above floor, ready for review. Cleanup is the
 final polishing gate before PR approval and merge.
 
+### Phase 19: Coverage Omit-Allowlist Checklist (Hard CI Gate)
+
+Use when extracting modules from a coverage-omitted orchestration class (e.g., `ci_driver.py`).
+New modules inherit the same "live gh/claude CLI required" property and MUST be registered in
+all three places atomically, BEFORE creating the new module files.
+
+The three places that must be updated in a single commit preceding new module creation:
+
+1. `pyproject.toml [tool.coverage.run] omit` — add the new module glob
+2. `tests/unit/validation/test_omit_allowlist.py` `expected_modules` frozen set — add the module name
+3. `tests/integration/test_orchestration_smoke.py` `OMITTED_MODULES` list — add the module name
+
+**The update must be atomic (one commit) and must precede the new module file creation.**
+Failure to update all three causes the allowlist guard test to fail CI immediately when the new
+file appears on disk.
+
+Correct guard file paths (verify on disk before writing the plan):
+
+- `tests/unit/validation/test_omit_allowlist.py` (NOT `tests/unit/test_omit_allowlist.py`)
+- `tests/integration/test_orchestration_smoke.py` (NOT in `tests/unit/`)
+
+```bash
+# Verify paths exist before writing the plan
+ls tests/unit/validation/test_omit_allowlist.py
+ls tests/integration/test_orchestration_smoke.py
+```
+
+Note: the Phase 11 "Coverage omit-allowlist guard" note documents the same concept briefly.
+This phase provides the atomic three-file checklist pattern for orchestration-class decompositions.
+
+### Phase 20: Narrow-Callable Injection (DIP Without Bidirectional Coupling)
+
+Use when collaborators extracted from a god-class need to call back into the original class.
+Passing the full `self` (the driver) creates bidirectional coupling — the
+collaborator → driver → collaborator web. The correct pattern is narrow-callable injection.
+
+Pattern (from `ArmingStateStore`, `arming_state.py:41`):
+
+```python
+# WRONG: full driver passed, bidirectional coupling
+self._check_inspector = CICheckInspector(driver=self)
+
+# RIGHT: only the needed callables injected
+self._check_inspector = CICheckInspector(
+    get_pr_branch=self._get_pr_branch,  # Callable[[int], str]
+)
+self._fix_orchestrator = CIFixOrchestrator(
+    format_review_threads_block=self._format_review_threads_block,
+    head_advanced=self._head_advanced,
+    ci_fix_head_is_pushable=self._ci_fix_head_is_pushable,
+    options_provider=lambda: self.options,
+    state_dir_provider=lambda: self.state_dir,
+)
+```
+
+Key insight: methods extracted INTO the same collaborator become `self.method()` internal calls —
+they are NOT back-calls and do NOT need injection. Only methods that STAY on the original class
+and are called by the new collaborator need injection as narrow callables.
+
+This matches the `TierActionBuilder` pattern (Phase 2 / collaborator-extraction-tdd) where
+callbacks are injected as `Callable` parameters rather than passing a host reference.
+
+### Phase 21: Sibling Test File Discovery for Delegation Stubs
+
+Use when planning delegation stubs for a god-class that has multiple test files. A module
+can have sibling test files (e.g., `test_ci_driver_*.py`) that all use `patch.object` on the
+original class. Grepping only the primary test file will miss patch refs in siblings.
+
+```bash
+# Find ALL test files for a module before planning delegation stubs
+ls tests/unit/**/*test_ci_driver*.py
+grep -l "patch.object(CIDriver" tests/unit/**/*.py
+```
+
+Delegation stubs (thin wrappers on the original class that call the collaborator) preserve all
+`patch.object(OriginalClass, '_method_name')` patch targets without any test changes — but only
+if you know which methods are patched across ALL sibling test files.
+
+Example scope (CIDriver decomposition):
+- `test_ci_driver.py` — 146 tests, primary file
+- `test_ci_driver_failing_pr_discovery.py` — patches `_discover_bot_prs`, `_discover_failing_prs`
+- `test_ci_driver_prs_mode.py` — patches `_discover_prs`, `_discover_failing_prs`, `_validate_pr_open`
+- `test_ci_driver_author_scope.py` — patches `_discover_bot_prs`, `_find_pr_for_issue`
+
+Total: 62 patch refs across 4 files — all use `patch.object(CIDriver, '_method_name')`.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -827,6 +924,10 @@ final polishing gate before PR approval and merge.
 | **Forgetting fixture migration after scoping a scanner** | Scoped the scanner to `scylla/` but left existing tests writing fixtures at `tmp_path/"bad.py"` | Root-level fixtures are now out of scope — tests returned zero findings and failed | After narrowing scanner scope, move every test fixture into the scoped dir and update hard-coded path assertions (`"bad.py"` → `"scylla/bad.py"`) |
 | **Trusting a TODO/audit LOC estimate without reading the substrate** | Took `TODO.md` "Phase 2: ~5000 LOC" and an audit's "CRITICAL: autograd missing" as authoritative effort | Existing tape/registry/SavedTensors infra already covered ~70%; estimate was 3-5x too high and conflated "documented" with "missing" | Read every substrate file in full with line-cited evidence BEFORE estimating (Phase 17); re-classify "missing" as "incomplete, N% gap" |
 | **Deleting legacy code before verifying zero callers** | Assumed a "fallback only" file was dead and considered deleting it on the strength of its header alone | "Fallback only" claims are not self-enforcing — the codebase may still depend on it in non-obvious ways; dead code passes all CI | Systematically grep all callers across `*.py/*.sh/*.md/.github/` first, rewrite stale back-references as self-contained comments, then delete and run full suites (Phase 16) |
+| **R0 plan: "add to source OR omit" for new orchestration modules** | Proposed alternative path of not adding new modules to the coverage omit list | Allowlist guard test (`test_omit_allowlist.py`) fails in CI immediately when the new file appears on disk — no alternative path exists for orchestration modules | Always add to omit AND update both guard files atomically in one commit BEFORE creating the new module files (Phase 19) |
+| **R0 plan: wrong coverage guard file path** | Used `tests/unit/test_omit_allowlist.py` (does not exist) as the path to update | File doesn't exist; correct path is `tests/unit/validation/test_omit_allowlist.py`; the integration guard is `tests/integration/test_orchestration_smoke.py` (not in `tests/unit/`) | Verify guard file paths on disk with `ls` before writing the plan; do not assume paths from memory |
+| **R0 plan: passing full driver `self` to collaborators** | Passed full `CIDriver` instance to extracted collaborators (`CICheckInspector(driver=self)`) | Creates bidirectional coupling — collaborator → driver → collaborator; violates DIP and makes collaborators impossible to test without constructing the full driver | Use narrow-callable injection: pass only the specific methods/lambdas the collaborator needs (Phase 20); template is `ArmingStateStore` in `arming_state.py:41` |
+| **R0 plan: grepped only the primary test file** | Ran grep for `patch.object` only in `test_ci_driver.py` when planning delegation stubs | Missed 3 sibling test files (`test_ci_driver_failing_pr_discovery.py`, `test_ci_driver_prs_mode.py`, `test_ci_driver_author_scope.py`) with 62 additional patch refs | Always grep ALL `test_<module>*.py` sibling files for `patch.object` refs before planning delegation stubs (Phase 21) |
 
 ## Results & Parameters
 
