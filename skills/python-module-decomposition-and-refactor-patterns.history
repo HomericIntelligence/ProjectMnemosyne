@@ -1,6 +1,98 @@
 <!-- markdownlint-disable MD024 -->
 # python-module-decomposition-and-refactor-patterns — History
 
+## v1.10.0 (2026-06-13)
+
+**Changed by:** /learn from ProjectHephaestus PR #1292 (issue #1179 — CIDriver god-class decomposition execution using narrow-callable DIP injection)
+**Verification:** verified-ci (PR #1292 merged, all CI gates passed, 146 existing tests + 22 new tests pass)
+
+### What changed
+
+Added Phase 23: God-Class Execution — Narrow-Callable Injection (DIP) Pattern — four
+implementation-time rules discovered during the first complete execution of a god-class
+decomposition using dependency inversion through injected callables:
+
+1. **Rule 1: Lambda wrapping mandatory for all injected callables** — bare bound-method
+   references (`self._head_advanced`) are captured at construction time; `patch.object` applied
+   after construction is bypassed. Always use `lambda *a, **k: self._method(*a, **k)` so the
+   mock is re-read at call time.
+
+2. **Rule 2: Patch each module's `run` import separately when a method chain splits** — after
+   moving the pre-agent SHA snapshot to an orchestrator, there are two distinct `run` lookup
+   sites: `ci_fix_orchestrator.run` (pre-agent) and `ci_driver.run` (post-agent). A test that
+   patches only the orchestrator's `run` hits real git on the second call.
+
+3. **Rule 3: Update attribute access in ALL sibling test files after migration** — moving
+   `_viewer_login` from `CIDriver` to `PRDiscovery` generates 6 mypy strict errors across
+   sibling test files; grep all tests for `driver.<migrated_attr>` and update to
+   `driver._collaborator.<attr>`.
+
+4. **Rule 4: Update `companions` tuple in phase-wiring tests when AGENT_* constants move** —
+   `test_phase_agent_wiring.py` scans a primary module plus any `companions` files for the
+   constant; an empty `companions=()` after a constant moves to an extracted module causes
+   the test to find no import and fail.
+
+Added 5 new Failed Attempts rows covering issues encountered during PR #1292 execution:
+- Bare bound-method reference bypassing patch.object (→ Phase 23 Rule 1)
+- Single run-patch after pre/post SHA split (→ Phase 23 Rule 2)
+- Forgotten _viewer_login attribute access in sibling test files (→ Phase 23 Rule 3)
+- companions=() not updated in phase-wiring test (→ Phase 23 Rule 4)
+- Logger patches targeting old module after extraction (→ Phase 4)
+
+Added 1 new outcome benchmark:
+- `ci_driver.py` (4 collaborators, narrow-callable DIP): 3,338 → 2,404 lines (−28%)
+
+Added 2 new "When to Use" bullets:
+- Executing a god-class decomposition with narrow-callable injection (DIP)
+- Sibling test files access internal attributes directly
+
+Added lambda wrapping subsection to Phase 2 (Choose Extraction Strategy).
+
+Added expanded Phase 4 notes: attribute access in tests + companions tuple in phase-wiring tests.
+
+Updated description (trigger 17), tags (6 new: lambda-injection, dip-narrow-callable,
+patch-object-compatibility, sibling-test-attribute-access, companions-tuple,
+cross-module-patching), Quick Reference (Phase 23), Trigger row, Verified On (new row).
+Bumped 1.9.0 → 1.10.0.
+
+### Why
+
+PR #1292 was the first complete execution of the CIDriver decomposition that had been
+planned and risk-audited across Phases 19, 22 (and their precursor Phases 20-21). Four
+execution-time traps emerged that are orthogonal to the planning risks:
+
+- The lambda vs. bare-reference trap (Rule 1) is a fundamental Python scoping issue that
+  affects any class-based extraction using DIP injection; it cannot be detected by planning.
+- The cross-module run-patch trap (Rule 2) only emerges when a pre/post SHA read is split
+  across modules — impossible to anticipate without executing.
+- The attribute-access and companions-tuple traps (Rules 3 and 4) are mechanical consistency
+  issues that a checklist can prevent but that grep-before-commit can also catch.
+
+These four rules form the execution complement to the planning rules in Phases 19 and 22.
+
+## v1.9.0 (2026-06-13)
+
+**Changed by:** /learn from ProjectHephaestus issue #1289 (CIDriver second decomposition pass planning, shared-state write-back)
+**Verification:** unverified (plan not yet executed; CI not run)
+
+### What changed
+
+Added Phase 22: God-Class Delegation — Shared-State Write-Back Rules. Six rules for
+design choices that must be made BEFORE writing any extraction code when methods being
+moved to a collaborator populate shared mutable state, are used by multiple collaborator
+groups, or where test fixtures pre-seed cache attributes:
+
+1. Identify every dict/cache written by the candidate method group
+2. Choose a write-back strategy for shared mutable dicts (Pattern A: return+assign in stub;
+   Pattern B: inject setter callable; Pattern C: mutable dict parameter)
+3. Methods called by multiple collaborator groups stay on the host
+4. Test fixture pre-seeding after cache extraction — keep cache on host or update all fixtures
+5. Read method bodies before assigning to collaborators (grep/name alone insufficient)
+6. Pre-plan __init__.py export conditionality (read it, don't leave "if/else" unresolved)
+
+Added 6 new Failed Attempts rows and updated tags, description (trigger 16), Verified On.
+Bumped 1.8.0 → 1.9.0.
+
 ## v1.6.0 (2026-06-13)
 
 **Changed by:** /learn from ProjectHephaestus issue #1196 Phase 20 reviewer NOGO (exception-contract POLA violation)

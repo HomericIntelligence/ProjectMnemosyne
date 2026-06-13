@@ -40,10 +40,15 @@ description: >-
   one collaborator), test fixture pre-seeding of cache attributes after extraction (pre-seeding
   driver._cache doesn't affect collaborator._cache), reading method bodies before assigning
   them to collaborators (name-only assignment is insufficient), and verifying __init__.py
-  export conditionality before planning conditional export steps.
+  export conditionality before planning conditional export steps,
+  (17) executing a god-class decomposition using narrow-callable injection (DIP) — lambda
+  wrapping injected callables so patch.object remains effective after extraction, updating
+  attribute access in sibling test files after cache migration, updating companions tuples in
+  phase-wiring tests when AGENT_* constants move to extracted modules, and patching each
+  module's imported run separately when a method chain splits across module boundaries.
 category: architecture
 date: 2026-06-13
-version: "1.9.0"
+version: "1.10.0"
 user-invocable: false
 history: python-module-decomposition-and-refactor-patterns.history
 tags:
@@ -80,6 +85,12 @@ tags:
   - stopiteration-exception-boundary
   - returncode-guard
   - noqa-c901-removal-verification
+  - lambda-injection
+  - dip-narrow-callable
+  - patch-object-compatibility
+  - sibling-test-attribute-access
+  - companions-tuple
+  - cross-module-patching
 ---
 
 # Python Module Decomposition and Refactor Patterns
@@ -90,8 +101,8 @@ tags:
 | ------- | ------- |
 | **Date** | 2026-06-13 |
 | **Objective** | Decompose oversized Python modules/classes/functions into focused, independently testable units using SRP, TDD, and DRY principles |
-| **Outcome** | Synthesized from 15+ verified skills; covers function-level extraction, class-based extraction, circular import fixes, immutability refactoring, extensibility-driven decomposition, CLI entry-point extraction with preserved patch routing, top-level symbol extraction to break sibling module cycles, CC>15 pipeline-step extraction, scanner-to-subdirectory scoping, context-manager double-counter fixes, safe legacy-code deletion, substrate-read-before-estimate discipline, post-parallel phase cleanup, god-class decomposition planning risks (state ownership, cross-call coupling, constant re-export, delegation stub type loss, coverage omit-allowlist traps, shared mutable dict write-back, methods shared across multiple collaborators, test fixture pre-seeding after cache extraction, method body read before assignment, __init__.py export conditionality verification), exception-contract verification before documenting wrapper behavior, three Phase 20 implementation-time traps (exception-boundary removal unmasks StopIteration from exhausted side_effect mocks; returncode-guard obligation at every call site of an absorbed-exception helper; agent mock type determines downstream subprocess.run consumption), and god-function decomposition planning rules (arithmetic chain verification, docstring budget, for-loop body sizing, return type tracing, N-tuple completeness, captured variable audit, approach table completeness, AST-measure discipline) |
-| **Trigger** | Files >800 lines, circular import errors, mixed-concern methods, C901/CC>15 complexity, extensibility requirements, CLI main() extraction, deferred imports inside function bodies preventing static analysis, broad scanners needing subdirectory scope, stale callers after context-manager refactors, dead fallback files, pessimistic refactor estimates, technical debt after parallel phases, planning a multi-collaborator god-class decomposition, extracting a two-branch provider-conditional dispatch with heterogeneous return types, documenting exception contracts for wrapper methods, planning god-function decomposition (individual functions > 80L), planning delegation-stub extraction where extracted methods populate shared dicts or caches read by the host class |
+| **Outcome** | Synthesized from 15+ verified skills; covers function-level extraction, class-based extraction, circular import fixes, immutability refactoring, extensibility-driven decomposition, CLI entry-point extraction with preserved patch routing, top-level symbol extraction to break sibling module cycles, CC>15 pipeline-step extraction, scanner-to-subdirectory scoping, context-manager double-counter fixes, safe legacy-code deletion, substrate-read-before-estimate discipline, post-parallel phase cleanup, god-class decomposition planning risks (state ownership, cross-call coupling, constant re-export, delegation stub type loss, coverage omit-allowlist traps, shared mutable dict write-back, methods shared across multiple collaborators, test fixture pre-seeding after cache extraction, method body read before assignment, __init__.py export conditionality verification), exception-contract verification before documenting wrapper behavior, three Phase 20 implementation-time traps (exception-boundary removal unmasks StopIteration from exhausted side_effect mocks; returncode-guard obligation at every call site of an absorbed-exception helper; agent mock type determines downstream subprocess.run consumption), god-function decomposition planning rules (arithmetic chain verification, docstring budget, for-loop body sizing, return type tracing, N-tuple completeness, captured variable audit, approach table completeness, AST-measure discipline), and god-class narrow-callable DIP execution (lambda wrapping for patch.object compatibility, cross-module import patching when method chains split, sibling test attribute path updates after cache migration, companions tuple updates in phase-wiring tests) |
+| **Trigger** | Files >800 lines, circular import errors, mixed-concern methods, C901/CC>15 complexity, extensibility requirements, CLI main() extraction, deferred imports inside function bodies preventing static analysis, broad scanners needing subdirectory scope, stale callers after context-manager refactors, dead fallback files, pessimistic refactor estimates, technical debt after parallel phases, planning a multi-collaborator god-class decomposition, extracting a two-branch provider-conditional dispatch with heterogeneous return types, documenting exception contracts for wrapper methods, planning god-function decomposition (individual functions > 80L), planning delegation-stub extraction where extracted methods populate shared dicts or caches read by the host class, executing a god-class decomposition using narrow-callable injection (DIP) where bare bound-method references to injected callables break patch.object |
 
 ## When to Use
 
@@ -116,6 +127,8 @@ Apply this skill when any of the following is true:
 - A function contains a **two-branch if/else over a boolean predicate** (e.g., `is_codex(agent)`) where each branch invokes a different external agent/subprocess API returning heterogeneous types, and you want to extract it into a unified private helper method without introducing a Protocol/Strategy class
 - You are **planning god-function decomposition** — individual functions exceeding the project's line-length threshold (e.g., > 80L) and need arithmetic chain verification, docstring budget accounting, for-loop body sizing, return type tracing for absorbed call sites, N-tuple completeness for orchestrator helpers, captured variable auditing, and approach-table completeness before writing any code
 - You are **planning god-class delegation extraction** where methods being moved to a collaborator populate shared mutable state (dicts, caches) that the host class reads elsewhere, where a method is used by multiple collaborator groups (assign to host, not one group), or where test fixtures pre-seed cache attributes on the host that will no longer be in scope after extraction
+- You are **executing a god-class decomposition with narrow-callable injection (DIP)** and need to wire collaborators using injected callables — including: using lambda wrapping (not bare method references) to preserve patch.object effectiveness, updating sibling test files that directly access attributes now living on a collaborator, updating companions tuples in phase-wiring tests when AGENT_* constants move to extracted modules, and patching each module's `run` import independently when a pre/post-agent SHA read splits across module boundaries
+- A class's **sibling test files access internal attributes directly** (e.g., `driver._viewer_login`) that will move to an extracted collaborator — grep test files before and after extraction to update attribute paths
 
 ## Verified Workflow
 
@@ -143,6 +156,7 @@ Decision tree:
   Two-branch bool-predicate dispatch    → Provider-dispatch extraction (Phase 20)
   Planning god-function decomposition   → Function-size planning rules (Phase 21)
   God-class delegation w/ shared state → Shared-state write-back rules (Phase 22)
+  God-class execution w/ DIP injection → Narrow-callable injection rules (Phase 23)
 
 Universal rule for mock patches after any move:
   Patch where the name is LOOKED UP at call time — not where it was defined.
@@ -220,6 +234,27 @@ def _build_tier_actions(self, tier_id, ...):
 **Design rule**: Methods should return `(config, checkpoint)` tuples rather than mutating `self` —
 makes unit tests trivial and enables explicit data flow.
 
+**Lambda wrapping for test compatibility** (critical when using class-based extraction with `patch.object`):
+
+When injecting host methods into a collaborator, ALWAYS use lambdas, never bare method references:
+
+```python
+# WRONG — stored reference captured at init time; patch.object bypassed:
+self._fix_orchestrator = CIFixOrchestrator(
+    head_advanced=self._head_advanced,  # captured at init, patch won't intercept
+)
+
+# RIGHT — lambda re-evaluates self._head_advanced at call time:
+self._fix_orchestrator = CIFixOrchestrator(
+    head_advanced=lambda *a, **k: self._head_advanced(*a, **k),  # patch works
+)
+```
+
+This applies to ALL injected callables, not just the "interesting" ones. A bare bound method
+is effectively a snapshot; a lambda is a live lookup. `patch.object(driver, "_head_advanced")`
+replaces `driver._head_advanced` on the object — the lambda re-reads it at call time while the
+bare reference does not.
+
 ### Phase 3: Create New Module (Self-Contained, No Parent Imports)
 
 The new module must be **self-contained** — it cannot import from the original module
@@ -264,6 +299,35 @@ Also update logger patches — warnings logged by an extracted class still targe
 # After extracting CheckpointFinalizer, update:
 patch("scylla.e2e.runner.logger") → patch("scylla.e2e.checkpoint_finalizer.logger")
 ```
+
+Also update attribute access in tests — when an instance attribute migrates to a collaborator,
+sibling test files that access it directly on the host will break with a mypy error or
+`AttributeError`:
+
+```python
+# After moving self._viewer_login from CIDriver to PRDiscovery:
+# WRONG: driver._viewer_login = ""
+# RIGHT: driver._pr_discovery._viewer_login = ""
+```
+
+Grep all test files for `driver.<attr>` (or `<host_instance>.<moved_attr>`) before and after
+every attribute migration. mypy strict mode surfaces these as `"CIDriver" has no attribute
+"_viewer_login"` — 6 such errors across test files are typical for a single cache attribute move.
+
+Also update `companions` tuples in phase-wiring tests — when an `AGENT_*` constant moves from
+the host module to an extracted collaborator, the test that verifies the import source must add
+the collaborator filename to the `companions` tuple:
+
+```python
+# test_phase_agent_wiring.py — BEFORE extraction:
+("ci_driver.py", "AGENT_CI_DRIVER", ())
+
+# AFTER constant moves to ci_fix_orchestrator.py:
+("ci_driver.py", "AGENT_CI_DRIVER", ("ci_fix_orchestrator.py",))
+```
+
+The `companions` tuple lists extra files the test scans in addition to the primary module;
+an empty tuple means only the primary module is checked.
 
 ### Phase 5: Module Decomposition — Re-export vs. Update Import Sites
 
@@ -1607,6 +1671,139 @@ Any method assigned without reading its body may:
       and sum actual lines rather than using average estimates
 ```
 
+### Phase 23: God-Class Execution — Narrow-Callable Injection (DIP) Pattern
+
+Use when EXECUTING a god-class decomposition using Dependency Inversion through injected callables.
+This phase covers the implementation-time traps discovered during ProjectHephaestus PR #1292
+(CIDriver decomposed into 4 collaborators using narrow-callable injection: `pr_discovery.py`,
+`ci_check_inspector.py`, `ci_fix_orchestrator.py`, `post_merge_processor.py`).
+
+**Warning:** These rules are derived from a single verified CI execution. Treat as strong
+guidance but re-verify on new codebases.
+
+#### Rule 1: Lambda wrapping is mandatory for all injected callables
+
+When the host class injects its own methods into a collaborator via `__init__`, ALWAYS wrap
+them as lambdas. Bare bound-method references are captured at construction time; a mock applied
+to `driver._method` AFTER construction has no effect on the collaborator's stored reference.
+
+```python
+# WRONG — bare bound method is a snapshot; patch.object(driver, "_head_advanced") bypassed:
+self._fix_orchestrator = CIFixOrchestrator(
+    head_advanced=self._head_advanced,
+)
+
+# RIGHT — lambda re-evaluates self._head_advanced at call time; patch works:
+self._fix_orchestrator = CIFixOrchestrator(
+    head_advanced=lambda *a, **k: self._head_advanced(*a, **k),
+)
+```
+
+Apply to ALL injected callables without exception — even ones that seem "unlikely to be mocked"
+in tests. The cost is negligible; the debugging cost of a missed one is large.
+
+#### Rule 2: Patch each module's `run` import separately when a method chain splits
+
+When a pre-agent SHA snapshot moves to an extracted collaborator but the post-agent SHA
+read stays on the host, there are now TWO different lookup sites for `run` (or any shared
+utility function):
+
+```text
+Pre-agent snapshot:  ci_fix_orchestrator.run   (imported in the collaborator)
+Post-agent read:     ci_driver.run             (imported in the host)
+```
+
+Patching only `ci_fix_orchestrator.run` leaves the host's `run` unpatched — the second
+`run` call hits real git on a tmp_path with no repo and fails with a confusing error.
+
+```python
+# WRONG — only patches the orchestrator's run:
+with patch("hephaestus.automation.ci_fix_orchestrator.run", ...):
+    driver._run_ci_fix_session(...)
+
+# RIGHT — patches both lookup sites:
+with (
+    patch("hephaestus.automation.ci_fix_orchestrator.run", return_value=pre_sha),
+    patch("hephaestus.automation.ci_driver.run", return_value=post_sha),
+):
+    driver._run_ci_fix_session(...)
+```
+
+**General rule**: When a method chain splits across modules, identify every file that has
+`from subprocess_utils import run` (or similar) and patch the `run` name in EACH file that
+is exercised by the test path.
+
+#### Rule 3: Update attribute access in ALL sibling test files after migration
+
+When an instance attribute migrates from the host to a collaborator (e.g., `_viewer_login`
+moves from `CIDriver` to `PRDiscovery`), sibling test files that access it directly on the
+host will silently stop working. mypy strict mode surfaces these as attribute errors:
+
+```python
+# After moving _viewer_login from CIDriver to PRDiscovery:
+# WRONG — driver no longer has this attribute:
+driver._viewer_login = ""
+
+# RIGHT — access through the collaborator:
+driver._pr_discovery._viewer_login = ""
+```
+
+**Grep command** (run before and after each migration):
+
+```bash
+grep -rn "driver\._viewer_login\|driver\.<migrated_attr>" tests/
+```
+
+A single cache attribute migration typically generates 6 mypy errors across sibling test files.
+Fix all of them in the same commit as the migration.
+
+#### Rule 4: Update `companions` tuple in phase-wiring tests when AGENT_* constants move
+
+If the codebase has a test that verifies where `AGENT_*` constants are imported from (a common
+pattern for validating agent-wiring), it uses a `companions` tuple to list extra files to scan:
+
+```python
+# test_phase_agent_wiring.py
+@pytest.mark.parametrize("module,agent_const,companions", [
+    ("ci_driver.py", "AGENT_CI_DRIVER", ()),      # BEFORE: constant in ci_driver.py
+])
+```
+
+When `AGENT_CI_DRIVER` moves to `ci_fix_orchestrator.py`, add the new file to `companions`:
+
+```python
+    ("ci_driver.py", "AGENT_CI_DRIVER", ("ci_fix_orchestrator.py",)),  # AFTER
+```
+
+The `companions` tuple tells the test to scan both `ci_driver.py` AND `ci_fix_orchestrator.py`
+for the constant; without it, the test only scans the primary module and fails.
+
+#### Phase 23 Execution Checklist
+
+```markdown
+## God-Class Narrow-Callable DIP Execution Checklist (Phase 23)
+
+### Before wiring collaborators in __init__
+- [ ] Every injected callable is wrapped as `lambda *a, **k: self._method(*a, **k)` — no bare `self._method`
+- [ ] Verified by: `grep -n "self\._[a-z]" __init__` and confirm none are bare (not in a lambda)
+
+### After each collaborator is extracted
+- [ ] Grep all test files for `host_instance.<migrated_attr>` — update to `host._collaborator.<attr>`
+- [ ] Run mypy — zero new attribute errors expected after migration
+- [ ] Check phase-wiring tests for `companions` tuples — update if AGENT_* moved
+
+### When a pre/post SHA split occurs
+- [ ] Identify every file that imports `run` (or the split utility)
+- [ ] In each test that exercises the split path, patch each file's `run` independently
+- [ ] Verify both mocks are called (assert_called_once on each)
+
+### Final verification
+- [ ] All 146+ pre-existing tests pass
+- [ ] New collaborator tests pass (22+ for a 4-collaborator extraction)
+- [ ] mypy clean (zero attribute errors)
+- [ ] ci_driver.py line count meets target (−28% or better)
+```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -1669,6 +1866,11 @@ Any method assigned without reading its body may:
 | **Assigning method bodies to collaborators based on name/grep without reading the body** | `_arm_all_unarmed_open_prs`, `_check_arming_on_drive_start`, `_arming_state_path/load/save/clear` were assigned to `ArmingOrchestrator` based on method name and grep output only | Bodies not read; may reference state or call methods that break the injection model | Read every method body before assigning it to a collaborator; grep output and names alone are insufficient — the body may reveal state dependencies or cross-group calls that change the assignment (Phase 22, Rule 5) |
 | **Writing conditional `__init__.py` export step without reading `__init__.py`** | Plan said "if `automation/__init__.py` already exports `CIDriver`; otherwise skip" — conditionality not resolved at plan time | `__init__.py` content was not read during planning; whether to add exports and where was left ambiguous | Read `__init__.py` directly before planning any export step; never leave "if/else export" conditionality unresolved in the plan (Phase 22, Phase 22 Checklist) |
 | **Estimating line count target achievability without reading method bodies** | Plan estimated 37 methods × ~25 lines avg = ~814 net savings, projecting ci_driver.py to ~2,544 lines with no fallback plan if wrong | Method body lengths were not read; if average is <25 lines, target may not be reached after PRDiscovery alone | For line count projections: read the top-N longest method bodies directly (using AST measurement) and sum actual lines rather than applying an average estimate; if projection is near the threshold, include a fallback plan (Phase 22 Checklist) |
+| **Storing direct bound-method references in collaborator init** | Passed `head_advanced=self._head_advanced` (bare bound method) to collaborator constructor | `patch.object(driver, "_head_advanced")` doesn't intercept — the collaborator captured the original reference at init time, bypassing the mock | Always wrap injected callables as `lambda *a, **k: self._method(*a, **k)`; the lambda re-evaluates `self._method` at call time so `patch.object` works (Phase 23, Rule 1) |
+| **Single `run` module patch after pre/post SHA split** | Patched only `ci_fix_orchestrator.run` for both pre-agent and post-agent SHA reads after moving pre-agent snapshot to orchestrator | Post-agent SHA read (`_head_advanced`) uses `ci_driver.run` not `ci_fix_orchestrator.run`; second call missed the mock and hit real git on non-repo tmp_path | When a method chain splits across modules, patch each module's `run` import separately; the pre-agent call uses the orchestrator's `run`, the post-agent call uses ci_driver's `run` (Phase 23, Rule 2) |
+| **Forgetting `_viewer_login` attribute access in sibling test files** | Moved `_viewer_login` from `CIDriver` to `PRDiscovery` without updating `test_ci_driver_author_scope.py` which accessed `driver._viewer_login` directly | mypy reported `"CIDriver" has no attribute "_viewer_login"`; 6 mypy errors; tests failed | After moving any instance attribute to a collaborator, grep all test files for `driver.<attr>` and update to `driver._collaborator.<attr>` (Phase 23, Rule 3) |
+| **`companions=()` not updated in phase-wiring test** | `AGENT_CI_DRIVER` import moved to extracted collaborators (`ci_fix_orchestrator.py`, `post_merge_processor.py`) but `test_phase_agent_wiring.py` still had `("ci_driver.py", "AGENT_CI_DRIVER", ())` with empty companions tuple | Test checks the combined source of module + companions for the AGENT_* import; empty companions meant only `ci_driver.py` was scanned, which no longer has the import | When an `AGENT_*` constant moves to an extracted collaborator, add that collaborator filename to the `companions` tuple in `test_phase_agent_wiring.py` (Phase 23, Rule 4) |
+| **Logger patches targeting old module after extraction** | Left `patch("hephaestus.automation.ci_driver.logger")` for a warning that now emits from `pr_discovery.logger` | Mock showed 0 calls — warning emitted from extracted module's logger | After extracting a module, grep all test files for `ci_driver.logger` patches and update to `<new_module>.logger` (Phase 4) |
 
 ## Results & Parameters
 
@@ -1683,6 +1885,7 @@ Any method assigned without reading its body may:
 | `llm_judge.py` (module decomposition) | 1,488 | 142 | −90% | `build_pipeline.py`, `judge_context.py`, `judge_execution.py`, `judge_artifacts.py` |
 | `stages.py` + `run_report.py` (re-export) | 1,534 + 1,385 | 855 + 289 | −44% / −79% | 4 new modules |
 | Extensibility refactor (6 PRs) | — | — | −415 net | `discovery/`, `subtest_provider.py`, `TestFixture` |
+| `ci_driver.py` (4 collaborators, narrow-callable DIP) | 3,338 | 2,404 | −28% | `pr_discovery.py` (260L), `ci_check_inspector.py` (130L), `ci_fix_orchestrator.py` (530L), `post_merge_processor.py` (230L) |
 
 ### New test benchmarks
 
@@ -1744,3 +1947,4 @@ Revised LOC estimate: ~X (vs TODO "~Y"); justification: ~Z% already in substrate
 | ProjectHephaestus | Issue #1196 Phase 20 implementation — extracted `_invoke_agent_session` + `_push_ci_fix` into `ci_driver.py`; removed `# noqa: C901` from `_run_ci_fix_session`; added 11 new tests (`TestInvokeAgentSession` 8 tests, `TestPushCiFix` 3 tests); 157 tests in `test_ci_driver.py` pass; ruff + mypy clean; three implementation traps discovered: (1) outer `except Exception` was masking `StopIteration` from exhausted mock `side_effect` lists — removal exposed latent miscounting in `test_codex_ci_fix_session_skips_push_when_head_did_not_advance` (needed 3rd `run` side_effect for `clean_status`); (2) caller of `_invoke_agent_session` in `_retry_no_commit_once` lacked `if retry_result.returncode != 0: return False` — no-commit marker was being written incorrectly; (3) mock for `invoke_claude_with_session` in retry test had to be changed from `return_value=...` to `raise CalledProcessError` to avoid consuming excess `run` side_effects; CI gate pending (verified-local) | Phase 20 implementation traps: exception-boundary removal unmasks StopIteration, returncode-guard obligation at call sites, agent-mock type determines downstream `run` consumption (v1.7.0) |
 | ProjectHephaestus | Issue #1180 — planning decomposition of 7 god-functions across 4 files in `hephaestus/automation/` (R0→R3 planning cycle): R0 NOGO (waived 128L `_implement_issue` as "marginal"); R1 NOGO (claimed reduction with no extraction step); R2 NOGO (6-tuple dropped `reopened`, approach table missing two helpers); R3 approved; 8 planning rules identified: (1) arithmetic chain non-negotiable — no waivers; (2) docstring lines count toward function span; (3) for-loop body > 40L is a standalone extraction candidate; (4) helpers absorbing the only call to a data-fetching function must return the fetched data; (5) orchestrator N-tuple must cover ALL post-call variables; (6) every captured variable in an extracted body is a missing parameter; (7) approach table must list ALL helpers per target; (8) AST-measure before planning — never trust issue-cited line numbers (unverified — plan not yet executed) | New Phase 21: God-Function Decomposition Planning Rules (v1.8.0) |
 | ProjectHephaestus | Issue #1289 — planning second decomposition pass of `ci_driver.py` (3,358 lines) using Dependency Inversion + delegation stubs to preserve `patch.object` test targets; 4 collaborators proposed (`PRDiscovery`, `CICheckInspector`, `CIFixOrchestrator`, `ArmingOrchestrator`); 6 additional planning risks identified: (1) `shared_pr_issues` write-back not designed — `_discover_prs` moving to `PRDiscovery` populates dict that arming fan-out reads on CIDriver; (2) `_tracked_worktree_changes` used by both `CICheckInspector` and `CIFixOrchestrator` — cross-collaborator coupling if assigned to one; (3) test fixture pre-seeding of `driver._viewer_login` stops working after cache migrates to collaborator; (4) method bodies not read before assigning to collaborators (`_arm_all_unarmed_open_prs` etc. assigned by name only); (5) conditional `__init__.py` export step not resolved at plan time — `__init__.py` not read; (6) line count projection used 25-line average for method bodies without reading actual lengths — no fallback plan if target not reached after PRDiscovery (unverified — implementation not yet started) | New Phase 22: God-Class Delegation Shared-State Write-Back Rules (v1.9.0) |
+| ProjectHephaestus | PR #1292 (Issue #1179) — executed CIDriver god-class decomposition using narrow-callable injection (DIP): ci_driver.py 3,338 → 2,404 lines (−28%); 4 collaborators extracted (`pr_discovery.py` 260L, `ci_check_inspector.py` 130L, `ci_fix_orchestrator.py` 530L, `post_merge_processor.py` 230L); 4 implementation traps discovered: (1) bare bound-method references to injected callables bypass `patch.object` — all injected callables must be lambda-wrapped; (2) pre/post-SHA split after orchestrator extraction requires patching BOTH `ci_fix_orchestrator.run` and `ci_driver.run` independently; (3) `_viewer_login` attribute migration generated 6 mypy errors in sibling test files — all attribute access paths must be updated; (4) `AGENT_CI_DRIVER` move to extracted module broke `test_phase_agent_wiring.py` — companions tuple required update; 146 existing tests + 22 new tests pass; all CI gates passed (verified-ci) | New Phase 23: God-Class Narrow-Callable DIP Execution Pattern (v1.10.0) |
