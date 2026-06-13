@@ -54,10 +54,19 @@ description: >-
   bucketing is the only reliable approach for multi-module splits,
   (20) tracing delegation chains through sub-modules before adding _gh_call patches to a
   migration table — if the existing test already patches a sub-module (e.g. _review_utils._gh_call),
-  the patch does not need to move regardless of where the method moves.
+  the patch does not need to move regardless of where the method moves,
+  (21) source-reading every stub before writing it when three or more methods carried forward from
+  a prior plan revision were never directly source-read — the AST Criterion 6 name-presence check
+  passes silently for wrong-but-present stubs; fabricated parameters (e.g. `acquired_slot`) that
+  do not exist in source cause TypeError at runtime,
+  (22) verifying two-argument method stubs against source — a method name-matches a one-argument
+  plan entry but the actual source may have a different arity or keyword-only separator,
+  (23) verifying return type annotations against source before writing stubs — a method
+  returning `dict` in the plan may actually return `dict[str, Any]` or a named TypedDict, and
+  type mismatch passes tests but fails mypy strict.
 category: architecture
 date: 2026-06-13
-version: "1.11.0"
+version: "1.12.0"
 user-invocable: false
 history: python-module-decomposition-and-refactor-patterns.history
 tags:
@@ -105,6 +114,11 @@ tags:
   - test-class-bucket-analysis
   - delegation-chain-pre-check
   - review-utils-delegation
+  - source-read-before-stub
+  - fabricated-parameter-risk
+  - acquired-slot-verification
+  - return-type-annotation-verification
+  - stub-arity-verification
 ---
 
 # Python Module Decomposition and Refactor Patterns
@@ -115,8 +129,8 @@ tags:
 | ------- | ------- |
 | **Date** | 2026-06-13 |
 | **Objective** | Decompose oversized Python modules/classes/functions into focused, independently testable units using SRP, TDD, and DRY principles |
-| **Outcome** | Synthesized from 15+ verified skills; covers function-level extraction, class-based extraction, circular import fixes, immutability refactoring, extensibility-driven decomposition, CLI entry-point extraction with preserved patch routing, top-level symbol extraction to break sibling module cycles, CC>15 pipeline-step extraction, scanner-to-subdirectory scoping, context-manager double-counter fixes, safe legacy-code deletion, substrate-read-before-estimate discipline, post-parallel phase cleanup, god-class decomposition planning risks (state ownership, cross-call coupling, constant re-export, delegation stub type loss, coverage omit-allowlist traps, shared mutable dict write-back, methods shared across multiple collaborators, test fixture pre-seeding after cache extraction, method body read before assignment, __init__.py export conditionality verification), exception-contract verification before documenting wrapper behavior, three Phase 20 implementation-time traps (exception-boundary removal unmasks StopIteration from exhausted side_effect mocks; returncode-guard obligation at every call site of an absorbed-exception helper; agent mock type determines downstream subprocess.run consumption), god-function decomposition planning rules (arithmetic chain verification, docstring budget, for-loop body sizing, return type tracing, N-tuple completeness, captured variable audit, approach table completeness, AST-measure discipline), god-class narrow-callable DIP execution (lambda wrapping for patch.object compatibility, cross-module import patching when method chains split, sibling test attribute path updates after cache migration, companions tuple updates in phase-wiring tests), keyword-only method signature verification before writing stubs (fabricated positional signatures pass AST checks silently but raise TypeError at runtime), _gh_call multi-module split attribution via test-class boundary bucketing (range-grep spot-checks are insufficient for 4+ destination modules; class-boundary bucket analysis is required), and delegation-chain pre-check before adding _gh_call patches to migration tables (if existing test patches a sub-module like _review_utils._gh_call, that patch does not move regardless of where the method relocates) |
-| **Trigger** | Files >800 lines, circular import errors, mixed-concern methods, C901/CC>15 complexity, extensibility requirements, CLI main() extraction, deferred imports inside function bodies preventing static analysis, broad scanners needing subdirectory scope, stale callers after context-manager refactors, dead fallback files, pessimistic refactor estimates, technical debt after parallel phases, planning a multi-collaborator god-class decomposition, extracting a two-branch provider-conditional dispatch with heterogeneous return types, documenting exception contracts for wrapper methods, planning god-function decomposition (individual functions > 80L), planning delegation-stub extraction where extracted methods populate shared dicts or caches read by the host class, executing a god-class decomposition using narrow-callable injection (DIP) where bare bound-method references to injected callables break patch.object, writing delegation stubs for methods with keyword-only parameters (`*` separator), planning migration of a symbol patched in 10+ test sites across multiple test classes when the symbol will move to 4+ destination modules, or verifying whether an existing test's _gh_call patch already targets a sub-module (making migration unnecessary for that test) |
+| **Outcome** | Synthesized from 15+ verified skills; covers function-level extraction, class-based extraction, circular import fixes, immutability refactoring, extensibility-driven decomposition, CLI entry-point extraction with preserved patch routing, top-level symbol extraction to break sibling module cycles, CC>15 pipeline-step extraction, scanner-to-subdirectory scoping, context-manager double-counter fixes, safe legacy-code deletion, substrate-read-before-estimate discipline, post-parallel phase cleanup, god-class decomposition planning risks (state ownership, cross-call coupling, constant re-export, delegation stub type loss, coverage omit-allowlist traps, shared mutable dict write-back, methods shared across multiple collaborators, test fixture pre-seeding after cache extraction, method body read before assignment, __init__.py export conditionality verification), exception-contract verification before documenting wrapper behavior, three Phase 20 implementation-time traps (exception-boundary removal unmasks StopIteration from exhausted side_effect mocks; returncode-guard obligation at every call site of an absorbed-exception helper; agent mock type determines downstream subprocess.run consumption), god-function decomposition planning rules (arithmetic chain verification, docstring budget, for-loop body sizing, return type tracing, N-tuple completeness, captured variable audit, approach table completeness, AST-measure discipline), god-class narrow-callable DIP execution (lambda wrapping for patch.object compatibility, cross-module import patching when method chains split, sibling test attribute path updates after cache migration, companions tuple updates in phase-wiring tests), keyword-only method signature verification before writing stubs (fabricated positional signatures pass AST checks silently but raise TypeError at runtime), _gh_call multi-module split attribution via test-class boundary bucketing (range-grep spot-checks are insufficient for 4+ destination modules; class-boundary bucket analysis is required), delegation-chain pre-check before adding _gh_call patches to migration tables (if existing test patches a sub-module like _review_utils._gh_call, that patch does not move regardless of where the method relocates), source-read-before-stub mandate for any method carried forward from a prior plan revision without direct source verification (AST name checks pass for wrong-but-present parameters, only source-read confirms correctness), and return-type annotation verification against source before writing stubs (mypy strict rejects `dict` for `dict[str, Any]`) |
+| **Trigger** | Files >800 lines, circular import errors, mixed-concern methods, C901/CC>15 complexity, extensibility requirements, CLI main() extraction, deferred imports inside function bodies preventing static analysis, broad scanners needing subdirectory scope, stale callers after context-manager refactors, dead fallback files, pessimistic refactor estimates, technical debt after parallel phases, planning a multi-collaborator god-class decomposition, extracting a two-branch provider-conditional dispatch with heterogeneous return types, documenting exception contracts for wrapper methods, planning god-function decomposition (individual functions > 80L), planning delegation-stub extraction where extracted methods populate shared dicts or caches read by the host class, executing a god-class decomposition using narrow-callable injection (DIP) where bare bound-method references to injected callables break patch.object, writing delegation stubs for methods with keyword-only parameters (`*` separator), planning migration of a symbol patched in 10+ test sites across multiple test classes when the symbol will move to 4+ destination modules, verifying whether an existing test's _gh_call patch already targets a sub-module (making migration unnecessary for that test), or writing any stub for a method that was not directly source-read in the current planning session (prior-revision plan parameters may be fabricated) |
 
 ## When to Use
 
@@ -146,6 +160,9 @@ Apply this skill when any of the following is true:
 - A method being extracted has a **`*` (keyword-only) separator** in its `def` line — the stub def must also use `*`, and the forwarding call must use `keyword=value` for every param; AST name-presence checks pass even for wrong-signature stubs
 - A shared symbol (e.g., `_gh_call`) is **patched in 10+ test sites across one file** and will move to **4+ destination modules** — use test-class boundary bucketing (grep `^class` start lines, bucket each patch line) rather than range-grep spot-checks to attribute every patch site to its destination
 - An extracted method's **existing test already patches a sub-module** (e.g., `_review_utils._gh_call`) — verify the patch string before adding the site to the migration table; if the patch already targets the sub-module, it does not need to move regardless of where the method relocates
+- You are writing any **stub for a method that was not directly source-read in the current planning session** — parameters carried forward from a prior plan revision (e.g., `acquired_slot`) may be fabricated; AST name-presence checks pass silently for wrong-but-present stubs; only a direct `sed -n 'Np'` read of the `def` line confirms signature correctness
+- A plan stub shows a **two-argument method** (e.g., `_is_bot_pr_mode(self, issue_number, pr_number)`) whose source was never read in the current session — arity may differ from the plan
+- A plan stub specifies `-> dict` for a **return type annotation** but the source was not read — actual type may be `dict[str, Any]` or a named TypedDict; type mismatch passes tests but fails mypy strict
 
 ## Verified Workflow
 
@@ -177,6 +194,9 @@ Decision tree:
   Keyword-only method stub writing      → Verify `*` in def line before any stub (Phase 24)
   _gh_call split to 4+ modules          → Test-class bucket analysis (Phase 25)
   _gh_call patch already sub-module?   → Delegation chain pre-check (Phase 26)
+  Stub for method not source-read yet   → Source-read mandate before any stub (Phase 27)
+  Two-arg stub without source-read      → Arity verification before stub (Phase 28)
+  Return type in stub without source    → Return-type annotation verification (Phase 29)
 
 Universal rule for mock patches after any move:
   Patch where the name is LOOKED UP at call time — not where it was defined.
@@ -1992,6 +2012,149 @@ belongs to the sub-module and stays put.
 - [ ] Document the delegation chain in the plan: `_find_pr_for_issue → _review_utils.find_pr_for_issue → _review_utils._gh_call`
 ```
 
+### Phase 27: Source-Read Mandate for Stubs Carried Forward Without Direct Verification
+
+Use when writing any delegation stub for a method that was NOT directly source-read in the
+current planning session. The risk applies whenever a plan revision (R2, R3, R4, R5…)
+carries forward signatures from an earlier revision without re-verifying against the current
+source.
+
+**Warning:** This pattern has not yet been validated end-to-end with CI. Treat as a strong
+pre-implementation checklist until the implementer runs and confirms.
+
+**The problem**: A prior plan revision (e.g., R4) may have fabricated a parameter for a
+method that does not have it in source. The AST Criterion 6 check verifies method name
+presence only — a wrong-but-present stub passes silently. The failure surfaces only at
+runtime as `TypeError: unexpected keyword argument`.
+
+**Three R5 methods carrying this risk** (as of 2026-06-13):
+
+| Method | Location | Unconfirmed parameter | Risk |
+|--------|----------|-----------------------|------|
+| `_recheck_and_arm_after_fix` | ci_driver.py:1147 | `acquired_slot` | May not exist in source |
+| `_resolve_dirty_pr` | ci_driver.py:1227 | `acquired_slot` | May not exist in source |
+| `_attempt_ci_fixes` | ci_driver.py:1286 | `acquired_slot` | May not exist in source |
+
+The `acquired_slot` parameter appeared as a fabricated parameter in R4 for
+`_retry_no_commit_once` (where source showed it did NOT exist). The same risk applies to any
+method not directly source-read.
+
+**Implementer action** — before coding these stubs, run:
+
+```bash
+sed -n '1147p;1227p;1286p' hephaestus/automation/ci_driver.py
+```
+
+For each `def` line, check:
+
+1. Is there a `*` keyword-only separator? (if yes, stub must also use `*`)
+2. Is `acquired_slot` actually present? (if not, do not include it in stub or forwarding call)
+3. Are there other parameters not shown in the plan?
+
+**General rule**: For ANY method not directly source-read in the current session, run:
+
+```bash
+grep -n "def <method_name>" hephaestus/automation/ci_driver.py
+sed -n '<line>p' hephaestus/automation/ci_driver.py
+```
+
+Never carry forward a parameter from a prior plan revision as authoritative. AST Criterion 6
+is a name-presence check only — it cannot detect wrong-but-present parameters.
+
+#### Phase 27 Checklist
+
+```markdown
+## Source-Read-Before-Stub Checklist (Phase 27)
+
+### Before writing any stub in the implementation
+- [ ] List all stubs being written in this session
+- [ ] For each stub: was the `def` line directly source-read in this planning session?
+- [ ] If NOT source-read: run `sed -n '<line>p' <file>.py` before writing
+- [ ] For each `def` line read: (a) note `*` separator if present, (b) list all actual params,
+      (c) confirm no plan-carried params are missing or fabricated
+- [ ] Specifically for `_recheck_and_arm_after_fix`, `_resolve_dirty_pr`, `_attempt_ci_fixes`:
+      verify whether `acquired_slot` is actually in the def line
+```
+
+### Phase 28: Two-Argument Stub Arity Verification
+
+Use when a plan stub specifies a method with two or more non-self arguments and the
+source was not directly read in the current session.
+
+**The problem**: A plan entry like `_is_bot_pr_mode(self, issue_number, pr_number)` assumes
+two arguments, but the source at line 596 may have a different arity or a keyword-only
+separator. Calling with wrong arity raises `TypeError` at runtime; passing required arguments
+as positional when source uses `*` also raises `TypeError`.
+
+**Implementer action** — before coding `_is_bot_pr_mode` stub:
+
+```bash
+grep -n "def _is_bot_pr_mode" hephaestus/automation/ci_driver.py
+sed -n '<found_line>p' hephaestus/automation/ci_driver.py
+```
+
+Check: (a) is the arity exactly `(self, issue_number, pr_number)`? (b) is there a `*`
+keyword-only separator? (c) are parameter names spelled correctly?
+
+**General rule**: Any method with 2+ non-self arguments whose source was not read in the
+current session must be source-verified before stub writing. Arity errors are among the
+most common runtime failures from plans carried across revisions.
+
+#### Phase 28 Checklist
+
+```markdown
+## Two-Arg Stub Arity Checklist (Phase 28)
+
+### Before writing stubs for multi-argument methods
+- [ ] For each method with 2+ non-self args in the plan: was the def line source-read?
+- [ ] If NOT source-read: `grep -n "def <method>" <file>.py; sed -n '<line>p' <file>.py`
+- [ ] Confirm arity matches plan (exact number and names of parameters)
+- [ ] Check for `*` separator — if present, stub must use keyword-only form
+- [ ] Specifically for `_is_bot_pr_mode`: verify actual arity before writing stub
+```
+
+### Phase 29: Return-Type Annotation Verification Before Stub Writing
+
+Use when a plan specifies a return type annotation (e.g., `-> dict`) for a stub but the
+source was not directly read in the current session.
+
+**The problem**: A plan stub showing `_gh_pr_state(self, pr_number: int) -> dict` may
+underspecify the return type. The actual source may return `dict[str, Any]`, a specific
+`TypedDict` subclass, or a narrower type. Under mypy strict mode:
+
+- `-> dict` causes a `type-arg` mypy error (bare `dict` without type parameters)
+- `-> dict[str, Any]` is correct if the source returns a general dict
+- `-> SomePrStateDict` (a TypedDict) requires importing the TypedDict
+
+Type mismatch passes tests (duck typing) but fails the mypy gate that CI enforces.
+
+**Implementer action** — before coding `_gh_pr_state` stub:
+
+```bash
+grep -n "def _gh_pr_state" hephaestus/automation/ci_driver.py
+sed -n '<found_line>p' hephaestus/automation/ci_driver.py
+```
+
+Read the full return annotation. If the source has `-> dict[str, Any]`, use that exactly.
+If it returns a TypedDict, import and use the TypedDict.
+
+**General rule**: Never write `-> dict` (bare) in a stub unless source confirms it. Under
+mypy `strict = true`, bare generic types are rejected. Always use the fully parameterized
+form matching the source.
+
+#### Phase 29 Checklist
+
+```markdown
+## Return-Type Annotation Checklist (Phase 29)
+
+### Before writing stubs with dict/list/set return types
+- [ ] For each stub with `-> dict`, `-> list`, `-> set` in the plan: source-read the def line
+- [ ] Confirm the actual return annotation is fully parameterized (e.g., `dict[str, Any]`)
+- [ ] If source returns a TypedDict: import it and use the named type in the stub
+- [ ] Run mypy after writing stubs: `pixi run mypy hephaestus/automation/ci_driver.py`
+- [ ] Specifically for `_gh_pr_state`: verify actual return type annotation before writing stub
+```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -2062,6 +2225,9 @@ belongs to the sub-module and stays put.
 | **Fabricated positional signature for keyword-only method** | Plan gave `_retry_no_commit_once` a positional signature including a fabricated `acquired_slot` param; the real method at ci_driver.py:2296 uses `*` (keyword-only) with 7 actual params | Forwarding via positional args raises `TypeError` at runtime; AST Criterion 6 checks name presence only — wrong-but-present stub passes silently | Before writing any stub, read the actual `def` line; if `*` appears, stub def must also use `*` and the forwarding call must use `keyword=value` for every param (Phase 24) |
 | **Range-grep spot-check insufficient for multi-module _gh_call split** | Used two range-grep checks to estimate `_gh_call` migration scope when the symbol moved to 4+ destination modules across 26 patch sites | Only 2 of 26 sites were covered; 24 sites were unaccounted for, making the migration table incomplete | Grep all patch sites with line numbers; bucket each line into its test class by finding the largest class-start ≤ patch-line; each class → one method → one destination module; verify bucket totals equal the total site count (Phase 25) |
 | **Adding _gh_call patch for delegating method without checking its sub-module chain** | Added `_find_pr_for_issue`'s test to the `ci_driver._gh_call` migration table without reading the test's patch string | The test already patched `_review_utils._gh_call` — not `ci_driver._gh_call`; the symbol never lived in `ci_driver`'s namespace at the test level, so the migration was unnecessary | Before adding any method's patch sites to a migration table, read the actual patch string in the test; if it targets a sub-module, that site does not move regardless of where the method relocates (Phase 26) |
+| **Carrying `acquired_slot` forward from R4 into R5 stubs without source verification** | R4 plan fabricated `acquired_slot` as a parameter for `_retry_no_commit_once`; R5 plan carried the same parameter into stubs for `_recheck_and_arm_after_fix` (L1147), `_resolve_dirty_pr` (L1227), `_attempt_ci_fixes` (L1286) without source-reading those def lines | AST Criterion 6 name-presence check passes silently for wrong-but-present parameters; runtime raises `TypeError: unexpected keyword argument 'acquired_slot'` if the parameter does not exist in source; R4 already showed this exact failure mode for `_retry_no_commit_once` | Before writing any stub, run `sed -n 'Np' ci_driver.py` on the def line; never carry parameters from a prior plan revision as authoritative (Phase 27) |
+| **Plan specified `_is_bot_pr_mode(self, issue_number, pr_number)` without source-read** | R5 plan delegated `_is_bot_pr_mode` as a two-argument method based on plan inference, not direct source read of L596 | Arity or keyword-only separator may differ; calling with wrong arity raises `TypeError` at runtime; a `*` separator in source requires keyword-only forwarding calls | Source-read the def line before specifying arity in any stub; two-argument methods are a common site for arity mismatch across plan revisions (Phase 28) |
+| **Stub annotated `-> dict` for `_gh_pr_state` without source-read** | R5 plan showed `_gh_pr_state(self, pr_number: int) -> dict` without reading the actual return annotation in source | mypy strict rejects bare `dict` (missing type parameters); actual source may return `dict[str, Any]` or a TypedDict; type mismatch passes tests but fails CI mypy gate | Always source-read the return annotation; under `strict = true`, write the fully parameterized form (`dict[str, Any]`) matching source exactly (Phase 29) |
 
 ## Results & Parameters
 
@@ -2140,3 +2306,4 @@ Revised LOC estimate: ~X (vs TODO "~Y"); justification: ~Z% already in substrate
 | ProjectHephaestus | Issue #1289 — planning second decomposition pass of `ci_driver.py` (3,358 lines) using Dependency Inversion + delegation stubs to preserve `patch.object` test targets; 4 collaborators proposed (`PRDiscovery`, `CICheckInspector`, `CIFixOrchestrator`, `ArmingOrchestrator`); 6 additional planning risks identified: (1) `shared_pr_issues` write-back not designed — `_discover_prs` moving to `PRDiscovery` populates dict that arming fan-out reads on CIDriver; (2) `_tracked_worktree_changes` used by both `CICheckInspector` and `CIFixOrchestrator` — cross-collaborator coupling if assigned to one; (3) test fixture pre-seeding of `driver._viewer_login` stops working after cache migrates to collaborator; (4) method bodies not read before assigning to collaborators (`_arm_all_unarmed_open_prs` etc. assigned by name only); (5) conditional `__init__.py` export step not resolved at plan time — `__init__.py` not read; (6) line count projection used 25-line average for method bodies without reading actual lengths — no fallback plan if target not reached after PRDiscovery (unverified — implementation not yet started) | New Phase 22: God-Class Delegation Shared-State Write-Back Rules (v1.9.0) |
 | ProjectHephaestus | PR #1292 (Issue #1179) — executed CIDriver god-class decomposition using narrow-callable injection (DIP): ci_driver.py 3,338 → 2,404 lines (−28%); 4 collaborators extracted (`pr_discovery.py` 260L, `ci_check_inspector.py` 130L, `ci_fix_orchestrator.py` 530L, `post_merge_processor.py` 230L); 4 implementation traps discovered: (1) bare bound-method references to injected callables bypass `patch.object` — all injected callables must be lambda-wrapped; (2) pre/post-SHA split after orchestrator extraction requires patching BOTH `ci_fix_orchestrator.run` and `ci_driver.run` independently; (3) `_viewer_login` attribute migration generated 6 mypy errors in sibling test files — all attribute access paths must be updated; (4) `AGENT_CI_DRIVER` move to extracted module broke `test_phase_agent_wiring.py` — companions tuple required update; 146 existing tests + 22 new tests pass; all CI gates passed (verified-ci) | New Phase 23: God-Class Narrow-Callable DIP Execution Pattern (v1.10.0) |
 | ProjectHephaestus | Issue #1289 R5 planning session — 3 new pre-implementation verification rules discovered: (1) `_retry_no_commit_once` at ci_driver.py:2296 uses keyword-only `*` separator; plan gave it a fabricated positional signature including non-existent `acquired_slot` param — AST Criterion 6 would pass silently but runtime raises `TypeError`; fix: read actual `def` line before any stub; (2) `_gh_call` patched in 26 sites across one test file moving to 4+ destination modules — two range-grep spot-checks only covered 2 of 26 sites; fix: bucket all patch lines by test-class start-line boundary; (3) `_find_pr_for_issue` tests already patch `_review_utils._gh_call` (not `ci_driver._gh_call`) because the method already delegates through `_review_utils`; these sites do not need migration regardless of where the method moves; fix: read the patch string before adding any site to the migration table (plan not yet executed) | New Phases 24–26: Keyword-Only Sig Verification, _gh_call Bucket Analysis, Delegation Chain Pre-Check (v1.11.0) |
+| ProjectHephaestus | Issue #1289 R5 planning session (continued) — 3 additional pre-implementation verification risks identified for `ci_driver.py` stub writing: (1) plan carried `acquired_slot` parameter for `_recheck_and_arm_after_fix` (L1147), `_resolve_dirty_pr` (L1227), `_attempt_ci_fixes` (L1286) without source-reading those def lines — same fabrication risk as R4's `_retry_no_commit_once`; AST Criterion 6 passes silently; fix: `sed -n '1147p;1227p;1286p' ci_driver.py` before writing any stub; (2) plan specified `_is_bot_pr_mode(self, issue_number, pr_number)` as two-arg without source-reading L596 — arity or keyword-only separator may differ; (3) plan annotated `_gh_pr_state(self, pr_number: int) -> dict` without reading return annotation from source — mypy strict rejects bare `dict`; actual type may be `dict[str, Any]` or TypedDict; `acquired_slot` is the #1 risk in R5 (plan not yet executed) | New Phases 27–29: Source-Read Mandate, Arity Verification, Return-Type Annotation (v1.12.0) |

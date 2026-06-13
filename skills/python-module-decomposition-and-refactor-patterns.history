@@ -1,6 +1,57 @@
 <!-- markdownlint-disable MD024 -->
 # python-module-decomposition-and-refactor-patterns — History
 
+## v1.12.0 (2026-06-13)
+
+**Changed by:** /learn from ProjectHephaestus issue #1289 R5 planning session (continued — three additional stub-writing risks not directly source-read)
+**Verification:** unverified (planning session findings; implementation not yet executed)
+
+### What changed
+
+Added Phases 27–29 covering three additional pre-implementation verification risks identified
+during the R5 planning session for issue #1289 (ci_driver.py decomposition):
+
+**Phase 27: Source-Read Mandate for Stubs Carried Forward Without Direct Verification**
+
+Three `CIFixOrchestrator` stubs were carried forward from R4/R5 without direct source reads:
+- `_recheck_and_arm_after_fix` (ci_driver.py:1147) — plan includes `acquired_slot` parameter
+- `_resolve_dirty_pr` (ci_driver.py:1227) — plan includes `acquired_slot` parameter
+- `_attempt_ci_fixes` (ci_driver.py:1286) — plan includes `acquired_slot` parameter
+
+The `acquired_slot` parameter appeared as a fabricated parameter in R4 for
+`_retry_no_commit_once` (where source showed it did NOT exist). AST Criterion 6 verifies
+method name presence only — a wrong-but-present stub passes silently and fails at runtime
+with `TypeError: unexpected keyword argument`.
+
+Rule: Before writing any stub, run `sed -n 'Np' ci_driver.py` on the def line. Never carry
+parameters from a prior plan revision as authoritative.
+
+**Phase 28: Two-Argument Stub Arity Verification**
+
+The plan specifies `_is_bot_pr_mode(self, issue_number, pr_number)` as a two-argument method
+but the source at L596 was not directly read. Arity or keyword-only separator may differ.
+Rule: For any method with 2+ non-self args not source-read in the current session, verify
+arity and keyword-only status before writing the stub.
+
+**Phase 29: Return-Type Annotation Verification Before Stub Writing**
+
+The plan annotates `_gh_pr_state(self, pr_number: int) -> dict` without reading the return
+annotation from source. Under mypy `strict = true`, bare `dict` is rejected (missing type
+parameters). Actual type may be `dict[str, Any]` or a TypedDict. Rule: Source-read the
+return annotation; write the fully parameterized form matching source.
+
+Also added:
+- 4 new rows to Failed Attempts table (R5 acquired_slot risk, `_is_bot_pr_mode` arity,
+  `_gh_pr_state` return type, and the general carried-forward-parameter pattern)
+- 3 new use-case descriptions in frontmatter (21–23)
+- 5 new tags (source-read-before-stub, fabricated-parameter-risk, acquired-slot-verification,
+  return-type-annotation-verification, stub-arity-verification)
+- 4 new When-to-Use bullets
+- 3 new Quick Reference decision-tree entries
+- 1 new Verified On row
+
+---
+
 ## v1.11.0 (2026-06-13)
 
 **Changed by:** /learn from ProjectHephaestus issue #1289 R5 planning session (CIDriver god-class decomposition — planning-time verification rules)
