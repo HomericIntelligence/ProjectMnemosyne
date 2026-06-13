@@ -1,0 +1,62 @@
+<!-- markdownlint-disable MD024 -->
+# git-worktree-sys-path-precedence-issue — History
+
+## v1.1.0 (2026-06-12)
+
+**Changed by:** ProjectHephaestus Issue #1217 — wiring an inert `--json` flag into `hephaestus-check-repo-analyze-skills` via `emit_json_status()`
+**Verification:** verified-local
+
+### What changed
+
+- Added a "console-script verification trap" trigger (5) to the frontmatter `description` and a
+  new "When to Use" bullet: verifying a console-script fix from inside a worktree where the
+  installed entry point emits EMPTY/unpatched output and tempts the wrong conclusion
+  "the fix does not work."
+- Added a `### Console-Script Verification Probe (which tree resolved?)` subsection to the
+  Verified Workflow with the reusable `module.__file__` + `inspect.getsource(main)` diagnostic
+  snippet, and the guidance that the authoritative LOCAL verification is `python -m <module>` or
+  a direct `from <module> import main; main([...])` — NOT the installed entry-point script — and
+  that `pixi run dev-install` re-points `which <console-script>` but does NOT fix the
+  script-execution `sys.path[0]` shadowing.
+- Added two Failed Attempts rows: (a) trusting an empty console-script run as proof the fix is
+  broken (Issue #1217); (b) running `pixi run dev-install` to fix the shadowing.
+- Added a Verified On row for ProjectHephaestus Issue #1217 (2026-06-12, verified-local; CI for
+  PR #1253 pending).
+- Bumped version 1.0.0 → 1.1.0 (minor — new findings + two new failed-attempt rows + new
+  workflow subsection; no breaking changes). Skill-level `verification` stays `verified-local`.
+
+### Why
+
+The original skill framed the issue purely as "subprocess-spawned console scripts load stale code
+from the main repo." Issue #1217 surfaced the same root cause in a distinct, high-cost context:
+the VERIFICATION step. Running the installed entry point inside the worktree produced empty,
+unpatched output and nearly led to a false "the fix doesn't work" conclusion. Root-causing live
+via `module.__file__` (resolved to the OUTER repo tree) and `inspect.getsource(m.main)`
+(`"args.json" in src` was False) proved the editable install was shadowing the worktree code on
+the script-execution path, while `python -m` and direct import loaded the patched module. This
+amendment captures the reusable diagnostic probe and the rule: never trust an empty console-script
+run inside a worktree as evidence a fix failed; re-verify via `python -m` and check
+`module.__file__`.
+
+### Previous version (v1.0.0) snapshot of the changed regions
+
+#### Frontmatter (description / date / version)
+
+````markdown
+description: "Document the sys.path ordering issue in workspace-based git worktrees where the main project directory comes before the worktree in Python's module search path, causing subprocess-spawned entry points (console scripts) to import modules from the main repo instead of the worktree, even though the editable install (.pth file) correctly points to the worktree. Code changes work in direct Python imports but fail in subprocess invocations. Use when: (1) running console scripts via subprocess that load stale code from the main repo, (2) debugging entry points that work in direct Python imports but fail via pixi run or subprocess.run(), (3) code changes in a git worktree work when imported directly but fail when invoked as a console script, (4) sys.path shows main project directory before worktree path."
+category: tooling
+date: 2026-06-06
+version: "1.0.0"
+````
+
+#### When to Use (final bullet, pre-amendment)
+
+````markdown
+- Building automation tools or test suites that spawn console scripts as subprocess commands from within a git worktree
+````
+
+#### Failed Attempts (pre-amendment — last row only; two rows appended after it)
+
+````markdown
+| Checking only the main .pth file | Examined `.pth` file in main repo's site-packages | Missed that the worktree was using the SAME `.pixi/envs/default` and the .pth file there was also pointing to the worktree (correctly) | Both the main repo and worktree share `.pixi/envs/default`; the .pth file is correct in both cases. The issue is NOT the .pth target but the sys.path ordering. |
+````
