@@ -2,6 +2,39 @@
 
 # History: dependency-manifest-single-source-of-truth
 
+## v1.2.0 (2026-06-13)
+
+MINOR amendment. Merged two independent v1.1.0 amendments into a combined v1.2.0.
+
+**From PR #2388 (python interpreter pin, issue #1184 / PR #1260):**
+
+Extended the upper-cap rule to the **python interpreter pin** itself: an unbounded
+`python = ">=3.10"` in `pixi.toml [dependencies]` resolves to the experimental free-threaded
+`python-3.14.4 cp314t` build, outside the support matrix. Added:
+- `>=3.10,<3.14` cap guidance
+- `pixi update python` forced re-resolution + `grep -c cp314 → 0` acceptance check
+- Lock-diff-by-package-set and lock-stability verification
+- `extract_pixi_python_ceiling` / `check_pixi_python_ceiling` regression-guard pattern
+- Parallel-module wrong-test-file gotcha (the `test_python_version.py` vs
+  `test_check_python_version_consistency.py` issue)
+- Pre-commit scope-hygiene guidance
+- New "When to Use" trigger #6 (unbounded python pin)
+- 3 new Failed Attempts rows (cp314t, `pixi update python`, test file gotcha)
+- New Verified On row (ProjectHephaestus #1184 / PR #1260, verified-local)
+- Cross-references `state-machine-and-resource-lifecycle-patterns` and
+  `tooling-pixi-lockfile-churn-self-reference`
+
+**From main v1.1.0 (ruff floor, issue #1201 / PR #1294):**
+
+Learnings from raising the ruff floor bump `>=0.1.0` → `>=0.15`. Added:
+- 7a: Reuse existing `_find_dep` across new test classes (DRY)
+- 7b: Locate the correct pixi.toml section before writing the guard
+- 7c: No pixi re-solve needed when the lock already satisfies the new floor
+- 3 new Failed Attempts rows (DRY `_find_ruff_dep`, hardcoded sentinel, coverage gate)
+- New Verified On row (ProjectHephaestus #1201 / PR #1294)
+
+---
+
 ## v1.1.0 (2026-06-13)
 
 Amended with learnings from ProjectHephaestus issue #1201 (ruff floor bump `>=0.1.0` → `>=0.15`, PR #1294).
