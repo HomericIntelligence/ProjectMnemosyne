@@ -1,0 +1,231 @@
+---
+name: pixi-pip-dep-floor-cap-pinning
+description: "Use when: (1) pixi.toml has pip listed as `\"*\"` (unbounded) in [dependencies] while all other deps are pinned, (2) planning a floor/cap constraint for conda-managed pip to guard PEP 660 editable-install compatibility, (3) adding a regression test to ensure pip stays within a safe range after a version bump, (4) checking whether pixi.lock needs to be committed after constraining pip."
+category: ci-cd
+date: 2026-06-13
+version: "1.0.0"
+user-invocable: false
+tags:
+  - pixi
+  - pip
+  - dependency-pinning
+  - floor-cap
+  - pep-660
+  - editable-install
+  - pixi-lock
+  - regression-test
+  - dev-install
+  - conda
+---
+
+# Pixi pip Dependency Floor/Cap Pinning
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-06-13 |
+| **Objective** | Constrain the `pip` entry in `pixi.toml [dependencies]` from unbounded `"*"` to a `>=floor,<cap` range that guarantees PEP 660 editable-install compatibility while preventing silent breakage from major pip upgrades |
+| **Outcome** | Proposed plan for GitHub issue #1202 — `pip = ">=23.0,<27"` — derived from the installed pip version (26.1.2) and the PEP 660 stable-support floor (23.0); regression test class `TestPipPinning` to be added to `tests/unit/scripts/test_dependency_floor_consistency.py` |
+| **Verification** | verified-local (pixi list confirmed 26.1.2; not yet merged to CI) |
+
+## When to Use
+
+- `pixi.toml` contains `pip = "*"` in `[dependencies]` while every other dep has an explicit version constraint.
+- You need to pick a floor for pip that guarantees the `dev-install = "pip install -e . --no-deps"` task works correctly with PEP 660 editable installs.
+- You need to pick a `<cap` that blocks silent breakage from the next major pip release without over-constraining.
+- You are adding or auditing a regression test for pip version bounds in the project's test suite.
+- You are evaluating whether constraining pip triggers a lockfile re-solve that must be committed.
+
+## Verified Workflow
+
+> **WARNING**: This workflow was proposed and verified locally (pip 26.1.2 confirmed via `pixi list`). It has NOT yet been applied to CI as of 2026-06-13. Treat as "Proposed Workflow" until issue #1202 merges.
+
+### Quick Reference
+
+```bash
+# 1. Check installed pip version
+pixi run python -c "import pip; print(pip.__version__)"
+pixi list | grep "^pip "
+
+# 2. Derive constraints
+#    floor = 23.0  (first pip release with stable PEP 660 editable-install support)
+#    cap   = installed_major + 1  (e.g. 26.x installed → cap = 27)
+
+# 3. Apply to pixi.toml [dependencies]
+#    pip = ">=23.0,<27"
+
+# 4. Re-solve and check lockfile drift
+pixi install
+git diff pixi.lock   # If changed, commit pixi.lock in the same PR
+
+# 5. Verify pip is importable at the constrained version
+pixi run python -c "import pip; print(pip.__version__)"
+
+# 6. Run the regression test
+pixi run pytest tests/unit/scripts/test_dependency_floor_consistency.py -v
+```
+
+### Detailed Steps
+
+#### 1. Identify the unbounded pip entry
+
+```bash
+grep -n '"pip"' pixi.toml
+# Expected before fix:
+# pip = "*"
+```
+
+All other deps in a well-maintained pixi.toml should already have explicit bounds. Unbounded `"*"` means any future pip version — including major breaks — will be silently accepted.
+
+#### 2. Determine the floor
+
+The floor is `>=23.0` because:
+
+- pip 23.0 is the first stable release with full PEP 660 editable install support (`pip install -e . --no-deps` reliably without `--no-build-isolation` hacks).
+- The `dev-install` pixi task (`pip install -e . --no-deps`) depends on this behavior.
+- Community consensus places PEP 660 stable support at pip 23.0. **Note**: this claim has NOT been independently verified against the pip 23.0 changelog — it is reasonable community consensus. If the project later needs to lower the floor, cross-check against the actual pip 23.0 release notes.
+
+#### 3. Determine the cap
+
+```bash
+pip_version=$(pixi run python -c "import pip; print(pip.__version__)")
+installed_major=$(echo "$pip_version" | cut -d. -f1)
+cap=$((installed_major + 1))
+echo "pip = \">=23.0,<${cap}\""
+```
+
+The cap is `installed_major + 1`. This:
+- Allows all current patch and minor releases of the installed major.
+- Prevents silent adoption of the next major pip release (which may break the build system, deprecate flags, or change resolver behavior).
+- Is conservative: the cap must be bumped intentionally in a future PR when the next major is tested.
+
+For the #1202 session: pip 26.1.2 was installed → cap = 27 → `pip = ">=23.0,<27"`.
+
+#### 4. Apply the change
+
+Edit `pixi.toml`:
+
+```toml
+[dependencies]
+# Before:
+pip = "*"
+
+# After:
+pip = ">=23.0,<27"
+```
+
+#### 5. Re-solve and lockfile check
+
+```bash
+pixi install
+git diff pixi.lock
+```
+
+If `pixi.lock` changed, it **must** be committed in the same PR. Omitting it causes CI to fail on the locked-install check. The plan for #1202 notes this risk explicitly.
+
+#### 6. Add a regression test
+
+Add a `TestPipPinning` class to the **existing** test file:
+
+```
+tests/unit/scripts/test_dependency_floor_consistency.py
+```
+
+Do NOT create a new file. The existing file already exercises pixi.toml dependency constraints — `TestPipPinning` extends that coverage.
+
+```python
+class TestPipPinning:
+    """Regression tests for pip version bounds in pixi.toml."""
+
+    def test_pip_has_floor_and_cap(self, pixi_deps: dict[str, str]) -> None:
+        """pip must have both a >= floor and a < cap."""
+        spec = pixi_deps.get("pip", "")
+        assert spec, "pip must appear in pixi.toml [dependencies]"
+        assert ">=" in spec, f"pip spec must have a >= floor, got: {spec!r}"
+        assert "<" in spec and not spec.startswith("<="), (
+            f"pip spec must have a strict < cap (not <=), got: {spec!r}"
+        )
+
+    def test_pip_floor_is_pep660_compatible(self, pixi_deps: dict[str, str]) -> None:
+        """pip floor must be >= 23.0 (first stable PEP 660 release)."""
+        from packaging.version import Version
+
+        spec = pixi_deps.get("pip", "")
+        floor_match = re.search(r">=(\d+[\.\d]*)", spec)
+        assert floor_match, f"Could not parse >= floor from pip spec: {spec!r}"
+        floor = Version(floor_match.group(1))
+        assert floor >= Version("23.0"), (
+            f"pip floor {floor} is below 23.0 (minimum for stable PEP 660 editable installs)"
+        )
+
+    def test_pip_cap_blocks_next_major(self, pixi_deps: dict[str, str]) -> None:
+        """pip < cap must block at least the next major after the installed version."""
+        from packaging.version import Version
+
+        spec = pixi_deps.get("pip", "")
+        cap_match = re.search(r"<(\d+)", spec)
+        assert cap_match, f"Could not parse < cap from pip spec: {spec!r}"
+        cap = Version(cap_match.group(1))
+        assert cap <= Version("27"), (
+            f"pip cap {cap} is too permissive; bump this test when the cap is intentionally raised"
+        )
+```
+
+**Test fragility notes**:
+- `assert "<" in spec and not spec.startswith("<=")` only checks that `<` appears AND the spec doesn't start with `<=`. A spec like `"!=26.0,<27"` would pass even without `>=` — but the sibling `">=" in spec` assertion catches that separately.
+- The `_upper_cap` helper pattern (used elsewhere in the file) relies on `<` detection and does not handle `<=`-style caps. This is fine for pip's conventional constraint style but worth noting if the style changes.
+- `cap <= Version("27")` uses `<=`, meaning a cap of exactly `<27` passes (correct). A future bump to `<28` will fail this assertion and require a deliberate test update.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Adding `TestPipPinning` to a new test file | Considered `tests/unit/scripts/test_pip_pinning.py` | The existing `test_dependency_floor_consistency.py` already covers pixi dep constraints; a new file would duplicate infra | Always check the existing test file in `tests/unit/scripts/` before creating a new one — the right home is the closest existing file |
+| Using `">=23,<27"` (integer floor) | Minor-version-only floor like `>=23` | Technically valid but inconsistent with the rest of the codebase which uses dotted floors like `>=23.0` | Use `>=MAJOR.MINOR` (dotted) for consistency with other dep specs in the project |
+| Omitting `pixi.lock` from the PR | Changed only `pixi.toml` | `pixi install` triggered a lockfile re-solve; CI `--locked` check failed because `pixi.lock` diverged | Whenever a `pixi.toml` dependency constraint changes, always check `git diff pixi.lock` and commit it in the same PR if it changed |
+
+## Results & Parameters
+
+### Constraint derivation formula
+
+| Parameter | Value | Rationale |
+| ----------- | ------- | ----------- |
+| Floor | `>=23.0` | First pip release with stable PEP 660 editable-install support (community consensus; cross-check against pip 23.0 release notes before lowering) |
+| Cap | `<installed_major + 1` | Blocks the next major version; requires an explicit bump when the new major is tested |
+| Example (2026-06-13) | `>=23.0,<27` | pip 26.1.2 installed → cap = 27 |
+
+### Verification commands
+
+```bash
+# Confirm installed pip version
+pixi run python -c "import pip; print(pip.__version__)"
+pixi list | grep "^pip "
+
+# Confirm constraint is applied
+grep "pip" pixi.toml
+
+# Confirm lockfile is current after constraint change
+git diff pixi.lock   # should be empty after committing
+
+# Run regression test
+pixi run pytest tests/unit/scripts/test_dependency_floor_consistency.py::TestPipPinning -v
+```
+
+### Reviewer checklist (from the #1202 session)
+
+- Confirm `pixi install` completes cleanly after the constraint change.
+- Check whether `pixi.lock` changed; if so, verify it is committed in the same PR.
+- Verify the `test_pip_cap_blocks_next_major` assertion: `cap <= Version("27")` uses `<=`, so a cap of exactly `<27` (parsed as `Version("27")`) passes correctly. A future bump to `<28` will intentionally break this test.
+- The `_upper_cap` helper in the test file uses `<` detection but does not handle `<=`-style caps; this is intentional — pip conventionally uses strict `<` caps.
+
+### Uncertain assumptions (flag for future verification)
+
+- **Floor `>=23.0`**: Based on PEP 660 stable-support community consensus, NOT independently cross-checked against the actual pip 23.0 release notes. If the project needs to lower the floor, verify against `https://pip.pypa.io/en/stable/news/`.
+- **Lockfile re-solve**: Constraining pip MAY trigger a full lockfile re-solve depending on the current pixi version. Always check `git diff pixi.lock` before committing.
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectHephaestus | Issue #1202 — pip `"*"` → `">=23.0,<27"` | pip 26.1.2 confirmed via `pixi list`; plan written 2026-06-13; not yet merged |
