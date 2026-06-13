@@ -2,6 +2,23 @@
 
 # stale-documentation-audit-and-broken-reference-repair — History
 
+## v1.1.0 (2026-06-13)
+
+Added ADR LoC drift pattern from ProjectHephaestus issue #1177 (PR #1281):
+
+- New "When to Use" bullet: stale LoC/percentage figures in ADR files and CLAUDE.md
+- New ADR LoC drift row in the pattern classification table
+- Extended "ADR LoC drift (extended pattern)" in Detailed Steps with 5 rules:
+  (1) always re-measure from disk at implementation time,
+  (2) use content-match grep not issue-body line numbers,
+  (3) read the ADR before planning decomposition,
+  (4) grep the whole corpus for all copies,
+  (5) skip ruff check for doc-only changes; use markdownlint-cli2
+- New Quick Reference bash block for ADR LoC re-measurement commands
+- Four new Failed Attempts rows: trusting issue body figures, issue body line numbers,
+  planning decomposition without reading the ADR, running ruff on .md files
+- New Verified On row: ProjectHephaestus #1177 / PR #1281
+
 ## v1.0.0 (2026-06-07)
 
 Consolidated 10 documentation skills into one canonical covering stale-doc drift audits and broken-reference repair. Absorbed skills:

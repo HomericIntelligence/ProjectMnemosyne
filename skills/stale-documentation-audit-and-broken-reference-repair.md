@@ -3,7 +3,7 @@ name: stale-documentation-audit-and-broken-reference-repair
 description: "Use when: (1) running a doc-drift audit across a corpus — detecting stale counts, metric discrepancies, cross-doc contradictions, ecosystem-role drift; (2) removing phantom directory references from documentation when a path no longer exists; (3) fixing broken documentation references (dead links, stale headings); (4) auditing documentation examples for policy violations; (5) auditing and rewriting getting-started stubs by sourcing real commands from justfile and versions from pixi.toml; (6) fixing incorrect tier labels or version numbers in docs that have drifted from implementation; (7) managing the full lifecycle of placeholder and stub documentation — deletion under YAGNI, deferred-comment placeholders, rewriting with accurate codebase-grounded content; (8) resolving audit nitpicks for monolithic code by documenting verified design rationale; (9) resolving CONTRIBUTING.md case-clashes and circular cross-references in docs/; (10) validating anchor fragments in markdown deep-links to detect broken headings."
 category: documentation
 date: 2026-06-07
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 history: stale-documentation-audit-and-broken-reference-repair.history
 tags: [doc-drift, stale-doc, broken-references, phantom-dir, placeholder, stub, anchor-validation, tier-labels, doc-audit, doc-sync, merged]
@@ -16,8 +16,8 @@ tags: [doc-drift, stale-doc, broken-references, phantom-dir, placeholder, stub, 
 | Field | Value |
 | ------- | ------- |
 | **Date** | 2026-06-07 |
-| **Objective** | Canonical workflow for auditing stale documentation and repairing broken references: drift audits, phantom-dir/dead-link removal, placeholder lifecycle, getting-started rewrites, tier-label fixes, anchor validation |
-| **Outcome** | Consolidated from 10 skills covering doc-drift audits, broken-reference repair, policy-violation audits, placeholder/stub lifecycle, monolith-rationale docs, CONTRIBUTING case-clash, and anchor validation |
+| **Objective** | Canonical workflow for auditing stale documentation and repairing broken references: drift audits, phantom-dir/dead-link removal, placeholder lifecycle, getting-started rewrites, tier-label fixes, anchor validation, ADR LoC figure updates |
+| **Outcome** | Consolidated from 10 skills covering doc-drift audits, broken-reference repair, policy-violation audits, placeholder/stub lifecycle, monolith-rationale docs, CONTRIBUTING case-clash, and anchor validation; v1.1.0 adds ADR LoC drift pattern |
 | **Verification** | verified-ci |
 
 ## When to Use
@@ -34,6 +34,7 @@ tags: [doc-drift, stale-doc, broken-references, phantom-dir, placeholder, stub, 
 - An audit nitpick questions a monolithic file's organization and needs a documented rationale
 - Both `CONTRIBUTING.md` and `docs/contributing.md` exist with a circular cross-reference
 - README/docs deep-link to specific installation headings and you need CI to catch broken anchors
+- An ADR file (e.g. `docs/adr/`) cites LoC figures or percentage metrics that have drifted as the codebase grew since the ADR was authored; `CLAUDE.md` or other doc files repeat the same stale counts
 
 ## Verified Workflow
 
@@ -68,6 +69,12 @@ grep -r "TensorDataset\|class Trainer" shared/ papers/      # verify API exists
 # ── TIER-LABEL FIXES ─────────────────────────────────────────────────────────
 grep -n "T[0-9]" .claude/shared/metrics-definitions.md      # scan all tier refs
 
+# ── ADR LOC FIGURES (re-measure at implementation time, never trust issue body) ──
+find hephaestus -name '*.py' | xargs wc -l | tail -1          # total LoC
+find hephaestus/automation -name '*.py' | xargs wc -l | tail -1  # subpackage LoC
+# Then grep for ALL copies of the stale figure across the corpus:
+grep -rn "19,726\|19\.7k\|41,034" docs/ CLAUDE.md README.md    # replace with real old values
+
 # ── ANCHOR VALIDATION ────────────────────────────────────────────────────────
 python3 scripts/validate_installation_anchors.py README.md docs/getting-started/installation.md
 
@@ -95,6 +102,7 @@ Classify the staleness, then verify against an authoritative source before editi
 | Ecosystem role drift | External docs describe wrong role | `gh api orgs/<ORG>/repos` |
 | Doc contradiction | Policy conflict across files | grep policy term |
 | Citation §-drift | §-ref points to old §-number | global mapping table + WebFetch per arXiv ID |
+| ADR LoC drift | ADR cites old `N LoC / M% of codebase`; codebase has grown | `find … -name '*.py' \| xargs wc -l \| tail -1` — re-measure at implementation time |
 
 Fix patterns: `Planned → Implemented` in status tables; round counts with `+` for forward
 compatibility (`"2026+ tests" → "3,000+ tests"`) but exact counts (no `+`) for deterministic
@@ -103,6 +111,21 @@ strikethrough rather than removing them: `~~`.claude/agents/deleted.md`~~ — co
 Add a self-verifying command to the doc so future readers can re-check:
 `` `ls .github/workflows/*.yml | wc -l` ``. Authority order for contradictions:
 `CLAUDE.md > .claude/shared/pr-workflow.md > CONTRIBUTING.md` — edit only the wrong file.
+
+**ADR LoC drift (extended pattern)**: When an audit flags that an ADR's LoC figures are stale:
+
+1. **Re-measure at implementation time** — never use figures from the issue body (they reflect the audit
+   snapshot, not the current state). Run `find <package> -name '*.py' | xargs wc -l | tail -1` directly.
+2. **Use content-match grep, not line numbers** — issue bodies cite line numbers from the audit snapshot;
+   those numbers are stale by the time you implement. Find the actual string with
+   `grep -rn "<old_figure>" docs/ CLAUDE.md README.md`.
+3. **Read the ADR before planning** — the ADR may document why decomposition is rejected and identify
+   the already-implemented remedy (e.g., an optional-extra install boundary). The correct fix may be
+   documentation-only, not structural refactoring.
+4. **Grep the whole corpus** — the same stale figure often appears in both the ADR and `CLAUDE.md`
+   (and possibly `README.md`). Fix all occurrences in one PR.
+5. **Skip `ruff check` for doc-only changes** — `ruff` does not lint `.md` files; the run is a no-op.
+   Use `markdownlint-cli2` instead: `pixi run pre-commit run markdownlint-cli2 --files <file.md>`.
 
 **Example** — agent count drift after agents converted to skills: update both the Quick Links
 bullet (`- N agents` → `- M agents`) and the Agent Hierarchy line (`All N agents` → `All M agents`).
@@ -265,6 +288,10 @@ gh pr merge --auto --rebase
 | `replace_all: false` for a repeated phrase | Tried editing the first occurrence individually | Context string not unique — Edit reported "string not found" | Use `replace_all: true` when the same phrase appears multiple times |
 | `pixi run npx markdownlint-cli2 <file>` / `just pre-commit-all` | Linting via npx or `just` | `npx`/`just` not in PATH; pixi env init takes ~2 min | Run `pre-commit run` (or `git commit`) to trigger markdownlint directly |
 | Full pre-commit suite without skipping | Ran all hooks on a host with a GLIBC mismatch | `mojo-format` fails on GLIBC < 2.32 (environment, not code) | Use `SKIP=mojo-format`; only non-Mojo hooks matter for doc-only changes |
+| Trusting issue body LoC figures for ADR updates | Used `25,403 / 46,697 = 54.4%` from the audit-generated issue body | Figures reflected the audit snapshot date, not the current on-disk state; re-measurement gave `26,125 / 48,498 = 53.9%` | Always re-measure LoC from disk at implementation time with `find … -name '*.py' \| xargs wc -l \| tail -1` |
+| Using issue body line numbers to locate stale text in ADR | Jumped to `:9` / `:62` as cited in the issue | Issue line numbers were from the audit snapshot; the actual strings had shifted | Use content-match grep (`grep -rn "<old_figure>"`) to locate stale text — never trust issue-body line numbers |
+| Planning structural decomposition for an ADR's god-package finding | Proposed splitting the `automation/` package before reading ADR-0001 | ADR-0001 explicitly documents that decomposition is rejected; the prescribed remedy (optional-extra install boundary) was already implemented | Read the referenced ADR in full before planning — it may document that the finding is intentional design with an approved alternative remedy; correct fix may be documentation-only |
+| Running `pixi run ruff check docs/ CLAUDE.md` for doc-only changes | Ran ruff on markdown files expecting linting feedback | `ruff` does not lint `.md` files; the command is a no-op and produces no signal | Skip `ruff check` for doc-only changes; use `pixi run pre-commit run markdownlint-cli2 --files <file.md>` instead |
 | Deleting `docs/contributing.md` to resolve the case-clash | Removed the file entirely | Breaks inbound links from the docs index | Reduce to a redirect; keep root as canonical |
 | Per-file reviewers for citation corpus | Reviewed each entry individually | Could not see cross-document §-drift or arXiv ID-to-title swaps | Both failure modes need a cross-corpus structural audit, not per-file review |
 
@@ -331,4 +358,5 @@ pixi run npx markdownlint-cli2 <file>
 | ProjectOdyssey | Issues #3344, #3365; PR #3320; PR #4847 | Workflow README audit, agent-count fix, post-migration README sync |
 | ProjectOdyssey | Issues #3142/#3308, #3304/#3913, #3305/#3917, #3918/#4830, #3141/#3303, #3914/#4828, #3915/#4829 | Stub deletion, installation/quickstart rewrite, IDE-setup extend, getting-started audit, anchor validator |
 | ProjectHephaestus | Issue #792 (PR #984); Issue #630 (PR #667) | Monolith-rationale ADR; CONTRIBUTING case-clash redirect |
+| ProjectHephaestus | Issue #1177 (PR #1281) | Stale LoC figures in ADR + CLAUDE.md after `automation/` grew; re-measured on-disk (`26,125 / 48,498 = 53.9%`); doc-only fix; all CI passed |
 | mvillmow/Random | Predictive-Coding-in-Mojo Phase 0 | Cross-doc citation drift: 8 stale §-refs, 2 arXiv ID swaps caught |
