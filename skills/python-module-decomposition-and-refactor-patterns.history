@@ -1,6 +1,69 @@
 <!-- markdownlint-disable MD024 -->
 # python-module-decomposition-and-refactor-patterns — History
 
+## v1.4.0 (2026-06-10)
+
+**Changed by:** ProjectHephaestus PR #998 (issue #712) — `IssueImplementer` /
+`ImplementationPhaseRunner` decomposition into 5 named pipeline phases.
+**Verification:** verified-local (test suite green; multi-iteration review
+process surfaced the dual-back-reference fix and the "no NotImplementedError
+stubs" rule).
+
+### What changed
+
+Added **Phase 19: Phase-Strategy Decomposition with Dual-Back-Reference
+StageContext** — the case Phases 11 and 12 do not cover. CLI extraction
+(Phase 11) preserves patches on the original module; sibling-cycle extraction
+(Phase 12) retargets patches to the runner. Phase 19 must preserve BOTH patch
+addresses (`patch.object(impl, "_xxx")` AND `patch.object(impl.phase_runner, "_xxx")`)
+because both are exercised by the existing test suite, on the same set of
+methods. Solution: a frozen `StageContext` carrying both `impl` AND `runner`
+back-references, phase classes that dispatch back through
+`self.ctx.runner._xxx(...)`, and one-line reverse-delegation shims on the
+runner for every name tests patch.
+
+What was added in the canonical `.md`:
+
+- **Description trigger (13)**: orchestrator decomposition with dual-back-reference
+  StageContext.
+- **When-to-Use**: new bullet for 1000–2000 LoC orchestrators with dual patch contracts.
+- **Quick Reference decision tree**: new row routing to Phase 19.
+- **Phase 19 body**: workflow, StageContext shape with init-order guard, code
+  example showing runner shim + phase routing through `self.ctx.runner`, and
+  verification gates (per-phase public-method count via `inspect.getmembers`,
+  `wc -l ≤ 500`, `ruff check --select=C901`).
+- **Failed Attempts**: 8 new rows
+  1. Single back-reference (only `impl`) in StageContext
+  2. Naive symbol move without keeping runner shims
+  3. Checking in `raise NotImplementedError()` stubs as architectural placeholders
+  4. Keeping the original 1,712-LoC body AND adding shims
+  5. Reverse-delegation contract break inside the phase (`ctx.impl` instead of `ctx.runner`)
+  6. `hasattr(self, 'plan_phase')` guard with `__import__` fallback violating POLA
+  7. Module import deferred inside `with state_lock` (deadlock risk)
+  8. Filter chain missed `None` case for an Optional field
+- **Verified On**: new row for ProjectHephaestus PR #998 (issue #712).
+- **Tags**: `phase-strategy`, `reverse-delegation`, `stage-context`,
+  `orchestration-decomposition`, `patch-preservation`.
+
+Bumped MINOR 1.3.0 → 1.4.0 (additive extension; existing phases unchanged).
+
+### Why
+
+This is a recurring decomposition shape across the HomericIntelligence
+automation packages (issue implementer, fleet runners, e2e pipeline). The
+"naive symbol move" failure mode is silent — tests pass `Mock not called` rather
+than raise — and the wrong solution (`raise NotImplementedError()` stubs as
+"architectural placeholders") guarantees an unbounded review loop. Capturing
+the dual-back-reference rule and the "implement or remove" binary keeps future
+authors out of both traps.
+
+### Previous version snapshot (v1.3.0)
+
+- date: 2026-06-05
+- version: "1.3.0"
+- Phase list: 1–18
+- Failed Attempts: 25 rows
+
 ## v1.3.0 (2026-06-07)
 
 **Changed by:** Skill-consolidation pass (cluster PYR02)

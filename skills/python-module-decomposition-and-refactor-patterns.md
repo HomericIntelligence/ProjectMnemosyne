@@ -19,10 +19,14 @@ description: >-
   marked as fallback/reference-only after verifying zero real callers,
   (11) reading the existing substrate code before estimating a large refactor
   to avoid 3-5x LOC over-estimation, (12) finalizing code after parallel phases
-  complete by addressing technical debt accumulated during rapid development.
+  complete by addressing technical debt accumulated during rapid development,
+  (13) decomposing a 1000–2000 LoC orchestrator into named pipeline phases
+  (PlanPhase, ImplementPhase, ReviewPhase, FollowUpPhase, PRCreatePhase) while
+  preserving existing `patch.object(impl, ...)` AND `patch.object(impl.phase_runner, ...)`
+  test contracts via reverse-delegation shims and a dual-back-reference StageContext.
 category: architecture
-date: 2026-06-05
-version: "1.3.0"
+date: 2026-06-10
+version: "1.4.0"
 user-invocable: false
 history: python-module-decomposition-and-refactor-patterns.history
 tags:
@@ -45,6 +49,11 @@ tags:
   - dead-code
   - estimation
   - phase-cleanup
+  - phase-strategy
+  - reverse-delegation
+  - stage-context
+  - orchestration-decomposition
+  - patch-preservation
 ---
 
 # Python Module Decomposition and Refactor Patterns
@@ -77,6 +86,7 @@ Apply this skill when any of the following is true:
 - A code file declares itself **"kept for reference / fallback only"** but has zero real callers and leaves stale back-references in production code
 - A `TODO.md`/roadmap/audit estimates **"thousands of LOC" or weeks** for a substrate rewrite — read the substrate first to avoid a 3-5x pessimistic estimate
 - You are in the **cleanup phase** after parallel Test/Implementation/Package phases and need to address accumulated technical debt before merge
+- A **1000–2000 LoC orchestrator class** (e.g. `IssueImplementer`, `ImplementationPhaseRunner`) needs decomposition into named pipeline phases AND existing tests use BOTH `patch.object(impl, "_xxx")` and `patch.object(impl.phase_runner, "_xxx")` against methods you must move (Phase 19)
 
 ## Verified Workflow
 
@@ -100,6 +110,11 @@ Decision tree:
   Dead "fallback only" file, 0 callers  → Safe Legacy Deletion (Phase 16)
   Estimating a big rewrite              → Read substrate FIRST (Phase 17)
   Cleanup after parallel phases         → Finalization checklist (Phase 18)
+  Orchestrator → named pipeline phases  → Phase-Strategy w/ Dual-Backref StageContext
+    AND tests patch BOTH impl AND         (Phase 19): reverse-delegation shims +
+    impl.phase_runner methods             ctx.impl + ctx.runner; phases call
+                                          self.ctx.runner._xxx() to preserve both
+                                          patch addresses
 
 Universal rule for mock patches after any move:
   Patch where the name is LOOKED UP at call time — not where it was defined.
@@ -797,6 +812,162 @@ complex functions simplified, naming consistent, docs updated, all tests passing
 formatted, zero compiler warnings, coverage at/above floor, ready for review. Cleanup is the
 final polishing gate before PR approval and merge.
 
+### Phase 19: Phase-Strategy Decomposition with Dual-Back-Reference StageContext
+
+Use when a 1,000–2,000 LoC orchestrator class needs to be decomposed into a small
+set of named pipeline phases (the issue often names them explicitly:
+`PlanPhase`, `ImplementPhase`, `ReviewPhase`, `FollowUpPhase`, `PRCreatePhase`)
+AND existing tests already pin internal method names on TWO different objects:
+`patch.object(impl, "_xxx")` AND `patch.object(impl.phase_runner, "_xxx")`.
+
+This is the case Phases 11 and 12 don't cover: CLI extraction (Phase 11) preserves
+patches on the original module; sibling-cycle extraction (Phase 12) retargets
+patches to the runner. Phase 19 must preserve BOTH patch addresses simultaneously
+because both are exercised by the test suite, on the same set of methods.
+
+**Core idea**:
+
+1. Each phase exposes ONE public `run(...)` method and N private `_xxx_impl` methods
+   that hold the real bodies lifted from the runner.
+2. The coordinator (`ImplementationPhaseRunner`) keeps EVERY name that tests patch
+   as a one-line shim: `def _xxx(self, *a, **kw): return self.review_phase._xxx_impl(*a, **kw)`.
+3. Phases dispatch back via `self.ctx.runner._xxx(...)` — NOT `self.ctx.impl._xxx(...)`.
+   The runner is the patchable surface; `impl` only exists for the small set of
+   methods that tests pin directly on the implementer.
+4. `StageContext` is a frozen dataclass carrying BOTH back-references:
+
+```python
+@dataclass(frozen=True)
+class StageContext:
+    impl: IssueImplementer            # preserves patch.object(impl, "_xxx")
+    runner: ImplementationPhaseRunner  # preserves patch.object(impl.phase_runner, "_xxx")
+    state_mgr: ImplementerStateManager
+    # ... other already-initialized collaborators
+
+    def __post_init__(self):
+        assert self.impl.state_mgr is not None, (
+            "StageContext built before IssueImplementer finished __init__ — "
+            "construct phases AFTER state_mgr is wired"
+        )
+```
+
+**Why both references?**
+
+A naive single back-reference (just `impl`) causes a subtle test break: when a
+test does `patch.object(impl.phase_runner, "_fetch_plan_and_review")`, it patches
+the runner shim. But if the phase dispatched via `self.ctx.impl._fetch_plan_and_review`,
+the call goes through the implementer's pass-through, NOT through the runner shim
+the test patched — so the patch never fires. Holding `runner` directly on the
+context and routing through `self.ctx.runner.<name>` keeps the lookup site on
+the patched object.
+
+**Workflow**:
+
+1. **Audit ALL patch sites BEFORE moving code.** The union of patches is the
+   contract; every name must remain callable on its original object:
+   ```bash
+   grep -rn 'patch.object(.*impl\b' tests/ | grep -v 'phase_runner'
+   grep -rn 'patch.object(impl\.phase_runner' tests/
+   ```
+2. **Create `_stage_context.py` first** — frozen dataclass with `impl` AND `runner`
+   back-references and a `__post_init__` init-order assertion.
+3. **Extract phases simplest-first** (Plan → PRCreate → Implement → FollowUp → Review),
+   one per TDD cycle. For each: write the phase's per-class test file RED, lift the
+   body from the runner into `_xxx_impl`, wire the runner shim, verify the whole
+   suite stays green BEFORE moving on.
+4. **Name-collision resolution**: if a phase class name collides with an existing
+   enum value (e.g., `models.ReviewPhase` enum vs new `ReviewPhase` class), alias
+   at the import site: `from .models import ReviewPhase as ReviewState`. Don't
+   rename either type.
+5. **Decompose C901-flagged methods structurally**. As you lift each body, split
+   it into smaller helpers (`_iterate`, `_check_termination`, `_address`,
+   `_warn_if_unresolved`) so each fragment has CC ≤ 8. Remove the `# noqa: C901`.
+6. **Use `impl_module()` as a method, not a property.** A property triggering an
+   import on attribute access violates POLA (readers don't expect side effects).
+7. **Module imports stay at module scope.** Never defer imports inside lock-held
+   regions — holding any lock while acquiring Python's import lock creates a
+   deadlock risk.
+8. **Filter chains must enumerate ALL required fields explicitly**, including
+   Optional ones. If a downstream action needs `state.session_id` and `session_id`
+   is `Optional[str]`, add `if not state.session_id: continue` BEFORE calling the
+   action — defense-in-depth over "the filter probably caught it."
+9. **Verification gates** (run after each phase extraction, not at the end):
+   ```bash
+   # exactly one public method per phase
+   pixi run python -c "import inspect; from hephaestus.automation._review_phase \
+     import ReviewPhase; print([n for n,_ in inspect.getmembers(ReviewPhase, \
+     inspect.isfunction) if not n.startswith('_')])"
+   # coordinator under 500 lines
+   test "$(wc -l < hephaestus/automation/implementer_phase_runner.py)" -le 500
+   # C901 noqa removed cleanly
+   pixi run ruff check hephaestus/automation/ --select=C901
+   ```
+10. **"Implement or remove" is binary.** Never check in `raise NotImplementedError()`
+    stubs reachable through runner shims. Either implement fully or delete the
+    stub AND its runner shim in the same change. Half-completed extraction with
+    stubs guarantees an unbounded review loop (every direct caller crashes; every
+    `patch.object` test crashes; reviewers reopen the same threads each iteration).
+
+**Pattern in code**:
+
+```python
+# implementer_phase_runner.py (the coordinator)
+class ImplementationPhaseRunner:
+    def __init__(self, impl):
+        self.impl = impl
+        self.ctx = StageContext(impl=impl, runner=self, state_mgr=impl.state_mgr, ...)
+        self.review_phase = ReviewPhase(self.ctx)
+        self.plan_phase   = PlanPhase(self.ctx)
+        # ...
+
+    # One-line shim — exists ONLY so patch.object(impl.phase_runner, "_fetch_plan_and_review") works
+    def _fetch_plan_and_review(self, n):
+        return self.review_phase._fetch_plan_and_review_impl(n)
+
+    # Same for every patched name:
+    def _run_impl_review_step(self, *a, **kw):
+        return self.review_phase._run_impl_review_step_impl(*a, **kw)
+
+# _review_phase.py
+class ReviewPhase:
+    def __init__(self, ctx): self.ctx = ctx
+
+    def run(self, **kw) -> ReviewOutcome:        # SINGLE public entry point
+        return self._iterate(**kw)
+
+    def _iterate(self, **kw) -> ReviewOutcome:
+        # CRITICAL: route through ctx.runner, not ctx.impl —
+        # so patch.object(impl.phase_runner, "_fetch_plan_and_review") intercepts
+        plan, review = self.ctx.runner._fetch_plan_and_review(kw["issue_number"])
+        ...
+        outcome = self.ctx.runner._run_impl_review_step(...)
+        ...
+
+    def _fetch_plan_and_review_impl(self, n):    # real body lifted from runner
+        ...
+
+    def _run_impl_review_step_impl(self, *a, **kw):
+        ...
+```
+
+**The shim is NOT free — it's load-bearing.** Removing the shim breaks every
+test that did `patch.object(impl.phase_runner, "_xxx")` AND every direct call
+site like `implementer.phase_runner._xxx(...)`. Treat shims as part of the public
+contract during the lifetime of those tests.
+
+**Results & numbers (verified-local, ProjectHephaestus PR #998)**:
+
+| Metric | Value |
+|--------|-------|
+| Source class (`ImplementationPhaseRunner`) | ~1,712 LoC, CC>15 in 4 methods |
+| Phase modules created | 5 (Plan/Implement/Review/FollowUp/PRCreate) |
+| Phase modules total LoC | ~1,150 (avg 230 per phase) |
+| Reverse-delegation shims on the runner | ~30 one-line methods |
+| Per-test mock count for new phase tests | 3–5 (vs 20+ for the original) |
+| CC budget per extracted helper | ≤ 8 decision points |
+| StageContext fields | `impl`, `runner`, plus already-wired collaborators |
+| Init-order guard | `assert impl.state_mgr is not None` in `__post_init__` |
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -827,6 +998,14 @@ final polishing gate before PR approval and merge.
 | **Forgetting fixture migration after scoping a scanner** | Scoped the scanner to `scylla/` but left existing tests writing fixtures at `tmp_path/"bad.py"` | Root-level fixtures are now out of scope — tests returned zero findings and failed | After narrowing scanner scope, move every test fixture into the scoped dir and update hard-coded path assertions (`"bad.py"` → `"scylla/bad.py"`) |
 | **Trusting a TODO/audit LOC estimate without reading the substrate** | Took `TODO.md` "Phase 2: ~5000 LOC" and an audit's "CRITICAL: autograd missing" as authoritative effort | Existing tape/registry/SavedTensors infra already covered ~70%; estimate was 3-5x too high and conflated "documented" with "missing" | Read every substrate file in full with line-cited evidence BEFORE estimating (Phase 17); re-classify "missing" as "incomplete, N% gap" |
 | **Deleting legacy code before verifying zero callers** | Assumed a "fallback only" file was dead and considered deleting it on the strength of its header alone | "Fallback only" claims are not self-enforcing — the codebase may still depend on it in non-obvious ways; dead code passes all CI | Systematically grep all callers across `*.py/*.sh/*.md/.github/` first, rewrite stale back-references as self-contained comments, then delete and run full suites (Phase 16) |
+| **Single back-reference (only `impl`) in StageContext** | Initial Phase 19 design held only `impl`; phases dispatched via `self.ctx.impl._xxx(...)` | `patch.object(impl.phase_runner, "_xxx")` patches the runner shim, but phases called through `impl._xxx` which forwards via the *real* coordinator — the patch on the runner never intercepted; ~6 tests silently passed `Mock not called` | `StageContext` MUST carry BOTH `impl` AND `runner`; phases call back via `self.ctx.runner._xxx(...)` so the lookup site stays on the patched object (Phase 19) |
+| **Naive symbol move without keeping runner shims** | Moved `_fetch_plan_and_review` into the phase class and deleted it from the runner | Six direct `patch.object(implementer.phase_runner, "_fetch_plan_and_review")` sites AND two direct call sites (`implementer.phase_runner._fetch_plan_and_review(1)`) broke with `AttributeError` | Keep every patched method as a one-line shim on the original class for the lifetime of the tests; phases own the implementation in `_xxx_impl` (Phase 19) |
+| **Checking in `raise NotImplementedError()` stubs** | Created `_run_impl_review_impl`, `_run_impl_review_step_impl`, `_run_address_review_step_impl`, `_resume_impl_with_feedback_impl` as bare stubs to mark unfinished extraction | PR review surfaced 21 review threads (12 reopens) because runner shims delegated directly to the stubs — every direct caller and `patch.object(phase_runner, "_xxx")` test crashed; reviewers will not accept "architectural placeholder" framing | Never check in `raise NotImplementedError()` stubs reachable through runner shims. Either implement fully or delete both the stub AND its runner shim in the same commit (Phase 19) |
+| **Keeping the original 1,712-LoC body AND adding shims** | Appended ~130 lines of shims + 5 phase classes without removing any original orchestration logic | Coordinator file grew to ~1,840 LoC, blowing past the AC ≤500 LoC target; `# noqa: C901` waivers stayed because original methods stayed | Phase-strategy extraction is a MOVE, not an additive ADD. Each phase's `_xxx_impl` MUST contain the real body lifted from the runner; check `wc -l < 500` after each phase, not at the end (Phase 19) |
+| **Reverse-delegation contract break inside the phase** | `ReviewPhase._iterate` called `self.ctx.impl._run_impl_review_step(...)` instead of `self.ctx.runner._run_impl_review_step(...)` | `patch.object(impl.phase_runner, "_run_impl_review_step")` no longer intercepted — the phase routed through `impl`, which forwards but doesn't re-enter the patched shim | When inside a phase, ALWAYS dispatch through `self.ctx.runner._xxx(...)` for any method tests patch on the runner. Reserve `self.ctx.impl._xxx` for the small set tests pin directly on the implementer (Phase 19) |
+| **`hasattr(self, 'plan_phase')` guard with `__import__` fallback in `impl_module()`** | Defensive coding for "called before `__init__` completes" scenarios | Reviewer flagged POLA: "hidden import-fallback path is astonishing to callers; pick one — either remove the guard, or document the scenario it protects against" | Either commit to one path with a `__post_init__` assertion enforcing the invariant, or document the actual failure mode. Defensive `hasattr` checks without a real failure scenario create a dead branch readers must reason about (Phase 19) |
+| **Module import deferred inside `with state_lock` block** | Kept `from .models import ImplementationPhase` inside `with self.ctx.state_lock:` at the top of `PRCreatePhase.ensure` to "minimize import surface" | Holding `state_lock` while acquiring Python's global import lock creates a deadlock risk against any other thread holding the import lock while waiting on `state_lock` | Module imports MUST be at module scope. Never defer imports inside lock-held regions (Phase 19) |
+| **Filter chain missed None case for an Optional field** | `rerun_failed_learns` filtered `state.phase != COMPLETED or state.learn_completed or not session_agent_matches(...)`, then called `run_learn(state.session_id, ...)` without a None guard | The filter didn't exclude states with `session_id is None`; downstream `run_learn` either crashed or silently no-op'd | When a filter chain decides "process this row", enumerate ALL required fields, including Optionals. Add `if not state.session_id: continue` BEFORE the action — defense-in-depth over filter trust (Phase 19) |
 
 ## Results & Parameters
 
@@ -896,3 +1075,4 @@ Revised LOC estimate: ~X (vs TODO "~Y"); justification: ~Z% already in substrate
 | ProjectHephaestus | PR #745 — deleted 587-line legacy `run_automation_loop.sh` + helper + 480 lines of tests; scrubbed 8 stale back-references across 4 files; 1093 tests + 26 shell tests pass | Superseded `legacy-code-deletion-safe-removal-pattern` (Phase 16) |
 | ProjectOdyssey | PR #5457 — Phase 0 substrate read revised a TODO "~5000 LOC" estimate to ~1400; actual landed +937 LOC (CI green) | Superseded `architecture-estimate-rewrite-read-substrate-first` (Phase 17) |
 | HomericIntelligence ecosystem | Cleanup-phase coordination after parallel Test/Implementation/Package phases (KISS/DRY/SOLID finalization before merge) | Superseded `phase-cleanup` (Phase 18) |
+| ProjectHephaestus | PR #998 (issue #712) — `IssueImplementer`/`ImplementationPhaseRunner` decomposition into 5 named phase modules (Plan/Implement/Review/FollowUp/PRCreate) with `_stage_context.StageContext` carrying both `impl` and `runner`; ~30 reverse-delegation shims preserve `patch.object(impl, ...)` AND `patch.object(impl.phase_runner, ...)` contracts; verified-local (test suite green; review iterations identified the dual-back-reference fix and the "no NotImplementedError stubs" rule) | Phase 19: Phase-Strategy with Dual-Back-Reference StageContext |
