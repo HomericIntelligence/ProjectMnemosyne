@@ -1,5 +1,17 @@
 ## Version History
 
+### v1.2.0 (2026-06-13)
+- Added Failure Mode 8: `2>&1` in command substitution corrupts jq input — gh stderr (deprecation banners, update notices, GH_DEBUG traces) merged into captured variable via `2>&1` causes jq to receive non-JSON input, producing empty output and downstream false errors. Fix: capture stdout only; do not reference `$raw` in the error path (it is empty on failure).
+- Added Failure Mode 9: mock-gh bash function pattern for Python subprocess integration tests — `export -f gh` exports a bash function override into the sourced script's environment without needing a fake binary on PATH; `stderr_noise` flag lets tests verify the 2>&1 fix holds under realistic advisory output.
+- Added Failure Mode 10: ruff D401 applies to private helper docstrings — "Helper to", "Wrapper for", "Utility that" openers fail D401 even on `_private` functions; use imperative verb openers.
+- Added Quick Reference entry for `2>&1` corruption pattern.
+- Added Results & Parameters sections: "gh api stdout-only capture pattern", "mock-gh bash function pattern", "ruff D401 imperative-mood docstring openers".
+- Added two new Failed Attempts rows: `gh api … 2>&1` corruption and "Helper to" D401 rejection.
+- Updated When to Use with three new triggers.
+- Updated description frontmatter with trigger (9) for `2>&1` gh api corruption.
+- Bumped verification: verified-local → verified-ci (PR #1273, issue #1122, all CI green).
+- Verified on: HomericIntelligence/ProjectHephaestus issue #1122, PR #1273.
+
 ### v1.1.0 (2026-05-26)
 - Added Failure Mode 7: `set -m` (job control) + single-command `(...)` subshell exec-optimization causing silent abort with no error trace.
 - Added "Diagnostic recipe: silent abort after single-command subshell" subsection with ERR/EXIT/RETURN trap recipe.
