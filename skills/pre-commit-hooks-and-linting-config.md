@@ -1,9 +1,9 @@
 ---
 name: pre-commit-hooks-and-linting-config
-description: "Canonical guide to pre-commit hook configuration, single-source-of-truth versioning, CI/local parity, and integration of ruff/mypy/clang-format/yamllint/actionlint/golangci-lint/bandit/hadolint/shellcheck/markdownlint. Use when: (1) writing or amending .pre-commit-config.yaml, (2) diagnosing why a hook passes locally but fails in CI (version drift), (3) deciding fix-vs-suppress for lint findings, (4) adding a new linter to an existing pre-commit pipeline, (5) reconciling ruff/mypy/markdownlint config across multiple repos, (6) a pre-commit hook using a pixi console script false-fails locally even though CI passes — system-installed package in ~/.local/bin shadows the local dev version, (7) ruff I001/RUF059 fires on inline imports or unused tuple unpacking inside test functions after adding new tests, (8) mypy pre-commit hook fails because an UNTRACKED test file references methods not yet committed — the hook checks ALL .py files on disk including untracked ones, (9) CI ruff-format hook fails even though local `ruff check` passed — `ruff check` (lint) and `ruff format --check` (formatter) are SEPARATE tools sharing one binary and running only `check` never exercises the formatter, (10) running pre-commit against the full PR diff (every file changed since merge-base) with `--from-ref/--to-ref` not just `--files <current edit>` — a sub-agent's earlier commit can carry stale-formatter content that fails only in CI, (11) adding .editorconfig for cross-editor formatting consistency on non-Python files (YAML, JSON, Markdown, shell, Makefile), (12) an automated PR-reviewer flags lint/formatter/pre-commit-forced incidental churn as scope creep — toolchain-forced churn is exempt from YAGNI/scope review while author-chosen opportunistic work is still flagged, (13) removing a duplicate standalone markdownlint CI job when the lint job already runs pre-commit --all-files — MUST verify the job is NOT a required-check context in branch protection before deleting it, and MUST pre-scan the newly-in-scope files for violations that --fix cannot auto-fix."
+description: "Canonical guide to pre-commit hook configuration, single-source-of-truth versioning, CI/local parity, and integration of ruff/mypy/clang-format/yamllint/actionlint/golangci-lint/bandit/hadolint/shellcheck/markdownlint. Use when: (1) writing or amending .pre-commit-config.yaml, (2) diagnosing why a hook passes locally but fails in CI (version drift), (3) deciding fix-vs-suppress for lint findings, (4) adding a new linter to an existing pre-commit pipeline, (5) reconciling ruff/mypy/markdownlint config across multiple repos, (6) a pre-commit hook using a pixi console script false-fails locally even though CI passes — system-installed package in ~/.local/bin shadows the local dev version, (7) ruff I001/RUF059 fires on inline imports or unused tuple unpacking inside test functions after adding new tests, (8) mypy pre-commit hook fails because an UNTRACKED test file references methods not yet committed — the hook checks ALL .py files on disk including untracked ones, (9) CI ruff-format hook fails even though local `ruff check` passed — `ruff check` (lint) and `ruff format --check` (formatter) are SEPARATE tools sharing one binary and running only `check` never exercises the formatter, (10) running pre-commit against the full PR diff (every file changed since merge-base) with `--from-ref/--to-ref` not just `--files <current edit>` — a sub-agent's earlier commit can carry stale-formatter content that fails only in CI, (11) adding .editorconfig for cross-editor formatting consistency on non-Python files (YAML, JSON, Markdown, shell, Makefile), (12) an automated PR-reviewer flags lint/formatter/pre-commit-forced incidental churn as scope creep — toolchain-forced churn is exempt from YAGNI/scope review while author-chosen opportunistic work is still flagged, (13) removing a duplicate standalone markdownlint CI job when the lint job already runs pre-commit --all-files — MUST verify the job is NOT a required-check context in branch protection before deleting it, and MUST pre-scan the newly-in-scope files for violations that --fix cannot auto-fix, (14) the pre-commit hook exclude pattern for .claude/ may be LOAD-BEARING (not merely defensive) — confirm with git ls-files .claude/ before removing it; two tracked .md files (.claude/security/guidelines.md and .claude/workflows/development.md) exist in ProjectHephaestus and must remain excluded to match the standalone CI job's intent, (15) after removing a duplicate markdownlint CI job update every doc that names that job by its old CI name (e.g. docs/DEFINITION_OF_DONE.md and .github/README.md) or CI job name references become stale."
 category: tooling
 date: 2026-06-13
-version: "1.9.0"
+version: "2.0.0"
 user-invocable: false
 verification: verified-ci
 history: pre-commit-hooks-and-linting-config.history
@@ -51,7 +51,8 @@ tags: [merged, pre-commit, linting, ruff, mypy, clang-format, yamllint, actionli
 - Diagnosing CI formatter failures (mojo-format / ruff-format) on files you did not personally edit this session — a sub-agent's `--files`-scoped pre-commit missed them
 - Repository lacks `.editorconfig` and contributors use different editors with inconsistent indentation/whitespace on non-Python files (YAML, JSON, Markdown, shell, Makefile)
 - An automated PR-review agent (or human reviewer) flags lint/formatter/pre-commit-forced incidental churn (whitespace, import-sort, trailing-newline, mypy annotations) as scope creep or YAGNI, or you are designing a review rubric's scope/YAGNI dimension
-- Removing a duplicate standalone markdownlint CI job that runs the same check the `lint` job already runs via `pre-commit run --all-files` — the dedup is correct but two preconditions must hold before deletion: (a) the job name is NOT listed as a required-check context in branch protection, (b) all files that will newly fall under the pre-commit hook's `files:` pattern are pre-scanned for violations that `--fix` cannot auto-fix
+- Removing a duplicate standalone markdownlint CI job that runs the same check the `lint` job already runs via `pre-commit run --all-files` — the dedup is correct but three preconditions must hold before deletion: (a) the job name is NOT listed as a required-check context in branch protection, (b) all files that will newly fall under the pre-commit hook's `files:` pattern are pre-scanned for violations that `--fix` cannot auto-fix, (c) every document that names the removed job by its CI name is updated to avoid stale references
+- Verifying that a pre-commit `exclude:` pattern for `.claude/` is defensive vs. load-bearing — run `git ls-files .claude/ | grep '\.md$'` first; if tracked `.md` files exist the exclusion is load-bearing and MUST be preserved (see ProjectHephaestus: `.claude/security/guidelines.md` and `.claude/workflows/development.md`)
 
 ## Verified Workflow
 
@@ -298,21 +299,38 @@ pixi run npx markdownlint-cli2 "docs/**/*.md"
 1. `grep -n 'needs:' .github/workflows/_required.yml` — confirm zero jobs depend on the standalone job (safe DAG deletion).
 2. Verify the job name is absent from all required-check contexts (Step 1 above).
 3. Pre-scan newly-in-scope files (Step 2 above); fix all residual violations.
-4. Widen the hook's `exclude:` pattern in `.pre-commit-config.yaml` to NOT exclude the files the old job covered (or verify it already doesn't exclude them).
-5. Delete the job block from the workflow file.
-6. Run `pixi run pre-commit run --from-ref origin/main --to-ref HEAD` locally before push.
+4. Check whether the hook's `exclude:` pattern covers `.claude/`: run `git ls-files .claude/ | grep '\.md$'` — if results exist the exclusion is load-bearing and MUST be preserved (see `.claude/` exclusion note below).
+5. Widen the hook's `exclude:` pattern in `.pre-commit-config.yaml` to NOT exclude the files the old job covered (or verify it already doesn't exclude them).
+6. Delete the job block from the workflow file.
+7. Update every documentation file that names the removed job by its CI job name (e.g. `docs/DEFINITION_OF_DONE.md:31` "CI job `markdownlint`" → "CI job `lint`"; `.github/README.md:44` aggregated-checks list). Stale job-name references in docs are a recurring pain point discovered in ProjectHephaestus issue #1199.
+8. Run `pixi run pre-commit run --from-ref origin/main --to-ref HEAD` locally before push.
 
 **Note on `.claude/` exclusion in pre-commit hooks:** pre-commit only runs against git-tracked
-files. Excluding `.claude/` from the hook's `exclude:` pattern is defensive but harmless if
-`.claude/` files are already untracked (in `.gitignore`). Do not remove such an exclusion
-without confirming `.claude/` is fully covered by `.gitignore`.
+files. Excluding `.claude/` from the hook's `exclude:` pattern can be either defensive OR
+load-bearing — you MUST verify before removing it:
+
+```bash
+# Determine if the exclusion is load-bearing:
+git ls-files .claude/ | grep '\.md$'
+```
+
+If the command returns any paths (e.g. `.claude/security/guidelines.md`,
+`.claude/workflows/development.md`), the exclusion is **load-bearing**: removing it would
+bring those files into markdownlint scope and change the effective lint surface to be wider
+than the standalone job ever covered. Keep the exclusion unless you intentionally want to
+lint `.claude/` files. Only treat the exclusion as "defensive" (safe to remove) when
+`git ls-files .claude/ | grep '\.md$'` returns nothing.
+
+**ProjectHephaestus-specific:** As of 2026-06-13, `git ls-files .claude/ | grep '\.md$'`
+returns `.claude/security/guidelines.md` and `.claude/workflows/development.md` — both
+tracked. The exclusion is load-bearing.
 
 **Verification (fragile grep criterion):** a post-change grep like
 `grep -c 'markdownlint' .github/workflows/_required.yml` to assert a specific count is fragile
 if the edit also changes a step name that contains "markdownlint" elsewhere in the file. Verify
 the expected count matches actual state after ALL edits are applied.
 
-Unverified — plan produced for ProjectHephaestus issue #1199 (not yet implemented as of 2026-06-13).
+Partially verified (planning phase, 2026-06-13): docs/*.md pre-scan confirmed 0 violations with markdownlint-cli2; .claude/ exclusion confirmed load-bearing (two tracked .md files); doc-drift targets identified (docs/DEFINITION_OF_DONE.md:31, .github/README.md:44). Implementation (job deletion + pre-commit-config.yaml edit) not yet executed — verified-ci pending PR merge for ProjectHephaestus issue #1199.
 
 #### Bandit SAST severity-level tuning (silence LOW noise without disabling checks)
 
@@ -647,6 +665,8 @@ feasible (e.g., constrained CI environments, conda-forge only providing old Go v
 | Fix MD033 by editing stray `.claude-prompt-NNN.md` to remove HTML tags | Tried to strip `<NONCE>` / `<LABEL>` tags from the file | File is an agent artifact with no source value; editing it is wasted effort and the file can recur | Always `git rm` accidental artifact files; add `.gitignore` pattern to prevent recurrence |
 | Delete a standalone `markdownlint` CI job assuming it is not a required check | Removed the job from `_required.yml` without checking branch-protection rulesets | If the job name is listed as a required status check, every subsequent PR is permanently BLOCKED (no context posted, never satisfies the rule) — `ci-driver-blocked-required-context-drift` pattern | ALWAYS run `gh api repos/{owner}/{repo}/rulesets` and the branch-protection required-checks endpoint BEFORE deleting any CI job; update the ruleset atomically with the deletion |
 | Widen markdownlint hook scope without pre-scanning new files | Extended `files:` pattern to include `docs/` assuming `--fix` would handle all violations | `markdownlint-cli2 --fix` is a silent no-op for several rules (MD060, MD013 long lines); unfixable violations break CI on the first push after the scope change | Pre-scan with `--fix` then re-run without `--fix` to confirm zero residual violations before merging |
+| Treat `.claude/` exclude in pre-commit hook as purely defensive | Assumed `.claude/` was untracked (gitignored) so the exclude was safe to drop | Two tracked `.md` files exist in ProjectHephaestus (`.claude/security/guidelines.md`, `.claude/workflows/development.md`); removing the exclusion would expose them to markdownlint and widen scope beyond what the old standalone job covered | Always run `git ls-files .claude/ \| grep '\.md$'` before removing the `.claude/` exclusion; if any results, the exclusion is load-bearing |
+| Delete CI job without updating docs that reference the job by name | Removed `markdownlint` job from `_required.yml` without searching for the job name in docs | `docs/DEFINITION_OF_DONE.md:31` cited "CI job \`markdownlint\`" and `.github/README.md:44` listed `markdownlint` in the aggregated-checks list; those became stale and misleading | After deleting any CI job, grep for the job name across all docs and update every reference; common locations: DoD, README, CONTRIBUTING.md |
 | `bandit --exit-zero` to pass CI while investigating | Added `--exit-zero` flag during bandit hook integration | All real findings invisible to CI; defeating the purpose of SAST | Never suppress exit codes; fix each MEDIUM+ finding properly |
 | Security hook blocking workflow file `Edit` | Used `Edit` tool on `.github/workflows/pre-commit.yml` | Project security hook fires on all Actions workflow edits | Use `python3 -c "..."` via Bash to write the file instead |
 | mypy fails on untracked test file referencing not-yet-committed methods | Created both test file and implementation file but only staged the implementation for commit 1 | mypy pre-commit hook runs on ALL `.py` files on disk, including untracked ones; sees `attr-defined` / `module-attribute` errors in the untracked test | Temporarily move the untracked test file to `/tmp` before commit 1; restore and stage it for commit 2. Only needed for strict multi-commit atomic ordering. |
