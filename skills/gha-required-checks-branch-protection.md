@@ -1,9 +1,9 @@
 ---
 name: gha-required-checks-branch-protection
-description: "Use when: (1) PRs are permanently BLOCKED because a required status-check context is a job gated by if: github.event_name != 'pull_request' (skipped != satisfied), (2) consolidating duplicate CI jobs into a reusable workflow so _required.yml is a thin aggregator, (3) validating GitHub branch protection API responses and writing synthetic tests for bash enforcement scripts, (4) a summary aggregator job pattern is needed to replace N individual required contexts with one that handles skip semantics correctly."
+description: "Use when: (1) PRs are permanently BLOCKED because a required status-check context is a job gated by if: github.event_name != 'pull_request' (skipped != satisfied), (2) consolidating duplicate CI jobs into a reusable workflow so _required.yml is a thin aggregator, (3) validating GitHub branch protection API responses and writing synthetic tests for bash enforcement scripts, (4) a summary aggregator job pattern is needed to replace N individual required contexts with one that handles skip semantics correctly, (5) adding a RESULTS-loop aggregator gate to _required.yml with a guard test asserting all non-excluded jobs are wired into needs."
 category: ci-cd
-date: 2026-06-07
-version: "1.1.0"
+date: 2026-06-13
+version: "1.2.0"
 user-invocable: false
 history: gha-required-checks-branch-protection.history
 tags:
@@ -18,6 +18,9 @@ tags:
   - job-skip
   - api-validation
   - smoke-tests
+  - guard-test
+  - results-loop
+  - ci-hardening
 ---
 
 # GitHub Actions Required Checks and Branch Protection
@@ -26,10 +29,10 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-07 |
-| **Objective** | Make required status checks satisfiable and maintainable: handle skip-vs-success semantics with a `summary` aggregator, consolidate duplicate jobs into a reusable `workflow_call` workflow, validate branch-protection API writes with read-back, and smoke-test workflow structure |
-| **Outcome** | Consolidated guidance covering the four interacting concerns; specific cases preserved as examples |
-| **Verification** | verified-ci |
+| **Date** | 2026-06-13 |
+| **Objective** | Make required status checks satisfiable and maintainable: handle skip-vs-success semantics with a `summary` aggregator, consolidate duplicate jobs into a reusable `workflow_call` workflow, validate branch-protection API writes with read-back, smoke-test workflow structure, and add a RESULTS-loop gate with guard test |
+| **Outcome** | Consolidated guidance covering five interacting concerns; specific cases preserved as examples |
+| **Verification** | verified-ci (core patterns); unverified (RESULTS-loop gate — planning phase only) |
 
 ## When to Use
 
@@ -39,6 +42,7 @@ tags:
 - You are implementing or tightening GitHub branch protection rules via the API and need to detect silent failures where a PUT is accepted (HTTP 200) but the field is ignored.
 - You need to synthetically test a bash branch-protection enforcement script without hitting the live GitHub API.
 - An existing workflow-smoke-test gate covers only one workflow and additional critical workflows need regression protection.
+- You want a compact `RESULTS` env-var bash-loop aggregator (instead of one env var per job) and a guard unit test that asserts all non-excluded jobs are wired into the gate's `needs:` list — catching gaps automatically as the workflow grows.
 
 ## Verified Workflow
 
@@ -162,6 +166,82 @@ When a `workflow-smoke-test.yml` gate exists for one workflow and others need pr
 
 *Related parsing pitfall:* if a CI job is migrated from `strategy.matrix.test-group` to sequential named steps, a coverage validator that reads `strategy.matrix` will report 0 covered groups. Add a sequential-steps fallback guarded by `if not groups:` that collapses YAML backslash-newline continuations (`run_cmd.replace("\\\n", " ")`) before regex-extracting `just test-group "<path>" "<pattern>"`, keyed by `f"{step_name}::{path}"`.
 
+#### E. RESULTS-loop aggregator gate with guard test (planned — unverified)
+
+> **Warning:** This sub-pattern has not been validated end-to-end. It is a planning-phase capture from ProjectHephaestus issue #1315. Treat as a hypothesis until CI confirms.
+
+An alternative to declaring one `env` var per job is a compact `>-` block scalar that builds a space-separated `job=result` string, parsed by a single bash loop. This is more scalable when the gate covers many jobs, because adding a job only requires one `needs:` entry and one line in the block scalar rather than two env-var declarations.
+
+```yaml
+# Alternative compact form — one env var covers all jobs
+required-checks-gate:
+  if: always()
+  needs: [lint, unit-tests, integration-tests, type-check, security-scan]
+  runs-on: ubuntu-latest
+  steps:
+    - name: Check all required jobs passed
+      env:
+        RESULTS: >-
+          lint=${{ needs.lint.result }}
+          unit-tests=${{ needs.unit-tests.result }}
+          integration-tests=${{ needs.integration-tests.result }}
+          type-check=${{ needs.type-check.result }}
+          security-scan=${{ needs.security-scan.result }}
+      run: |
+        failed=0
+        for pair in $RESULTS; do
+          job="${pair%%=*}"
+          result="${pair##*=}"
+          if [[ "$result" != "success" && "$result" != "skipped" ]]; then
+            echo "::error::FAIL: $job -> $result"
+            failed=1
+          fi
+        done
+        exit $failed
+```
+
+**Key design choices and risks (unverified):**
+
+1. **`>-` block scalar**: strips the trailing newline and collapses all embedded newlines to spaces, producing a single space-separated string. The bash `for pair in $RESULTS` loop then splits on whitespace. This works correctly in standard bash.
+
+2. **Hyphenated job names**: `job="${pair%%=*}"` splits on the first `=`. Since job names may contain hyphens (e.g., `unit-tests`) but not `=`, this is safe. The `##*=` suffix extracts everything after the last `=`. This is the unverified risk: if a job name or result value ever contains `=`, the split breaks.
+
+3. **`skipped` vs `cancelled` semantics**: When a job's `if:` condition evaluates to false on a given event (e.g., `changes-gate` skips on label events), GitHub sets `result: skipped`. The value `cancelled` only appears when the workflow run itself is explicitly cancelled. The bash loop accepts `skipped` as passing, so legitimately-skipped jobs do not block the gate.
+
+4. **Branch protection PUT risk**: Setting `"required_pull_request_reviews": null` in a PUT payload is intended to preserve existing review settings (null = no-op for that field), but this is a destructive API call that has been known to zero out review requirements. Always read-back after PUT. Use `enforce_admins: false` to preserve admin emergency override capability.
+
+**Guard test pattern** — asserts no job is accidentally omitted from the gate's `needs:` list:
+
+```python
+import yaml
+from pathlib import Path
+
+def test_all_required_jobs_wired_to_gate():
+    """Assert required-checks-gate.needs covers every non-excluded job."""
+    workflow = yaml.safe_load(
+        (Path(".github/workflows/_required.yml")).read_text()
+    )
+    jobs = workflow["jobs"]
+    excluded = {"auto-merge-policy", "pr-policy", "required-checks-gate"}
+    all_jobs = set(jobs.keys()) - excluded
+    gate_needs = set(jobs["required-checks-gate"]["needs"])
+    assert gate_needs == all_jobs, (
+        f"Gate missing jobs: {all_jobs - gate_needs}\n"
+        f"Gate has extra: {gate_needs - all_jobs}"
+    )
+```
+
+This guard test catches new jobs added to `_required.yml` that are not wired into the gate, preventing silent bypass of branch protection.
+
+**Exclusion categories:**
+
+| Job Type | Include in Gate? | Reason |
+| --------- | ---------------- | ------- |
+| Regular CI jobs | YES | Must pass or be skipped |
+| Advisory jobs (e.g., `auto-merge-policy`) | NO | Non-blocking by design |
+| Jobs with own required context (e.g., `pr-policy`) | NO | Already has own branch-protection entry |
+| The gate itself (`required-checks-gate`) | NO | Would create circular `needs:` |
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -174,6 +254,7 @@ When a `workflow-smoke-test.yml` gate exists for one workflow and others need pr
 | Exact equality for drift detection | Asserted `required_approving_review_count == 1` | Blocks a valid future tightening to 2 (drift check fails) | Use `>= min_threshold`, not `== exact_value` |
 | Wrote smoke tests without reading the workflow | Assumed step names from memory; checked `continue-on-error` across the whole file | Real step name differed; the advisory step legitimately has `continue-on-error: true`, so a global check always fails | Read the workflow first; scope step assertions with a DOTALL step-boundary lookahead |
 | Left coverage validator unchanged after matrix→steps migration | Migrated the job to sequential steps without updating `validate_test_coverage.py` | `parse_ci_matrix()` navigated to `strategy.matrix.test-group`, found 0 groups, reported every file uncovered | Add a sequential-steps fallback; collapse `"\\\n"` continuations before regex |
+| Used `needs.*.result` wildcard in `if:` expression | Tried `if: needs.*.result != 'failure'` to avoid listing each job explicitly | GitHub Actions does not support `needs.*.result` wildcard expressions in `if:` conditions — the expression is rejected at parse time | List each job individually in env vars or use the RESULTS bash-loop pattern; wildcards are not supported in `needs.*` expressions |
 
 ## Results & Parameters
 
@@ -253,6 +334,7 @@ VERIFY_RULES_FIXTURE="$f" bash scripts/verify-branch-protection.sh   # expect no
 | ProjectOdyssey | PR #4838, issue #3948 | Extended `workflow-smoke-test.yml` to cover 3 more workflows; 26 tests pass |
 | ProjectOdyssey | `fix/pixi-env-isolation-signed` branch | Coverage-validator sequential-steps fallback; verified-precommit |
 | ProjectMnemosyne | Local branch, yamllint passed | Reusable-workflow `_required.yml`/`_checks.yml` split; verified-precommit |
+| ProjectHephaestus | Issue #1315 planning phase | RESULTS-loop aggregator + guard test pattern; **unverified** — not yet implemented or CI-verified |
 
 ## References
 

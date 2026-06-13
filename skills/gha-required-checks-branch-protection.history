@@ -2,6 +2,29 @@
 
 # gha-required-checks-branch-protection — History
 
+## v1.2.0 (2026-06-13)
+
+Add RESULTS-loop aggregator gate pattern and guard test (planning phase, unverified)
+
+- Added new "When to Use" bullet for the RESULTS-loop compact form.
+- Added subsection E: RESULTS-loop aggregator gate — the `>-` block scalar that builds
+  a space-separated `job=result` string iterated by a bash loop. Scales better than one
+  env var per job for large `needs:` lists.
+- Documented `skipped` vs `cancelled` semantics: GitHub emits `skipped` (not `cancelled`)
+  when a job's `if:` condition is false; the bash loop accepts `skipped` as passing.
+- Added guard test pattern: `test_all_required_jobs_wired_to_gate` asserts
+  `gate.needs == all_jobs - excluded`, preventing silent bypass of branch protection
+  when new jobs are added to the workflow.
+- Added exclusion category table: regular CI jobs vs advisory vs self-required-context vs
+  the gate itself.
+- Added Failed Attempts row: `needs.*.result` wildcard in `if:` expressions is rejected
+  at parse time — must list jobs individually or use the RESULTS bash loop.
+- Added "unverified" caveat on branch-protection PUT semantics (`null` for review field).
+- Added ProjectHephaestus issue #1315 row to Verified On table (unverified, planning phase).
+- Source: ProjectHephaestus issue #1315 planning session (2026-06-13).
+
+---
+
 ## v1.1.0 (2026-06-07)
 
 restore path-filter co-occurrence lesson (nuance audit pass 2)
