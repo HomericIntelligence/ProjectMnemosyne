@@ -3,6 +3,71 @@
 
 ## v1.13.0 (2026-06-13)
 
+**Changed by:** /learn from ProjectHephaestus issue #1289 R5+R6+R7 planning sessions (CIDriver god-class decomposition — planning-time verification rules, return-type verification, acquired_slot confirmation, keyword-only forwarding call, fabricated-param prevention protocol, acquired_slot mnemonic)
+**Verification:** unverified (planning session findings; implementation not yet executed)
+
+### What changed
+
+Added Phases 25–32 covering eight pre-implementation verification and planning rules from R5,
+R6, and R7 planning sessions for issue #1289:
+
+**Phase 25: Keyword-Only Method Signature Verification**
+
+See v1.12.0 entry for Phases 25–29 context. Phase 25 was established from R5 findings.
+
+**Phase 30: Keyword-Only Forwarding Call — `_mark_drive_green_learn_result` Pattern**
+
+The R6 stub for `_mark_drive_green_learn_result` (L1550-1556) had a fabricated `pr_number`
+positional param and was missing the keyword-only `succeeded: bool` entirely. Phase 25
+established the rule to verify `*` in the def line. This phase extends it to the forwarding
+call: the stub def must include `*`, AND the forwarding call in the body must pass every
+keyword-only param as `param=value` (not positionally). Both the def and the body are
+independent failure points for keyword-only methods.
+
+Rule: For methods with `*` in their source def line, check BOTH the stub signature (includes
+`*`?) AND the stub body (every keyword-only param passed as `param=value`?).
+
+**Phase 31: Fabricated Parameters Are the #1 Planning Failure Mode**
+
+In 3 consecutive review rounds (R4/R5/R6), every NOGO included at least one fabricated
+signature:
+- R4: `_retry_no_commit_once` had fabricated `acquired_slot` (doesn't exist in source)
+- R5: Six wrong return types inferred from expected behavior
+- R6: `_resolve_dirty_pr` had fabricated 4th param `worktree_path` with false "confirmed from
+  source" claim; `_mark_drive_green_learn_result` had fabricated `pr_number` + missing `succeeded`
+
+Root cause: Planner described expected/intuitive signatures instead of reading actual source.
+The false "confirmed from source" annotation in R6 made the fabrication harder to catch.
+
+Prevention protocol (verified effective in R7): run `sed -n '<start>,<end>p'` for EVERY stub
+(not just uncertain ones); never write "confirmed from source" without running the command;
+write stubs by copying from command output, not from memory.
+
+**Phase 32: `acquired_slot` vs No `acquired_slot` — Slot-Ownership Mnemonic**
+
+Two similarly-named methods are easy to confuse:
+- `_attempt_mechanical_rebase(self, issue_number, pr_number, acquired_slot)` — HAS `acquired_slot`
+- `_retry_no_commit_once(self, *, issue_number, pr_number, ...)` — NO `acquired_slot`
+
+Mnemonic: `acquired_slot` belongs to methods that ARE semaphore-slot workers (dispatched by
+the slot scheduler). Methods that execute as sub-steps INSIDE an already-acquired slot do not
+receive the parameter. Use this as a prior, then verify by reading the def line.
+
+Also added:
+- 3 new rows to Failed Attempts table (R6 `_resolve_dirty_pr` fabricated worktree_path, R6
+  `_mark_drive_green_learn_result` fabricated pr_number/missing succeeded, R4
+  `_retry_no_commit_once` fabricated acquired_slot)
+- 3 new use-case descriptions in frontmatter
+- New tags (keyword-only-forwarding-call, fabricated-params-failure-mode,
+  acquired-slot-mnemonic, r7-planning-session)
+- 3 new When-to-Use bullets
+- 3 new Quick Reference decision-tree entries (Phases 30–32)
+- 1 new Verified On row
+
+---
+
+## v1.12.0 (2026-06-13)
+
 **Changed by:** /learn from ProjectHephaestus issue #1289 R5+R6 planning sessions (CIDriver god-class decomposition — planning-time verification rules, return-type verification, acquired_slot confirmation)
 **Verification:** unverified (planning session findings; implementation not yet executed)
 
