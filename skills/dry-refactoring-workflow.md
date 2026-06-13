@@ -1,9 +1,9 @@
 ---
 name: dry-refactoring-workflow
-description: "Complete TDD-driven workflow for identifying and eliminating code duplication by extracting reusable helper methods. Use when: (1) extracting duplicated helper methods into a shared module using TDD (write a failing test against the canonical, delete the duplicate, run green); (2) creating a private leaf module with leading-underscore naming to centralize a repeated internal call (e.g. importlib.metadata version resolution, path construction) and prevent re-introduction across modules; (3) centralizing hardcoded path constants into a single module to prevent drift when directory structure changes (incl. phase-routed in_progress/completed splits); (4) deduplicating LLM JSON extraction, parser logic, or any call-site pattern copy-pasted across several files; (5) test structure must mirror source structure when extracting helpers; (6) running a full DRY consolidation pass (discovery via grep, classifying true duplicates vs intentional variants, dict-structure consolidation) and refactoring to a single canonical source; (7) extract-method / SRP decomposition of over-long functions (50-LOC) and methods (100-LOC), including converting a mutating closure into a method via a small mutable box; (8) extracting repeated cached lookups into an @lru_cache helper (and clearing the cache so unittest.mock.patch works); (9) removing stale scripts / deprecated stubs (grep callers first) and replacing hardcoded file lists with dynamic Path.rglob discovery. Also covers cryptographic commit signing requirements in PR workflows."
+description: "Complete TDD-driven workflow for identifying and eliminating code duplication by extracting reusable helper methods. Use when: (1) extracting duplicated helper methods into a shared module using TDD (write a failing test against the canonical, delete the duplicate, run green); (2) creating a private leaf module with leading-underscore naming to centralize a repeated internal call (e.g. importlib.metadata version resolution, path construction) and prevent re-introduction across modules; (3) centralizing hardcoded path constants into a single module to prevent drift when directory structure changes (incl. phase-routed in_progress/completed splits); (4) deduplicating LLM JSON extraction, parser logic, or any call-site pattern copy-pasted across several files; (5) test structure must mirror source structure when extracting helpers; (6) running a full DRY consolidation pass (discovery via grep, classifying true duplicates vs intentional variants, dict-structure consolidation) and refactoring to a single canonical source; (7) extract-method / SRP decomposition of over-long functions (50-LOC) and methods (100-LOC), including converting a mutating closure into a method via a small mutable box; (8) extracting repeated cached lookups into an @lru_cache helper (and clearing the cache so unittest.mock.patch works); (9) removing stale scripts / deprecated stubs (grep callers first) and replacing hardcoded file lists with dynamic Path.rglob discovery; (10) PLANNING a consolidation of two OVERLAPPING but not-identical constant collections (frozensets / keyword lists / error-pattern tuples) — classify true-duplicate vs intentional-variant first, then extract only the shared CORE into one canonical immutable constant and have each consumer compose CORE | its-own-extras, proving anti-drift with CORE.issubset(consumer) parity tests, instead of a flat merge that would violate a deliberate behavioral contract. Also covers cryptographic commit signing requirements in PR workflows."
 category: architecture
-date: 2026-06-07
-version: 1.4.0
+date: 2026-06-12
+version: 1.5.0
 user-invocable: false
 verification: verified-ci
 history: dry-refactoring-workflow.history
@@ -18,7 +18,7 @@ Complete TDD-driven workflow for identifying and eliminating code duplication by
 | ----------- | --------- |
 | **Date** | 2026-06-04 |
 | **Objective** | TDD-driven extraction of duplicated code into reusable helper modules, with emphasis on private module placement, test structure mirroring, and cryptographic commit signing |
-| **Outcome** | ✅ v1.0.0 (Feb 2026): Eliminated token aggregation duplication. v1.1.0 (Jun 2026): Extended with private module patterns, test mirroring enforcement, signing requirements. v1.3.0 (Jun 2026): Absorbed centralized path constants, LLM JSON extraction dedup, full DRY consolidation discovery/classify pass, and canonical-source refactor patterns (Pydantic type hierarchy, dict-structure consolidation, orphan relocation). v1.4.0 (Jun 2026): Restored SRP/extract-method (mutable-box closure), @lru_cache detection util (mock.patch/cache_clear gotcha), stale-script/stub cleanup, and dynamic Path.rglob discovery patterns from the nuance audit. |
+| **Outcome** | ✅ v1.0.0 (Feb 2026): Eliminated token aggregation duplication. v1.1.0 (Jun 2026): Extended with private module patterns, test mirroring enforcement, signing requirements. v1.3.0 (Jun 2026): Absorbed centralized path constants, LLM JSON extraction dedup, full DRY consolidation discovery/classify pass, and canonical-source refactor patterns (Pydantic type hierarchy, dict-structure consolidation, orphan relocation). v1.4.0 (Jun 2026): Restored SRP/extract-method (mutable-box closure), @lru_cache detection util (mock.patch/cache_clear gotcha), stale-script/stub cleanup, and dynamic Path.rglob discovery patterns from the nuance audit. ⚠️ v1.5.0 (Jun 2026, **planning-only / unverified**): Added Phase 10 — planning a consolidation of OVERLAPPING constant collections via the core/extras split (CORE \| consumer-extras) with subset parity anti-drift tests, classifying intentional-variant-with-overlap separately from "do not consolidate". Captured from ProjectHephaestus #1205 planning; NOT executed end-to-end. |
 | **Primary Issues** | #642 (original), #739 (private module extraction), #917 (pr-policy signing), #503 (LLM JSON dedup) |
 | **Primary PRs** | #714 (original), #900+ (refactoring), #137/#1738 (path constants), #505 (JSON dedup), #201 (DRY consolidation) |
 | **History** | [changelog](./dry-refactoring-workflow.history) |
@@ -53,6 +53,10 @@ Use this workflow when you encounter:
 - "`@lru_cache` is breaking my `mock.patch` test — how to clear the cache?"
 - "Remove stale scripts / deprecated stubs as part of consolidation"
 - "Replace a hardcoded file list with dynamic `Path.rglob` discovery"
+- "Two error-pattern / keyword lists overlap — should I merge them into one frozenset?"
+- "Consolidate `TRANSIENT_ERROR_PATTERNS` and `NETWORK_ERROR_KEYWORDS` / two near-duplicate constant collections"
+- "These two constant lists are 80% the same but one has extras — DRY them up"
+- "Plan a DRY merge of overlapping constants without changing either matcher's behavior"
 
 ## Verified Workflow
 
@@ -557,6 +561,124 @@ skill_files = sorted(Path("skills").rglob("*.md"))
 
 Sort the result for deterministic ordering and filter excludes explicitly (e.g. skip `*.notes.md` / `__pycache__`) rather than re-introducing a hardcoded allowlist.
 
+### Phase 10: Overlapping Constant Collections — Core/Extras Split (NEW in v1.5.0, PLANNING-ONLY)
+
+> **Warning:** This phase is a **proposed workflow** captured from PLANNING ProjectHephaestus
+> issue #1205. It was **NOT validated end-to-end** — no code was written, no tests were run,
+> and no CI confirmed it. Treat every step below as a hypothesis until CI confirms it on a
+> real PR. The rest of this skill is `verified-ci`; this phase alone is unverified.
+
+**The trap this phase exists to avoid:** when two duplicate-*looking* constant collections
+(frozensets, keyword lists, error-pattern tuples) are flagged for DRY consolidation, the
+naive move is a flat merge into one shared frozenset. But "looks duplicated" is not
+"is duplicated." Two collections can overlap heavily yet carry **deliberate,
+behavior-bearing differences** — an *intentional variant with overlap*. A flat merge
+silently violates one consumer's contract or breaks one consumer's test.
+
+This is a **refinement of the Phase 8c classification table.** Phase 8c offered two
+end-states for an intentional variant: "do NOT consolidate" (cross-reference docstrings)
+vs full consolidation. Phase 10 adds a **third, middle path** for the overlapping case:
+consolidate *only the shared CORE*, keep each consumer's extras local.
+
+#### Quick Reference
+
+```text
+discover two duplicate-looking collections
+  └─ CLASSIFY: true-duplicate (same intent) ── or ── intentional-variant (deliberate diffs)?
+       ├─ true duplicate            → flat-merge into one canonical constant (Phase 8c)
+       ├─ variant, NO overlap       → do NOT consolidate; cross-reference docstrings (Phase 8c)
+       └─ variant WITH overlap      → CORE/EXTRAS split (THIS phase):
+             1. extract genuinely-shared CORE into ONE canonical immutable frozenset
+             2. each consumer = CORE | <its own layer-specific extras>
+             3. add parity tests: CORE.issubset(consumer_A) AND CORE.issubset(consumer_B)
+             4. keep PUBLIC NAMES + iterable types; recompose only their VALUES
+             5. real acceptance gate = the EXISTING behavioral suites stay green
+```
+
+#### The #1205 worked example
+
+`TRANSIENT_ERROR_PATTERNS` (resilience layer) and `NETWORK_ERROR_KEYWORDS` (retry layer)
+overlapped on transient-failure substrings. But `NETWORK_ERROR_KEYWORDS` *additionally*
+held `"rate limit"` / `"throttle"`, which the resilience layer **deliberately omits** —
+its documented contract is *"rate limit error passthrough (not retried)"*. A naive shared
+frozenset would either (a) make the resilience layer retry rate-limit errors (contract
+violation) or (b) drop rate-limit/throttle from the network tagger (breaks an existing
+test). Neither is acceptable. The core/extras split preserves both contracts.
+
+#### Detailed Steps
+
+1. **Discover, then CLASSIFY before touching anything.** Read BOTH collections and their
+   surrounding docstrings/tests in full. Ask: is every element shared by *intent*, or does
+   one collection carry elements the other *deliberately excludes*? A module docstring
+   contract line ("rate limit error passthrough — not retried") or an existing test that
+   asserts an exclusion is your signal that you are looking at an intentional variant, not
+   drift. **If you cannot confirm the difference is deliberate, stop and confirm it** —
+   the whole split is mis-scoped if the "intentional" difference is actually stale.
+
+2. **Extract only the genuinely-shared CORE** into one canonical immutable constant. Use a
+   `frozenset` (immutable, set-algebra-friendly). Put it in a **leaf module both consumers
+   can import with no cycle, respecting the architecture boundary** — in Hephaestus this was
+   the pre-existing `hephaestus/constants.py` (stdlib-only, already holds shared frozensets).
+   **Never** place it in the product/automation layer (the library may not import automation),
+   and avoid sub-package `__init__.py` (circular-import risk).
+
+   ```python
+   # hephaestus/constants.py  (leaf, stdlib-only, no cycle)
+   # Shared CORE of transient-failure substrings used by BOTH the resilience
+   # retry matcher and the network-error tagger. Lowercase; matched as substrings.
+   TRANSIENT_ERROR_CORE: frozenset[str] = frozenset({
+       "timeout", "timed out", "connection", "network", "temporarily",
+       "unavailable", "reset by peer", "broken pipe",
+   })
+   ```
+
+3. **Each consumer composes its full collection as `CORE | <its own extras>`** —
+   keeping the **public names and existing iterable types** so call sites that iterate
+   them (`any(p in err for p in NAME)`) and exported-symbol consumers keep working. Only
+   the *values* are recomposed from the core.
+
+   ```python
+   # resilience layer — intentionally does NOT include rate-limit/throttle
+   from hephaestus.constants import TRANSIENT_ERROR_CORE
+   # exact phrases kept as explicit extras (see trap #2 below)
+   _RESILIENCE_EXTRAS = frozenset({"connection refused", "connection reset"})
+   TRANSIENT_ERROR_PATTERNS = tuple(sorted(TRANSIENT_ERROR_CORE | _RESILIENCE_EXTRAS))
+
+   # retry/network layer — ADDS rate-limit/throttle by deliberate contract
+   from hephaestus.constants import TRANSIENT_ERROR_CORE
+   _NETWORK_EXTRAS = frozenset({"rate limit", "throttle"})
+   NETWORK_ERROR_KEYWORDS = tuple(sorted(TRANSIENT_ERROR_CORE | _NETWORK_EXTRAS))
+   ```
+
+4. **Add subset parity (anti-drift) tests** so the shared signals can never silently drift
+   out of either consumer — this is what makes the plan *reviewable*:
+
+   ```python
+   from hephaestus.constants import TRANSIENT_ERROR_CORE
+   from hephaestus.resilience import TRANSIENT_ERROR_PATTERNS
+   from hephaestus.retry import NETWORK_ERROR_KEYWORDS
+
+   def test_core_present_in_both_consumers():
+       assert TRANSIENT_ERROR_CORE.issubset(set(TRANSIENT_ERROR_PATTERNS))
+       assert TRANSIENT_ERROR_CORE.issubset(set(NETWORK_ERROR_KEYWORDS))
+   ```
+
+   Plus standard constants-module tests (see the `testing-python-constants-module` skill):
+   `isinstance(CORE, frozenset)`, all-lowercase, immutability (`AttributeError` on `.add()`),
+   and parametrized membership of each expected substring.
+
+5. **TDD RED → GREEN.** The parity + constants tests fail first with `ImportError`
+   (`TRANSIENT_ERROR_CORE` does not exist yet); create the constant to go green.
+
+6. **Grep ALL file types for orphaned refs** to the old literals after recomposing.
+
+7. **The REAL acceptance gate is the EXISTING behavioral suites, not the new constant
+   tests.** Run `test_retry.py`, `test_subprocess_resilience.py`, etc. — every behavioral
+   matcher test must stay green. New constant tests proving structure are necessary but
+   insufficient; behavior is the contract.
+
+8. Signed commit + auto-merge per the standard PR workflow above.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -579,6 +701,9 @@ Sort the result for deterministic ordering and filter excludes explicitly (e.g. 
 | Mock a value behind an `@lru_cache` helper without clearing the cache | `unittest.mock.patch` / `monkeypatch.setattr` on the underlying function, then called the cached helper | The cache held the pre-patch value, so the mock was never exercised and the test asserted stale data | Call `helper.cache_clear()` in the test before (and between) patches — ideally via setup/teardown or an autouse fixture |
 | Delete a stale script before checking for callers | `git rm old_entrypoint.py` as part of consolidation without grepping first | A kept file still imported / documented it → broken import and dangling doc reference post-merge | Grep all file types for callers FIRST; if a kept file back-references the target, rewrite it self-contained and verify before deleting |
 | Keep a hardcoded file list after consolidating the tree | Left `SKILL_FILES = [...]` enumerating discovered files by hand | The list silently rotted as files were added/removed — discovery missed new files and pointed at deleted ones | Discover dynamically with `sorted(Path(...).rglob("*.ext"))` and filter excludes explicitly instead of maintaining an allowlist |
+| (PLANNING #1205) Assume two duplicate-*looking* constant lists are pure duplicates and flat-merge them | Planned a single shared frozenset for `TRANSIENT_ERROR_PATTERNS` + `NETWORK_ERROR_KEYWORDS` | The resilience layer's documented contract DELIBERATELY omits `"rate limit"`/`"throttle"` ("rate limit error passthrough — not retried"). A flat merge would make it retry rate-limit errors (contract violation) OR drop them from the network tagger (breaks an existing test) | CLASSIFY first: true-duplicate vs intentional-variant-WITH-overlap. For overlap, extract only the shared CORE into one frozenset and have each consumer compose `CORE \| its-own-extras`. Confirm the "intentional" difference is a real, current contract (docstring + test), not stale drift, before scoping the split |
+| (PLANNING #1205) Drop exact phrases "because a broad substring in CORE already covers them" | Considered removing `"connection refused"`/`"connection reset"` from the resilience extras since CORE held the broader `"connection"` | `"connection"` MATCHES `"connection refused"` at runtime, but the resilience test `test_essential_patterns_present` asserts EXACT MEMBERSHIP of the phrase `"connection refused"` — matching-equivalence is NOT membership-equivalence. Dropping the phrase passes behavior but fails the membership assertion | Keep the exact phrases as explicit per-consumer extras even when a broad CORE substring would match them. A flat dedupe that elides "covered" phrases silently breaks membership tests |
+| (PLANNING #1205) Change a list literal to `sorted(frozenset \| frozenset)` without checking how callers use it | Planned to recompose `TRANSIENT_ERROR_PATTERNS`/`NETWORK_ERROR_KEYWORDS` as `sorted(CORE \| extras)` | That changes element ORDER and the source TYPE. Any caller relying on original ordering, on `.append()`/mutation, or on index access would break; and the looser `is_network_error` substrings (`"connection"`,`"timeout"`,`"network"`) must not be accidentally tightened/loosened | Before recomposing, grep callers to confirm ONLY iteration is used (no mutation, no indexing, no order dependence). Keep public names + iterable types; treat each behavioral matcher suite (`test_retry.py`, `test_subprocess_resilience.py`) as the real acceptance gate, not the new constant tests |
 ## Results & Parameters
 
 ### Code Changes
@@ -645,17 +770,27 @@ def _aggregate_token_stats(self, tier_results: dict[TierID, TierResult]) -> Toke
 | Pre-commit checks | All pass |
 | Time to implement | ~30 minutes |
 
+## Verified On
+
+| Project | Issue/PR | Scope | Verification |
+| --------- | ---------- | ------- | -------------- |
+| ProjectHephaestus | #739 | Private module extraction | verified-ci |
+| ProjectScylla | dir-structure split | Path-constant bypass audit | verified-ci |
+| ProjectHephaestus | #1205 | Phase 10 core/extras split for overlapping `TRANSIENT_ERROR_PATTERNS` / `NETWORK_ERROR_KEYWORDS` | ⚠️ **unverified — planning only, NOT executed** (no code, no tests, no CI) |
+
 ## Related Skills
 
 - `token-stats-aggregation` (evaluation) - Token aggregation pattern
 - `codebase-consolidation` (architecture) - Finding duplicates
+- `testing-python-constants-module` (testing) - frozenset/immutability/membership tests referenced by Phase 10
 
 ## Tags
 
-`refactoring`, `dry-principle`, `helper-methods`, `tdd`, `code-quality`, `python`, `pytest`, `private-modules`, `test-structure`, `git-signing`, `importlib-metadata`, `srp`, `extract-method`, `lru-cache`, `mock-patch`, `rglob`, `dead-code-removal`
+`refactoring`, `dry-principle`, `helper-methods`, `tdd`, `code-quality`, `python`, `pytest`, `private-modules`, `test-structure`, `git-signing`, `importlib-metadata`, `srp`, `extract-method`, `lru-cache`, `mock-patch`, `rglob`, `dead-code-removal`, `constants`, `frozenset`, `drift`, `intentional-variant`, `core-extras-split`, `planning`
 
 ## Version History
 
+- **v1.5.0** (2026-06-12): Added Phase 10 (PLANNING-ONLY, **unverified**) — the core/extras split for consolidating OVERLAPPING constant collections that are intentional-variants-with-overlap, not pure duplicates. Refines the Phase 8c classification table with a third middle path: extract only the shared CORE into one immutable frozenset, compose each consumer as `CORE | extras`, and prove anti-drift with `CORE.issubset(consumer)` parity tests while keeping public names/types. Added 3 Failed Attempts rows (flat-merge-violates-contract, drop-phrases-because-broad-substring-covers-them, recompose-changes-order/type) and a `## Verified On` table. Captured from planning ProjectHephaestus issue #1205; NOT executed end-to-end (no code, no tests, no CI). Prior v1.4.0 snapshot archived to history.
 - **v1.4.0** (2026-06-07): Restored SRP/LRU-cache/stale-script DRY patterns lost in the v1.3.0 absorption (nuance audit). Added Phase 9 + `### Detailed Steps`: extract-method/SRP decomposition with mutable-box closure conversion, `@lru_cache` detection util with the `mock.patch`/`cache_clear()` gotcha, stale-script/deprecated-stub cleanup (grep callers first, rewrite back-references self-contained), and dynamic `Path.rglob` discovery. Added 4 Failed Attempts rows.
 - **v1.3.0** (2026-06-07): Absorbed 5 skills — `centralized-path-constants`, `private-module-extraction-helper-pattern`, `deduplicate-llm-json-extraction`, `dry-consolidation-workflow`, `dry-consolidate-to-canonical-refactor`. Added Quick Reference h3 and Phase 8 (path constants, LLM JSON dedup, discovery/classify pass, Pydantic type hierarchy, dict-structure consolidation, orphan relocation). Extended description and Failed Attempts. Full originals preserved in history.
 - **v1.1.0** (2026-06-04): Added Phase 7 covering private module extraction patterns, test structure mirroring enforcement, cryptographic commit signing, PyPI distribution name handling. Verified via ProjectHephaestus issue #739.
