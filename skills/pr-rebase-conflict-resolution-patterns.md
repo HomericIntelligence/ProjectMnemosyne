@@ -1,12 +1,12 @@
 ---
 name: pr-rebase-conflict-resolution-patterns
-description: "Use when: (1) a PR branch is CONFLICTING or DIRTY after main advances and needs rebasing, (2) a mass rebase of 10+ PRs is needed after a major refactor causes conflicts across the queue, (3) a stacked PR goes DIRTY when its prerequisite merges and the base must be retargeted — later CI/lint fix commits on the dependent branch are orphaned and must be cherry-picked, (4) a Safety Net hook blocks git checkout --theirs / --ours during automated rebase conflict resolution, (5) a file was completely rewritten on one branch and small targeted edits exist on the other, (6) a parallel swarm produced overlapping PRs that conflict on the same paths and one must be rebased onto the other, (7) a feature PR conflicts after a sibling refactor merges and edits must be ported to the new file structure, (8) a TypeScript or other language-level shadowing bug appears only after a rebase because two branches independently added identically-named locals to the same scope, (9) numerical or optimizer PRs conflict when main merged its own version of a shared module and API signatures changed, (10) a PR's substantive change independently landed on main via a sibling PR so a rebase produces an add/add conflict on a duplicated new file and the PR becomes a near-no-op residual, (11) a PR is DIRTY with all CI checks green/passing — the merge conflict itself is the sole blocker (rebase, do not hunt for a failing job), (12) a rebase hits a modify/delete conflict on a file the PR intentionally deletes — confirm the base copy is still stale then git rm, (13) a PR is BLOCKED with mergeable=MERGEABLE but a required check shows SKIPPED — the required check is gated by needs: on a job that fails because the branch carries unpinned GitHub Actions rejected by an org-wide SHA-pin policy; fix is rebase to inherit main's pinned workflow files (not an empty re-trigger commit)"
+description: "Use when: (1) a PR branch is CONFLICTING or DIRTY after main advances and needs rebasing, (2) a mass rebase of 10+ PRs is needed after a major refactor causes conflicts across the queue, (3) a stacked PR goes DIRTY when its prerequisite merges and the base must be retargeted — later CI/lint fix commits on the dependent branch are orphaned and must be cherry-picked, (4) a Safety Net hook blocks git checkout --theirs / --ours during automated rebase conflict resolution, (5) a file was completely rewritten on one branch and small targeted edits exist on the other, (6) a parallel swarm produced overlapping PRs that conflict on the same paths and one must be rebased onto the other, (7) a feature PR conflicts after a sibling refactor merges and edits must be ported to the new file structure, (8) a TypeScript or other language-level shadowing bug appears only after a rebase because two branches independently added identically-named locals to the same scope, (9) numerical or optimizer PRs conflict when main merged its own version of a shared module and API signatures changed, (10) a PR's substantive change independently landed on main via a sibling PR so a rebase produces an add/add conflict on a duplicated new file and the PR becomes a near-no-op residual, (11) a PR is DIRTY with all CI checks green/passing — the merge conflict itself is the sole blocker (rebase, do not hunt for a failing job), (12) a rebase hits a modify/delete conflict on a file the PR intentionally deletes — confirm the base copy is still stale then git rm, (13) a PR is BLOCKED with mergeable=MERGEABLE but a required check shows SKIPPED — the required check is gated by needs: on a job that fails because the branch carries unpinned GitHub Actions rejected by an org-wide SHA-pin policy; fix is rebase to inherit main's pinned workflow files (not an empty re-trigger commit), (14) multiple rebased PRs — including ones unrelated to the failing test — all fail the SAME test after merging onto main; suspect a broken main from a SEMANTIC collision between two independently-merged PRs that never textually conflict (e.g. a return-tuple arity change + a stale test mock), prove it by running the failing test against bare origin/main, and fix main first"
 category: ci-cd
-date: 2026-06-13
-version: "1.4.0"
+date: 2026-06-14
+version: "1.5.0"
 user-invocable: false
 history: pr-rebase-conflict-resolution-patterns.history
-tags: [git, rebase, merge-conflict, pr, batch, stacked-pr, cherry-pick, safety-net, parallel-swarm, serial-merge-train, full-rewrite, shadow-variable, tdz, numeric-equivalence, clang-format, cmake, pixi-lock, force-with-lease, auto-merge, already-merged-sibling, add-add-conflict, sha-pin, unpinned-actions, skipped-required-check, markdownlint, lint-blocked, org-policy, myrmidon-swarm]
+tags: [git, rebase, merge-conflict, pr, batch, stacked-pr, cherry-pick, safety-net, parallel-swarm, serial-merge-train, full-rewrite, shadow-variable, tdz, numeric-equivalence, clang-format, cmake, pixi-lock, force-with-lease, auto-merge, already-merged-sibling, add-add-conflict, sha-pin, unpinned-actions, skipped-required-check, markdownlint, lint-blocked, org-policy, myrmidon-swarm, semantic-collision, broken-main, tuple-arity, stale-mock, merge-train-cascade]
 ---
 
 # PR Rebase & Conflict Resolution Patterns
@@ -39,6 +39,7 @@ tags: [git, rebase, merge-conflict, pr, batch, stacked-pr, cherry-pick, safety-n
 - A PR is `DIRTY`/`CONFLICTING` with **all CI checks green/passing** — the merge conflict itself is the sole blocker; rebase, do not hunt for a failing job (`gh pr view N --json mergeStateStatus,mergeable,statusCheckRollup`).
 - A rebase hits a **modify/delete conflict on a file the PR intentionally deletes** (`CONFLICT (modify/delete): <path> deleted in <commit> and modified in HEAD`) — confirm the base copy is still the stale content the PR removes, then `git rm`.
 - A PR is **BLOCKED with `mergeable=MERGEABLE`** (no git conflict) but a **required check shows `SKIPPED`** — the required check (e.g. `markdownlint`) is declared `needs: lint` and the `lint` job fails because the branch carries **unpinned GitHub Actions** (`actions/setup-python@v6`) rejected by an org-wide SHA-pin policy. The fix is a **rebase onto current main** so the branch inherits main's pinned workflow files; pushing an empty re-trigger commit does NOT fix this.
+- **Multiple rebased PRs — including ones unrelated to the failing test — all fail the SAME test** after merging onto main; suspect a **broken main from a semantic collision between two independently-merged PRs** (e.g. a return-tuple arity change + a stale test mock). The two PRs never textually conflict — each is green against the main it saw — but their UNION on main is inconsistent and fails at RUNTIME. Prove it by running the failing test against bare `origin/main`, then **fix main first** (one small PR); do NOT fix it inside each trailing PR.
 - Common trigger phrases: "fix these failing PRs", "rebase all branches onto main", "mass rebase after merge wave", "stacked PR went dirty", "Safety Net blocked git checkout", "markdownlint SKIPPED BLOCKED", "action not allowed must be pinned".
 
 ## Verified Workflow
@@ -50,6 +51,8 @@ tags: [git, rebase, merge-conflict, pr, batch, stacked-pr, cherry-pick, safety-n
 gh pr list --state open --json number --jq 'length'      # 0 → cleanup task, not a rebase task
 gh run list --branch main --limit 3 --json status,conclusion,workflowName \
   --jq '.[] | "\(.workflowName): \(.status)/\(.conclusion)"'   # main RED → fix main FIRST
+# RE-CHECK main is green before EACH rebase wave — a sibling merge can turn main red AFTER the train starts
+# (semantic collision: a 9-tuple return change + a stale 7-tuple test mock, each green alone). § K.
 git cherry origin/main <branch>     # 0 lines → branch already merged (squash artifact); skip
 
 # DIRTY/CONFLICTING with EVERY check green = the conflict IS the blocker (no phantom failing job):
@@ -97,7 +100,7 @@ git checkout --ours marketplace.json                    # main has the union; PR
 #### A. Pre-flight (don't skip)
 
 1. `gh pr list --state open` — if 0, this is a **cleanup task**, not a rebase. `git branch -vv` showing "ahead 1" on every branch is a **squash-merge artifact**, not unmerged work; confirm with `git cherry origin/main <branch>` (0 lines = merged).
-2. Confirm main CI is green (`gh run list --branch main`). **Rebasing onto a broken main cannot unblock PRs.** If a systemic blocker exists (bad pip-audit flag, workflow `globs:"**/*.md"` overriding `.markdownlintignore`, broken `pixi.lock`, pre-existing violations in shared files), **fix main in its own small PR and let it merge first**, then rebase the queue.
+2. Confirm main CI is green (`gh run list --branch main`). **Rebasing onto a broken main cannot unblock PRs.** If a systemic blocker exists (bad pip-audit flag, workflow `globs:"**/*.md"` overriding `.markdownlintignore`, broken `pixi.lock`, pre-existing violations in shared files), **fix main in its own small PR and let it merge first**, then rebase the queue. **Main can go red AFTER the train starts** — each PR that merges may collide semantically with an already-merged sibling (a return-tuple/signature change landing while a stale test mock of that function landed separately). RE-CHECK `gh run list --branch main` is green before EACH rebase wave, not just at the start. When two PRs both touch the same function-and-its-test (especially a return-tuple/arity/signature change in one and a mock of that function in the other), treat them as a **latent collision** even though they will never textually conflict.
 3. Check allowed merge methods. Squash-only repos (e.g. Charybdis) reject `gh pr merge --auto --rebase` with a GraphQL error — use `--squash`.
 
 #### B. The rebase mechanics that matter
@@ -248,6 +251,42 @@ done
 - Use `--squash` — squash-only repos reject `--rebase`.
 - Re-arm auto-merge AFTER the push, not before.
 
+#### K. Broken main from a semantic collision between two independently-merged PRs
+
+**Symptom:** During a serial merge-train, after several PRs merge, the *trailing* PRs — including ones that NEVER touched the failing test — all fail the **same** test when re-rebased onto the now-advanced main. There are NO conflict markers; each rebase is textually clean. The tell is the *shared* failure across unrelated PRs.
+
+**Root cause:** Two PRs each modified the same function/test pair in compatible-looking ways. Each passed its OWN CI (each was green against the main it saw). But once BOTH merge, their UNION on main is inconsistent and fails at RUNTIME. Because there is no textual conflict, conflict resolution never surfaces it — only a test run catches it.
+
+**Concrete case (ProjectHephaestus, 2026-06-14):**
+
+- PR #1336 extended `_process_review_iteration` to return a **9-tuple** (added `reopened_keys, validator_clean`); its caller `_run_impl_review_loop` was updated to unpack 9.
+- PR #1337 (merged independently) ADDED a new test `test_review_loop_resolves_conflict_before_first_review` whose mock `_iter` returned the OLD **7-tuple** (`return "GO","A","ok",[],False,[],True`).
+- Each PR was green on its own. After BOTH merged, main failed: `ValueError: not enough values to unpack (expected 9, got 7)` at `_review_phase.py:635`.
+- Fix was a 1-line mock update appending the 2 new fields (`..., True, set(), True`) — landed as #1340 / issue #1339.
+
+**Diagnosis procedure:**
+
+1. Get the exact failing test name + error from the run log:
+   `gh run view <id> --log-failed | grep -E "FAILED tests/|^E "`.
+2. If the SAME test fails across MULTIPLE unrelated rebased PRs → it is almost certainly **main**, not the PRs.
+3. **PROVE main is red, don't guess** — check the failing test out against bare `origin/main` in a clean worktree and run it:
+
+   ```bash
+   git worktree add /tmp/main-check origin/main
+   cd /tmp/main-check && pixi run python -m pytest <exact::failing::test> -x
+   # fails on bare main → the bug is main's, not any PR's
+   ```
+
+4. Find the arity/signature mismatch: locate ALL return statements of the function AND the call site's unpack arity, AND any MOCK of that function in tests (the stale mock is the usual culprit — a test that hard-codes the old tuple).
+
+   ```bash
+   git show origin/main:<func-file> | grep -nE 'return '        # real return arity
+   grep -rnE '<func-name>|return \(|return "' <test-file>       # stale mock of the function
+   ```
+
+5. **FIX MAIN FIRST** in its own small PR: file an issue, branch off `origin/main`, fix the mock/signature, sign, PR, label go, arm auto-merge. Do NOT try to fix it inside each trailing PR — the breakage is shared; fix it once on main.
+6. After the main-fix merges, the trailing PRs re-green by **RE-RUNNING their CI** (or a trivial rebase) against the corrected main — they do NOT each need the fix.
+
 #### C2. Post-rebase verification checklist (run before claiming clean)
 
 - **No conflict markers survive** in any rewritten file: `grep -nE '^(<<<<<<<|=======|>>>>>>>)' <file>` returns nothing.
@@ -297,6 +336,8 @@ done
 | Enabling auto-merge while required check still SKIPPED (before rebase) | Armed `gh pr merge --auto --squash` on a BLOCKED PR before rebasing | `mergeStateStatus=BLOCKED` means auto-merge is ignored even after arming — GitHub records the arm but cannot merge; the branch stays stuck | Rebase first → push → THEN arm auto-merge; re-arm after every force-push |
 | `git checkout --ours/--theirs` during rebase in Safety-Net-guarded repo | Attempted standard conflict resolution shortcut during the rebase phase | Safety Net hook blocks `git checkout <ref> -- <path>` as a destructive operation | Use `git show origin/main:<path> > <path>` (equivalent to `--ours` in rebase context) then `git add <path>` |
 | Diagnosing SHA-pin-blocked PRs as a CI/code failure | Investigated failing job logs in the PR's own code/tests | The real failure is in the workflow file (unpinned action reference), not the PR's code content — the PR's actual code is typically fine | Compare required contexts list against head-SHA check-runs; a required context showing SKIPPED when it should be SUCCESS points to a `needs:` chain collapse upstream, not a code bug |
+| Assume a rebased PR's red CI is the PR's fault | Investigated each trailing PR's own code when its required CI went red after rebasing onto main | The SAME test (`test_review_loop_resolves_conflict_before_first_review`) failed on MULTIPLE unrelated PRs because MAIN was red from a 9-tuple-vs-7-tuple-mock semantic collision (#1336 return-arity change + #1337 stale mock, each green alone) — no textual conflict, invisible to rebase | When the same test fails across multiple unrelated rebased PRs, run that test against bare `origin/main` to PROVE main is red, then fix main first (ProjectHephaestus #1340/#1339, 2026-06-14) |
+| Try to fix the broken test inside each trailing PR | Started patching the stale mock separately in each of the 4 trailing PRs | The breakage is SHARED on main, not per-PR; per-PR fixes duplicate work, diverge, and collide on the next merge | Land ONE main-fix PR (issue → branch off origin/main → 1-line fix → sign → label go → arm), then re-green the queue by re-running CI; trailing PRs need no per-PR change |
 
 ## Results & Parameters
 
@@ -376,3 +417,4 @@ git -C /tmp/pr-<N> push --force-with-lease origin HEAD:<branch>
 | Agamemnon / Odysseus | Extraction destination PRs #419/#420/#421; Odysseus #43 NATS reconciliation vs merged #32; Agamemnon #422 empty-commit re-trigger of 6 required checks | verified-ci / verified-local |
 | HomericIntelligence/Odysseus | PR #64 full-file-rewrite conflict on docs/architecture.md (234-line rewrite vs 3-line delta) | verified-local |
 | ProjectMnemosyne | 2026-06-13: org-wide SHA-pin policy PR landed on main; ~107 skill PRs created before the pin carried `actions/setup-python@v6` (unpinned). `lint` failed with "action not allowed — must be pinned", cascading to `markdownlint=SKIPPED` (declared `needs: lint`). All 107 PRs showed `mergeable=MERGEABLE` + `mergeStateStatus=BLOCKED`. Parallel Myrmidon Haiku swarm rebased each PR onto main (~9 PRs/agent in isolated worktrees, `--force-with-lease`). Skill PRs touching only `skills/*.md` rebased cleanly (0 conflicts). After push, CI re-ran with pinned actions, `lint` passed, `markdownlint` ran to success, auto-merge-armed PRs merged. Secondary: 107 PRs exhibited combined-status `pending` (count=0) caching; empty signed commit forced recompute and cleared the block. **verified-ci** | verified-ci |
+| ProjectHephaestus | 2026-06-14 serial merge-train of ~12 PRs: 8/12 merged, then the trailing 4 all went red on `test_review_loop_resolves_conflict_before_first_review` (a test none of them touched). Root-caused to a SEMANTIC collision between two independently-merged PRs that never textually conflict: #1336 changed `_process_review_iteration` to return a 9-tuple; #1337 added a test whose mock returned the old 7-tuple. Union on main raised `ValueError: not enough values to unpack (expected 9, got 7)` at `_review_phase.py:635`. Proved via running the failing test against bare `origin/main`. Fixed once on main via a 1-line mock update (#1340 / issue #1339); trailing PRs re-greened by re-running CI. | verified-local (fix PR not yet merged at capture) |
