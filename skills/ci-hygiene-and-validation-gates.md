@@ -407,7 +407,7 @@ pattern. The same principle applies: ignore + guard, never delete runtime-regene
 
 ```bash
 git check-ignore -v build/
-# Expected: .gitignore:5:build/	build/
+# Expected: .gitignore:5:build/    build/
 ```
 
 Do NOT edit `.gitignore` — `build/` is already ignored. Do NOT delete the nested live clone or
@@ -488,7 +488,6 @@ This rides the already-required lint gate, so **no new workflow** is needed.
 then `git clean -fdX build/` (removes only ignored files under `build/`). The guard does not
 delete anything — it only asserts the tracked-file invariant.
 
-
 ---
 
 ## Failed Attempts
@@ -505,11 +504,10 @@ delete anything — it only asserts the tracked-file invariant.
 | Install with `--no-deps` (Pattern 4) | `pip install -e . --no-deps` to match a leaner CI image | The checker imports `packaging` (a declared dep) and `ModuleNotFoundError`s at runtime; under `set -e` that is a crash, not an assertion | A checker that imports declared deps must be installed WITH deps |
 | Just delete the no-op job (Pattern 4) | Remove the dead `deps-version-sync` job entirely | The context `deps/version-sync` is pinned in the org ruleset; deletion leaves every PR BLOCKED on a check that never reports | De-list the required context first (admin API) OR make the job real in-place; never delete a pinned-context job in a code PR |
 | `pixi lock --check` for leg 3 (Pattern 4) | Used `pixi lock --check` to verify the lockfile | The repo pins pixi `v0.69.0` everywhere (composite `setup-pixi-env`, `pixi-check`); `--check` availability on that exact version was unverified, and a prior skill documented older pixi lacking the `lock` subcommand entirely | Use `pixi install --locked` (proven on the pinned version, already used by `pixi-check`), not a flag verified only on a newer local pixi |
-| Confirmed clean PASS only (Pattern 4) |
+| Confirmed clean PASS only (Pattern 4) | Ran the rewritten gate on a clean branch, saw green, called it done | A dead gate ALSO shows a clean PASS; only a synthetic-FAIL test distinguishes a real gate from a no-op | Two-sided verification (clean PASS **and** synthetic FAIL) is mandatory for any gate change |
 | Edit `.pre-commit-config.yaml` directly (Pattern 5) | Used the normal `Edit` tool to add the `check-build-dir-untracked` hook | Blocked by a config-file security hook ("don't ask mode" / config-file guard) — same class as the workflow-file block noted in Pattern 2 | Apply the change via a Python `read → str.replace → write` script; assert the anchor appears exactly once and the addition isn't already present before writing |
 | Delete on-disk `build/*.log` to "clean up" (Pattern 5) | `rm build/*.log` / `git clean` to remove scratch junk | A live automation loop regenerates the logs within seconds — deletion is futile and the on-disk presence was never the problem | The problem is *tracking*, not presence: gitignore + an untracked-invariant guard. Never delete runtime-regenerated state |
 | Make the Pattern 5 guard exit 0 like the stale-script detector | Soft-warn instead of hard-fail, mirroring Pattern 3 | A tracked file under a gitignored scratch dir is a *true invariant breach* that would then pass CI silently and could ship logs in a distribution | Hard-fail (exit 1) is correct for a true-invariant guard; the exit-0 rule applies only to heuristic discovery tooling (Pattern 3), not invariant assertions |
- Ran the rewritten gate on a clean branch, saw green, called it done | A dead gate ALSO shows a clean PASS; only a synthetic-FAIL test distinguishes a real gate from a no-op | Two-sided verification (clean PASS **and** synthetic FAIL) is mandatory for any gate change |
 
 ## Results & Parameters
 
@@ -553,7 +551,7 @@ git ls-files build/
 
 # 2. Confirm build/ is gitignored, and at which .gitignore line
 git check-ignore -v build/
-# Expected: .gitignore:5:build/	build/
+# Expected: .gitignore:5:build/    build/
 
 # 3. Auto-discovered parametrized smoke test for the new script (rides existing
 #    parametrized test that imports every scripts/*.py and runs its main()).
@@ -653,7 +651,7 @@ ruleset admin), `console-scripts-exit-code-discipline` (exit-code semantics unde
 `set -e`), `lockfile-and-release-pipeline-management` (lockfile-sync verification), and
 the companion worktree-`__file__` skill (why `-m` beats a `scripts/<x>.py` shim).
 
-## Verified On
+## Verified On (Extended)
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
