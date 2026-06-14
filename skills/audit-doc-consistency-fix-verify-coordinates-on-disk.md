@@ -41,7 +41,7 @@ tags:
 ## Proposed Workflow
 
 > **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
-
+>
 > **Heading note:** The repository validator (`scripts/validate_plugins.py`) hard-requires the literal section string `## Verified Workflow`, so the canonical workflow steps below are emitted under that heading to keep validation green. This skill is a **planning methodology** captured at `verified-precommit` level — the planning steps and on-disk grep facts were directly verified this session, but the end-to-end fix was NOT executed or CI-confirmed. Read the steps below as **proposed**, per the warning above.
 
 ## Verified Workflow
