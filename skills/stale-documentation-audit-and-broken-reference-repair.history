@@ -2,6 +2,74 @@
 
 # stale-documentation-audit-and-broken-reference-repair — History
 
+## v1.10.0 (2026-06-13)
+
+Salvaged six dropped learnings from closed PRs #2351/#2352/#2372/#2373/#2397/#2398/#2399/#2401
+that were absorbed by carrier PR #2346 without their content being folded into the canonical skill.
+
+Previous version snapshot: v1.9.0 (2026-06-13)
+
+Changes:
+
+- **Learning 1 — Count-annotates-curated-list rule** (from #2351/#2373): A doc count annotates
+  its adjacent human-curated enumeration (tree, tier table, bullet list), not the raw filesystem.
+  Bumping the number to `find … | wc -l` while the curated list is unchanged produces a
+  contradictory doc (number > list_count) — a POLA NOGO worse than the original staleness.
+  Correct fix: reconcile number-to-list (clarify scope/unit). Added §1a, verification one-liner,
+  When-to-Use bullet, two new Failed-Attempts rows (bumped 19→20 without updating tree; trusted
+  issue's stale 21-subpackage claim), and new Quick-Reference block.
+- **Learning 2 — Verify replacement command actually runs before shipping** (from #2352): A
+  feature name is not an environment name in pixi — `dev` may be in `[features]` not
+  `[environments]`, making `pixi run -e dev` / `pixi shell -e dev` fail. Un-sourced commands
+  are a STOP signal. Added §5c, pixi env verification command, When-to-Use bullet, new
+  Failed-Attempts row, and Quick-Reference block.
+- **Learning 3 — Pixi-only repos: prefix env tools with `pixi run`** (from #2372, verified-ci):
+  Bare `pre-commit install`, `pytest`, `mypy`, `ruff` invocations fail on a clean machine
+  (PATH does not include `.pixi/envs/default/bin`). Added §5b, detection grep, positive/negative
+  verification pattern, When-to-Use bullet, new Failed-Attempts row, and Verified-On row.
+- **Learning 4 — Enforced artifact > prose for conflicting counts** (from #2397): When an issue
+  quotes two different numbers for the same thing, count from the passing test/enforced artifact
+  (frozen-allowlist test, `expected_modules` set). Only add a prose guard when no enforced guard
+  already exists. Added §6b, grep pattern for paraphrased counts, When-to-Use bullet, new
+  Failed-Attempts row, and Verified-On row.
+- **Learning 5 — Count-drift: re-derive from single source of truth with phrase-scoped grep**
+  (from #2398): Re-derive from `pyproject.toml [project.scripts]` or equivalent manifest — never
+  from a second doc. Phrase-scope the stale-number re-grep to scope the edit AND prove no copies
+  survive. Prefer exact-string Edit over `replace_all` on bare digits. Added §6c, concrete example
+  (37→47 tool count), When-to-Use bullet, new Failed-Attempts row, and Verified-On row.
+- **Learning 6 — Content-anchored file:line citation repair + markdownlint-Skipped caveat**
+  (from #2399/#2401): Locate dangling `file.py:NN` refs by content-match grep (not audit
+  coordinate, which is off-by-one); replace with durable content-anchored citation; re-grep
+  corpus post-fix; leave historical narrative intact. CAVEAT: `pre-commit run --files <doc>`
+  prints `Skipped` when the hook's file filter excludes the path — the file was NOT linted.
+  Added §3b, Quick-Reference block for file:line repair, markdownlint-Skipped caveat, When-to-Use
+  bullet, two new Failed-Attempts rows, Key-parameters bullet, and Verified-On row.
+- Updated `description:` field with trigger conditions 19–24 for the new learnings.
+- Added six new tags: `count-annotates-list`, `pixi-environment`, `pixi-run-prefix`,
+  `enforced-artifact`, `phrase-scoped-grep`, `file-line-citation`, `markdownlint-skipped`.
+- Bumped `version:` to `1.10.0`, updated `date:` to 2026-06-13.
+
+## v1.9.0 (2026-06-13)
+
+Added merge-method per-repo note, doc-drift consolidation PLANNING, count-set disambiguation,
+phantom-path remove-vs-redirect, git-tag version-currency guard, subpackage counting, and Pattern
+D drift-test fragility from ProjectHephaestus issues #1188/#1211/#1208/#1216.
+
+Previous version snapshot: v1.2.0
+
+- New When-to-Use bullets (14–18): count-set disambiguation, phantom-path planning,
+  version-currency guard, subpackage counting, drift-test fragility
+- §10 Doc-drift consolidation PLANNING (proposed, unverified hypothesis)
+- §10 Pattern D version-currency (UNVERIFIED planning artifact from #1208)
+- §1b Counting subpackages (unverified planning subsection from #1188)
+- Planning Discipline section: remove-vs-redirect rule, confirm-then-fix audit sequence,
+  reviewer-risk checklist
+- Reliable markdownlint invocation subsection
+- Key parameters: merge-method per-repo bullet; doc-version authority on hatch-vcs repos
+- Quick Reference: disambiguate-flagged-count block
+- New Verified-On rows: #1211, #1216, #1208
+- Bumped version to 1.9.0
+
 ## v1.2.0 (2026-06-13)
 
 Added stale line-number citation audit and issue-body claim verification patterns
