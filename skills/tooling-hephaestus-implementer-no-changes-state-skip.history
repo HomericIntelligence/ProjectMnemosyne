@@ -1,0 +1,53 @@
+# tooling-hephaestus-implementer-no-changes-state-skip — History
+
+## v1.2.0 (2026-06-08)
+
+**Changed by:** PR #1100 — run_learn model parameter fix (ProjectHephaestus)
+**Verification:** verified-precommit
+
+### What changed
+- Added "learn model parameter" section to Verified Workflow: `run_learn()` in `learn.py` must accept `model: str | None = None` so callers can override the default `learn_model()` (Haiku); `_run_learn()` in `ImplementationPhaseRunner` passes `implementer_model()` so the `/learn` step uses the same model as the implementation
+- Added new "When to Use" trigger: `run_learn()` invokes `learn_model()` (Haiku) but the caller (`_run_learn` on `ImplementationPhaseRunner`) should pass `implementer_model()`
+- Added 1 new Failed Attempts row
+- Added new Verified On entry (PR #1100)
+- Bumped version 1.1.0 → 1.2.0
+
+### Why
+`run_learn()` was hardcoded to use `learn_model()` (Haiku) regardless of which model the
+implementer session ran with. When resumed from `_run_learn()` in `ImplementationPhaseRunner`,
+the `/learn` step needs to use `implementer_model()` to avoid the capability mismatch of
+having a Haiku session pick up an Opus/Sonnet implementation transcript.
+
+### Previous version (v1.1.0) snapshot
+
+---
+name: tooling-hephaestus-implementer-no-changes-state-skip
+aliases:
+  - automation-implementer-no-changes-state-skip
+description: "When hephaestus implementer_phase_runner raises RuntimeError('No changes produced...') from pr_manager because a branch has 0 commits vs main (work already merged), detect this specific case and apply state:skip + return WorkerResult(success=True) instead of failing. Use when: (1) an automation loop inflates rc=1 for issues whose work already landed via a prior merged PR, (2) diagnosing why drive-green stays suppressed after implementation loops 1-4 even though the actual code change is already merged, (3) implementing or reviewing error handling in _implement_issue in implementer_phase_runner.py."
+category: tooling
+date: 2026-06-07
+version: "1.1.0"
+...
+
+[Full v1.1.0 content as present before this amendment]
+
+---
+
+## v1.1.0 (2026-06-07)
+
+**Changed by:** PR #1090 — no-changes-produced state:skip fix
+**Verification:** verified-ci
+
+### What changed
+- Initial amendment adding "no-changes-produced → state:skip" pattern to the base skill
+
+### Previous version (v1.0.0) snapshot
+
+[v1.0.0 initial version]
+
+---
+
+## v1.0.0 (initial)
+
+**Initial version.**
