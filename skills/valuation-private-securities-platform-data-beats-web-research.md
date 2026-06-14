@@ -85,7 +85,7 @@ Platform data finds assets that document archives miss. The platform sweep is a 
 
 - When the issuer has no 409A, the priced-round conversion price (invested $ ÷ shares received) is a defensible working basis for the converted preferred.
 - Carry exercised common as "pending 409A".
-- When one position appears in two schedule sections, value it ONCE and cross-reference the other row ("valued at <item> to avoid double-count").
+- When one position appears in two schedule sections, value it ONCE and cross-reference the other row ("valued at `<item>` to avoid double-count").
 
 ### Decision Rules
 
