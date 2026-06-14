@@ -1,133 +1,150 @@
 ---
 name: planning-mechanize-dod-convention-gate
-description: "Plan-time pattern for mechanizing a convention-only Definition-of-Done item (e.g. a conventional-commit rule) by writing ONE pure-stdlib validator and wiring it into BOTH a local pre-commit hook AND an existing REQUIRED CI job. Use when: (1) planning to turn a documented-but-unenforced convention (commit-message format, naming rule, file-layout rule) into an automated gate, (2) deciding whether to add a new CI workflow vs extend a job that already fetches the data you need, (3) scoping a new gate so it does not retroactively fail on historical deviations, (4) you need a register of the assumptions a reviewer MUST scrutinize before implementing a conventional-commit / pre-commit / GraphQL-commit-message gate."
+description: "Planning a mechanized Definition-of-Done / convention gate (e.g. a commit-message convention check) enforced at BOTH a local pre-commit stage and a REQUIRED CI job. Use when: (1) planning a hook + CI gate that enforces a project convention on new artifacts; (2) a plan rests on an external API field, a hook-installation mechanism, or an inferred allow-list and a reviewer NOGO'd it as unverified; (3) you must convert plan-time assumptions into verified evidence to move a plan from NOGO to GO; (4) adding a commit-msg-stage pre-commit hook and wondering why it never fires; (5) extending an existing GitHub GraphQL block to read commit.message; (6) deciding whether an allow-list (conventional-commit types) is safe to hard-fail."
 category: ci-cd
 date: 2026-06-12
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
-verification: unverified
-tags:
-  - ci-cd
-  - planning
-  - conventional-commits
-  - pre-commit
-  - definition-of-done
-  - validation-gate
-  - pr-policy
-  - graphql
+verification: verified-local
+tags: [planning, definition-of-done, convention-gate, pre-commit, commit-msg-hook, conventional-commits, graphql, required-ci-job, plan-verification, nogo-to-go, load-bearing-assumption]
 ---
 
-# Planning: Mechanize a Convention-Only Definition-of-Done Gate
+# Planning a Mechanized Definition-of-Done / Convention Gate
 
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-06-12 |
-| **Objective** | Produce a durable plan-time pattern for mechanizing a convention-only Definition-of-Done item — specifically, an automated conventional-commit gate (ProjectHephaestus issue #1209) — so that a human-enforced rule becomes machine-enforced. |
-| **Outcome** | Plan produced; NOT executed. The validator script, its unit test, the pre-commit hook, and the CI step do not yet exist. No CI run confirms the approach. |
-| **Verification** | unverified — this is a hypothesis until an implementation lands and CI confirms it. |
+| **Objective** | Plan a mechanized convention gate (commit-message convention) enforced locally (pre-commit `commit-msg` stage) AND in a REQUIRED CI job, for ProjectHephaestus issue #1209 |
+| **Outcome** | A v1.0.0 plan was NOGO'd as `unverified` (load-bearing assumptions not directly checked). Re-plan verified each assumption against the live repo + live GitHub GraphQL API and folded the evidence in → GO. verified-local. |
+| **Scope** | Plan-time verification of load-bearing assumptions; pre-commit commit-msg install mechanics; GraphQL commit.message availability; allow-list-vs-real-history scan |
 
 ## When to Use
 
-- You are PLANNING to convert a documented-but-unenforced convention (commit-message format, branch naming, file layout, header presence) into an automated gate.
-- You are deciding whether to author a brand-new CI workflow or extend an existing required job that already fetches the relevant data (e.g. PR commits, changed files).
-- You need to scope a new gate so a historical deviation already on `main` does not fail the gate retroactively.
-- You are about to implement a conventional-commit / commit-msg / GraphQL-`commit.message` gate and want the list of assumptions a reviewer should challenge first.
+- You are planning a hook + CI gate that enforces a project convention (commit-message format, file-naming, header presence) on NEW artifacts, not the whole history.
+- A reviewer NOGO'd your plan because it rests on an unverified external API field, hook-installation mechanism, or inferred allow-list — even though the design itself is sound.
+- You need to convert plan-time assumptions into directly-verified evidence to move a plan from NOGO to GO.
+- You are adding a `commit-msg`-stage pre-commit hook and it never seems to run.
+- You are extending an existing GitHub GraphQL query block to add `commit.message` and want to confirm it is actually returned.
+- You are about to hard-fail on an allow-list (e.g. conventional-commit types) and need to know whether real history already conforms.
 
 ## Verified Workflow
 
-> **Warning:** This workflow has not been validated end-to-end. It is a *proposed* workflow (verification: unverified) — the validator section heading is "Verified Workflow" but the plan was never executed. Treat every step below as a hypothesis until CI confirms.
+**Verified locally only — CI validation of the implementation PR is pending.** The verification commands below were RUN against the live ProjectHephaestus repo and the live GitHub GraphQL API; the eventual implementation PR has NOT yet run through full CI. So: `verified-local`, not `verified-ci`.
+
+### The headline meta-lesson
+
+When a plan asserts a design that rests on **an external API field, a hook-installation mechanism, or an inferred allow-list**, a reviewer will (correctly) NOGO it until those are DIRECTLY verified — even when the design is sound. The fix on re-plan is NOT to change the design. It is to RUN the cheap verification for each assumption and fold the evidence into the plan. **Plan-time verification of load-bearing assumptions is what converts a NOGO to GO.** Each verification below costs seconds to minutes; skipping it costs a whole review round-trip.
 
 ### Quick Reference
 
 ```bash
-# 1. Find a proven sibling script to mirror (standalone stdlib + unit-tested core + thin main()).
-ls scripts/check_*.py
-sed -n '1,40p' scripts/check_security_policy_no_hardcoded_date.py
-sed -n '1,40p' tests/.../test_check_security_policy_no_hardcoded_date.py   # note the sys.path.insert(...,"scripts") import shim
+# 1. commit-msg-stage hooks are INERT without default_install_hook_types.
+#    Confirm whether the wiring exists; if absent, add it (cheaper than editing 3 doc files).
+grep -n "default_install_hook_types" .pre-commit-config.yaml || echo "ABSENT — add it"
+# Then add at top level of .pre-commit-config.yaml:
+#   default_install_hook_types: [pre-commit, commit-msg]
+# so the already-documented `pre-commit install` wires BOTH stages.
 
-# 2. Re-grep every line number you intend to cite — do NOT trust a plan's stale numbers.
-grep -n "pr-policy\|commit\|signature" .github/workflows/*_required.yml
-grep -n "Conventional" docs/DEFINITION_OF_DONE.md
+# 2. pre-commit run --all-files does NOT exercise commit-msg-stage hooks.
+#    Verify the hook through its REAL stage:
+pre-commit run <hook-id> --hook-stage commit-msg --commit-msg-filename /tmp/msg.txt
 
-# 3. Confirm the data the existing required job ALREADY fetches before adding a step to it.
-grep -n "message\|oid\|signature" .github/workflows/*_required.yml   # is commit.message actually queried?
+# 3. Confirm GraphQL commit.message is actually returned — run it against a REAL PR.
+gh api graphql -f query='
+  query($owner:String!,$name:String!,$num:Int!){
+    repository(owner:$owner,name:$name){
+      pullRequest(number:$num){
+        commits(first:100){nodes{commit{message}}}
+      }
+    }
+  }' -F owner=mvillmow -F name=ProjectHephaestus -F num=1233 \
+  --jq '.data.repository.pullRequest.commits.nodes[].commit.message | split("\n")[0]'
 
-# 4. Before shipping, scan open PRs + recent history for the allowed-types list you assumed.
-#    A wrong allowed-types list fails legitimate commits on day one.
-
-# 5. commit-msg hooks need an explicit install — default `pre-commit install` does NOT wire them.
-pre-commit install --hook-type commit-msg
-# NOTE: `pre-commit run --all-files` does NOT exercise commit-msg-stage hooks. Use stdin + pytest.
+# 4. An allow-list inferred from docs is NOT evidence. SCAN real history.
+git log origin/main -n 60 --format='%s' | \
+  grep -vE '^(feat|fix|docs|refactor|test|chore|ci|build|perf|style|revert)(\(.+\))?!?: ' || \
+  echo "zero violations in recent history"
 ```
 
-### Detailed Steps
+### Plan architecture (the design that survived review)
 
-1. **One validator, two call sites.** Write a single pure-stdlib validator function. Wire it into:
-   - a **local pre-commit hook** (catches the bad commit before push), AND
-   - an **existing REQUIRED CI job** (catches it in CI).
-   The CI half MUST live in a *required* job, not an advisory one. Project memory ("main-broken-by-nonrequired-precommit") records that advisory / non-required pre-commit checks let bad commits land on `main`.
+Keep these patterns — they were not the reason for the NOGO:
 
-2. **Extend an existing job, don't add a workflow.** If a required CI job already fetches the data you need (here, `pr-policy` already fetches every PR commit via GraphQL), add a new *step* there rather than authoring a new workflow file. Lower cost, keeps related policy co-located.
+- **One validator, two call sites.** A single pure `is_valid_subject(subject) -> (bool, reason)` function. The pre-commit hook calls it on the staged commit message; the CI job calls it on each new commit's subject. No duplicated rule logic.
+- **Extend an existing REQUIRED CI job, do not add a new workflow.** Adding a new workflow risks a non-required job that silently never blocks. Per the *main-broken-by-nonrequired-precommit* incident, the CI half of the gate MUST be a REQUIRED job, folded into the existing required lint/check job rather than a standalone advisory step.
+- **Mirror a proven sibling script.** Model the new validator and its CI invocation on an existing, already-passing convention-check in the repo rather than inventing a new shape.
+- **Scope the gate to NEW artifacts, not history.** Validate only the commits introduced by the PR (or the staged message locally) — never re-validate the full `main` history, which contains a known historical deviation.
+- **Empty-set passes.** Both halves must treat an empty/malformed fetch as PASS, not hard-fail, so a transient API hiccup can't block every PR.
 
-3. **Mirror a proven sibling verbatim.** Copy the shape of an existing, working script + test pair (here `scripts/check_security_policy_no_hardcoded_date.py` and its test): a standalone stdlib script, a unit-tested pure core function, a thin `main()`, and a test that imports via a `sys.path.insert(..., "scripts")` shim. Reusing a proven sibling shrinks the review surface.
+### The five load-bearing verifications (each was a prior RISK, now resolved)
 
-4. **Scope the gate to NEW artifacts, not history.** A historical deviation (e.g. commit `67079cc3` `[FIX]...`) must NOT make the gate fail retroactively. Gate only new PR commits, and reuse the repo's existing `dependabot[bot]` exemption idiom rather than inventing a new one.
+1. **commit-msg-stage hooks are inert without `default_install_hook_types`.** A hook declared `stages: [commit-msg]` does nothing under a plain `pre-commit install`, which wires only the pre-commit stage. Verified absent via `grep default_install_hook_types .pre-commit-config.yaml` → NONE. **Fix:** add top-level `default_install_hook_types: [pre-commit, commit-msg]` so the already-documented `pre-commit install` wires both stages — cheaper than editing install docs in three files (CONTRIBUTING / CLAUDE / README).
 
-5. **Unit-test the conventional-commit parser edge cases:**
-   - split on the FIRST colon only — `subject.split(":", 1)`;
-   - extract scope via `index("(")` / `rindex(")")` so nested parens survive (`feat(core(sub)):`);
-   - allow the trailing `!` breaking marker (`feat!:`, `feat(api)!:`);
-   - ignore `Merge` / `Revert` / `fixup!` / `squash!` machinery commits;
-   - reject the bracketed `[FIX]` form, unknown types, and empty description / scope / subject.
+2. **`pre-commit run --all-files` does NOT exercise commit-msg-stage hooks.** Using it as the "local gate works" proof is a verification gap a reviewer catches as a silent-failure (POLA) blocker. **Fix:** verify the hook through its real stage: `pre-commit run <hook-id> --hook-stage commit-msg --commit-msg-filename <file>`.
+
+3. **GraphQL `commit.message` availability confirmed by a live query, not assumed.** Verified by running the actual augmented query against a real PR (#1233): `.commit.message | split("\n")[0]` yields the subject line. **Lesson:** when extending an existing GraphQL block to add a field, run the augmented query against one real object before trusting it; add an empty-set-passes fallback so a malformed/empty fetch can't hard-fail the gate.
+
+4. **An inferred allow-list is not evidence — SCAN real history.** "Verify zero current violations before adding a hard-fail gate" must be an EXECUTED command, not a claim. Running the `ALLOWED_TYPES` scan over the last 60 `origin/main` subjects found exactly 1 violation — the already-known historical deviation — confirming recent practice conforms and the gate won't break legitimate work on day one.
+
+5. **Test names must match what they exercise.** A test called `..._multiple_colons` that uses a single-colon input is a TDD gap the reviewer will flag. Use the genuine edge-case input the advise findings named: `fix: url: handle https://...`.
+
+### Implementer handoff note
+
+Stale line numbers in a plan are a known liability. Cite them for orientation, but instruct the implementer to **re-grep before editing**, since concurrent merges shift them between plan-time and implement-time.
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
-| GraphQL `commit.message` reuse | Plan assumes the GitHub GraphQL `Commit.message` field returns the full message, with subject = `message.split("\n")[0]`. | UNVERIFIED — the existing `pr-policy` query selects only `oid` and `signature`; `message` was never queried or tested. Field name or newline handling may differ. | Confirm the exact field is queryable and returns what you expect BEFORE building parsing on top of it. |
-| `commit-msg` stage wiring | Plan assumes `stages: [commit-msg]` + `pass_filenames: true` passes the commit-message file path as the sole arg, and that `pre-commit install` wires the commit-msg hook type. | Default `pre-commit install` wires ONLY the pre-commit stage; commit-msg needs `pre-commit install --hook-type commit-msg`. The plan never added that install step — a real gap. | A commit-msg-stage hook is dead unless the install explicitly requests `--hook-type commit-msg`. Add that step. |
-| `pre-commit run --all-files` as proof | Plan's verification step ran `pre-commit run --all-files` to "prove" the new hook works. | That command does NOT execute commit-msg-stage hooks, so it proves nothing about the new hook. Only the stdin/`-` path and pytest give real coverage. | Verify a commit-msg hook via stdin (`echo "msg" \| hook -`) and unit tests, never via `--all-files`. |
-| Trusting cited line numbers | Plan cites `_required.yml:334/390/440` and `DEFINITION_OF_DONE.md:18`. | Concurrent merges shift line numbers; cited numbers go stale between plan and implementation. | The implementer must re-grep every anchor, not trust the plan's numbers. |
-| Hardcoded allowed-types list | Assumed `feat\|fix\|docs\|refactor\|test\|chore\|ci\|build\|perf\|style\|revert`, inferred from CLAUDE.md + observed history. | Not from an authoritative repo config. If real history uses other types, the gate fails legitimate commits on day one. The plan said "verify zero current violations" but never actually scanned open PRs. | Derive the allowed-types list from an authoritative source and scan ALL open PRs + recent history before enabling the gate. |
-| Nested-paren + breaking-marker combo | Parser uses `endswith((")", ")!"))` to detect scope-close, then strips the `!`. | The interaction between the nested-paren scope extraction and the `!`-strip is subtle and a likely bug source (e.g. `feat(core(sub))!:`). | Give the nested-paren + breaking-marker combination extra dedicated test cases; it is the most fragile branch. |
-
-Every row above is an **unverified assumption made during planning**, recorded honestly so a reviewer scrutinizes it before implementation. "Why It Failed" describes the *risk*, since none of these were directly proven.
+| --------- | ---------------- | --------------- | ---------------- |
+| Ship a sound design with its load-bearing assumptions only described, not verified | v1.0.0 plan asserted the commit-msg hook, the GraphQL `commit.message` field, and a conventional-commit allow-list as facts | Reviewer NOGO'd as `unverified` — a sound design resting on unchecked external-API / hook-install / allow-list assumptions is not a GO | Plan-time verification of load-bearing assumptions is what converts NOGO→GO. Don't change the design; RUN the cheap verification per assumption and fold the evidence into the plan. |
+| Rely on `pre-commit install` to wire the commit-msg hook | Declared the hook with `stages: [commit-msg]` and assumed the documented `pre-commit install` would activate it | A plain `pre-commit install` wires only the pre-commit stage; commit-msg-stage hooks are INERT without `default_install_hook_types`. Verified absent via grep → NONE | Add top-level `default_install_hook_types: [pre-commit, commit-msg]` to `.pre-commit-config.yaml` — cheaper than editing install docs in 3 files |
+| Prove the local gate with `pre-commit run --all-files` | Planned to demonstrate the hook works by running `pre-commit run --all-files` | `--all-files` does NOT exercise commit-msg-stage hooks — a silent-failure (POLA) gap the reviewer flags | Verify the hook through its real stage: `pre-commit run <hook-id> --hook-stage commit-msg --commit-msg-filename <file>` |
+| Assume GraphQL returns `commit.message` | Extended the existing GraphQL commits block to read `commit.message` without running it | An added field on an existing query is unverified until a real object proves it; an empty/malformed fetch could hard-fail every PR | Run the augmented query against one real PR (#1233 → `.commit.message \| split("\n")[0]` = subject) and add an empty-set-passes fallback |
+| Infer the allowed commit types from docs and hard-fail on them | Built the `ALLOWED_TYPES` allow-list from CONTRIBUTING prose and planned a hard-fail gate | A docs-inferred allow-list is not evidence that real history conforms; a day-one hard-fail could break legitimate work | SCAN real history: the `ALLOWED_TYPES` scan over the last 60 origin/main subjects found exactly 1 violation (the known historical deviation) — recent practice conforms |
+| Name a test for the behavior it doesn't exercise | Wrote `test_..._multiple_colons` using a single-colon input | Reviewer flags it as a TDD gap — the name claims an edge case the input doesn't hit | Use the genuine edge-case input the advise findings named: `fix: url: handle https://...` |
+| Hardcode the plan's grep line numbers as edit targets | Cited exact line numbers in the plan and pointed the implementer straight at them | Concurrent merges shift line numbers between plan-time and implement-time | Cite line numbers for orientation but instruct the implementer to re-grep before editing |
+| Plan a standalone advisory CI workflow for the convention check | Considered a new, separate workflow for the CI half of the gate | A non-required job silently never blocks (the main-broken-by-nonrequired-precommit incident) | The CI half MUST be a REQUIRED job — fold it into the existing required lint/check job, not a new advisory workflow |
 
 ## Results & Parameters
 
-**Pattern summary (copy-paste checklist for the implementer):**
+### Verification checklist before declaring a convention-gate plan GO
 
-```text
-[ ] ONE pure-stdlib validator function; thin main(); unit-tested core.
-[ ] Wired into a LOCAL pre-commit hook (stages: [commit-msg], pass_filenames: true).
-[ ] Wired into an EXISTING REQUIRED CI job (pr-policy) as a new step — NOT a new workflow.
-[ ] CI half is in a REQUIRED job (advisory checks let bad commits reach main).
-[ ] Mirrors scripts/check_security_policy_no_hardcoded_date.py + its test (sys.path.insert shim).
-[ ] Gates NEW PR commits only; reuses the dependabot[bot] exemption; no retroactive failures.
-[ ] Added `pre-commit install --hook-type commit-msg` to setup docs (default install skips it).
-[ ] Verified GraphQL commit.message is actually queryable + returns full message.
-[ ] Re-grepped every cited line number (do not trust plan numbers).
-[ ] Allowed-types list derived from authoritative config; scanned all open PRs for violations.
+```yaml
+load_bearing_assumptions_verified:
+  hook_install_mechanism:
+    - grep_default_install_hook_types: executed   # not assumed
+    - hook_tested_via_real_stage: true            # --hook-stage commit-msg
+  external_api_field:
+    - graphql_field_run_against_real_object: true # PR #1233
+    - empty_set_passes_fallback: true
+  inferred_allow_list:
+    - scanned_real_history: true                  # last 60 origin/main subjects
+    - current_violation_count_known: true         # = 1 (historical deviation)
+  tdd:
+    - test_names_match_inputs: true
+  ci_half:
+    - is_a_required_job: true                     # not advisory/non-required
 ```
 
-**Conventional-commit parser invariants to assert in tests:**
+### Design invariants to preserve
 
-```text
-"feat: x"            -> OK
-"feat(api): x"       -> OK
-"feat!: x"           -> OK (breaking marker)
-"feat(api)!: x"      -> OK (scope + breaking)
-"feat(core(sub)): x" -> OK (nested paren via index("(")/rindex(")"))
-"[FIX] x"            -> REJECT (bracketed form)
-"frobnicate: x"      -> REJECT (unknown type)
-"feat: "             -> REJECT (empty description)
-"feat(): x"          -> REJECT (empty scope)
-"Merge branch ..."   -> IGNORE  (machinery)
-"Revert ..."         -> IGNORE
-"fixup! ..."         -> IGNORE
-"squash! ..."        -> IGNORE
-```
+| Invariant | Why |
+| ----------- | ----- |
+| One validator, two call sites | DRY — local hook + CI job share `is_valid_subject` |
+| Extend existing REQUIRED CI job | Non-required jobs never block (main-broken-by-nonrequired-precommit) |
+| Mirror a proven sibling script | Reuse a passing shape rather than invent one |
+| Scope gate to NEW artifacts | History contains a known deviation; don't re-validate it |
+| Empty-set passes | Transient/malformed fetch must not hard-fail every PR |
 
-**Source context:** plan produced for ProjectHephaestus issue #1209 (mechanize the last convention-only Definition-of-Done item). Verification level `unverified` — script, test, hook, and CI step do not yet exist; no CI run confirms the approach.
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectHephaestus | Issue #1209 re-plan, 2026-06-12 | NOGO→GO after directly verifying commit-msg install mechanics, GraphQL `commit.message` (PR #1233), and allow-list-vs-real-history (1 violation in last 60 subjects) |
+
+## References
+
+- ProjectHephaestus issue #1209 (mechanized DoD / convention gate)
+- Related learning: main-broken-by-nonrequired-precommit-and-strict-false (the CI half must be a REQUIRED job)
