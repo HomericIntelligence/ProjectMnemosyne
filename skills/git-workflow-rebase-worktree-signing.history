@@ -1,5 +1,35 @@
 # git-workflow-rebase-worktree-signing — History
 
+## v1.2.0 (2026-06-12) — Add stale-base implementation branch detection (D4)
+
+**Changed by:** ProjectHephaestus issue #1182 / PR #1259 (stale-base rebase before implementing)
+**Verification:** verified-local
+
+### What changed
+
+- Expanded `description` with trigger (13): an approved plan cites files / line ranges / job names that do not exist on the branch — suspect a stale base, rebase onto origin/main before editing
+- Added new "When to Use" bullet for the stale-base implementation-branch case
+- Added new section D4: "Stale-base implementation branch — plan cites code the branch doesn't have" with file-state-mismatch detection (`wc -l` / `grep` vs the plan's citations), the `git merge-base --is-ancestor <main-sha> HEAD` confirmation, the rebase-before-editing fix, the `--force-with-lease` push rationale, and a decision table separating stale base vs already-resolved vs genuinely-wrong plan
+- Added a Quick Reference snippet for the stale-base detection + rebase flow
+- Added 1 Failed Attempts row: concluding "the plan is wrong" when the plan cited a non-existent job, when the real cause was a branch base one commit behind origin/main
+- Added a Verified On row for ProjectHephaestus #1182 / PR #1259
+
+### Why
+
+While implementing the approved plan for issue #1182 (add `if: github.event_name != 'pull_request'`
+to the `pip-audit` and `sast` jobs in `security.yml`, deliberately leaving `license-scan`
+untouched), the cited `license-scan` job at `:97-137` did not exist: the branch file was 96
+lines, `grep -n license-scan` returned nothing, and `scripts/check_license_compatibility.py`
+was missing. Root cause: the branch HEAD `5e8fb2ee` (#1248) was exactly one commit behind
+`origin/main` `dd2552e4` (#1252 — the PR that ADDED `license-scan` and the script). The plan
+was correct; the branch base was stale. `git rebase origin/main` brought the file to 137
+lines with the job at `:97`, after which the two-line edits applied cleanly, were committed
+signed, and pushed with `--force-with-lease` (history had been rewritten). This is distinct
+from the `stale-plan-already-resolved` skill (where the fix already merged and you close the
+issue) — here the fix had NOT yet reached the branch, so the action is rebase-forward, not close.
+
+---
+
 ## v1.1.0 (2026-05-28) — Add stale staged/unstaged changes pattern for already-rebased worktrees
 
 **Changed by:** ProjectHephaestus PR #639 (PlannerHost Protocol rebase + fix)

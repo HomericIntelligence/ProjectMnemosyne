@@ -1,9 +1,9 @@
 ---
 name: git-workflow-rebase-worktree-signing
-description: "Canonical git-workflow guide covering rebase conflict resolution, worktree lifecycle, GPG signing pitfalls, submodule coordination, and branch-state recovery. Use when: (1) rebasing a feature branch with non-trivial conflicts, (2) creating/cleaning git worktrees, (3) a commit is rejected because GPG signing produced an unknown key, (4) reconciling submodule state across branches, (5) recovering a branch that's in a detached/dirty state, (6) batch-rebasing many sibling branches in parallel, (7) salvaging commits from a rejected PR via cherry-pick, (8) recovering commits accidentally made on local main, (9) resolving stash-pop conflicts blocked by Safety Net, (10) cleaning up stale worktrees/branches/stashes with a preservation bias, (11) dispatching agents into submodule worktrees that hit transient permission errors, (12) finding stale staged or unstaged changes in a worktree that has already been rebased onto main."
+description: "Canonical git-workflow guide covering rebase conflict resolution, worktree lifecycle, GPG signing pitfalls, submodule coordination, and branch-state recovery. Use when: (1) rebasing a feature branch with non-trivial conflicts, (2) creating/cleaning git worktrees, (3) a commit is rejected because GPG signing produced an unknown key, (4) reconciling submodule state across branches, (5) recovering a branch that's in a detached/dirty state, (6) batch-rebasing many sibling branches in parallel, (7) salvaging commits from a rejected PR via cherry-pick, (8) recovering commits accidentally made on local main, (9) resolving stash-pop conflicts blocked by Safety Net, (10) cleaning up stale worktrees/branches/stashes with a preservation bias, (11) dispatching agents into submodule worktrees that hit transient permission errors, (12) finding stale staged or unstaged changes in a worktree that has already been rebased onto main, (13) an approved implementation plan cites files / line ranges / job names that do not exist on the branch — suspect a stale base, not a wrong plan, and rebase onto origin/main before editing."
 category: tooling
-date: 2026-05-28
-version: "1.1.0"
+date: 2026-06-12
+version: "1.2.0"
 user-invocable: false
 verification: verified-local
 history: git-workflow-rebase-worktree-signing.history
@@ -35,6 +35,7 @@ tags: [merged, git, rebase, worktree, gpg-signing, submodule, branch-state, cher
 - Cleaning up stale worktrees / branches / stashes with a preservation bias
 - Sub-agents inside submodule worktrees hitting transient "permission denied" on git commands
 - A worktree already rebased onto main has stale staged or unstaged changes that weren't committed (leftover partial work from a prior session)
+- An approved implementation plan cites specific files, line ranges, or job names that do NOT exist on the branch — the branch base is stale (one or more `main` commits behind), so the file the plan described has not landed on the branch yet
 
 ## Verified Workflow
 
@@ -70,6 +71,15 @@ git worktree prune
 # --- Stash-pop conflict (Safety Net blocks checkout -- and stash drop) ---
 grep -n "<<<<<<\|======\|>>>>>>" <file>   # locate all conflict markers
 git add <file>   # after editing markers out
+
+# --- Stale-base implementation branch (plan cites code the branch lacks) ---
+wc -l <cited-file>                          # mismatch vs plan's cited line range
+grep -n "<cited-job-or-symbol>" <cited-file>  # absent → suspect stale base
+git fetch origin main
+git merge-base --is-ancestor <main-sha> HEAD || echo "STALE BASE — rebase first"
+git rebase origin/main                      # bring the cited code onto the branch
+# ...apply plan edits, commit signed...
+git push --force-with-lease origin <branch> # rebase rewrote history
 
 # --- Worktree / branch cleanup (preservation-biased) ---
 git cherry origin/main <branch>            # '-' = safe; '+' needs investigation
@@ -377,6 +387,61 @@ git restore <file>             # also discard from working tree if it's still di
 # Apply only the valid fix (e.g. RUF059 variable rename) as a new file edit
 ```
 
+#### D4. Stale-base implementation branch — plan cites code the branch doesn't have
+
+When implementing an approved plan, the plan may reference files, line ranges, or job
+names that simply **are not on the branch**. The instinct is "the plan is wrong" — but the
+far more common cause is a **stale base**: the plan was written against `main`, but the
+implementation branch was cut from a commit *before* the PR that added the cited code landed.
+The fix is not to rewrite the plan — it is to rebase the branch forward, then implement.
+
+**Detection — compare the plan's citations to the on-disk reality:**
+
+```bash
+# Plan cites e.g. "license-scan job at security.yml:97-137"
+wc -l .github/workflows/security.yml         # 96 lines — but plan cites :97-137 → impossible
+grep -n "license-scan" .github/workflows/security.yml   # NONE → cited job absent
+ls scripts/check_license_compatibility.py    # MISSING → cited script absent
+```
+
+When the cited anchors are missing, this is NOT the `stale-plan-already-resolved` case
+(where the fix already merged and you close the issue). Here the fix has NOT yet reached the
+branch — confirm the branch base is behind the `main` commit that introduced the cited code:
+
+```bash
+# <main-sha> = the commit (from git log on origin/main) that ADDED the cited file/job
+git fetch origin main
+git merge-base --is-ancestor <main-sha> HEAD && echo "ancestor (up to date)" || echo "NOT ancestor — STALE BASE"
+git log --oneline HEAD..origin/main          # lists the commits the branch is missing
+```
+
+`NOT ancestor` confirms the branch is missing the commit the plan depends on.
+
+**Fix — rebase onto origin/main BEFORE editing, then implement:**
+
+```bash
+git fetch origin main
+git rebase origin/main                        # expect a clean rebase if branch is just behind
+# Re-verify the plan's anchors now exist:
+wc -l .github/workflows/security.yml          # now 137 lines
+grep -n "license-scan" .github/workflows/security.yml   # now appears at :97
+ls scripts/check_license_compatibility.py     # now present
+# NOW apply the plan's edits, commit signed, then:
+git push --force-with-lease origin <branch>   # rebase rewrote history → plain push is rejected
+```
+
+**Why `--force-with-lease`:** the rebase rewrote the branch's commit SHAs, so the local
+branch diverges from its old remote tip. A plain `git push` is rejected as non-fast-forward;
+`--force-with-lease` updates the remote safely (refuses if someone else advanced it).
+
+**Decision rule — stale base vs wrong plan vs already-resolved:**
+
+| Symptom | Diagnosis | Action |
+| --------- | ----------- | -------- |
+| Cited anchor absent AND `merge-base --is-ancestor <main-sha> HEAD` → NOT ancestor | Stale base — branch is behind the commit that added the code | Rebase onto origin/main, then implement (this section) |
+| Cited anchor absent AND the change already on the branch / on main via a broader fix | Plan already resolved | Close issue / comment-only PR (see `stale-plan-already-resolved` skill) |
+| Cited anchor absent AND it never existed on any branch | Genuinely wrong plan | Escalate / rewrite the plan |
+
 ### E. Cherry-Pick Decision Procedure
 
 When salvaging commits from a rejected PR, a commit's subject line can disguise the fact that it only operates on dropped code.
@@ -549,6 +614,7 @@ Six-test checklist for any SKILL.md transformer: fixture exists, initial conditi
 | Mass rebase of all "ahead" branches without cherry check | Rebased all 57 "ahead N" branches | All 57 were squash-merged; cherry=0 for every branch — rebasing produced empty/reword conflicts | Always run `git cherry origin/main <branch>` first; "ahead N" in `git branch -vv` is the squash-merge artifact |
 | Calling `gh pr checkout <N>` on a branch already checked out in a worktree | `gh pr checkout 639` in the parent repo while the worktree at `.claude/worktrees/agent-*/` was already on that branch | `fatal: '620-auto-impl' is already used by worktree at ...` — `gh pr checkout` creates/updates local branches and conflicts with the existing worktree | When working inside a dedicated worktree for a branch, skip `gh pr checkout` — the worktree IS already on that branch. Just verify with `git branch --show-current`. |
 | Committing stale staged changes without inspecting `git diff --cached` first | Found staged changes in worktree, assumed they were the intended fix, committed without reading the diff | Staged diff was a partial REVERT (removed Protocol class, replaced with direct `Planner` reference) — the opposite of the PR's purpose | Always `git diff --cached` before staging more or committing in a worktree you didn't create fresh. A prior agent may have staged partial work. Unstage with `git restore --staged <file>` if the staged diff undoes the PR's intent. |
+| Concluding "the plan is wrong" when it cited a non-existent job | Plan said to add `if:` to jobs and preserve `license-scan` at `security.yml:97-137`, but the branch file was 96 lines, `grep -n license-scan` returned nothing, and `scripts/check_license_compatibility.py` was missing | The branch HEAD (`5e8fb2ee`, #1248) was exactly one commit behind `origin/main` (`dd2552e4`, #1252 — the PR that ADDED `license-scan` + the script). The plan was correct; the branch base was stale | When a plan cites files/line-ranges/job-names absent on the branch, run `git merge-base --is-ancestor <main-sha> HEAD`. "NOT ancestor" = stale base. `git fetch origin main && git rebase origin/main` brought the file to 137 lines and the job to `:97`; then implement and push `--force-with-lease`. This is NOT the already-resolved case (don't close the issue) |
 
 ## Results & Parameters
 
@@ -604,3 +670,4 @@ rebase_time: ~2 minutes
 | ProjectOdyssey | Rejected PR `#5382`; cherry-pick decision saved PR `#5407` | Cherry-pick no-op detection |
 | ProjectMnemosyne | 14 PRs auto-merged + worktree migration PR `#991` | Clone-to-worktree migration |
 | ProjectOdyssey | Wave D/E bulk issue fixing — 26 PRs, 2026-04-12 | Plan-mode avoidance; Haiku model |
+| ProjectHephaestus | Issue #1182 / PR #1259 — plan cited `license-scan` at `security.yml:97-137` but branch (`5e8fb2ee`, one commit behind `dd2552e4`/#1252) had a 96-line file with no such job; rebased onto origin/main, then implemented | Stale-base implementation branch detection (section D4) |
