@@ -1,9 +1,9 @@
 ---
 name: parallel-pr-worktree-workflow
-description: "Use when: (1) launching 2+ parallel rebase agents that need isolated git state to avoid branch collision, (2) implementing 5+ independent fixes in parallel PRs using git worktrees, (3) bulk-merging skill PRs with CI fixes and conflict resolution, (4) batching 10+ PRs across parallel sub-agents for maximum throughput, (5) launching >=2 concurrent sub-agents that each commit/push to the same git repo, (6) sub-agents report file bleed-over or unexpected `git checkout` reverts mid-task, (7) RESCUE pattern when parallel dispatch across distinct branches has already produced cross-contaminated commits — consolidate worker PRs into ONE branch via cherry-pick and close individual PRs, (8) doing ANY multi-fix work in a shared checkout that a concurrent foreign session/automation may also touch — use dedicated worktrees from the start so a foreign session cannot move your HEAD/branch."
+description: "Use when: (1) launching 2+ parallel rebase agents that need isolated git state to avoid branch collision, (2) implementing 5+ independent fixes in parallel PRs using git worktrees, (3) bulk-merging skill PRs with CI fixes and conflict resolution, (4) batching 10+ PRs across parallel sub-agents for maximum throughput, (5) launching >=2 concurrent sub-agents that each commit/push to the same git repo, (6) sub-agents report file bleed-over or unexpected `git checkout` reverts mid-task, (7) RESCUE pattern when parallel dispatch across distinct branches has already produced cross-contaminated commits — consolidate worker PRs into ONE branch via cherry-pick and close individual PRs, (8) doing ANY multi-fix work in a shared checkout that a concurrent foreign session/automation may also touch — use dedicated worktrees from the start so a foreign session cannot move your HEAD/branch, (9) arming auto-merge on a STACKED PR (base is another open/feature branch) — retarget to main BEFORE arming or it squash-merges into the intermediate base and can ORPHAN the change, (10) recovering an orphaned stacked merge (PR state=MERGED but content stranded on a dead intermediate branch) via cherry-pick onto a fresh main branch."
 category: ci-cd
-date: 2026-06-13
-version: "1.3.0"
+date: 2026-06-14
+version: "1.4.0"
 user-invocable: false
 verification: verified-ci
 history: parallel-pr-worktree-workflow.history
@@ -33,6 +33,7 @@ when a worktree is shared or dirty), `git-worktree-parallel-execution-lifecycle`
 - Main conversation needs to commit while background agents are running
 - Issues are independent (not interdependent) and benefit from parallel development
 - **(v1.3.0, verified-local)** ANY other session/automation may touch the shared checkout — do ALL multi-fix work in dedicated worktrees from the start, never in the primary checkout. A concurrent foreign session can move your branch and commit under you (see Phase 3c)
+- **(v1.4.0, verified-local)** Arming auto-merge on a STACKED PR (one whose base is another open/feature branch). RETARGET to `main` first — arming a still-stacked PR squash-merges it into the intermediate base, NOT main, and can ORPHAN the change if that base is later closed unmerged (see Phase 3d)
 
 **Do NOT use when:**
 - Issues are interdependent (use sequential PRs from `batch-pr-rebase-conflict-resolution-workflow`)
@@ -200,6 +201,86 @@ git add -A && git commit -S -m "..."
 
 The patch is the safety net; combined with the stash, nothing is lost. Leave the stash undropped
 (see Safety-Net Friction below) rather than forcing `git stash drop`.
+
+### Phase 3d (v1.4.0, verified-local): NEVER Arm Auto-Merge on a Still-Stacked PR — It Merges Into the Intermediate Base and Can ORPHAN the Change
+
+**The hazard:** when a PR's base is another open/feature branch (a stacked PR) and you arm
+`gh pr merge --auto --squash`, GitHub fires the merge against that INTERMEDIATE base the moment
+it is eligible — squashing the change onto the intermediate branch, NOT `main`. If that
+intermediate base is later closed UNMERGED, the change is stranded on a dead branch (the PR shows
+`state=MERGED` but its content never reaches `main`). Observed this session (ProjectHephaestus
+/myrmidon-swarm driving a stack of PRs): two PRs (RC2, RC6) were armed while still based on
+intermediate branches. RC6 was harmless — its base was another open PR that itself merges to main,
+so RC6 folded into it. RC2's base (`chore-ruff-format-drift`) belonged to a CLOSED PR, so RC2's
+change merged onto a dead branch and was ORPHANED from main.
+
+**Critical timing facts about GitHub stacked-PR retargeting:**
+
+- GitHub does NOT auto-retarget a stacked PR to `main` until its base PR actually **MERGES**.
+- If the base PR is **CLOSED (not merged)**, the dependent is STRANDED — it is not auto-retargeted.
+- Once a PR has merged into a now-dead base, `gh pr edit N --base main` FAILS with
+  `Cannot change the base branch of a closed pull request`. There is no in-place fix; you must
+  recover the commit (below).
+
+**Prevention — before arming auto-merge on any stacked PR:**
+
+```bash
+# 1. Confirm the base content is ALREADY on main (the base PR merged, OR the base is a no-op
+#    already upstream — e.g. rebase silently drops it as "patch contents already upstream").
+# 2. Retarget the dependent to main FIRST:
+gh pr edit N --base main
+# 3. Re-rebase the dependent onto main to drop the now-redundant base commit and surface only
+#    the real change:
+cd /tmp/<repo-stem>-wt-<task> && git rebase origin/main && git push --force-with-lease
+# 4. Only AFTER it is mergeable against main, arm auto-merge:
+gh pr merge N --auto --squash
+```
+
+**NEVER arm a PR whose base is an intermediate branch you intend to close/abandon.** Order
+matters for a fan-out: retarget + rebase ALL dependents to main first, arm LAST.
+
+#### Recovering an ORPHANED stacked merge (v1.4.0, verified-local)
+
+**Detect:**
+
+```bash
+gh pr view N --json state,baseRefName,mergedAt
+# state=MERGED but baseRefName is an intermediate/closed branch == orphaned.
+```
+
+The change lives as a commit on that intermediate branch:
+
+```bash
+git log origin/main..origin/<intermediate-branch> --oneline
+```
+
+**Recover** by cherry-picking that commit onto a fresh `main` branch and opening a NEW PR to main:
+
+```bash
+git worktree add /tmp/recover origin/main -b <name>-v2
+cd /tmp/recover
+git cherry-pick -S <orphaned-sha>          # -S keeps it signed
+git log origin/main..HEAD --oneline        # verify it is NOT a no-op
+# run the affected tests, then push + open a NEW PR to main (--base main)
+```
+
+This restores the lost change with a clean lineage on `main`.
+
+#### Prevention for a fan-out of stacked PRs (v1.4.0, verified-local)
+
+When a base branch becomes a **NO-OP** (its content already merged to main via a sibling — confirm
+via a rebase that silently drops it with "patch contents already upstream"):
+
+1. CLOSE that base PR.
+2. RETARGET all its dependents to `main` BEFORE arming any of them (`gh pr edit N --base main`).
+3. Re-rebase each dependent onto `main` to drop the redundant base commit and surface only the
+   real change.
+4. Only arm (`--auto --squash`) after each is MERGEABLE against main.
+
+Order matters: retarget + rebase FIRST, arm LAST. See also
+`github-auto-merge-ci-gating-merge-method` (the arming/gating companion) and
+`pr-rebase-conflict-resolution-patterns` (the rebase silent-drop / superseded-PR detection used to
+find no-op bases).
 
 ### Phase 4: Agent Isolation for Parallel Rebase
 
@@ -638,6 +719,8 @@ gh issue close <issue-number> --comment "Fixed in PR #<number>"
 | Trying to salvage 8 cross-contaminated worker PRs by force-pushing each branch separately (ProjectOdyssey #5363) | After parallel haiku/sonnet swarm contaminated each other's branches via shared parent `.git/`, attempted per-branch cleanup with selective `git reset` and force-push | Commits were tangled across branches — fixing one branch broke another; cleanup was O(N^2) | Consolidate ALL worker commits into ONE branch via cherry-pick (Phase 10b), open a single PR with multiple `Closes #N` lines, and close worker PRs with a reference comment |
 | Implement multi-fix work directly in the shared main checkout (ProjectHephaestus, 2026-06-13, verified-local) | Made fixes in the primary repo checkout instead of a worktree while a separate automation/agent session was active in the same repo | The concurrent foreign session committed and switched the branch out from under the work — staged changes landed on the wrong branch and a foreign commit appeared (the other session opened its own PR) | Always use a dedicated worktree per fix from the start; the worktree's independent HEAD/index cannot be moved by a foreign session. Recover via `git diff --cached > patch` + stash + fresh worktree + `git apply` (Phase 3c) |
 | Branch all N fixes off main when they share a common blocker (ProjectHephaestus, 2026-06-13, verified-local) | Created all N fix worktrees off `main` when every fix needed the same prerequisite (a repo-wide format-drift fix) | Every commit was blocked by the unfixed shared prerequisite — pre-commit reformatted untouched files and failed each commit | Land the prerequisite as its OWN PR first, branch each fix off the prereq branch, target each PR with `--base <prereq-branch>`; GitHub auto-retargets to main once the prereq merges (Phase 3b) |
+| Arm auto-merge on a stacked PR still based on an intermediate branch (ProjectHephaestus, 2026-06-14, verified-local) | Ran `gh pr merge --auto --squash` on a PR whose base was still an intermediate feature branch (`chore-ruff-format-drift`) rather than `main` | GitHub fired the merge against the INTERMEDIATE base the moment it was eligible — squashed the change onto the intermediate branch; that base belonged to a CLOSED PR, so the change was ORPHANED from main (PR showed `state=MERGED` but content was on a dead branch) | Retarget the dependent to `main` and confirm the base content is ALREADY on main BEFORE arming (`gh pr edit N --base main`, rebase onto main, THEN `--auto --squash`). Never arm a PR whose base you intend to close/abandon (Phase 3d) |
+| Assume GitHub auto-retargets a stacked PR to main when its base closes (ProjectHephaestus, 2026-06-14, verified-local) | Expected the dependent PR to retarget to `main` automatically once its base branch's PR was closed | GitHub only auto-retargets when the base PR actually MERGES; a CLOSED (unmerged) base STRANDS the dependent, and after it merges into the dead base `gh pr edit --base main` fails with "Cannot change the base branch of a closed pull request" | Retarget dependents to `main` manually BEFORE the base is closed; if already orphaned, recover by cherry-picking the orphaned SHA onto a fresh main branch and opening a NEW PR (Phase 3d recovery) |
 
 ## Results & Parameters
 
@@ -731,3 +814,4 @@ executor: haiku      # Simple rebase, pre-commit fixes
 | HomericIntelligence/ProjectArgus | Atlas v0.2.1 patch series; 17 PRs landed across 6 waves (PRs #463-#474). Wave-1 used a shared tree and hit working-tree-revert bleed-over; waves 2-6 used per-sub-agent `/tmp/<repo>-wt-<task>` worktrees with zero state interference. 1 mid-flight conflict caught via `gh pr view --json mergeable`; 1 false "auto-merge armed" report caught the same way (rebase forbidden, switched to `--squash`). | Sub-agent PR isolation amendment (v1.1.0) |
 | ProjectOdyssey | Phase G EASY-tier 8-issue swarm consolidation, PR #5363 (2026-05-09). Eight cross-contaminated worker PRs collapsed into one consolidation branch via cherry-pick; individual worker PRs closed-not-merged; 67/68 substantive checks green. | Phase 10b RESCUE pattern (v1.2.0) |
 | ProjectHephaestus | output.log root-cause fixes, 2026-06-13 (verified-local). 6 root-cause fix PRs shipped as a stack — a shared format-drift prerequisite landed first, 5 independent fixes dispatched to 5 parallel sub-agents in dedicated worktrees branched off the prereq (one stacked on another fix). Surfaced a concurrent foreign-session hijack of the shared main checkout (recovered via patch-export + fresh worktree) and CC Safety-Net friction on `git checkout --` / `git branch -D` / `git stash drop`. Zero cross-contamination across the 5 worktree agents. | Phase 3b/3c + Dispatch Hygiene + Safety-Net Friction (v1.3.0) |
+| ProjectHephaestus | /myrmidon-swarm driving a stack of PRs to merge, 2026-06-14 (verified-local). Two PRs (RC2, RC6) were armed for auto-merge while still based on intermediate branches. They squash-merged into those intermediate bases, NOT main. RC6 folded harmlessly into an open base PR; RC2's base (`chore-ruff-format-drift`) was a CLOSED PR, so RC2's change was ORPHANED from main (`state=MERGED`, content on a dead branch). Recovered RC2 by cherry-picking the orphaned SHA onto a fresh main branch (`git cherry-pick -S`) and opening a NEW PR to main. Confirmed GitHub only auto-retargets stacked PRs when the base MERGES, not when it closes unmerged. | Phase 3d stacked-PR auto-merge hazard + orphan recovery (v1.4.0) |
