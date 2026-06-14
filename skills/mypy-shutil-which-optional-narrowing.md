@@ -17,7 +17,7 @@ tags: []
 | ------- | ------- |
 | **Date** | 2026-06-11 |
 | **Category** | ci-cd |
-| **Objective** | Fix a `[list-item]` / `[arg-type]` mypy error where a `shutil.which()` result remains `str | None` after a `pytest.skip()` guard, failing both the `lint` and `pre-commit` required CI checks |
+| **Objective** | Fix a `[list-item]` / `[arg-type]` mypy error where a `shutil.which()` result remains `str \| None` after a `pytest.skip()` guard, failing both the `lint` and `pre-commit` required CI checks |
 | **Outcome** | Added a single `assert binary is not None` after the skip guard to narrow `Optional[str]` → `str`; mypy clean (314 source files), all pre-commit hooks pass, full suite green (3516 passed, 18 skipped, 84.93% coverage) |
 | **Verification** | verified-local — confirmed via `pixi run --environment lint mypy`, `pre-commit run --all-files`, and the full pytest suite locally |
 | **Toolchain** | mypy, pytest, pre-commit, pixi |
@@ -94,7 +94,7 @@ pre-commit run --all-files            # -> Mypy Type Check Python ... Passed
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| 1 | Relied on the `if binary is None: pytest.skip(...)` guard alone to narrow `binary` to `str` | mypy does not treat `pytest.skip()` as `NoReturn`, so it never narrows the post-guard type — `binary` stays `str | None` | A runtime-raising helper is not a type-checker `NoReturn` unless declared as such; mypy needs an explicit narrowing statement |
+| 1 | Relied on the `if binary is None: pytest.skip(...)` guard alone to narrow `binary` to `str` | mypy does not treat `pytest.skip()` as `NoReturn`, so it never narrows the post-guard type — `binary` stays `str \| None` | A runtime-raising helper is not a type-checker `NoReturn` unless declared as such; mypy needs an explicit narrowing statement |
 | 2 | Adding `# type: ignore[list-item]` at the call site | The repo's `forbid-suppressions` gate rejects inline ignores, and it hides the genuine `Optional` rather than resolving it | Suppression masks the real defect and is blocked by policy; narrow the type instead of silencing the checker |
 | 3 | Fixed only the `lint` check and assumed `pre-commit` was a separate, still-failing problem | Both checks run the **same** mypy invocation over the same single error; the one fix cleared both simultaneously | When one identical mypy error fails both `lint` and `pre-commit`, treat it as one fix, not two |
 | 4 | Considered `raise pytest.skip.Exception(...)` or `assert binary, "..."` as the narrowing form | Both type-check correctly, but are heavier / less explicit than the intent of "this is not None here" | A plain `assert binary is not None` is the minimal, intent-revealing narrowing; prefer it over restructuring |
