@@ -2,6 +2,28 @@
 
 # gha-required-checks-branch-protection — History
 
+## v1.4.0 (2026-06-14)
+
+**Changed by:** ProjectHephaestus issue #1338 / PR #1343 — verified _unwired_jobs helper pattern
+**Verification:** verified-local (6/6 tests pass; CI pending on PR #1343)
+
+### What changed
+
+- Upgraded Section F verification level from "unverified / planning-phase hypothesis" to "verified-local" after successful implementation in PR #1343
+- Added implementation details: leaf module placement (`hephaestus/ci/required_checks_gate.py`), `GATE_JOB` constant export, positive-path test signature change (`jobs` → `workflow` fixture), `__init__.py` not updated (private helper)
+- Added new Failed Attempts row: passing `jobs` dict instead of full `wf` dict to `_unwired_jobs` causes `KeyError: 'jobs'`
+- Added Verified On row for ProjectHephaestus #1338/#1343
+
+### Why
+
+Section F was captured in v1.3.0 as a "planning-phase hypothesis" from the NOGO review on issue #1315. Issue #1338 required implementing the pattern end-to-end. All 6 guard tests pass locally. The implementation confirmed three non-obvious details: (1) leaf module avoids circular imports, (2) helper takes the full `wf` document not just `jobs`, requiring the positive-path test to switch fixtures, (3) the private underscore-prefix helper is not re-exported in `__init__.py`.
+
+### Previous version (v1.3.0) snapshot
+
+[See v1.3.0 entry below]
+
+---
+
 ## v1.3.0 (2026-06-13)
 
 Documents guard-test negative-path pattern, job-key vs context-name disambiguation,

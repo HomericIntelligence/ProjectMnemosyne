@@ -1,9 +1,9 @@
 ---
 name: gha-required-checks-branch-protection
-description: "Use when: (1) PRs are permanently BLOCKED because a required status-check context is a job gated by if: github.event_name != 'pull_request' (skipped != satisfied), (2) consolidating duplicate CI jobs into a reusable workflow so _required.yml is a thin aggregator, (3) validating GitHub branch protection API responses and writing synthetic tests for bash enforcement scripts, (4) a summary aggregator job pattern is needed to replace N individual required contexts with one that handles skip semantics correctly, (5) adding a RESULTS-loop aggregator gate to _required.yml with a guard test asserting all non-excluded jobs are wired into needs, (6) guard test needs a provable negative path to catch silently-inverted conditions, (7) job key vs context name disambiguation for branch protection contexts, (8) GET-before-PUT mitigation for destructive branch protection API, (9) requirements deviation must be disclosed explicitly in implementation plans."
+description: "Use when: (1) PRs are permanently BLOCKED because a required status-check context is a job gated by if: github.event_name != 'pull_request' (skipped != satisfied), (2) consolidating duplicate CI jobs into a reusable workflow so _required.yml is a thin aggregator, (3) validating GitHub branch protection API responses and writing synthetic tests for bash enforcement scripts, (4) a summary aggregator job pattern is needed to replace N individual required contexts with one that handles skip semantics correctly, (5) adding a RESULTS-loop aggregator gate to _required.yml with a guard test asserting all non-excluded jobs are wired into needs, (6) guard test needs a provable negative path to catch silently-inverted conditions [verified-local: _unwired_jobs helper pattern, PR #1343], (7) job key vs context name disambiguation for branch protection contexts, (8) GET-before-PUT mitigation for destructive branch protection API, (9) requirements deviation must be disclosed explicitly in implementation plans."
 category: ci-cd
-date: 2026-06-13
-version: "1.3.0"
+date: 2026-06-14
+version: "1.4.0"
 user-invocable: false
 history: gha-required-checks-branch-protection.history
 tags:
@@ -29,10 +29,10 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-13 |
+| **Date** | 2026-06-14 |
 | **Objective** | Make required status checks satisfiable and maintainable: handle skip-vs-success semantics with a `summary` aggregator, consolidate duplicate jobs into a reusable `workflow_call` workflow, validate branch-protection API writes with read-back, smoke-test workflow structure, add a RESULTS-loop gate with guard test, and document guard-test negative-path, job-key vs context-name disambiguation, destructive PUT mitigation, and requirements-deviation disclosure |
 | **Outcome** | Consolidated guidance covering nine interacting concerns; specific cases preserved as examples |
-| **Verification** | verified-ci (core patterns); unverified (RESULTS-loop gate, sections F–I — planning phase only) |
+| **Verification** | verified-ci (core patterns); verified-local (section F: _unwired_jobs helper + 3-test pattern, PR #1343) |
 
 ## When to Use
 
@@ -244,7 +244,7 @@ This guard test catches new jobs added to `_required.yml` that are not wired int
 
 #### F. Guard test with provable negative path (revised pattern — unverified)
 
-> **Warning:** This refinement is a planning-phase capture from ProjectHephaestus issue #1315 NOGO review. Treat as a hypothesis until CI confirms.
+> **Verification:** verified-local — implemented in ProjectHephaestus PR #1343 (issue #1338). All 6 tests pass locally; CI validation pending merge. The `_unwired_jobs` helper lives in `hephaestus/ci/required_checks_gate.py`.
 
 The v1.2.0 guard test used a static assertion on the live workflow. A NOGO review identified that this doesn't prove the guard *can* catch a gap — a silently-inverted condition (e.g., `gate_needs - all_jobs` instead of `all_jobs - gate_needs`) would still pass the positive test. Fix: extract a pure helper `_unwired_jobs(wf, excluded)` that can be unit-tested independently with a synthetic workflow dict.
 
@@ -305,6 +305,13 @@ def test_unwired_jobs_excluded_not_flagged():
 ```
 
 The negative-path test (second) is the critical addition — it proves the helper *can* detect a gap, not just that the current workflow happens to pass.
+
+**Implementation notes (verified-local, PR #1343):**
+
+- **Leaf module, not sub-package:** `hephaestus/ci/required_checks_gate.py` is a leaf module — not a `__init__.py`-based sub-package — to avoid circular imports. See the `dry-refactoring-workflow` skill for the general pattern.
+- **`GATE_JOB` constant exported:** the module exports a `GATE_JOB` string constant so tests import it rather than re-defining the string independently.
+- **Positive-path test fixture signature:** the positive-path test takes a `workflow` fixture (the full parsed document), NOT a `jobs` fixture, because `_unwired_jobs` calls `wf["jobs"]` internally. Keeping the old `(self, jobs: dict)` signature causes a `KeyError: 'jobs'` (see Failed Attempts).
+- **`__init__.py` NOT updated:** `_unwired_jobs` has an underscore prefix (private) and is intentionally not re-exported in `hephaestus/ci/__init__.py`, consistent with the existing convention for internal helpers.
 
 #### G. Job key vs. context name disambiguation
 
@@ -373,6 +380,7 @@ The disclosure is cheap (one sentence); the NOGO cycle it prevents is expensive.
 | Guard test without negative path | Static assertion `_unwired_jobs(live_wf, EXCLUDED) == set()` only | Doesn't prove the guard detects gaps — a silently-inverted condition (e.g., `gate_needs - all_jobs` instead of `all_jobs - gate_needs`) still passes the positive test | Extract `_unwired_jobs()` helper; add explicit negative-path test with synthetic wf dict containing a `dummy-job` not in `needs:` |
 | `enforce_admins: true` in PUT payload | Set to `true` to "harden" branch protection | Removes admin emergency escape valves; admins can no longer force-push to fix emergencies | Use `false` unless threat model explicitly requires hardened admin lockout |
 | Requirements deviation left implicit | Plan dropped two `test` contexts from required list without flagging the deviation | Reviewer flagged as undisclosed scope change (NOGO finding) | Always call out deviations from issue literal text explicitly in the plan or PR body; flag for issue-author confirmation |
+| Pass `jobs` dict (not full `wf` dict) to `_unwired_jobs` | Refactored positive-path test kept the `jobs` fixture signature instead of switching to `workflow` | `_unwired_jobs(wf, excluded)` calls `wf["jobs"]` internally; passing the jobs dict directly raises `KeyError: 'jobs'` | Change the positive-path test to accept the `workflow` fixture (full document), not the `jobs` fixture |
 
 ## Results & Parameters
 
@@ -454,6 +462,7 @@ VERIFY_RULES_FIXTURE="$f" bash scripts/verify-branch-protection.sh   # expect no
 | ProjectMnemosyne | Local branch, yamllint passed | Reusable-workflow `_required.yml`/`_checks.yml` split; verified-precommit |
 | ProjectHephaestus | Issue #1315 planning phase | RESULTS-loop aggregator + guard test pattern; **unverified** — not yet implemented or CI-verified |
 | ProjectHephaestus | Issue #1315 NOGO review cycle (2026-06-13) | Guard-test negative-path (`_unwired_jobs` helper + 3-test pattern), job-key vs context-name disambiguation, GET-before-PUT mitigation, requirements-deviation disclosure pattern; **unverified** — planning phase captures |
+| ProjectHephaestus | Issue #1338 / PR #1343 — extract _unwired_jobs helper | 6/6 tests pass locally; CI pending |
 
 ## References
 
