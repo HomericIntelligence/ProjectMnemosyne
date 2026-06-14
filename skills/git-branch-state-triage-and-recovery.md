@@ -1,12 +1,12 @@
 ---
 name: git-branch-state-triage-and-recovery
-description: "Diagnose and recover branches that have entered an invalid or obsolete state. Use when: (1) a branch is many commits behind main and its remote tracking ref is gone — determine whether any net-new contribution remains before creating a PR, (2) a branch has no common ancestor with main ('fatal: refusing to merge unrelated histories') and needs content extraction and recreation, (3) a stacked PR was retargeted and lint/CI fix commits made after retarget are orphaned from the prerequisite PR and must be cherry-picked, (4) fix commits exist locally but cannot fast-forward push to a remote PR branch because histories diverged after a rebase — cherry-pick onto the remote tip instead"
+description: "Diagnose and recover branches that have entered an invalid or obsolete state. Use when: (1) a branch is many commits behind main and its remote tracking ref is gone — determine whether any net-new contribution remains before creating a PR, (2) a branch has no common ancestor with main ('fatal: refusing to merge unrelated histories') and needs content extraction and recreation, (3) a stacked PR was retargeted and lint/CI fix commits made after retarget are orphaned from the prerequisite PR and must be cherry-picked, (4) fix commits exist locally but cannot fast-forward push to a remote PR branch because histories diverged after a rebase — cherry-pick onto the remote tip instead, (5) a branch has hundreds or thousands of HEAD-only files vs main and main underwent corpus consolidation — run a three-way file-count diff (branch vs main vs merge-base) to distinguish 'pre-consolidation originals already absorbed' from 'genuinely unmerged new work' before any destructive reset"
 category: tooling
-date: 2026-06-07
-version: "1.0.0"
+date: 2026-06-13
+version: "1.1.0"
 user-invocable: false
 history: git-branch-state-triage-and-recovery.history
-tags: [git, branch, triage, recovery, stale, superseded, orphan, diverged, merge-base, cherry-pick, fork-point, diff-filter, unrelated-histories, non-fast-forward]
+tags: [git, branch, triage, recovery, stale, superseded, orphan, diverged, merge-base, cherry-pick, fork-point, diff-filter, unrelated-histories, non-fast-forward, consolidation, three-way-diff, count-diff, hard-reset, stash]
 ---
 
 # Git Branch State Triage and Recovery
@@ -30,6 +30,7 @@ is always: **what state is this branch in, and how do I recover it?** Three dist
 - The task is "get all open PRs merged" — check `gh pr list --state open` first; if zero open PRs the premise has changed
 - A `git diff origin/main...HEAD` shows a large file count difference but you suspect most of it is merge noise
 - Staged files with AD status in `git status --short` (added in index, deleted from working dir)
+- Hundreds or thousands of HEAD-only files exist vs main, and main has commit messages like "consolidate N skills into X" or "absorb C086" — this is a **corpus consolidation** divergence, not unique unmerged work
 
 **State B — Orphan / unrelated history:**
 - `git merge-base` returns nothing between branch and main
@@ -64,6 +65,20 @@ git log --diff-filter=D --oneline origin/main -- <path> | head -1  # how main di
 git ls-files --stage | awk '{print $1, $4}' | sort > /tmp/staged.txt
 git ls-tree -r origin/main | awk '{print $3, $4}' | sort > /tmp/mainh.txt
 comm -23 /tmp/staged.txt /tmp/mainh.txt           # staged files NOT on main = true new work
+
+# === State A (large-scale): three-way count diff for consolidation divergence ===
+MERGE_BASE=$(git merge-base HEAD origin/main)
+git ls-tree -r --name-only "$MERGE_BASE" skills/ | grep '\.md$' | sort > /tmp/base.txt
+git ls-tree -r --name-only HEAD skills/ | grep '\.md$' | sort > /tmp/branch.txt
+git ls-tree -r --name-only origin/main skills/ | grep '\.md$' | sort > /tmp/main2.txt
+wc -l /tmp/base.txt /tmp/branch.txt /tmp/main2.txt  # counts: base→branch grew? base→main shrank?
+comm -23 /tmp/branch.txt /tmp/main2.txt | wc -l     # branch-only (pre-consolidation originals?)
+comm -13 /tmp/branch.txt /tmp/main2.txt | wc -l     # main-only (new canonical merged skills?)
+# if main shrank (consolidation) and branch-only are old originals absorbed by main:
+git log --oneline origin/main | grep -iE 'consolidat|absorb|merge.*skill|cluster' | head -10
+# safety: stash before any hard-reset (recoverable snapshot)
+git stash push -u -m "pre-reset snapshot $(date +%Y%m%d)"
+git log --oneline origin/main..HEAD                  # confirm only superseded commits
 
 # === State B: orphan / unrelated history ===
 git fetch origin <branch>
@@ -108,6 +123,42 @@ git cherry-pick <fix-sha>                         # apply only the targeted fix
    - Its "new" files are already present on main.
 
    When all three hold the branch has zero net contribution and can be discarded.
+
+#### State A (large-scale) — Three-way count diff for corpus-consolidation divergence
+
+When a branch has **hundreds or thousands** of HEAD-only files vs main AND main shows
+consolidation commit messages, spot-checking a few file versions is not sufficient — the
+branch and main may have diverged in *opposite* directions simultaneously.
+
+1. **Find the merge-base**: `MERGE_BASE=$(git merge-base HEAD origin/main)`. All counts are
+   relative to this ancestor.
+2. **Count artifacts at all three points**:
+   ```bash
+   git ls-tree -r --name-only "$MERGE_BASE" skills/ | grep '\.md$' | sort > /tmp/base.txt
+   git ls-tree -r --name-only HEAD            skills/ | grep '\.md$' | sort > /tmp/branch.txt
+   git ls-tree -r --name-only origin/main     skills/ | grep '\.md$' | sort > /tmp/main2.txt
+   wc -l /tmp/base.txt /tmp/branch.txt /tmp/main2.txt
+   ```
+   Interpret: if `base→branch` grew (new skills added on branch) but `base→main` shrank
+   (consolidation on main), the branch has old originals that main absorbed into canonical
+   merged skills. The branch-only files are the **pre-consolidation originals**, not new work.
+3. **Compute three comm sets**:
+   - `comm -23 branch main` (branch-only): would be deleted by reset — are these old originals or new skills?
+   - `comm -13 branch main` (main-only): canonical merged skills the branch is missing.
+   - `comm -12 branch main` (intersection): files present in both — compare versions.
+4. **Confirm consolidation on main**: `git log --oneline origin/main | grep -iE 'consolidat|absorb|cluster' | head -10`.
+   Messages like "consolidate 50-cluster 516->291" confirm main ran systematic consolidation
+   after the branch diverged. Branch-only files matching the pre-consolidation count at
+   merge-base are the absorbed originals, not unique work.
+5. **Safety: stash before any destructive reset**:
+   ```bash
+   git stash push -u -m "pre-reset snapshot $(date +%Y%m%d)"
+   ```
+   The stash is a recoverable snapshot. Confirm `git log --oneline origin/main..HEAD` contains
+   only commits superseded by main's consolidation PRs before running `git reset --hard origin/main`.
+6. **Surface the finding to the human** when branch-only file count is large (e.g. >500).
+   The decision to hard-reset is irreversible without the stash — it's the human's data and
+   they should confirm the conclusion explicitly.
 
 #### State B — Orphan-branch recovery (no common ancestor)
 
@@ -163,6 +214,9 @@ git cherry-pick <fix-sha>                         # apply only the targeted fix
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 | --------- | ---------------- | --------------- | ---------------- |
+| Judging staleness by spot-checking a few file `version:` fields | Compared version numbers in ~5 files on branch vs main to determine which side was "newer" | Branch and main had diverged in opposite directions: branch grew (new skills added), main shrank (consolidation). A handful of version comparisons gave a misleading picture of the whole | Run a three-way file-count diff (branch vs main vs merge-base) before drawing any conclusion when hundreds of files are involved |
+| Assuming "branch's PR already merged ⇒ all branch work is on main" | Saw that an early PR (#1572) was merged and concluded the branch had no remaining contribution | An early PR merged but the bulk of the branch's subsequent commits (hundreds of new skills added after the merge) never reached main — they were simply abandoned before the branch was last touched | PR-merge history answers only "did this PR's content land?" not "has every commit on this branch landed?" — check `git log --oneline origin/main..HEAD` for the full picture |
+| Committing the large working-tree deletions | Working tree showed hundreds of deleted files; first instinct was to commit them as "cleanup" | The deletions were not intentional cleanup — they were the working tree reflecting pre-consolidation originals that the index still tracked but disk did not have. Committing would have reverted ~360 skills and downgraded canonicals main had since improved | Never commit large file-count deletions without first running the three-way count diff; if `comm -23 branch main` shows thousands of "branch-only" files that map to the pre-consolidation count at merge-base, the deletions are stale state, not new work |
 | Treating HEAD-only files as unmerged value | Assumed "file present in HEAD but not in main" = "work not yet on main" | Most HEAD-only files were OLD files that main subsequently deleted or consolidated through later PRs after the branch diverged | Always check HOW a file left main (`--diff-filter=D`) before assuming it was never there |
 | Using plain `git log` to find deletions | `git log --oneline origin/main -- <path>` showed nothing | Plain log only shows commits that touched the file; it does not surface the deletion commit reliably | `--diff-filter=D` is required to find the commit that removed a file |
 | Treating AD status as uncommitted work | `git status --short` showed hundreds of AD lines and looked like staged changes needing attention | AD status is normal for branches created in worktrees not fully restored to disk — files exist in the index but not on disk | AD means "added in index, deleted from working dir"; verify hashes match main before treating as new work |
@@ -192,6 +246,40 @@ No pull requests match your search
 a3f2b1c feat(skill-merge): consolidate 12 skills into automation-bundle (C086)
 # comm -23 staged_hashes.txt main_hashes.txt | wc -l
 0       ← zero true new files; staged index is a no-op
+```
+
+### State A (large-scale) — Three-way count diff interpretation table
+
+| Pattern | merge-base count | branch count | main count | Diagnosis |
+| ------- | ---------------- | ------------ | ---------- | --------- |
+| Branch grew, main shrank | 1661 | 1849 | 333 | main ran corpus consolidation post-diverge; branch-only files are pre-consolidation originals |
+| Branch shrank, main grew | N | N-k | N+m | branch deleted files; check if intentional or if branch is behind main |
+| Both grew from base | N | N+a | N+b | two independent workstreams; inspect `comm -23` and `comm -13` carefully |
+| Branch == main count | N | N | N | files differ by content, not count; use hash comparison or version comparison |
+
+**Confirmation command sequence** for the "branch grew, main shrank" pattern:
+
+```bash
+# 1. Get counts at all three points
+MERGE_BASE=$(git merge-base HEAD origin/main)
+git ls-tree -r --name-only "$MERGE_BASE" skills/ | grep '\.md$' | wc -l   # e.g. 1661
+git ls-tree -r --name-only HEAD            skills/ | grep '\.md$' | wc -l   # e.g. 1849
+git ls-tree -r --name-only origin/main     skills/ | grep '\.md$' | wc -l   # e.g. 333
+
+# 2. Verify main ran consolidation
+git log --oneline origin/main | grep -iE 'consolidat|absorb|cluster' | head -5
+# Expected: "chore(triage): second-pass addendum (21 new clusters, 5 merges, C060-C080)"
+
+# 3. Confirm branch-only count matches expected pre-consolidation originals
+comm -23 /tmp/branch.txt /tmp/main2.txt | wc -l  # e.g. 970 (pre-consolidation originals)
+comm -13 /tmp/branch.txt /tmp/main2.txt | wc -l  # e.g. 76 (canonical merged skills branch lacks)
+
+# 4. Safety stash and confirm superseded commits
+git stash push -u -m "pre-reset snapshot $(date +%Y%m%d)"
+git log --oneline origin/main..HEAD | head -10  # should show only adds/updates now on main
+
+# 5. Only then hard-reset
+git reset --hard origin/main
 ```
 
 ### State B — Orphan signs and recovery checklist
@@ -226,6 +314,7 @@ branches, because they touch a narrow region the remote version differs in only 
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
+| ProjectMnemosyne | Branch `feature/myrmidon-merge-triage` (32 ahead, 730 behind, remote gone) — three-way count diff: merge-base=1661 skills, branch=1849 (grew), main=333 (shrank via consolidation). 970 branch-only files were pre-consolidation originals. Hard-reset to origin/main confirmed correct after stash. 107 PRs subsequently merged on main. | State A — large-scale corpus consolidation |
 | ProjectMnemosyne | Branch `feature/myrmidon-merge-triage` (32 ahead, 525 behind, remote gone) — confirmed fully superseded; no PRs opened | State A |
 | ProjectMnemosyne | Branch `skill/debugging/fixme-todo-cleanup-v2` pushed from ProjectOdyssey's history — no merge-base; content already on main; deleted | State B |
 | ProjectOdyssey | PR #3197, issue #3088 — BF16 test skip; reset to remote (13 remote-only commits) + cherry-pick fix | State C |

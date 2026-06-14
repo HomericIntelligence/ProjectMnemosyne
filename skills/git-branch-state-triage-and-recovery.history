@@ -2,6 +2,15 @@
 
 # History: git-branch-state-triage-and-recovery
 
+## v1.1.0 (2026-06-13)
+
+Added State A large-scale divergence handling: three-way file-count diff (branch vs main vs
+merge-base) for corpus-consolidation scenarios. New triggers, new detailed steps subsection,
+new Quick Reference commands, three new Failed Attempts rows, stash-before-reset safety
+discipline, State A count-diff interpretation table with confirmation command sequence.
+Verified on `feature/myrmidon-merge-triage` branch (merge-base=1661, branch=1849, main=333;
+970 branch-only pre-consolidation originals; hard-reset confirmed correct; 107 PRs merged).
+
 ## v1.0.0 (2026-06-07)
 
 Merged the following 3 skills into the canonical `git-branch-state-triage-and-recovery`:
