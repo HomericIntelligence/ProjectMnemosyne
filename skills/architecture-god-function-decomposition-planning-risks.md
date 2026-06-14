@@ -48,6 +48,80 @@ issue body may be weeks or months old; the code on disk is authoritative.
 
 ---
 
+## When to Use
+
+Use this skill when:
+
+1. Planning an extraction pass on over-long (god) functions in any Python codebase, especially when the task originates from a GitHub issue that cites specific line numbers, function sizes, or file locations.
+2. Reviewing a decomposition plan before approving it — check that each cited function size was measured from disk, not from the issue body.
+3. Implementing a decomposition plan produced by another agent or engineer — verify all arithmetic, helper call sites, and test file assumptions before writing code.
+4. Authoring decomposition plans for ProjectHephaestus `hephaestus/automation/` modules (where the 80-line orchestrator cap is enforced).
+
+---
+
+## Verified Workflow
+
+### Quick Reference
+
+| Step | Action |
+| ------ | ------- |
+| 1 | Run AST measurement on each named function — never trust issue-cited sizes |
+| 2 | For functions that must reach ≤N lines, write the explicit subtraction chain |
+| 3 | For each new helper, confirm at least one call site appears in the plan |
+| 4 | For control-flow sentinel returns, enumerate ALL signal states in docstring |
+| 5 | Verify test file existence before writing stubs |
+| 6 | Check empty/sentinel values passed to downstream functions |
+
+### Step 1: Measure Functions from Disk
+
+Before writing any extraction plan, measure every named function via AST:
+
+```python
+python3 -c "
+import ast
+src = open('<project-root>/path/to/file.py').read()
+tree = ast.parse(src)
+for node in ast.walk(tree):
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        size = node.end_lineno - node.lineno + 1
+        if size > 80:
+            print(f'{node.name}: {node.lineno}–{node.end_lineno} ({size}L)')
+" | sort -t'(' -k2 -rn
+```
+
+If the issue cites a file+line, grep for the function name first — it may have moved:
+
+```bash
+grep -rn "def _target_function" <project-root>/src/
+```
+
+### Step 2: Plan Extractions with Arithmetic Proof
+
+For each function that must reach ≤N lines, write the subtraction chain before claiming the target is met:
+
+```text
+_example_function: 250L
+  − _helper_1: 30L
+  − _helper_2: 45L
+  = 175L (still over 80L cap — plan additional extractions)
+```
+
+### Step 3: Audit Helper Call Sites
+
+After writing the plan, for each helper defined in "New helpers" / "Extracted functions":
+
+```text
+grep the replacement code blocks for `helper_name(`
+- Zero matches → either delete the helper or add the call site
+- Never ship a plan where a defined helper has no shown call site
+```
+
+### Step 4: Document Sentinel Return Contracts
+
+When a helper encodes control-flow signals in its return value, enumerate all states in the docstring and show all branches in the caller's replacement block.
+
+---
+
 ## Risk 1: Issue-Cited Line Numbers May Be Stale — Always Re-read Before Planning
 
 **What happened**: Issue #1180 cited `_implement_issue` as 354 lines (at line 255).
@@ -453,6 +527,49 @@ Before submitting or approving a god-function decomposition plan:
     [ ] Read the downstream function's first 20 lines
     [ ] Confirm it handles the empty value correctly
     [ ] Cite the verification in the plan (file:line range)
+```
+
+---
+
+## Results & Parameters
+
+### Successful Patterns
+
+| Pattern | Context | Outcome |
+| --------- | --------- | --------- |
+| AST re-measurement before planning | ProjectHephaestus #1180 R1 | Caught 354L→128L drift; prevented planning extractions on wrong function size |
+| grep-by-name before grep-by-line | ProjectHephaestus #1180 R1 | Found `_run_impl_review_loop` moved from `ci_driver.py:1513` to `_review_phase.py:374` |
+| Subtraction arithmetic chain | ProjectHephaestus #1180 R1 | Revealed 5 extractions needed (not 3) for `_run_ci_fix_session` to reach ≤80L |
+| Sentinel return contract docstring | ProjectHephaestus #1180 R1 | Made all 3 control-flow states explicit; prevented silent fall-through bugs |
+
+### Key Thresholds (ProjectHephaestus)
+
+- Orchestrator line cap: **80 lines** (enforced via unit tests)
+- "Marginal" overage is NOT a valid waiver — any function named in the issue and over the cap is in scope
+- Valid waiver only when: measured disk size ≤ cap
+
+### Copy-Paste: AST Measurement Command
+
+```python
+python3 -c "
+import ast
+src = open('path/to/file.py').read()
+tree = ast.parse(src)
+for node in ast.walk(tree):
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        size = node.end_lineno - node.lineno + 1
+        if size > 80:
+            print(f'{node.name}: lines {node.lineno}–{node.end_lineno} ({size}L)')
+" | sort -t'(' -k2 -rn
+```
+
+### Copy-Paste: Subtraction Chain Template
+
+```text
+<function_name>: <current>L
+  − <helper_1>: <extracted>L  (extracted: <description>)
+  − <helper_2>: <extracted>L  (extracted: <description>)
+  = <remaining>L (target ≤ <cap>L) ✓/✗
 ```
 
 ---
