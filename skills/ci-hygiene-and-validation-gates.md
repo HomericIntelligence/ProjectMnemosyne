@@ -1,9 +1,9 @@
 ---
 name: ci-hygiene-and-validation-gates
-description: "Use when: (1) adding a CI step that grep-blocks reappearance of deprecated identifiers after a cleanup PR, (2) adding a standalone JSON schema validation step to catch config drift even when pre-commit was skipped, (3) detecting orphaned scripts/*.py files not referenced in CI workflows, justfile, or other scripts."
+description: "Use when: (1) adding a CI step that grep-blocks reappearance of deprecated identifiers after a cleanup PR, (2) adding a standalone JSON schema validation step to catch config drift even when pre-commit was skipped, (3) detecting orphaned scripts/*.py files not referenced in CI workflows, justfile, or other scripts, (4) you discover a NAMED required CI check that asserts nothing (a dead gate that computes-and-discards its verdict, or whose only failure path is unreachable) and must make it genuinely enforce in place because its context is pinned in the org ruleset and cannot be deleted."
 category: ci-cd
-date: 2026-06-07
-version: "1.0.0"
+date: 2026-06-12
+version: "1.1.0"
 user-invocable: false
 history: ci-hygiene-and-validation-gates.history
 tags:
@@ -15,14 +15,23 @@ tags:
   - pre-commit
   - stale-detection
   - regression-guard
+  - required-status-check
+  - dead-gate
+  - no-op-assertion
+  - version-sync
+  - set-e
+  - pinned-context
+  - defense-in-depth
+  - pip-install-deps
+  - pixi-locked
 ---
 ## Overview
 
 | Field | Value |
 | ------- | ------- |
-| **Goal** | Add lightweight, build-free CI/pre-commit gates that catch regressions, config drift, and referential-integrity issues without a full test run |
-| **Patterns** | (1) grep deprecation guard, (2) standalone schema validation step, (3) stale-script detector |
-| **Output** | New `run:` steps in existing CI jobs and/or a stdlib-only pre-commit hook |
+| **Goal** | Add lightweight, build-free CI/pre-commit gates that catch regressions, config drift, and referential-integrity issues without a full test run — and detect/repair gates that look green but assert nothing |
+| **Patterns** | (1) grep deprecation guard, (2) standalone schema validation step, (3) stale-script detector, (4) detect & fix a dead required gate |
+| **Output** | New `run:` steps in existing CI jobs and/or a stdlib-only pre-commit hook; or a rewritten existing job that asserts its named contract in place |
 | **Language** | Any (Mojo, Python, TypeScript, …) — checks are plain `grep` / `python` |
 | **Build required** | No — pure file scans, run before compilation |
 | **Verification** | verified-ci |
@@ -33,6 +42,7 @@ tags:
 - A project has a `validate_config_schemas.py`-style script gated only behind a `pass_filenames: true` pre-commit hook, and you need CI to validate *all* config files on every PR (standalone schema validation).
 - A `scripts/` directory has grown organically and you want to surface orphaned `*.py` files not referenced in `.github/`, `justfile`, `.pre-commit-config.yaml`, or other scripts (stale-script detector).
 - A follow-up issue explicitly asks for a "regression guard" or "automated drift check" without requiring code review.
+- A required status check shows green on every PR but you suspect it "asserts nothing": it computes a verdict and `echo`s it without ever testing it, or its only `exit 1` is behind a condition that is never true in this repo (dead gate). The context is pinned in the org ruleset, so you must make the existing job enforce its named contract in place rather than delete it (Pattern 4).
 
 ## Verified Workflow
 
@@ -52,6 +62,23 @@ pixi run python scripts/validate_config_schemas.py --verbose \
 python scripts/check_stale_scripts.py
 pre-commit run check-stale-scripts --all-files
 pixi run python -m pytest tests/unit/scripts/test_check_stale_scripts.py -v
+
+# (4) Dead-gate TWO-SIDED verification — mirror the EXACT CI invocation:
+#     clean venv + `pip install -e .` WITH deps + bare python/-m (NOT `pixi run`).
+#     A gate change is NOT "verified" until you show BOTH a clean PASS and a synthetic FAIL.
+python -m venv /tmp/dg && . /tmp/dg/bin/activate && pip install -e .   # WITH deps (no --no-deps)
+
+# Leg 1+2 — the unit-tested checker:
+python -m hephaestus.scripts_lib.check_version_single_source; echo "clean exit: $?"   # expect 0
+printf '\nversion = "9.9.9"\n' >> pyproject.toml                                       # inject under [project]
+python -m hephaestus.scripts_lib.check_version_single_source; echo "bad exit: $?"     # expect non-zero
+git checkout -- pyproject.toml                                                         # restore -> 0 again
+
+# Leg 3 — lockfile sync on the repo-pinned pixi (v0.69.0), same as the pixi-check job:
+pixi install --locked; echo "clean exit: $?"                                           # expect 0
+printf '\n[pypi-dependencies]\nnonexistent-sentinel-pkg = "*"\n' >> pixi.toml          # drift
+pixi install --locked; echo "drift exit: $?"                                           # expect non-zero
+git checkout -- pixi.toml                                                              # restore -> 0 again
 ```
 
 ### Detailed Steps
@@ -269,6 +296,90 @@ def test_cross_script_reference(self, tmp_path: Path) -> None:
     assert find_references("util.py", all_targets, scripts_dir) is True
 ```
 
+#### Pattern 4 — Detect & fix a dead required gate
+
+A **dead gate** is a required CI check that shows green but cannot fail. It is
+security-theater: it blocks nothing while broadcasting a false guarantee. The
+canonical instance: a `deps-version-sync` job that computed a `DYNAMIC` value from
+`pyproject.toml`, `echo`ed it, and **never used it in a conditional**, while its only
+`exit 1` lived inside `if [ -f VERSION ]; then ... fi` — and the repo has **no**
+`VERSION` file (it uses hatch-vcs dynamic versioning). Net: the required check passed
+for any version configuration.
+
+**Step 1 — Detect the dead gate (review heuristics).** A check asserts nothing if:
+
+1. **Unreachable failure path.** Grep the job for every `exit 1` / `exit "$fail"` and
+   trace whether it is reachable. Is the enclosing `if` ever true in *this* repo? e.g.
+   `if [ -f VERSION ]` when no `VERSION` file exists is dead code.
+2. **Discarded verdict.** Any value that is computed and `echo`ed but never appears in
+   a `[ ... ]`, `case`, or `if` test is a discarded verdict — the assertion is missing.
+3. **No constructible failing input.** Confirm by (mentally or actually) running the
+   job against a KNOWN-BAD input. If you cannot construct an input that makes it exit
+   non-zero, it asserts nothing.
+
+**Step 2 — Decide: fix in place, do NOT delete (pinned-context constraint).** Before
+touching anything, check whether the check's context is pinned in the org ruleset:
+
+```bash
+gh api "repos/<owner>/<repo>/rulesets" --jq '.[].name'
+# Inspect each ruleset for required_status_checks contexts (e.g. "deps/version-sync").
+```
+
+If the context is **pinned**, deleting the job leaves every PR permanently BLOCKED
+waiting on a check that never reports — the classic *ci-driver-blocked-required-context-drift*
+failure (and ruleset mutation is an admin API change outside a code PR's scope). The
+correct move is therefore **make the EXISTING job assert its named contract in place**
+(defense-in-depth on an immovable check), NOT delete it. Cross-link
+`gha-required-checks-branch-protection`.
+
+> **Justified DRY overlap.** Making a dead gate real may duplicate assertions other
+> gates already make (here: `lint`'s `check-version-single-source` pre-commit hook, and
+> `pixi-check`'s `pixi install --locked`). State this overlap explicitly as an accepted
+> trade-off — the alternative (deletion) bricks the merge queue.
+
+**Step 3 — Install WITH deps; the checker imports declared deps.** Drop `--no-deps`
+from `pip install -e "."`. The version checker imports `hephaestus.utils.helpers ->
+from packaging.requirements import ...`; `packaging` is a declared core dep. With
+`--no-deps` the checker `ModuleNotFoundError`s at runtime (a crash under `set -e`, not
+an assertion). Install WITH deps so imports resolve.
+
+**Step 4 — Invoke an already-tested checker under `set -euo pipefail`.** Reuse a
+unit-tested checker module rather than re-deriving regex in bash (which historically
+caused a false-PASS — see repo issue #435). Prefer `python -m <pkg>.<module>` over a
+`scripts/<x>.py` shim (see the companion worktree-`__file__` skill on why the shim's
+`__file__` resolution breaks in worktrees):
+
+```yaml
+      - name: Verify version single-source-of-truth (pyproject.toml -> pixi.toml)
+        run: |
+          set -euo pipefail
+          python -m hephaestus.scripts_lib.check_version_single_source
+```
+
+**Step 5 — Add the missing leg(s) the gate's NAME promises.** `DEFINITION_OF_DONE.md`
+named this job for a **three-file contract** (`pyproject.toml -> pixi.toml ->
+pixi.lock`), but the checker covered only `pyproject` + `pixi.toml`. Add `pixi install
+--locked` to assert `pixi.lock` is in sync (exits non-zero on drift) — the same frozen
+verification the existing `pixi-check` job uses, on the repo-pinned pixi (`v0.69.0`,
+guaranteed to support `--locked`):
+
+```yaml
+      - name: Verify pixi.lock is in sync with the workspace
+        run: |
+          set -euo pipefail
+          pixi install --locked
+```
+
+**Step 6 — Delete the dead code (YAGNI).** Remove the computed-and-discarded `DYNAMIC`
+block and the unreachable `VERSION`-file branch.
+
+**Step 7 — TWO-SIDED verification (mandatory).** A dead gate ALSO shows a clean PASS;
+only a synthetic-FAIL test distinguishes a real gate from a no-op. Mirror the EXACT CI
+invocation (clean venv + `pip install -e .` WITH deps + bare `python`/`-m`, **not**
+`pixi run`). See the Quick Reference block above for the exact commands. The change is
+not "verified" until you have demonstrated BOTH a clean PASS and a synthetic FAIL for
+every leg.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -279,6 +390,11 @@ def test_cross_script_reference(self, tmp_path: Path) -> None:
 | New workflow file | Considered a standalone `deprecation-guard.yml` / separate schema workflow | Unnecessary complexity; the check fits naturally inside an existing syntax/static-check job | Prefer adding a step to an existing job over creating a new workflow |
 | Match import names without `.py` | `from util import helper` → searched for `"util.py"` | Import statement uses module name, not filename | Basename matching (with `.py`) is correct; cross-script refs should use the full filename in subprocess calls/comments |
 | Hard failure (exit 1) on stale candidates | Exit non-zero to force cleanup | Too aggressive — legitimate one-time setup scripts would block future commits | Always exit 0 for stale detection; it is discovery tooling, not enforcement |
+| Verify via convenient pixi env (Pattern 4) | Verified the checker with `pixi run --environment default python3` | The pixi env has all deps, so the `--no-deps` install bug is masked; proves nothing about the real `pip install -e .` + bare-python CI invocation | Mirror the EXACT CI install + interpreter, not a convenient env |
+| Install with `--no-deps` (Pattern 4) | `pip install -e . --no-deps` to match a leaner CI image | The checker imports `packaging` (a declared dep) and `ModuleNotFoundError`s at runtime; under `set -e` that is a crash, not an assertion | A checker that imports declared deps must be installed WITH deps |
+| Just delete the no-op job (Pattern 4) | Remove the dead `deps-version-sync` job entirely | The context `deps/version-sync` is pinned in the org ruleset; deletion leaves every PR BLOCKED on a check that never reports | De-list the required context first (admin API) OR make the job real in-place; never delete a pinned-context job in a code PR |
+| `pixi lock --check` for leg 3 (Pattern 4) | Used `pixi lock --check` to verify the lockfile | The repo pins pixi `v0.69.0` everywhere (composite `setup-pixi-env`, `pixi-check`); `--check` availability on that exact version was unverified, and a prior skill documented older pixi lacking the `lock` subcommand entirely | Use `pixi install --locked` (proven on the pinned version, already used by `pixi-check`), not a flag verified only on a newer local pixi |
+| Confirmed clean PASS only (Pattern 4) | Ran the rewritten gate on a clean branch, saw green, called it done | A dead gate ALSO shows a clean PASS; only a synthetic-FAIL test distinguishes a real gate from a no-op | Two-sided verification (clean PASS **and** synthetic FAIL) is mandatory for any gate change |
 
 ## Results & Parameters
 
@@ -325,6 +441,68 @@ Exit code: 0
 `ALWAYS_ACTIVE` set (never flagged): `{"common.py", "check_stale_scripts.py"}`. Add any shared
 library module imported by other scripts but never invoked directly.
 
+### Pattern 4 — dead required gate, made real in place
+
+Final job shape in `.github/workflows/_required.yml` (job `deps-version-sync`, required
+status check `deps/version-sync`) — install WITH deps, `set -euo pipefail`, reuse the
+unit-tested checker via `-m`, pinned `setup-pixi` `v0.69.0`, lockfile leg via `pixi
+install --locked`:
+
+```yaml
+  deps-version-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install package WITH deps (checker imports `packaging`)
+        run: |
+          set -euo pipefail
+          pip install -e .              # NOT --no-deps
+      - name: Verify version single-source (pyproject.toml -> pixi.toml)
+        run: |
+          set -euo pipefail
+          python -m hephaestus.scripts_lib.check_version_single_source
+      - name: Setup pixi (pinned)
+        uses: ./.github/actions/setup-pixi-env   # pins pixi v0.69.0
+      - name: Verify pixi.lock in sync (pixi.toml -> pixi.lock)
+        run: |
+          set -euo pipefail
+          pixi install --locked
+```
+
+Two-sided verification (the discipline that proves the gate is real) — mirror the EXACT
+CI invocation, clean venv + `pip install -e .` WITH deps + bare `python`/`-m`, NOT
+`pixi run`:
+
+```bash
+python -m venv /tmp/dg && . /tmp/dg/bin/activate && pip install -e .   # WITH deps
+
+# Leg 1+2 (checker): clean -> 0 ; inject static [project].version -> non-zero ; restore -> 0
+python -m hephaestus.scripts_lib.check_version_single_source; echo $?   # 0
+printf '\nversion = "9.9.9"\n' >> pyproject.toml                        # append so tomllib parses it under [project]
+python -c 'import tomllib;print(tomllib.load(open("pyproject.toml","rb"))["project"].get("version"))'  # 9.9.9
+python -m hephaestus.scripts_lib.check_version_single_source; echo $?   # non-zero
+git checkout -- pyproject.toml                                          # -> 0
+
+# Leg 3 (lockfile): clean -> 0 ; append sentinel pypi dep -> non-zero ; restore -> 0
+pixi install --locked; echo $?                                         # 0
+printf '\n[pypi-dependencies]\nnonexistent-sentinel-pkg = "*"\n' >> pixi.toml
+pixi install --locked; echo $?                                        # non-zero: "lock file not up-to-date with the workspace"
+git checkout -- pixi.toml                                             # -> 0
+```
+
+Accepted DRY overlap (justified by the pinned-context constraint): `lint`'s
+`check-version-single-source` pre-commit hook (legs 1+2) and `pixi-check`'s `pixi
+install --locked` (leg 3). The alternative — deleting the pinned-context job — bricks
+the merge queue, so defense-in-depth duplication is the correct trade-off.
+
+**Related skills:** `gha-required-checks-branch-protection` (pinned required contexts,
+ruleset admin), `console-scripts-exit-code-discipline` (exit-code semantics under
+`set -e`), `lockfile-and-release-pipeline-management` (lockfile-sync verification), and
+the companion worktree-`__file__` skill (why `-m` beats a `scripts/<x>.py` shim).
+
 ## Verified On
 
 | Project | Context | Details |
@@ -332,3 +510,4 @@ library module imported by other scripts but never invoked directly.
 | ProjectOdyssey | Issue #3834 (grep deprecation guard) — follow-up from #3267/#3059; PR #4810 | 8 deprecated backward-result aliases blocked in `comprehensive-tests.yml` `mojo-syntax-check` job |
 | ProjectScylla | Issue #1443 (schema validation) — follow-up from #1382; PR #1466 | `validate_config_schemas.py` + pre-commit hook already existed; CI step was the only missing piece |
 | ProjectOdyssey | Issue #3969 (stale-script detector) — follow-up from #3148/#3337; PR #4844 | stdlib-only detector + pre-commit hook + 20 unit tests; 22 stale candidates surfaced |
+| ProjectHephaestus | Issue #1181 (dead required gate) — PR #1266; `deps/version-sync` passed in CI in 13s on the fix branch | `deps-version-sync` job in `.github/workflows/_required.yml` computed-and-discarded a `DYNAMIC` verdict with its only `exit 1` behind a non-existent `VERSION` file; rewired to install WITH deps + `python -m hephaestus.scripts_lib.check_version_single_source` under `set -euo pipefail` + `pixi install --locked` (pinned pixi v0.69.0); context pinned in org ruleset so fixed in place, not deleted; two-sided verified |

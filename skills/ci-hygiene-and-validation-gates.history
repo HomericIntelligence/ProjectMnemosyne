@@ -4,6 +4,52 @@
 This file preserves the full original content of the skills merged into
 `ci-hygiene-and-validation-gates`.
 
+## v1.1.0 (2026-06-12)
+
+**What changed:** Added **Pattern 4 — detect & fix a dead required gate** to
+`## Verified Workflow` (with a Quick Reference two-sided verification block), five
+new `## Failed Attempts` rows, a `## Results & Parameters` subsection for the
+dead-gate fix, and a `## Verified On` row (ProjectHephaestus issue #1181 / PR
+#1266). Bumped `version` 1.0.0 → 1.1.0 (MINOR — additive pattern), `date` → 2026-06-12,
+added tags `required-status-check`, `dead-gate`, `no-op-assertion`, `version-sync`,
+`set-e`, `pinned-context`, `defense-in-depth`, `pip-install-deps`, `pixi-locked`.
+
+**Why:** A required status check (`deps/version-sync`) computed a verdict, `echo`ed
+it, and discarded it; its only `exit 1` lived behind `if [ -f VERSION ]` while the
+repo has no `VERSION` file (hatch-vcs dynamic versioning) — so the gate passed for
+ANY version configuration (security-theater). The context was pinned in the org
+ruleset and could not be deleted (deletion bricks the merge queue), so the gate had
+to be made real in-place. Searchers for "required check asserts nothing" / "dead
+gate" should land on this skill alongside the existing grep/schema/stale patterns.
+
+### Snapshot of v1.0.0 (superseded 2026-06-12)
+
+The full v1.0.0 markdown body (frontmatter + Patterns 1–3, the original six Failed
+Attempts rows, Results & Parameters for Patterns 1–3, and the three-row Verified On
+table) is preserved in git history at the commit immediately preceding the v1.1.0
+amendment. The v1.0.0 frontmatter was:
+
+```yaml
+---
+name: ci-hygiene-and-validation-gates
+description: "Use when: (1) adding a CI step that grep-blocks reappearance of deprecated identifiers after a cleanup PR, (2) adding a standalone JSON schema validation step to catch config drift even when pre-commit was skipped, (3) detecting orphaned scripts/*.py files not referenced in CI workflows, justfile, or other scripts."
+category: ci-cd
+date: 2026-06-07
+version: "1.0.0"
+user-invocable: false
+history: ci-hygiene-and-validation-gates.history
+tags:
+  - ci-cd
+  - grep
+  - validation
+  - deprecation
+  - schema
+  - pre-commit
+  - stale-detection
+  - regression-guard
+---
+```
+
 ## v1.0.0 (2026-06-07)
 
 Merged the following skills into `ci-hygiene-and-validation-gates`:
