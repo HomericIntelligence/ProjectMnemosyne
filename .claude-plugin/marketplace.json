@@ -6,9 +6,9 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "2.1.0",
-  "total_plugins": 291,
+  "total_plugins": 292,
   "categories": {
-    "architecture": 45,
+    "architecture": 46,
     "ci-cd": 44,
     "debugging": 23,
     "documentation": 16,
@@ -18,7 +18,7 @@
     "tooling": 110,
     "training": 7
   },
-  "last_updated": "2026-06-08T01:54:12Z",
+  "last_updated": "2026-06-13T01:40:24Z",
   "plugins": [
     {
       "name": "agent-config-validation-and-integrity",
@@ -36,6 +36,25 @@
         "model-selection",
         "claude-cli",
         "pydantic",
+        "hephaestus"
+      ]
+    },
+    {
+      "name": "architecture-executable-convention-guard-pattern",
+      "description": "Turn an un-guarded documented invariant (a prose convention) into a tested, blocking, reusable executable check that CI or any consumer can call. Use when: (1) a contract like 'absence of artifact X means stage Y never ran' lives only in docstrings/comments and nothing asserts it, (2) you are adding an enforcement gate whose whole purpose is signal fidelity and must pick a collision-free exit code distinct from argparse's usage-error 2 and sibling CLIs, (3) a verification step must resolve its inputs strictly read-only and must NOT fabricate the very signal whose absence it checks (e.g. a resolver that mkdir()s the directory), (4) you classify a log/marker line and must anchor on the line prefix instead of a free substring scan vulnerable to user-controlled tokens, (5) you relax argparse requirements (nargs='?') for a new mode and must re-guard the original mode so it does not silently no-op, (6) the same convention is documented in two places (module docstring + sibling shell comment) and must be kept in sync when made executable.",
+      "version": "1.0.0",
+      "source": "./skills/architecture-executable-convention-guard-pattern.md",
+      "category": "architecture",
+      "tags": [
+        "executable-convention",
+        "invariant-guard",
+        "exit-code-collision",
+        "fail-safe",
+        "read-only-verification",
+        "log-line-anchoring",
+        "observability",
+        "cli-verify-mode",
+        "ci-gate",
         "hephaestus"
       ]
     },
