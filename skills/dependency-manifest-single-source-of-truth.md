@@ -350,7 +350,7 @@ def check_pixi_python_ceiling(repo_root) -> bool:
 > `tests/unit/scripts_lib/test_check_python_version_consistency.py`. **Before adding tests to
 > the file a plan names, `grep` its import line to confirm it actually imports the module you
 > changed** — duplicated/parallel module names cause plans to point at the wrong test file.
-
+>
 > **SCOPE HYGIENE — repo-wide pre-commit hooks touch files you didn't change.** Running the
 > ruff pre-commit hook auto-fixed an unrelated pre-existing file (a latent E501 in
 > `tests/unit/scripts/test_check_license_compatibility.py` on main). It was reverted
