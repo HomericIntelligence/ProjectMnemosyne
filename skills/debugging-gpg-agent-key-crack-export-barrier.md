@@ -112,7 +112,7 @@ with gpg.Context(pinentry_mode=gpg.constants.PINENTRY_MODE_LOOPBACK) as c:
 | OpenPGP packet layout | OpenPGP MPI framing => ~668-byte encrypted blob (what `gpg2john`/john parse) |
 | Layout interchangeability | None — copied salt/count/iv/blob between the two => john `No password hashes loaded` |
 | Subkey -> keygrip map | `gpg --list-secret-keys --with-keygrip --with-subkey-fingerprints` |
-| Message's required key id | `gpg --list-packets <msg.asc> | grep keyid` |
+| Message's required key id | `gpg --list-packets <msg.asc> \| grep keyid` |
 | Stub export size | 659 bytes (`gnu-dummy` S2K, no secret material) |
 | Safe trial throughput | ~1.4 tries/sec, hard S2K floor; identical for GPGME in-process and per-process gpg; unaffected by agent-cache reloads |
 | Export refusal modes | `No passphrase given` (empty loopback) / `Inappropriate ioctl for device` (no pinentry) |
