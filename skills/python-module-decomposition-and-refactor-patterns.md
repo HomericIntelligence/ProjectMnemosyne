@@ -83,7 +83,7 @@ description: >-
   do not.
 category: architecture
 date: 2026-06-13
-version: "1.13.0"
+version: "1.14.0"
 user-invocable: false
 history: python-module-decomposition-and-refactor-patterns.history
 tags:
@@ -139,6 +139,9 @@ tags:
   - fabricated-params-failure-mode
   - acquired-slot-mnemonic
   - r7-planning-session
+  - shim-replaces-body
+  - append-only-shim
+  - f811-redefinition
 ---
 
 # Python Module Decomposition and Refactor Patterns
@@ -149,7 +152,7 @@ tags:
 | ------- | ------- |
 | **Date** | 2026-06-13 |
 | **Objective** | Decompose oversized Python modules/classes/functions into focused, independently testable units using SRP, TDD, and DRY principles |
-| **Outcome** | Synthesized from 15+ verified skills; covers function-level extraction, class-based extraction, circular import fixes, immutability refactoring, extensibility-driven decomposition, CLI entry-point extraction with preserved patch routing, top-level symbol extraction to break sibling module cycles, CC>15 pipeline-step extraction, scanner-to-subdirectory scoping, context-manager double-counter fixes, safe legacy-code deletion, substrate-read-before-estimate discipline, post-parallel phase cleanup, god-class decomposition planning risks (state ownership, cross-call coupling, constant re-export, delegation stub type loss, coverage omit-allowlist traps, shared mutable dict write-back, methods shared across multiple collaborators, test fixture pre-seeding after cache extraction, method body read before assignment, __init__.py export conditionality verification), exception-contract verification before documenting wrapper behavior, three Phase 20 implementation-time traps (exception-boundary removal unmasks StopIteration from exhausted side_effect mocks; returncode-guard obligation at every call site of an absorbed-exception helper; agent mock type determines downstream subprocess.run consumption), god-function decomposition planning rules (arithmetic chain verification, docstring budget, for-loop body sizing, return type tracing, N-tuple completeness, captured variable audit, approach table completeness, AST-measure discipline), god-class narrow-callable DIP execution (lambda wrapping for patch.object compatibility, cross-module import patching when method chains split, sibling test attribute path updates after cache migration, companions tuple updates in phase-wiring tests), post-extraction DRY and constructor-injection refinement (thin delegation stubs, __setattr__ propagation, .clear()/.update() dict identity, circular import avoidance via local copies, from __future__ import annotations in collaborators), keyword-only method signature verification before writing stubs (fabricated positional signatures pass AST checks silently but raise TypeError at runtime), `_gh_call` multi-module split attribution via test-class boundary bucketing (range-grep spot-checks are insufficient for 4+ destination modules; class-boundary bucket analysis is required), delegation-chain pre-check before adding `_gh_call` patches to migration tables (if existing test patches a sub-module like `_review_utils._gh_call`, that patch does not move regardless of where the method relocates), return-type verification for delegation stubs (both parameters AND return types must be source-read; a stub with a wrong return type fails mypy in the host file not the collaborator modules, and is invisible unless the host file is in the mypy target list), acquired_slot parameter confirmation (three specific methods — _recheck_and_arm_after_fix, `_resolve_dirty_pr`, `_attempt_ci_fixes` — all have acquired_slot as a real positional parameter), keyword-only forwarding call verification for methods like _mark_drive_green_learn_result (stub def must include `*` AND forwarding call must use `param=value` keyword syntax), fabricated-param prevention protocol (in 3 consecutive rounds R4/R5/R6 the #1 rejection cause was fabricated signatures — use `sed -n` on the exact line range before writing any stub; never write "confirmed from source" without running the command), and acquired_slot vs no-acquired_slot slot-ownership mnemonic (methods that ACQUIRE a semaphore slot have the param; sub-steps executing INSIDE an acquired slot do not) |
+| **Outcome** | Synthesized from 17+ verified skills; covers function-level extraction, class-based extraction, circular import fixes, immutability refactoring, extensibility-driven decomposition, CLI entry-point extraction with preserved patch routing, top-level symbol extraction to break sibling module cycles, CC>15 pipeline-step extraction, scanner-to-subdirectory scoping, context-manager double-counter fixes, safe legacy-code deletion, substrate-read-before-estimate discipline, post-parallel phase cleanup, god-class decomposition planning risks (state ownership, cross-call coupling, constant re-export, delegation stub type loss, coverage omit-allowlist traps, shared mutable dict write-back, methods shared across multiple collaborators, test fixture pre-seeding after cache extraction, method body read before assignment, __init__.py export conditionality verification), exception-contract verification before documenting wrapper behavior, three Phase 20 implementation-time traps (exception-boundary removal unmasks StopIteration from exhausted side_effect mocks; returncode-guard obligation at every call site of an absorbed-exception helper; agent mock type determines downstream subprocess.run consumption), god-function decomposition planning rules (arithmetic chain verification, docstring budget, for-loop body sizing, return type tracing, N-tuple completeness, captured variable audit, approach table completeness, AST-measure discipline), god-class narrow-callable DIP execution (lambda wrapping for patch.object compatibility, cross-module import patching when method chains split, sibling test attribute path updates after cache migration, companions tuple updates in phase-wiring tests), post-extraction DRY and constructor-injection refinement (thin delegation stubs, __setattr__ propagation, .clear()/.update() dict identity, circular import avoidance via local copies, from __future__ import annotations in collaborators), keyword-only method signature verification before writing stubs (fabricated positional signatures pass AST checks silently but raise TypeError at runtime), `_gh_call` multi-module split attribution via test-class boundary bucketing (range-grep spot-checks are insufficient for 4+ destination modules; class-boundary bucket analysis is required), delegation-chain pre-check before adding `_gh_call` patches to migration tables (if existing test patches a sub-module like `_review_utils._gh_call`, that patch does not move regardless of where the method relocates), return-type verification for delegation stubs (both parameters AND return types must be source-read; a stub with a wrong return type fails mypy in the host file not the collaborator modules, and is invisible unless the host file is in the mypy target list), acquired_slot parameter confirmation (three specific methods — _recheck_and_arm_after_fix, `_resolve_dirty_pr`, `_attempt_ci_fixes` — all have acquired_slot as a real positional parameter), keyword-only forwarding call verification for methods like _mark_drive_green_learn_result (stub def must include `*` AND forwarding call must use `param=value` keyword syntax), fabricated-param prevention protocol (in 3 consecutive rounds R4/R5/R6 the #1 rejection cause was fabricated signatures — use `sed -n` on the exact line range before writing any stub; never write "confirmed from source" without running the command), and acquired_slot vs no-acquired_slot slot-ownership mnemonic (methods that ACQUIRE a semaphore slot have the param; sub-steps executing INSIDE an acquired slot do not) |
 | **Trigger** | Files >800 lines, circular import errors, mixed-concern methods, C901/CC>15 complexity, extensibility requirements, CLI main() extraction, deferred imports inside function bodies preventing static analysis, broad scanners needing subdirectory scope, stale callers after context-manager refactors, dead fallback files, pessimistic refactor estimates, technical debt after parallel phases, planning a multi-collaborator god-class decomposition, extracting a two-branch provider-conditional dispatch with heterogeneous return types, documenting exception contracts for wrapper methods, planning god-function decomposition (individual functions > 80L), planning delegation-stub extraction where extracted methods populate shared dicts or caches read by the host class, executing a god-class decomposition using narrow-callable injection (DIP) where bare bound-method references to injected callables break patch.object, applying post-extraction DRY cleanup and constructor-injection refinement (delegation stubs, __setattr__ propagation, dict identity preservation), writing delegation stubs for methods with keyword-only parameters (`*` separator), planning migration of a symbol patched in 10+ test sites across multiple test classes when the symbol will move to 4+ destination modules, verifying whether an existing test's _gh_call patch already targets a sub-module (making migration unnecessary for that test), source-reading the `->` return annotation for every delegation stub (wrong return types fail mypy in the host file and are invisible if the host file is not in the mypy target list), confirming positional vs keyword-only status of parameters for methods before finalizing stub signatures, verifying the forwarding call uses `param=value` syntax for every keyword-only parameter, applying the fabricated-param prevention protocol (run `sed -n` on each def line range before writing any stub), or distinguishing slot-worker methods (have `acquired_slot`) from sub-step methods (do not) |
 
 ## When to Use
@@ -186,6 +189,9 @@ Apply this skill when any of the following is true:
 - Writing a delegation stub for a method with **keyword-only params that also appear after `*` in the source** — the stub def must include `*`, the forwarding call must use `keyword=value`; missing the keyword syntax in the forwarding call raises `TypeError` even when the stub def is correct (Phase 30)
 - Planning has **failed due to fabricated signatures in three or more consecutive review rounds** — activate the fabricated-param prevention protocol: `sed -n '<start>,<end>p'` for every `def` line before writing any stub; do not write "confirmed from source" without running the command (Phase 31)
 - Determining whether a method should receive **`acquired_slot` as a parameter** — use the slot-ownership mnemonic: methods that ACQUIRE a semaphore slot (rebase/resolve/fix workers) have the param; methods that execute AS A SUB-STEP already inside an acquired slot do not (Phase 32)
+- A **shim was added to the host class but the original body was NOT deleted** — ruff F811 redefinition, `wc -l` went UP instead of DOWN, and `# noqa: C901` waivers remain; the correct sequence is delete-original-then-add-shim in one atomic change (Phase 11b)
+- Decomposing an orchestrator whose tests pin method names on **BOTH the implementer AND the phase runner** (`patch.object(impl, "_xxx")` AND `patch.object(impl.phase_runner, "_xxx")`) — use a frozen `StageContext` dataclass carrying both back-references so phases route dispatch through `self.ctx.runner._xxx()` (Phase 18b)
+- Planning a god-class decomposition and needing to understand the **full scope of patch-string migration** before writing any extraction code — build a symbol → patch-count → destination-collaborator table first (Phase 18c)
 
 ## Verified Workflow
 
@@ -203,12 +209,16 @@ Decision tree:
   Extensibility blocked by coupling     → Extract-Parameterize-Protocol pattern
   Extract CLI main() while keeping      → Reverse-Delegation Pattern (Phase 11) OR
     existing patch.object tests intact    Top-Level Extraction (Phase 12)
+  Shim added but body not deleted       → Shim-Replaces-Body anti-pattern (Phase 11b)
   CC>15 pipeline method (# noqa: C901)  → Pipeline-Step Extraction (Phase 13)
   Broad scanner → one subdirectory      → Allow-list scope helper (Phase 14)
   Counter == 2 after ctx-manager move   → Audit callers, drop stale +1/-1 (Phase 15)
   Dead "fallback only" file, 0 callers  → Safe Legacy Deletion (Phase 16)
   Estimating a big rewrite              → Read substrate FIRST (Phase 17)
   Cleanup after parallel phases         → Finalization checklist (Phase 18)
+  Decompose orchestrator w/ dual patch  → Dual-Back-Ref StageContext (Phase 18b)
+    targets (impl + phase_runner both)
+  Pre-migration patch string audit      → Build migration table first (Phase 18c)
   Planning god-class decomposition      → Planning risk audit (Phase 19)
   Two-branch bool-predicate dispatch    → Provider-dispatch extraction (Phase 20)
   Planning god-function decomposition   → Function-size planning rules (Phase 21)
@@ -654,6 +664,52 @@ pytest tests/ -q
 | ruff + mypy | clean (288 files) |
 | Verification level | verified-local |
 
+### Phase 11b: Shim-Replaces-Body — the Append-Only Anti-Pattern
+
+The reverse-delegation pattern (Phase 11) is only **HALF** the move. The shim on the host
+class is the patchable address; the real body must **MOVE** into the collaborator/phase. A
+decomposition that **ADDS** shims while **KEEPING** the original bodies is a no-op for the
+size/complexity acceptance criteria and actively breaks lint.
+
+**Symptom triad that means "you appended instead of replaced"**:
+
+1. ruff **F811** redefinition on the duplicated names (the shim redefines a name already
+   defined earlier in the same class).
+2. **`wc -l` went UP, not down** — the file grew because both copies coexist.
+3. **`grep noqa: C901`** still finds the waivers — they rode along in the dead original bodies,
+   so the complexity is still "present" and the AC for removing waivers is unmet.
+
+**Correct sequence per method** (do these as ONE atomic change so the tree is never
+half-migrated):
+
+1. Move the real body into `Phase._xxx_impl(...)`, rewriting `self.X` → `self.ctx.X`
+   (options/state_dir/repo_root/impl/status_tracker/state_lock) and `self._impl_module` →
+   `self.ctx.impl_module()`.
+2. For cross-collaborator calls that tests patch on the runner, dispatch through
+   `self.ctx.runner._xxx(...)` (NOT `self.ctx.impl._xxx`) so
+   `patch.object(impl.phase_runner, "_xxx")` still intercepts.
+3. **DELETE** the original body from the host class.
+4. Add the one-line shim on the host class:
+   `def _xxx(self, ...): return self.<phase>._xxx_impl(...)`.
+5. Drop any `# noqa: C901` that was on the deleted body — its complexity now lives in the
+   decomposed phase fragments, each under the CC budget.
+
+**Verification gates** (all must pass before claiming the AC met):
+
+```bash
+grep -n "noqa: C901" <runner>.py            # must be ZERO
+python -c "import <pkg>.<runner>"            # imports cleanly (no leftover refs to deleted helpers)
+ruff check <runner>.py                       # no F811, no F841, no ARG002
+wc -l <runner>.py                            # must be SMALLER than before
+pixi run python -m pytest tests/ -q          # full suite green (the real gate — do not skip)
+```
+
+**Sequencing note for multi-agent / parallel edits**: the "move body into phase" edit and the
+"delete original + add shim on runner" edit touch **DIFFERENT files** but are logically
+coupled. Run them **SEQUENTIALLY** (phase first, runner second) — never let two agents edit the
+phase file and the runner file's overlapping method region concurrently, or one will reference
+a body the other just moved.
+
 ### Phase 12: Top-Level Symbol Extraction — Breaking Sibling-Module Cycles
 
 Use when two sibling modules (e.g., `implementer_cli.py`, `implementer_phase_runner.py`) have
@@ -969,6 +1025,224 @@ git status                               # no uncommitted changes
 complex functions simplified, naming consistent, docs updated, all tests passing, code
 formatted, zero compiler warnings, coverage at/above floor, ready for review. Cleanup is the
 final polishing gate before PR approval and merge.
+
+### Phase 18b: Phase-Strategy Decomposition with Dual-Back-Reference StageContext
+
+Use when a 1,000–2,000 LoC orchestrator class needs to be decomposed into a small
+set of named pipeline phases (the issue often names them explicitly:
+`PlanPhase`, `ImplementPhase`, `ReviewPhase`, `FollowUpPhase`, `PRCreatePhase`)
+AND existing tests already pin internal method names on TWO different objects:
+`patch.object(impl, "_xxx")` AND `patch.object(impl.phase_runner, "_xxx")`.
+
+This is the case Phases 11 and 12 don't cover: CLI extraction (Phase 11) preserves
+patches on the original module; sibling-cycle extraction (Phase 12) retargets
+patches to the runner. Phase 18b must preserve BOTH patch addresses simultaneously
+because both are exercised by the test suite, on the same set of methods.
+
+**Core idea**:
+
+1. Each phase exposes ONE public `run(...)` method and N private `_xxx_impl` methods
+   that hold the real bodies lifted from the runner.
+2. The coordinator (`ImplementationPhaseRunner`) keeps EVERY name that tests patch
+   as a one-line shim: `def _xxx(self, *a, **kw): return self.review_phase._xxx_impl(*a, **kw)`.
+3. Phases dispatch back via `self.ctx.runner._xxx(...)` — NOT `self.ctx.impl._xxx(...)`.
+   The runner is the patchable surface; `impl` only exists for the small set of
+   methods that tests pin directly on the implementer.
+4. `StageContext` is a frozen dataclass carrying BOTH back-references:
+
+```python
+@dataclass(frozen=True)
+class StageContext:
+    impl: IssueImplementer            # preserves patch.object(impl, "_xxx")
+    runner: ImplementationPhaseRunner  # preserves patch.object(impl.phase_runner, "_xxx")
+    state_mgr: ImplementerStateManager
+    # ... other already-initialized collaborators
+
+    def __post_init__(self):
+        assert self.impl.state_mgr is not None, (
+            "StageContext built before IssueImplementer finished __init__ — "
+            "construct phases AFTER state_mgr is wired"
+        )
+```
+
+**Why both references?**
+
+A naive single back-reference (just `impl`) causes a subtle test break: when a
+test does `patch.object(impl.phase_runner, "_fetch_plan_and_review")`, it patches
+the runner shim. But if the phase dispatched via `self.ctx.impl._fetch_plan_and_review`,
+the call goes through the implementer's pass-through, NOT through the runner shim
+the test patched — so the patch never fires. Holding `runner` directly on the
+context and routing through `self.ctx.runner.<name>` keeps the lookup site on
+the patched object.
+
+**Workflow**:
+
+1. **Audit ALL patch sites BEFORE moving code.** The union of patches is the
+   contract; every name must remain callable on its original object:
+   ```bash
+   grep -rn 'patch.object(.*impl\b' tests/ | grep -v 'phase_runner'
+   grep -rn 'patch.object(impl\.phase_runner' tests/
+   ```
+2. **Create `_stage_context.py` first** — frozen dataclass with `impl` AND `runner`
+   back-references and a `__post_init__` init-order assertion.
+3. **Extract phases simplest-first** (Plan → PRCreate → Implement → FollowUp → Review),
+   one per TDD cycle. For each: write the phase's per-class test file RED, lift the
+   body from the runner into `_xxx_impl`, wire the runner shim, verify the whole
+   suite stays green BEFORE moving on.
+4. **Name-collision resolution**: if a phase class name collides with an existing
+   enum value (e.g., `models.ReviewPhase` enum vs new `ReviewPhase` class), alias
+   at the import site: `from .models import ReviewPhase as ReviewState`. Don't
+   rename either type.
+5. **Decompose C901-flagged methods structurally**. As you lift each body, split
+   it into smaller helpers (`_iterate`, `_check_termination`, `_address`,
+   `_warn_if_unresolved`) so each fragment has CC ≤ 8. Remove the `# noqa: C901`.
+6. **Use `impl_module()` as a method, not a property.** A property triggering an
+   import on attribute access violates POLA (readers don't expect side effects).
+7. **Module imports stay at module scope.** Never defer imports inside lock-held
+   regions — holding any lock while acquiring Python's import lock creates a
+   deadlock risk.
+8. **Filter chains must enumerate ALL required fields explicitly**, including
+   Optional ones. If a downstream action needs `state.session_id` and `session_id`
+   is `Optional[str]`, add `if not state.session_id: continue` BEFORE calling the
+   action — defense-in-depth over "the filter probably caught it."
+9. **Verification gates** (run after each phase extraction, not at the end):
+   ```bash
+   # exactly one public method per phase
+   pixi run python -c "import inspect; from hephaestus.automation._review_phase \
+     import ReviewPhase; print([n for n,_ in inspect.getmembers(ReviewPhase, \
+     inspect.isfunction) if not n.startswith('_')])"
+   # coordinator under 500 lines
+   test "$(wc -l < hephaestus/automation/implementer_phase_runner.py)" -le 500
+   # C901 noqa removed cleanly
+   pixi run ruff check hephaestus/automation/ --select=C901
+   ```
+10. **"Implement or remove" is binary.** Never check in `raise NotImplementedError()`
+    stubs reachable through runner shims. Either implement fully or delete the
+    stub AND its runner shim in the same change. Half-completed extraction with
+    stubs guarantees an unbounded review loop (every direct caller crashes; every
+    `patch.object` test crashes; reviewers reopen the same threads each iteration).
+
+**Pattern in code**:
+
+```python
+# implementer_phase_runner.py (the coordinator)
+class ImplementationPhaseRunner:
+    def __init__(self, impl):
+        self.impl = impl
+        self.ctx = StageContext(impl=impl, runner=self, state_mgr=impl.state_mgr, ...)
+        self.review_phase = ReviewPhase(self.ctx)
+        self.plan_phase   = PlanPhase(self.ctx)
+        # ...
+
+    # One-line shim — exists ONLY so patch.object(impl.phase_runner, "_fetch_plan_and_review") works
+    def _fetch_plan_and_review(self, n):
+        return self.review_phase._fetch_plan_and_review_impl(n)
+
+    # Same for every patched name:
+    def _run_impl_review_step(self, *a, **kw):
+        return self.review_phase._run_impl_review_step_impl(*a, **kw)
+
+# _review_phase.py
+class ReviewPhase:
+    def __init__(self, ctx): self.ctx = ctx
+
+    def run(self, **kw) -> ReviewOutcome:        # SINGLE public entry point
+        return self._iterate(**kw)
+
+    def _iterate(self, **kw) -> ReviewOutcome:
+        # CRITICAL: route through ctx.runner, not ctx.impl —
+        # so patch.object(impl.phase_runner, "_fetch_plan_and_review") intercepts
+        plan, review = self.ctx.runner._fetch_plan_and_review(kw["issue_number"])
+        ...
+        outcome = self.ctx.runner._run_impl_review_step(...)
+        ...
+
+    def _fetch_plan_and_review_impl(self, n):    # real body lifted from runner
+        ...
+
+    def _run_impl_review_step_impl(self, *a, **kw):
+        ...
+```
+
+**The shim is NOT free — it's load-bearing.** Removing the shim breaks every
+test that did `patch.object(impl.phase_runner, "_xxx")` AND every direct call
+site like `implementer.phase_runner._xxx(...)`. Treat shims as part of the public
+contract during the lifetime of those tests.
+
+**Results & numbers (verified-local, ProjectHephaestus PR #998)**:
+
+| Metric | Value |
+|--------|-------|
+| Source class (`ImplementationPhaseRunner`) | ~1,712 LoC, CC>15 in 4 methods |
+| Phase modules created | 5 (Plan/Implement/Review/FollowUp/PRCreate) |
+| Phase modules total LoC | ~1,150 (avg 230 per phase) |
+| Reverse-delegation shims on the runner | ~30 one-line methods |
+| Per-test mock count for new phase tests | 3–5 (vs 20+ for the original) |
+| CC budget per extracted helper | ≤ 8 decision points |
+| StageContext fields | `impl`, `runner`, plus already-wired collaborators |
+| Init-order guard | `assert impl.state_mgr is not None` in `__post_init__` |
+
+### Phase 18c: Pre-Migration Patch-String Audit
+
+Before extracting any methods from a god-class, build a complete patch migration table.
+This is a prerequisite step — never claim "only N fixture lines change" without
+completing this audit first.
+
+**Why this matters**: Python resolves symbol names from the module where the *call site*
+lives at runtime. When a method body moves to a collaborator module, the collaborator must
+explicitly import every symbol its methods call (e.g., `from .github_api import _gh_call`).
+Any `patch("original_module.symbol")` string that was intercepting calls via the original
+module will STOP intercepting once the method body moves — the name is now looked up from
+the collaborator's namespace.
+
+**Scale of changes (real example from issue #1289, ci_driver.py → 4 collaborators)**:
+
+| Symbol | Patch count | Destination collaborator |
+|--------|------------|--------------------------|
+| `gh_pr_checks` | 21 patches | `ci_check_inspector` |
+| `_gh_call` | 17 patches | split across 3 collaborators by method location |
+| `get_repo_info` | 14 patches | `pr_discovery` |
+| `compact_session` | 5 patches | `post_merge_processor` |
+| `sync_worktree_to_remote_branch` | 5 patches | `ci_fix_orchestrator` |
+| `rebase_worktree_onto` | 4 patches | `ci_fix_orchestrator` |
+| `run` | 6 patches | `ci_fix_orchestrator` |
+| `gh_pr_resolve_thread` | 3 patches | `ci_check_inspector` |
+| `invoke_claude_with_session` | 2 patches | `ci_fix_orchestrator` |
+| **Total** | **80+** | across 4 test files |
+
+**Workflow**:
+
+1. Grep all test patch strings for the source module:
+   ```bash
+   grep -rn 'patch("hephaestus.automation.original_module\.' tests/
+   ```
+2. For each unique symbol found, identify which methods call it (read the method bodies).
+3. Determine which collaborator each method is moving to.
+4. Build a migration table: `Symbol → source module → patches count → destination collaborator`.
+5. For each patch call in each test file: update the string to
+   `hephaestus.automation.collaborator_module.symbol`.
+6. **Patches for methods STAYING on the original class** → no change to patch string.
+7. **Constructor/fixture patches** (`__init__` dependencies like `get_repo_root`,
+   `WorktreeManager`) → no change (`__init__` stays on the original class, so lookups
+   remain in the original module's namespace).
+
+```bash
+# Stale patch string detector — run after migration to verify completeness
+grep -rn \
+  'original_module\.gh_pr_checks\|original_module\._gh_call\|original_module\.get_repo_info' \
+  tests/unit/ && echo "FAIL: stale patches remain" || echo "PASS: all patch strings migrated"
+```
+
+**Key insight — `_gh_call` is called from many methods across collaborators**:
+When a frequently-called helper like `_gh_call` is used in methods that go to
+DIFFERENT collaborators, each collaborator must import it at module level, and
+the 17 patches for `_gh_call` must be sorted by which collaborator's methods each
+test is exercising. There is no single migration target — the target depends on
+which method's code path the test exercises.
+
+**Verification**: After updating all patch strings, run the full test suite. A
+`AssertionError: Expected 'symbol' to have been called once. Called 0 times.` error
+means a stale patch string remains.
 
 ### Phase 19: God-Class Decomposition — Planning Risk Audit
 

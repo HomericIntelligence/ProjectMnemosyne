@@ -1,6 +1,48 @@
 <!-- markdownlint-disable MD024 -->
 # python-module-decomposition-and-refactor-patterns — History
 
+## v1.14.0 (2026-06-13)
+
+**Changed by:** MERGE-BOTH rebase — folding unique content from PR #2319 (branch skill/decomp-shim-must-replace-not-append, v1.11.0 base) into v1.13.0 canonical
+**Verification:** unverified (content from PR #2319 planning session; CI not yet run)
+
+### What changed
+
+Added three unique contributions from PR #2319 that were absent from v1.13.0:
+
+**Phase 11b: Shim-Replaces-Body — the Append-Only Anti-Pattern**
+
+The reverse-delegation pattern (Phase 11) is only HALF the move. Adding a shim WITHOUT
+deleting the original body produces three detectable symptoms: ruff F811 redefinition,
+`wc -l` going UP instead of DOWN, and `# noqa: C901` waivers still present. The correct
+sequence is delete-original-then-add-shim as ONE atomic change. Critically, the "move body
+into phase" edit (phase file) and the "delete original + add shim" edit (runner file) touch
+different files but are logically coupled and must run SEQUENTIALLY (phase first, runner
+second) — never let two agents edit overlapping method regions concurrently.
+
+**Phase 18b: Phase-Strategy Decomposition with Dual-Back-Reference StageContext**
+
+Covers the case Phases 11 and 12 don't cover: when tests pin method names on BOTH the
+implementer (`patch.object(impl, "_xxx")`) AND the phase runner
+(`patch.object(impl.phase_runner, "_xxx")`). Solution: a frozen `StageContext` dataclass
+carrying both back-references (`impl` AND `runner`), with phases routing all cross-phase
+dispatch through `self.ctx.runner._xxx()` (not `self.ctx.impl._xxx()`) so the runner
+remains the patchable surface. Includes `__post_init__` init-order assertion, naming-collision
+resolution pattern, and a "implement or remove is binary" rule for NotImplementedError stubs.
+Verified on ProjectHephaestus PR #998 (~1,712 LoC orchestrator → 5 phase modules).
+
+**Phase 18c: Pre-Migration Patch-String Audit**
+
+Before extracting methods from a god-class, build a complete patch migration table
+(symbol → patch-count → destination collaborator). This is a prerequisite step — never claim
+"only N fixture lines change" without completing this audit. Real-world scale: 80+ patch
+string updates across 4 test files (issue #1289, ci_driver.py → 4 collaborators). Key insight:
+when `_gh_call` is used in methods going to DIFFERENT collaborators, each collaborator must
+import it and each patch site must be attributed to the specific collaborator's code path.
+
+Also added 3 new tags: `shim-replaces-body`, `append-only-shim`, `f811-redefinition`.
+Updated Outcome summary to "17+" skills. Bumped 1.13.0 → 1.14.0.
+
 ## v1.13.0 (2026-06-13)
 
 **Changed by:** /learn from ProjectHephaestus issue #1289 R5+R6+R7 planning sessions (CIDriver god-class decomposition — planning-time verification rules, return-type verification, acquired_slot confirmation, keyword-only forwarding call, fabricated-param prevention protocol, acquired_slot mnemonic)
