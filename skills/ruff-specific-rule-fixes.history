@@ -5,6 +5,23 @@
 This file preserves the full verbatim content of the skills consolidated into
 `ruff-specific-rule-fixes.md`, along with the version history of the canonical.
 
+## v1.3.0 (2026-06-13)
+
+**Changed by:** Merge of PR #2379 (skill/amend-ruff-unused-noqa-and-scripts-smoke) onto main v1.2.0
+**Verification:** verified-precommit (RUF100 + scripts smoke); verified-local (E501 retroactive patterns)
+
+### What changed
+
+- Added Pattern D (scripts/*.py RUF100 unused-noqa + auto-discovered smoke `--help` contract).
+- Renamed existing Pattern D (retroactive floor-bump violations) to Pattern E.
+- Extended "When to Use" trigger #8: adding a new scripts/*.py or adding a # noqa for a rule not in select.
+- Extended description trigger list to include #8.
+- Added tags: RUF100, unused-noqa, select-list, scripts-smoke-test, help-contract, D103.
+- Added 3 new Failed Attempts entries (S603 noqa, scripts --help contract, D103 docstrings).
+- Added new Results subsection: "RUF100 unused-noqa + scripts smoke `--help` contract".
+- Added ProjectHephaestus issue #1214 / PR #1250 to Verified On table.
+- Bumped version 1.2.0 → 1.3.0.
+
 ## v1.2.0 (2026-06-13)
 
 **Changed by:** Session — ProjectHephaestus issue #1313 (ruff floor bump 0.1.x to 0.15)
