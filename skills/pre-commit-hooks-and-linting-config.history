@@ -1,6 +1,49 @@
 <!-- markdownlint-disable MD024 -->
 # pre-commit-hooks-and-linting-config -- History
 
+## v2.2.0 (2026-06-13) -- Salvage commit-msg-stage hooks learning (closed PR #2353)
+
+**Source:** Closed PR #2353 (HomericIntelligence/ProjectMnemosyne) — commit-msg-stage hooks
+and `default_install_hook_types` learning that was dropped when the PR was closed without merge.
+
+**What changed:**
+
+- Added triggers (17) and (18) to `description` and `When to Use`:
+  (17) adding a commit-msg-stage hook — must set `default_install_hook_types: [pre-commit, commit-msg]`
+  or plain `pre-commit install` silently omits the commit-msg stage;
+  (18) verifying a commit-msg hook — `--all-files` does NOT run commit-msg-stage hooks; use
+  `pre-commit run --hook-stage commit-msg --commit-msg-filename <file>`.
+- Added new Quick Reference block for commit-msg-stage hooks in the `### Quick Reference` section.
+- Added new detailed subsection `#### commit-msg-stage hooks and \`default_install_hook_types\``
+  under the main Verified Workflow covering:
+  - Root cause of silent-inert hook pattern (missing `default_install_hook_types`)
+  - The canonical fix (one-line at top of `.pre-commit-config.yaml`)
+  - How to verify the hook fires (`--hook-stage commit-msg --commit-msg-filename`)
+  - Commit-msg validator hook YAML pattern (`language: system`, `pass_filenames: true`)
+  - Ruff D301 raw-docstring fix for validator scripts containing `\n` escape sequences
+  - "Your pre-commit configuration is unstaged" abort and how to avoid it
+  - `core.hooksPath` note: blocked `install` does NOT block `--hook-stage` verification
+- Added 5 new `Failed Attempts` rows:
+  1. Inert commit-msg hook under plain install (no `default_install_hook_types`)
+  2. Verified commit-msg hook with `--all-files` and shipped an untested/inert hook
+  3. Ruff D301 — bare docstring with `\n` in validator script
+  4. "Pre-commit configuration is unstaged" abort during `--hook-stage` run
+  5. Assumed `core.hooksPath`-blocked install also blocks `--hook-stage` verification
+- Added `commit-msg` and `default-install-hook-types` to `tags`.
+- Added ProjectMnemosyne row to Verified On table.
+
+**Key new verified facts (from closed PR #2353):**
+
+- `default_install_hook_types` must be set explicitly; default covers only `pre-commit` stage
+- `pre-commit run --all-files` is stage-blind: commit-msg-stage hooks are silently skipped
+- Canonical verification: `pre-commit run --hook-stage commit-msg --commit-msg-filename <file>`
+- `language: system` + `pass_filenames: true` is the correct pattern for commit-msg validators
+- `core.hooksPath` blocking install does NOT block `--hook-stage` framework invocation
+
+**Verification level:** verified — from closed PR #2353 development session
+
+---
+
 ## v2.0.0 (2026-06-13) -- Strengthen markdownlint dedup with load-bearing .claude/ and doc-drift findings (issue #1199)
 
 **Source:** ProjectHephaestus issue #1199 implementation plan — additional verified facts from pre-scan and tracked-file audit

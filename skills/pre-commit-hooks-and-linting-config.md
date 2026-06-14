@@ -1,13 +1,13 @@
 ---
 name: pre-commit-hooks-and-linting-config
-description: "Canonical guide to pre-commit hook configuration, single-source-of-truth versioning, CI/local parity, and integration of ruff/mypy/clang-format/yamllint/actionlint/golangci-lint/bandit/hadolint/shellcheck/markdownlint. Use when: (1) writing or amending .pre-commit-config.yaml, (2) diagnosing why a hook passes locally but fails in CI (version drift), (3) deciding fix-vs-suppress for lint findings, (4) adding a new linter to an existing pre-commit pipeline, (5) reconciling ruff/mypy/markdownlint config across multiple repos, (6) a pre-commit hook using a pixi console script false-fails locally even though CI passes — system-installed package in ~/.local/bin shadows the local dev version, (7) ruff I001/RUF059 fires on inline imports or unused tuple unpacking inside test functions after adding new tests, (8) mypy pre-commit hook fails because an UNTRACKED test file references methods not yet committed — the hook checks ALL .py files on disk including untracked ones, (9) CI ruff-format hook fails even though local `ruff check` passed — `ruff check` (lint) and `ruff format --check` (formatter) are SEPARATE tools sharing one binary and running only `check` never exercises the formatter, (10) running pre-commit against the full PR diff (every file changed since merge-base) with `--from-ref/--to-ref` not just `--files <current edit>` — a sub-agent's earlier commit can carry stale-formatter content that fails only in CI, (11) adding .editorconfig for cross-editor formatting consistency on non-Python files (YAML, JSON, Markdown, shell, Makefile), (12) an automated PR-reviewer flags lint/formatter/pre-commit-forced incidental churn as scope creep — toolchain-forced churn is exempt from YAGNI/scope review while author-chosen opportunistic work is still flagged, (13) removing a duplicate standalone markdownlint CI job when the lint job already runs pre-commit --all-files — MUST verify the job is NOT a required-check context in branch protection before deleting it, and MUST pre-scan the newly-in-scope files for violations that --fix cannot auto-fix, (14) the pre-commit hook exclude pattern for .claude/ may be LOAD-BEARING (not merely defensive) — confirm with git ls-files .claude/ before removing it; two tracked .md files (.claude/security/guidelines.md and .claude/workflows/development.md) exist in ProjectHephaestus and must remain excluded to match the standalone CI job's intent, (15) after removing a duplicate markdownlint CI job update every doc that names that job by its old CI name (e.g. docs/DEFINITION_OF_DONE.md and .github/README.md) or CI job name references become stale; (16) BOTH the required `lint` check AND the `pre-commit` check are red in a PR — they share the same `ruff format` hook, so a single `ruff format <files>` run clears both; do not debug as two separate problems."
+description: "Canonical guide to pre-commit hook configuration, single-source-of-truth versioning, CI/local parity, and integration of ruff/mypy/clang-format/yamllint/actionlint/golangci-lint/bandit/hadolint/shellcheck/markdownlint. Use when: (1) writing or amending .pre-commit-config.yaml, (2) diagnosing why a hook passes locally but fails in CI (version drift), (3) deciding fix-vs-suppress for lint findings, (4) adding a new linter to an existing pre-commit pipeline, (5) reconciling ruff/mypy/markdownlint config across multiple repos, (6) a pre-commit hook using a pixi console script false-fails locally even though CI passes — system-installed package in ~/.local/bin shadows the local dev version, (7) ruff I001/RUF059 fires on inline imports or unused tuple unpacking inside test functions after adding new tests, (8) mypy pre-commit hook fails because an UNTRACKED test file references methods not yet committed — the hook checks ALL .py files on disk including untracked ones, (9) CI ruff-format hook fails even though local `ruff check` passed — `ruff check` (lint) and `ruff format --check` (formatter) are SEPARATE tools sharing one binary and running only `check` never exercises the formatter, (10) running pre-commit against the full PR diff (every file changed since merge-base) with `--from-ref/--to-ref` not just `--files <current edit>` — a sub-agent's earlier commit can carry stale-formatter content that fails only in CI, (11) adding .editorconfig for cross-editor formatting consistency on non-Python files (YAML, JSON, Markdown, shell, Makefile), (12) an automated PR-reviewer flags lint/formatter/pre-commit-forced incidental churn as scope creep — toolchain-forced churn is exempt from YAGNI/scope review while author-chosen opportunistic work is still flagged, (13) removing a duplicate standalone markdownlint CI job when the lint job already runs pre-commit --all-files — MUST verify the job is NOT a required-check context in branch protection before deleting it, and MUST pre-scan the newly-in-scope files for violations that --fix cannot auto-fix, (14) the pre-commit hook exclude pattern for .claude/ may be LOAD-BEARING (not merely defensive) — confirm with git ls-files .claude/ before removing it; two tracked .md files (.claude/security/guidelines.md and .claude/workflows/development.md) exist in ProjectHephaestus and must remain excluded to match the standalone CI job's intent, (15) after removing a duplicate markdownlint CI job update every doc that names that job by its old CI name (e.g. docs/DEFINITION_OF_DONE.md and .github/README.md) or CI job name references become stale; (16) BOTH the required `lint` check AND the `pre-commit` check are red in a PR — they share the same `ruff format` hook, so a single `ruff format <files>` run clears both; do not debug as two separate problems; (17) adding a commit-msg-stage hook (e.g. conventional-commit validator) — must set `default_install_hook_types: [pre-commit, commit-msg]` in .pre-commit-config.yaml or plain `pre-commit install` silently omits the commit-msg stage and the hook is permanently inert for all contributors; (18) verifying that a commit-msg-stage hook actually fires — `pre-commit run --all-files` does NOT invoke commit-msg-stage hooks; drive them via `pre-commit run --hook-stage commit-msg --commit-msg-filename <file>` instead."
 category: tooling
 date: 2026-06-13
-version: "2.1.0"
+version: "2.2.0"
 user-invocable: false
 verification: verified-ci
 history: pre-commit-hooks-and-linting-config.history
-tags: [merged, pre-commit, linting, ruff, mypy, clang-format, yamllint, actionlint, hooks, pixi-environment, bandit, markdownlint, sast, ruff-format, editorconfig, pr-diff, ci-parity, pr-review, yagni]
+tags: [merged, pre-commit, linting, ruff, mypy, clang-format, yamllint, actionlint, hooks, pixi-environment, bandit, markdownlint, sast, ruff-format, editorconfig, pr-diff, ci-parity, pr-review, yagni, commit-msg, default-install-hook-types]
 ---
 
 # Pre-commit Hooks and Linting Configuration
@@ -57,6 +57,8 @@ tags: [merged, pre-commit, linting, ruff, mypy, clang-format, yamllint, actionli
 - A `pre-commit` job fails with "files were modified by this hook" / "N files reformatted" — a formatter hook mutated files in CI's check mode; you must run the formatter and commit the result (pre-commit fails any time a hook changes a file, even with zero lint violations)
 - BOTH the required `lint` job AND the required `pre-commit` job go red together on a Python PR — suspect a SINGLE `ruff format` drift FIRST; both jobs invoke the same formatter so one drift surfaces as two red checks
 - A prior commit hand-wrapped a list/generator comprehension (or call) across multiple lines that fits within `line-length` — `ruff format` collapses it back to one line and `--check` reports "Would reformat"; the author never ran `ruff format` locally
+- Adding a `commit-msg`-stage hook (e.g. conventional-commit-format validator) and discovering it never fires — check whether `default_install_hook_types` is set; without it, plain `pre-commit install` only wires the `pre-commit` stage, leaving the hook permanently inert for every contributor
+- A commit-msg hook appears in `.pre-commit-config.yaml` with `stages: [commit-msg]` and `pre-commit run --all-files` returns green — but the hook has never actually been invoked; `--all-files` skips commit-msg-stage hooks entirely; use `pre-commit run --hook-stage commit-msg --commit-msg-filename <file>` to exercise it
 
 ## Verified Workflow
 
@@ -143,6 +145,15 @@ pre-commit run shellcheck --all-files
 
 # --- ACTIONLINT ---
 pre-commit run actionlint --all-files
+
+# --- COMMIT-MSG STAGE HOOKS ---
+# Wire both stages so plain `pre-commit install` covers pre-commit AND commit-msg:
+# (add to top of .pre-commit-config.yaml)
+# default_install_hook_types: [pre-commit, commit-msg]
+
+# Verify a commit-msg hook fires (--all-files does NOT run commit-msg stage):
+echo "feat: my message" > /tmp/test_commit_msg.txt
+pre-commit run --hook-stage commit-msg --commit-msg-filename /tmp/test_commit_msg.txt
 
 # --- LOCK FILE CONFLICT (pre-commit stash) ---
 git add pixi.lock  # Stage lock file before commit to avoid stash conflict
@@ -496,6 +507,119 @@ like `pre-commit`, `toolchain`, `opportunistic`) AND that scope-creep detection 
 
 Verified by ProjectHephaestus PR #1019 (closes #1017; false positive originated from
 PR #1015 inline comment r3366637812).
+
+#### commit-msg-stage hooks and `default_install_hook_types`
+
+A hook declared with `stages: [commit-msg]` is **silently inert** for every contributor who
+runs the documented `pre-commit install` command unless `default_install_hook_types` is set
+in `.pre-commit-config.yaml`. By default, `pre-commit install` only wires the `pre-commit`
+stage. The commit-msg hook exists in the config file, pre-commit shows no warnings, and
+`pre-commit run --all-files` returns green — but the hook has never fired for anyone.
+
+**The fix — one line at the top of `.pre-commit-config.yaml`:**
+
+```yaml
+# .pre-commit-config.yaml
+default_install_hook_types: [pre-commit, commit-msg]
+
+repos:
+  # ... existing hooks ...
+  - repo: local
+    hooks:
+      - id: conventional-commit
+        name: Validate conventional commit format
+        language: system
+        entry: python3 scripts/check_commit_msg.py
+        stages: [commit-msg]
+        pass_filenames: true   # pre-commit passes the commit-msg file as $1
+```
+
+After adding `default_install_hook_types`, every developer who runs `pre-commit install`
+(or re-runs it) gets both stages wired. Developers who installed before the change must
+re-run `pre-commit install` once to pick up the commit-msg stage.
+
+**Verifying the hook fires (the `--all-files` trap):**
+
+`pre-commit run --all-files` does **NOT** run commit-msg-stage hooks — the framework skips
+any hook whose `stages` list does not include the currently-active stage. A green
+`--all-files` run is NOT evidence that a commit-msg hook works. Drive it explicitly:
+
+```bash
+# Write a test commit message to a temp file:
+echo "feat: add conventional commit validator" > /tmp/test_commit_msg.txt
+
+# Invoke only the commit-msg stage (works even without a real commit in flight):
+pre-commit run --hook-stage commit-msg --commit-msg-filename /tmp/test_commit_msg.txt
+
+# Expected: hook id listed, "Passed" if the message is valid
+# Also test an invalid message:
+echo "bad commit message without type" > /tmp/bad_commit_msg.txt
+pre-commit run --hook-stage commit-msg --commit-msg-filename /tmp/bad_commit_msg.txt
+# Expected: hook id listed, "Failed" and error output from the validator script
+```
+
+**Commit-msg validator hook YAML pattern:**
+
+```yaml
+- repo: local
+  hooks:
+    - id: conventional-commit
+      name: Validate conventional commit format
+      language: system
+      entry: python3 scripts/check_commit_msg.py
+      stages: [commit-msg]
+      pass_filenames: true
+```
+
+Use `language: system` (not `language: python` or `language: script`) so the hook runs in
+the project's ambient Python environment (pixi, venv, etc.). Use `pass_filenames: true` —
+pre-commit passes the commit-msg file path as `sys.argv[1]`; the script reads it with
+`Path(sys.argv[1]).read_text()`.
+
+**Ruff D301 — raw-string docstring when the string contains escape sequences:**
+
+If the commit-msg validator script contains a docstring with `\n` or other backslash
+sequences, ruff flags D301: "Use `r\"\"\"` if any backslashes in a docstring". Convert the
+docstring to a raw string:
+
+```python
+# Before (ruff D301):
+def check(msg: str) -> bool:
+    """Validate message.\n\nReturns True if valid."""
+    ...
+
+# After:
+def check(msg: str) -> bool:
+    r"""Validate message.\n\nReturns True if valid."""
+    ...
+```
+
+**"Your pre-commit configuration is unstaged" abort:**
+
+If `.pre-commit-config.yaml` is modified but not yet staged, pre-commit may abort with:
+
+```
+Your pre-commit configuration is unstaged.
+`git add .pre-commit-config.yaml` to fix this.
+```
+
+This occurs because pre-commit reads the config from the index (staged version), not the
+working tree. Stage the config file before running hooks:
+
+```bash
+git add .pre-commit-config.yaml
+pre-commit run --hook-stage commit-msg --commit-msg-filename /tmp/test_commit_msg.txt
+```
+
+**`core.hooksPath` note — blocked `install` does not block `--hook-stage` verification:**
+
+In repos where `git config core.hooksPath` is set to a non-standard path (e.g. a shared
+hooks directory), `pre-commit install` may fail or install hooks to the wrong location.
+This does NOT prevent `--hook-stage` invocation: `pre-commit run --hook-stage commit-msg`
+bypasses the git hook installation entirely and invokes the framework directly. Use it for
+verification even when `install` is blocked.
+
+Verified by closed PR #2353 (HomericIntelligence/ProjectMnemosyne).
 
 ## Hook-Specific Patterns
 
@@ -1128,6 +1252,11 @@ feasible (e.g., constrained CI environments, conda-forge only providing old Go v
 | Hand-wrap a comprehension/call that fits on one line | Editor/prior automated edit split a `sorted(... for ... if ...)` across multiple lines | `ruff format` collapses it back under `line-length`; `--check` reports "Would reformat" → exit 1 | Never hand-wrap code that fits the limit; run `pixi run --environment lint ruff format <files>` and let ruff own line-wrap |
 | Debug `lint` and `pre-commit` as two separate CI failures | Saw both red on a PR and opened two investigation threads | Wasted effort — both jobs run the SAME `ruff format` hook; `lint` runs `ruff format --check` (`Would reformat:`) and `pre-commit`'s `Ruff Format Python` hook reports "files were modified by this hook" on the identical files | When exactly `lint` + `pre-commit` are red, check `ruff format --check` FIRST; one `ruff format <files>` run clears both. A pre-commit job fails any time a hook *modifies* files, not only on lint *violations* |
 | Hand-wrap a comprehension after a manual edit and commit without re-running the formatter | A prior commit edited two comprehensions in `ensure_state_labels.py`/`loop_runner.py` and hand-wrapped them across lines, assuming the manual wrapping was acceptable | `ruff format` collapses each comprehension onto a single line under the 100-col limit; the formatter "wants" to reformat → `ruff format --check` (lint) and the pre-commit Ruff Format hook both fail with a pure-whitespace diff | After ANY manual edit to Python, run `pixi run --environment lint ruff format <files>` (or `pre-commit run --all-files`) BEFORE committing — never hand-wrap an expression and assume it is fine |
+| Inert commit-msg hook under plain `pre-commit install` (no `default_install_hook_types`) | Added `stages: [commit-msg]` hook to `.pre-commit-config.yaml` without setting `default_install_hook_types`; documented `pre-commit install` as the setup step | `pre-commit install` only wires the `pre-commit` stage by default; the commit-msg hook is never invoked — no error, no warning, just silent inaction for every contributor | Set `default_install_hook_types: [pre-commit, commit-msg]` at the top of `.pre-commit-config.yaml` so a plain `pre-commit install` wires both stages automatically |
+| Verified commit-msg hook with `--all-files` (shipped an untested/inert hook) | Ran `pre-commit run --all-files` after adding the commit-msg hook; it returned green; concluded the hook was working | `--all-files` skips any hook whose `stages` list does not include the current active stage; commit-msg hooks are entirely invisible to `--all-files` | Always verify commit-msg hooks via `pre-commit run --hook-stage commit-msg --commit-msg-filename <file>`; a green `--all-files` run proves nothing about commit-msg-stage hooks |
+| Ruff D301 — bare docstring with escaped `\n` in commit-msg validator | Wrote `"""Validate message.\n\nReturns True if valid."""` in the validator script | Ruff D301 fires: "Use `r\"\"\"` if any backslashes in a docstring" — the docstring contains a `\n` escape, which ruff treats as a reason to require a raw string | Use `r"""..."""` for any docstring that contains backslash sequences; raw strings suppress D301 without changing behaviour |
+| "Your pre-commit configuration is unstaged" abort during `--hook-stage` run | Modified `.pre-commit-config.yaml` to add `default_install_hook_types` then ran `pre-commit run --hook-stage commit-msg` before staging the file | pre-commit reads the config from the git index (staged version), not the working tree; an unstaged config change causes an immediate abort with an error message | Run `git add .pre-commit-config.yaml` before any `pre-commit run` invocation after modifying the config |
+| Assumed `core.hooksPath` blocking `pre-commit install` also blocks `--hook-stage` verification | In a repo with a custom `core.hooksPath`, skipped `--hook-stage` testing because `install` had failed | `pre-commit run --hook-stage` bypasses git hook installation entirely and invokes the pre-commit framework directly; it works regardless of `core.hooksPath` configuration | `core.hooksPath` affects `pre-commit install` (which writes `.git/hooks/`) but NOT direct framework invocations via `pre-commit run --hook-stage` |
 
 ## Results & Parameters
 
@@ -1280,6 +1409,7 @@ indent_style = tab                 # Make syntax requires tabs
 | ProjectHephaestus | PRs #707, #913 (ruff-format trap), #1019 closes #1017 (review-rubric toolchain-churn carve-out) | [history file](pre-commit-hooks-and-linting-config.history) |
 | ProjectOdyssey | PR #5453 (full-PR-diff pre-commit scope fixed CI mojo-format on sub-agent files) | [history file](pre-commit-hooks-and-linting-config.history) |
 | ProjectScylla | PR #1556, audit finding S13 (.editorconfig cross-editor consistency) | [history file](pre-commit-hooks-and-linting-config.history) |
+| ProjectMnemosyne | Closed PR #2353 (commit-msg-stage hooks + `default_install_hook_types` learning) | [history file](pre-commit-hooks-and-linting-config.history) |
 
 ## References
 
