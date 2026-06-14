@@ -52,10 +52,38 @@ description: >-
   .clear()/.update() preserves shared mutable dict identity so host and collaborator share
   the same object, circular import trap when a utility function imported by a sibling module
   must stay in the original file (define a local copy in the collaborator instead), and
-  from __future__ import annotations required in collaborator modules using PEP 604 union types.
+  from __future__ import annotations required in collaborator modules using PEP 604 union types,
+  (19) verifying keyword-only method signatures (`*` separator in def line) before writing
+  delegation stubs — fabricated positional signatures for keyword-only methods raise TypeError
+  at runtime and pass AST name-presence checks silently,
+  (20) mapping `_gh_call` patch sites to destination modules via test-class bucket analysis
+  when splitting a symbol across 4+ modules — range-grep spot-checks miss sites, class-boundary
+  bucketing is the only reliable approach for multi-module splits,
+  (21) tracing delegation chains through sub-modules before adding _gh_call patches to a
+  migration table — if the existing test already patches a sub-module (e.g. _review_utils._gh_call),
+  the patch does not need to move regardless of where the method moves,
+  (22) verifying return types of delegation stubs by source-reading the full `def` line
+  including the `->` annotation — a stub that lies about its return type fails mypy in the
+  host file (not in the collaborator modules) and is invisible to Criterion 9 unless the host
+  file is also in the mypy target list,
+  (23) confirming whether `acquired_slot` is a real parameter of three specific methods
+  (`_recheck_and_arm_after_fix`, `_resolve_dirty_pr`, `_attempt_ci_fixes`) — all three DO
+  have `acquired_slot` as a positional parameter with a default on `_attempt_ci_fixes`,
+  (24) verifying keyword-only parameter lists for methods that use `*` as a positional
+  separator when writing delegation stubs — both the stub def AND the forwarding call must
+  use keyword syntax; fabricated positional params and fabricated keyword-only params are
+  symmetric failure modes of the same root cause (not reading the actual `def` line),
+  (25) recognizing that fabricated method parameters are the #1 planning failure mode across
+  multiple consecutive review rounds — the only reliable prevention is running `sed -n` or
+  Read on the exact line range for every method before writing any stub, never describing
+  signatures from memory, naming similarity, or expected behavior,
+  (26) discriminating between methods that take `acquired_slot` and methods that do not by
+  their conceptual role: methods that acquire a semaphore slot (rebase/resolve/fix workers)
+  have `acquired_slot`; methods that are sub-steps executed INSIDE an already-acquired slot
+  do not.
 category: architecture
 date: 2026-06-13
-version: "1.11.0"
+version: "1.13.0"
 user-invocable: false
 history: python-module-decomposition-and-refactor-patterns.history
 tags:
@@ -98,6 +126,19 @@ tags:
   - sibling-test-attribute-access
   - companions-tuple
   - cross-module-patching
+  - keyword-only-signature
+  - gh-call-patch-migration
+  - test-class-bucket-analysis
+  - delegation-chain-pre-check
+  - review-utils-delegation
+  - return-type-verification
+  - stub-return-type-drift
+  - mypy-host-file-target
+  - acquired-slot-positional
+  - keyword-only-forwarding-call
+  - fabricated-params-failure-mode
+  - acquired-slot-mnemonic
+  - r7-planning-session
 ---
 
 # Python Module Decomposition and Refactor Patterns
@@ -108,8 +149,8 @@ tags:
 | ------- | ------- |
 | **Date** | 2026-06-13 |
 | **Objective** | Decompose oversized Python modules/classes/functions into focused, independently testable units using SRP, TDD, and DRY principles |
-| **Outcome** | Synthesized from 15+ verified skills; covers function-level extraction, class-based extraction, circular import fixes, immutability refactoring, extensibility-driven decomposition, CLI entry-point extraction with preserved patch routing, top-level symbol extraction to break sibling module cycles, CC>15 pipeline-step extraction, scanner-to-subdirectory scoping, context-manager double-counter fixes, safe legacy-code deletion, substrate-read-before-estimate discipline, post-parallel phase cleanup, god-class decomposition planning risks (state ownership, cross-call coupling, constant re-export, delegation stub type loss, coverage omit-allowlist traps, shared mutable dict write-back, methods shared across multiple collaborators, test fixture pre-seeding after cache extraction, method body read before assignment, __init__.py export conditionality verification), exception-contract verification before documenting wrapper behavior, three Phase 20 implementation-time traps (exception-boundary removal unmasks StopIteration from exhausted side_effect mocks; returncode-guard obligation at every call site of an absorbed-exception helper; agent mock type determines downstream subprocess.run consumption), god-function decomposition planning rules (arithmetic chain verification, docstring budget, for-loop body sizing, return type tracing, N-tuple completeness, captured variable audit, approach table completeness, AST-measure discipline), and god-class narrow-callable DIP execution (lambda wrapping for patch.object compatibility, cross-module import patching when method chains split, sibling test attribute path updates after cache migration, companions tuple updates in phase-wiring tests) |
-| **Trigger** | Files >800 lines, circular import errors, mixed-concern methods, C901/CC>15 complexity, extensibility requirements, CLI main() extraction, deferred imports inside function bodies preventing static analysis, broad scanners needing subdirectory scope, stale callers after context-manager refactors, dead fallback files, pessimistic refactor estimates, technical debt after parallel phases, planning a multi-collaborator god-class decomposition, extracting a two-branch provider-conditional dispatch with heterogeneous return types, documenting exception contracts for wrapper methods, planning god-function decomposition (individual functions > 80L), planning delegation-stub extraction where extracted methods populate shared dicts or caches read by the host class, executing a god-class decomposition using narrow-callable injection (DIP) where bare bound-method references to injected callables break patch.object |
+| **Outcome** | Synthesized from 15+ verified skills; covers function-level extraction, class-based extraction, circular import fixes, immutability refactoring, extensibility-driven decomposition, CLI entry-point extraction with preserved patch routing, top-level symbol extraction to break sibling module cycles, CC>15 pipeline-step extraction, scanner-to-subdirectory scoping, context-manager double-counter fixes, safe legacy-code deletion, substrate-read-before-estimate discipline, post-parallel phase cleanup, god-class decomposition planning risks (state ownership, cross-call coupling, constant re-export, delegation stub type loss, coverage omit-allowlist traps, shared mutable dict write-back, methods shared across multiple collaborators, test fixture pre-seeding after cache extraction, method body read before assignment, __init__.py export conditionality verification), exception-contract verification before documenting wrapper behavior, three Phase 20 implementation-time traps (exception-boundary removal unmasks StopIteration from exhausted side_effect mocks; returncode-guard obligation at every call site of an absorbed-exception helper; agent mock type determines downstream subprocess.run consumption), god-function decomposition planning rules (arithmetic chain verification, docstring budget, for-loop body sizing, return type tracing, N-tuple completeness, captured variable audit, approach table completeness, AST-measure discipline), god-class narrow-callable DIP execution (lambda wrapping for patch.object compatibility, cross-module import patching when method chains split, sibling test attribute path updates after cache migration, companions tuple updates in phase-wiring tests), post-extraction DRY and constructor-injection refinement (thin delegation stubs, __setattr__ propagation, .clear()/.update() dict identity, circular import avoidance via local copies, from __future__ import annotations in collaborators), keyword-only method signature verification before writing stubs (fabricated positional signatures pass AST checks silently but raise TypeError at runtime), `_gh_call` multi-module split attribution via test-class boundary bucketing (range-grep spot-checks are insufficient for 4+ destination modules; class-boundary bucket analysis is required), delegation-chain pre-check before adding `_gh_call` patches to migration tables (if existing test patches a sub-module like `_review_utils._gh_call`, that patch does not move regardless of where the method relocates), return-type verification for delegation stubs (both parameters AND return types must be source-read; a stub with a wrong return type fails mypy in the host file not the collaborator modules, and is invisible unless the host file is in the mypy target list), acquired_slot parameter confirmation (three specific methods — _recheck_and_arm_after_fix, `_resolve_dirty_pr`, `_attempt_ci_fixes` — all have acquired_slot as a real positional parameter), keyword-only forwarding call verification for methods like _mark_drive_green_learn_result (stub def must include `*` AND forwarding call must use `param=value` keyword syntax), fabricated-param prevention protocol (in 3 consecutive rounds R4/R5/R6 the #1 rejection cause was fabricated signatures — use `sed -n` on the exact line range before writing any stub; never write "confirmed from source" without running the command), and acquired_slot vs no-acquired_slot slot-ownership mnemonic (methods that ACQUIRE a semaphore slot have the param; sub-steps executing INSIDE an acquired slot do not) |
+| **Trigger** | Files >800 lines, circular import errors, mixed-concern methods, C901/CC>15 complexity, extensibility requirements, CLI main() extraction, deferred imports inside function bodies preventing static analysis, broad scanners needing subdirectory scope, stale callers after context-manager refactors, dead fallback files, pessimistic refactor estimates, technical debt after parallel phases, planning a multi-collaborator god-class decomposition, extracting a two-branch provider-conditional dispatch with heterogeneous return types, documenting exception contracts for wrapper methods, planning god-function decomposition (individual functions > 80L), planning delegation-stub extraction where extracted methods populate shared dicts or caches read by the host class, executing a god-class decomposition using narrow-callable injection (DIP) where bare bound-method references to injected callables break patch.object, applying post-extraction DRY cleanup and constructor-injection refinement (delegation stubs, __setattr__ propagation, dict identity preservation), writing delegation stubs for methods with keyword-only parameters (`*` separator), planning migration of a symbol patched in 10+ test sites across multiple test classes when the symbol will move to 4+ destination modules, verifying whether an existing test's _gh_call patch already targets a sub-module (making migration unnecessary for that test), source-reading the `->` return annotation for every delegation stub (wrong return types fail mypy in the host file and are invisible if the host file is not in the mypy target list), confirming positional vs keyword-only status of parameters for methods before finalizing stub signatures, verifying the forwarding call uses `param=value` syntax for every keyword-only parameter, applying the fabricated-param prevention protocol (run `sed -n` on each def line range before writing any stub), or distinguishing slot-worker methods (have `acquired_slot`) from sub-step methods (do not) |
 
 ## When to Use
 
@@ -137,6 +178,14 @@ Apply this skill when any of the following is true:
 - You are **executing a god-class decomposition with narrow-callable injection (DIP)** and need to wire collaborators using injected callables — including: using lambda wrapping (not bare method references) to preserve patch.object effectiveness, updating sibling test files that directly access attributes now living on a collaborator, updating companions tuples in phase-wiring tests when AGENT_* constants move to extracted modules, and patching each module's `run` import independently when a pre/post-agent SHA read splits across module boundaries
 - A class's **sibling test files access internal attributes directly** (e.g., `driver._viewer_login`) that will move to an extracted collaborator — grep test files before and after extraction to update attribute paths
 - You are **refining a completed extraction** (DRY pass / constructor-injection cleanup) and need to add thin delegation stubs to preserve test `patch.object` targets, wire a `__setattr__` override to propagate test-time attribute changes to collaborators, use `.clear()/.update()` to preserve shared mutable dict object identity, detect circular import traps for utility functions imported by sibling modules, or add `from __future__ import annotations` to collaborator files that use PEP 604 union types
+- A method being extracted has a **`*` (keyword-only) separator** in its `def` line — the stub def must also use `*`, and the forwarding call must use `keyword=value` for every param; AST name-presence checks pass even for wrong-signature stubs
+- A shared symbol (e.g., `_gh_call`) is **patched in 10+ test sites across one file** and will move to **4+ destination modules** — use test-class boundary bucketing (grep `^class` start lines, bucket each patch line) rather than range-grep spot-checks to attribute every patch site to its destination
+- An extracted method's **existing test already patches a sub-module** (e.g., `_review_utils._gh_call`) — verify the patch string before adding the site to the migration table; if the patch already targets the sub-module, it does not need to move regardless of where the method relocates
+- Writing **delegation stubs** for a set of methods — source-read the `->` return annotation for EVERY stub, not just parameter types; a stub with an incorrect return type (e.g., `-> bool` when the real method returns `WorkerResult | None`) fails mypy in the host file, not in the collaborator modules, and is invisible unless the host file is included in the mypy target list
+- Confirming whether **`acquired_slot`** (or any other parameter) is a real parameter of a target method — read the actual `def` line; fabrication risk runs both ways (parameters may exist OR be absent); the three methods `_recheck_and_arm_after_fix`, `_resolve_dirty_pr`, `_attempt_ci_fixes` all DO have `acquired_slot` as a positional parameter
+- Writing a delegation stub for a method with **keyword-only params that also appear after `*` in the source** — the stub def must include `*`, the forwarding call must use `keyword=value`; missing the keyword syntax in the forwarding call raises `TypeError` even when the stub def is correct (Phase 30)
+- Planning has **failed due to fabricated signatures in three or more consecutive review rounds** — activate the fabricated-param prevention protocol: `sed -n '<start>,<end>p'` for every `def` line before writing any stub; do not write "confirmed from source" without running the command (Phase 31)
+- Determining whether a method should receive **`acquired_slot` as a parameter** — use the slot-ownership mnemonic: methods that ACQUIRE a semaphore slot (rebase/resolve/fix workers) have the param; methods that execute AS A SUB-STEP already inside an acquired slot do not (Phase 32)
 
 ## Verified Workflow
 
@@ -166,6 +215,14 @@ Decision tree:
   God-class delegation w/ shared state → Shared-state write-back rules (Phase 22)
   God-class execution w/ DIP injection → Narrow-callable injection rules (Phase 23)
   Post-extraction DRY / constructor pass → Delegation stub + setattr refinement (Phase 24)
+  Keyword-only method stub writing      → Verify `*` in def line before any stub (Phase 25)
+  _gh_call split to 4+ modules          → Test-class bucket analysis (Phase 26)
+  _gh_call patch already sub-module?   → Delegation chain pre-check (Phase 27)
+  Stub return types unverified          → Return-type source-read rule (Phase 28)
+  acquired_slot existence uncertain     → Parameter confirmation check (Phase 29)
+  Keyword-only forwarding call wrong    → _mark_drive_green_learn_result pattern (Phase 30)
+  Fabricated params in consecutive runs → Fabricated-param prevention protocol (Phase 31)
+  acquired_slot vs no acquired_slot     → Slot-ownership mnemonic (Phase 32)
 
 Universal rule for mock patches after any move:
   Patch where the name is LOOKED UP at call time — not where it was defined.
@@ -2025,6 +2082,471 @@ parametrization miss.
 - [ ] Collaborator uses relative import (`from .session_naming import`) not absolute
 ```
 
+### Phase 25: Keyword-Only Method Signature Verification
+
+**Problem**: During R5 planning for issue #1289, `_retry_no_commit_once` was given a fabricated
+positional signature in the plan (including a fabricated `acquired_slot` parameter). The real
+method at `ci_driver.py:2296` uses `*` (keyword-only) with params:
+
+```python
+def _retry_no_commit_once(
+    self,
+    *,
+    issue_number: int,
+    pr_number: int,
+    worktree_path: Path,
+    pr_head_branch: str,
+    pre_agent_sha: str,
+    session_id: str,
+    max_retries: int = 2,
+) -> bool:
+```
+
+Forwarding a keyword-only method with positional args raises `TypeError` at runtime.
+The AST-check in Criterion 6 (method name presence) only checks whether the method name
+exists in the stub — it does **not** verify signature correctness. A wrong-but-present stub
+passes the check silently.
+
+**Rule**: For every method being extracted, read the actual `def` line and the complete
+parameter list (including whether `*` appears as the first param after `self`) before writing
+any stub. Never infer keyword-only status from call-site context alone.
+
+**Stub template for keyword-only methods**:
+
+```python
+# In host class (delegation stub):
+def _retry_no_commit_once(
+    self,
+    *,
+    issue_number: int,
+    pr_number: int,
+    worktree_path: Path,
+    pr_head_branch: str,
+    pre_agent_sha: str,
+    session_id: str,
+    max_retries: int = 2,
+) -> bool:
+    return self._collaborator._retry_no_commit_once(
+        issue_number=issue_number,
+        pr_number=pr_number,
+        worktree_path=worktree_path,
+        pr_head_branch=pr_head_branch,
+        pre_agent_sha=pre_agent_sha,
+        session_id=session_id,
+        max_retries=max_retries,
+    )
+```
+
+#### Phase 25 Checklist
+
+```markdown
+## Keyword-Only Stub Checklist (Phase 25)
+
+### Before writing any stub
+- [ ] Read the actual `def` line in the source file — not a plan summary, the real line
+- [ ] Check: does `*` appear as a standalone parameter before named params?
+- [ ] If yes: stub def MUST use `*` too; forwarding call MUST use `keyword=value` for every param
+- [ ] Verify no fabricated params (params not in the real def) appear in the stub
+- [ ] Verify no params from the real def are missing from the stub
+
+### AST check limitation
+- [ ] Criterion 6 (name-presence check) passes for wrong-signature stubs — it ONLY checks the method name
+- [ ] Signature correctness is your responsibility; the check will not catch it
+```
+
+### Phase 26: `_gh_call` Multi-Module Split Attribution via Test-Class Boundaries
+
+**Problem**: When `_gh_call` is patched in 26+ places across one test file, and the symbol
+moves to 4+ destination modules, "17-way split" estimates and range-grep spot-checks are
+both insufficient. Two range greps only cover 2 of 26 sites — the remaining 24 sites are
+unaccounted for.
+
+**Fix**: Map every patch site to its test class by:
+
+1. Get class start lines:
+
+```bash
+grep -n "^class " tests/unit/automation/test_ci_driver.py
+```
+
+2. Get all patch sites:
+
+```bash
+grep -n "ci_driver\._gh_call" tests/unit/automation/test_ci_driver.py
+```
+
+3. Bucket each patch line into the class whose start-line is the **largest ≤ the patch line**.
+   Each test class tests one method; each method goes to one collaborator module.
+   The bucket directly gives the destination module.
+
+4. Verify the total across all buckets equals the total patch count before finalizing.
+
+**Verification after migration**:
+
+```bash
+# Only the N lines that stay in ci_driver should remain; all others must be gone
+grep -n "ci_driver\._gh_call" tests/unit/automation/test_ci_driver.py | \
+  grep -v "^<line1>:\|^<line2>:..." && echo "FAIL" || echo "PASS"
+```
+
+**Rule**: Never estimate `_gh_call` migration scope from a count of methods or a range-based
+spot-grep. Always bucket every patch line by class boundary to determine its destination.
+
+#### Phase 26 Checklist
+
+```markdown
+## _gh_call Multi-Module Split Checklist (Phase 26)
+
+### Before planning migration
+- [ ] `grep -n "^class " test_file.py` — record all class name + start-line pairs
+- [ ] `grep -n "symbol_being_moved\._gh_call" test_file.py` — collect ALL patch lines with line numbers
+- [ ] For each patch line: find the class whose start-line is largest ≤ patch line number
+- [ ] Tally sites per bucket (per destination module)
+- [ ] Sum all buckets — must equal total patch count; if not, a site was missed
+
+### After migration
+- [ ] Re-run the grep — zero sites targeting old module should remain (except intentional ones)
+- [ ] Run the full test suite — every test class that had patches must still pass
+```
+
+### Phase 27: Delegation Chain Through Sub-Modules — Pre-Check Before Patch Migration
+
+**Finding**: `_find_pr_for_issue` in `ci_driver.py` already delegates internally to
+`_review_utils.find_pr_for_issue`, which in turn calls `_review_utils._gh_call` — NOT
+`ci_driver._gh_call`. The test (`TestBodySearch`, line 1561) patches
+`hephaestus.automation._review_utils._gh_call`.
+
+Moving `_find_pr_for_issue` to a collaborator does **not** require migrating any `_gh_call`
+patch for this method's tests — the symbol never lived in `ci_driver`'s namespace at the
+test level.
+
+**Rule**: Before adding a method's `_gh_call` patch sites to the migration table, read the
+patch string in the test. If the existing test already patches a sub-module (e.g.,
+`_review_utils._gh_call`), that patch does not need to move regardless of where the method
+moves.
+
+**Pre-check command**:
+
+```bash
+# For a method under consideration, find all its test class's patches:
+grep -n "ci_driver\._gh_call\|_review_utils\._gh_call\|other_submodule\._gh_call" \
+  tests/unit/automation/test_ci_driver.py | \
+  awk -F: '$1 >= CLASS_START && $1 <= CLASS_END'
+```
+
+If the output shows `_review_utils._gh_call` (not `ci_driver._gh_call`), the patch site
+belongs to the sub-module and stays put.
+
+#### Phase 27 Checklist
+
+```markdown
+## Delegation Chain Pre-Check Checklist (Phase 27)
+
+### For each method identified for migration
+- [ ] Read the method body — does it delegate to a sub-module function (e.g., `_review_utils.X`)?
+- [ ] If yes: check the test's patch string — does it patch `ci_driver._gh_call` or `_review_utils._gh_call`?
+- [ ] If the test patches the sub-module directly: this patch site does NOT belong in the migration table
+- [ ] Only add `ci_driver._gh_call` patches (not sub-module patches) to the migration count for this method
+- [ ] Document the delegation chain in the plan: `_find_pr_for_issue → _review_utils.find_pr_for_issue → _review_utils._gh_call`
+```
+
+### Phase 28: Return-Type Verification Is as Critical as Parameter Verification
+
+**Problem**: During R5 planning for issue #1289, six delegation stubs were written with
+incorrect return types inferred from expected behavior rather than source-read annotations.
+Phase 24 established the rule to read parameter signatures; it did not extend to return types.
+
+| Method | Actual return type | Plan had |
+|--------|-------------------|----------|
+| `_recheck_and_arm_after_fix` (L1149) | `WorkerResult \| None` | `-> bool` |
+| `_resolve_dirty_pr` (L1229) | `WorkerResult` | `-> bool` |
+| `_attempt_ci_fixes` (L1292) | `WorkerResult \| None` | `-> bool` |
+| `_gh_pr_state` (L1625) | `dict[str, Any] \| None` | `-> dict` |
+| `_enable_auto_merge` (L2861) | `bool` | `-> None` |
+| `_run_drive_green_compact` (L3019) | `bool` | `-> None` |
+
+**Root cause**: Phase 22 only verified *parameters* of three specific methods. Return types
+were never independently checked. Inferred return types (e.g., "this method arms a PR,
+so it must return `bool`") are frequently wrong.
+
+**Two failure modes for wrong return types**:
+
+1. **Mypy fails in the HOST file** (`ci_driver.py`) containing the stubs, NOT in the new
+   collaborator modules. The collaborator method itself is typed correctly; the stub in the
+   host is the mismatch.
+2. **Invisible to Criterion 9** if mypy only targets the new collaborator modules. Adding
+   `ci_driver.py` to the mypy target list is required to catch these errors.
+
+**Rule**: For every delegation stub, source-read the full `def` line including the `->` return
+annotation. Do not infer return types from method names, call-site expectations, or analogy.
+
+```python
+# Example: source-read confirms these are NOT bool
+def _recheck_and_arm_after_fix(
+    self, issue_number: int, pr_number: int, acquired_slot: int,
+) -> WorkerResult | None:   # NOT bool — must source-read to know this
+    ...
+
+def _enable_auto_merge(
+    self, pr_number: int,
+) -> bool:                   # NOT None — must source-read to know this
+    ...
+```
+
+**Mypy target list rule**: When writing stubs for methods extracted TO collaborator modules,
+include the HOST file (`ci_driver.py`) in the Criterion 9 mypy invocation:
+
+```bash
+# INCOMPLETE — only catches errors in collaborator modules:
+mypy hephaestus/automation/pr_discovery.py hephaestus/automation/ci_fix_orchestrator.py
+
+# COMPLETE — also catches stub return-type drift in the host:
+mypy hephaestus/automation/ci_driver.py \
+     hephaestus/automation/pr_discovery.py \
+     hephaestus/automation/ci_fix_orchestrator.py \
+     hephaestus/automation/ci_check_inspector.py \
+     hephaestus/automation/arming_orchestrator.py
+```
+
+#### Phase 28 Checklist
+
+```markdown
+## Return-Type Verification Checklist (Phase 28)
+
+### For every delegation stub before writing it
+- [ ] Read the actual `def` line in the source — locate the `->` annotation
+- [ ] Record the exact return type including `| None`, `| None` unions, `dict[str, Any]` vs bare `dict`, etc.
+- [ ] Do NOT infer from method name, expected behavior, or analogy with similar methods
+- [ ] Stub `->` annotation must exactly match source annotation (including `| None` where present)
+
+### Mypy target list (Criterion 9)
+- [ ] Include the HOST file (e.g., `ci_driver.py`) in the mypy invocation alongside collaborator modules
+- [ ] Reason: wrong stub return types fail mypy in the host file, not the collaborator modules
+- [ ] Verify: `mypy ci_driver.py <collaborator_modules>` shows zero errors before declaring stubs correct
+```
+
+### Phase 29: `acquired_slot` Confirmation — Fabrication Risk Runs Both Ways
+
+**Context**: Phase 24 established that fabricated parameters (parameters that do NOT exist)
+cause `TypeError` at runtime. A symmetric risk is assuming a parameter does NOT exist when
+it actually does.
+
+**Finding for issue #1289 R6**: Three methods all DO have `acquired_slot` as a real
+positional parameter:
+
+| Method | Actual signature summary |
+|--------|-------------------------|
+| `_recheck_and_arm_after_fix(self, issue_number, pr_number, acquired_slot)` | positional, not keyword-only |
+| `_resolve_dirty_pr(self, issue_number, pr_number, acquired_slot)` | positional, not keyword-only |
+| `_attempt_ci_fixes(self, issue_number, pr_number, acquired_slot, extra_context="")` | positional; `extra_context` has default |
+
+These are distinct from `_retry_no_commit_once` (Phase 24), which does NOT have
+`acquired_slot`. The fabrication risk in Phase 24 was about a non-existent parameter; the
+confirmation here is that for these three methods, the parameter genuinely exists.
+
+**Dual verification rule**: When uncertain about a specific parameter:
+
+1. **Does the parameter EXIST?** — read the `def` line; confirm the name appears in the signature
+2. **Is it positional or keyword-only?** — check whether `*` appears before it
+3. **Does it have a default?** — check for `= <value>` after the name
+
+Delegation stubs must preserve the exact positional/keyword-only status and default values.
+
+```python
+# Correct stubs reflecting source-read signatures:
+def _recheck_and_arm_after_fix(
+    self, issue_number: int, pr_number: int, acquired_slot: int,
+) -> WorkerResult | None:
+    return self._collaborator._recheck_and_arm_after_fix(
+        issue_number, pr_number, acquired_slot,  # positional pass-through
+    )
+
+def _attempt_ci_fixes(
+    self, issue_number: int, pr_number: int, acquired_slot: int, extra_context: str = "",
+) -> WorkerResult | None:
+    return self._collaborator._attempt_ci_fixes(
+        issue_number, pr_number, acquired_slot, extra_context,
+    )
+```
+
+#### Phase 29 Checklist
+
+```markdown
+## Parameter Existence Confirmation Checklist (Phase 29)
+
+### For each parameter whose existence is uncertain
+- [ ] Read the actual `def` line — does the parameter name appear?
+- [ ] If YES: record positional vs keyword-only (before or after `*`?) and whether it has a default
+- [ ] If NO: the parameter is fabricated — remove it from the stub
+- [ ] Do NOT assume parameter existence from method name, call-site usage, or similar methods
+
+### Symmetric fabrication risks
+- [ ] Phase 25 risk: parameter listed in plan but absent from source → TypeError at runtime
+- [ ] Phase 29 risk: parameter absent from plan but present in source → stub drops required arg
+- [ ] Both risks resolved by the same fix: source-read the `def` line before writing any stub
+```
+
+### Phase 30: Keyword-Only Forwarding Call — `_mark_drive_green_learn_result` Pattern
+
+**Context**: Phase 25 established the rule to check for `*` in the stub def when source uses
+keyword-only params. During R6, `_mark_drive_green_learn_result` was given a completely wrong
+stub — fabricated positional `pr_number`, missing keyword-only `succeeded`. In R7, the correct
+stub was identified but the forwarding call still required fixing.
+
+**Source signature (ci_driver.py:1550–1556)**:
+
+```python
+def _mark_drive_green_learn_result(
+    self, issue_number: int, record: dict[str, Any], *, succeeded: bool
+) -> None:
+```
+
+**Wrong stub (R6 failure)**:
+
+```python
+def _mark_drive_green_learn_result(self, issue_number: int, pr_number: int, record: dict[str, Any]) -> None:
+    # Had fabricated pr_number positional, missing keyword-only succeeded
+```
+
+**Correct stub (R7)**:
+
+```python
+def _mark_drive_green_learn_result(
+    self, issue_number: int, record: dict[str, Any], *, succeeded: bool
+) -> None:
+    return self._post_merge_processor._mark_drive_green_learn_result(
+        issue_number, record, succeeded=succeeded)  # must pass succeeded= as kwarg
+```
+
+**Key rule**: A `*` separator in the source signature means ALL params after it are keyword-only.
+The forwarding call must pass them as `param=value`, not positionally. The stub def and the
+forwarding call are TWO separate places that must both be correct.
+
+**Common mistake**: Fixing the stub def (adding `*`) but passing `succeeded` positionally in
+the body. This raises `TypeError` at runtime but passes all static checks.
+
+#### Phase 30 Checklist
+
+```markdown
+## Keyword-Only Forwarding Call Checklist (Phase 30)
+
+### For methods with * in their source def line
+- [ ] Stub def includes `*` at the correct position
+- [ ] Every param after `*` in the stub uses the correct name and type annotation
+- [ ] Forwarding call passes EVERY keyword-only param as `param=value` (not positional)
+- [ ] No fabricated params appear in the stub (applies to both positional and keyword-only sections)
+- [ ] No real params are omitted from the stub
+
+### Two-location check
+- [ ] Stub def signature: correct? (includes `*`, correct param names and types)
+- [ ] Stub body forwarding call: correct? (every keyword-only param passed as `param=value`)
+```
+
+### Phase 31: Fabricated Parameters Are the #1 Planning Failure Mode
+
+**Evidence from R4/R5/R6 rejection history**:
+
+| Round | Fabrication | Source truth |
+|-------|-------------|--------------|
+| R4 | `_retry_no_commit_once` had fabricated `acquired_slot` | Method is keyword-only with no `acquired_slot` at all |
+| R5 | Six stubs had wrong return types inferred from expected behavior | Source had `WorkerResult \| None`, `WorkerResult`, `dict[str, Any] \| None`, `bool` |
+| R6 | `_resolve_dirty_pr` had fabricated 4th param `worktree_path` AND false "confirmed from source" claim | Source L1227-1229 shows 3 params; call site L919 confirms 3 args |
+| R6 | `_mark_drive_green_learn_result` had fabricated `pr_number`, missing keyword-only `succeeded` | Source L1550-1556: keyword-only `succeeded`, no `pr_number` at all |
+
+**Root cause pattern**: The planner described expected/intuitive signatures based on:
+- What the method "should" accept given its name
+- Params that appear in nearby methods with similar names
+- Return types inferred from "methods like this usually return bool"
+
+None of these are reliable. Method signatures are entirely determined by the actual source.
+
+**Prevention protocol (verified effective in R7)**:
+
+1. For EVERY stub: run `sed -n '<start>,<end>p' ci_driver.py` to get the exact `def` + `->` line range
+2. Verify call sites in the source to confirm param count matches (find at least one caller)
+3. Do NOT write "confirmed from source" unless the `sed` or Read command was actually run
+4. Write the stub by copying the signature characters from the command output, not from memory
+
+**False confirmation anti-pattern**:
+
+When a plan includes "confirmed from source" but the source was not actually read, it gives
+reviewers false confidence and causes the same error to persist across multiple rounds. The
+phrase "confirmed from source" is only valid if the exact line range was verified during THIS
+planning session.
+
+#### Phase 31 Checklist
+
+```markdown
+## Fabricated-Param Prevention Checklist (Phase 31)
+
+### Before writing ANY stub in a planning document
+- [ ] Run `sed -n '<start>,<end>p' <source_file>.py` for EVERY stub (not just uncertain ones)
+- [ ] Record the exact line range used (start, end line numbers)
+- [ ] Write the stub signature by copying from the sed output, not from memory
+- [ ] Find at least one call site in source and count the args — must match param count
+
+### Prohibited phrases without verification
+- [ ] "confirmed from source" — ONLY write this after actually running sed/Read on that line range
+- [ ] "similar to nearby method X" — signatures are independent; do not infer from analogies
+- [ ] "this type of method usually returns bool" — always source-read the `->` annotation
+
+### Pattern matching to check (common fabrication triggers)
+- [ ] Methods named `_resolve_X` near other methods with a `worktree_path` param: check if THIS method has it
+- [ ] Methods similar to keyword-only methods: check if THIS method also uses `*`
+- [ ] Methods that "sound like" guards: check if the return type is actually `bool` vs `WorkerResult | None`
+```
+
+### Phase 32: `acquired_slot` vs No `acquired_slot` — Slot-Ownership Mnemonic
+
+**Problem**: Two similarly-structured methods are easy to confuse when assigning `acquired_slot`:
+
+| Method | `acquired_slot`? | Conceptual role |
+|--------|-----------------|-----------------|
+| `_attempt_mechanical_rebase(self, issue_number, pr_number, acquired_slot) -> bool` | YES | IS a worker — it acquires a slot before doing rebase work |
+| `_retry_no_commit_once(self, *, issue_number, pr_number, worktree_path, ...) -> bool` | NO | Sub-step INSIDE a worker — executes within an already-acquired slot |
+| `_recheck_and_arm_after_fix(self, issue_number, pr_number, acquired_slot) -> WorkerResult \| None` | YES | IS a worker — re-enters the arming queue inside an acquired slot context |
+| `_resolve_dirty_pr(self, issue_number, pr_number, acquired_slot) -> WorkerResult` | YES | IS a worker — resolves dirty-PR state at the worker level |
+
+**Mnemonic rule**:
+
+> `acquired_slot` belongs to methods that ARE semaphore-slot workers (they receive the slot
+> token as evidence they've been dispatched by the slot scheduler).
+> Methods that run AS INTERNAL STEPS of a worker — already executing inside a slot —
+> do NOT receive `acquired_slot`; they inherit the slot context implicitly.
+
+**Diagnostic check**:
+
+```bash
+# Find which methods call _attempt_mechanical_rebase to see the caller pattern:
+grep -n "_attempt_mechanical_rebase\|_retry_no_commit_once\|_resolve_dirty_pr" ci_driver.py | grep -v "^.*def "
+# Callers of worker methods pass acquired_slot explicitly
+# Calls to sub-step methods do not
+```
+
+**Why this matters for delegation stubs**: If you add `acquired_slot` to `_retry_no_commit_once`
+(which does NOT have it), the stub will fail at runtime with `TypeError: unexpected argument`.
+If you omit `acquired_slot` from `_resolve_dirty_pr` (which DOES have it), the stub will fail
+with `TypeError: missing required argument`.
+
+Both errors are prevented by the same fix: source-read the `def` line (Phase 25/30). This
+phase adds the conceptual mnemonic to help predict which category a method falls into before
+reading, reducing the planning error rate in future rounds.
+
+#### Phase 32 Checklist
+
+```markdown
+## Slot-Ownership Mnemonic Checklist (Phase 32)
+
+### Classification heuristic (apply BEFORE source-reading to guide focus)
+- [ ] Is this method dispatched directly by the slot scheduler? → likely HAS acquired_slot
+- [ ] Is this method called FROM WITHIN a worker method? → likely does NOT have acquired_slot
+- [ ] Use this as a prior, then VERIFY by reading the actual def line (Phase 25 rule)
+
+### Verification (always required regardless of heuristic)
+- [ ] Source-read the def line: does `acquired_slot` appear in the parameter list?
+- [ ] If uncertain: find a call site with `grep -n "methodname" ci_driver.py` and count args
+```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -2098,6 +2620,13 @@ parametrization miss.
 | **Collaborator module missing `from __future__ import annotations`** | New collaborator modules used `dict[int, list[int]] \| None` without the future import | Runtime `TypeError: unsupported operand type(s) for \|` on Python 3.9 (or unexpected annotation evaluation errors) | Add `from __future__ import annotations` as the first non-comment line of every collaborator module using PEP 604 union types (Phase 24, Rule 5) |
 | **Counting first pre-commit run as "clean" when it made auto-fixes** | Ran pre-commit once, saw no hook failures, declared it clean | First pass made ruff auto-fixes (import ordering, trailing commas); second pass would have shown additional issues | Always run pre-commit twice; only the second pass with zero file changes counts as clean (Phase 24, Rule 6) |
 | **Structural test failed: constant not found in companions** | `AGENT_CI_DRIVER` moved to `ci_fix_orchestrator.py` but `companions=()` left empty in parametrize | `test_phase_agent_wiring.py` only scanned `ci_driver.py` — constant no longer there; test failed with "constant not found" | Add collaborator filename to `companions` tuple; ensure collaborator uses relative import (`from .session_naming import`) to match test regex (Phase 24, Rule 7) |
+| **Fabricated positional signature for keyword-only method** | Plan gave `_retry_no_commit_once` a positional signature including a fabricated `acquired_slot` param; the real method at ci_driver.py:2296 uses `*` (keyword-only) with 7 actual params | Forwarding via positional args raises `TypeError` at runtime; AST Criterion 6 checks name presence only — wrong-but-present stub passes silently | Before writing any stub, read the actual `def` line; if `*` appears, stub def must also use `*` and the forwarding call must use `keyword=value` for every param (Phase 25) |
+| **Range-grep spot-check insufficient for multi-module _gh_call split** | Used two range-grep checks to estimate `_gh_call` migration scope when the symbol moved to 4+ destination modules across 26 patch sites | Only 2 of 26 sites were covered; 24 sites were unaccounted for, making the migration table incomplete | Grep all patch sites with line numbers; bucket each line into its test class by finding the largest class-start ≤ patch-line; each class → one method → one destination module; verify bucket totals equal the total site count (Phase 26) |
+| **Adding _gh_call patch for delegating method without checking its sub-module chain** | Added `_find_pr_for_issue`'s test to the `ci_driver._gh_call` migration table without reading the test's patch string | The test already patched `_review_utils._gh_call` — not `ci_driver._gh_call`; the symbol never lived in `ci_driver`'s namespace at the test level, so the migration was unnecessary | Before adding any method's patch sites to a migration table, read the actual patch string in the test; if it targets a sub-module, that site does not move regardless of where the method relocates (Phase 27) |
+| **R6 return-type drift — six stubs inferred from expected behavior instead of source-read** | Six delegation stubs used `-> bool` / `-> None` / `-> dict` inferred from expected behavior (`_enable_auto_merge` "should return None since it's a side-effect method"; `_recheck_and_arm_after_fix` "should return bool since it's a guard") | Mypy in `ci_driver.py` rejected all six stubs; Criterion 9 only covered collaborator modules — not `ci_driver.py` — so the errors were not caught by the plan-time mypy check | Source-read the `->` annotation for every stub; add `ci_driver.py` (the host file) to the Criterion 9 mypy target list — wrong return types surface in the host, not in collaborator modules (Phase 28) |
+| **R6 `_resolve_dirty_pr` stub had fabricated 4th param `worktree_path` with false "confirmed from source"** | Added positional `worktree_path: Path` as a 4th parameter to `_resolve_dirty_pr` with a note claiming it was "confirmed from source" | Source L1227-1229 shows 3 params (`self, issue_number, pr_number, acquired_slot`); call site L919 confirms 3 args; the 4th param did not exist; the false confirmation claim wasted a review round | Never write "confirmed from source" without actually running `sed -n` or Read on that exact line range during the current planning session; this is the same root cause as all prior fabrications (Phase 31) |
+| **R6 `_mark_drive_green_learn_result` stub had fabricated `pr_number`, missing keyword-only `succeeded`** | Wrote stub with positional `pr_number` (doesn't exist in source) and omitted the keyword-only `succeeded` parameter entirely | Source L1550-1556: `def _mark_drive_green_learn_result(self, issue_number: int, record: dict[str, Any], *, succeeded: bool) -> None` — no `pr_number`, `succeeded` is keyword-only; forwarding call must use `succeeded=succeeded` | Both the stub def AND the forwarding call must be correct; a method named for "learn result" doesn't need `pr_number`; read the def line to know; pass keyword-only params with `param=value` in the forwarding call (Phase 30) |
+| **R4 `_retry_no_commit_once` had fabricated `acquired_slot`** | Added positional `acquired_slot` parameter to `_retry_no_commit_once` based on its presence in similar-looking worker methods | Source: `_retry_no_commit_once` uses `*` (keyword-only) with no `acquired_slot` at all — it is a sub-step executed inside a worker, not a worker itself | Methods that execute AS SUB-STEPS inside an acquired slot do not receive `acquired_slot`; only methods dispatched BY the slot scheduler receive it (Phase 32); source-read the def line to confirm (Phase 25) |
 
 ## Results & Parameters
 
@@ -2177,3 +2706,6 @@ Revised LOC estimate: ~X (vs TODO "~Y"); justification: ~Z% already in substrate
 | ProjectHephaestus | Issue #1289 — planning second decomposition pass of `ci_driver.py` (3,358 lines) using Dependency Inversion + delegation stubs to preserve `patch.object` test targets; 4 collaborators proposed (`PRDiscovery`, `CICheckInspector`, `CIFixOrchestrator`, `ArmingOrchestrator`); 6 additional planning risks identified: (1) `shared_pr_issues` write-back not designed — `_discover_prs` moving to `PRDiscovery` populates dict that arming fan-out reads on CIDriver; (2) `_tracked_worktree_changes` used by both `CICheckInspector` and `CIFixOrchestrator` — cross-collaborator coupling if assigned to one; (3) test fixture pre-seeding of `driver._viewer_login` stops working after cache migrates to collaborator; (4) method bodies not read before assigning to collaborators (`_arm_all_unarmed_open_prs` etc. assigned by name only); (5) conditional `__init__.py` export step not resolved at plan time — `__init__.py` not read; (6) line count projection used 25-line average for method bodies without reading actual lengths — no fallback plan if target not reached after PRDiscovery (unverified — implementation not yet started) | New Phase 22: God-Class Delegation Shared-State Write-Back Rules (v1.9.0) |
 | ProjectHephaestus | PR #1292 (Issue #1179) — executed CIDriver god-class decomposition using narrow-callable injection (DIP): ci_driver.py 3,338 → 2,404 lines (−28%); 4 collaborators extracted (`pr_discovery.py` 260L, `ci_check_inspector.py` 130L, `ci_fix_orchestrator.py` 530L, `post_merge_processor.py` 230L); 4 implementation traps discovered: (1) bare bound-method references to injected callables bypass `patch.object` — all injected callables must be lambda-wrapped; (2) pre/post-SHA split after orchestrator extraction requires patching BOTH `ci_fix_orchestrator.run` and `ci_driver.run` independently; (3) `_viewer_login` attribute migration generated 6 mypy errors in sibling test files — all attribute access paths must be updated; (4) `AGENT_CI_DRIVER` move to extracted module broke `test_phase_agent_wiring.py` — companions tuple required update; 146 existing tests + 22 new tests pass; all CI gates passed (verified-ci) | New Phase 23: God-Class Narrow-Callable DIP Execution Pattern (v1.10.0) |
 | ProjectHephaestus | PR #1320 (Issue #1289) — DRY + constructor-injection refinement of the Phase 23 extraction; ci_driver.py 2,404 → 1,410 lines (−41% further; −58% total from 3,358); 7 post-extraction patterns identified: (1) thin delegation stubs on original class preserve `patch.object` targets without test edits; (2) `__setattr__` override with `self.__dict__.get()` guard propagates test-time `state_dir` / `dry_run` assignments to collaborators; (3) `.clear()/.update()` preserves `shared_pr_issues` dict object identity across host + collaborators; (4) `_pr_is_failing` must stay in `ci_driver.py` because `loop_runner.py` imports it at module level — define local copy in collaborator to avoid circular import; (5) `from __future__ import annotations` required in collaborator modules using PEP 604 `X \| Y` union types; (6) pre-commit first pass auto-fixes; only second pass counts as clean; (7) structural tests scanning source text for `AGENT_*` constants / relative imports need `companions` tuple updated; 1,600 tests passed; pre-commit clean on both passes (verified-ci) | New Phase 24: Post-Extraction DRY / Constructor-Injection Refinement (v1.11.0) |
+| ProjectHephaestus | Issue #1289 R5 planning session — 3 new pre-implementation verification rules discovered: (1) `_retry_no_commit_once` at ci_driver.py:2296 uses keyword-only `*` separator; plan gave it a fabricated positional signature including non-existent `acquired_slot` param — AST Criterion 6 would pass silently but runtime raises `TypeError`; fix: read actual `def` line before any stub; (2) `_gh_call` patched in 26 sites across one test file moving to 4+ destination modules — two range-grep spot-checks only covered 2 of 26 sites; fix: bucket all patch lines by test-class start-line boundary; (3) `_find_pr_for_issue` tests already patch `_review_utils._gh_call` (not `ci_driver._gh_call`) because the method already delegates through `_review_utils`; these sites do not need migration regardless of where the method moves; fix: read the patch string before adding any site to the migration table (plan not yet executed) | New Phases 25–27: Keyword-Only Sig Verification, _gh_call Bucket Analysis, Delegation Chain Pre-Check (v1.13.0) |
+| ProjectHephaestus | Issue #1289 R6 planning session — 2 new verification rules discovered: (1) six delegation stubs had wrong return types (`-> bool` or `-> None` or bare `-> dict` instead of `WorkerResult \| None`, `WorkerResult`, `dict[str, Any] \| None`, `bool`); mypy in ci_driver.py rejected all six; Criterion 9 only covered collaborator modules — adding ci_driver.py to the mypy target list is required to surface host-file type errors; fix: source-read `->` annotation for every stub; (2) three methods — `_recheck_and_arm_after_fix` (L1149), `_resolve_dirty_pr` (L1229), `_attempt_ci_fixes` (L1292) — all DO have `acquired_slot` as a real positional parameter (unlike `_retry_no_commit_once` which did NOT); fabrication risk runs both ways: parameters may genuinely exist or be absent; source-read is the only reliable check (plan not yet executed) | New Phases 28–29: Return-Type Verification, acquired_slot Confirmation (v1.13.0) |
+| ProjectHephaestus | Issue #1289 R7 planning session — 3 new planning-time rules discovered: (1) `_mark_drive_green_learn_result` (L1550-1556) uses keyword-only `succeeded: bool` with no `pr_number` at all; R6 stub had fabricated `pr_number` and missing `succeeded`; R7 fix: both stub def AND forwarding call must be correct for keyword-only params — stub def needs `*`, forwarding call needs `succeeded=succeeded`; (2) fabricated method signatures were the #1 rejection cause in 3 consecutive rounds (R4 fabricated `acquired_slot` in `_retry_no_commit_once`; R5 had 6 wrong return types; R6 had fabricated `worktree_path` in `_resolve_dirty_pr` and fabricated `pr_number` + missing `succeeded` in `_mark_drive_green_learn_result`); prevention: `sed -n '<start>,<end>p'` for EVERY stub, never use "confirmed from source" without running the command; (3) `acquired_slot` ownership mnemonic: methods that ARE semaphore-slot workers (dispatched by slot scheduler) have the param; sub-steps executing INSIDE an acquired slot do not; use as prior then source-verify (plan not yet executed) | New Phases 30–32: Keyword-Only Forwarding Call, Fabricated-Param Prevention Protocol, acquired_slot Mnemonic (v1.13.0) |

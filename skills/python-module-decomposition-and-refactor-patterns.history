@@ -1,6 +1,177 @@
 <!-- markdownlint-disable MD024 -->
 # python-module-decomposition-and-refactor-patterns — History
 
+## v1.13.0 (2026-06-13)
+
+**Changed by:** /learn from ProjectHephaestus issue #1289 R5+R6+R7 planning sessions (CIDriver god-class decomposition — planning-time verification rules, return-type verification, acquired_slot confirmation, keyword-only forwarding call, fabricated-param prevention protocol, acquired_slot mnemonic)
+**Verification:** unverified (planning session findings; implementation not yet executed)
+
+### What changed
+
+Added Phases 25–32 covering eight pre-implementation verification and planning rules from R5,
+R6, and R7 planning sessions for issue #1289:
+
+**Phase 25: Keyword-Only Method Signature Verification**
+
+See v1.12.0 entry for Phases 25–29 context. Phase 25 was established from R5 findings.
+
+**Phase 30: Keyword-Only Forwarding Call — `_mark_drive_green_learn_result` Pattern**
+
+The R6 stub for `_mark_drive_green_learn_result` (L1550-1556) had a fabricated `pr_number`
+positional param and was missing the keyword-only `succeeded: bool` entirely. Phase 25
+established the rule to verify `*` in the def line. This phase extends it to the forwarding
+call: the stub def must include `*`, AND the forwarding call in the body must pass every
+keyword-only param as `param=value` (not positionally). Both the def and the body are
+independent failure points for keyword-only methods.
+
+Rule: For methods with `*` in their source def line, check BOTH the stub signature (includes
+`*`?) AND the stub body (every keyword-only param passed as `param=value`?).
+
+**Phase 31: Fabricated Parameters Are the #1 Planning Failure Mode**
+
+In 3 consecutive review rounds (R4/R5/R6), every NOGO included at least one fabricated
+signature:
+- R4: `_retry_no_commit_once` had fabricated `acquired_slot` (doesn't exist in source)
+- R5: Six wrong return types inferred from expected behavior
+- R6: `_resolve_dirty_pr` had fabricated 4th param `worktree_path` with false "confirmed from
+  source" claim; `_mark_drive_green_learn_result` had fabricated `pr_number` + missing `succeeded`
+
+Root cause: Planner described expected/intuitive signatures instead of reading actual source.
+The false "confirmed from source" annotation in R6 made the fabrication harder to catch.
+
+Prevention protocol (verified effective in R7): run `sed -n '<start>,<end>p'` for EVERY stub
+(not just uncertain ones); never write "confirmed from source" without running the command;
+write stubs by copying from command output, not from memory.
+
+**Phase 32: `acquired_slot` vs No `acquired_slot` — Slot-Ownership Mnemonic**
+
+Two similarly-named methods are easy to confuse:
+- `_attempt_mechanical_rebase(self, issue_number, pr_number, acquired_slot)` — HAS `acquired_slot`
+- `_retry_no_commit_once(self, *, issue_number, pr_number, ...)` — NO `acquired_slot`
+
+Mnemonic: `acquired_slot` belongs to methods that ARE semaphore-slot workers (dispatched by
+the slot scheduler). Methods that execute as sub-steps INSIDE an already-acquired slot do not
+receive the parameter. Use this as a prior, then verify by reading the def line.
+
+Also added:
+- 3 new rows to Failed Attempts table (R6 `_resolve_dirty_pr` fabricated worktree_path, R6
+  `_mark_drive_green_learn_result` fabricated pr_number/missing succeeded, R4
+  `_retry_no_commit_once` fabricated acquired_slot)
+- 3 new use-case descriptions in frontmatter
+- New tags (keyword-only-forwarding-call, fabricated-params-failure-mode,
+  acquired-slot-mnemonic, r7-planning-session)
+- 3 new When-to-Use bullets
+- 3 new Quick Reference decision-tree entries (Phases 30–32)
+- 1 new Verified On row
+
+---
+
+## v1.12.0 (2026-06-13)
+
+**Changed by:** /learn from ProjectHephaestus issue #1289 R5+R6 planning sessions (CIDriver god-class decomposition — planning-time verification rules, return-type verification, acquired_slot confirmation)
+**Verification:** unverified (planning session findings; implementation not yet executed)
+
+### What changed
+
+Added Phases 25–29 covering five pre-implementation verification rules from R5 and R6
+planning sessions for issue #1289 (Phases 25–27 renumbered from PR branch Phases 24–26;
+Phases 28–29 from PR branch Phases 27–28, all to avoid collision with canonical Phase 24
+from v1.11.0 and Phase 24 in v1.12.0 history):
+
+**Phase 25: Keyword-Only Method Signature Verification**
+
+A method identified for extraction (`_retry_no_commit_once`, ci_driver.py:2296) had a
+fabricated positional signature in the plan, including a non-existent `acquired_slot` param.
+The real method uses `*` (keyword-only) with 7 named params. Forwarding via positional args
+raises `TypeError` at runtime. The AST Criterion 6 (name-presence check) passes silently for
+wrong-signature stubs — it only checks the method name, not its signature.
+
+Rule: Read the actual `def` line before writing any stub. If `*` appears, the stub def must
+also use `*`, and the forwarding call must use `keyword=value` for every param.
+
+**Phase 26: `_gh_call` Multi-Module Split Attribution via Test-Class Boundaries**
+
+`_gh_call` is patched in 26 places across one test file, moving to 4+ destination modules.
+Two range-grep spot-checks only covered 2 of 26 sites. The correct approach: grep all
+patch sites with line numbers, then bucket each patch line into the test class whose
+start-line is the largest ≤ the patch line. Each class tests one method; each method goes
+to one collaborator; the bucket directly gives the destination module. Verify total across
+all buckets equals the total site count.
+
+**Phase 27: Delegation Chain Through Sub-Modules — Pre-Check Before Patch Migration**
+
+`_find_pr_for_issue` already delegates internally to `_review_utils.find_pr_for_issue`,
+which calls `_review_utils._gh_call`. The test (`TestBodySearch`, L1561) patches
+`hephaestus.automation._review_utils._gh_call` — not `ci_driver._gh_call`. Moving the
+method to a collaborator does not require migrating this patch. Rule: read the patch string
+before adding any site to the migration table; if it already targets a sub-module, it stays
+where it is.
+
+**Phase 28: Return-Type Verification for Delegation Stubs**
+
+Six stubs in the R6 plan had wrong return types inferred from expected behavior:
+`_recheck_and_arm_after_fix` (plan: `-> bool`, actual: `-> WorkerResult | None`),
+`_resolve_dirty_pr` (plan: `-> bool`, actual: `-> WorkerResult`),
+`_attempt_ci_fixes` (plan: `-> bool`, actual: `-> WorkerResult | None`),
+`_gh_pr_state` (plan: `-> dict`, actual: `-> dict[str, Any] | None`),
+`_enable_auto_merge` (plan: `-> None`, actual: `-> bool`),
+`_run_drive_green_compact` (plan: `-> None`, actual: `-> bool`).
+Key insight: wrong stub return types fail mypy in the HOST file (`ci_driver.py`), not the
+collaborator modules. The host file must be included in the mypy target list.
+
+**Phase 29: `acquired_slot` IS a Real Parameter for Three Methods**
+
+Confirmed that three methods DO have `acquired_slot` as a real positional parameter:
+`_recheck_and_arm_after_fix`, `_resolve_dirty_pr`, `_attempt_ci_fixes`. These are distinct
+from `_retry_no_commit_once` (Phase 25), which does NOT have `acquired_slot`. Fabrication
+risk runs both ways: parameters may be fabricated (non-existent) or overlooked (genuinely
+present but excluded from the plan). Source-reading the `def` line is the only reliable check.
+
+Also added:
+- 4 new rows to Failed Attempts table (keyword-only signature fabrication, range-grep
+  insufficient, delegation chain pre-check omitted, R6 return-type drift)
+- 5 new use-case descriptions in frontmatter (19–23, renumbered)
+- 9 new tags (keyword-only-signature, gh-call-patch-migration, test-class-bucket-analysis,
+  delegation-chain-pre-check, review-utils-delegation, return-type-verification,
+  stub-return-type-drift, mypy-host-file-target, acquired-slot-positional)
+- 5 new When-to-Use bullets
+- 5 new Quick Reference decision-tree entries (Phases 25/26/27/28/29)
+- 2 new Verified On rows
+
+---
+
+## v1.12.0 (2026-06-13)
+
+**Changed by:** /learn from ProjectHephaestus PR #1320 (Issue #1289 — DRY + constructor-injection refinement)
+**Verification:** verified-ci (PR #1320 merged, 1,600 tests passed, pre-commit clean on both passes)
+
+### What changed
+
+Added Phase 24: Post-Extraction DRY / Constructor-Injection Refinement. Seven patterns
+identified during the review-addressed refinement of the Phase 23 extraction (ci_driver.py
+2,404 → 1,410 lines; −41% further, −58% total from 3,338):
+
+1. Thin delegation stubs preserve `patch.object` targets without test edits
+2. `__setattr__` override with `self.__dict__.get()` guard propagates test-time attribute
+   changes to collaborators without infinite recursion during `__init__`
+3. `.clear()/.update()` preserves shared mutable dict object identity across host + collaborators
+4. Circular import avoidance: `_pr_is_failing` must stay in `ci_driver.py`; define local copy
+   in collaborator because `loop_runner.py` imports it at module level
+5. `from __future__ import annotations` required in every collaborator using PEP 604 union types
+6. Pre-commit first pass auto-fixes; only second pass (with zero file changes) counts as clean
+7. Structural tests scanning source text for `AGENT_*` constants / relative imports need
+   `companions` tuple updated when constants move to extracted collaborators
+
+Also added:
+- 7 new rows to Failed Attempts table (stub deletion, dict reassignment, local copy omission,
+  missing future import, pre-commit counting error, companions tuple omission, logger patch)
+- Use-case description (18) in frontmatter
+- 1 new When-to-Use bullet (DRY refinement)
+- 1 new Quick Reference entry (Phase 24)
+- 1 new Verified On row (PR #1320)
+
+---
+
 ## v1.10.0 (2026-06-13)
 
 **Changed by:** /learn from ProjectHephaestus PR #1292 (issue #1179 — CIDriver god-class decomposition execution using narrow-callable DIP injection)
