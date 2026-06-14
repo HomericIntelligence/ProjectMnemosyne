@@ -1,12 +1,32 @@
+# mnemosyne-skill-pr-ci-gate-first-pass-green — History
+
+## v1.1.0 (2026-06-14)
+
+**Changed by:** ProjectHephaestus session folding two post-creation findings into PR #1323 (merged green 2026-06-14, squash 0c712af)
+**Verification:** verified-ci
+
+### What changed
+
+- Upgraded verification verified-local → verified-ci (PR #1323 gate observed green: 27 SUCCESS / 2 SKIPPED / 0 failing).
+- Added Failed Attempt: renaming `## Verified Workflow` to `## Proposed Workflow` is a guaranteed `validate` failure (validator substring-requires the literal header).
+- Added Failed Attempt: `[ -f .git/hooks/pre-commit ]` is unreliable (worktree `.git` is a file; stray `core.hooksPath`) — use `git rev-parse --git-path hooks`.
+- Added two Results & Parameters bullets for the above; refreshed Overview/Verified-On/risks.
+
+### Why
+
+Both were discovered AFTER v1.0.0 was authored: the Proposed-Workflow rename trap was found while creating this very skill (the sub-agent hit it), and the pre-commit path-check bug was proven against a live worktree. Both fixes shipped in Heph PR #1323, which then merged green — promoting the whole workflow to verified-ci.
+
+### Previous version (v1.0.0) snapshot
+
+````markdown
 ---
 name: mnemosyne-skill-pr-ci-gate-first-pass-green
 description: "Use when authoring a ProjectMnemosyne /learn skill PR and you want it to pass CI on the FIRST push instead of bouncing on a red gate: (1) before committing a new or amended skills/*.md so you run the SAME two checks the Mnemosyne branch-protection requires — validate (ruff + scripts/validate_plugins.py over the WHOLE skills/ dir + mypy + pytest) and markdownlint (markdownlint-cli2 with .markdownlint.yaml); (2) when a markdown table in your skill has an inline pipe (regex, shell pipe, a|b) that markdownlint MD056/table-column-count rejects but validate_plugins.py silently passes; (3) when /learn emits a skill missing one of the five required ## sections and validate fails on your own new file; (4) when parallel /learn runs fork fresh origin/main against the SAME skill and become mutually DIRTY, so you need the open-PR amend-lock; (5) when a pre-existing broken file already on main reddens validate for files you never touched; (6) before claiming verified-ci, to confirm the gate is actually green and not just your local run."
 category: tooling
-date: 2026-06-14
-version: "1.1.0"
+date: 2026-06-13
+version: "1.0.0"
 user-invocable: false
-verification: verified-ci
-history: mnemosyne-skill-pr-ci-gate-first-pass-green.history
+verification: verified-local
 tags:
   - ci-cd
   - markdownlint
@@ -20,12 +40,12 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-14 |
+| **Date** | 2026-06-13 |
 | **Objective** | Author a ProjectMnemosyne `/learn` skill PR (`skills/*.md` plus optional `.history`) that passes the required CI gate on the FIRST push, instead of discovering a red `markdownlint` or `validate` check after the PR is open |
 | **Required gate** | Mnemosyne `main` branch protection requires EXACTLY two contexts: `validate` (ruff + `python3 scripts/validate_plugins.py` over the WHOLE `skills/` dir + mypy + pytest) and `markdownlint` (markdownlint-cli2 with `.markdownlint.yaml`). Branch-protection contexts are literally `["validate","markdownlint"]` |
 | **Outcome** | A four-step local validation order (section self-check, markdownlint-cli2, validate\_plugins.py, pre-commit) plus an open-PR amend-lock that prevents the mutually-DIRTY duplicate-PR cluster seen across 117 open Mnemosyne skill PRs |
-| **Verification** | verified-ci — ProjectHephaestus PR #1323 (which carries these /learn + /advise fixes) merged GREEN on 2026-06-14 as squash commit 0c712af; the validate + markdownlint gate (27 SUCCESS / 2 SKIPPED / 0 failing) was observed green before merge. |
-| **Verified On** | ProjectHephaestus PR #1323 (MERGED 2026-06-14, squash 0c712af). The amend-lock dedup query reproduced the duplicate-PR cluster; the section self-check flagged the exact 4 missing sections in PR #2417's real file; the new pre-commit-install check was proven against a live worktree. |
+| **Verification** | verified-local — local markdownlint + `validate_plugins.py` + the section self-check were run and pass on this file. The ProjectHephaestus PR #1323 that carries these same `/learn` + `/advise` fixes is still OPEN/BLOCKED awaiting a GO label, so this is NOT verified-ci yet |
+| **Verified On** | ProjectHephaestus PR #1323 (amends `skills/learn/SKILL.md` + `skills/advise/SKILL.md` with all of the lessons below). The dedup query reproduced the duplicate-PR cluster, and the section self-check flagged the exact 4 missing sections in PR #2417's real file |
 
 ## When to Use
 
@@ -38,7 +58,7 @@ tags:
 
 ## Verified Workflow
 
-> **Verification note:** Now verified-ci — ProjectHephaestus PR #1323 merged green on 2026-06-14 (squash 0c712af); the four-step local order + amend-lock are CI-proven, not just local.
+> **Verification note:** The four-step local order below was run and passes on this skill file (verified-local). The end-to-end CI behavior is carried by ProjectHephaestus PR #1323, which is still OPEN/BLOCKED awaiting a GO label — so treat "passes CI on the first pass" as verified-local, not verified-ci, until that PR's gate is observed green.
 
 ### Quick Reference
 
@@ -99,8 +119,6 @@ VERIFIED-CI HONESTY:
 | Generated a skill missing four required sections | Let `/learn` emit a skill and committed without a section self-check | The `validate` gate reported "Missing required section" on the PR's OWN new file (#2417 / #2420) | grep each of the five `##` headers before commit; a missing header is a guaranteed `validate` failure |
 | Labeled a skill verified-ci while its own gate was red | Set `verification: verified-ci` based on a passing local run | The PR's `validate`/`markdownlint` gate was still red, so the verification level was untrustworthy | Only claim verified-ci after `gh pr view <PR> --json statusCheckRollup` shows the gate green; local-only is verified-local |
 | Blamed validate errors on my own change | Saw red `validate` and assumed my new file broke it | The errors were in files I never touched — a single broken file already on main reddens EVERY PR's whole-dir `validate` | When validate errors point at untouched files, it is pre-existing main breakage; surface a separate fix PR and do not misattribute |
-| Renamed `## Verified Workflow` to `## Proposed Workflow` for an unverified skill | Followed the old /learn instruction to rename the header when verification is not verified-ci | `validate_plugins.py` substring-requires the LITERAL `## Verified Workflow` (scripts/validate_plugins.py line ~94), so the rename triggers `Missing required section: ## Verified Workflow` | NEVER rename the header; keep `## Verified Workflow` always and put the "not yet verified" warning as a blockquote INSIDE the section. The /learn skill itself had this trap in 3 places (fixed in Heph PR #1323) |
-| Checked `[ -f .git/hooks/pre-commit ]` to decide whether to install hooks | Used a path test to detect whether pre-commit was installed in the clone/worktree | In a WORKTREE `.git` is a FILE (a gitdir pointer), not a dir, so the path never exists even when hooks ARE installed; and a stray `core.hooksPath` can make the path exist while `pre-commit install` was never run | Resolve the real hooks dir with `git rev-parse --git-path hooks` and grep that hook for the `pre-commit` marker; do not test `.git/hooks/pre-commit` directly |
 
 ## Results & Parameters
 
@@ -114,12 +132,10 @@ VERIFIED-CI HONESTY:
 - **Amend-lock query.** `gh pr list --repo HomericIntelligence/ProjectMnemosyne --state open --search "<name> in:title" --json number,headRefName,title` plus a files-based check. If an open PR already amends the skill, stack on its branch — do not fork main. This is what prevents the ~35-PR DIRTY duplicate cluster.
 - **Local validation order (canonical).** (0) section self-check, (1) `markdownlint-cli2 --config .markdownlint.yaml`, (2) `python3 scripts/validate_plugins.py`, (3) `pre-commit run --files <the file>`.
 - **verified-ci is observed, not assumed.** Only `gh pr view <PR> --json mergeStateStatus,statusCheckRollup` showing the gate green earns `verified-ci`. A passing local run is `verified-local`.
-- **Never rename `## Verified Workflow`.** validate_plugins.py substring-matches the literal header (line ~94). For an unverified skill keep the header and mark status with an in-section warning blockquote — renaming to `## Proposed Workflow` is itself a guaranteed `Missing required section` failure.
-- **Detect pre-commit installation robustly.** Do not test `[ -f .git/hooks/pre-commit ]` — in a worktree `.git` is a file and a stray `core.hooksPath` fakes it. Use `hooks_dir=$(git rev-parse --git-path hooks); grep -qs pre-commit "$hooks_dir/pre-commit"`.
 
 ### Uncertain assumptions / risks (re-check before relying on this)
 
-- **Verified in CI:** carrier ProjectHephaestus PR #1323 merged green 2026-06-14 (squash 0c712af). The lessons are CI-proven; re-confirm the Mnemosyne gate contexts haven't drifted before relying on the exact two-check list.
+- **Not yet verified in CI.** Verification level is `verified-local`. The carrier ProjectHephaestus PR #1323 was OPEN/BLOCKED awaiting a GO label at capture time; confirm its `validate`/`markdownlint` gate goes green before upgrading this skill to `verified-ci`.
 - **Branch-protection contexts can drift.** `["validate","markdownlint"]` was read at capture time. Re-confirm with `gh api repos/HomericIntelligence/ProjectMnemosyne/rulesets` (or branch-protection) before assuming the gate is still exactly those two checks.
 - **markdownlint rule set is config-driven.** `.markdownlint.yaml` disables many rules (MD013, MD022, MD031, MD032, etc.) but NOT MD056 or MD012. If the config changes, re-derive which rules can redden the gate; always run the actual `markdownlint-cli2` rather than reasoning about it.
 - **The duplicate-cluster counts (117 PRs, ~35 DIRTY, ~9 / ~14 per skill) were a point-in-time scan.** They illustrate the failure mode, not a stable metric; re-run the amend-lock query for the current open-PR state.
@@ -136,3 +152,10 @@ VERIFIED-CI HONESTY:
 - [markdownlint MD012 / no-multiple-blanks rule](https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md#md012)
 - [markdownlint-cli2 usage and `--config`](https://github.com/DavidAnson/markdownlint-cli2)
 - [GitHub: Managing rulesets and required status checks](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets)
+````
+
+---
+
+## v1.0.0 (2026-06-13)
+
+**Initial version.**
