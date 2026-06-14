@@ -2,8 +2,8 @@
 name: github-auto-merge-ci-gating-merge-method
 description: "Use when: (1) a PR has mergeStateStatus CLEAN or MERGEABLE but auto-merge never fires despite all checks passing, (2) gh pr merge --auto --rebase or --squash returns an error or silently fails on a squash-only repo, (3) a PR is BLOCKED because required CI status contexts never post (workflow never triggered, paths filter excluded PR, required check name mismatch), (4) GPG-signing failures or mismatched committer emails cause commits to be unsigned and block the pr-policy gate, (5) branch protection rulesets and classic branch protection disagree and their union blocks merge, (6) a CI ruleset chicken-and-egg deadlock blocks a PR that introduces a new workflow, (7) an advisory check should not block merge but currently does because it lives in the required gate, (8) deciding which merge method a repo supports before arming auto-merge, (9) auditing required-check names after adding or removing CI jobs, (10) state:implementation-go label or pr-policy gates auto-merge arming, (11) per-issue arming-state machine is triggered on the wrong event (optimistic point vs detected merge)"
 category: ci-cd
-date: 2026-06-07
-version: "1.1.0"
+date: 2026-06-14
+version: "1.2.0"
 user-invocable: false
 history: github-auto-merge-ci-gating-merge-method.history
 tags:
@@ -28,6 +28,7 @@ tags:
 | Date | Objective | Outcome |
 | ------ | ----------- | --------- |
 | 2026-06-07 | Consolidated canonical for why GitHub auto-merge does not fire and how to arm it correctly: wrong merge method, missing/required CI status contexts, two-layer branch protection, GPG-signing blockers, ruleset bootstrap deadlock, the `state:implementation-go` arming-state machine, and advisory-vs-required gate split | Each failure mode has a verified diagnosis + fix; verified across many HomericIntelligence repos in live CI |
+| 2026-06-14 | Add the classic-vs-ruleset review-count UNION hard gate (a required human approval automation cannot provide), the keystone-PR self-introduced-required-context merge-train deadlock (merge keystone first, then re-rebase the queue), and duplicate check-run resolution after a re-run | Diagnosed live across 13 open ProjectHephaestus PRs during a `/myrmidon-swarm` drive (verified-local; the PRs had not yet merged at capture, the review-union gate was confirmed by API inspection) |
 
 GitHub auto-merge is **stricter than branch protection** and fires only when EVERY check (required and non-required) reaches a clean terminal state, the chosen merge method is allowed, every required status context has actually posted, all commits are verified-signed, and BOTH protection layers (ruleset + classic) are satisfied. A PR that looks ready (`mergeStateStatus: CLEAN`/`MERGEABLE`) can sit forever when any one of those is silently unmet. This skill covers the merge-blocking mechanics; it does NOT cover general CI failure diagnosis, rebase-conflict resolution, review-loop orchestration, or PR enumeration.
 
@@ -176,6 +177,76 @@ Critical gotchas:
 - All-checks-green + `MERGEABLE` can still sit `BLOCKED` on `required_review_thread_resolution: true` — unresolved `@github-advanced-security` (CodeQL) review threads gate merge. Detect via the GraphQL `reviewThreads` query (REST field is empty); READ each `path:line` and classify false-positive vs genuine, document accept-rationale, then `resolveReviewThread`. A force-push amend re-runs CodeQL and can post NEW threads — re-check the count after amending.
 - A `branch-protection-drift` required check that fails in ~4s with empty `--log-failed` is failing at the `gh api` call itself: `Resource not accessible by integration (HTTP 403)` from hitting the admin `branches/main/protection` endpoint with the default `GITHUB_TOKEN`. Switch to `rules/branches/main` (readable with `contents: read`; field names differ — `dismiss_stale_reviews` -> `dismiss_stale_reviews_on_push`). Fixing the 403 EXPOSES real drift — survey the ecosystem (count:0, dismiss:false, thread-resolution:true) to decide which side is authoritative.
 
+#### Classic-vs-ruleset review-count UNION (a required human approval automation cannot clear)
+
+A repo can carry BOTH a classic branch-protection AND an org/repo ruleset, each with its own
+`required_approving_review_count`. GitHub enforces their UNION — the STRICTER count wins. So a
+classic protection with `required_approving_review_count: 1` is NOT overridden by a ruleset that
+sets `0` (even with `required_review_thread_resolution: true`); every PR still needs 1 human
+APPROVING review. No automated actor can satisfy this: a bot, a GitHub App, or the PR author who
+armed auto-merge CANNOT approve their own PR, and a `COMMENTED` review does NOT count — only an
+`APPROVED` review increments the satisfied-count. This is a HARD gate: the swarm/automation cannot
+bypass it; a human with approve rights must approve.
+
+Diagnostic signature (all true at once): `mergeable=MERGEABLE`, `mergeStateStatus=BLOCKED`, ALL
+required status checks `SUCCESS`, NOT behind main, auto-merge armed, `reviewDecision=null` (or
+`REVIEW_REQUIRED`), and critically `viewerCanEnableAutoMerge=false` via GraphQL. Diagnose precisely:
+
+```bash
+# Classic layer review-count
+gh api repos/OWNER/REPO/branches/main/protection/required_pull_request_reviews \
+  --jq '{required_approving_review_count, require_code_owner_reviews}'
+# Ruleset layer review params (take the UNION — the stricter count wins)
+gh api repos/OWNER/REPO/rules/branches/main \
+  --jq '[.[]|select(.type=="pull_request").parameters]'
+# Per-PR decision (COMMENTED != APPROVED; only APPROVED satisfies the count)
+gh pr view N --json reviewDecision,mergeable,mergeStateStatus
+# If false, no automated actor can clear this — a human must approve
+gh api graphql -f query='query{repository(owner:"OWNER",name:"REPO"){pullRequest(number:N){viewerCanEnableAutoMerge}}}'
+```
+
+Lesson: when auto-merge will not fire with everything green, check BOTH protection layers'
+review-count, take the UNION (stricter wins), and recognize a required human approval is a hard gate
+automation cannot bypass.
+
+#### Keystone-PR self-introduced required context (a serial merge-train deadlock)
+
+A required status context that does NOT yet exist in any workflow on `main` — because it is
+INTRODUCED by ONE open PR — deadlocks the WHOLE queue. Example: branch protection requires
+`required-checks-gate`, but that context is produced by an `if: always()` aggregator job (with a
+large `needs:` list) living in `.github/workflows/_required.yml` on a single "harden CI" PR. Every
+OTHER open PR is missing that never-posted context and sits `BLOCKED`. The keystone PR can
+self-satisfy because its OWN branch carries the gate workflow.
+
+Diagnostic — the required context is configured but not on main:
+
+```bash
+gh api repos/OWNER/REPO/branches/main/protection/required_status_checks --jq .contexts
+git grep -c "required-checks-gate" origin/main -- .github/   # 0 / not-on-main => producer is in an unmerged PR
+```
+
+Resolution: merge the KEYSTONE PR FIRST (it is the unblock-everything PR); then every other PR must
+be RE-REBASED onto the new `main` to inherit the gate workflow so the context actually posts on
+their HEAD. This is the chicken-and-egg ruleset deadlock — distinct from the bootstrap deadlock above
+(there the gate blocks its OWN introducing PR; here the keystone self-satisfies but blocks the rest
+of the queue until they rebase to inherit the producer workflow).
+
+#### Duplicate check-runs after re-running a cancelled run
+
+Re-running a failed/cancelled CI run can leave DUPLICATE check-runs of the same required-context name
+on a single HEAD sha (one stale, one fresh):
+
+```bash
+gh api repos/OWNER/REPO/commits/SHA/check-runs \
+  --jq '[.check_runs[]|{name,conclusion}]|group_by(.name)[]|{name:.[0].name,count:length,conclusions:[.[].conclusion]}'
+# e.g. required-checks-gate appearing twice
+```
+
+If BOTH copies are `success` it is harmless to branch protection. If one is a stale `FAILURE` from a
+cancelled duplicate run, re-run the FAILED run (`gh run rerun <id> --failed`) so the name resolves to
+a single success. Beware: a rerun re-evaluates `changes-gate` and may flip most NON-required jobs to
+`SKIPPED` (fine — only the named required contexts matter). Do NOT chase `SKIPPED` non-required jobs.
+
 #### GPG-signing as a blocker
 
 The ruleset's `required_signatures` silently blocks unsigned commits, and a `pr-policy` gate often re-checks signatures via GraphQL `verified: true`. Mismatched committer emails or a missing `-S` produce unsigned commits that block merge with no obvious failing test. `git log --show-signature` showing `U` (good signature, untrusted local key) is FINE — GitHub verifies against the REGISTERED key. Always sign with `-S`; an empty re-trigger commit must also be signed or it is rejected by the same gate it is trying to unblock.
@@ -241,6 +312,8 @@ Two distinct state machines gate arming:
 | Trusted `mergeStateStatus` right after force-push | Checked immediately | It lags several minutes — shows BLOCKED while CI is passing | Verify via `actions/runs?branch=<branch>` matching `head_sha` |
 | Treated an arm-time GraphQL "clean status" / "unstable status" error as fatal | Aborted (or force-merged) when `enablePullRequestAutoMerge` rejected the arm | These are transient: "clean status" is API lag on a fresh-CLEAN PR; "unstable status" is checks still settling (PR resolves to `UNKNOWN`, which accepts the arm) | "clean" → retry immediately; "unstable" → wait a few seconds and retry; only OTHER GraphQL errors are fatal |
 | Assumed auto-merge waits for the LATEST commit's CI under `strict: false` | Trusted that a fired auto-merge meant the merged tip's CI had passed | `strict_required_status_checks_policy: false` accepts passing checks from a PRIOR commit SHA, so the newest commit's CI can still be QUEUED when auto-merge fires and merges | Check `gh api .../branches/main/protection/required_status_checks --jq .strict`; under `false`, stale-CI merges are expected behavior, not a fault |
+| Assumed all-green + auto-merge armed ⇒ will merge | Left ~13 MERGEABLE+armed PRs expecting them to fire | A CLASSIC protection `required_approving_review_count: 1` (UNION with a ruleset's `0`) requires 1 human APPROVING review the automation cannot provide; `viewerCanEnableAutoMerge=false` | Check BOTH protection layers' review-count and take the UNION; a required human approval is a hard gate — only an `APPROVED` (not `COMMENTED`) human review clears it |
+| Treated a never-posting required context as a CI flake | Re-ran CI / waited for `required-checks-gate` to post on every queued PR | The context was introduced by an unmerged keystone PR and is not on `main`; `git grep -c <ctx> origin/main -- .github/` returns 0 | Merge the keystone PR FIRST, then RE-REBASE the queue onto new `main` so each PR inherits the producer workflow and the context posts |
 
 ## Results & Parameters
 
@@ -276,6 +349,9 @@ auto-merge armed but not merged
 | GitHub Actions app id for `required_status_checks.integration_id` | `15368` |
 | Baseline ruleset contexts | `lint, unit-tests, integration-tests, build, schema-validation, security/dependency-scan, security/secrets-scan, deps/version-sync` |
 | HI `pull_request` ruleset params | count `0`, `dismiss_stale_reviews_on_push false`, `require_last_push_approval false`, `required_review_thread_resolution true`, `require_code_owner_review false` |
+| Review-count UNION (observed ProjectHephaestus) | classic `required_approving_review_count=1` UNION ruleset `required_approving_review_count=0` (+ `required_review_thread_resolution true`) ⇒ effective 1 human approval required; automation cannot clear it |
+| Required status contexts (observed ProjectHephaestus) | `'test (ubuntu-latest, 3.12, integration)'`, `'test (ubuntu-latest, 3.12, unit)'`, `required-checks-gate` |
+| `required-checks-gate` producer | an `if: always()` aggregator job in `.github/workflows/_required.yml`; a PR lacking that workflow version never gets the context |
 | `dismissed_comment` (CodeQL dismiss) max length | 280 chars (HTTP 422 otherwise) |
 | Required-check context format | bare job `name:` (e.g. `lint`), NOT `"Required Checks / lint"` |
 | GO label set | `state:plan-go`, `state:plan-no-go`, `state:needs-plan`, `state:implementation-go`, `state:implementation-no-go` |
@@ -305,3 +381,4 @@ auto-merge armed but not merged
 | ProjectNestor | Unresolved CodeQL review threads gated #101/#97; `branch-protection-drift` 403 | Resolving threads flipped BLOCKED→merged 2026-06-02; switched to rules endpoint + ecosystem reconcile |
 | ProjectHephaestus | `pr-policy` label-gate (#899/#901/#903/#904/#906/#908/#910), `pull_request_target` arming workflow (#915/#917), squash-only docs/code fix (#668/#904/#911), per-issue arming-state machine (#844, builds on #835), pre-armed auto-merge trap (#1073/#1075/#1077), advisory split (#1081 closes #1080) | Label alignment re-ran `pr-policy` green; settings-aware merge selection shipped; `/learn` capture keyed on detected-merge; advisory split verified-local (107 `tests/unit/ci` pass) |
 | HomericIntelligence (all 15 repos) | Two-layer protection audited + applied live; `homeric-main-baseline` ruleset rollout | Union confirmed; Keystone 404-body fake-context trap corrected; Nestor classic count:1 patched to 0 |
+| ProjectHephaestus | 2026-06-14: drove 13 open PRs toward mergeable during a `/myrmidon-swarm` run — hit the classic-vs-ruleset review-count UNION hard gate (`viewerCanEnableAutoMerge=false`), a `required-checks-gate` keystone PR (`_required.yml` `if: always()` aggregator) blocking the whole queue, and duplicate check-runs after a re-run | verified-local: the union gate was confirmed by API inspection (classic count=1 UNION ruleset count=0); keystone-first + re-rebase identified as the queue unblock; PRs had not yet merged at capture |
