@@ -1,9 +1,9 @@
 ---
 name: python-import-patterns-and-compatibility-guards
-description: "Use when: (1) a child module would create circular dependencies by importing the parent at module level — use function-local imports to defer the lookup and keep the import graph acyclic; (2) extending a public SDK surface with peer classes using lazy-loading __init__.py infrastructure (lazy exports pattern via __getattr__) to prevent eager-load regressions when adding new peers to __all__; (3) code uses a stdlib module added in a later Python version (tomllib in 3.11+, ExceptionGroup in 3.11+) and the CI matrix includes older Python — add a version-gated try/except import guard so the module remains importable; (4) adding cross-OS CI matrix and Windows jobs fail with ModuleNotFoundError for POSIX-only stdlib modules (curses, fcntl, grp, tzdata) — add conditional import guards and ensure tzdata is listed as an optional Windows dependency."
+description: "Use when: (1) a child module would create circular dependencies by importing the parent at module level — use function-local imports to defer the lookup and keep the import graph acyclic; (2) extending a public SDK surface with peer classes using lazy-loading __init__.py infrastructure (lazy exports pattern via __getattr__) to prevent eager-load regressions when adding new peers to __all__; (3) code uses a stdlib module added in a later Python version (tomllib in 3.11+, ExceptionGroup in 3.11+) and the CI matrix includes older Python — add a version-gated try/except import guard so the module remains importable; (4) adding cross-OS CI matrix and Windows jobs fail with ModuleNotFoundError for POSIX-only stdlib modules (curses, fcntl, grp, tzdata) — add conditional import guards and ensure tzdata is listed as an optional Windows dependency; (5) a hardcoded surface-pinning test (set(__all__) == literal) fails on CI with 'Extra items in the left set' because a peer export landed on main via an independent PR while your branch was open — fix the stale test literal, not the (correct) source, and use env -i / git stash / grep-the-CI-log to separate real failures from live-session environment noise."
 category: architecture
-date: 2026-06-07
-version: "1.0.0"
+date: 2026-06-11
+version: "1.1.0"
 user-invocable: false
 history: python-import-patterns-and-compatibility-guards.history
 tags:
@@ -21,6 +21,11 @@ tags:
   - fcntl
   - tzdata
   - compatibility
+  - surface-pinning
+  - branch-divergence
+  - merge-skew
+  - test-vs-source
+  - environment-noise
 ---
 
 # Python Import Patterns and Compatibility Guards
@@ -29,10 +34,10 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-07 |
-| **Objective** | Manage the Python import graph and import compatibility across versions and platforms: avoid circular dependencies with function-local imports, extend public SDK surfaces via lazy exports without eager-load regressions, and guard stdlib imports that vary by Python version or OS |
-| **Outcome** | Acyclic import graphs, Windows-importable packages, CI matrices green on older Python and POSIX-only stdlib, and lazy SDK surfaces that scale to new peer classes |
-| **Verification** | verified-ci |
+| **Date** | 2026-06-11 |
+| **Objective** | Manage the Python import graph and import compatibility across versions and platforms: avoid circular dependencies with function-local imports, extend public SDK surfaces via lazy exports without eager-load regressions, guard stdlib imports that vary by Python version or OS, and keep hardcoded surface-pinning tests from going stale when peers land via parallel PRs |
+| **Outcome** | Acyclic import graphs, Windows-importable packages, CI matrices green on older Python and POSIX-only stdlib, lazy SDK surfaces that scale to new peer classes, and a decision procedure for fixing stale pinned-`__all__` tests (test vs source) without chasing live-session environment noise |
+| **Verification** | verified-ci (function-local / version-guard / Windows-guard / lazy-exports); verified-local (surface-pin-stale fix — CI re-run confirmation pending) |
 
 ## When to Use
 
@@ -40,6 +45,7 @@ tags:
 - **Lazy exports (SDK surface)**: Extending a public package `__all__` with peer classes from submodules, adding `TYPE_CHECKING` imports, preventing eager-load regressions, or avoiding architectural restructuring when widening the public surface.
 - **Version-gated stdlib guard**: A CI matrix includes Python 3.10 and code does a bare import of a 3.11+ stdlib module (`tomllib`, `ExceptionGroup`); `pytest` collection fails with `ModuleNotFoundError` on the lowest Python in the matrix.
 - **Windows / POSIX-only stdlib guard**: Adding a cross-OS CI matrix where Windows jobs fail with `ModuleNotFoundError` for `curses`/`fcntl`/`termios`/`grp`/`pwd`, or `zoneinfo.ZoneInfo` raises `ZoneInfoNotFoundError` on Windows (needs `tzdata`).
+- **Stale surface-pin test (branch-divergence / merge-skew)**: A hardcoded surface-pinning test (`assert set(__all__) == {literal}`) fails on CI with `Extra items in the left set: '<Symbol>'`, where `<Symbol>` is a *legitimate* peer export that landed on `main` via an independent PR while your feature branch was open. The production `__init__.py` is correct; the test literal went stale. You need to decide whether the test or the source is wrong, then fix only the stale party — and to do that you must separate the real CI failure from environment noise that only appears when the local suite runs inside a live automation session.
 
 ## Verified Workflow
 
@@ -143,6 +149,29 @@ grep -rn "^import \(curses\|fcntl\|termios\|grp\|pwd\)" hephaestus/  # each need
        assert not missing, f"Missing peer classes in __all__: {missing}"
    ```
 7. **Validate**: `pixi run pytest tests/unit/automation/ -v && pixi run ruff check ... && pixi run mypy ...`.
+8. **Prefer a subset assertion (`expected - set(__all__)`) over strict equality (`set(__all__) == expected`)** for the pin. A subset assertion (`missing = expected - set(__all__); assert not missing`) catches *removed* peers (the regression you care about) but tolerates a new peer being added on `main` via an independent PR. A strict-equality pin breaks every open branch the moment any peer lands elsewhere (see section B′). If you must keep strict equality, treat the literal as a manifest that has to be re-synced on rebase.
+
+#### B′. Repairing a stale surface-pin test after a parallel-PR peer landed
+
+A strict-equality surface pin (`assert set(automation.__all__) == expected`) fails on CI with `Extra items in the left set: '<Symbol>'` when `<Symbol>` was added to `__all__` on `main` by an independent PR while your branch was open. The source is correct; the *test literal* is the stale party. Procedure:
+
+1. **Confirm the failure is real and isolate the symbol.** `gh pr view <pr> --json state,statusCheckRollup` to confirm OPEN + which checks fail (here: `unit-tests` on every Python leg). Then `gh run view --job <id> --log-failed | grep -iE "FAILED|AssertionError"` to find the single failing test among thousands. The pytest set-diff (`Extra items in the left set: '<Symbol>'`) names the exact symbol.
+2. **Decide test-vs-source before editing either** — the critical step. Prove whether `<Symbol>` is a legitimate export or an accidental addition:
+   ```bash
+   git log --oneline -- hephaestus/automation/__init__.py     # when/how did <Symbol> enter __all__?
+   git log -p -1 -- hephaestus/automation/__init__.py          # the landing commit + its PR/message
+   ```
+   If `<Symbol>` landed via a separate, legitimate feature PR on `main` (e.g. `AuditReviewer` via #1067), the **test is stale, not the source**. Do NOT remove `<Symbol>` from `__all__` — that would silently shrink the public surface.
+3. **Fix the test literal only.** Add `<Symbol>` to the `expected` set, alphabetically placed. Zero production code changes.
+4. **Discriminate real CI failures from live-session environment noise.** A full *local* suite run inside a live Claude Code automation session can show extra failures that CI does not. Two cheap discriminators:
+   ```bash
+   # (a) env-var leakage (e.g. HEPH_*_MODEL set in the live session):
+   env -i HOME="$HOME" PATH="$PATH" pixi run pytest <path>::<test> -q   # PASS under env -i ⇒ environmental
+   # (b) your-change-vs-pre-existing: stash your diff, re-run on the clean base:
+   git stash && pixi run pytest <path> -q ; git stash pop            # still fails ⇒ pre-existing, not yours
+   ```
+   Decisive tiebreaker: `gh run view --job <id> --log | grep <testname>` — if the test **PASSED in CI**, the local failure is environment-only (CI has no live `gh` auth and no `HEPH_*_MODEL` env vars). Lesson: when the local suite shows MORE failures than CI, verify each against the CI log before attributing any of them to your change.
+5. **Harden the pin** so the next parallel PR doesn't re-break it: switch the assertion to a subset check (step 8 above), or accept that the strict literal is a manifest requiring a rebase-time re-sync.
 
 #### C. Version-gated stdlib import guard (newer-Python module on older matrix)
 
@@ -200,6 +229,9 @@ General pattern + known backports:
 | Move the helper function to dodge the edge | Relocate `get_current_correlation_id()` into `utils` | Creates a god-module, couples `utils.helpers` to logging concerns, violates SRP | Move the import, not the function — keep it where it semantically belongs |
 | Eager-load new phase modules in `__init__.py` | `from .address_reviewer import AddressReviewer` directly | Defeats lazy loading, increases import time, breaks the established pattern | Use `_LAZY_EXPORTS` + `__getattr__` and add the module to `_PHASE_ENTRYPOINTS` |
 | Create a parallel surface test file | New `test_package_surface.py` to pin `__all__` | DRY violation — existing `test_package_imports.py` already iterates `__all__` | Extend existing test coverage; don't duplicate iteration logic |
+| Pin the surface with strict equality | `assert set(automation.__all__) == {hardcoded literal}` authored on the feature branch | `AuditReviewer` landed on `main` via independent PR #1067 while the branch was open; CI failed on ALL Py legs with `Extra items in the left set: 'AuditReviewer'`. The source `__all__` was correct; the test literal went stale (branch-divergence / merge-skew) | A strict-equality pin breaks every open branch the instant a peer lands elsewhere. Prefer a subset assertion (`expected - set(__all__)`) that catches removals but tolerates parallel additions; if you keep equality, re-sync the literal on rebase |
+| "Fix" the stale pin by editing the source | Considered removing `AuditReviewer` from `__all__` to satisfy the failing equality assertion | Would have silently shrunk the public SDK surface — `AuditReviewer` is a legitimate peer export added by #1067 | Decide test-vs-source BEFORE editing: `git log -p -1 -- __init__.py` proved the symbol was a real, separately-landed export. Fix the stale TEST literal, never the correct source |
+| Trust the local suite over the CI log | Saw 3 local failures and assumed all 3 were caused by my change | 2 were live-session environment noise: `HEPH_*_MODEL` env vars set in the session, and live `gh` auth leaking real PR data past a mock. Only 1 (`test_public_surface_pins_expected_symbols`) was the genuine CI failure | When local shows MORE failures than CI, verify each against the CI log. `env -i HOME=$HOME PATH=$PATH pytest` isolates env-var leakage; `git stash` isolates pre-existing failures; `gh run view --log \| grep <test>` is the decisive tiebreaker (those 2 PASSED in CI) |
 | Bare `import tomllib` assuming 3.11+ matrix | Used stdlib `tomllib` directly | Matrix also ran 3.10; collection failed with `ModuleNotFoundError: No module named 'tomllib'` | Always check the lowest Python in the matrix before using newer stdlib modules |
 | `try/except ImportError` instead of version guard | `try: import tomllib except ImportError: import tomli as tomllib` | Works at runtime but mypy cannot statically narrow the type; false positive on 3.11+ | Use `sys.version_info >= (3, 11)` — mypy treats it as a narrowing predicate |
 | Skip declaring the backport dependency | Did not add `tomli; python_version < '3.11'` | `tomli` absent in fresh CI env → `ModuleNotFoundError: No module named 'tomli'` | Declare backports as conditional deps in both `pyproject.toml` and `pixi.toml` |
@@ -238,6 +270,59 @@ tests/unit/automation/test_package_imports.py::test_public_surface_pins_expected
 ```
 
 `__all__`, `_LAZY_EXPORTS` keys, and `TYPE_CHECKING` imports must all be alphabetically sorted (case-sensitive, uppercase first). `_PHASE_ENTRYPOINTS` order does not matter (membership check only).
+
+### Stale surface-pin — failure signature, diagnosis, and fix
+
+CI failure signature (every Python leg, exactly one failing test):
+
+```text
+FAILED tests/unit/automation/test_package_imports.py::test_public_surface_pins_expected_symbols
+    assert set(automation.__all__) == expected
+E   Extra items in the left set:
+E     'AuditReviewer'
+```
+
+Diagnose test-vs-source, then fix the test (not the source):
+
+```bash
+# 1. Confirm OPEN + which checks fail
+gh pr view 968 --json state,statusCheckRollup
+
+# 2. Find the single failing test among thousands
+gh run view --job <job-id> --log-failed | grep -iE "FAILED|AssertionError"
+
+# 3. Reproduce locally — the set-diff names the exact symbol
+pixi run python -m pytest tests/unit/automation/test_package_imports.py::test_public_surface_pins_expected_symbols -v
+
+# 4. PROVE the symbol is a legitimate, separately-landed export (decides test-vs-source)
+git log --oneline -- hephaestus/automation/__init__.py   # AuditReviewer entered via PR #1067 on main
+git log -p -1 -- hephaestus/automation/__init__.py        # "feat(automation): add audit reviewer..."
+```
+
+The fix is one line in the TEST, alphabetically placed, with zero source change:
+
+```python
+expected = {
+    "AddressReviewer",
+    "AuditReviewer",   # ← added: legitimate peer that landed on main via #1067
+    "CIDriver",
+    # ...
+}
+```
+
+Separating the real CI failure from live-session environment noise (3 local failures, only 1 genuine):
+
+```bash
+# env-var leak (HEPH_PLANNER_MODEL / HEPH_IMPLEMENTER_MODEL / HEPH_REVIEWER_MODEL set in the live session)
+env -i HOME="$HOME" PATH="$PATH" pixi run pytest \
+    tests/unit/automation/test_loop_runner.py::test_phase_env_model_vars_only_when_non_empty -q   # PASS ⇒ environmental
+
+# pre-existing vs your-change (live gh auth leaked 24/40 real PRs past the mock)
+git stash && pixi run pytest tests/unit/automation/test_ci_driver_prs_mode.py -q ; git stash pop  # same fail ⇒ not yours
+
+# decisive tiebreaker: all 3 noise tests PASSED in CI (no live gh auth, no HEPH_*_MODEL there)
+gh run view --job <job-id> --log | grep -E "test_phase_env_model_vars_only_when_non_empty|test_ci_driver_prs_mode"
+```
 
 ### Version-gated guard — expected output & type-ignore
 
@@ -289,5 +374,6 @@ def test_entry_point_importable(module_path: str) -> None:
 |---------|---------|---------|
 | ProjectHephaestus | PR #633 — correlation_id propagation | Function-local import of `get_current_correlation_id` in `hephaestus/utils/helpers.py:170-172`; lint passes with no `noqa` |
 | ProjectHephaestus | Issue #775 / PR #968 — widen automation SDK surface | Exposed PlanReviewer, AddressReviewer, CIDriver (+Options) via `__all__`/`_LAZY_EXPORTS`/`_PHASE_ENTRYPOINTS`; surface-pinning test; 1081 automation tests pass |
+| ProjectHephaestus | Issue #775 / PR #968 vs #1067 — stale surface-pin repair | `test_public_surface_pins_expected_symbols` failed on every Py leg with `Extra items in the left set: 'AuditReviewer'`; `AuditReviewer` was a legitimate peer added on `main` by independent PR #1067. Fixed the stale test literal (one-line add, alphabetised), zero source change. `verified-local` — CI re-run confirmation pending. 2 sibling local failures (`HEPH_*_MODEL` env leak; live `gh` auth past a mock) proven environmental via `env -i` + `git stash` + grep-the-CI-log |
 | ProjectHephaestus | PR #657 — fix broken main CI | `sys.version_info` guard for `tomllib`/`tomli` in `tests/unit/ci/test_bandit_config.py`; conditional deps in `pyproject.toml`/`pixi.toml`; 2590 tests pass |
 | ProjectHephaestus | PRs #534, #536, #538 (issue #539 tracks full port) — Windows-importability | curses guard in `CursesUI`, fcntl guard in `planner.py`, `tzdata` for `hephaestus.github.rate_limit` |

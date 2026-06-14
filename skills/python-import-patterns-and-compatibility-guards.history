@@ -2,6 +2,28 @@
 
 # History: python-import-patterns-and-compatibility-guards
 
+## v1.1.0 (2026-06-11)
+
+**Changed by:** ProjectHephaestus PR #968 / issue #775 CI fix — stale surface-pin test repair (`AuditReviewer` landed on main via independent PR #1067)
+**Verification:** verified-local (CI re-run confirmation pending) for the new surface-pin-stale material; the pre-existing function-local / version-guard / Windows-guard / lazy-exports sections remain verified-ci
+
+### What changed
+
+- Added a 5th "Use when" trigger to the frontmatter description and a 5th "When to Use" bullet: stale strict-equality surface-pin test fails with `Extra items in the left set` because a peer export landed via a parallel PR.
+- Added detailed-steps subsection **B′. Repairing a stale surface-pin test after a parallel-PR peer landed** (confirm + isolate symbol, decide test-vs-source via `git log -p`, fix the test literal not the source, discriminate env noise via `env -i` / `git stash` / grep-the-CI-log, harden the pin).
+- Added step 8 to section B recommending a subset assertion (`expected - set(__all__)`) over strict equality so parallel additions don't break open branches.
+- Added 3 Failed Attempts rows: strict-equality pin went stale via merge-skew; "fixing" it by editing the (correct) source would have shrunk the public surface; trusting the local suite over the CI log conflated 2 environment-noise failures with the 1 real one.
+- Added Results & Parameters subsection "Stale surface-pin — failure signature, diagnosis, and fix" with the exact pytest set-diff signature, the `gh pr view` / `gh run view --log-failed` / `git log -p` diagnosis commands, the one-line test fix, and the `env -i` + `git stash` + grep-the-CI-log discriminators.
+- Updated Overview (date, objective, outcome, mixed-verification note), added tags (surface-pinning, branch-divergence, merge-skew, test-vs-source, environment-noise), added a Verified On row for the #968-vs-#1067 stale-pin repair, bumped version 1.0.0 → 1.1.0, date → 2026-06-11.
+
+### Why
+
+v1.0.0's lazy-exports section taught how to ADD a surface-pinning test but pinned the surface with strict equality and never covered the failure mode where that literal goes stale because a peer export lands on `main` via an independent PR while the feature branch is open. PR #968's CI failed on every Python leg with `Extra items in the left set: 'AuditReviewer'` — the source `__all__` was correct (AuditReviewer is a legitimate export from #1067); the test literal was stale. The critical, non-obvious decision is test-vs-source: removing AuditReviewer from `__all__` to satisfy the assertion would have silently shrunk the public SDK surface. A secondary trap was that the local suite (run inside a live Claude Code session) showed 2 extra failures from `HEPH_*_MODEL` env leakage and live `gh` auth bleeding past a mock — neither caused by the change, both proven environmental against the CI log.
+
+### Previous version (v1.0.0) snapshot
+
+See the v1.0.0 entry below (retained unchanged) for the full prior content merged from the four source skills.
+
 ## v1.0.0 (2026-06-07)
 
 Initial canonical, merged from 4 source skills:
