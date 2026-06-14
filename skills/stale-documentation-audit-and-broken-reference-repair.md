@@ -1,12 +1,12 @@
 ---
 name: stale-documentation-audit-and-broken-reference-repair
-description: "Use when: (1) running a doc-drift audit across a corpus — detecting stale counts, metric discrepancies, cross-doc contradictions, ecosystem-role drift; (2) removing phantom directory references from documentation when a path no longer exists; (3) fixing broken documentation references (dead links, stale headings); (4) auditing documentation examples for policy violations; (5) auditing and rewriting getting-started stubs by sourcing real commands from justfile and versions from pixi.toml; (6) fixing incorrect tier labels or version numbers in docs that have drifted from implementation; (7) managing the full lifecycle of placeholder and stub documentation — deletion under YAGNI, deferred-comment placeholders, rewriting with accurate codebase-grounded content; (8) resolving audit nitpicks for monolithic code by documenting verified design rationale; (9) resolving CONTRIBUTING.md case-clashes and circular cross-references in docs/; (10) validating anchor fragments in markdown deep-links to detect broken headings; (11) an issue claims a file contains a specific string — verify it before trusting the claim; (12) a doc or test comment references a line number in another file that may have shifted; (13) PLANNING a doc-drift consolidation — issue line numbers are stale and more copies exist than cited; (14) a flagged stale count is ambiguous which set the doc counts — disambiguate before bumping; (15) planning a phantom-path fix — applying the remove-vs-redirect decision rule and confirm-then-fix audit discipline; (16) a dated currency claim in a doc trails the git tag and you want a CI-effective version-currency guard; (17) a README/CLAUDE.md directory tree omits or miscounts a subpackage; (18) syncing a stale doc-version claim to the correct version authority and deciding whether to add a drift-detection regression test."
+description: "Use when: (1) running a doc-drift audit across a corpus — detecting stale counts, metric discrepancies, cross-doc contradictions, ecosystem-role drift; (2) removing phantom directory references from documentation when a path no longer exists; (3) fixing broken documentation references (dead links, stale headings); (4) auditing documentation examples for policy violations; (5) auditing and rewriting getting-started stubs by sourcing real commands from justfile and versions from pixi.toml; (6) fixing incorrect tier labels or version numbers in docs that have drifted from implementation; (7) managing the full lifecycle of placeholder and stub documentation — deletion under YAGNI, deferred-comment placeholders, rewriting with accurate codebase-grounded content; (8) resolving audit nitpicks for monolithic code by documenting verified design rationale; (9) resolving CONTRIBUTING.md case-clashes and circular cross-references in docs/; (10) validating anchor fragments in markdown deep-links to detect broken headings; (11) an issue claims a file contains a specific string — verify it before trusting the claim; (12) a doc or test comment references a line number in another file that may have shifted; (13) PLANNING a doc-drift consolidation — issue line numbers are stale and more copies exist than cited; (14) a flagged stale count is ambiguous which set the doc counts — disambiguate before bumping; (15) planning a phantom-path fix — applying the remove-vs-redirect decision rule and confirm-then-fix audit discipline; (16) a dated currency claim in a doc trails the git tag and you want a CI-effective version-currency guard; (17) a README/CLAUDE.md directory tree omits or miscounts a subpackage; (18) syncing a stale doc-version claim to the correct version authority and deciding whether to add a drift-detection regression test; (19) a doc count annotates a human-curated enumeration (tree, tier table, bullet list) and you must reconcile number-to-list not number-to-filesystem; (20) a replacement command must be verified to actually run in THIS repo before shipping — feature names are not environment names in pixi; (21) a pixi-only repo has bare env-tool invocations (pre-commit, pytest, mypy, ruff) that fail on clean machines; (22) an audit issue quotes conflicting numbers — treat both as suspect prose and count from the enforced artifact; (23) re-deriving a count from the authoritative manifest/code and hunting all stale copies with a phrase-scoped grep; (24) locating and repairing dangling file:line citations by content-match not coordinate, and confirming markdownlint was not silently skipped."
 category: documentation
 date: 2026-06-13
-version: "1.9.0"
+version: "1.10.0"
 user-invocable: false
 history: stale-documentation-audit-and-broken-reference-repair.history
-tags: [doc-drift, stale-doc, broken-references, phantom-dir, placeholder, stub, anchor-validation, tier-labels, doc-audit, doc-sync, merged, merge-method, consolidation-planning, count-disambiguation, remove-vs-redirect, confirm-then-fix, version-currency, git-tag-authority, subpackage-count, pattern-d, drift-test-fragility]
+tags: [doc-drift, stale-doc, broken-references, phantom-dir, placeholder, stub, anchor-validation, tier-labels, doc-audit, doc-sync, merged, merge-method, consolidation-planning, count-disambiguation, remove-vs-redirect, confirm-then-fix, version-currency, git-tag-authority, subpackage-count, pattern-d, drift-test-fragility, count-annotates-list, pixi-environment, pixi-run-prefix, enforced-artifact, phrase-scoped-grep, file-line-citation, markdownlint-skipped]
 ---
 
 # Stale Documentation Audit and Broken Reference Repair
@@ -17,7 +17,7 @@ tags: [doc-drift, stale-doc, broken-references, phantom-dir, placeholder, stub, 
 | ------- | ------- |
 | **Date** | 2026-06-13 |
 | **Objective** | Canonical workflow for auditing stale documentation and repairing broken references: drift audits, phantom-dir/dead-link removal, placeholder lifecycle, getting-started rewrites, tier-label fixes, anchor validation, ADR LoC figure updates, stale line-number citations |
-| **Outcome** | Consolidated from 10 skills covering doc-drift audits, broken-reference repair, policy-violation audits, placeholder/stub lifecycle, monolith-rationale docs, CONTRIBUTING case-clash, and anchor validation; v1.1.0 adds ADR LoC drift pattern; v1.2.0 adds stale line-number citation audit and issue-body claim verification; v1.9.0 adds merge-method per-repo note, doc-drift consolidation PLANNING, count-set disambiguation, phantom-path remove-vs-redirect, git-tag version-currency guard, subpackage counting, and Pattern D drift-test fragility |
+| **Outcome** | Consolidated from 10 skills covering doc-drift audits, broken-reference repair, policy-violation audits, placeholder/stub lifecycle, monolith-rationale docs, CONTRIBUTING case-clash, and anchor validation; v1.1.0 adds ADR LoC drift pattern; v1.2.0 adds stale line-number citation audit and issue-body claim verification; v1.9.0 adds merge-method per-repo note, doc-drift consolidation PLANNING, count-set disambiguation, phantom-path remove-vs-redirect, git-tag version-currency guard, subpackage counting, and Pattern D drift-test fragility; v1.10.0 salvages 6 dropped learnings: count-annotates-list rule, pixi env verification before shipping, pixi-run prefix for bare env tools, enforced-artifact > prose for conflicting counts, phrase-scoped grep for count-drift, and content-anchored file:line citation repair with markdownlint-Skipped caveat |
 | **Verification** | verified-ci |
 
 ## When to Use
@@ -43,6 +43,12 @@ tags: [doc-drift, stale-doc, broken-references, phantom-dir, placeholder, stub, 
 - A dated currency claim (latest-released-version / last-updated) in a doc trails the git tag line and you want a CI-effective guard (one that actually runs, not silently skips)
 - A README/CLAUDE.md directory tree omits or miscounts a subpackage and you must re-derive the true package count from the filesystem (not trust the doc's own number or the issue's)
 - A doc states a stale released-version claim (e.g. `MIGRATION.md` says "latest released version is 0.9.2" but `git tag` shows v0.9.5) and you must sync it to the correct version authority — AND decide whether to add a drift-detection regression test (see §18 for the fragility traps before you couple a prose regex to a git-tag-derived authority)
+- A doc count annotates an adjacent human-curated enumeration (tree, tier table, bullet list) — the fix is to reconcile number-to-list (clarify scope/unit), NOT number-to-filesystem; bumping the number to a raw `find … | wc -l` result while the curated list is unchanged produces an internally-contradictory doc (POLA NOGO)
+- A replacement command was copied from another doc or from the issue body — verify it actually runs in THIS repo (e.g. `pixi run -e dev true` to confirm `dev` is an environment, not just a feature) before shipping
+- A pixi-managed repo has bare env-tool invocations (`pre-commit install`, `pytest`, `mypy`, `ruff`) in docs or README that will fail with `command not found` on a clean machine because `.pixi/envs/default/bin` is not on PATH after `pixi install`
+- An audit issue quotes conflicting numbers (e.g. "6 vs 11 excluded modules") — treat BOTH quoted counts as suspect prose and count from the enforced artifact (a passing frozen-allowlist test or `expected_modules` set) instead
+- Docs or test comments state a count that must be re-derived from the authoritative manifest (e.g. `pyproject.toml [project.scripts]`) — use a phrase-scoped grep to BOTH locate the stale copy AND confirm no other stale copies survive
+- A doc carries a dangling `file.py:NN-MM` reference — locate the construct by content-match grep (not the audit's reported coordinate, which is off-by-one), replace with a content-anchored durable citation; after the fix, verify `pre-commit run --files <doc>` actually LINTED the file (a "Skipped" status means the hook's file filter excluded the path — linting did NOT occur)
 
 ## Verified Workflow
 
@@ -56,7 +62,41 @@ pixi run python -m pytest --collect-only -q tests/ 2>/dev/null | tail -3   # rea
 ls .claude/agents/*.md | wc -l                                              # real agent count
 grep "fail_under" pyproject.toml                                            # real coverage threshold
 grep -r "<old_count>" . --include="*.md" --exclude-dir=.git                 # find ALL stale copies
-gh api orgs/<ORG>/repos --paginate --jq '.[] | "\(.name) -- \(.description)"' | sort  # role truth
+
+# ── COUNT-ANNOTATES-LIST: verify documented_count == enumeration_count ────────
+# The number annotating a tree/table/list counts THAT LIST, not the filesystem.
+# 1. Count items in the curated list
+grep -c "^  ├\|^  └\|^  │" README.md                 # tree entries (example)
+# 2. Count real packages / dirs
+git ls-files 'hephaestus/*/__init__.py' | wc -l       # tracked packages
+# 3. If number != list_count: clarify scope ("19 documented subpackages"), never
+#    just bump to filesystem count — that leaves number > list_count (contradictory).
+
+# ── PIXI ENV VERIFICATION before shipping a replacement command ───────────────
+pixi run -e dev true 2>&1 | grep -q "unknown environment" && echo "NOGO: not an env" \
+  || echo "OK"
+# 'dev' may be a feature (in [features]) not an environment (in [environments]).
+# An un-sourced/uncertain command is a STOP — verify or drop; never ship on a hunch.
+
+# ── PIXI-ONLY REPOS: detect bare env-tool invocations ────────────────────────
+grep -rnE '^[[:space:]]*(pre-commit|pytest|mypy|ruff)\b' docs/ README*
+# Bare invocations fail on a clean machine (PATH does not include .pixi/envs/default/bin).
+# Fix: prepend 'pixi run' — e.g. 'pre-commit install' → 'pixi run pre-commit install'
+# Verify: grep -rnE '^[[:space:]]*(pixi run )?(pre-commit|pytest|mypy|ruff)\b' docs/ README*
+
+# ── ENFORCED ARTIFACT > PROSE for conflicting issue counts ─────────────────────
+# When issue body says "6 vs 11 excluded modules", count from the test itself:
+grep -rn 'expected_modules\|All 11\|the 11 automation\|11 modules' pyproject.toml docs/ tests/
+# A passing frozen-allowlist test (expected_modules set + "N modules" comment) is
+# stronger ground truth than any prose. Only add a doc-grep regression guard when
+# no enforced guard already exists.
+
+# ── PHRASE-SCOPED GREP: re-derive count + hunt all stale copies ───────────────
+# Count from the authoritative manifest (never a second doc):
+grep -cE '^[a-z_-]+ =' pyproject.toml     # project.scripts entry count (example)
+# Phrase-scope the stale-number re-grep to BOTH scope the edit AND prove no copies survive:
+grep -rn 'of 37|37 declared|37 tools' docs/ README* ROADMAP*
+# Prefer exact-string Edit over replace_all on bare digits — bare digits false-positive.
 
 # ── BROKEN / PHANTOM REFERENCES ──────────────────────────────────────────────
 grep -rn "<removed-path>" docs/ README.md CONTRIBUTING.md   # find dead refs
@@ -90,6 +130,18 @@ grep -n "claimed incorrect string" path/to/file.md  # returns nothing → claim 
 grep -n "guard_pattern\|function_name" path/to/source.sh
 # Step 3: Search for ALL stale variants — docs and test files updated independently
 grep -rn "old_ref_1\|old_ref_2" docs/ tests/ --include="*.md" --include="*.bats" --include="*.sh"
+
+# ── FILE:LINE CITATION REPAIR (content-anchored, not coordinate-anchored) ─────
+# 1. Locate the construct by content, not the audit's line number (off-by-one risk):
+grep -n "construct_keyword\|function_name" path/to/source.py
+# 2. Replace with a content-anchored durable citation (package __init__ or durable text),
+#    NOT a fresh ':NN' that will re-rot.
+# 3. Re-grep corpus after fix:
+grep -rn "old_file_ref\|stale_coord" docs/ tests/
+# 4. Verify markdownlint actually LINTED the file (not silently skipped):
+#    Look for "Markdown Lint … Skipped" in pre-commit output → hook's file filter
+#    excluded the path; the file was NOT linted. Verify manually or adjust hook scope.
+pixi run pre-commit run markdownlint-cli2 --files path/to/file.md
 
 # ── DISAMBIGUATE A FLAGGED COUNT (which set does the doc count?) ─────────────
 find hephaestus -maxdepth 1 -mindepth 1 -type d ! -name __pycache__ | wc -l  # real subpackage dirs
@@ -128,6 +180,9 @@ Classify the staleness, then verify against an authoritative source before editi
 | ADR LoC drift | ADR cites old `N LoC / M% of codebase`; codebase has grown | `find … -name '*.py' \| xargs wc -l \| tail -1` — re-measure at implementation time |
 | Line-number citation drift | Doc/test cites `file.sh:N–M`; construct moved after code churn | `grep -n <guard_pattern> <file>` to find current line; then `grep -rn "old_N\|old_M"` across all referencing files |
 | Issue-body fabricated claim | Issue says file "contains" a string that no longer exists in main | `grep -n "<exact claimed string>" <file>` before planning; returns nothing → issue written against older main |
+| Count-annotates-list drift | Doc bumps a number to match `find \| wc -l` but the adjacent curated list is unchanged | Reconcile number-to-list; clarify scope/unit (e.g. "19 documented subpackages"); never let number exceed list length |
+| Conflicting-count prose | Issue quotes two different numbers for the same thing | Count from the enforced artifact (passing test, expected_modules set); treat both prose counts as suspect |
+| Manifest-to-doc count drift | ROADMAP/README count trails `pyproject.toml [project.scripts]` or equivalent | Grep the manifest; phrase-scope re-grep to catch all stale copies |
 
 Fix patterns: `Planned → Implemented` in status tables; round counts with `+` for forward
 compatibility (`"2026+ tests" → "3,000+ tests"`) but exact counts (no `+`) for deterministic
@@ -156,6 +211,38 @@ Add a self-verifying command to the doc so future readers can re-check:
 bullet (`- N agents` → `- M agents`) and the Agent Hierarchy line (`All N agents` → `All M agents`).
 
 Optionally add a drift-detection regression test (see Results & Parameters) and an ADR.
+
+#### 1a. Count-annotates-curated-list rule
+
+A doc count typically annotates an adjacent human-curated enumeration (a tree, tier table, or
+bullet list). Its **contract** is "this number = the count of the list beside it," NOT
+"this number = `find … | wc -l`."
+
+**The POLA NOGO**: bumping the number to the raw filesystem count while the curated list is
+unchanged produces an internally-contradictory doc — a number promising N over a list of N-1.
+This is **worse than the original staleness**.
+
+**Correct fix**: reconcile number-to-LIST:
+
+1. Count items in the curated list (e.g. tree entries).
+2. Count items in the filesystem (tracked packages).
+3. If they differ, the list is missing an entry — add the missing entry AND update the number,
+   OR clarify the scope/unit in the number annotation (e.g. "19 documented subpackages").
+4. Never let `number > list_count` in the final doc.
+
+**Verification one-liner** — assert documented_count equals enumeration_count:
+
+```bash
+# documented_count: the number in the caption/heading
+documented_count=19
+# enumeration_count: count lines in the adjacent curated list
+enumeration_count=$(grep -c "^  ├\|^  └" README.md)
+[ "$documented_count" -eq "$enumeration_count" ] && echo "CONSISTENT" || echo "MISMATCH: $documented_count vs $enumeration_count"
+```
+
+**Common confusion**: the audit issue may itself cite a stale count (e.g., "21 subpackages")
+derived from an earlier filesystem snapshot (`ls -d */ | wc -l` overcounts, including
+`__pycache__`). Always re-derive: `git ls-files 'pkg/*/__init__.py' | wc -l` (tracked packages).
 
 #### 2. Phantom-directory references
 
@@ -204,6 +291,33 @@ heading anchors. Edge cases: `` `pixi install` fails `` → `pixi-install-fails`
 step to `.github/workflows/link-check.yml` after the lychee step. Test hermetically with
 `TemporaryDirectory` (portable in class-based tests where `tmp_path` fixtures aren't injected).
 
+#### 3b. Content-anchored file:line citation repair and markdownlint-Skipped caveat
+
+**File:line citation repair** — when an audit flags a dangling `file.py:NN-MM` reference:
+
+1. **Locate by content, not coordinate.** The audit's reported line number is itself off-by-one
+   (it reflects the audit snapshot). Use `grep -n "<construct_keyword>" path/to/source.py` to
+   find the current location.
+2. **Replace with a content-anchored durable citation** — cite the package `__init__.py` or a
+   durable function/class name rather than a raw `:NN` coordinate that will re-rot with the next
+   code churn.
+3. **Re-grep the corpus post-fix** to confirm no other files carry the stale coordinate:
+   `grep -rn "old_file.py:NN" docs/ tests/`.
+4. **Historical-accuracy guardrail** — repair only the broken citation; do not "modernize"
+   historical narrative (e.g. `APPROVED/REVISE/BLOCK` vocabulary from a prior review round).
+   Changing historical status labels corrupts the audit trail.
+
+**markdownlint-Skipped caveat** — after running `pre-commit run --files <doc>`, check the
+output line for `Markdown Lint`. A status of `Skipped` means the hook's file filter excluded
+the path — the file was **NOT linted**. Do not assume a clean pre-commit run implies markdownlint
+was satisfied. Verify explicitly:
+
+```bash
+pixi run pre-commit run markdownlint-cli2 --files path/to/file.md
+# If this also skips, the hook's 'files:' pattern excludes the path.
+# In that case lint manually or adjust the hook scope.
+```
+
 #### 4. Placeholder / stub lifecycle (delete · defer · annotate · rewrite)
 
 ```text
@@ -246,6 +360,51 @@ version *range* from `pixi.toml` (`mojo >= 0.26.1, < 0.27`), never a nightly bui
 Common lint fixes: MD001 (h5 after h3 — flatten inner subsections or demote `#####` to `####`);
 MD040 (add a language tag); fix malformed fences (one open delimiter, one language tag, one close).
 
+#### 5b. Pixi-only setup docs: prefix env tools with `pixi run`
+
+In a pixi-managed repo, bare env-tool invocations (`pre-commit install`, `pytest`, `mypy`, `ruff`)
+in docs or README **fail with `command not found`** on a clean machine. After `pixi install`,
+`.pixi/envs/default/bin` is NOT added to `PATH` unless you `pixi shell` — which itself may not
+work (see env-vs-feature caveat below).
+
+**Detection**:
+
+```bash
+grep -rnE '^[[:space:]]*(pre-commit|pytest|mypy|ruff)\b' docs/ README*
+```
+
+**Fix**: edit to `pixi run <tool>` for each bare invocation found.
+
+**Verification** (positive + negative):
+
+```bash
+# Negative: no bare invocations remain
+grep -rnE '^[[:space:]]*(pre-commit|pytest|mypy|ruff)\b' docs/ README*
+# Positive: pixi run form present
+grep -rnE '^[[:space:]]*pixi run (pre-commit|pytest|mypy|ruff)\b' docs/ README*
+```
+
+Then run markdownlint to confirm no lint regressions from the edits.
+
+#### 5c. Verify the replacement command actually runs before shipping
+
+A replacement command must be verified to run in **THIS repo**, not just look canonical.
+
+**The feature-vs-environment trap (pixi)**: `pixi.toml` defines environments under `[environments]`
+and features under `[features]`. A `dev` feature composed into `default` is **NOT** an environment.
+`pixi run -e dev` / `pixi shell -e dev` will fail with "unknown environment" if `dev` is only a
+feature:
+
+```bash
+# Verification check:
+pixi run -e dev true 2>&1 | grep -q "unknown environment" && echo "NOGO: dev is a feature, not an env" \
+  || echo "OK: dev environment exists"
+```
+
+**Rule**: an un-sourced or uncertain command (copied from a sibling doc without verification) is
+a **STOP** signal. Verify it runs or drop it — never ship on a hunch. Do not propagate a sibling
+doc's error into a new doc.
+
 #### 6. Tier-label / version fixes
 
 Labels drift off-by-one from the authoritative table after a renumbering. Scan ALL occurrences
@@ -258,6 +417,51 @@ Hybrid · T6 Super.
 `T5 (Hierarchy)`: fix to `T2 / T3 / T4`. Hotspots: the Token Tracking section (`T2 vs T3
 Analysis` → `T1 vs T2`) and the 9-row Component Cost table. Only named references (`(Name)` or
 `-` dashes) need fixing; bare tier numbers in formula example data are correct as-is.
+
+#### 6b. Enforced artifact > prose for conflicting counts
+
+When an audit issue quotes conflicting numbers (e.g., "6 vs 11 excluded modules"), treat
+**BOTH** as suspect prose and count from the executable/enforced artifact:
+
+- A passing frozen-allowlist test (`expected_modules` set + "N modules" comment) is stronger
+  ground truth than any prose.
+- Grep the whole corpus for paraphrased counts:
+
+  ```bash
+  grep -rn '11 modules\|All 11\|the 11 automation' pyproject.toml docs/ tests/
+  ```
+
+  Copies of the count hide in test docstrings, PR descriptions, and design docs — find all of them.
+
+- Only add a doc-grep regression guard when **no enforced guard already exists**. If a passing
+  test already asserts the count, a prose guard is redundant and fragile.
+
+#### 6c. Count-drift: re-derive from single source of truth with phrase-scoped grep
+
+Re-derive counts from the authoritative manifest or code — **never from a second doc**:
+
+```bash
+# Example: count declared CLI tools from pyproject.toml [project.scripts]
+grep -c '^\s*[a-z_-]' pyproject.toml    # count non-empty lines in [project.scripts] block
+```
+
+**Phrase-scope** the stale-number re-grep to BOTH scope the edit AND prove no stale copies
+survive elsewhere:
+
+```bash
+grep -rn 'of 37\|37 declared\|37 tools' docs/ README* ROADMAP*
+```
+
+- **Prefer exact-string `Edit`** over `replace_all` on bare digits — a bare digit like `37`
+  false-positives on unrelated numbers in the same file.
+- **Risk caveat**: every stale copy must be updated atomically (one PR). A partial update that
+  fixes the primary file but leaves copies in ROADMAP or test docstrings produces a contradictory
+  corpus.
+
+**Concrete example**: `ROADMAP.md` said "13 of 37 declared tools"; `pyproject.toml
+[project.scripts]` had 47 entries (real count). Fix phrase: `"13 of 47 implemented tools"`.
+After fixing, re-grep: `grep -rn 'of 37\|37 declared' docs/ README* ROADMAP*` — must return
+nothing.
 
 #### 7. Audit-nitpick: monolith rationale (optional)
 
@@ -548,6 +752,12 @@ pixi run npx markdownlint-cli2 <file>
   `_version_from_git_tag`), NOT `pyproject.toml` — there is no static `[project].version` field.
   `security-md-version-sync`'s pyproject-as-source-of-truth assumption does NOT apply to
   dynamic-versioning repos.
+- **Count-annotates-list**: a doc count annotates its adjacent curated list — reconcile
+  number-to-list, never number-to-filesystem; `number > list_count` is always a POLA NOGO.
+- **Pixi env vs feature**: `[environments]` defines runnable environments; `[features]` does not.
+  `pixi run -e <name>` fails if `<name>` is only a feature. Verify before shipping.
+- **markdownlint Skipped**: `pre-commit run --files <doc>` may print `Skipped` for markdownlint —
+  the file was NOT linted. Verify with `pixi run pre-commit run markdownlint-cli2 --files <doc>`.
 
 #### 1b. Counting subpackages for a directory-tree drift fix (planning)
 
@@ -668,6 +878,14 @@ Surface these as explicit risks; each is a place where a phantom-path plan commo
 | Bare `actions/checkout` for a job whose tests need tags | Left the default shallow checkout on the unit-test job | A bare checkout is shallow and tag-less, so `_version_from_git_tag` returns `None` and the guard skips/fails | Add `fetch-depth: 0` + `fetch-tags: true` (mirror auto-tag.yml / release.yml) |
 | Regex coupled to doc wording with no guard | Relied on the regex silently returning no match after a reword | A reworded sentence makes the regex match nothing → test passes vacuously, drift undetected | `assert match is not None` (fail loud on reword) + an in-code `# WARNING:` comment to update the regex in lockstep |
 | Searching only the issue-reported stale line-number value | Only grepped for `137-141` (the value cited in the issue) | The test file had a *different* stale value (`127-129`) from independent update history; missed it entirely | Search for all plausible old values across all referencing files — doc and test files may carry different stale numbers from independent update histories |
+| Bumped doc count `19`→`20` to match `find \| wc -l` while curated list unchanged | Changed caption number to match filesystem count without adding the missing list entry | Produced an internally-contradictory doc: number promised 20 over a list of 19 entries — worse than the original staleness | Reconcile number-to-LIST: add the missing list entry AND update the number, or clarify scope in the annotation; never let `number > list_count` |
+| Trusted audit issue's stated `21 subpackages` figure | Used 21 (the issue-filed count) as the target to bump to | Issue-filed counts are themselves stale: real filesystem was 20 dirs / 19 documented packages (ls -d overcounts, includes `__pycache__`) | Re-derive with `git ls-files 'pkg/*/__init__.py' \| wc -l` — never trust an issue's count claim |
+| Shipped `pixi shell -e dev` / `pixi run -e dev` without verifying dev is an environment | Copied command from a sibling doc assuming dev was a pixi environment | `dev` is a *feature* in `[features]`, not an entry in `[environments]`; the command fails with "unknown environment" | Verify: `pixi run -e dev true 2>&1 \| grep -q "unknown environment"` before shipping; an un-sourced command is a STOP signal |
+| Bare `pre-commit install` invocation in README of a pixi-managed repo | Wrote `pre-commit install` without `pixi run` prefix | Fails with `command not found` on a clean machine — `.pixi/envs/default/bin` is not on PATH after `pixi install` | Prefix all env-tool invocations with `pixi run`; detect bare invocations with `grep -rnE '^[[:space:]]*(pre-commit\|pytest\|mypy\|ruff)\b'` |
+| Trusted audit issue's conflicting prose counts (`6 vs 11 modules`) | Tried to reconcile the two prose numbers by checking code | Both counts were suspect prose; the real count was in a passing frozen-allowlist test (`expected_modules` set) | Count from the enforced artifact first; only add a prose guard when no enforced guard already exists |
+| Used `replace_all` on a bare digit when doing a count fix | Ran `replace_all: true` on `"37"` to update a tool count | Bare digit `37` matched unrelated occurrences in the same file (version strings, line numbers) | Use exact-phrase `Edit` (`"13 of 37 declared tools"`) and phrase-scoped grep (`grep -rn 'of 37\|37 declared'`) for precise targeting |
+| Trusted the audit's reported `file.py:NN` coordinate to locate a dangling citation | Jumped directly to line NN of the cited source file | Audit coordinate was off-by-one from a prior code churn; the referenced construct was at a different line | Locate by content-match grep (`grep -n "<construct_keyword>" source.py`), not coordinate |
+| Assumed `pre-commit run --files <doc>` linted the file when output showed `Skipped` | Counted a `Skipped` pre-commit result as lint-clean | `Skipped` means the hook's file filter excluded the path — markdownlint did NOT run; issues went undetected | Check the status word in the output; verify with `pixi run pre-commit run markdownlint-cli2 --files <doc>` |
 
 ## Results & Parameters
 
@@ -740,4 +958,10 @@ pixi run npx markdownlint-cli2 <file>
 | ProjectHephaestus | Issue #1211 (PR #1236) | Phantom-dir removal (.claude/shared/ in CLAUDE.md); surfaced squash-only merge-method pitfall |
 | ProjectHephaestus | Issue #1216 (planning artifact, **unverified**) | Consolidate two drifted README onboarding blocks onto canonical `just bootstrap` — PLANNING only; plan written but not executed end-to-end, no CI confirmation. Source of the §13 doc-drift consolidation planning workflow |
 | ProjectHephaestus | Issue #1208 (planning artifact, **unverified**) | Doc-version-currency sync + drift-test fragility (Pattern D) — hatch-vcs repo, git-tag authority, `>=` semantics; plan not executed in CI. Source of §18 Pattern D workflow |
+| ProjectHephaestus | Issues #2351/#2373 (closed, content salvaged) | Count-annotates-list rule: bumping 19→20 without updating tree produced contradictory doc; issue-filed count of 21 was stale (overcounted `__pycache__`); reconcile number-to-list not number-to-filesystem |
+| ProjectHephaestus | Issue #2352 (closed, content salvaged) | Replacement command must run in THIS repo: `pixi run -e dev` failed because `dev` is a feature not an environment; un-sourced commands are a STOP signal |
+| ProjectHephaestus | Issue #2372 (closed, verified-ci) | Pixi-only repo: bare `pre-commit install` fails on clean machine; prefix all env-tool invocations with `pixi run`; detect with `grep -rnE` |
+| ProjectHephaestus | Issue #2397 (closed, content salvaged) | Conflicting prose counts (6 vs 11 modules); enforced-artifact (passing frozen-allowlist test) beats both; no redundant prose guard when test already exists |
+| ProjectHephaestus | Issue #2398 (closed, content salvaged) | Count-drift from `[project.scripts]`: ROADMAP said 37, pyproject had 47; phrase-scoped grep to scope edit and prove no copies survive; exact-string Edit over bare-digit replace_all |
+| ProjectHephaestus | Issues #2399/#2401 (closed, content salvaged) | Dangling file:line citation: locate by content not audit coordinate; content-anchored durable citation; markdownlint Skipped != linted; historical narrative left intact |
 | mvillmow/Random | Predictive-Coding-in-Mojo Phase 0 | Cross-doc citation drift: 8 stale §-refs, 2 arXiv ID swaps caught |
