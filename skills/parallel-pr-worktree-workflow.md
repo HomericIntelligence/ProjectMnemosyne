@@ -1,9 +1,9 @@
 ---
 name: parallel-pr-worktree-workflow
-description: "Use when: (1) launching 2+ parallel rebase agents that need isolated git state to avoid branch collision, (2) implementing 5+ independent fixes in parallel PRs using git worktrees, (3) bulk-merging skill PRs with CI fixes and conflict resolution, (4) batching 10+ PRs across parallel sub-agents for maximum throughput, (5) launching >=2 concurrent sub-agents that each commit/push to the same git repo, (6) sub-agents report file bleed-over or unexpected `git checkout` reverts mid-task, (7) RESCUE pattern when parallel dispatch across distinct branches has already produced cross-contaminated commits — consolidate worker PRs into ONE branch via cherry-pick and close individual PRs."
+description: "Use when: (1) launching 2+ parallel rebase agents that need isolated git state to avoid branch collision, (2) implementing 5+ independent fixes in parallel PRs using git worktrees, (3) bulk-merging skill PRs with CI fixes and conflict resolution, (4) batching 10+ PRs across parallel sub-agents for maximum throughput, (5) launching >=2 concurrent sub-agents that each commit/push to the same git repo, (6) sub-agents report file bleed-over or unexpected `git checkout` reverts mid-task, (7) RESCUE pattern when parallel dispatch across distinct branches has already produced cross-contaminated commits — consolidate worker PRs into ONE branch via cherry-pick and close individual PRs, (8) doing ANY multi-fix work in a shared checkout that a concurrent foreign session/automation may also touch — use dedicated worktrees from the start so a foreign session cannot move your HEAD/branch."
 category: ci-cd
-date: 2026-05-09
-version: "1.2.0"
+date: 2026-06-13
+version: "1.3.0"
 user-invocable: false
 verification: verified-ci
 history: parallel-pr-worktree-workflow.history
@@ -19,6 +19,10 @@ tags: []
 | **Objective** | Parallel workflow tooling pattern — git worktrees for agent isolation, batching PRs per agent, bulk PR triage and merge |
 | **Outcome** | Consolidated from 4 source skills |
 
+**See also:** `tooling-stage-only-your-own-files-in-shared-worktree` (the staging-scope companion
+when a worktree is shared or dirty), `git-worktree-parallel-execution-lifecycle`, and
+`parallel-agent-swarm-dispatch-patterns`.
+
 ## When to Use
 
 - Launching 2+ background agents to mass-rebase branches in parallel (each needs isolated git state)
@@ -28,6 +32,7 @@ tags: []
 - Bulk-merging accumulated skill PRs (10+) with a mix of passing/failing CI
 - Main conversation needs to commit while background agents are running
 - Issues are independent (not interdependent) and benefit from parallel development
+- **(v1.3.0, verified-local)** ANY other session/automation may touch the shared checkout — do ALL multi-fix work in dedicated worktrees from the start, never in the primary checkout. A concurrent foreign session can move your branch and commit under you (see Phase 3c)
 
 **Do NOT use when:**
 - Issues are interdependent (use sequential PRs from `batch-pr-rebase-conflict-resolution-workflow`)
@@ -124,6 +129,78 @@ worktrees/rebase-batch2/   ← batch 2 agent
 worktrees/fix-pr-rebase/   ← main conversation overflow work
 ```
 
+### Phase 3b (v1.3.0, verified-local): Prereq-Stacking for a Fan-Out Sharing a Common Blocker
+
+**Use this when** a fan-out of N independent fixes all share a common prerequisite — e.g. a
+repo-wide format-drift fix that otherwise blocks *every* commit (pre-commit reformats files you
+didn't touch). Branching all N off `main` first means every commit is blocked by the unfixed
+shared prerequisite.
+
+Pattern (this is how 6 fixes shipped cleanly as a stack in ProjectHephaestus, 2026-06-13):
+
+1. **Land the prerequisite as its OWN branch/PR FIRST.** This is the shared blocker fix.
+2. **Branch each fix worktree off the PREREQUISITE branch**, not `main`:
+
+   ```bash
+   git fetch origin
+   git worktree add /tmp/<repo-stem>-wt-fixA -b <fixA-branch> origin/<prereq-branch>
+   git worktree add /tmp/<repo-stem>-wt-fixB -b <fixB-branch> origin/<prereq-branch>
+   ```
+
+3. **Target each fix PR at the prereq branch:**
+
+   ```bash
+   gh pr create --base <prereq-branch> --title "..." --body "...Depends on #<prereq-pr>..."
+   ```
+
+   GitHub **auto-retargets** the fix PRs to `main` once the prereq merges — no manual rebase
+   needed for the common case.
+4. **A fix that itself depends on ANOTHER fix** (e.g. it reuses a helper the other fix adds) is
+   branched off THAT fix's branch instead of the prereq branch, and its PR targets that fix's
+   branch with `--base <other-fix-branch>`.
+5. **Document the dependency in each PR body** (`Depends on #<n>`) so reviewers and auto-retarget
+   logic stay coherent.
+
+This keeps every commit green: the prereq is already present in each fix's base, so pre-commit
+and CI don't trip over the shared blocker.
+
+### Phase 3c (v1.3.0, verified-local): Recovery — Work Tangled on the Wrong Branch (Foreign-Session Hijack)
+
+**Symptom:** while implementing fixes directly in the MAIN repo checkout (not a worktree), a
+SEPARATE automation/agent session running in the same repo committed to the working directory and
+switched the branch out from under you. `git branch --show-current` returns a branch you didn't
+switch to; a HEAD commit by a different author appears (the other session opened its own PR); your
+staged changes are intact but on the wrong branch.
+
+**Root cause:** branch state IS the working tree. The primary checkout shares one HEAD/index; any
+concurrent session can move it. A worktree gives you an independent HEAD/index a foreign session
+cannot move — so the durable fix is to never do multi-fix work in the primary checkout (Phase 3 /
+3b). The patch-export below is the recovery when you're already tangled.
+
+```bash
+# 1. Export your staged diff to a patch — this is your safety net
+git diff --cached > /tmp/work.patch
+
+# 2. Clean the hijacked branch: unstage, then stash (recoverable — do NOT git checkout --)
+git restore --staged .
+git stash push -- <your-files>        # NOT `git checkout -- <files>` (Safety Net blocks it)
+
+# 3. Create the correct branch in a FRESH worktree off the intended base
+git fetch origin
+git worktree add /tmp/<repo-stem>-wt-recover -b <correct-branch> origin/<intended-base>
+cd /tmp/<repo-stem>-wt-recover
+
+# 4. Verify the patch applies cleanly, THEN apply it
+git apply --check /tmp/work.patch     # dry run first
+git apply /tmp/work.patch
+
+# 5. Commit on the correct branch
+git add -A && git commit -S -m "..."
+```
+
+The patch is the safety net; combined with the stash, nothing is lost. Leave the stash undropped
+(see Safety-Net Friction below) rather than forcing `git stash drop`.
+
 ### Phase 4: Agent Isolation for Parallel Rebase
 
 When launching parallel agents to rebase many PRs, each agent MUST get its own worktree:
@@ -218,6 +295,33 @@ git -C <repo> worktree prune
 ```
 
 Cleanup is cheap. Re-creating a worktree from `origin/<base>` takes seconds and gives a clean state. Do NOT reuse a worktree path across sub-agents — give each sub-agent its own.
+
+#### Dispatch Hygiene (v1.3.0, verified-local)
+
+The dispatch shape that shipped 5 root-cause fixes in parallel with zero cross-contamination
+(ProjectHephaestus, 2026-06-13):
+
+- **One issue + one worktree + one sub-agent per independent fix.** Do not multiplex.
+- **Create all worktrees UP FRONT** before launching any agent:
+  `git worktree add <dir> -b <branch> <base>` for each fix.
+- **Launch all sub-agents in ONE message** for true concurrency (one tool block, N agent calls).
+- **Each agent's brief gets:** its worktree path, the issue number, the base branch (the
+  prereq/stack base from Phase 3b, not always `main`), the exact root-cause trace, and the shared
+  rules — signed commit (`git commit -S`), `Closes #N` in the PR body, NEVER `--no-verify`, do
+  NOT pre-arm auto-merge before the repo's go-label gate if it has one, and the stacked-PR `--base`.
+
+All 5 agents succeeded in parallel because each had an isolated worktree — the path IS the
+isolation boundary.
+
+#### Safety-Net Friction to Expect (v1.3.0, verified-local)
+
+A CC Safety Net may BLOCK these as destructive. Plan recovery around the safe alternatives:
+
+| Blocked command | Safe alternative | Why it's safe |
+| ----------------- | ------------------ | --------------- |
+| `git checkout -- <files>` | `git stash push -- <files>` | Stash is recoverable; checkout discards |
+| `git branch -D <branch>` | `git branch -d <branch>` | Safe-delete; works when the branch has no unmerged unique commits |
+| `git stash drop` | leave the stash undropped | Avoids forcing a destructive op; stashes are cheap to keep |
 
 ### Phase 5: Implementation Pattern (Per Worktree)
 
@@ -532,6 +636,8 @@ gh issue close <issue-number> --comment "Fixed in PR #<number>"
 | Brief too short (<50 lines) | Sent compact prompts to sub-agents to "save tokens" | Sub-agent guessed at file paths, branch names, integration base; ~30% rework rate | ~80-120 line briefs hit the sweet spot. Include explicit worktree path, "don't touch other worktrees" warning, exact `--base` flag, auto-merge command, and verification commands |
 | Reusing worktree path across sub-agents | Removed worktree A after agent A finished, gave agent B the same path | Subtle git-state contamination from leftover index/refs even after `worktree remove` | Each sub-agent gets a unique path. The path IS the isolation boundary; the branch is just a label |
 | Trying to salvage 8 cross-contaminated worker PRs by force-pushing each branch separately (ProjectOdyssey #5363) | After parallel haiku/sonnet swarm contaminated each other's branches via shared parent `.git/`, attempted per-branch cleanup with selective `git reset` and force-push | Commits were tangled across branches — fixing one branch broke another; cleanup was O(N^2) | Consolidate ALL worker commits into ONE branch via cherry-pick (Phase 10b), open a single PR with multiple `Closes #N` lines, and close worker PRs with a reference comment |
+| Implement multi-fix work directly in the shared main checkout (ProjectHephaestus, 2026-06-13, verified-local) | Made fixes in the primary repo checkout instead of a worktree while a separate automation/agent session was active in the same repo | The concurrent foreign session committed and switched the branch out from under the work — staged changes landed on the wrong branch and a foreign commit appeared (the other session opened its own PR) | Always use a dedicated worktree per fix from the start; the worktree's independent HEAD/index cannot be moved by a foreign session. Recover via `git diff --cached > patch` + stash + fresh worktree + `git apply` (Phase 3c) |
+| Branch all N fixes off main when they share a common blocker (ProjectHephaestus, 2026-06-13, verified-local) | Created all N fix worktrees off `main` when every fix needed the same prerequisite (a repo-wide format-drift fix) | Every commit was blocked by the unfixed shared prerequisite — pre-commit reformatted untouched files and failed each commit | Land the prerequisite as its OWN PR first, branch each fix off the prereq branch, target each PR with `--base <prereq-branch>`; GitHub auto-retargets to main once the prereq merges (Phase 3b) |
 
 ## Results & Parameters
 
@@ -624,3 +730,4 @@ executor: haiku      # Simple rebase, pre-commit fixes
 | ProjectMnemosyne | 30 open skill PRs bulk merged, 2026-03-03 | bulk-skill-pr-merge source |
 | HomericIntelligence/ProjectArgus | Atlas v0.2.1 patch series; 17 PRs landed across 6 waves (PRs #463-#474). Wave-1 used a shared tree and hit working-tree-revert bleed-over; waves 2-6 used per-sub-agent `/tmp/<repo>-wt-<task>` worktrees with zero state interference. 1 mid-flight conflict caught via `gh pr view --json mergeable`; 1 false "auto-merge armed" report caught the same way (rebase forbidden, switched to `--squash`). | Sub-agent PR isolation amendment (v1.1.0) |
 | ProjectOdyssey | Phase G EASY-tier 8-issue swarm consolidation, PR #5363 (2026-05-09). Eight cross-contaminated worker PRs collapsed into one consolidation branch via cherry-pick; individual worker PRs closed-not-merged; 67/68 substantive checks green. | Phase 10b RESCUE pattern (v1.2.0) |
+| ProjectHephaestus | output.log root-cause fixes, 2026-06-13 (verified-local). 6 root-cause fix PRs shipped as a stack — a shared format-drift prerequisite landed first, 5 independent fixes dispatched to 5 parallel sub-agents in dedicated worktrees branched off the prereq (one stacked on another fix). Surfaced a concurrent foreign-session hijack of the shared main checkout (recovered via patch-export + fresh worktree) and CC Safety-Net friction on `git checkout --` / `git branch -D` / `git stash drop`. Zero cross-contamination across the 5 worktree agents. | Phase 3b/3c + Dispatch Hygiene + Safety-Net Friction (v1.3.0) |
