@@ -1,0 +1,154 @@
+# planning-check-already-shipped-before-planning — History
+
+## v1.1.0 (2026-06-15)
+
+**Changed by:** ProjectHephaestus issue #1357 planning session — wrote a decomposition plan against a repo state where the implementation had already landed uncommitted in an untracked `1-fix` worktree.
+**Verification:** verified-local (subset of tests passed locally; full CI gate — coverage, mypy, ruff, import-surface — NOT run this session)
+
+### What changed
+
+- Broadened the core lesson from "the fix may already be MERGED (git log)" to "the work may already be DONE — merged OR landed uncommitted in a sibling worktree that `git log` will NOT show."
+- Added Step 0 to the workflow: run `git status --porcelain` + `git worktree list` BEFORE trusting "git log shows nothing → not done yet" (an untracked `?? 1-fix/` dir is the tell).
+- Added Step 1: MEASURE the file (`wc -l`, `grep -cE "^\s+def "`) instead of trusting the issue body's stated LOC/method counts ("3,570 lines, ~60 methods needing decomposition").
+- Added Step 4: confirm a consolidation issue's named preservation methods/PRs still exist on the facade via grep before claiming preservation.
+- Added Step 7: verify DIP/constructor claims against actual collaborator constructor signatures (or via mypy), not just the `__init__` call site.
+- Clarified the test-subset semantics: a green subset is `verified-local`; a failing coverage gate on a subset is a gate artifact, not a code failure.
+- Added 4 new Failed Attempts rows (rely on git log alone; trust stated counts; infer DIP from call site; treat subset green as done).
+- Added a second concrete example (issue #1357, uncommitted-worktree case) with honest caveats.
+- Updated the planner decision tree with the worktree/measure branches and subset-vs-full test distinction.
+- Added a Verified On row for issue #1357.
+- Frontmatter: bumped `version` 1.0.0 → 1.1.0, updated `date` to 2026-06-15, added `history` field, broadened `description`, and lowered skill-wide `verification` to `verified-local` (the new finding is the lowest-confidence claim; the original merged-fix example remains verified-ci and is labeled as such inline).
+
+### Why
+
+v1.0.0 only covered the case where the fix is already in `main` via a merged PR, detectable
+with `git log`. The #1357 session exposed a strictly harder variant: the entire decomposition
+(facade + 4 collaborators + lambda-wrapped DIP wiring + 211 green tests) had already landed but
+was sitting UNCOMMITTED in an untracked `1-fix` worktree. `git log` on `main` showed nothing, so
+a v1.0.0-style check would have falsely concluded "not done yet" and produced a plan to RE-DO the
+work — risking a conflicting duplicate implementation. The fix is to check the working tree and
+sibling worktrees, and to measure the file directly, before trusting either the issue narrative
+or `git log`.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: planning-check-already-shipped-before-planning
+description: "Before writing an implementation plan, grep the real source for the function and check recent git log — the fix may already be merged. Use when: (1) planning a follow-up issue, (2) issue body cites specific file paths."
+category: architecture
+date: 2026-06-13
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: []
+---
+
+# Planning: Check If Already Shipped Before Writing a Plan
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-13 |
+| **Objective** | Detect whether a GitHub issue's fix is already in `main` before writing an implementation plan |
+| **Outcome** | Successful — planner correctly identified a shipped fix (PR #1308) and reported it instead of re-implementing |
+| **Verification** | verified-ci |
+
+## When to Use
+
+- Planning a follow-up or consolidation issue (issue body may lag behind actual implementation)
+- Issue body cites specific file paths or line numbers (these go stale after merges)
+- Picking up an issue from a batch/backlog queue — the fix may have been merged hours or days ago
+- Before any implementation plan step — running this check costs seconds and avoids wasted work
+
+## Verified Workflow
+
+### Quick Reference
+
+\`\`\`bash
+# 1. Grep for the function/symbol cited in the issue — find the real file
+grep -r "function_name_from_issue" hephaestus/ --include="*.py" -l
+
+# 2. Check if the fix is already in place
+grep -n "the_new_behavior_or_regex" path/to/real/file.py
+
+# 3. Check recent commits for matching descriptions
+git log --oneline -10
+
+# 4. Confirm what changed in the likely commit
+git show --stat <sha>
+
+# 5. Run the relevant tests — a passing suite means it's already fixed
+pixi run pytest tests/unit/path/to/relevant_tests.py -v
+\`\`\`
+
+### Detailed Steps
+
+1. **Find the real file** — Issue bodies frequently cite stale file paths or wrong line numbers. Never trust them directly. Grep the codebase for the function name, class name, or constant names mentioned in the issue.
+
+2. **Check for the fix already present** — Once you have the real file path, grep for the new behavior (new constant, new code path, new branch). If it matches what the issue requested, the fix is in.
+
+3. **Confirm via git log** — Run `git log --oneline -10` to see recent commits. Look for a message matching the issue description. Run `git show --stat <sha>` to confirm the modified files match.
+
+4. **Run tests before writing the plan** — Run `pixi run pytest <relevant test module> -v`. If all tests pass and the tests cover the new behavior, the fix is confirmed shipped.
+
+5. **Document for auditability** — Even when already shipped, record what was found: the commit SHA, PR number, the file and line range of the implementation, and which tests cover it. This satisfies reviewer auditability requirements.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Trust issue body file paths | Used `python_version.py:290-293` as the implementation target (as cited in the issue) | Actual code lived in `scripts_lib/check_python_version_consistency.py` — a completely different file | Issue bodies cite stale paths; always grep to locate the real code |
+| Skip pre-plan grep | Started outlining implementation steps before checking whether the code was already there | Would have produced a plan to re-implement something already merged in PR #1308 | A 10-second grep check prevents hours of wasted planning |
+| Assume consolidation issue = unshipped | Treated the issue as describing future work because its body said "not yet done" | The issue was a consolidation tracker that lagged behind the actual PR by hours | Consolidation/follow-up issues are high-risk for describing already-shipped work |
+
+## Results & Parameters
+
+### Concrete example (ProjectHephaestus issue #1291 / PR #1308)
+
+Issue body said: "add YAML sequence format support to `extract_ci_matrix_python_versions`" and cited `python_version.py:290-293` as the bug location.
+
+Grep revealed the real file:
+\`\`\`
+hephaestus/scripts_lib/check_python_version_consistency.py
+\`\`\`
+
+Fix confirmed present at lines 17–21 (regex constants) and 173–183 (two-phase dispatch):
+\`\`\`python
+_CI_MATRIX_BRACKET_RE = re.compile(r"\[([^\]]+)\]")
+_CI_MATRIX_SEQUENCE_RE = re.compile(r"^\s*-\s+(.+)$", re.MULTILINE)
+\`\`\`
+
+Commit: `dd15c35f` — merged via PR #1308 on 2026-06-13 with CI green.
+All 11 tests in `tests/unit/scripts_lib/test_check_python_version_consistency.py::TestExtractCiMatrixPythonVersions` pass.
+
+### Decision tree for planners
+
+\`\`\`
+Before writing any implementation plan:
+│
+├─ 1. Grep for the function/symbol name → find the real file path
+│
+├─ 2. Grep for the new behavior in that file
+│   ├─ FOUND → check git log for the matching commit
+│   │   └─ commit found + tests pass → REPORT AS ALREADY SHIPPED (do not re-plan)
+│   └─ NOT FOUND → proceed with implementation planning
+│
+└─ 3. Run tests for the relevant module
+    ├─ ALL PASS → strong signal the fix is already in
+    └─ SOME FAIL → issue is genuinely open; proceed with planning
+\`\`\`
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | Issue #1291 — YAML sequence support in CI matrix extractor | PR #1308 merged 2026-06-13, commit dd15c35f |
+```
+
+---
+
+## v1.0.0 (2026-06-13)
+
+**Initial version.** Detect whether a GitHub issue's fix is already in `main` (via grep + git log + tests) before writing an implementation plan. Verified on ProjectHephaestus issue #1291 / PR #1308.
