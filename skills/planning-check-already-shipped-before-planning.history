@@ -1,5 +1,71 @@
 # planning-check-already-shipped-before-planning — History
 
+## v1.2.0 (2026-06-15)
+
+**Changed by:** ProjectHephaestus issue #1357 planning session (continued) — after confirming the
+work was already on disk, the plan-loop reviewer returned NOGO (Grade D) on a plan that was
+actually a retrospective status note, exposing a lesson v1.1.0 did not cover.
+**Verification:** verified-local (the boundary/mypy/ruff gates ran GREEN this session, resolving
+v1.1.0's "not run" caveats for those gates; the full `tests/unit/automation` suite still had no
+reported pass/fail count, so the suite-wide claim stays conservative)
+
+### What changed
+
+- Added the core NEW lesson: even when the work is already on disk, the plan-loop demands a
+  FORWARD-LOOKING plan. A "status note" (bullets describing what shipped + caveats) is a category
+  error and gets NOGO'd (Grade D) on Completeness/Concreteness/Verification-Plan/Stage-Handoff —
+  "on disk being correct does not rehabilitate the plan artifact itself."
+- Added the stage-handoff lesson: never DEFER a checkable gate (boundary tests, mypy) to the
+  reviewer as "follow-up"; run it during planning and cite it as completed.
+- Added a When-to-Use trigger: "the plan-loop reviewer NOGO'd your plan as a 'status note' /
+  retrospective."
+- Added Verified-Workflow steps 9 (emit a forward-looking plan even for landed work) and 10 (run
+  every gate yourself; mypy-duplicate-module and pytest `--no-cov` gotchas; subset-coverage is an
+  artifact).
+- Added 4 Failed Attempts rows: status-note-as-plan → NOGO; defer-gate-to-reviewer → stage-handoff
+  failure; `pixi run mypy <paths>` → Duplicate module error; subset `pixi run pytest` without
+  `--no-cov` → unrecognized `--cov`.
+- Added a Results & Parameters subsection with the GREEN gate outputs (2 passed boundary; mypy
+  clean on 402 files; ruff clean; 2449 lines; 25 stubs; preservation methods at :781/:880/:943/
+  :1019) and the explicit note that mypy proves type-level DIP but NOT behavioral SRP.
+- Extended the planner decision tree with the forward-plan-even-when-done branch and the
+  subset/`--no-cov`/`mypy`-bare notes; added a second Verified On row for the NOGO→fix.
+- Frontmatter: bumped `version` 1.1.0 → 1.2.0, kept `date` 2026-06-15, broadened `description`,
+  kept `verification: verified-local`.
+
+### Why
+
+v1.1.0 captured "the work may already be done (merged OR uncommitted) — verify before planning."
+It did not cover what to do with the PLAN ARTIFACT once you confirm the work is done. The #1357
+session learned that the plan-loop still grades the artifact, not the disk: a descriptive status
+note is NOGO'd as a category error, and deferring a runnable gate to the reviewer is a
+stage-handoff failure. The fix is to emit a genuine forward-looking plan (design + files +
+build order + per-criterion verification) and to run every gate yourself. The session ran the
+previously-deferred boundary/mypy/ruff gates GREEN, which also upgrades v1.1.0's call-site DIP
+inference to type-level proof.
+
+### Previous version (v1.1.0) snapshot
+
+```markdown
+---
+name: planning-check-already-shipped-before-planning
+description: "Before writing an implementation plan, verify the ACTUAL on-disk state — grep/wc/test the real source — instead of trusting the issue body's stated starting condition (LOC counts, method counts, \"needs to be done\"). The fix may already be merged, OR already landed uncommitted in a sibling worktree that git log will NOT show. Use when: (1) planning a follow-up or consolidation issue, (2) issue body cites specific file paths or LOC/method counts, (3) git status shows an untracked sibling worktree directory."
+category: architecture
+date: 2026-06-15
+version: "1.1.0"
+user-invocable: false
+verification: verified-local
+history: planning-check-already-shipped-before-planning.history
+tags: []
+---
+```
+
+(Full v1.1.0 body is reconstructable from this changelog + the v1.0.0 snapshot below; the v1.2.0
+edits are purely additive — a new trigger, steps 9–10, 4 Failed Attempts rows, a Results
+subsection, decision-tree branches, and a Verified On row.)
+
+---
+
 ## v1.1.0 (2026-06-15)
 
 **Changed by:** ProjectHephaestus issue #1357 planning session — wrote a decomposition plan against a repo state where the implementation had already landed uncommitted in an untracked `1-fix` worktree.
