@@ -1,5 +1,230 @@
 # stale-plan-already-resolved — History
 
+## v1.2.0 (2026-06-14) — Extend stale-artifact insight to log-driven root-cause analysis
+
+**Changed by:** ProjectHephaestus 2026-06-14 stale-log root-cause session (analyze a
+2588-line automation-loop `output.log` for 4 failure root causes)
+**Verification:** verified-ci
+
+### What changed
+
+A session analyzed a 2588-line automation-loop `output.log` to find 4 failure root causes
+and fix them. The KEY learning: a captured log reflects the state of `origin/main` AT THE
+TIME THE LOG WAS PRODUCED. Between log capture and the fix session, OTHER PRs had merged
+into main, so 2 of the 4 "bugs" found in the log were ALREADY FIXED on current main:
+
+- The malformed-GraphQL `UNKNOWN_CHAR` crash was already fixed by PR #1148 (owner/name now
+  passed as `-F` variables).
+- The planner-learnings 120s timeout was already replaced by `learn_claude_timeout()`
+  (=7200s) on main.
+
+These were caught BEFORE implementing each root cause by re-verifying against CURRENT
+`origin/main` rather than trusting the log:
+
+- `git show origin/main:<file> | grep ...` confirmed whether the buggy code still existed.
+- A LIVE reproduction for the external bug: running the exact failing command against the
+  API — `gh api graphql -f query='...' -F owner=... -F name=...` returned valid JSON (no
+  `UNKNOWN_CHAR`), proving it was already fixed; running the OLD broken form reproduced the
+  error, confirming it was the prior cause.
+
+Payoff: scope was corrected on 2 of 4 fixes (drop the redundant code, keep only the durable
+hardening), avoiding shipping a "fix" for an already-fixed bug. The 2 genuinely-live bugs
+(armed-DIRTY swallowed, green-BLOCKED threads not addressed) were confirmed still present on
+current main before implementing. The corrected-scope fixes merged green in CI (PRs
+#1353-#1356).
+
+This amendment adds, on top of v1.1.0:
+
+1. **Broadened framing** — from "stale PLAN" to "stale point-in-time ARTIFACT (plan, LOG,
+   error report, CI failure, audit finding)". Existing plan content is kept; the
+   log/artifact dimension is added.
+2. **New description trigger** — a captured LOG / error report drives a root-cause analysis,
+   but the log reflects an older main; verify each finding reproduces on current
+   `origin/main` before fixing.
+3. **New When-to-Use bullets** — (a) a log/output.log drives the work and time has passed /
+   other PRs merged since capture; (b) before implementing a fix found in any captured
+   artifact, you have not yet confirmed the defect still exists on current main.
+4. **New Verified Workflow step** — the re-verification technique: `git show
+   origin/main:<file>` to confirm buggy code is still present, plus a LIVE reproduction of
+   the failing command (re-run the exact gh/api/CLI call); if it now succeeds the bug is
+   already fixed; run the old broken form to confirm it was the prior cause.
+5. **Two new Failed Attempts rows** — took the log's 4 findings at face value (2 already
+   fixed); assumed the log == current main (false — it is a point-in-time snapshot).
+6. **New Verified On row** — ProjectHephaestus 2026-06-14 output.log 4-RC analysis.
+
+Frontmatter: `version` bumped 1.1.0 → 1.2.0, `date` 2026-05-20 → 2026-06-14,
+`verification` raised verified-local → verified-ci.
+
+### Previous version (v1.1.0) snapshot
+
+```markdown
+---
+name: stale-plan-already-resolved
+description: 'Detect when an issue''s implementation plan is stale because the fix
+  was already applied. Use when: the plan references specific line numbers that don''t
+  match current code, or the requested change is already satisfied by a broader fix
+  already in place.'
+category: ci-cd
+date: 2026-05-20
+version: 1.1.0
+user-invocable: false
+verification: verified-local
+history: stale-plan-already-resolved.history
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Problem** | Issue plan was written when code was in state A, but code is now in state B (already fixed or changed further) |
+| **Key insight** | Always verify actual current state before applying a plan — plans can become stale after other PRs merge |
+| **Impact** | Prevents unnecessary changes and incorrect "fixes" that would revert progress |
+| **Context** | Issue #4280: plan said change `test_*_layers.mojo` → `test_*_layers*.mojo`, but code already used `test_*.mojo` |
+| **Verification** | verified-local |
+| **History** | [changelog](./stale-plan-already-resolved.history) |
+
+## When to Use
+
+1. An issue's implementation plan references specific line numbers but the diff shows different content
+2. A plan says "change X to Y" but X is not present — a broader/different change is already there
+3. A follow-up issue references a prior fix (e.g., "follow-up from #3458") and the code may have evolved
+4. The plan was written weeks ago and many PRs have merged since
+5. CI pattern change issues where the pattern may have been updated as part of a broader consolidation
+6. An issue cites exact line numbers or a code snippet that does not appear anywhere in the current files — the issue likely predates a merged fix that already removed or moved the target
+
+## Verified Workflow
+
+### 1. Read the plan carefully for specific anchors
+
+Look for references to:
+
+- Specific line numbers (`line 234`)
+- Specific patterns that should exist (`pattern: "test_*_layers.mojo"`)
+- "Current state" described in the plan
+
+```bash
+# Issue plan said: "line 234: change test_*_layers.mojo → test_*_layers*.mojo"
+```
+
+### 2. Verify current file state against the plan's "before"
+
+```bash
+# Check if the "before" state from the plan still exists
+grep -n "test_\*_layers\.mojo" .github/workflows/comprehensive-tests.yml
+# If no output → the plan's "before" state is gone; something already changed it
+```
+
+### 3. Check what's actually there now
+
+```bash
+# Read the relevant section to understand current state
+grep -A3 '"Models"' .github/workflows/comprehensive-tests.yml
+```
+
+### 4. Find the commit/PR that already made the change (decisive diagnostic)
+
+When the plan's "before" state is gone, `git log -S` pinpoints exactly which commit removed
+or changed it. Search for the **exact phrase or code snippet quoted in the issue**:
+
+```bash
+# git log -S finds commits that ADDED or REMOVED the given string
+git log -S "<exact phrase or snippet from the issue>" -- '<glob>'
+```
+
+Real example — issue #422 asked to remove a `CHANGELOG.md or equivalent release notes`
+criterion line from four `repo-analyze*/SKILL.md` files:
+
+```bash
+git log -S "CHANGELOG.md or equivalent release notes" -- 'skills/repo-analyze*/SKILL.md'
+# → surfaces commit 76b46c9 (PR #357, "chore: remove CHANGELOG.md and changelog tooling")
+#   which already removed the line ecosystem-wide weeks before the issue was actioned.
+```
+
+If `git log -S` shows the string was already removed by a merged commit, the issue's cited
+line numbers are stale and the requested change is already done.
+
+### 5. Determine if the issue's goal is already satisfied
+
+The key question: does the current state **achieve the same objective** as the planned change?
+
+| Plan objective | Current state | Action |
+| ---------------- | --------------- | -------- |
+| `test_*_layers*.mojo` (match part files) | `test_*.mojo` (even broader, also matches part files) | Goal already met — add clarifying comment only |
+| Add explicit filenames | Wildcard already present | Goal already met — no change needed |
+| Remove explicit filenames | Already using wildcard | Goal already met — document only |
+
+### 6. Apply the minimal appropriate change
+
+Pick the action based on whether **any file** still needs to change:
+
+| Situation | Correct action |
+| ----------- | ---------------- |
+| Functional fix already exists, but a comment/doc would clarify current intent | Update the comment/doc, then create a comment-only PR with `Closes #<issue>` |
+| Goal is fully met AND no comment/doc change belongs in any file (the change is genuinely zero-diff) | Close the issue directly — **no PR** |
+
+When a clarifying comment IS warranted:
+
+```diff
+- # test_googlenet_layers.mojo split into 3 parts (≤8 tests each)
++ # test_*.mojo glob auto-discovers all model tests including _partN split files
++ # (e.g., test_googlenet_layers_part1.mojo) without requiring manual CI updates.
+```
+
+When there is genuinely **nothing to change** — no functional change and no comment/doc
+edit belongs anywhere — do not open an empty PR. Close the issue directly and cite the
+commit/PR that already did the work:
+
+```bash
+gh issue close <N> --reason completed \
+  --comment "Already resolved by PR #357 (commit 76b46c9, 'chore: remove CHANGELOG.md
+and changelog tooling'), which removed this line ecosystem-wide on 2026-05-07. The line
+numbers in this issue predate that merge. Section 10 already covers release management
+generically. No code change needed."
+```
+
+### 7. Verify with the project's validation command
+
+```bash
+python3 scripts/validate_test_coverage.py
+# Must exit 0 before committing — only when a file actually changed
+```
+
+### 8. Close the issue
+
+- If a file changed: create the PR with `Closes #<issue>` (even a pure comment update) so
+  the issue closes on merge and the already-correct state is documented.
+- If nothing changed: the `gh issue close --reason completed --comment` from step 6 already
+  closed it — no PR exists or is needed.
+
+## Results & Parameters
+
+| Parameter | Value |
+| ----------- | ------- |
+| Key diagnostic | `grep -n "<pattern from plan>" <file>` — if empty, plan is stale |
+| Decisive diagnostic | `git log -S "<exact phrase from issue>" -- '<glob>'` — finds the commit/PR that already made the change |
+| Validation command | `python3 scripts/validate_test_coverage.py` |
+| Correct change scope | Comment-only update when the functional fix already exists; zero change when nothing needs editing |
+| Close when zero diff | `gh issue close <N> --reason completed --comment "<cites the PR/commit>"` — no PR |
+| PR label | `cleanup` |
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Applying plan verbatim | Would have changed `test_*.mojo` back to `test_*_layers*.mojo` | This would have been a regression — narrowing a working broad pattern | Always read actual file before applying a "before → after" from a plan |
+| Skipping verification | Assuming plan's "before" state was current | Plan said line 234 had `test_*_layers.mojo`; actual line 283 had `test_*.mojo` | Verify anchors (line numbers, patterns) before touching anything |
+| Treating as no-op | Issue already resolved, do nothing | Issue remains open; no PR closes it | Even when goal is met, create a PR with a comment clarification to formally close |
+| Assuming a PR is always needed to close the issue | Planning a comment-only PR even though no file needed any change | There was literally no diff to make — a PR would be empty | When the goal is fully met and no clarifying comment belongs in any file, close the issue directly with `gh issue close --reason completed --comment` |
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | Issue #4280 (follow-up from #3458) | [notes.md](../references/notes.md) |
+| ProjectHephaestus | Issue #422 — CHANGELOG criterion already removed by PR #357 (commit 76b46c9) | Closed directly as completed; no PR (zero diff) |
+```
+
+---
+
 ## v1.1.0 (2026-05-20) — Add close-directly-no-PR case and git log -S diagnostic
 
 **Changed by:** Session context (ProjectHephaestus#422 — CHANGELOG criterion already removed by PR #357)
