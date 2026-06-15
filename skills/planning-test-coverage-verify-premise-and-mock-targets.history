@@ -1,10 +1,29 @@
+# planning-test-coverage-verify-premise-and-mock-targets — History
+
+## v1.1.0 (2026-06-15)
+
+**Changed by:** ProjectHephaestus issue #1362 re-plan (NOGO follow-up)
+**Verification:** unverified
+
+### What changed
+
+- Added 1 Failed Attempts row + 1 Detailed Step: mutating a transient MagicMock return value (`processor._options().agent = "codex"`) does not flip the real branch.
+- Bumped version 1.0.0 → 1.1.0 (added a Failed Attempt = MINOR).
+- Added `history:` frontmatter field.
+
+### Why
+
+The v1.0.0 plan re-work surfaced a distinct mock pitfall not previously captured: setting an attribute on an ephemeral `_options()` return object leaves the code's captured options unchanged, so the targeted branch never flips. Captured so future plans configure the mock's return_value (or use a real options object) instead of mutating a transient return.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
 ---
 name: planning-test-coverage-verify-premise-and-mock-targets
 description: "When planning a 'add tests for an untested module' task, the issue's filename, line numbers, and 'X is untested' claim are a HYPOTHESIS to verify against the filesystem before adopting them — and the mock.patch target must be the rebound name in the CONSUMER module, not the definition site. Use when: (1) planning unit-test coverage for a module an issue says is untested, (2) an issue tells you to CREATE a specific test file path, (3) the module under test uses `from .x import y` and your tests need to mock y, (4) deciding whether an 'untested' claim means no file or no coverage of specific methods."
 category: testing
 date: 2026-06-15
-version: "1.1.0"
-history: planning-test-coverage-verify-premise-and-mock-targets.history
+version: "1.0.0"
 user-invocable: false
 verification: unverified
 tags:
@@ -28,7 +47,7 @@ tags:
 |-------|-------|
 | **Date** | 2026-06-15 |
 | **Objective** | Produce a correct plan for adding unit-test coverage to a supposedly-untested module, without creating duplicate files or writing mocks that silently exercise real code |
-| **Outcome** | Plan produced; NOT executed end-to-end — mock-target paths, keyword-vs-positional `call_args`, and the return-tuple shape were read from source but never run. Re-plan (v1.1.0) added a transient-mock-mutation pitfall |
+| **Outcome** | Plan produced; NOT executed end-to-end — mock-target paths, keyword-vs-positional `call_args`, and the return-tuple shape were read from source but never run |
 | **Verification** | unverified |
 
 When an issue asks you to "add tests for untested method(s) of module X," it usually
@@ -133,17 +152,6 @@ not after a refactor.)
    `(_ for _ in ()).throw(...)` trick to build a no-arg raising callable is clever-but-obscure.
    A 2-line `def _raise(*_a, **_k): raise ...` helper reads better and is equally mockable.
 
-8. **Do not mutate a transient MagicMock return value to flip a branch.** To drive a branch
-   like `if is_codex(options.agent):` down the codex path, the plan tried
-   `processor._options().agent = "codex"`. But `_options()` returns a fresh, ephemeral object
-   on every call; setting `.agent` on that throwaway return does NOT change the options
-   instance the real code already captured, so `is_codex(options.agent)` still sees the OLD
-   value and the wrong branch runs — the test exercises the wrong path and passes/fails for
-   the wrong reason. Instead, make `_options()` *genuinely* report the target value: configure
-   the mock's `return_value.agent` (e.g. `processor._options.return_value.agent = "codex"`),
-   or build a real options object with `agent="codex"` and have the fixture return it. Never
-   mutate a transient mock return after the fact.
-
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -155,7 +163,6 @@ not after a refactor.)
 | Plan to remove the coverage omit-allowlist entry | Considered deleting the `pyproject.toml` omit line for the module | Safe only if the new tests lift module coverage above the threshold; otherwise the run goes red | Treat omit-allowlist removals as conditional; note in the PR rather than committing when coverage impact is unverified |
 | Use a clever raising-lambda for a no-arg callable | `(_ for _ in ()).throw(SomeError(...))` to make a raising side_effect | Clever-but-obscure; violates POLA and is hard to read in review | Use a plain `def _raise(*a, **k): raise ...` helper — same behavior, readable |
 | Declare the plan verified from reading source | Read lines 156/159/221 for return shape and call kwargs | Reading is not running; mock-target paths, kwarg assumptions, and return arity were never executed | Run the proposed tests once before claiming verification; until then mark the plan `unverified` and point the reviewer at these assumptions |
-| Mutate a MagicMock's transient return to flip a branch | `processor._options().agent = "codex"` to drive the `is_codex(options.agent)` branch down the codex path | `_options()` returns a fresh ephemeral object per call; setting `.agent` on that transient return does not change the options instance the real code captured, so `is_codex(options.agent)` still sees the old value and the wrong branch runs | Configure the mock's `return_value.agent` (or build a real options object with the target value) so `_options()` genuinely reports it; never mutate a transient mock return after the fact |
 
 ## Results & Parameters
 
@@ -228,3 +235,10 @@ on `PostMergeProcessor` in `hephaestus/automation/post_merge_processor.py`.
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | Issue #1362 — add coverage for `run_drive_green_learnings` / `run_drive_green_compact` on `PostMergeProcessor` | unverified — plan produced from source reading; tests never executed |
+```
+
+---
+
+## v1.0.0 (2026-06-15)
+
+**Initial version.** (PR #2537)
