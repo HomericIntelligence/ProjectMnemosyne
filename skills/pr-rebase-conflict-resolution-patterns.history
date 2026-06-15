@@ -1,6 +1,44 @@
 <!-- markdownlint-disable MD024 -->
 # pr-rebase-conflict-resolution-patterns — History
 
+## v1.7.0 (2026-06-15)
+
+**Changed by:** ProjectHephaestus 2026-06-15 PR #1365 / issue #1357 — rebase-skip pattern for fully-superseded add/add commits
+
+**Verification:** verified-local — observed live during PR #1365 rebase onto main after sibling PR #1358 merged with identical CIDriver decomposition files; `git diff --cached REBASE_HEAD` was empty; `git rebase --skip` cleaned the rebase; `git diff origin/main HEAD` showed zero output.
+
+**What changed:**
+
+- Added **trigger (16)** to frontmatter `description`: a rebase produces ONLY add/add conflicts and ALL conflicted files already exist on main with canonical content — zero staged diff after resolving with main's versions means the commit is fully superseded; use `git rebase --skip` (not `--continue` which creates a superfluous empty commit).
+- Added a **When to Use** bullet for the fully-superseded-commit / rebase-skip scenario.
+- Added **`--skip` vs `--continue` decision note** to § B ("The rebase mechanics that matter"): check `git diff --cached REBASE_HEAD` before deciding; empty diff → `--skip`; non-empty diff → `GIT_EDITOR=true git rebase --continue`.
+- Added **Section L** ("Fully-superseded commit: `--skip` not `--continue`") covering: trigger, step-by-step resolution with the `git show REBASE_HEAD:<path>` → `cat` → `git add` pattern, the `git diff --cached REBASE_HEAD` verification gate, why `--skip` not `--continue`, outcome (branch tip == main → close PR as superseded), contrast with K2 (K2 has genuine unique work to preserve), and a checklist before skipping.
+- Added **1 Failed Attempts** row: using `git rebase --continue` after resolving add/add conflicts with main's version when the staged diff is empty → superfluous empty commit; fix = `git diff --cached REBASE_HEAD` check then `--skip`.
+- Added a **Verified On** row: ProjectHephaestus PR #1365/issue #1357 — 10 add/add conflicts (5 source + 5 test files), all superseded by #1358; rebase-skip produced zero diff vs main.
+- Added tags: `rebase-skip`, `fully-superseded-commit`.
+- Bumped version: `1.6.0` → `1.7.0`, date: `2026-06-15`.
+
+**Why:** The existing skill covered "near-no-op residual" (some genuine unique delta remains) and K2 (parallel extraction where both branches have genuine unique test classes). This adds the distinct `--skip` case where the commit contributes NOTHING — all files are byte-for-byte identical on both branches — and `--continue` is wrong. The `git diff --cached REBASE_HEAD` check is the correct gate to distinguish `--skip` from `--continue` cases.
+
+**Snapshot:** Full prior v1.6.0 skill content (frontmatter + body) is preserved in the v1.6.0 history entry below.
+
+## v1.6.0 (2026-06-15)
+
+**Changed by:** ProjectHephaestus 2026-06-15 PR #1360 / issue #1360 — cluster-extraction add/add conflict (K2 pattern)
+
+**Verification:** verified-ci — 1747 tests passed after rebase.
+
+**What changed:**
+
+- Added **trigger (15)** to frontmatter `description`: two parallel cluster-extraction PRs both create the same new module file and the rebase produces an add/add conflict on BOTH the source module AND its test file — main's source is authoritative, test files must be semantically merged.
+- Added a **When to Use** bullet for the cluster-extraction add/add scenario.
+- Added **Section K2** ("Cluster-extraction add/add conflict") with step-by-step resolution, distinction from "near-no-op residual", and verification checklist.
+- Added a **Verified On** row: ProjectHephaestus PR #1360/issue #1360 — two parallel cluster-extraction PRs both extracting `loop_repo_manager.py`.
+- Added tags: `cluster-extraction`, `parallel-pr-same-module`.
+- Bumped version: `1.5.0` → `1.6.0`.
+
+**Snapshot:** Full prior v1.5.0 skill content preserved below.
+
 ## v1.5.0 (2026-06-14)
 
 **Changed by:** ProjectHephaestus 2026-06-14 serial merge-train (~12 PRs) — broken-main semantic-collision diagnosis
