@@ -1,12 +1,12 @@
 ---
 name: pr-rebase-conflict-resolution-patterns
-description: "Use when: (1) a PR branch is CONFLICTING or DIRTY after main advances and needs rebasing, (2) a mass rebase of 10+ PRs is needed after a major refactor causes conflicts across the queue, (3) a stacked PR goes DIRTY when its prerequisite merges and the base must be retargeted — later CI/lint fix commits on the dependent branch are orphaned and must be cherry-picked, (4) a Safety Net hook blocks git checkout --theirs / --ours during automated rebase conflict resolution, (5) a file was completely rewritten on one branch and small targeted edits exist on the other, (6) a parallel swarm produced overlapping PRs that conflict on the same paths and one must be rebased onto the other, (7) a feature PR conflicts after a sibling refactor merges and edits must be ported to the new file structure, (8) a TypeScript or other language-level shadowing bug appears only after a rebase because two branches independently added identically-named locals to the same scope, (9) numerical or optimizer PRs conflict when main merged its own version of a shared module and API signatures changed, (10) a PR's substantive change independently landed on main via a sibling PR so a rebase produces an add/add conflict on a duplicated new file and the PR becomes a near-no-op residual, (11) a PR is DIRTY with all CI checks green/passing — the merge conflict itself is the sole blocker (rebase, do not hunt for a failing job), (12) a rebase hits a modify/delete conflict on a file the PR intentionally deletes — confirm the base copy is still stale then git rm, (13) a PR is BLOCKED with mergeable=MERGEABLE but a required check shows SKIPPED — the required check is gated by needs: on a job that fails because the branch carries unpinned GitHub Actions rejected by an org-wide SHA-pin policy; fix is rebase to inherit main's pinned workflow files (not an empty re-trigger commit), (14) multiple rebased PRs — including ones unrelated to the failing test — all fail the SAME test after merging onto main; suspect a broken main from a SEMANTIC collision between two independently-merged PRs that never textually conflict (e.g. a return-tuple arity change + a stale test mock), prove it by running the failing test against bare origin/main, and fix main first"
+description: "Use when: (1) a PR branch is CONFLICTING or DIRTY after main advances and needs rebasing, (2) a mass rebase of 10+ PRs is needed after a major refactor causes conflicts across the queue, (3) a stacked PR goes DIRTY when its prerequisite merges and the base must be retargeted — later CI/lint fix commits on the dependent branch are orphaned and must be cherry-picked, (4) a Safety Net hook blocks git checkout --theirs / --ours during automated rebase conflict resolution, (5) a file was completely rewritten on one branch and small targeted edits exist on the other, (6) a parallel swarm produced overlapping PRs that conflict on the same paths and one must be rebased onto the other, (7) a feature PR conflicts after a sibling refactor merges and edits must be ported to the new file structure, (8) a TypeScript or other language-level shadowing bug appears only after a rebase because two branches independently added identically-named locals to the same scope, (9) numerical or optimizer PRs conflict when main merged its own version of a shared module and API signatures changed, (10) a PR's substantive change independently landed on main via a sibling PR so a rebase produces an add/add conflict on a duplicated new file and the PR becomes a near-no-op residual, (11) a PR is DIRTY with all CI checks green/passing — the merge conflict itself is the sole blocker (rebase, do not hunt for a failing job), (12) a rebase hits a modify/delete conflict on a file the PR intentionally deletes — confirm the base copy is still stale then git rm, (13) a PR is BLOCKED with mergeable=MERGEABLE but a required check shows SKIPPED — the required check is gated by needs: on a job that fails because the branch carries unpinned GitHub Actions rejected by an org-wide SHA-pin policy; fix is rebase to inherit main's pinned workflow files (not an empty re-trigger commit), (14) multiple rebased PRs — including ones unrelated to the failing test — all fail the SAME test after merging onto main; suspect a broken main from a SEMANTIC collision between two independently-merged PRs that never textually conflict (e.g. a return-tuple arity change + a stale test mock), prove it by running the failing test against bare origin/main, and fix main first, (15) two parallel cluster-extraction PRs both create the same new module file and the rebase produces an add/add conflict on BOTH the source module AND its test file — main's source is authoritative, test files must be semantically merged (keep main's richer base + append your branch's unique test classes)"
 category: ci-cd
-date: 2026-06-14
-version: "1.5.0"
+date: 2026-06-15
+version: "1.6.0"
 user-invocable: false
 history: pr-rebase-conflict-resolution-patterns.history
-tags: [git, rebase, merge-conflict, pr, batch, stacked-pr, cherry-pick, safety-net, parallel-swarm, serial-merge-train, full-rewrite, shadow-variable, tdz, numeric-equivalence, clang-format, cmake, pixi-lock, force-with-lease, auto-merge, already-merged-sibling, add-add-conflict, sha-pin, unpinned-actions, skipped-required-check, markdownlint, lint-blocked, org-policy, myrmidon-swarm, semantic-collision, broken-main, tuple-arity, stale-mock, merge-train-cascade]
+tags: [git, rebase, merge-conflict, pr, batch, stacked-pr, cherry-pick, safety-net, parallel-swarm, serial-merge-train, full-rewrite, shadow-variable, tdz, numeric-equivalence, clang-format, cmake, pixi-lock, force-with-lease, auto-merge, already-merged-sibling, add-add-conflict, sha-pin, unpinned-actions, skipped-required-check, markdownlint, lint-blocked, org-policy, myrmidon-swarm, semantic-collision, broken-main, tuple-arity, stale-mock, merge-train-cascade, cluster-extraction, parallel-pr-same-module]
 ---
 
 # PR Rebase & Conflict Resolution Patterns
@@ -40,7 +40,8 @@ tags: [git, rebase, merge-conflict, pr, batch, stacked-pr, cherry-pick, safety-n
 - A rebase hits a **modify/delete conflict on a file the PR intentionally deletes** (`CONFLICT (modify/delete): <path> deleted in <commit> and modified in HEAD`) — confirm the base copy is still the stale content the PR removes, then `git rm`.
 - A PR is **BLOCKED with `mergeable=MERGEABLE`** (no git conflict) but a **required check shows `SKIPPED`** — the required check (e.g. `markdownlint`) is declared `needs: lint` and the `lint` job fails because the branch carries **unpinned GitHub Actions** (`actions/setup-python@v6`) rejected by an org-wide SHA-pin policy. The fix is a **rebase onto current main** so the branch inherits main's pinned workflow files; pushing an empty re-trigger commit does NOT fix this.
 - **Multiple rebased PRs — including ones unrelated to the failing test — all fail the SAME test** after merging onto main; suspect a **broken main from a semantic collision between two independently-merged PRs** (e.g. a return-tuple arity change + a stale test mock). The two PRs never textually conflict — each is green against the main it saw — but their UNION on main is inconsistent and fails at RUNTIME. Prove it by running the failing test against bare `origin/main`, then **fix main first** (one small PR); do NOT fix it inside each trailing PR.
-- Common trigger phrases: "fix these failing PRs", "rebase all branches onto main", "mass rebase after merge wave", "stacked PR went dirty", "Safety Net blocked git checkout", "markdownlint SKIPPED BLOCKED", "action not allowed must be pinned".
+- **Two parallel cluster-extraction PRs both create the same new module** (e.g. `loop_repo_manager.py`) via independent extraction from the same god-module; the rebase produces `CONFLICT (add/add)` on BOTH the source file AND the test file. This differs from a "near-no-op residual" case — both branches have genuine work; the resolution requires careful semantic merging (see § K2).
+- Common trigger phrases: "fix these failing PRs", "rebase all branches onto main", "mass rebase after merge wave", "stacked PR went dirty", "Safety Net blocked git checkout", "markdownlint SKIPPED BLOCKED", "action not allowed must be pinned", "CONFLICT (add/add) on new module".
 
 ## Verified Workflow
 
@@ -126,6 +127,7 @@ git checkout --ours marketplace.json                    # main has the union; PR
 | Workflow YAML (`.github/workflows/*.yml`), `.pre-commit-config.yaml` — additive | Keep BOTH sides' additions (main's `concurrency`/`permissions`/`timeout-minutes` AND the branch's container/job/hook). Read the commit message: a later "remove X" commit on the same branch flips intent — take the removal. |
 | Workflow YAML — two DIFFERENT fix approaches | Take main's approach (established convention; simpler wins). Then **hunt orphaned lines**: grep the discarded approach's keywords (e.g. `/tmp/benchmark-results\|podman cp`) — lines outside the conflict markers survive silently. |
 | Test files — both sides added coverage | Semantic merge: keep main's new tests AND the PR's helpers/tests; upgrade inherited tests to the PR's docstring standard; re-run the owned test file. |
+| Add/add conflict — parallel cluster extraction created the same new module | SOURCE file: diff main's vs branch's version (`diff <(git show HEAD:<path>) <(git show REBASE_HEAD:<path>)`); differences are typically docstrings/comments only, not logic — take main's version as authoritative (`git show HEAD:<path> > <path>`). TEST file: merge both — take main's richer base and append your branch's unique test classes (`grep "^class " <branch-test>` identifies unique classes); never take just one side. `pyproject.toml`/allowlist comment-only conflicts: take main's comment (reviewed longer). After resolution verify: `grep "^class " <merged-test>` must include all classes from both sides. |
 | Full-file rewrite vs small delta | Take the rewrite side (`git checkout --theirs` in rebase = PR), then hand-apply the small delta from main's commit. Never auto-merge — it produces an incoherent hybrid. |
 | Absorbed/deleted file (UD: deleted by us, modified by them) | `git rm <file>` (keep the deletion). |
 | Source code, semantic | Read each hunk's intent (`git show REBASE_HEAD -- <file>` vs `git show HEAD:<file>`); decide per-hunk, never blanket `--ours`/`--theirs`. Use Sonnet+ for analysis, not Haiku. |
@@ -158,6 +160,75 @@ git checkout --ours marketplace.json                    # main has the union; PR
 - **Over-deletion replay**: a "remove deprecated X" commit authored pre-fix, replayed post-fix, also removes the new symbols → ImportError for symbols that should exist. Restore the missing classes, strip stale decorators/duplicate fields/unused imports (canary: `import warnings`/`dataclasses` left unused), update `__init__` exports.
 - **C++ signature drift**: a sibling PR changed a shared function signature; your call sites (incl. tests) fail "too few/many arguments". Build LOCALLY before pushing — one build surfaces every error at once.
 - **Numeric/optimizer add/add**: main merged its own copy of a shared module with a changed signature. Dropping the PR's duplicate compiles but can be silently wrong. Classify DUPLICATE vs NEW, adapt the call-site to main's API while **documenting numeric equivalence in a code comment** (e.g. NorMuon's per-axis normalization divides out main's global Muon scale → only direction matters), test the math, fix unreachable assertions with **derived** values (Lion floor `max(0,1−N·lr)` → `< 0.55`), and **defer provably-broken algorithms** (remove from PR, file follow-up) rather than merge wrong math.
+
+#### K2. Cluster-extraction add/add conflict (two parallel PRs extract the same new module)
+
+**Trigger**: Two PRs independently extract the same function cluster from a god-module (e.g. `loop_runner.py → loop_repo_manager.py`). Both create new files. After the first PR merges, the second PR's rebase produces `CONFLICT (add/add)` on the source file AND the test file.
+
+This is NOT the same as a "near-no-op residual" — both branches have genuine extraction work. The resolution is:
+
+**Step 1: Audit the source file**
+
+```bash
+# In the rebase worktree, compare HEAD (main's merged version) vs REBASE_HEAD (your branch's version):
+diff <(git show HEAD:<new-module.py>) <(git show REBASE_HEAD:<new-module.py>)
+```
+
+- If differences are ONLY in docstrings/comments (not logic): take main's version entirely
+  ```bash
+  git show HEAD:<new-module.py> > <new-module.py>
+  git add <new-module.py>
+  ```
+- If there are genuine logic differences: escalate — two parallel extractions should not produce logic divergence; something went wrong upstream
+
+**Step 2: Merge the test file (semantic merge)**
+
+Both branches independently wrote test classes for the new module. Take ALL of them:
+
+```bash
+# Identify unique test classes on each side:
+grep "^class " <(git show HEAD:<test_new_module.py>)        # main's classes
+grep "^class " <(git show REBASE_HEAD:<test_new_module.py>) # your branch's classes
+```
+
+Take main's version as the base, then append any test classes present ONLY on your branch.
+
+```bash
+git show HEAD:<test_new_module.py> > <test_new_module.py>
+# Manually append unique classes from REBASE_HEAD that are not in HEAD
+git add <test_new_module.py>
+```
+
+**Step 3: Handle `pyproject.toml` / allowlist comment-only conflicts**
+
+Take main's comment (reviewed longer, more complete):
+```bash
+git show HEAD:pyproject.toml > pyproject.toml
+git add pyproject.toml
+```
+
+**Step 4: Verify the merge**
+
+```bash
+# Source: must not add or remove logic vs main
+diff <new-module.py> <(git show HEAD:<new-module.py>)  # should show only comment/docstring diffs or nothing
+
+# Tests: must contain ALL classes from both sides
+grep "^class " <test_new_module.py>  # must include every class from both branches
+
+# Run the tests:
+pixi run pytest <test_new_module.py> -v
+```
+
+**Step 5: Continue the rebase (signed)**
+
+```bash
+GIT_EDITOR=true git -C <worktree> rebase --continue
+# Then re-sign:
+git -C <worktree> rebase --exec "git commit --amend --no-edit -S --no-verify" origin/main
+git -C <worktree> push --force-with-lease origin HEAD:<branch>
+gh pr merge <N> --auto --squash
+```
 
 #### H. C++ clang-format vs CMake
 
@@ -417,4 +488,5 @@ git -C /tmp/pr-<N> push --force-with-lease origin HEAD:<branch>
 | Agamemnon / Odysseus | Extraction destination PRs #419/#420/#421; Odysseus #43 NATS reconciliation vs merged #32; Agamemnon #422 empty-commit re-trigger of 6 required checks | verified-ci / verified-local |
 | HomericIntelligence/Odysseus | PR #64 full-file-rewrite conflict on docs/architecture.md (234-line rewrite vs 3-line delta) | verified-local |
 | ProjectMnemosyne | 2026-06-13: org-wide SHA-pin policy PR landed on main; ~107 skill PRs created before the pin carried `actions/setup-python@v6` (unpinned). `lint` failed with "action not allowed — must be pinned", cascading to `markdownlint=SKIPPED` (declared `needs: lint`). All 107 PRs showed `mergeable=MERGEABLE` + `mergeStateStatus=BLOCKED`. Parallel Myrmidon Haiku swarm rebased each PR onto main (~9 PRs/agent in isolated worktrees, `--force-with-lease`). Skill PRs touching only `skills/*.md` rebased cleanly (0 conflicts). After push, CI re-ran with pinned actions, `lint` passed, `markdownlint` ran to success, auto-merge-armed PRs merged. Secondary: 107 PRs exhibited combined-status `pending` (count=0) caching; empty signed commit forced recompute and cleared the block. **verified-ci** | verified-ci |
+| ProjectHephaestus | 2026-06-15, PR #1360 (issue #1360): Two parallel cluster-extraction PRs (#1360 and #1361) both extracted 12 repo-management functions from `loop_runner.py` into `loop_repo_manager.py`. After #1361 merged, #1360 rebased and produced `CONFLICT (add/add)` on `hephaestus/automation/loop_repo_manager.py` AND `tests/unit/automation/test_loop_repo_manager.py`. Source differences were docstrings/comments only — took main's version. Test file merged both sets of test classes. `pyproject.toml` allowlist comment conflict took main's. verified-ci: 1747 tests passed after rebase. | verified-ci |
 | ProjectHephaestus | 2026-06-14 serial merge-train of ~12 PRs: 8/12 merged, then the trailing 4 all went red on `test_review_loop_resolves_conflict_before_first_review` (a test none of them touched). Root-caused to a SEMANTIC collision between two independently-merged PRs that never textually conflict: #1336 changed `_process_review_iteration` to return a 9-tuple; #1337 added a test whose mock returned the old 7-tuple. Union on main raised `ValueError: not enough values to unpack (expected 9, got 7)` at `_review_phase.py:635`. Proved via running the failing test against bare `origin/main`. Fixed once on main via a 1-line mock update (#1340 / issue #1339); trailing PRs re-greened by re-running CI. | verified-local (fix PR not yet merged at capture) |
