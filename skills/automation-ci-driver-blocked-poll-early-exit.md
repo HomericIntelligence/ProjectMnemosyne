@@ -1,12 +1,13 @@
 ---
 name: automation-ci-driver-blocked-poll-early-exit
-description: "Use when: (1) _wait_for_pr_terminal spins for the full 30-minute timeout on a BLOCKED PR that has unresolved human review threads or pending required review, (2) diagnosing why the ci_driver polls indefinitely instead of exiting early on mergeStateStatus=BLOCKED, (3) implementing or testing an early-exit guard for BLOCKED PRs, (4) adding _pending_required_check_names helper to ci_driver."
+description: "Use when: (1) _wait_for_pr_terminal spins for the full 30-minute timeout on a BLOCKED PR that has unresolved human review threads or pending required review, (2) diagnosing why the ci_driver polls indefinitely instead of exiting early on mergeStateStatus=BLOCKED, (3) implementing or testing an early-exit guard for BLOCKED PRs, (4) adding _pending_required_check_names helper to ci_driver, (5) a CI-green auto-merge-armed PR is stuck in mergeStateStatus=BLOCKED and you need to determine whether the blocker is unresolved review threads (not a human approval gate), (6) triaging github-code-quality bot false-positive threads (unused-import on re-export shims, unnecessary-lambda on DIP injection wrappers)."
 category: debugging
-date: 2026-06-07
-version: "1.0.0"
+date: 2026-06-15
+version: "1.1.0"
+history: "skills/automation-ci-driver-blocked-poll-early-exit.history"
 user-invocable: false
-verification: verified-local
-tags: [automation, ci-driver, blocked, mergeStateStatus, poll, early-exit, branch-protection, wait-for-pr-terminal]
+verification: verified-ci
+tags: [automation, ci-driver, blocked, mergeStateStatus, poll, early-exit, branch-protection, wait-for-pr-terminal, review-threads, thread-resolution, false-positive, github-code-quality, dip-lambda, re-export-shim]
 ---
 
 # Automation CI Driver: BLOCKED PR Poll Early-Exit
@@ -15,11 +16,11 @@ tags: [automation, ci-driver, blocked, mergeStateStatus, poll, early-exit, branc
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-07 |
-| **Objective** | Make `_wait_for_pr_terminal` exit early when `mergeStateStatus=BLOCKED` is caused by a branch-protection gate (unresolved conversations, required review) rather than spinning for the full 1800s |
-| **Outcome** | Successful — early-exit fires only when BOTH failing and pending required checks are empty; returns `"BLOCKED"` which callers treat as armed success |
-| **Verification** | verified-local (all unit tests pass locally; PR #1090 filed, CI pending) |
-| **History** | N/A (initial version) |
+| **Date** | 2026-06-15 |
+| **Objective** | (1) Make `_wait_for_pr_terminal` exit early when `mergeStateStatus=BLOCKED` is caused by a branch-protection gate rather than spinning for the full 1800s. (2) Diagnose and resolve BLOCKED state on green+armed PRs by identifying and clearing unresolved review threads rather than waiting for a non-existent human approval gate. |
+| **Outcome** | Successful — early-exit fires only when BOTH failing and pending required checks are empty; returns `"BLOCKED"` which callers treat as armed success. Confirmed: green+armed PRs blocked by `required_review_thread_resolution` unblock and auto-merge fires within seconds of thread clearance. |
+| **Verification** | verified-ci (PRs #1283 and #1358, ProjectHephaestus, merged once threads cleared) |
+| **History** | See `skills/automation-ci-driver-blocked-poll-early-exit.history` |
 
 ## When to Use
 
@@ -28,6 +29,8 @@ tags: [automation, ci-driver, blocked, mergeStateStatus, poll, early-exit, branc
 - Adding or reviewing the `_pending_required_check_names` helper method
 - Writing tests for the early-exit path (three scenarios: immediate exit, no exit on failing checks, no exit on pending checks)
 - Understanding why GitHub reports `BLOCKED` during in-flight CI (not just branch-protection gates)
+- A CI-green, auto-merge-armed PR is stuck in `mergeStateStatus: BLOCKED` and you suspect it needs human approval — **verify the branch-protection config first** (see Diagnostic Runbook below)
+- A `github-code-quality` SAST bot has opened threads about "unused import" or "unnecessary lambda" that appear to be false positives
 
 ## Root Cause
 
@@ -37,6 +40,8 @@ tags: [automation, ci-driver, blocked, mergeStateStatus, poll, early-exit, branc
 2. **In-flight CI** — required checks are still running. Once they complete the status changes to `CLEAN` or `FAILING`.
 
 The fix requires distinguishing these: only fire the early-exit when ALL required checks have completed (none failing, none pending).
+
+**Agent diagnostic note (v1.1.0):** A green+armed PR can sit in `BLOCKED` with `required_approving_review_count: null` (no human approval required) when `required_review_thread_resolution: true` is set. In this case the blocker is **unresolved review threads**, not a missing human approval. Threads opened by the `github-code-quality` SAST bot are often false positives (see Diagnostic Runbook).
 
 ## Verified Workflow
 
@@ -134,11 +139,84 @@ def test_open_blocked_with_pending_checks_does_not_short_circuit(self, driver, m
    pixi run ruff check hephaestus/automation/ci_driver.py
    ```
 
+### Diagnostic Runbook: Green+Armed PR Stuck BLOCKED
+
+When a PR shows all CI checks green and auto-merge is armed but `mergeStateStatus` is `BLOCKED`:
+
+**Step 1 — Check branch-protection config (takes 10 seconds):**
+
+```bash
+gh api repos/<owner>/<repo>/branches/main/protection \
+  --jq '{approving_count: .required_pull_request_reviews.required_approving_review_count, thread_resolution: .required_conversation_resolution.enabled}'
+```
+
+If `approving_count` is `null` and `thread_resolution` is `true`, the blocker is **unresolved review threads** — NOT a human approval gate.
+
+**Step 2 — Enumerate unresolved threads:**
+
+```bash
+gh api graphql -F owner=<owner> -F repo=<repo> -F pr=<number> -f query='
+query($owner:String! $repo:String! $pr:Int!) {
+  repository(owner:$owner name:$repo) {
+    pullRequest(number:$pr) {
+      reviewThreads(first:20) {
+        nodes {
+          id
+          isResolved
+          comments(first:1) {
+            nodes { author { login } path line body }
+          }
+        }
+      }
+    }
+  }
+}' | python3 -c "
+import json,sys
+data=json.load(sys.stdin)
+threads=data['data']['repository']['pullRequest']['reviewThreads']['nodes']
+for t in threads:
+    if not t['isResolved']:
+        c=t['comments']['nodes'][0]
+        print(f\"Thread {t['id']}: {c['author']['login']} @ {c['path']}:{c['line']}\")
+        print(f\"  {c['body'][:120]}\")
+"
+```
+
+**Step 3 — Triage each unresolved thread:**
+
+- **`github-code-quality` bot, "Unused import" on a re-export shim** — This fires on `import X as X` in a backward-compat shim. `ruff`/real-CI lint passes because `import X as X` IS a recognized re-export idiom. Bot doesn't recognize it.
+  - FIX: Add an `__all__` listing the re-exported names (makes intent explicit and silences the bot at source). Note: adding `__all__` can make a prior `# noqa: F401` redundant → triggers `RUF100` — remove the `noqa` comment if ruff reports it.
+  - Then reply to the thread: "Fixed: added `__all__` to make the re-export intent explicit." and resolve.
+
+- **`github-code-quality` bot, "Unnecessary lambda" on a DIP injection wrapper** — e.g., `lambda: self._foo()`. These are INTENTIONAL: they defer method lookup to call time so `patch.object(driver, '_foo')` works in tests. A bare method ref (`self._foo`) captures the original function at `__init__` time and bypasses the mock.
+  - FIX: Do NOT change the code. Reply: "Intentional by design — defers `self._method` lookup to call time so `patch.object(driver, '_method')` intercepts correctly in tests; inlining would capture the original and break the test suite." Then resolve.
+
+- **Other threads** — Apply the genuine fix if the concern is valid, then reply with what was done and resolve.
+
+**Step 4 — Resolve threads via GraphQL:**
+
+```bash
+gh api graphql -f query='
+mutation($id:ID!) {
+  resolveReviewThread(input:{threadId:$id}) {
+    thread { isResolved }
+  }
+}' -F id=<thread-id>
+```
+
+**Step 5 — Verify unblock:** Once all threads are resolved, GitHub re-evaluates within seconds. Auto-merge fires automatically if conditions are met. Check with:
+
+```bash
+gh pr view <number> --json mergeStateStatus,autoMergeRequest
+```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
 | Single-condition guard | Only checked `not failing` before BLOCKED early-exit | GitHub reports `BLOCKED` while CI checks are still in-flight; would fire early-exit before CI completes, causing premature abandonment of valid PRs | Must check BOTH `not failing` AND `not pending` — two-condition guard required |
+| Diagnosed green+armed BLOCKED PR as "waiting on human approval" | Concluded BLOCKED status meant a human reviewer was needed before merge could proceed | Branch protection had `required_approving_review_count: null` (no approval required) and `required_review_thread_resolution: true`; the real blocker was unresolved bot review threads, not a human gate | Always check `gh api repos/.../branches/main/protection` first; if approving count is null and thread-resolution is true, the blocker is threads — resolvable by an agent |
+| "Fixed" a github-code-quality "unnecessary lambda" thread by inlining the DIP lambda | Changed `lambda: self._foo()` to `self._foo` to satisfy the bot's complaint | `self._foo` captures the method at `__init__` time, bypassing `patch.object` mocks; would have broken the entire test suite for ci_driver | DIP injection lambdas are intentional — reply with rationale ("defers lookup to call time so patch.object works") and resolve without code change |
 
 ## Results & Parameters
 
@@ -150,6 +228,21 @@ def test_open_blocked_with_pending_checks_does_not_short_circuit(self, driver, m
 | CI failed | `BLOCKED` | `["ci/build"]` | `[]` | No — returns `"FAILING"` |
 | Branch-protection gate | `BLOCKED` | `[]` | `[]` | Yes — returns `"BLOCKED"` |
 | Conflict | `CONFLICTING` | any | any | Yes — returns `"CONFLICTING"` (pre-existing) |
+
+### Branch-Protection BLOCKED Sub-Types
+
+| Sub-type | `required_approving_review_count` | `required_review_thread_resolution` | Resolution |
+|----------|-----------------------------------|--------------------------------------|------------|
+| Missing human approval | non-null integer | any | Wait for human reviewer |
+| Unresolved review threads | null | true | Triage and resolve each thread |
+| Signed-commit policy | N/A | any | Ensure commits are GPG-signed |
+
+### False-Positive Thread Patterns (github-code-quality bot)
+
+| Bot complaint | Actual situation | Correct action |
+|---------------|-----------------|----------------|
+| "Unused import" on `import X as X` | Backward-compat re-export shim; ruff passes | Add `__all__` listing re-exports; remove now-redundant `# noqa: F401` if RUF100 fires; reply+resolve |
+| "Unnecessary lambda" on `lambda: self._method()` | DIP injection wrapper; defers lookup for `patch.object` testability | Reply "intentional by design" + resolve; do NOT inline |
 
 ### Environment Variables
 
@@ -167,3 +260,4 @@ def test_open_blocked_with_pending_checks_does_not_short_circuit(self, driver, m
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | Issue — `_wait_for_pr_terminal` polls indefinitely on BLOCKED PRs with unresolved review threads | PR #1090; all unit tests pass locally; all pre-commit hooks pass |
+| ProjectHephaestus | PR queue session 2026-06-15 — multiple green+armed PRs stuck BLOCKED; diagnosed as unresolved review threads (not human approval gate); `github-code-quality` false-positive threads cleared via reply+resolve | PRs #1283 and #1358 merged within seconds of thread clearance; branch protection confirmed `required_approving_review_count: null`, `required_review_thread_resolution: true` |
