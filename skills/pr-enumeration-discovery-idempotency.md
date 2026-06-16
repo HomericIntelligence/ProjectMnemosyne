@@ -1,9 +1,9 @@
 ---
 name: pr-enumeration-discovery-idempotency
-description: "Use when: (1) gh pr list silently truncates results because the default limit is 30 and a repo has more open PRs, (2) gh label list or gh issue list silently drops entries past the default pagination limit, (3) Dependabot or other bot-authored PRs are invisible to issue-driven automation because they have no Closes #N link — use synthetic issue-key union pattern, (4) an automation tool creates duplicate PRs for the same issue because it lacks an idempotency check before calling gh pr create, (5) GitHub API reports a PR as merged but the remote ref and local working tree have not yet synced — merged state is not proof of remote sync, (6) a bulk PR-sync tool times out (HTTP 504) because gh pr list with statusCheckRollup at 50+ PRs is too heavy — fetch statusCheckRollup per-PR instead, (7) a bulk driver silently skips the whole PR queue by returning an empty list on a gh error instead of raising, (8) stale CI classification marks BEHIND/BLOCKED PRs as FAILING and skips them when they should be rebased, (9) a docstring promises a soft-fail (Empty dict on any lookup failure — discovery must never abort) but the except tuple catches only a subset of subprocess failure modes — a gh-CLI hang (subprocess.TimeoutExpired) or missing binary (OSError/FileNotFoundError) propagates uncaught, violating the contract"
+description: "Use when: (1) gh pr list silently truncates results because the default limit is 30 and a repo has more open PRs, (2) gh label list or gh issue list silently drops entries past the default pagination limit, (3) Dependabot or other bot-authored PRs are invisible to issue-driven automation because they have no Closes #N link — use synthetic issue-key union pattern, (4) an automation tool creates duplicate PRs for the same issue because it lacks an idempotency check before calling gh pr create, (5) GitHub API reports a PR as merged but the remote ref and local working tree have not yet synced — merged state is not proof of remote sync, (6) a bulk PR-sync tool times out (HTTP 504) because gh pr list with statusCheckRollup at 50+ PRs is too heavy — fetch statusCheckRollup per-PR instead, (7) a bulk driver silently skips the whole PR queue by returning an empty list on a gh error instead of raising, (8) stale CI classification marks BEHIND/BLOCKED PRs as FAILING and skips them when they should be rebased, (9) a docstring promises a soft-fail (Empty dict on any lookup failure — discovery must never abort) but the except tuple catches only a subset of subprocess failure modes — a gh-CLI hang (subprocess.TimeoutExpired) or missing binary (OSError/FileNotFoundError) propagates uncaught, violating the contract, (10) the PLANNER phase re-plans an issue that already has an open closing PR — add a skip-gate that calls find_pr_for_issue before planning so plan and implement share identical skip semantics, (11) a MERGED closing-PR is not detected because discovery only searches open PRs — use find_merged_closing_pr to search merged PRs too, and close the issue if it is still open"
 category: ci-cd
-date: 2026-06-10
-version: "1.1.0"
+date: 2026-06-15
+version: "1.2.0"
 user-invocable: false
 history: pr-enumeration-discovery-idempotency.history
 tags:
@@ -27,6 +27,11 @@ tags:
   - TimeoutExpired
   - soft-fail
   - symmetric-failure-modes
+  - planner-skip-gate
+  - merged-closing-pr
+  - find-merged-closing-pr
+  - real-head-branch
+  - assumed-branch-name
 ---
 
 # PR Enumeration, Discovery, and Idempotency
@@ -35,9 +40,9 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-10 |
-| **Objective** | Canonical reference for correctly *finding* PRs (pagination, bot PRs, limit caps), filing them idempotently, reasoning about state divergence between the GitHub API and the remote, classifying a bulk PR queue for routing, and using the canonical 4-tuple of subprocess failure modes when a soft-fail contract is in force. |
-| **Outcome** | Consolidated from 8 verified skills covering gh enumeration, synthetic-issue-key bot discovery, duplicate-PR prevention, merged-state sync verification, bulk PR-sync classification, and (v1.1.0) symmetric subprocess except-tuple coverage for soft-fail discovery helpers. |
+| **Date** | 2026-06-15 |
+| **Objective** | Canonical reference for correctly *finding* PRs (pagination, bot PRs, limit caps), filing them idempotently, reasoning about state divergence between the GitHub API and the remote, classifying a bulk PR queue for routing, using the canonical 4-tuple of subprocess failure modes when a soft-fail contract is in force, and gating the PLANNER phase against re-planning issues that already have open or merged closing PRs. |
+| **Outcome** | Consolidated from 8 verified skills covering gh enumeration, synthetic-issue-key bot discovery, duplicate-PR prevention, merged-state sync verification, bulk PR-sync classification, (v1.1.0) symmetric subprocess except-tuple coverage for soft-fail discovery helpers, and (v1.2.0) planner skip-gate + merged-closing-PR detection to prevent 5.5h zombie-PR churn. |
 | **Verification** | verified-ci |
 | **History** | [changelog](./pr-enumeration-discovery-idempotency.history) |
 
@@ -51,6 +56,9 @@ tags:
 - An automation tool creates duplicate PRs for one issue because `gh pr create` runs without an existing-PR check, or a worktree manager rebuilds a branch from base and discards remote history.
 - You are about to report "PR is merged" from `gh pr view` alone, or about to push a local branch to a PR a parallel process may also own — merged/named state is not proof of remote sync or matching content.
 - A bulk PR-sync tool times out (HTTP 504) on `gh pr list` with `statusCheckRollup` at 50+ PRs, silently returns `[]` on a gh error, or skips every BEHIND/BLOCKED PR as FAILING after a fix lands on main.
+- The **PLANNER** phase of an automation loop re-plans an issue that already has an open closing PR — the implementer phase skips it, but the planner ran first and consumed an agent call (and hit 529 retries). Add a skip-gate calling `_review_utils.find_pr_for_issue(issue)` before planning: plan and implement must use identical skip semantics.
+- An issue stays open forever even after a PR with a valid `Closes #N` line merges — because discovery only searched `--state open` and never found the merged PR. Call `find_merged_closing_pr(issue)` against `--state merged` too; if a merged closing PR exists and the issue is still open, close the issue with `gh issue close N --comment "Closed by merged PR #M"`.
+- A `git fetch origin <branch>` fails with exit 128 because the branch was resolved by assuming `{issue}-auto-impl` instead of calling `gh pr view <pr> --json headRefName` — the PR's real head branch may have been filed from a differently-named branch.
 
 ## Verified Workflow
 
@@ -357,6 +365,114 @@ Three compounding bugs each silently neuter a bulk PR-sync tool (`hephaestus.git
 | MERGEABLE | BEHIND / BLOCKED | SUCCESS / UNKNOWN | OUTDATED | rebase |
 | CONFLICTING | DIRTY | any | CONFLICTED | per-PR conflict resolution |
 
+#### Planner skip-gate: call find_pr_for_issue before planning
+
+The IMPLEMENTER phase already skipped issues that had an existing open closing PR via
+`_review_utils.find_pr_for_issue(issue)`. The PLANNER phase ran first with no such gate,
+which let it re-plan an issue that already had an open closing PR — consuming an agent
+call and repeatedly failing with 529 throttle errors during the churn window. The fix
+(PR #1373) is to add the SAME skip-gate at the top of the planning routine:
+
+```python
+# In the planner (before calling the planning agent):
+existing_pr = _review_utils.find_pr_for_issue(issue_number)
+if existing_pr is not None:
+    logger.info(
+        "Planner skip: issue #%d already has open PR #%d", issue_number, existing_pr
+    )
+    return  # do not re-plan
+
+# Continue with normal planning...
+```
+
+**Rule:** plan and implement MUST share identical skip semantics. If `find_pr_for_issue`
+governs the implementer's skip, it MUST govern the planner's skip too — they are the
+same guard applied at two consecutive phases of the same pipeline.
+
+#### Merged closing-PR detection: find_merged_closing_pr
+
+An open issue stays open forever if its closing PR was filed via `Closes #N` in the body
+but the discovery routine only queries `--state open`. The issue never receives the
+closing signal (GitHub auto-closes on merge only for the DEFAULT branch target). Fix
+(PR #1373): add `find_merged_closing_pr(issue) -> int | None` that searches merged PRs:
+
+```python
+def find_merged_closing_pr(issue_number: int, repo: str) -> int | None:
+    """Search merged PRs for one that closes this issue.
+
+    Uses the SAME exact-line regex as find_pr_for_issue to avoid false matches:
+    - ^Closes #1234\\b  matches "Closes #1234" at line start
+    - Cannot match "Closes #12" when searching for #1234 (\\b stops at digit boundary)
+    - Cannot match "Closes #12, #18" false-matching #1 (digit boundary guard)
+    """
+    pattern = re.compile(rf"^Closes #{issue_number}\b", re.MULTILINE)
+    try:
+        result = subprocess.run(
+            ["gh", "pr", "list", "--state", "merged", "--repo", repo,
+             "--search", f"Closes #{issue_number} in:body",
+             "--json", "number,body"],
+            capture_output=True, text=True, check=True, timeout=30,
+        )
+        prs = json.loads(result.stdout or "[]")
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired,
+            OSError, json.JSONDecodeError):
+        return None
+    for pr in prs:
+        if pattern.search(pr.get("body") or ""):
+            return pr["number"]
+    return None
+```
+
+When `find_merged_closing_pr(issue)` returns a PR number and the issue is still open,
+close the issue — do NOT re-plan:
+
+```python
+merged_pr = find_merged_closing_pr(issue_number, repo)
+if merged_pr is not None:
+    subprocess.run(
+        ["gh", "issue", "close", str(issue_number), "--repo", repo,
+         "--comment", f"Closed by merged PR #{merged_pr}"],
+        check=True,
+    )
+    logger.info("Closed issue #%d via merged PR #%d", issue_number, merged_pr)
+    return
+```
+
+**Search query note:** `gh pr list --search "Closes #N in:body"` is a pre-filter hint
+to GitHub's search index; it is NOT a guarantee. Always apply the regex post-filter
+(`pattern.search(body)`) to confirm the exact line match. The `--search` hint reduces
+the candidate set from "all merged PRs" to a manageable handful; the regex removes
+false positives from the candidate set.
+
+#### Real head-branch resolution: always use get_pr_head_branch
+
+Assuming a PR's head branch is named `{issue}-auto-impl` is wrong whenever the PR was
+filed from a branch with a different name (e.g. a bundle branch named `1179-auto-impl`
+that closes multiple issues including #1360). The log message is:
+
+```
+head branch is '1179-auto-impl' (not the assumed '1360-auto-impl')
+git fetch origin 1360-auto-impl  → exit 128: couldn't find remote ref
+```
+
+Fix: always resolve the real head branch via `gh pr view`:
+
+```python
+def get_pr_head_branch(pr_number: int, repo: str) -> str:
+    """Resolve the REAL head branch of a PR — never assume {issue}-auto-impl."""
+    result = subprocess.run(
+        ["gh", "pr", "view", str(pr_number), "--repo", repo,
+         "--json", "headRefName", "--jq", ".headRefName"],
+        capture_output=True, text=True, check=True, timeout=30,
+    )
+    return result.stdout.strip()
+```
+
+Every call site that previously constructed `f"{issue_number}-auto-impl"` to fetch or
+check out a PR branch MUST be replaced with `get_pr_head_branch(pr_number, repo)`.
+The assumed name is cheap to construct but wrong ~100% of the time when the filing
+convention changes or multiple issues share one branch.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -380,6 +496,9 @@ Three compounding bugs each silently neuter a bulk PR-sync tool (`hephaestus.git
 | Narrow-tuple soft-fail in a `gh`-wrapped discovery helper | Caught only `(subprocess.CalledProcessError, json.JSONDecodeError)` in `_discover_failing_prs` despite a docstring promising "Empty dict on any lookup failure — discovery must never abort" | A `gh` CLI hang (`subprocess.TimeoutExpired`) and a missing binary (`OSError` / `FileNotFoundError`) propagated uncaught, got swallowed by the outer worker-thread exception handler, and marked the entire work item failed — silently violating the soft-fail contract. The sister helper `_count_failing_prs` in the same package caught a disjoint subset `(TimeoutExpired, OSError)`, so neither covered the full failure surface. | A soft-fail helper wrapping an external CLI MUST catch the canonical 4-tuple `(subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError, json.JSONDecodeError)`. Sister helpers wrapping the same binary must converge on the same tuple — an asymmetry IS the bug. Keep the precise tuple (do not broaden to `except Exception` — that masks `AttributeError`/`TypeError` from refactors and Mocks). Preserve a `logger.info(...)` line on the soft-fail path so it stays observable (POLA — a silent fallback with no log is a multi-hour debug). |
 | Bare `except Exception` "to be safe" in a discovery helper | Replaced the narrow tuple with `except Exception` after one TimeoutExpired escape | Swallowed `AttributeError` from a malformed `Mock(spec=...)` in a unit test (silent test pass on a broken refactor) and `KeyError` from a JSON-schema drift after the `gh --json` field set changed (silent data corruption — discovery returned `{}` because the dict access blew up, not because gh failed). | The broad boundary is the wrong tool for a discovery helper with a tight contract. Stay with the explicit 4-tuple; use the classification pattern (`silent-boundary-observability-exception-classification`) only when fail-safe orchestrator semantics genuinely require `except Exception` AND you want unexpected types to log at ERROR. |
 | Silent fallback to `{}` with NO log line | Caught the right exceptions but stripped the log call "to reduce log noise" | Operator saw "all repos clean" while every `gh pr list` was actually timing out. Debug took multiple hours of log archaeology before the timeout pattern was visible. | A soft-fail path is *expected*, not silent. Keep `logger.info("<helper> skipped: gh ... failed (%s)", exc)` — `INFO` (not `ERROR`) so it doesn't page on-call, but never *absent*. POLA: every fallback branch must be observable in logs. |
+| Re-plan issue without checking for an existing open or merged closing PR | Planner ran unconditionally for every open issue; only the implementer had the `find_pr_for_issue` skip-gate | Automation-loop burned ~5.5h opening duplicate/zombie PRs for issue #1357 while PR #1358 already closed it; planner re-planned the issue on each iteration and the implementer tried to open more PRs, each failing with 529 throttle errors | Plan and implement MUST share identical skip semantics. Add `find_pr_for_issue(issue)` at the top of the planning routine; if it returns a PR, SKIP — do not call the planning agent. |
+| Search only `--state open` PRs when checking for a closing PR | `find_pr_for_issue` queried `gh pr list --state open --search "Closes #N in:body"` | A merged PR with `Closes #N` was invisible; the issue stayed open and was re-implemented on every automation-loop iteration indefinitely | Also call `find_merged_closing_pr(issue)` against `--state merged`; if a merged closing PR exists and the issue is still open, close the issue with `gh issue close N --comment "Closed by merged PR #M"` — do not re-plan. |
+| Match a PR to an issue by the assumed `{issue}-auto-impl` branch name | Constructed `f"{issue_number}-auto-impl"` to identify the PR's head branch, then ran `git fetch origin {issue}-auto-impl` | Fails exit 128 when the PR was filed from a differently-named branch (e.g. bundle branch `1179-auto-impl` that closes multiple issues including #1360); the assumed branch does not exist on the remote | Always resolve the real head via `get_pr_head_branch(pr_number, repo)` which calls `gh pr view <pr> --json headRefName`; never construct the branch name from the issue number. |
 
 ## Results & Parameters
 
@@ -437,3 +556,4 @@ git fetch origin --quiet && \
 | ProjectKeystone | Merged-state write-direction divergence (PR #571 / branch `512-impl`, 2026-05-29) | Parallel `.issue_implementer` pushed a different implementation; caught before a clobbering push |
 | HomericIntelligence/ProjectHephaestus | Bulk PR-sync 504 + silent no-op + stale-classify (`fleet_sync`, PRs #1028/#1030, 2026-06-06) | Run listed 56 PRs and rebased 49 (7 genuine conflicts) |
 | HomericIntelligence/ProjectHephaestus | Symmetric 4-tuple soft-fail in `_discover_failing_prs` (issue #1096 → PR #1097, merged via PR #1151, 2026-06-10) | Widened narrow `(CalledProcessError, JSONDecodeError)` except to canonical `(CalledProcessError, TimeoutExpired, OSError, JSONDecodeError)` in `hephaestus/automation/ci_driver.py:491-498`; aligned with sister helper `loop_runner._count_failing_prs:684`; added 2 regression tests in `tests/unit/automation/test_ci_driver_failing_pr_discovery.py` (gh timeout + missing-binary). All checks passed first try (pre-commit, unit/integration tests on Python 3.10–3.13, pr-policy, auto-merge, CodeQL). |
+| HomericIntelligence/ProjectHephaestus | Planner skip-gate + merged-closing-PR detection + real-head-branch resolution (issue #1370 → PR #1373, 2026-06-15) | Fixed 3 root causes of ~5.5h zombie-PR churn against issues #1357/#1289/#1179: added `find_pr_for_issue` skip-gate to planner phase; added `find_merged_closing_pr` searching `--state merged` with exact-line `^Closes #N\b` regex; replaced assumed `{issue}-auto-impl` branch construction with `get_pr_head_branch(pr, repo)` via `gh pr view headRefName`. All CI checks passed (pr-policy, unit/integration, CodeQL). |

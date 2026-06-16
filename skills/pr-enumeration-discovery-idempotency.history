@@ -5,6 +5,60 @@
 This file preserves the full original content of every skill merged into the
 `pr-enumeration-discovery-idempotency` canonical.
 
+## v1.2.0 (2026-06-15)
+
+**Changed by:** ProjectHephaestus planner idempotency fix (PR #1373, issue #1370)
+**Verification:** verified-ci
+
+### What changed
+
+- Extended the `## When to Use` triggers: added planner-phase open-PR skip-gate
+  and merged-closing-PR detection + issue-close triggers.
+- Added 3 new `## Failed Attempts` rows:
+  - Re-plan issue without checking for an existing open/merged closing PR → duplicate PRs + 5.5h churn
+  - Search only open PRs for closing link → merged-closed issue re-implemented, never closes
+  - Match PR to issue by assumed `{issue}-auto-impl` branch → fetch fails / wrong worktree
+- Added `#### Planner skip-gate: call find_pr_for_issue before planning` subsection
+  under Verified Workflow describing the unified planner/implementer skip semantics.
+- Added `#### Merged closing-PR detection: find_merged_closing_pr` subsection
+  covering `find_merged_closing_pr(issue)` and `gh issue close` flow.
+- Added `#### Real head-branch resolution: always use get_pr_head_branch` subsection
+  replacing assumed `{issue}-auto-impl` with `gh pr view headRefName`.
+- Added new `## Verified On` row: ProjectHephaestus PR #1373 / issue #1370.
+- Frontmatter: `version: "1.1.0"` → `"1.2.0"`, `date: 2026-06-10` → `2026-06-15`,
+  new tags `planner-skip-gate`, `merged-closing-pr`, `find-merged-closing-pr`,
+  `real-head-branch`, `assumed-branch-name`.
+- Description: extended items with (10) planner open-PR skip-gate and
+  (11) merged-closing-PR closes-open-issue triggers.
+
+### Why
+
+The automation-loop output.log (2026-06-15) burned ~5.5 hours opening duplicate
+and zombie PRs for issue #1357 (and #1289/#1179) while a parallel PR #1358 had
+already closed it. Three compounding root causes: (1) the PLANNER phase had no
+open-PR skip-gate (the IMPLEMENTER phase already skipped issues with an existing
+open PR but the PLANNER ran first and re-planned the same issue — wasting an
+agent call and repeatedly failing on 529); (2) a MERGED closing-PR was not
+recognized because discovery only searched `--state open`, so the issue stayed
+open and got re-implemented; (3) the assumed branch name `{issue}-auto-impl` was
+used to fetch a PR's head branch, which fails when the PR was filed from a
+differently-named branch (e.g. `1179-auto-impl`). Fixes merged in PR #1373.
+
+### Previous version (v1.1.0) snapshot
+
+The full v1.1.0 content of `pr-enumeration-discovery-idempotency.md` is
+captured at the git commit immediately prior to the commit that introduced
+v1.2.0. The inline-diff of what changed between v1.1.0 and v1.2.0 is
+described in the "What changed" section above. The complete v1.1.0 text
+can be recovered via:
+
+```bash
+git log --oneline skills/pr-enumeration-discovery-idempotency.md | head -5
+git show <prior-sha>:skills/pr-enumeration-discovery-idempotency.md
+```
+
+---
+
 ## v1.1.0 (2026-06-10)
 
 **What changed:** Widened the `_discover_failing_prs` except tuple from the
