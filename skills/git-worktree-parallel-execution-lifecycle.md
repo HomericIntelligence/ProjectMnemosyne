@@ -16,11 +16,21 @@ description: "Use when: (1) creating isolated git worktrees for parallel agent e
   discarding the unstaged edits — recover by locating the WIP stash and re-applying into a fresh
   /tmp worktree, (15) deciding whether a CLOSED-PR branch with `git cherry` +1 is keepable
   unreleased work or merely superseded (content reached main via another PR, or the branch edits
-  since-deleted/renamed files) — investigate before keeping, don't assume cherry=+1 means keep."
+  since-deleted/renamed files) — investigate before keeping, don't assume cherry=+1 means keep,
+  (16) auditing a worktree-looking directory (especially under the host repo's build/.worktrees/
+  or a stray clone-within-a-repo at build/<OtherProject>) that may belong to a DIFFERENT
+  repository — confirm `git -C <dir> remote get-url origin` matches the current repo's remote
+  before touching it; a dir that shows up in a `git status` loop but is ABSENT from `git worktree
+  list` belongs to another clone and is OUT OF SCOPE, (17) distinguishing stale-checkout drift
+  (a big dirty diff full of `D`/`M` lines in a merged worktree that is redundant with main) from
+  real uncommitted work — prove redundancy with `git cat-file -e main:<file>` before discarding,
+  (18) a bulk `git reset --hard` / `git clean -fd` / `git worktree remove --force` across many
+  worktrees got safety-net-BLOCKED as 'Irreversible Local Destruction' — hand the exact per-worktree
+  commands to the user to run themselves rather than auto-executing."
 category: tooling
-date: 2026-05-28
-version: "1.2.0"
-verification: verified-ci
+date: 2026-06-15
+version: "1.3.0"
+verification: verified-local
 user-invocable: false
 history: git-worktree-parallel-execution-lifecycle.history
 tags: [worktree, git, parallel-agents, wave-execution, cleanup, branch-collision, contamination,
@@ -67,6 +77,10 @@ mass cleanup. Includes the critical "no-worktree-at-all" anti-pattern warning.
 - 20+ worktrees after parallel wave execution with mixed states
 - Locked worktrees from dead agent PIDs (myrmidon swarm sessions)
 - `git worktree remove --force` blocked by Safety Net
+- Auditing a worktree-looking directory that may belong to a DIFFERENT repo or a
+  clone-within-a-repo (e.g. `build/.worktrees/...`, `build/<OtherProject>`)
+- Distinguishing stale-checkout drift (redundant-with-main dirty diff) from real uncommitted work
+- A bulk `git reset --hard` / `git clean -fd` / `git worktree remove --force` got safety-net-blocked
 
 **Not suitable for:**
 
@@ -420,6 +434,62 @@ generate a 7-section script (`/tmp/<repo>-worktree-cleanup.sh`):
 - **§6 PRUNE** — `git worktree prune && git remote prune origin`
 - **§7 VERIFY** — `git worktree list` (expect 1); `git branch | wc -l` (unchanged)
 
+#### Cross-Repo & Stale-Drift Safety Checks (verified-local, ProjectHephaestus 2026-06-15)
+
+Three traps surfaced during a real `/worktree-cleanup` session. Run these BEFORE any destructive op.
+
+**(a) Cross-repo check — a worktree-looking dir may belong to ANOTHER repo.** A directory under
+the host repo's `build/.worktrees/` (e.g. `build/.worktrees/mnemo-skill-911`) was actually a
+worktree of a DIFFERENT repository, spawned from a stray clone-within-a-repo at
+`build/ProjectMnemosyne`. It did NOT appear in the host repo's `git worktree list` (different
+`.git`), yet showed up in a `git status` loop. A blind cleanup would have force-deleted genuine
+uncommitted work from another project.
+
+```bash
+# Before touching ANY worktree-looking directory, confirm it belongs to THIS repo:
+THIS_REMOTE=$(git remote get-url origin)
+DIR_REMOTE=$(git -C <dir> remote get-url origin 2>/dev/null)
+[ "$DIR_REMOTE" != "$THIS_REMOTE" ] && { echo "OUT OF SCOPE: $dir belongs to $DIR_REMOTE — never remove"; }
+# Red flag: a dir present in a `git status` loop but ABSENT from `git worktree list`
+# belongs to a different clone — leave it alone.
+```
+
+**(b) Redundancy proof — a big dirty diff in a MERGED worktree is usually stale-checkout drift.**
+Worktrees whose PRs are already MERGED showed huge dirty diffs full of `D` (deleted) and `M`
+lines (e.g. `D hephaestus/automation/_implement_phase.py`). These were NOT new work — the working
+tree had been edited toward a state main has long since passed. Prove redundancy before discarding:
+
+```bash
+gh pr list --head <branch> --state all     # MERGED = positive signal it's safe
+# For each "deleted" file in the dirty diff, check whether it STILL EXISTS on main:
+git cat-file -e main:<path> && echo "file exists on main → the local deletion is drift, not real"
+# Confirm untracked files are only automation artifacts:
+ls .claude-address-review-*.md .claude-followup-*.json followup-*.json 2>/dev/null
+```
+
+If `git cat-file -e main:<file>` succeeds for the "deleted" files, the deletion is local drift
+(redundant with main), not a change worth preserving.
+
+**(c) Safety-net-blocked bulk discard → hand the commands to the user.** Looping
+`git reset --hard HEAD` + `git clean -fd` across many worktrees the agent UNILATERALLY judged
+redundant was BLOCKED by the Claude Code auto-mode safety classifier as "Irreversible Local
+Destruction not cleared by the general cleanup request." `git worktree remove` also refuses a
+dirty worktree without `--force`, and `--force` is itself blocked. Resolution that worked: stop
+auto-executing and surface the per-worktree command block for the user to run via the `!` prefix.
+
+```text
+# Clean worktrees (dirty=0), including locked-by-dead-PID ones, CAN be removed automatically:
+git worktree unlock <path> && git worktree remove <path>      # no --force needed
+
+# Force-discard of dirty-but-redundant trees needs the USER's hands — print, do not run:
+#   (for each judged-redundant worktree)
+#   git -C <wt> reset --hard HEAD
+#   git -C <wt> clean -fd
+#   git worktree remove --force <wt>
+```
+
+Only the force-discard of dirty-but-redundant trees needs user hands; everything clean is automatic.
+
 #### Gitignore Hygiene (Phase 0.5)
 
 Run before cleanup operations to prevent re-accumulation:
@@ -545,6 +615,9 @@ gh api --method DELETE "repos/$REPO/git/refs/heads/<branch-name>"
 | Rebase of stale-PR branches without conflict pre-check | Attempted `git rebase origin/main` on closed-PR branches | All had conflicts — work was superseded | Run conflict pre-check before any rebase; conflicts on closed-PR = superseded, keep closed |
 | Haiku for Category B rebase+PR | Used Haiku for rebase+PR wave | Haiku wrote generic/inaccurate PR descriptions without analyzing the diff | Sonnet required for Category B: needs to read diff and write meaningful PR title/body |
 | Sequential Wave 2 myrmidon | Ran rebase+PR and conflict-check sequentially | Doubled time when both subtasks are fully independent | Run Wave 2a (Sonnet) and Wave 2b (Haiku) in parallel |
+| Treat a dir under `build/.worktrees/` as one of THIS repo's worktrees | About to clean `build/.worktrees/mnemo-skill-911`, which sat under the host repo's build dir | It was a worktree of a DIFFERENT repo (ProjectMnemosyne), spawned from a stray clone-within-a-repo at `build/ProjectMnemosyne`; it never appeared in the host repo's `git worktree list` (different `.git`); a blind cleanup would have force-deleted genuine uncommitted work from another project | Before touching any worktree-looking dir, run `git -C <dir> remote get-url origin` and confirm it matches THIS repo's remote; a dir in a `git status` loop but ABSENT from `git worktree list` belongs to another clone — OUT OF SCOPE, never remove |
+| Assume a big `D`/`M` dirty diff in a merged worktree is real work to preserve | Worktrees on already-MERGED PRs showed huge diffs full of `D hephaestus/automation/_implement_phase.py`-style deletions | The deletions were stale-checkout drift — the tree was edited toward a state main long since passed; the "deleted" files still exist on main, so the diff is redundant, not new work | Prove redundancy with `git cat-file -e main:<file>` for each "deleted" path (success = drift) + `gh pr list --head <branch> --state all` (MERGED = safe) + confirm untracked files are only `.claude-address-review-*.md`/`.claude-followup-*.json`/`followup-*.json` artifacts BEFORE discarding |
+| Auto-loop `git reset --hard HEAD` + `git clean -fd` across 14 unilaterally-judged-redundant worktrees | Tried to bulk-discard dirty-but-redundant trees in auto mode | Claude Code safety classifier BLOCKED it as "Irreversible Local Destruction not cleared by the general cleanup request"; `git worktree remove` also refuses dirty trees without `--force`, and `--force` is blocked too | Auto-remove only CLEAN worktrees (incl. locked-by-dead-PID: `git worktree unlock <p> && git worktree remove <p>`, no `--force`); for force-discard of dirty-but-redundant trees, STOP and print the exact per-worktree reset/clean/remove block for the USER to run via the `!` prefix |
 
 ## Results & Parameters
 
@@ -628,3 +701,4 @@ WORKTREE_PATH=$(git worktree list --porcelain 2>/dev/null | \
 | ProjectHephaestus | CLOSED+cherry=+1 superseded-branch refinement: `fix/strict-simplify-pr-site4-581-v2` (PR #586 CLOSED) looked keepable but its strict-rubric work was on main via #583/#585/#587 and it edited the since-split `prompts.py` — read-only branch-safety audit, recommendation to user (verified-local, NOT CI) | worktree-cleanup/tidy audit 2026-05-28 |
 | AchaeanFleet | Phase 0.5 gitignore hygiene (commit dcf3d43); `git status --short` clean after cleanup | 2026-04-25 |
 | ProjectOdyssey | `scripts/rebase-all-branches.sh` inline cleanup refactor (PR #5408) | 2026-05-14 |
+| ProjectHephaestus | Worktree-cleanup safety session: cross-repo hiding under `build/.worktrees/mnemo-skill-911` (belonged to ProjectMnemosyne via stray `build/ProjectMnemosyne` clone); stale-checkout drift on merged worktrees proven redundant via `git cat-file -e main:<file>`; bulk `reset --hard`/`clean -fd`/`remove --force` across 14 trees safety-net-blocked → handed per-worktree commands to user (verified-local, read-only audit + recommendation) | worktree-cleanup safety 2026-06-15 |

@@ -1,6 +1,65 @@
 <!-- markdownlint-disable MD024 -->
 # git-worktree-parallel-execution-lifecycle — History
 
+## v1.3.0 (2026-06-15)
+
+**Changed by:** ProjectHephaestus `/worktree-cleanup` safety session (real audit, read-only + hand-to-user)
+**Verification:** verified-local
+
+### What changed
+
+- Added a Verified Workflow subsection "Cross-Repo & Stale-Drift Safety Checks" inside Phase 6
+  capturing three real cleanup traps and their resolutions:
+  - **(a) Cross-repo check** — before touching any worktree-looking directory (especially under
+    `build/.worktrees/` or a stray clone-within-a-repo at `build/<OtherProject>`), confirm
+    `git -C <dir> remote get-url origin` matches THIS repo's remote; a dir present in a
+    `git status` loop but ABSENT from `git worktree list` belongs to another clone and is OUT OF
+    SCOPE — never remove.
+  - **(b) Redundancy proof** — a big `D`/`M` dirty diff in a MERGED worktree is usually
+    stale-checkout drift; prove it with `git cat-file -e main:<file>` (file still on main ⇒ the
+    local deletion is drift, not real work) plus `gh pr list --head <branch> --state all` (MERGED)
+    and confirming untracked files are only `.claude-address-review-*.md` / `.claude-followup-*.json`
+    / `followup-*.json` artifacts, BEFORE discarding.
+  - **(c) Safety-net-blocked bulk discard** — `git reset --hard` / `git clean -fd` /
+    `git worktree remove --force` looped across many unilaterally-judged-redundant worktrees is
+    blocked by the auto-mode safety classifier as "Irreversible Local Destruction"; auto-remove
+    only CLEAN trees (incl. locked-by-dead-PID via `git worktree unlock && git worktree remove`,
+    no `--force`), and HAND the exact per-worktree reset/clean/remove commands to the user (`!`
+    prefix) for the dirty-but-redundant force-discards.
+- Added 3 Failed Attempts rows (cross-repo dir misclassification; assuming merged-worktree drift
+  is real work; auto-looping bulk reset/clean across 14 trees → safety-net block).
+- Added 3 frontmatter `description` triggers: (16) cross-repo / clone-within-a-repo worktree audit,
+  (17) stale-drift vs real uncommitted work, (18) safety-net-blocked bulk discard → hand to user.
+- Added 3 "When to Use" Cleanup bullets mirroring the new triggers.
+- Added a Verified On row for the ProjectHephaestus worktree-cleanup safety session (2026-06-15).
+- Bumped version 1.2.0 → 1.3.0 (minor — new findings + new triggers; no breaking changes). Skill
+  `date` → 2026-06-15; skill-level `verification` → `verified-local` (the new findings come from a
+  read-only audit + recommendation-to-user session, not a CI-validated change).
+
+### Why
+
+A real ProjectHephaestus `/worktree-cleanup` session surfaced three pitfalls the prior skill did
+not cover. (1) A directory under the host repo's `build/.worktrees/` was actually a worktree of a
+DIFFERENT repository (ProjectMnemosyne, via a stray `build/ProjectMnemosyne` clone-within-a-repo);
+it never appeared in the host repo's `git worktree list`, so a blind cleanup would have
+force-deleted genuine uncommitted work from another project. (2) Worktrees on already-merged PRs
+showed huge dirty diffs full of `D`/`M` lines that LOOKED like real work but were stale-checkout
+drift redundant with main — provable via `git cat-file -e main:<file>`. (3) Looping
+`git reset --hard` + `git clean -fd` across 14 judged-redundant worktrees was safety-net-blocked
+as irreversible local destruction, and `git worktree remove --force` is likewise blocked; the
+working resolution was to remove only clean trees automatically and hand the force-discard
+commands to the user. These are captured as a new safety-checks subsection, three Failed Attempts
+rows, and three new triggers.
+
+### Previous version (v1.2.0) snapshot
+
+See `git show HEAD:skills/git-worktree-parallel-execution-lifecycle.md` at the commit prior to
+this amendment for the complete pre-amendment snapshot (the rest of the file is unchanged; this
+amendment only ADDS the Phase 6 safety-checks subsection, 3 Failed Attempts rows, 3 triggers,
+1 Verified On row, and the When-to-Use bullets).
+
+---
+
 ## v1.2.0 (2026-05-28)
 
 **Changed by:** ProjectHephaestus worktree-cleanup + tidy leftover-branch audit
