@@ -480,8 +480,8 @@ green, CI `ruff-format` still failed).
 
 #### `check-toml` is required for duplicate TOML tables
 
-TOML parse failures can abort CI before tests or lint even start. In Inference360 PR
-#157, dependency setup failed because `pyproject.toml` had a duplicate
+TOML parse failures can abort CI before tests or lint even start. In Inference360
+PR #157, dependency setup failed because `pyproject.toml` had a duplicate
 `[tool.coverage.paths]` table. Ruff did not catch this because it operates on Python
 lint/format surfaces, not TOML table semantics. The correct pre-commit surface is
 `check-toml` from `pre-commit/pre-commit-hooks`, with a focused regression test that
