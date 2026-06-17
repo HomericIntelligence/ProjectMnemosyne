@@ -1,9 +1,9 @@
 ---
 name: parallel-pr-worktree-workflow
-description: "Use when: (1) launching 2+ parallel rebase agents that need isolated git state to avoid branch collision, (2) implementing 5+ independent fixes in parallel PRs using git worktrees, (3) bulk-merging skill PRs with CI fixes and conflict resolution, (4) batching 10+ PRs across parallel sub-agents for maximum throughput, (5) launching >=2 concurrent sub-agents that each commit/push to the same git repo, (6) sub-agents report file bleed-over or unexpected `git checkout` reverts mid-task, (7) RESCUE pattern when parallel dispatch across distinct branches has already produced cross-contaminated commits — consolidate worker PRs into ONE branch via cherry-pick and close individual PRs, (8) doing ANY multi-fix work in a shared checkout that a concurrent foreign session/automation may also touch — use dedicated worktrees from the start so a foreign session cannot move your HEAD/branch, (9) arming auto-merge on a STACKED PR (base is another open/feature branch) — retarget to main BEFORE arming or it squash-merges into the intermediate base and can ORPHAN the change, (10) recovering an orphaned stacked merge (PR state=MERGED but content stranded on a dead intermediate branch) via cherry-pick onto a fresh main branch."
+description: "Use when: (1) launching 2+ parallel rebase agents that need isolated git state to avoid branch collision, (2) implementing 5+ independent fixes in parallel PRs using git worktrees, (3) bulk-merging skill PRs with CI fixes and conflict resolution, (4) batching 10+ PRs across parallel sub-agents for maximum throughput, (5) launching >=2 concurrent sub-agents that each commit/push to the same git repo, (6) sub-agents report file bleed-over or unexpected `git checkout` reverts mid-task, (7) RESCUE pattern when parallel dispatch across distinct branches has already produced cross-contaminated commits — consolidate worker PRs into ONE branch via cherry-pick and close individual PRs, (8) doing ANY multi-fix work in a shared checkout that a concurrent foreign session/automation may also touch — use dedicated worktrees from the start so a foreign session cannot move your HEAD/branch, (9) arming auto-merge on a STACKED PR (base is another open/feature branch) — retarget to main BEFORE arming or it squash-merges into the intermediate base and can ORPHAN the change, (10) recovering an orphaned stacked merge (PR state=MERGED but content stranded on a dead intermediate branch) via cherry-pick onto a fresh main branch, (11) triaging GitHub PR CI where current-head checks are stale, absent, or blocked by merge conflicts — inspect job logs plus PR rollup/mergeability before editing and use one worktree per PR branch."
 category: ci-cd
-date: 2026-06-14
-version: "1.4.0"
+date: 2026-06-17
+version: "1.5.0"
 user-invocable: false
 verification: verified-ci
 history: parallel-pr-worktree-workflow.history
@@ -20,8 +20,9 @@ tags: []
 | **Outcome** | Consolidated from 4 source skills |
 
 **See also:** `tooling-stage-only-your-own-files-in-shared-worktree` (the staging-scope companion
-when a worktree is shared or dirty), `git-worktree-parallel-execution-lifecycle`, and
-`parallel-agent-swarm-dispatch-patterns`.
+when a worktree is shared or dirty), `git-worktree-parallel-execution-lifecycle`,
+`parallel-agent-swarm-dispatch-patterns`, and
+`pr-ci-failure-triage-preexisting-vs-introduced`.
 
 ## When to Use
 
@@ -30,10 +31,15 @@ when a worktree is shared or dirty), `git-worktree-parallel-execution-lifecycle`
 - Safety Net blocks `git branch -D` or `git reset --hard` in the shared working tree
 - Implementing 5+ independent fixes in parallel, each with its own PR
 - Bulk-merging accumulated skill PRs (10+) with a mix of passing/failing CI
+- Delegating fixes for several failing GitHub PRs where each branch needs separate log triage,
+  focused tests, pushes, and current-head CI polling
 - Main conversation needs to commit while background agents are running
 - Issues are independent (not interdependent) and benefit from parallel development
 - **(v1.3.0, verified-local)** ANY other session/automation may touch the shared checkout — do ALL multi-fix work in dedicated worktrees from the start, never in the primary checkout. A concurrent foreign session can move your branch and commit under you (see Phase 3c)
 - **(v1.4.0, verified-local)** Arming auto-merge on a STACKED PR (one whose base is another open/feature branch). RETARGET to `main` first — arming a still-stacked PR squash-merges it into the intermediate base, NOT main, and can ORPHAN the change if that base is later closed unmerged (see Phase 3d)
+- **(v1.5.0, verified-ci)** `gh pr checks` shows stale failures, or a required `validate`
+  check disappears after a push. Inspect PR rollup, commits, mergeability, and rebase conflicted
+  branches before assuming the workflow was skipped (see Phase 1b).
 
 **Do NOT use when:**
 - Issues are interdependent (use sequential PRs from `batch-pr-rebase-conflict-resolution-workflow`)
@@ -87,6 +93,66 @@ done
 **Note**: With `strict: false` on branch protection, PRs don't need to be up-to-date with main before merging. Merge all without rebasing between each one.
 
 **Watch for**: `GraphQL: Pull Request is not mergeable` — PR became conflicted during batch. Handle in Phase 4.
+
+### Phase 1b (v1.5.0, verified-ci): Current-Head CI Triage Before Editing
+
+When rescuing multiple failing PRs, do the GitHub diagnosis before editing any branch. A stale
+red check from an older SHA can send the wrong sub-agent to the wrong file, and an absent
+`validate` run can mean GitHub could not create the pull-request merge ref because the PR is
+conflicted.
+
+```bash
+REPO=LLM360/Inference360
+PR=149
+
+# 1. Get the visible check summary, then open the real failing job log.
+gh pr checks "$PR" --repo "$REPO"
+gh run view --repo "$REPO" --job <job-id> --log
+
+# 2. Confirm the check rollup belongs to the current PR head and inspect mergeability.
+gh pr view "$PR" --repo "$REPO" \
+  --json headRefName,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,commits \
+  --jq '{branch:.headRefName, head:.headRefOid, mergeable, mergeStateStatus,
+         latestCommit:(.commits[-1].oid // null),
+         checks:[.statusCheckRollup[] | {name,state,conclusion,detailsUrl}]}'
+```
+
+Interpretation:
+
+- `gh run view --job --log` names the actual failing gate. Fix that, not the first nearby
+  symptom in the PR diff.
+- If the latest current-head `validate` check fails on Ruff, fix formatting or undefined names
+  first, push, then expect the next gate (often coverage) to surface.
+- If `validate` is missing after a push and the PR reports `mergeable: CONFLICTING`, rebase the
+  branch. The workflow is not skipped; GitHub cannot synthesize the pull-request merge ref.
+
+Per-PR worktree recovery:
+
+```bash
+PR=149
+BRANCH=feat/endpoint-status
+WT=/tmp/inference360-pr-$PR
+
+git fetch origin master "$BRANCH"
+git worktree add -B "$BRANCH" "$WT" "origin/$BRANCH"
+cd "$WT"
+git rebase origin/master
+# Resolve conflicts, run focused tests, then:
+git push --force-with-lease origin HEAD:"$BRANCH"
+```
+
+Delegation shape:
+
+1. Create or reuse exactly one worktree per PR branch.
+2. Give each sub-agent only its PR number, branch, failing check log, expected local tests, and
+   the instruction not to touch the main checkout or other worktrees.
+3. After each push, the parent session polls `gh pr checks` and validates with `gh pr view
+   --json headRefOid,mergeable,mergeStateStatus,statusCheckRollup,commits`.
+4. Stop only when GitHub shows checks for the current head SHA and the required gate is green.
+
+Full local suites can fail for environment reasons (`portpicker.NoFreePortFoundError`, broken
+`just`, submodule HEAD mismatch). Record those separately, but use focused tests plus GitHub CI
+as the source of truth for the PR rescue.
 
 ### Phase 2: Plan Dependency Groups for Parallel Work
 
@@ -721,6 +787,10 @@ gh issue close <issue-number> --comment "Fixed in PR #<number>"
 | Branch all N fixes off main when they share a common blocker (ProjectHephaestus, 2026-06-13, verified-local) | Created all N fix worktrees off `main` when every fix needed the same prerequisite (a repo-wide format-drift fix) | Every commit was blocked by the unfixed shared prerequisite — pre-commit reformatted untouched files and failed each commit | Land the prerequisite as its OWN PR first, branch each fix off the prereq branch, target each PR with `--base <prereq-branch>`; GitHub auto-retargets to main once the prereq merges (Phase 3b) |
 | Arm auto-merge on a stacked PR still based on an intermediate branch (ProjectHephaestus, 2026-06-14, verified-local) | Ran `gh pr merge --auto --squash` on a PR whose base was still an intermediate feature branch (`chore-ruff-format-drift`) rather than `main` | GitHub fired the merge against the INTERMEDIATE base the moment it was eligible — squashed the change onto the intermediate branch; that base belonged to a CLOSED PR, so the change was ORPHANED from main (PR showed `state=MERGED` but content was on a dead branch) | Retarget the dependent to `main` and confirm the base content is ALREADY on main BEFORE arming (`gh pr edit N --base main`, rebase onto main, THEN `--auto --squash`). Never arm a PR whose base you intend to close/abandon (Phase 3d) |
 | Assume GitHub auto-retargets a stacked PR to main when its base closes (ProjectHephaestus, 2026-06-14, verified-local) | Expected the dependent PR to retarget to `main` automatically once its base branch's PR was closed | GitHub only auto-retargets when the base PR actually MERGES; a CLOSED (unmerged) base STRANDS the dependent, and after it merges into the dead base `gh pr edit --base main` fails with "Cannot change the base branch of a closed pull request" | Retarget dependents to `main` manually BEFORE the base is closed; if already orphaned, recover by cherry-picking the orphaned SHA onto a fresh main branch and opening a NEW PR (Phase 3d recovery) |
+| Treat the first Ruff failure as the complete PR fix (LLM360/Inference360, 2026-06-17, verified-ci) | Fixed Ruff format and `F821` undefined-name failures in the first `validate` log, then expected CI to go green | The next current-head `validate` run failed coverage because the new script had too little direct test coverage | After each push, poll current-head CI again. A first failure can mask the next gate; add focused tests for newly introduced scripts or behavior before declaring the PR rescued |
+| Trust stale `gh pr checks` output after a force-push (LLM360/Inference360, 2026-06-17, verified-ci) | Read `gh pr checks` as the live truth even though it still showed failed `validate` runs from earlier SHAs | The visible failure did not necessarily apply to the current head commit | Use `gh pr view --json headRefOid,mergeable,mergeStateStatus,statusCheckRollup,commits` to connect check state to the current PR head before assigning or editing |
+| Assume a missing `validate` check means the workflow was skipped (LLM360/Inference360, 2026-06-17, verified-ci) | Waited for a current-head `validate` run that never appeared after pushing fixes | The PR was `mergeable: CONFLICTING`; GitHub could not create the `pull_request` merge ref, so the required validate workflow never started | Inspect mergeability when a required check disappears. Rebase the branch onto current `origin/master`, resolve conflicts in its worktree, then `git push --force-with-lease`; validate appears after the merge ref is synthesizeable |
+| Treat the full local suite as the single source of truth (LLM360/Inference360, 2026-06-17, verified-ci) | Tried to use the entire local suite as the final readiness signal while fixing PR branches | Local environment failures such as `portpicker.NoFreePortFoundError`, broken `just`, or submodule HEAD mismatch were not the PR's CI gate | Run focused tests that cover the edited surface locally, record unrelated environment failures, and use current-head GitHub CI as the PR rescue source of truth |
 
 ## Results & Parameters
 
@@ -754,6 +824,36 @@ for pr in <SPACE_SEPARATED_PR_NUMBERS>; do
   echo "PR #$pr: $(gh pr view $pr --json state --jq '.state')"
 done
 ```
+
+### Current-Head CI Rescue Parameters (v1.5.0)
+
+```bash
+# One PR branch per isolated worktree.
+git fetch origin master <pr-branch>
+git worktree add -B <pr-branch> /tmp/<repo-stem>-pr-<number> origin/<pr-branch>
+
+# Identify the real failing gate, not just the first red summary line.
+gh pr checks <number> --repo <org/repo>
+gh run view --repo <org/repo> --job <job-id> --log
+
+# Verify the rollup applies to the current head and diagnose missing checks.
+gh pr view <number> --repo <org/repo> \
+  --json headRefName,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,commits
+
+# If validate disappears because the PR is conflicted:
+cd /tmp/<repo-stem>-pr-<number>
+git rebase origin/master
+git push --force-with-lease origin HEAD:<pr-branch>
+```
+
+Inference360 branch mapping from the verified session:
+
+| PR | Branch | Final CI result |
+| --- | --- | --- |
+| #149 | `feat/endpoint-status` | All GitHub checks passed at `c8b7a06`; PR open and mergeable clean |
+| #155 | `claude-config` | All GitHub checks passed at `23fe471`; PR open and mergeable clean |
+| #156 | `code-cleanup` | CI validate passed at `66db8ac`; PR merged |
+| #157 | `move-inference360-module` | CI passed after TOML coverage config fix; PR merged |
 
 ### Agent Configuration
 
@@ -815,3 +915,4 @@ executor: haiku      # Simple rebase, pre-commit fixes
 | ProjectOdyssey | Phase G EASY-tier 8-issue swarm consolidation, PR #5363 (2026-05-09). Eight cross-contaminated worker PRs collapsed into one consolidation branch via cherry-pick; individual worker PRs closed-not-merged; 67/68 substantive checks green. | Phase 10b RESCUE pattern (v1.2.0) |
 | ProjectHephaestus | output.log root-cause fixes, 2026-06-13 (verified-local). 6 root-cause fix PRs shipped as a stack — a shared format-drift prerequisite landed first, 5 independent fixes dispatched to 5 parallel sub-agents in dedicated worktrees branched off the prereq (one stacked on another fix). Surfaced a concurrent foreign-session hijack of the shared main checkout (recovered via patch-export + fresh worktree) and CC Safety-Net friction on `git checkout --` / `git branch -D` / `git stash drop`. Zero cross-contamination across the 5 worktree agents. | Phase 3b/3c + Dispatch Hygiene + Safety-Net Friction (v1.3.0) |
 | ProjectHephaestus | /myrmidon-swarm driving a stack of PRs to merge, 2026-06-14 (verified-local). Two PRs (RC2, RC6) were armed for auto-merge while still based on intermediate branches. They squash-merged into those intermediate bases, NOT main. RC6 folded harmlessly into an open base PR; RC2's base (`chore-ruff-format-drift`) was a CLOSED PR, so RC2's change was ORPHANED from main (`state=MERGED`, content on a dead branch). Recovered RC2 by cherry-picking the orphaned SHA onto a fresh main branch (`git cherry-pick -S`) and opening a NEW PR to main. Confirmed GitHub only auto-retargets stacked PRs when the base MERGES, not when it closes unmerged. | Phase 3d stacked-PR auto-merge hazard + orphan recovery (v1.4.0) |
+| LLM360/Inference360 | GitHub PR CI rescue session, 2026-06-17. Four failing PRs (#149 `feat/endpoint-status`, #155 `claude-config`, #156 `code-cleanup`, #157 `move-inference360-module`) were fixed in isolated PR worktrees using log-first triage, focused local tests, and current-head CI polling. #149/#155 needed rebase after `validate` disappeared because `mergeable: CONFLICTING` prevented the pull-request merge ref; #156/#157 merged after CI passed. | Phase 1b current-head CI triage + per-PR worktree rescue (v1.5.0, verified-ci) |
