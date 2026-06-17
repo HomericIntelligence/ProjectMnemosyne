@@ -1,11 +1,12 @@
 ---
 name: ci-transient-flake-and-environment-failures
-description: "Use when: (1) a CI job fails non-deterministically and re-running resolves it (e.g. Trivy install.sh curl-pipe exit-1, lychee link-check 403/connection-reset from bot-blocking sites), (2) CI passes locally 100% but fails in GitHub Actions and you need a reproduction strategy that covers cold pixi cache + UID mismatch + no-TTY simultaneously, (3) a CI job is failing because a doctor/health-check script validates developer-local resources absent in GitHub Actions runners."
+description: "Use when: (1) a CI job fails non-deterministically and re-running resolves it (e.g. Trivy install.sh curl-pipe exit-1, lychee link-check 403/connection-reset from bot-blocking sites), (2) CI passes locally 100% but fails in GitHub Actions and you need a reproduction strategy that covers cold pixi cache + UID mismatch + no-TTY simultaneously, (3) a CI job is failing because a doctor/health-check script validates developer-local resources absent in GitHub Actions runners, (4) a dependency-install step stays in_progress far beyond the repo's baseline before tests start, such as Playwright browser install or Python package install hangs."
 category: ci-cd
-date: 2026-06-07
-version: "1.0.0"
+date: 2026-06-17
+version: "1.1.0"
 user-invocable: false
 history: ci-transient-flake-and-environment-failures.history
+verification: verified-ci
 tags:
   - ci
   - github-actions
@@ -24,6 +25,11 @@ tags:
   - git-hooks
   - ci-guard
   - environment-detection
+  - playwright
+  - pip-install
+  - dependency-install
+  - runner-hang
+  - gh-run-rerun
 ---
 
 # CI Transient Flake and Environment Failures
@@ -32,10 +38,11 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-07 |
-| **Objective** | Diagnose and resolve CI failures that are transient network flakes (Trivy install, lychee link-check) or environment-only (passes locally, fails in GHA) — without reaching for banned suppressions. |
-| **Outcome** | Verified across ProjectAgamemnon (#368), ProjectOdyssey (#5347), ProjectOdyssey local repro, and ProjectMyrmidons (#350). |
+| **Date** | 2026-06-17 |
+| **Objective** | Diagnose and resolve CI failures that are transient network flakes, environment-only, developer-local health checks, or dependency-install hangs before tests start - without reaching for banned suppressions. |
+| **Outcome** | Verified across ProjectAgamemnon (#368), ProjectOdyssey (#5347), ProjectOdyssey local repro, ProjectMyrmidons (#350), and Radiance (#897/#904). |
 | **Verification** | verified-ci |
+| **History** | Previous v1.0.0 snapshot archived in `ci-transient-flake-and-environment-failures.history` |
 
 ## When to Use
 
@@ -44,6 +51,7 @@ tags:
   - **Lychee link-check flake**: HTTP 403 on `claude.ai` / `platform.claude.com` / `code.claude.com` (bot-blocking), or `os error 104` (connection reset) on `contributor-covenant.org` and similar community sites.
 - Tests pass locally 100% but fail consistently in CI, and you need to replicate the three CI conditions (cold pixi cache + UID mismatch + no-TTY) simultaneously.
 - A doctor / health-check / preflight script (`scripts/doctor.sh`, `just doctor`) exits 1 in CI because it validates developer-local resources (`.git/hooks/`, SSH keys, local config) absent on GHA runners.
+- A GitHub job API response shows a dependency-install step such as `Install Playwright Chromium for browser smoke tests`, `Install backend coverage dependencies`, `Install backend runtime and test dependencies`, or `Install focused regression dependencies` remains `in_progress` far beyond the latest green baseline while the test step is still pending.
 - You are tempted to add `|| true` or `continue-on-error: true` to silence a flake — STOP, those are policy-banned.
 
 ## Verified Workflow
@@ -76,6 +84,21 @@ if [[ "${CI:-}" == "true" ]]; then
     warn "<check name> skipped in CI" "<reason: dev-local only>"
     return
 fi
+
+# --- Dependency-install hang before tests start ---
+gh api repos/<owner>/<repo>/actions/jobs/<job_id> \
+  --jq '{status:.status,steps:[.steps[]|{name,status,started_at,completed_at}]}'
+
+# Compare against a latest green main/PR job before deciding whether to wait.
+gh api repos/<owner>/<repo>/actions/runs/<main_run_id>/jobs \
+  --jq '.jobs[] | select(.name=="tests-frontend") | {status,conclusion,started_at,completed_at,steps}'
+
+# If the install path invokes optional OS package work but the runner already has deps:
+npx --no-install playwright install chromium
+
+# If the same install path passed elsewhere and this run is stuck:
+gh run cancel <run_id> --repo <owner/repo>
+gh run rerun <run_id> --repo <owner/repo>
 ```
 
 ### Detailed Steps
@@ -206,6 +229,32 @@ fi
 
    Categories of checks needing CI guards: git hooks, SSH infrastructure, local config files, pre-commit install state, GPG signing setup, editor/IDE config.
 
+#### E. Dependency-install step hangs before tests start
+
+1. **Use the job API, not just logs.** In-progress jobs may return unavailable log
+   blobs, but `gh api repos/<owner>/<repo>/actions/jobs/<job_id>` still reports
+   each step's `status`, `started_at`, and `completed_at`. If the test step is
+   pending, do not debug the tests yet.
+
+2. **Compare against a recent green baseline.** Pull the same job from the latest
+   green main or sibling PR run. A dependency-install step running for 10-15 minutes
+   when the baseline is seconds is a runner/install hang, not slow tests.
+
+3. **Simplify optional install work when the command is the variable.** For
+   Playwright, `playwright install --with-deps chromium` can enter an apt/system
+   dependency path that is not needed when the runner image already has system
+   dependencies. Prefer `playwright install chromium` (or `npx --no-install
+   playwright install chromium`) only after verifying the browser smoke tests still
+   pass in fresh CI.
+
+4. **Cancel and rerun proven transient install hangs.** If identical dependency
+   install paths passed on main, sibling jobs, or a subsequent PR attempt, cancel the
+   stuck run and rerun it on a fresh runner instead of waiting indefinitely.
+
+5. **Only edit code/tests after reproduction.** If the rerun reaches the test step
+   and fails deterministically with logs, treat that as a real code/test failure.
+   Until then, classify the problem as pre-test infrastructure.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -219,6 +268,10 @@ fi
 | Declare crash "non-reproducible locally" with warm cache + UID 1000 | 10 parallel agents ran the test locally; all passed | Warm cache + matching UID + TTY don't replicate CI | Never declare "passes locally" without identical conditions; replicate ALL three at once |
 | Fix one CI condition at a time | Tried only cold cache, or only UID mismatch | Each condition alone may not trigger the crash; all three together are required | Replicate cold cache + UID mismatch + no-TTY simultaneously |
 | Conclude "non-deterministic JIT flakiness" from the summary line | Read only `execution crashed`, not the full trace | The real cause (permission error) was in the stack trace | Always read the complete stack trace before forming a hypothesis |
+| Fetch live logs for an in-progress install step | Tried to read logs while the job was still running | GitHub returned unavailable log blobs; the test step had not started | Use the job API step list to identify the stuck in-progress step and pending test steps |
+| Debug tests before dependency install completed | Treated the failing check as a test failure | The test command never ran, so editing tests or assertions could not affect the failure | Classify pre-test dependency-install hangs separately from deterministic test failures |
+| Keep `playwright install --with-deps chromium` after a long CI hang | Waited on the apt/system dependency path even though the runner baseline installed browsers in seconds | The optional `--with-deps` path was the variable and could hang before browser smoke tests started | If runner system deps are already adequate, install the pinned browser only and verify fresh CI |
+| Wait indefinitely on Python dependency install hangs | Assumed enough time would eventually produce logs | The same install path passed on a fresh runner attempt; the stuck attempt consumed CI time without new evidence | After proving a pre-test install hang is transient, cancel and rerun on a fresh runner |
 
 ## Results & Parameters
 
@@ -275,6 +328,16 @@ if [[ "${CI:-}" == "true" ]]; then ...  # skip developer-local checks
 
 `.git/hooks/` is absent on: GitHub Actions runners (all OS), GitLab shallow clones, any `git clone --depth=1` / `actions/checkout`, Docker-copied repos. It IS present after `pre-commit install`, on full clones, or in CI jobs that explicitly run `pre-commit install`.
 
+### Dependency-install hang - Radiance facts
+
+| Fact | Detail |
+|------|--------|
+| Playwright install hang | PR #897 first CI attempt had `Install Playwright Chromium for browser smoke tests` stuck for 15+ minutes while the latest green `master` baseline completed the same job in seconds |
+| Durable frontend fix | Replaced `playwright install --with-deps chromium` with `playwright install chromium`; fresh CI installed in about 12 seconds and browser smoke passed |
+| Python coverage install hang | Original Dependabot PR #890 had coverage dependency install hang before tests; canceling and rerunning produced a green second attempt |
+| Backend dependency install hangs | PR #904 attempt 1 had backend dependency-install jobs stuck before tests; canceling and rerunning produced a green second attempt |
+| Classification rule | When the stuck step is dependency installation and test steps are pending, do not edit tests until a fresh run reaches the test command and fails deterministically |
+
 ## Verified On
 
 | Project | Context | Details |
@@ -283,3 +346,4 @@ if [[ "${CI:-}" == "true" ]]; then ...  # skip developer-local checks
 | ProjectOdyssey | 2026-05-03 — PR #5347/#5348 link-check session | `claude.ai` (403) and `contributor-covenant.org` (os error 104) fixed by `.lycheeignore` entries |
 | ProjectOdyssey | Reproducing `fortify_fail_abort` crash declared non-reproducible in `jit-fortify-buffer-overflow.md` | Cold cache + UID 1001 + `-T` flag combined triggered the crash 100% deterministically |
 | ProjectMyrmidons | PR #350 | `scripts/doctor.sh` Check 4 failed `just doctor --skip-connectivity` in CI; `${CI:-}` guard fixed it |
+| Radiance | PRs #897/#904, 2026-06-17 | Playwright `--with-deps` install hang resolved by browser-only install; Python dependency-install hangs cleared by cancel/rerun after API step-state polling showed tests had not started |
