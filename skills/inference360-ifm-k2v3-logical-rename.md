@@ -79,7 +79,7 @@ just validate
 | Rename every old token everywhere | Bulk replacement included checkpoint and PerfHC storage strings | External storage paths still physically contained k2v3, so rewritten jobs would point at paths that did not exist | Treat logical identifiers and physical storage locations as different classes of data. Preserve real paths unless storage has actually moved. |
 | Placeholder tokens containing K2V3 | Protected strings used placeholders like `@@K2V3_PROTECTED_...@@` before a bulk rewrite | The placeholder itself contained the target token and was transformed, making restoration fail | Use neutral placeholder tokens with no old or new name in them, or restore from `HEAD` before continuing. |
 | Adjacent string literal stale-token guard | A test tried to avoid embedding the stale token by writing adjacent string literals | Ruff can collapse adjacent string literals back into the exact old token, defeating the guard's intent | Use explicit concatenation, for example `"k2" + "v3"` and `"k2" + "_v3"`. |
-| Filename audit skipped | Content was updated but old filenames were not checked separately | A repo-wide content grep does not prove tracked filenames were renamed | Run `git ls-files | rg 'k2v3|K2V3|K2v3|k2_v3'` and require no matches. |
+| Filename audit skipped | Content was updated but old filenames were not checked separately | A repo-wide content grep does not prove tracked filenames were renamed | Run the tracked-filename stale-name audit from Quick Reference and require no matches. |
 
 ## Results & Parameters
 
