@@ -12,7 +12,7 @@ description: >-
   current trunk using git diff --binary plus git apply --index.
 category: tooling
 date: 2026-06-18
-version: "1.3.0"
+version: "1.3.1"
 user-invocable: false
 verification: verified-ci
 history: git-branch-state-triage-and-recovery.history
@@ -486,32 +486,36 @@ branches, because they touch a narrow region the remote version differs in only 
 
 ### State D — Follow-up branch from validated local amendment
 
-Concrete verified values from the Inference360 recovery:
+Generic verified parameter map from the follow-up branch recovery:
 
 | Parameter | Value |
 | --------- | ----- |
-| Old PR | LLM360/Inference360 PR #160 |
-| Old branch | `feat/simplify-control-interface` |
-| Local validated amended commit | `530bd3114d4ae62c01d4ac11729ff4a86fab6706` |
-| Old PR head SHA reported by GitHub | `858e302` |
-| Trunk commit containing the merged simplification | `61304b9` on `origin/master` |
-| Patch file | `/tmp/inference360-ifm-rename.patch` |
-| Follow-up branch | `feat/ifm-naming` |
-| Follow-up PR | LLM360/Inference360 PR #161 |
-| Verification | `verified-ci` — PR #161 auto-merged after CI passed |
+| Old PR | `<repo> PR <old-pr-number>` |
+| Old branch | `<old-branch>` |
+| Local validated amended commit | `<validated-commit-sha>` |
+| Old PR head SHA reported by GitHub | `<old-pr-head-sha>` |
+| Trunk commit containing the merged work | `<trunk-commit-sha>` on `origin/<trunk>` |
+| Patch file | `/tmp/<followup-topic>.patch` |
+| Follow-up branch | `<followup-branch>` |
+| Follow-up PR | `<repo> PR <followup-pr-number>` |
+| Verification | `verified-ci` after follow-up PR checks passed |
 
 Copy-paste sequence used:
 
 ```bash
-git fetch origin master
-git diff --stat origin/master 530bd3114d4ae62c01d4ac11729ff4a86fab6706
-git diff --binary origin/master 530bd3114d4ae62c01d4ac11729ff4a86fab6706 \
-  --output=/tmp/inference360-ifm-rename.patch
-git switch -c feat/ifm-naming origin/master
-git apply --index /tmp/inference360-ifm-rename.patch
-git diff --quiet 530bd3114d4ae62c01d4ac11729ff4a86fab6706 -- .
-git commit -m "refactor: align IFM naming"
-git push -u origin feat/ifm-naming
+TRUNK="master"
+VALIDATED_COMMIT="<validated-commit-sha>"
+FOLLOWUP_BRANCH="<followup-branch>"
+PATCH_FILE="/tmp/<followup-topic>.patch"
+
+git fetch origin "$TRUNK"
+git diff --stat "origin/$TRUNK" "$VALIDATED_COMMIT"
+git diff --binary "origin/$TRUNK" "$VALIDATED_COMMIT" --output="$PATCH_FILE"
+git switch -c "$FOLLOWUP_BRANCH" "origin/$TRUNK"
+git apply --index "$PATCH_FILE"
+git diff --quiet "$VALIDATED_COMMIT" -- .
+git commit -m "refactor: apply follow-up change"
+git push -u origin "$FOLLOWUP_BRANCH"
 ```
 
 ## Verified On
@@ -524,7 +528,7 @@ git push -u origin feat/ifm-naming
 | ProjectOdyssey | PR #3197, issue #3088 — BF16 test skip; reset to remote (13 remote-only commits) + cherry-pick fix | State C |
 | ProjectHephaestus | 7 local branches all failed auto-rebase with conflicts; `git cherry` showed every commit `+`. Message-search proved all subsumed: `999-fix-pr-thread-reply-mutation`→`187720a … (#1041)`, `fix-1282-work`→`22fc435 … (#1282)`, `rc2-conflict-gate`→`d3701b8 … (#1335)`. Reported subsumed; no swarm, no delete | State A — squash-merge false positive |
 | ProjectHephaestus | Worktree `agent-a7fe2df2b7f6e658b` — 3 "uncommitted modified" files all 0 unique lines vs main (`log_on_error` changes already merged via PR #1372); safe to discard | State A — worktree 0-unique-lines |
-| LLM360/Inference360 | PR #160 auto-merged before follow-up IFM rename changes could be force-pushed; old remote branch was gone, local amended commit `530bd3114d4ae62c01d4ac11729ff4a86fab6706` was converted into follow-up branch `feat/ifm-naming`; PR #161 opened and auto-merged after CI passed | State D — already-merged PR follow-up branch |
+| LLM360/Inference360 | An auto-merged PR merged before follow-up changes could be force-pushed; the old remote branch was gone, and a validated local amended commit was converted into a clean follow-up branch from current trunk; the follow-up PR auto-merged after CI passed | State D — already-merged PR follow-up branch |
 
 ## References
 

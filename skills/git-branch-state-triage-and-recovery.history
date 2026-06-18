@@ -2,24 +2,37 @@
 
 # History: git-branch-state-triage-and-recovery
 
+## v1.3.1 (2026-06-18)
+
+**Changed by:** Generic wording cleanup for already-merged PR follow-up branch recovery
+**Verification:** verified-ci
+
+### What changed
+- Replaced concrete branch names, patch filenames, commit messages, and model-family wording in State D with reusable placeholders.
+- Preserved the validated workflow: diff current trunk against the already-validated local commit, apply that binary patch to a fresh branch from trunk, verify the resulting tree matches, then open a follow-up PR.
+- Kept the source-project verification level without preserving project-specific model-family identifiers in the learning.
+
+### Why
+The reusable lesson is the git recovery shape, not the specific model-family rename that happened to trigger it. ProjectMnemosyne should make this searchable as an already-merged PR follow-up workflow without retaining product-specific terminology.
+
 ## v1.3.0 (2026-06-18)
 
-**Changed by:** Inference360 PR #160/#161 follow-up branch recovery after auto-merge
+**Changed by:** Inference360 already-merged PR follow-up branch recovery after auto-merge
 **Verification:** verified-ci
 
 ### What changed
 - Added State D for the case where an auto-merge PR has already merged, the old remote head branch is gone or stale, and local follow-up work lives only in a validated amended commit.
 - Added the trunk-to-validated-commit binary patch workflow: `git diff --binary <trunk> <validated-sha> --output=...`, fresh branch from trunk, `git apply --index`, then `git diff --quiet <validated-sha> -- .`.
-- Added failed attempts and verified Inference360 parameters for PR #160 -> PR #161.
+- Added failed attempts and verified source-repository parameters for old PR -> follow-up PR recovery.
 - Added missing top-level `verification: verified-ci` frontmatter required by the flat skill validator.
 
 ### Why
-PR #160 had auto-merge enabled and merged before follow-up IFM rename changes could be force-pushed.
-`git push --force-with-lease origin feat/simplify-control-interface` was rejected as stale,
-`git fetch origin feat/simplify-control-interface` failed because the remote ref was deleted,
-and `gh pr view 160` showed `state: MERGED`. The correct target was no longer the old PR
-branch; it was a clean follow-up branch from current `origin/master` carrying only the delta
-from trunk to the already-validated local amended commit.
+An old PR had auto-merge enabled and merged before follow-up changes could be force-pushed.
+`git push --force-with-lease origin <old-branch>` was rejected as stale,
+`git fetch origin <old-branch>` failed because the remote ref was deleted,
+and `gh pr view <old-pr-number>` showed `state: MERGED`. The correct target was no longer
+the old PR branch; it was a clean follow-up branch from current `origin/<trunk>` carrying only
+the delta from trunk to the already-validated local amended commit.
 
 ### Previous version (v1.2.0) snapshot
 
