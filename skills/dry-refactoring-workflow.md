@@ -1,11 +1,11 @@
 ---
 name: dry-refactoring-workflow
-description: "Complete TDD-driven workflow for identifying and eliminating code duplication by extracting reusable helper methods. Use when: (1) extracting duplicated helper methods into a shared module using TDD (write a failing test against the canonical, delete the duplicate, run green); (2) creating a private leaf module with leading-underscore naming to centralize a repeated internal call (e.g. importlib.metadata version resolution, path construction) and prevent re-introduction across modules; (3) centralizing hardcoded path constants into a single module to prevent drift when directory structure changes (incl. phase-routed in_progress/completed splits); (4) deduplicating LLM JSON extraction, parser logic, or any call-site pattern copy-pasted across several files; (5) test structure must mirror source structure when extracting helpers; (6) running a full DRY consolidation pass (discovery via grep, classifying true duplicates vs intentional variants, dict-structure consolidation) and refactoring to a single canonical source; (7) extract-method / SRP decomposition of over-long functions (50-LOC) and methods (100-LOC), including converting a mutating closure into a method via a small mutable box; (8) extracting repeated cached lookups into an @lru_cache helper (and clearing the cache so unittest.mock.patch works); (9) removing stale scripts / deprecated stubs (grep callers first) and replacing hardcoded file lists with dynamic Path.rglob discovery; (10) PLANNING a consolidation of two OVERLAPPING but not-identical constant collections (frozensets / keyword lists / error-pattern tuples) — classify true-duplicate vs intentional-variant first, then extract only the shared CORE into one canonical immutable constant and have each consumer compose CORE | its-own-extras, proving anti-drift with CORE.issubset(consumer) parity tests, instead of a flat merge that would violate a deliberate behavioral contract. Also covers cryptographic commit signing requirements in PR workflows."
+description: "Complete TDD-driven workflow for identifying and eliminating code duplication by extracting reusable helper methods. Use when: (1) extracting duplicated helper methods into a shared module using TDD (write a failing test against the canonical, delete the duplicate, run green); (2) creating a private leaf module with leading-underscore naming to centralize a repeated internal call (e.g. importlib.metadata version resolution, path construction) and prevent re-introduction across modules; (3) centralizing hardcoded path constants into a single module to prevent drift when directory structure changes (incl. phase-routed in_progress/completed splits); (4) deduplicating LLM JSON extraction, parser logic, or any call-site pattern copy-pasted across several files; (5) test structure must mirror source structure when extracting helpers; (6) running a full DRY consolidation pass (discovery via grep, classifying true duplicates vs intentional variants, dict-structure consolidation) and refactoring to a single canonical source; (7) extract-method / SRP decomposition of over-long functions (50-LOC) and methods (100-LOC), including converting a mutating closure into a method via a small mutable box; (8) extracting repeated cached lookups into an @lru_cache helper (and clearing the cache so unittest.mock.patch works); (9) removing stale scripts / deprecated stubs (grep callers first) and replacing hardcoded file lists with dynamic Path.rglob discovery; (10) PLANNING a consolidation of two OVERLAPPING but not-identical constant collections (frozensets / keyword lists / error-pattern tuples) — classify true-duplicate vs intentional-variant first, then extract only the shared CORE into one canonical immutable constant and have each consumer compose CORE | its-own-extras, proving anti-drift with CORE.issubset(consumer) parity tests, instead of a flat merge that would violate a deliberate behavioral contract. (11) behavior-preserving duplicate cleanup across test fakes, tiny strategy/kernel modules, and validation wrappers: keep public module exports stable, centralize only identical mechanics, preserve local wrapper names/error messages, and verify with focused + full suites before opening a PR. Also covers cryptographic commit signing requirements in PR workflows."
 category: architecture
-date: 2026-06-12
-version: 1.5.0
+date: 2026-06-18
+version: "1.6.0"
 user-invocable: false
-verification: verified-ci
+verification: verified-local
 history: dry-refactoring-workflow.history
 ---
 # DRY Refactoring Workflow
@@ -16,9 +16,9 @@ Complete TDD-driven workflow for identifying and eliminating code duplication by
 
 | Attribute | Details |
 | ----------- | --------- |
-| **Date** | 2026-06-04 |
+| **Date** | 2026-06-18 |
 | **Objective** | TDD-driven extraction of duplicated code into reusable helper modules, with emphasis on private module placement, test structure mirroring, and cryptographic commit signing |
-| **Outcome** | ✅ v1.0.0 (Feb 2026): Eliminated token aggregation duplication. v1.1.0 (Jun 2026): Extended with private module patterns, test mirroring enforcement, signing requirements. v1.3.0 (Jun 2026): Absorbed centralized path constants, LLM JSON extraction dedup, full DRY consolidation discovery/classify pass, and canonical-source refactor patterns (Pydantic type hierarchy, dict-structure consolidation, orphan relocation). v1.4.0 (Jun 2026): Restored SRP/extract-method (mutable-box closure), @lru_cache detection util (mock.patch/cache_clear gotcha), stale-script/stub cleanup, and dynamic Path.rglob discovery patterns from the nuance audit. ⚠️ v1.5.0 (Jun 2026, **planning-only / unverified**): Added Phase 10 — planning a consolidation of OVERLAPPING constant collections via the core/extras split (CORE \| consumer-extras) with subset parity anti-drift tests, classifying intentional-variant-with-overlap separately from "do not consolidate". Captured from ProjectHephaestus #1205 planning; NOT executed end-to-end. |
+| **Outcome** | ✅ v1.0.0 (Feb 2026): Eliminated token aggregation duplication. v1.1.0 (Jun 2026): Extended with private module patterns, test mirroring enforcement, signing requirements. v1.3.0 (Jun 2026): Absorbed centralized path constants, LLM JSON extraction dedup, full DRY consolidation discovery/classify pass, and canonical-source refactor patterns (Pydantic type hierarchy, dict-structure consolidation, orphan relocation). v1.4.0 (Jun 2026): Restored SRP/extract-method (mutable-box closure), @lru_cache detection util (mock.patch/cache_clear gotcha), stale-script/stub cleanup, and dynamic Path.rglob discovery patterns from the nuance audit. ⚠️ v1.5.0 (Jun 2026, **planning-only / unverified**): Added Phase 10 — planning a consolidation of OVERLAPPING constant collections via the core/extras split (CORE \| consumer-extras) with subset parity anti-drift tests, classifying intentional-variant-with-overlap separately from "do not consolidate". v1.6.0 (Jun 2026): Added Radiance behavior-preserving duplicate cleanup pattern for route-test fakes, layout-only metric kernels, validation field wrappers, and stale tool deletion; verified locally with Ruff, full pytest, compileall, diff check, and pre-push pytest; PR CI pending. |
 | **Primary Issues** | #642 (original), #739 (private module extraction), #917 (pr-policy signing), #503 (LLM JSON dedup) |
 | **Primary PRs** | #714 (original), #900+ (refactoring), #137/#1738 (path constants), #505 (JSON dedup), #201 (DRY consolidation) |
 | **History** | [changelog](./dry-refactoring-workflow.history) |
@@ -57,6 +57,10 @@ Use this workflow when you encounter:
 - "Consolidate `TRANSIENT_ERROR_PATTERNS` and `NETWORK_ERROR_KEYWORDS` / two near-duplicate constant collections"
 - "These two constant lists are 80% the same but one has extras — DRY them up"
 - "Plan a DRY merge of overlapping constants without changing either matcher's behavior"
+- "Consolidate duplicated server test fake apps / fake requests without changing route assertions"
+- "Replace repeated tiny metric/operator kernel classes with one parameterized kernel while keeping module-level `KERNEL` exports stable"
+- "Share validation type checks but preserve each module's exception class, wrapper function names, and error message text"
+- "Remove an obsolete script and its Ruff exception after `rg` proves no first-party callers remain"
 
 ## Verified Workflow
 
@@ -73,6 +77,13 @@ grep -rn "experiment_dir / \|experiment_dir/" src/ scripts/ | grep -v "paths.py"
 
 # --- VERIFY no orphaned refs after migration (must be empty) ---
 grep -rn "old_module\.\|_old_function_name" src/ tests/ --include="*.py"
+
+# --- RADIANCE-STYLE behavior-preserving duplicate cleanup ---
+rg -n "class _FakeRequest|class _FakeApp|def route\(" tests/radiance/server tests/project/release -g "*.py"
+rg -n "class (Flatten|Reshape|Permute|Transpose|View)Kernel|estimate_layout_reindex" radiance/metrics/ops -g "*.py"
+rg -n "def _required_mapping|def _required_list|def _required_string|def _as_mapping" radiance/*validation.py
+./.venv/bin/python -m ruff check radiance scripts tests --no-cache
+./.venv/bin/pytest -q
 
 # --- TDD loop: write failing test, implement helper, go green ---
 <package-manager> run pytest tests/unit/<module>/test_<file>.py -v   # RED then GREEN
@@ -679,6 +690,56 @@ test). Neither is acceptable. The core/extras split preserves both contracts.
 
 8. Signed commit + auto-merge per the standard PR workflow above.
 
+
+### Phase 11: Behavior-Preserving Duplicate Cleanup Across Tests, Kernels, and Validation Wrappers (NEW in v1.6.0)
+
+Use this when an audit finds several low-risk duplicate surfaces in one Python repository, but
+runtime behavior must remain stable.
+
+#### Quick Reference
+
+```bash
+# Find repeated fake app/request route scaffolding.
+rg -n "class _FakeRequest|class _FakeApp|def route\(" tests/radiance/server tests/project/release -g "*.py"
+
+# Find repeated tiny kernel classes delegating to the same estimator.
+rg -n "class (Flatten|Reshape|Permute|Transpose|View)Kernel|estimate_layout_reindex" radiance/metrics/ops -g "*.py"
+
+# Find repeated validation field wrappers.
+rg -n "def _required_mapping|def _required_list|def _required_string|def _as_mapping" radiance/*validation.py
+
+# Behavior-preserving verification gate.
+./.venv/bin/python -m ruff check radiance scripts tests --no-cache
+./.venv/bin/pytest -q
+./.venv/bin/python -m compileall radiance scripts tests
+git diff --check
+```
+
+#### Detailed Steps
+
+1. **Centralize test-only HTTP fakes in tests, not production.** If several route tests define
+   `_FakeRequest`, `_FakeApp`, and identical `route()` decorators, create a local test support
+   module. Keep variants explicit by storage shape: rule -> handler, rule -> list[handler],
+   `(rule, method) -> handler`, `(method, rule) -> handler`, or registration-order list.
+   This removes decorator duplication without making assertions harder to read.
+2. **Extract only the invariant mechanics.** For fake route apps, share the decorator and route
+   method normalization once, then let tiny subclasses/adapters record routes in the shape each
+   test already expects. Do not force every test into one awkward route index.
+3. **Replace repeated tiny strategy classes with one parameterized instance.** If modules differ
+   only by `supported_ops` and call the same estimator, keep each module's public `KERNEL` export
+   but construct it from the shared class, e.g. `KERNEL = LayoutReindexKernel(("flatten", ...))`.
+   This preserves provider registration behavior while deleting boilerplate classes.
+4. **Preserve validation API/error contracts with local wrappers.** When modules use different
+   exception classes or message wording, do not import one module's helper into another. Instead,
+   create generic low-level checks that accept `error_type` and exact message strings, then keep
+   the existing `_required_mapping` / `_required_string` wrappers in each module.
+5. **Delete stale large scripts only after a caller audit.** Run `rg` for the filename, import
+   name, CLI reference, docs, and CI exception. Remove the file and remove only the specific lint
+   exception/test expectation tied to it.
+6. **Run focused tests first, then full gates.** Execute the touched server tests, touched
+   validation tests, metric alias tests, then full Ruff/pytest/compileall/diff-check. If the repo
+   has a pre-push hook, treat its full pytest rerun as an additional local signal, not CI.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -704,7 +765,20 @@ test). Neither is acceptable. The core/extras split preserves both contracts.
 | (PLANNING #1205) Assume two duplicate-*looking* constant lists are pure duplicates and flat-merge them | Planned a single shared frozenset for `TRANSIENT_ERROR_PATTERNS` + `NETWORK_ERROR_KEYWORDS` | The resilience layer's documented contract DELIBERATELY omits `"rate limit"`/`"throttle"` ("rate limit error passthrough — not retried"). A flat merge would make it retry rate-limit errors (contract violation) OR drop them from the network tagger (breaks an existing test) | CLASSIFY first: true-duplicate vs intentional-variant-WITH-overlap. For overlap, extract only the shared CORE into one frozenset and have each consumer compose `CORE \| its-own-extras`. Confirm the "intentional" difference is a real, current contract (docstring + test), not stale drift, before scoping the split |
 | (PLANNING #1205) Drop exact phrases "because a broad substring in CORE already covers them" | Considered removing `"connection refused"`/`"connection reset"` from the resilience extras since CORE held the broader `"connection"` | `"connection"` MATCHES `"connection refused"` at runtime, but the resilience test `test_essential_patterns_present` asserts EXACT MEMBERSHIP of the phrase `"connection refused"` — matching-equivalence is NOT membership-equivalence. Dropping the phrase passes behavior but fails the membership assertion | Keep the exact phrases as explicit per-consumer extras even when a broad CORE substring would match them. A flat dedupe that elides "covered" phrases silently breaks membership tests |
 | (PLANNING #1205) Change a list literal to `sorted(frozenset \| frozenset)` without checking how callers use it | Planned to recompose `TRANSIENT_ERROR_PATTERNS`/`NETWORK_ERROR_KEYWORDS` as `sorted(CORE \| extras)` | That changes element ORDER and the source TYPE. Any caller relying on original ordering, on `.append()`/mutation, or on index access would break; and the looser `is_network_error` substrings (`"connection"`,`"timeout"`,`"network"`) must not be accidentally tightened/loosened | Before recomposing, grep callers to confirm ONLY iteration is used (no mutation, no indexing, no order dependence). Keep public names + iterable types; treat each behavioral matcher suite (`test_retry.py`, `test_subprocess_resilience.py`) as the real acceptance gate, not the new constant tests |
+| Replacing repeated validation wrappers directly with one module-specific helper | Considered importing one validation module's `_required_*` helpers into the others | Each validation module has its own exception class and message wording; sharing a wrapper would leak the wrong exception/message contract | Share only the primitive type checks and keep local wrappers that pass `error_type` plus exact message text |
+| Forcing all fake route apps into one route dictionary shape | A single fake app abstraction looked attractive for all server route tests | Tests intentionally index registered routes differently: by rule, by ordered list, by `(rule, method)`, or by `(method, rule)` | Share the decorator mechanics in a base helper, then keep explicit small storage adapters so test assertions remain clear |
+| Reusing a merged feature branch for a follow-up cleanup PR | Current branch already had a merged PR, so committing on it would have produced a confusing branch/PR relationship | GitHub reported the branch's prior PR as `MERGED`; a new PR needed a new branch from current trunk | Stash uncommitted work, fetch current trunk, create a fresh branch from `origin/<trunk>`, pop the stash, re-verify, sign, push, and open the new PR |
 ## Results & Parameters
+
+### Radiance v1.6.0 Local Verification
+
+| Check | Result |
+| ----- | ------ |
+| Ruff | `./.venv/bin/python -m ruff check radiance scripts tests --no-cache` passed |
+| Full pytest | `1249 passed, 6 skipped` locally and again in the pre-push hook |
+| Compileall | `./.venv/bin/python -m compileall radiance scripts tests` passed |
+| Diff hygiene | `git diff --check` passed |
+| PR | LLM360/Radiance PR #908 opened; CI pending at capture time |
 
 ### Code Changes
 
@@ -777,6 +851,7 @@ def _aggregate_token_stats(self, tier_results: dict[TierID, TierResult]) -> Toke
 | ProjectHephaestus | #739 | Private module extraction | verified-ci |
 | ProjectScylla | dir-structure split | Path-constant bypass audit | verified-ci |
 | ProjectHephaestus | #1205 | Phase 10 core/extras split for overlapping `TRANSIENT_ERROR_PATTERNS` / `NETWORK_ERROR_KEYWORDS` | ⚠️ **unverified — planning only, NOT executed** (no code, no tests, no CI) |
+| LLM360/Radiance | PR #908 | Consolidated route-test fakes, layout-only metric kernels, validation field checks, and removed stale `hf_checkpoint_architecture_html.py` | verified-local — full local/pre-push test suite passed; PR CI pending at capture time |
 
 ## Related Skills
 
@@ -786,10 +861,11 @@ def _aggregate_token_stats(self, tier_results: dict[TierID, TierResult]) -> Toke
 
 ## Tags
 
-`refactoring`, `dry-principle`, `helper-methods`, `tdd`, `code-quality`, `python`, `pytest`, `private-modules`, `test-structure`, `git-signing`, `importlib-metadata`, `srp`, `extract-method`, `lru-cache`, `mock-patch`, `rglob`, `dead-code-removal`, `constants`, `frozenset`, `drift`, `intentional-variant`, `core-extras-split`, `planning`
+`refactoring`, `dry-principle`, `helper-methods`, `radiance`, `test-fakes`, `validation-wrappers`, `layout-kernels`, `tdd`, `code-quality`, `python`, `pytest`, `private-modules`, `test-structure`, `git-signing`, `importlib-metadata`, `srp`, `extract-method`, `lru-cache`, `mock-patch`, `rglob`, `dead-code-removal`, `constants`, `frozenset`, `drift`, `intentional-variant`, `core-extras-split`, `planning`
 
 ## Version History
 
+- **v1.6.0** (2026-06-18): Added Phase 11, a locally verified Radiance behavior-preserving duplicate cleanup workflow. Captures shared server route test fakes, parameterized layout-only metric kernels via `LayoutReindexKernel`, shared primitive validation field checks with local wrappers preserving exception/message contracts, stale script deletion after caller audit, and the fresh-branch PR workflow when the current branch's old PR is already merged. Verification was local/pre-push only; PR #908 CI was pending at capture time. Prior v1.5.0 snapshot archived to history.
 - **v1.5.0** (2026-06-12): Added Phase 10 (PLANNING-ONLY, **unverified**) — the core/extras split for consolidating OVERLAPPING constant collections that are intentional-variants-with-overlap, not pure duplicates. Refines the Phase 8c classification table with a third middle path: extract only the shared CORE into one immutable frozenset, compose each consumer as `CORE | extras`, and prove anti-drift with `CORE.issubset(consumer)` parity tests while keeping public names/types. Added 3 Failed Attempts rows (flat-merge-violates-contract, drop-phrases-because-broad-substring-covers-them, recompose-changes-order/type) and a `## Verified On` table. Captured from planning ProjectHephaestus issue #1205; NOT executed end-to-end (no code, no tests, no CI). Prior v1.4.0 snapshot archived to history.
 - **v1.4.0** (2026-06-07): Restored SRP/LRU-cache/stale-script DRY patterns lost in the v1.3.0 absorption (nuance audit). Added Phase 9 + `### Detailed Steps`: extract-method/SRP decomposition with mutable-box closure conversion, `@lru_cache` detection util with the `mock.patch`/`cache_clear()` gotcha, stale-script/deprecated-stub cleanup (grep callers first, rewrite back-references self-contained), and dynamic `Path.rglob` discovery. Added 4 Failed Attempts rows.
 - **v1.3.0** (2026-06-07): Absorbed 5 skills — `centralized-path-constants`, `private-module-extraction-helper-pattern`, `deduplicate-llm-json-extraction`, `dry-consolidation-workflow`, `dry-consolidate-to-canonical-refactor`. Added Quick Reference h3 and Phase 8 (path constants, LLM JSON dedup, discovery/classify pass, Pydantic type hierarchy, dict-structure consolidation, orphan relocation). Extended description and Failed Attempts. Full originals preserved in history.
