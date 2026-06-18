@@ -1,12 +1,22 @@
 ---
 name: git-branch-state-triage-and-recovery
-description: "Diagnose and recover branches that have entered an invalid or obsolete state. Use when: (1) a branch is many commits behind main and its remote tracking ref is gone — determine whether any net-new contribution remains before creating a PR, (2) a branch has no common ancestor with main ('fatal: refusing to merge unrelated histories') and needs content extraction and recreation, (3) a stacked PR was retargeted and lint/CI fix commits made after retarget are orphaned from the prerequisite PR and must be cherry-picked, (4) fix commits exist locally but cannot fast-forward push to a remote PR branch because histories diverged after a rebase — cherry-pick onto the remote tip instead, (5) a branch has hundreds or thousands of HEAD-only files vs main and main underwent corpus consolidation — run a three-way file-count diff (branch vs main vs merge-base) to distinguish 'pre-consolidation originals already absorbed' from 'genuinely unmerged new work' before any destructive reset, (6) a branch LOOKS unmerged — `git cherry origin/main <branch>` shows every commit with a `+` prefix, `git rev-list --count origin/main..<branch>` reports commits ahead, and an auto-rebase onto main conflicts — but its PR was squash-merged, so the work is actually subsumed; disambiguate with message-search on main (`git log origin/main --oneline | grep '(#PRnum)'`) + `gh pr list --state all`, NOT with git cherry / ahead-counts"
+description: >-
+  Diagnose and recover branches that have entered an invalid or obsolete state. Use when:
+  (1) a branch is many commits behind main and its remote tracking ref is gone,
+  (2) a branch has no common ancestor with main and needs content extraction,
+  (3) stacked or diverged PR fixes must be cherry-picked onto the correct tip,
+  (4) a branch has many HEAD-only files after main-side consolidation,
+  (5) a squash-merged branch looks unmerged because git cherry/ahead counts lie,
+  (6) an auto-merge PR already merged, its remote head ref is gone or stale, and a
+  validated local amended commit must be converted into a clean follow-up branch from
+  current trunk using git diff --binary plus git apply --index.
 category: tooling
-date: 2026-06-16
-version: "1.2.0"
+date: 2026-06-18
+version: "1.3.0"
 user-invocable: false
+verification: verified-ci
 history: git-branch-state-triage-and-recovery.history
-tags: [git, branch, triage, recovery, stale, superseded, orphan, diverged, merge-base, cherry-pick, fork-point, diff-filter, unrelated-histories, non-fast-forward, consolidation, three-way-diff, count-diff, hard-reset, stash]
+tags: [git, branch, triage, recovery, stale, superseded, orphan, diverged, merge-base, cherry-pick, fork-point, diff-filter, unrelated-histories, non-fast-forward, consolidation, three-way-diff, count-diff, hard-reset, stash, auto-merge, follow-up-branch, force-with-lease, git-apply]
 ---
 
 # Git Branch State Triage and Recovery
@@ -15,15 +25,15 @@ tags: [git, branch, triage, recovery, stale, superseded, orphan, diverged, merge
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-07 |
+| **Date** | 2026-06-18 |
 | **Objective** | Diagnose what state a branch is in (stale/superseded, orphaned/unrelated history, or diverged from remote) and recover it cleanly |
-| **Outcome** | Success — unified triage tree: confirm-and-discard superseded branches, extract+recreate orphan branches, reset+cherry-pick diverged branches |
+| **Outcome** | Success — unified triage tree: confirm-and-discard superseded branches, extract+recreate orphan branches, reset+cherry-pick diverged branches, and convert validated local amended commits from already-merged PRs into clean follow-up branches |
 | **Verification** | verified-ci |
 
 ## When to Use
 
 Use this skill whenever a branch is in an unexpected or unmergeable state. The root question
-is always: **what state is this branch in, and how do I recover it?** Three distinct states:
+is always: **what state is this branch in, and how do I recover it?** Four distinct states:
 
 **State A — Stale / superseded by main:**
 - A branch is many commits behind main **and** its remote tracking ref is gone (`[gone]` in `git branch -vv`)
@@ -44,6 +54,13 @@ is always: **what state is this branch in, and how do I recover it?** Three dist
 - `git status` shows "Your branch and 'origin/<branch>' have diverged"
 - A fix commit exists locally but the remote has accumulated additional commits (e.g. after a rebase or stacked-PR retarget)
 - A fix plan assumed the remote was behind, but it actually has more commits than local
+
+**State D — Already-merged PR; old head ref stale/gone; local amended commit has follow-up work:**
+- `git push --force-with-lease origin <branch>` rejects as stale after auto-merge had been enabled
+- `git fetch origin <branch>` fails with "couldn't find remote ref" because the PR head branch was deleted after merge
+- `gh pr view <pr>` shows `state: MERGED` and an old `headRefOid`, while current trunk contains the merged work under a new squash/rebase commit SHA
+- You have a local amended commit that was already validated, but the old PR branch is no longer the correct target
+- The right recovery is to diff current trunk to the validated local commit, apply that binary patch on a fresh branch from trunk, prove the new tree matches the validated commit, then open a follow-up PR
 
 ## Verified Workflow
 
@@ -112,6 +129,22 @@ git log --oneline HEAD..origin/<branch>           # remote-only commits (often f
 git merge-base HEAD origin/<branch>               # common ancestor
 git reset --hard origin/<branch>                  # absorb remote, AFTER confirming fix applies
 git cherry-pick <fix-sha>                         # apply only the targeted fix
+
+# === State D: old PR merged; remote branch deleted; preserve validated local delta ===
+# Use the repository's real trunk: origin/main for most repos, origin/master for Inference360.
+TRUNK=origin/master
+VALIDATED_SHA=<validated-local-amended-sha>
+PATCH=/tmp/<topic>-followup.patch
+git fetch origin master
+gh pr view <old-pr> --json state,headRefName,headRefOid,autoMergeRequest,mergeCommit
+git fetch origin <old-branch>                     # expected failure if the branch was deleted
+git diff --stat "$TRUNK" "$VALIDATED_SHA"         # inspect the intended incremental delta
+git diff --binary "$TRUNK" "$VALIDATED_SHA" --output="$PATCH"
+git switch -c <followup-branch> "$TRUNK"
+git apply --index "$PATCH"
+git diff --quiet "$VALIDATED_SHA" -- .            # proves worktree matches validated commit
+git commit -m "<follow-up message>"
+git push -u origin <followup-branch>
 ```
 
 ### Detailed Steps
@@ -293,6 +326,58 @@ branch and main may have diverged in *opposite* directions simultaneously.
    lint/CI fix commits made after the retarget become orphaned from the prerequisite, reset to
    the correct remote tip and cherry-pick the orphaned fix commits onto it.
 
+#### State D — Already-merged PR with deleted head ref; recover follow-up delta
+
+Use this when the PR merged before you could update it, the remote PR branch is gone or stale,
+and you have a local amended commit that contains exactly the validated follow-up work. Do not
+try to keep force-pushing the old branch; after merge, the correct target is current trunk.
+
+1. **Confirm the old PR is no longer writable as a PR update target.** A stale lease rejection
+   plus a missing remote ref means this is not a normal rebase push:
+   ```bash
+   git push --force-with-lease origin <old-branch>  # rejected as stale
+   git fetch origin <old-branch>                    # fatal: couldn't find remote ref
+   gh pr view <old-pr> --json state,headRefName,headRefOid,autoMergeRequest,mergeCommit
+   ```
+   If `state` is `MERGED`, stop targeting `<old-branch>`. The PR content is already on trunk,
+   usually as a new squash/rebase commit SHA that does not equal the old PR head SHA.
+2. **Refresh trunk and compare the validated local tree to trunk.** Use the repo's real trunk
+   branch (`origin/master` for Inference360, `origin/main` for most HomericIntelligence repos):
+   ```bash
+   git fetch origin master
+   TRUNK=origin/master
+   VALIDATED_SHA=<validated-local-amended-sha>
+   git diff --stat "$TRUNK" "$VALIDATED_SHA"
+   ```
+   The diff must show only the intended follow-up changes. If it includes the already-merged PR
+   body again, your trunk ref is stale or you picked the wrong validated SHA.
+3. **Save a binary patch from trunk to the validated local commit.** Binary mode preserves
+   renames, mode bits, and binary files:
+   ```bash
+   PATCH=/tmp/<repo>-<topic>-followup.patch
+   git diff --binary "$TRUNK" "$VALIDATED_SHA" --output="$PATCH"
+   ```
+4. **Create the follow-up branch from current trunk and apply the patch into the index.**
+   ```bash
+   git switch -c <followup-branch> "$TRUNK"
+   git apply --index "$PATCH"
+   ```
+5. **Prove the new branch tree matches the already-validated local commit.**
+   ```bash
+   git diff --quiet "$VALIDATED_SHA" -- .
+   ```
+   This is the key guardrail: it proves the patch-applied branch has the same tree as the
+   local commit you already validated. If this diff is non-empty, fix the mismatch before
+   committing.
+6. **Commit, push, and open a normal follow-up PR.** Enable auto-merge on the new PR; the old
+   merged PR should remain untouched.
+   ```bash
+   git commit -m "<follow-up message>"
+   git push -u origin <followup-branch>
+   gh pr create --base <trunk-branch> --head <followup-branch> --title "<title>" --body "<body>"
+   gh pr merge <new-pr> --auto --squash --repo <owner/repo>
+   ```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -310,6 +395,9 @@ branch and main may have diverged in *opposite* directions simultaneously.
 | Relied on `git cherry origin/main <branch>` to detect unmerged work | All commits showed `+` so branches looked unmerged | Squash-merge gives every original commit a new patch-id; cherry never matches | Use message-search (`git log origin/main --oneline \| grep '(#PR)'`) + `gh pr list --state all`, not git cherry, for squash repos |
 | Considered spawning a rebase-conflict-resolution swarm for 7 conflicting branches | Conflicts existed only because the squash content already on main collides with original commits | Resolution would be "take main's side" everywhere → empty branch | Confirm subsumed first; report subsumed and stop — don't resolve, don't delete |
 | Assistant tried `git worktree remove --force` / `git tag -d` / `git checkout --` | Blocked by CC Safety Net hook | Cannot override the hook even with user approval in-chat | Prove safety, then print the exact destructive command for the user to run manually |
+| Force-pushed a follow-up amendment to an auto-merged PR's old branch | `git push --force-with-lease origin feat/simplify-control-interface` after PR #160 had auto-merge enabled | The PR had already merged and the lease was stale; the old branch was no longer the live PR update target | Check `gh pr view <pr> --json state,headRefOid,autoMergeRequest` before pushing follow-up amendments to an auto-merge PR |
+| Fetched the old PR branch after merge | `git fetch origin feat/simplify-control-interface` | GitHub had deleted the merged PR head branch, so fetch failed with "couldn't find remote ref" | Treat missing remote ref plus `state: MERGED` as a signal to create a new follow-up branch from current trunk |
+| Treated the local amended commit as a branch update after merge | Local commit `530bd3114d4ae62c01d4ac11729ff4a86fab6706` was validated, so the instinct was to force-push it to PR #160 | `origin/master` already contained the original simplification under new commit `61304b9`; the old PR head SHA was `858e302`, so the branch identity was obsolete | Diff current trunk to the validated commit, apply that patch on a fresh branch, and prove the resulting tree matches the validated commit before opening a follow-up PR |
 
 ## Results & Parameters
 
@@ -396,6 +484,36 @@ git status                                    # "ahead by 1 commit"
 Cherry-picks of small, focused single-file fixes rarely conflict, even on heavily diverged
 branches, because they touch a narrow region the remote version differs in only slightly.
 
+### State D — Follow-up branch from validated local amendment
+
+Concrete verified values from the Inference360 recovery:
+
+| Parameter | Value |
+| --------- | ----- |
+| Old PR | LLM360/Inference360 PR #160 |
+| Old branch | `feat/simplify-control-interface` |
+| Local validated amended commit | `530bd3114d4ae62c01d4ac11729ff4a86fab6706` |
+| Old PR head SHA reported by GitHub | `858e302` |
+| Trunk commit containing the merged simplification | `61304b9` on `origin/master` |
+| Patch file | `/tmp/inference360-ifm-rename.patch` |
+| Follow-up branch | `feat/ifm-naming` |
+| Follow-up PR | LLM360/Inference360 PR #161 |
+| Verification | `verified-ci` — PR #161 auto-merged after CI passed |
+
+Copy-paste sequence used:
+
+```bash
+git fetch origin master
+git diff --stat origin/master 530bd3114d4ae62c01d4ac11729ff4a86fab6706
+git diff --binary origin/master 530bd3114d4ae62c01d4ac11729ff4a86fab6706 \
+  --output=/tmp/inference360-ifm-rename.patch
+git switch -c feat/ifm-naming origin/master
+git apply --index /tmp/inference360-ifm-rename.patch
+git diff --quiet 530bd3114d4ae62c01d4ac11729ff4a86fab6706 -- .
+git commit -m "refactor: align IFM naming"
+git push -u origin feat/ifm-naming
+```
+
 ## Verified On
 
 | Project | Context | Details |
@@ -406,6 +524,7 @@ branches, because they touch a narrow region the remote version differs in only 
 | ProjectOdyssey | PR #3197, issue #3088 — BF16 test skip; reset to remote (13 remote-only commits) + cherry-pick fix | State C |
 | ProjectHephaestus | 7 local branches all failed auto-rebase with conflicts; `git cherry` showed every commit `+`. Message-search proved all subsumed: `999-fix-pr-thread-reply-mutation`→`187720a … (#1041)`, `fix-1282-work`→`22fc435 … (#1282)`, `rc2-conflict-gate`→`d3701b8 … (#1335)`. Reported subsumed; no swarm, no delete | State A — squash-merge false positive |
 | ProjectHephaestus | Worktree `agent-a7fe2df2b7f6e658b` — 3 "uncommitted modified" files all 0 unique lines vs main (`log_on_error` changes already merged via PR #1372); safe to discard | State A — worktree 0-unique-lines |
+| LLM360/Inference360 | PR #160 auto-merged before follow-up IFM rename changes could be force-pushed; old remote branch was gone, local amended commit `530bd3114d4ae62c01d4ac11729ff4a86fab6706` was converted into follow-up branch `feat/ifm-naming`; PR #161 opened and auto-merged after CI passed | State D — already-merged PR follow-up branch |
 
 ## References
 
