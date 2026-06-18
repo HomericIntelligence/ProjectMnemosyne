@@ -690,7 +690,6 @@ test). Neither is acceptable. The core/extras split preserves both contracts.
 
 8. Signed commit + auto-merge per the standard PR workflow above.
 
-
 ### Phase 11: Behavior-Preserving Duplicate Cleanup Across Tests, Kernels, and Validation Wrappers (NEW in v1.6.0)
 
 Use this when an audit finds several low-risk duplicate surfaces in one Python repository, but

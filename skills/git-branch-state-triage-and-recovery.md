@@ -62,8 +62,6 @@ is always: **what state is this branch in, and how do I recover it?** Five disti
 - You have a local amended commit that was already validated, but the old PR branch is no longer the correct target
 - The right recovery is to diff current trunk to the validated local commit, apply that binary patch on a fresh branch from trunk, prove the new tree matches the validated commit, then open a follow-up PR
 
-
-
 **State E — Current branch's old PR is already merged, but the worktree has uncommitted follow-up work:**
 - `gh pr view` for the current branch reports `state: MERGED`.
 - The branch may still exist on origin, but its PR identity is spent; pushing more commits to it will not update an open PR.
@@ -153,8 +151,6 @@ git apply --index "$PATCH"
 git diff --quiet "$VALIDATED_SHA" -- .            # proves worktree matches validated commit
 git commit -m "<follow-up message>"
 git push -u origin <followup-branch>
-```
-
 
 # === State E: current branch PR is MERGED but uncommitted follow-up work exists ===
 gh pr view --json number,state,title,url,headRefName,baseRefName
@@ -171,6 +167,7 @@ git log --show-signature -1 --oneline
 git push -u origin <fresh-branch>
 gh issue create --title "<tracking issue>" --body "<kickoff/scope>"
 gh pr create --base <trunk> --head <fresh-branch> --title "<title>" --body "Closes #<issue>"
+```
 
 ### Detailed Steps
 
@@ -403,7 +400,6 @@ try to keep force-pushing the old branch; after merge, the correct target is cur
    gh pr merge <new-pr> --auto --squash --repo <owner/repo>
    ```
 
-
 #### State E — Current branch's previous PR is merged; move uncommitted follow-up work to a fresh PR branch
 
 Use this when `gh pr view` on the current branch points to a merged PR, but `git status` shows
@@ -472,10 +468,9 @@ patch.
 | Force-pushed a follow-up amendment to an auto-merged PR's old branch | `git push --force-with-lease origin feat/simplify-control-interface` after PR #160 had auto-merge enabled | The PR had already merged and the lease was stale; the old branch was no longer the live PR update target | Check `gh pr view <pr> --json state,headRefOid,autoMergeRequest` before pushing follow-up amendments to an auto-merge PR |
 | Fetched the old PR branch after merge | `git fetch origin feat/simplify-control-interface` | GitHub had deleted the merged PR head branch, so fetch failed with "couldn't find remote ref" | Treat missing remote ref plus `state: MERGED` as a signal to create a new follow-up branch from current trunk |
 | Treated the local amended commit as a branch update after merge | Local commit `530bd3114d4ae62c01d4ac11729ff4a86fab6706` was validated, so the instinct was to force-push it to PR #160 | `origin/master` already contained the original simplification under new commit `61304b9`; the old PR head SHA was `858e302`, so the branch identity was obsolete | Diff current trunk to the validated commit, apply that patch on a fresh branch, and prove the resulting tree matches the validated commit before opening a follow-up PR |
-
 | Reused the current branch after discovering its PR was already merged | `gh pr view` on `codex/test-architecture-layout` showed PR #906 as `MERGED`, but the worktree contained new cleanup changes | A merged PR branch is historical; pushing more commits there would not create the intended fresh review and would confuse branch/PR state | Stash the uncommitted work, fetch current trunk, create a fresh branch from `origin/<trunk>`, pop the stash, re-verify, sign, push, and create a new linked PR |
-## Results & Parameters
 
+## Results & Parameters
 
 ### State E — Fresh PR branch from merged current branch with uncommitted work
 
