@@ -1,6 +1,46 @@
 <!-- markdownlint-disable MD024 -->
 # dry-refactoring-workflow — History
 
+## v1.7.0 (2026-06-19)
+
+**Changed by:** ProjectHermes #329 / PR #652 — HMAC `_sign()` dedup
+**Verification:** verified-ci
+
+### What changed
+
+- Added Phase 12 with three concrete sub-sections:
+  - 12a: Grep FIRST — issue "Evidence:" sections go stale as prior PRs partially resolve them.
+  - 12b: Inline vs fixture decision table for pure `bytes→str` test helpers.
+  - 12c: Remote branch divergence resolution — push as a new branch rather than force-push or rebase.
+- Added three Failed Attempts rows (trusting issue evidence, adding a pytest fixture for a pure function, rebasing onto 84-commit diverged branch).
+- Updated Verified On table with ProjectHermes #329 / PR #652 entry.
+- Promoted `verification` metadata to `verified-ci`.
+- Added new tags: `stale-issue-body`, `inline-vs-fixture`, `remote-branch-divergence`, `hmac`, `test-helper-dedup`.
+
+### Why
+
+ProjectHermes issue #329 described deduplicating a `_sign()` HMAC-SHA256 test helper across 4
+files. By the time the work started, 3 of the 4 files had already been migrated by prior PRs.
+This produced three durable lessons not yet in this skill: (1) grep the current state before
+trusting the issue body; (2) the right granularity for a pure function helper is inline, not a
+pytest fixture; (3) when a remote branch diverges with a competing solution, a new branch is
+cleaner than rebase.
+
+### Previous version (v1.6.0) snapshot
+
+````markdown
+---
+name: dry-refactoring-workflow
+description: "Complete TDD-driven workflow for identifying and eliminating code duplication by extracting reusable helper methods. Use when: (1) extracting duplicated helper methods into a shared module using TDD (write a failing test against the canonical, delete the duplicate, run green); (2) creating a private leaf module with leading-underscore naming to centralize a repeated internal call (e.g. importlib.metadata version resolution, path construction) and prevent re-introduction across modules; (3) centralizing hardcoded path constants into a single module to prevent drift when directory structure changes (incl. phase-routed in_progress/completed splits); (4) deduplicating LLM JSON extraction, parser logic, or any call-site pattern copy-pasted across several files; (5) test structure must mirror source structure when extracting helpers; (6) running a full DRY consolidation pass (discovery via grep, classifying true duplicates vs intentional variants, dict-structure consolidation) and refactoring to a single canonical source; (7) extract-method / SRP decomposition of over-long functions (50-LOC) and methods (100-LOC), including converting a mutating closure into a method via a small mutable box; (8) extracting repeated cached lookups into an @lru_cache helper (and clearing the cache so unittest.mock.patch works); (9) removing stale scripts / deprecated stubs (grep callers first) and replacing hardcoded file lists with dynamic Path.rglob discovery; (10) PLANNING a consolidation of two OVERLAPPING but not-identical constant collections (frozensets / keyword lists / error-pattern tuples) — classify true-duplicate vs intentional-variant first, then extract only the shared CORE into one canonical immutable constant and have each consumer compose CORE | its-own-extras, proving anti-drift with CORE.issubset(consumer) parity tests, instead of a flat merge that would violate a deliberate behavioral contract. (11) behavior-preserving duplicate cleanup across test fakes, tiny strategy/kernel modules, and validation wrappers: keep public module exports stable, centralize only identical mechanics, preserve local wrapper names/error messages, and verify with focused + full suites before opening a PR. Also covers cryptographic commit signing requirements in PR workflows."
+category: architecture
+date: 2026-06-18
+version: "1.6.0"
+user-invocable: false
+verification: verified-local
+history: dry-refactoring-workflow.history
+---
+````
+
 ## v1.6.0 (2026-06-18)
 
 **Changed by:** Radiance PR #908 duplicate-code cleanup
