@@ -5,6 +5,42 @@ This file preserves the full content of every skill absorbed into the canonical
 
 ---
 
+## v1.2.0 (2026-06-19)
+
+**Changed by:** Plan R1 (second revision, post-NOGO) for issue #176 (NATS leaf-node config has no authentication) — Odysseus session
+**Verification:** unverified OVERALL for the auth-planning section (full plan not exercised end-to-end); the brace-depth config-block validator specifically is verified-local (prototyped this session: exit 0 on the fixed fixture, exit 1 on the repo's current configs)
+
+### What changed
+- Bumped version 1.1.0 → 1.2.0 (MINOR — new findings/Failed-Attempts rows + new meta-lessons subsection from the NOGO cycle; no breaking removals)
+- Kept `date` at 2026-06-19; kept `history` frontmatter field; `verification: unverified` retained (overall) with the validator's verified-local status stated inline
+- Updated the Overview table (Outcome + Verification) to state honestly that the full plan is still unverified BUT the config-block validator was prototyped verified-local
+- Added a new Verified Workflow subsection **"Canonical Config-Block-Presence Check — Brace-Depth Validator (verified-local, R1)"** containing the depth-tracking `block()` awk helper (counts `{`/`}`, strips comments with `sed 's/#.*//'`, greps inside the extracted block) plus the both-directions assertion and the pinned `nats-server -t` fail-closed test
+- Added 5 new Failed Attempts rows (the concrete NOGO causes): awk parser that ends the block on the first `}` (nested `tls{}` closes early); verification that only checks the broken case; assuming a `just` recipe wired into the justfile runs in CI; parse check gated on `command -v nats-server` (silent skip); asserting `.gitignore` coverage from a pattern (fabricated)
+- Reworked the "Uncertain Assumptions a Reviewer MUST Verify" catalogue: downgraded the env-substitution fail-closed item from "untested assumption" to "tested via pinned nats-server in CI"; marked the awk-brittleness item RESOLVED by the brace-depth validator; flagged the `.gitignore` and CI-invocation items as confirmed-false (fabricated/absent) in R1; added item #8 noting the shared-token-vs-per-leaf-`.creds` posture risk REMAINS
+- Added a new **"Reviewer-risk + Meta-Lessons"** subsection with the durable planning lessons: prototype the validator before shipping; verify the CI invocation graph not just file existence; every line-number citation drifts (re-grep); fail-closed must be tested not asserted; negative-path verification needs both directions
+- Updated the `config_auth_gate` YAML to reflect brace-depth extraction, both-directions assertion, the explicit-CI-step requirement, and the pinned unconditional nats-server check
+- Added a Verified On row: Odysseus / "Plan R1 for issue #176 (NATS leaf auth, post-NOGO)" / validator prototyped verified-local; full plan unverified
+
+### Why
+The first plan (v1.1.0 amendment, PR #2592) was NOGO'd. The re-plan (R1) fixed the findings and,
+critically, PROTOTYPED the validator this time instead of shipping unvalidated awk. The NOGO
+surfaced five concrete latent traps — chief among them an awk parser that stopped at the first `}`
+and thus closed the nested `tls{}` rather than `leafnodes{}`, mis-declaring a correctly-authed
+config as unauthenticated. The durable learning is a refinement of the prior amendment (same topic,
+same canonical skill): hard-won planning lessons that any NATS-leaf-auth (or config-block-gate) plan
+in this ecosystem must apply — prototype the validator, track brace depth, test fail-closed, verify
+the CI invocation graph, and assert negative paths in both directions.
+
+### Previous version (v1.1.0) snapshot
+
+The full v1.1.0 skill body is preserved below under the **v1.1.0 (2026-06-19)** entry (its
+"Previous version (v1.0.0) snapshot" in turn preserves v1.0.0). The v1.2.0 changes are additive
+to that v1.1.0 baseline; see the **What changed** list above for the exact deltas (new validator
+subsection, 5 new Failed Attempts rows, reworked reviewer-risk catalogue, new meta-lessons
+subsection, updated `config_auth_gate` YAML, new Verified On row).
+
+---
+
 ## v1.1.0 (2026-06-19)
 
 **Changed by:** Plan for issue #176 (NATS leaf-node config has no authentication) — Odysseus session

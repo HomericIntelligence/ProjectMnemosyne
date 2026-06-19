@@ -3,7 +3,7 @@ name: homeric-crosshost-deployment-and-mesh-topology
 description: "Deploy and operate the HomericIntelligence mesh across multiple Tailscale hosts using NATS JetStream, compose overlays, and justfile launchers. Use when: (1) splitting the E2E stack across multiple physical hosts via compose overlay or per-component launchers, (2) bringing up Agamemnon/Nestor/Hermes natively or via containers on any new Tailnet host from cold state, (3) running hub+remote-worker topology for cross-host myrmidon dispatch, (4) configuring NATS connections (direct or leafnode) over Tailscale, (5) implementing NATS JetStream publish retry with exponential backoff, (6) debugging Hermes webhook event types, compose healthchecks, or podman rootlessport/DNS quirks, (7) PLANNING credential-based authentication for a credential-less NATS leaf/server config and scrutinizing the uncertain assumptions a reviewer must verify in such a plan."
 category: architecture
 date: 2026-06-19
-version: "1.1.0"
+version: "1.2.0"
 user-invocable: false
 verification: unverified
 history: homeric-crosshost-deployment-and-mesh-topology.history
@@ -51,8 +51,8 @@ tags:
 | ------- | ------- |
 | **Date** | 2026-06-19 |
 | **Objective** | Deploy and operate the HomericIntelligence mesh across multiple Tailscale hosts using NATS JetStream, compose overlays, justfile launchers, and resilient publish patterns; and plan credential-based authentication for the credential-less NATS leaf/server config |
-| **Outcome** | Deployment patterns verified-local (two-host + 6-host). The NATS leaf/server auth fix is an UNVERIFIED PLAN for issue #176 — no code was run, no CI passed; the plan's highest-value content is its catalogue of uncertain assumptions a reviewer must verify. |
-| **Verification** | unverified for the NATS auth-planning section (added 2026-06-19); verified-local for all prior deployment content (Odysseus sessions 2026-04-03 to 2026-05-03) |
+| **Outcome** | Deployment patterns verified-local (two-host + 6-host). The NATS leaf/server auth fix is still an UNVERIFIED PLAN for issue #176 (R1, post-NOGO) — the full plan was not run end-to-end and no CI passed. BUT the config-block-presence validator was PROTOTYPED this session (verified-local: exit 0 on the fixed fixture, exit 1 on the repo's current configs). The plan's highest-value content remains its catalogue of uncertain assumptions a reviewer must verify, now sharpened by concrete NOGO causes. |
+| **Verification** | unverified OVERALL for the NATS auth-planning section (the full plan was not exercised end-to-end); the brace-depth config-block validator specifically is verified-local (prototyped 2026-06-19 against fixed + current fixtures). Verified-local for all prior deployment content (Odysseus sessions 2026-04-03 to 2026-05-03). |
 | **History** | [changelog](./homeric-crosshost-deployment-and-mesh-topology.history) |
 
 ## When to Use
@@ -282,6 +282,60 @@ leafnodes {
 }
 ```
 
+### Canonical Config-Block-Presence Check — Brace-Depth Validator (verified-local, R1)
+
+**This is the validated heart of the R1 plan.** The NOGO killed the first plan because its
+validator stopped at the first `}` — which closes the nested `tls {}`, not the `leafnodes {}`
+block. A config-block validator MUST track brace DEPTH (count `{` vs `}`), never stop at the
+first close brace. Prototyped this session: exit 0 on the fixed fixture, exit 1 on the repo's
+current (unauthed) `configs/nats/server.conf`.
+
+```bash
+#!/usr/bin/env bash
+# validate-configs (wired into `just validate-configs`; CI must invoke it explicitly).
+# Extract a named brace-block by DEPTH, stripping comments first, then assert auth inside it.
+set -euo pipefail
+
+# block FILE BLOCKNAME -> prints the contents of the first top-level BLOCKNAME { ... },
+# tracking nested braces by depth so nested tls{}/jetstream{} do NOT close it early.
+block() {
+  local file="$1" name="$2"
+  sed 's/#.*//' "$file" | awk -v blk="$name" '
+    $0 ~ blk"[[:space:]]*\\{" && depth==0 { inblk=1 }
+    inblk {
+      n=gsub(/\{/,"{"); m=gsub(/\}/,"}");
+      depth += n - m;
+      print;
+      if (depth<=0 && started) { inblk=0 }
+      if (n>0) started=1
+    }
+  '
+}
+
+# Assert the leafnodes{} listener carries its OWN authorization{} (per-block, not file-wide).
+if ! block configs/nats/server.conf leafnodes | grep -q 'authorization'; then
+  echo "FAIL: server.conf leafnodes{} listener has no authorization{} block" >&2
+  exit 1
+fi
+echo "OK: leafnodes listener is authenticated"
+```
+
+Verification discipline that makes this gate real (all learned from the NOGO):
+
+```bash
+# Assert BOTH directions — a validator that always exits 1 "passes" the bad-case check
+# for the WRONG reason and silently rejects the FIX too.
+./validate-configs                 # MUST exit 0 on the fixed config
+git stash && ! ./validate-configs  # MUST exit 1 on the unfixed config
+git stash pop
+
+# Fail-closed must be TESTED, not asserted: render the config with the token UNSET and
+# grep for the leaked literal. Install a pinned nats-server in CI and run it unconditionally
+# — never gate the check on `command -v nats-server` (that turns it into a silent no-op).
+NATS_LEAF_TOKEN= nats-server -t -c configs/nats/server.conf 2>&1 \
+  | grep -q '\$NATS_LEAF_TOKEN' && { echo "FAIL: unset token leaked as literal"; exit 1; }
+```
+
 ### Agamemnon API Shape (Confirmed)
 
 ```bash
@@ -431,6 +485,11 @@ pkill -f ProjectNestor_server    || kill $(pgrep -f ProjectNestor_server)
 | `sensitive = true` in Nomad var | Terraform-ism to hide NATS creds in a Nomad variable | Nomad parse error: "argument named 'sensitive' is not expected" | Don't secure NATS creds via Nomad `sensitive` vars |
 | Naive grep gate | `grep` for `token` without stripping comments | A commented-out example passes the check (false-negative) | Strip comments before asserting presence; assert per-block, not file-wide |
 | Assuming pytest exists | Planning a pytest-based regression test for the config | Odysseus has no pytest; tasks are `just`-backed | Wire gates into the existing `just` / CI runner |
+| awk parser that ends block on first `}` | Validate leafnodes auth by scanning until the first `}` | Nested `tls{}` inside `leafnodes{}` closes first — parser declared a CORRECTLY-authed config unauthenticated; exited 1 on BOTH fixed and broken configs | A config-block validator MUST track brace DEPTH (count `{` vs `}`), not stop at the first `}`. Nested blocks are the norm in NATS/HCL-style configs |
+| Verification that only checks the broken case | `git stash && ! validator && echo PASS` | A validator that always exits 1 "passes" this check for the wrong reason — masks that it also rejects the FIX | Always assert BOTH directions: exit 1 on the unfixed config AND exit 0 on the fixed config. A regression gate that can't accept the fix is broken |
+| Assuming a recipe wired into justfile runs in CI | Claimed validator "already runs on pull_request via ci.yml" | `ci.yml`'s validate job inlines its own steps and never invokes `just validate-configs`/`pixi run validate` | Don't assume CI calls your `just` recipe — READ the workflow. Add an explicit CI step (or confirm the recipe is invoked) or the gate doesn't exist |
+| Parse check gated on `command -v nats-server` | `command -v nats-server && nats-server -t ... \|\| echo skipped` | The tool is absent in CI, so the check silently skips — the fail-closed assumption is never actually tested | If a verification matters, INSTALL the tool in CI (pinned release) and run it unconditionally; a `command -v ... \|\|` guard turns the check into a no-op |
+| Asserting `.gitignore` coverage from a pattern | Claimed `/etc/nats/certs/` was already git-ignored | `grep -n "certs\|creds\|nats" .gitignore` → no matches; the claim was fabricated from the certs convention | Grep the actual file before claiming a path is ignored. "It follows the convention" is not evidence the entry exists |
 
 ## Results & Parameters
 
@@ -490,31 +549,59 @@ This is the core value of the planning learning. A plan for NATS leaf/server aut
 ecosystem is only as trustworthy as these unverified claims. A reviewer should treat each as
 a blocking question, not a settled fact.
 
-1. **Env-var substitution in `authorization { token = "$NATS_LEAF_TOKEN" }` is ASSUMED, not
-   verified against the installed NATS version. (HIGHEST RISK.)** NATS supports `$VAR`
-   substitution, but confirm the *deployed* nats-server version honors it for the token field
-   **and** that an UNSET var fails CLOSED (rejects connections) rather than treating the literal
-   string `$NATS_LEAF_TOKEN` as the token — the latter is a fail-OPEN-ish weak shared secret.
+1. **Env-var substitution in `authorization { token = "$NATS_LEAF_TOKEN" }` — fail-closed is now
+   TESTED, not assumed (R1 downgrade).** Previously the HIGHEST-RISK untested assumption; R1 adds a
+   pinned `nats-server -t -c server.conf` run with the var UNSET that greps the rendered config for
+   the leaked literal `$NATS_LEAF_TOKEN`. With that CI step the fail-closed behavior is verified, not
+   hoped for. The residual risk is keeping that pinned check unconditional (never gate it on
+   `command -v nats-server`) so it can't silently skip.
 2. **Whether one shared token across client + all leaf nodes is acceptable** vs per-leaf
    `.creds`. A shared token is a shared secret with no per-leaf revocation. The plan documents
    `.creds` as recommended but ships a token fallback; the reviewer must confirm the bootstrap
    token is not silently becoming the permanent posture.
-3. **The awk leafnode-block parser is brittle.** It assumes a single-line `}` closes the block
-   and that there are no nested braces before `authorization`. But the `leafnodes {}` block
-   contains a nested `tls {}` block, so the FIRST `}` closes `tls`, not `leafnodes` — the awk may
-   declare the block authed/unauthed incorrectly. Test the validator against the ACTUAL
-   multi-brace config, never a flattened one.
+3. **The awk leafnode-block parser brittleness is RESOLVED in R1 by the brace-depth validator.**
+   The original NOGO cause: a parser that ends the block on the first `}` closes the nested
+   `tls {}`, not `leafnodes {}`, mis-declaring auth. R1 replaces it with the depth-tracking
+   `block()` helper (counts `{` vs `}`, strips comments) prototyped this session — exit 0 on the
+   fixed fixture, exit 1 on the current configs. Reviewer residual: confirm the validator is run in
+   BOTH directions (rejects the bad config AND accepts the fix), never just the bad case.
 4. **Cited line numbers may have drifted.** `server.conf:27-34`, `leaf.conf:34-37`,
    `justfile:258-266`, `ci.yml:11-55`, `deployment.md:152-161` were read once. Re-confirm each
    before editing.
 5. **ADR-008 Status is "Proposed", not "Accepted".** The plan builds ADR-009 on top of an
    unaccepted ADR. Confirm the sequencing/numbering is still valid.
-6. **`.gitignore` coverage of `/etc/nats/certs/` was inferred from the certs pattern, not
-   grepped.** The claim that the certs-dir convention extends to `.creds` files is unverified —
-   grep `.gitignore` directly to ensure `.creds` are actually ignored.
-7. **`just validate-configs` actually running in CI on `pull_request` is ASSUMED.** Confirm the
-   `ci.yml` validate job invokes the recipe (the assumed `pixi run validate` → `just
-   validate-configs` chain) rather than inlining its own yamllint and skipping the auth gate.
+6. **`.gitignore` coverage of `.creds`/`certs` was FABRICATED in R0 — confirmed absent in R1.**
+   `grep -n "certs\|creds\|nats" .gitignore` returns no matches; the R0 claim that the convention
+   already ignored these paths was invented. The plan must ADD the `.gitignore` entries, not assume
+   them. Lesson: grep the actual file before claiming a path is ignored.
+7. **`just validate-configs` running in CI on `pull_request` was FALSE — confirmed in R1.**
+   `ci.yml`'s validate job inlines its own steps and never invokes `just validate-configs` /
+   `pixi run validate`. The gate does not exist until an explicit CI step is added (or the workflow
+   is changed to call the recipe). Read `ci.yml` end-to-end; do not infer the invocation graph.
+8. **Shared-token-vs-per-leaf-`.creds` posture risk REMAINS (R1, unresolved).** The plan still
+   ships a `token` bootstrap fallback alongside the recommended per-leaf `.creds`. A shared token is
+   a shared secret with no per-leaf revocation; the reviewer must confirm the bootstrap token is not
+   silently becoming the permanent posture. This is the one reviewer-risk item the R1 prototype did
+   NOT retire.
+
+### Reviewer-risk + Meta-Lessons (planning learnings from the NOGO, R1)
+
+These are the durable PLANNING lessons the NOGO cycle taught — independent of NATS specifics.
+
+- **The single most valuable planning move was PROTOTYPING the validator before shipping the
+  plan.** Running the brace-depth `block()` extractor against fixed + current fixtures turned "I
+  think this works" into "exit 0 vs exit 1, verified." Plans that ship unvalidated shell/awk get
+  NOGO'd on latent traps (here: the nested-`tls{}` brace).
+- **Verify the CI invocation graph, not just file existence.** A gate wired into a `just` recipe is
+  invisible to CI unless the workflow actually calls that recipe. Read `ci.yml` end-to-end.
+- **Every line-number citation drifts.** The NOGO flagged `:27-39` vs the actual `:27-40`. Re-grep
+  before citing; precision claims invite precision checks.
+- **Fail-closed must be TESTED, not asserted.** The highest-risk assumption (unset
+  `$NATS_LEAF_TOKEN` resolves empty, not to the literal string) only became believable once a pinned
+  `nats-server -t` run was added that greps the rendered config for a leaked literal.
+- **Negative-path verification needs BOTH directions.** Asserting only "rejects the bad config"
+  hides a validator that rejects everything — including the fix. Assert exit 1 on broken AND exit 0
+  on fixed.
 
 ```yaml
 # PROPOSED NATS auth env vars (mirror existing $NATS_MONITORING_PASSWORD pattern)
@@ -526,12 +613,18 @@ nats_auth_env_vars:
 
 # PROPOSED fail-closed lint (shell, wired into `just validate-configs`, NOT pytest)
 config_auth_gate:
-  runner: "just validate-configs  (invoked by ci.yml on pull_request)"
+  runner: "just validate-configs — MUST be invoked by an EXPLICIT ci.yml step"
+  ci_invocation: "ci.yml inlines its own steps; it does NOT call the recipe today — add the step"
   must_strip_comments_before_grep: true     # else a commented example passes
+  brace_depth_extraction: true              # block() counts {/} — nested tls{} must not close early
   assert_per_block: true                    # leafnodes{} needs its own authorization{}
+  assert_both_directions: true              # exit 1 on broken config AND exit 0 on the fix
+  fail_closed_test: "NATS_LEAF_TOKEN= nats-server -t -c server.conf | grep -q '$NATS_LEAF_TOKEN'"
+  nats_server_in_ci: "pinned release, run UNCONDITIONALLY (never `command -v` guard)"
   ports:
     leaf_remote: 7422                        # never 4222
   adr: "new ADR-009 (append-only); never edit accepted ADRs"
+  validator_status: "prototyped verified-local: exit 0 on fixed fixture, exit 1 on current configs"
 ```
 
 | Project | Context | Details |
@@ -543,3 +636,4 @@ config_auth_gate:
 | HomericIntelligence/Odysseus | 2026-04-24 NATS publish retry | Full retry loop with jitter verified in CI (ProjectHermes) |
 | HomericIntelligence/Odysseus | 2026-05-03 Atlas 6-host cold-start | 6 hosts started (4 podman, 1 pixi native, 1 docker); Agamemnon API confirmed |
 | Odysseus | Plan for issue #176 (NATS leaf auth) | unverified plan — no code run, no CI; value is the reviewer-risk catalogue of uncertain assumptions |
+| Odysseus | Plan R1 for issue #176 (NATS leaf auth, post-NOGO) | validator prototyped verified-local (brace-depth `block()`: exit 0 on fixed fixture, exit 1 on current configs); full plan still unverified |
