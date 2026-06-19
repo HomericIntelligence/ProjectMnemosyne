@@ -1,10 +1,11 @@
 ---
 name: homeric-crosshost-deployment-and-mesh-topology
-description: "Deploy and operate the HomericIntelligence mesh across multiple Tailscale hosts using NATS JetStream, compose overlays, and justfile launchers. Use when: (1) splitting the E2E stack across multiple physical hosts via compose overlay or per-component launchers, (2) bringing up Agamemnon/Nestor/Hermes natively or via containers on any new Tailnet host from cold state, (3) running hub+remote-worker topology for cross-host myrmidon dispatch, (4) configuring NATS connections (direct or leafnode) over Tailscale, (5) implementing NATS JetStream publish retry with exponential backoff, (6) debugging Hermes webhook event types, compose healthchecks, or podman rootlessport/DNS quirks."
+description: "Deploy and operate the HomericIntelligence mesh across multiple Tailscale hosts using NATS JetStream, compose overlays, and justfile launchers. Use when: (1) splitting the E2E stack across multiple physical hosts via compose overlay or per-component launchers, (2) bringing up Agamemnon/Nestor/Hermes natively or via containers on any new Tailnet host from cold state, (3) running hub+remote-worker topology for cross-host myrmidon dispatch, (4) configuring NATS connections (direct or leafnode) over Tailscale, (5) implementing NATS JetStream publish retry with exponential backoff, (6) debugging Hermes webhook event types, compose healthchecks, or podman rootlessport/DNS quirks, (7) PLANNING credential-based authentication for a credential-less NATS leaf/server config and scrutinizing the uncertain assumptions a reviewer must verify in such a plan."
 category: architecture
-date: 2026-05-19
-version: "1.0.0"
+date: 2026-06-19
+version: "1.1.0"
 user-invocable: false
+verification: unverified
 history: homeric-crosshost-deployment-and-mesh-topology.history
 tags:
   - cross-host
@@ -30,6 +31,16 @@ tags:
   - e2e
   - cpp20
   - homeric-intelligence
+  - auth
+  - authorization
+  - credentials
+  - leafnode
+  - leaf-conf
+  - server-conf
+  - security
+  - planning
+  - reviewer-risks
+  - adr
 ---
 
 # HomericIntelligence Cross-Host Deployment and Mesh Topology
@@ -38,10 +49,10 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-05-19 |
-| **Objective** | Deploy and operate the HomericIntelligence mesh across multiple Tailscale hosts using NATS JetStream, compose overlays, justfile launchers, and resilient publish patterns |
-| **Outcome** | Two-host and 6-host deployments validated; compose overlay, per-component launcher, hub+remote-worker, and cold-start patterns all confirmed working. NATS publish retry with jitter verified in CI. |
-| **Verification** | verified-local (multiple Odysseus sessions 2026-04-03 to 2026-05-03) |
+| **Date** | 2026-06-19 |
+| **Objective** | Deploy and operate the HomericIntelligence mesh across multiple Tailscale hosts using NATS JetStream, compose overlays, justfile launchers, and resilient publish patterns; and plan credential-based authentication for the credential-less NATS leaf/server config |
+| **Outcome** | Deployment patterns verified-local (two-host + 6-host). The NATS leaf/server auth fix is an UNVERIFIED PLAN for issue #176 — no code was run, no CI passed; the plan's highest-value content is its catalogue of uncertain assumptions a reviewer must verify. |
+| **Verification** | unverified for the NATS auth-planning section (added 2026-06-19); verified-local for all prior deployment content (Odysseus sessions 2026-04-03 to 2026-05-03) |
 | **History** | [changelog](./homeric-crosshost-deployment-and-mesh-topology.history) |
 
 ## When to Use
@@ -54,6 +65,7 @@ tags:
 - Choosing between compose overlay vs native binary vs per-component launcher deployment
 - Implementing NATS JetStream publish retry with exponential backoff and jitter in Python
 - Debugging cross-host service communication, NATS leafnode config, or podman networking issues
+- Planning credential-based authentication for the canonical credential-less `configs/nats/leaf.conf` + `server.conf` (issue #176) and reviewing such a plan for unverified assumptions
 
 ## Verified Workflow
 
@@ -205,6 +217,71 @@ leafnodes {
 }
 ```
 
+## Proposed Workflow — Planning NATS Leaf/Server Auth (UNVERIFIED, issue #176)
+
+> **Warning:** This section is an UNVERIFIED PLAN. No code was run, no CI passed,
+> and the NATS version behaviors below were not exercised. Treat every step as a
+> hypothesis until CI confirms. The highest-value content here is the
+> reviewer-risk catalogue in **Results & Parameters** — read it before trusting any step.
+
+The canonical `configs/nats/leaf.conf` and `configs/nats/server.conf` ship with NO
+authentication: the `leafnodes {}` listener accepts anonymous leaf connections, so any
+host that can reach port 7422 can join the mesh and relay traffic. This is the plan for
+closing that hole. `configs/` is canonical — fixing it propagates to every host that
+copies the config.
+
+### Proposed Steps
+
+1. **Add `authorization {}` to BOTH the client listener AND the `leafnodes {}` listener
+   in `server.conf`.** A leafnode listener without its own authorization stays open even
+   if the client listener is authed — they are independent. Do not assume top-level
+   `authorization {}` covers the leafnode listener.
+2. **Add a credential to each `leaf.conf` `remotes` entry.** Prefer
+   `credentials = ".../leaf.creds"` (NKey/JWT, per-leaf, individually revocable). A
+   `token = "$NATS_LEAF_TOKEN"` is an acceptable bootstrap fallback only. **Keep the URL
+   on port 7422 — never 4222** (4222 is the client port; leaf remotes pointed at 4222
+   silently fail to connect).
+3. **Reference secrets via NATS env substitution** (`$NATS_LEAF_TOKEN`), mirroring the
+   existing `$NATS_MONITORING_PASSWORD` pattern already in the configs. Never commit
+   secret values.
+4. **Treat `configs/` as canonical** — the fix lands once and propagates to every host
+   that copies or symlinks the config.
+5. **Enforce with a fail-closed lint wired into the EXISTING runner/CI gate.** This repo
+   is `just` / `pixi`, **NOT** pytest. Add a shell validator invoked by
+   `just validate-configs` (which CI must call). The gate **must strip comments before
+   grepping** so a commented-out example does not satisfy the check, and it must assert
+   per-block (the leafnode block has its own authorization) rather than file-wide.
+6. **Auth is a NEW architectural decision → write a NEW append-only ADR (ADR-009).**
+   Never edit an accepted ADR.
+
+```hcl
+# server.conf — PROPOSED (both listeners authed)
+authorization {
+  user = "$NATS_CLIENT_USER"
+  password = "$NATS_CLIENT_PASSWORD"
+}
+leafnodes {
+  port = 7422
+  authorization {                 # leafnode listener needs its OWN block
+    token = "$NATS_LEAF_TOKEN"     # or per-leaf user/account + .creds
+  }
+  tls { ... }                     # NOTE: nested block — see awk-parser risk below
+}
+```
+
+```hcl
+# leaf.conf — PROPOSED (authed remote, still port 7422)
+leafnodes {
+  remotes [
+    {
+      url: "nats-leaf://<hub-ip>:7422"
+      credentials: "/etc/nats/creds/leaf.creds"   # preferred; revocable per-leaf
+      # token: "$NATS_LEAF_TOKEN"                  # bootstrap fallback only
+    }
+  ]
+}
+```
+
 ### Agamemnon API Shape (Confirmed)
 
 ```bash
@@ -349,6 +426,11 @@ pkill -f ProjectNestor_server    || kill $(pgrep -f ProjectNestor_server)
 | Assuming Odysseus present on all hosts | Skipped `gh repo clone` step | Only some hosts had a clone; others needed fresh clone | Pre-check `ls ~/<project-root>` — clone if missing |
 | `podman cp` to overwrite read-only bind-mount | Tried `podman cp` on `:ro` Prometheus config | Volume is `:ro` — copy fails with "device or resource busy" | Write resolved-IP config to host bind-mount source, then `/-/reload` |
 | Forking Atlas branch from feature branch | Created feat branch from `feat/issue-22-ci-hardening` | Picked up 12 extra CI commits; PR not rebased to main | Always fork from `main`; check base before `git worktree add` |
+| Leaf remote on port 4222 (auth fix) | Pointing `remotes.url` at the client port while adding creds | Leaf nodes silently never connect | Leaf remotes MUST use 7422, even when adding auth |
+| Auth only on client listener | Adding `authorization{}` only at the top level of `server.conf` | The `leafnodes{}` listener stays open — anonymous leaf relay still works | The leafnode listener needs its OWN `authorization` block |
+| `sensitive = true` in Nomad var | Terraform-ism to hide NATS creds in a Nomad variable | Nomad parse error: "argument named 'sensitive' is not expected" | Don't secure NATS creds via Nomad `sensitive` vars |
+| Naive grep gate | `grep` for `token` without stripping comments | A commented-out example passes the check (false-negative) | Strip comments before asserting presence; assert per-block, not file-wide |
+| Assuming pytest exists | Planning a pytest-based regression test for the config | Odysseus has no pytest; tasks are `just`-backed | Wire gates into the existing `just` / CI runner |
 
 ## Results & Parameters
 
@@ -402,7 +484,55 @@ recipes:
   start-console:    "python3 tools/odysseus-console.py"
 ```
 
-## Verified On
+### Uncertain Assumptions a Reviewer MUST Verify (NATS auth plan, issue #176)
+
+This is the core value of the planning learning. A plan for NATS leaf/server auth in this
+ecosystem is only as trustworthy as these unverified claims. A reviewer should treat each as
+a blocking question, not a settled fact.
+
+1. **Env-var substitution in `authorization { token = "$NATS_LEAF_TOKEN" }` is ASSUMED, not
+   verified against the installed NATS version. (HIGHEST RISK.)** NATS supports `$VAR`
+   substitution, but confirm the *deployed* nats-server version honors it for the token field
+   **and** that an UNSET var fails CLOSED (rejects connections) rather than treating the literal
+   string `$NATS_LEAF_TOKEN` as the token — the latter is a fail-OPEN-ish weak shared secret.
+2. **Whether one shared token across client + all leaf nodes is acceptable** vs per-leaf
+   `.creds`. A shared token is a shared secret with no per-leaf revocation. The plan documents
+   `.creds` as recommended but ships a token fallback; the reviewer must confirm the bootstrap
+   token is not silently becoming the permanent posture.
+3. **The awk leafnode-block parser is brittle.** It assumes a single-line `}` closes the block
+   and that there are no nested braces before `authorization`. But the `leafnodes {}` block
+   contains a nested `tls {}` block, so the FIRST `}` closes `tls`, not `leafnodes` — the awk may
+   declare the block authed/unauthed incorrectly. Test the validator against the ACTUAL
+   multi-brace config, never a flattened one.
+4. **Cited line numbers may have drifted.** `server.conf:27-34`, `leaf.conf:34-37`,
+   `justfile:258-266`, `ci.yml:11-55`, `deployment.md:152-161` were read once. Re-confirm each
+   before editing.
+5. **ADR-008 Status is "Proposed", not "Accepted".** The plan builds ADR-009 on top of an
+   unaccepted ADR. Confirm the sequencing/numbering is still valid.
+6. **`.gitignore` coverage of `/etc/nats/certs/` was inferred from the certs pattern, not
+   grepped.** The claim that the certs-dir convention extends to `.creds` files is unverified —
+   grep `.gitignore` directly to ensure `.creds` are actually ignored.
+7. **`just validate-configs` actually running in CI on `pull_request` is ASSUMED.** Confirm the
+   `ci.yml` validate job invokes the recipe (the assumed `pixi run validate` → `just
+   validate-configs` chain) rather than inlining its own yamllint and skipping the auth gate.
+
+```yaml
+# PROPOSED NATS auth env vars (mirror existing $NATS_MONITORING_PASSWORD pattern)
+nats_auth_env_vars:
+  NATS_LEAF_TOKEN:        "$ENV — bootstrap fallback only; MUST fail closed if unset"
+  NATS_CLIENT_USER:       "$ENV"
+  NATS_CLIENT_PASSWORD:   "$ENV"
+  # Preferred over token: per-leaf NKey/JWT .creds at /etc/nats/creds/leaf.creds (revocable)
+
+# PROPOSED fail-closed lint (shell, wired into `just validate-configs`, NOT pytest)
+config_auth_gate:
+  runner: "just validate-configs  (invoked by ci.yml on pull_request)"
+  must_strip_comments_before_grep: true     # else a commented example passes
+  assert_per_block: true                    # leafnodes{} needs its own authorization{}
+  ports:
+    leaf_remote: 7422                        # never 4222
+  adr: "new ADR-009 (append-only); never edit accepted ADRs"
+```
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
@@ -412,3 +542,4 @@ recipes:
 | HomericIntelligence/Odysseus | 2026-04-21 E2E compose pipeline | 10-container stack; all 7 phases passing on podman + docker; PR #117 |
 | HomericIntelligence/Odysseus | 2026-04-24 NATS publish retry | Full retry loop with jitter verified in CI (ProjectHermes) |
 | HomericIntelligence/Odysseus | 2026-05-03 Atlas 6-host cold-start | 6 hosts started (4 podman, 1 pixi native, 1 docker); Agamemnon API confirmed |
+| Odysseus | Plan for issue #176 (NATS leaf auth) | unverified plan — no code run, no CI; value is the reviewer-risk catalogue of uncertain assumptions |
