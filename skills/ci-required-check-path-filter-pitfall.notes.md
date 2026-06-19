@@ -62,3 +62,45 @@ acceptable and the always-run design is needlessly conservative.
 - `check-jsonschema` assumed installable.
 - Branch-protection config not queried.
 - Upstream action tags not cross-checked.
+
+## R1 re-plan — the #1 risk materialized (2026-06-19)
+
+R1 of the ProjectHermes #562 plan finally VERIFIED the keystone assumption. Branch protection was
+queried:
+
+```bash
+gh api repos/HomericIntelligence/ProjectHermes/branches/main/protection \
+  --jq '.required_status_checks.contexts'
+# -> ["Secret Scanning (gitleaks)","justfile-check"]
+```
+
+The docker-build job is NOT among the required contexts. Therefore the R0 keystone premise —
+"the workflow is a required check, so a `paths:` filter would brick unrelated PRs" — was FALSE.
+A skipped, path-filtered workflow does NOT block merge here. The reviewer NOGO'd R0 (grade D)
+precisely because it built on this unverified-and-false premise.
+
+### Corrected pattern — dedicated path-filtered workflow
+
+Because the check is NOT required, the correct, KISS, requirement-matching design is a dedicated
+workflow that path-filters on the Dockerfile (this also matches the issue's literal ask):
+
+```yaml
+# .github/workflows/docker-build.yml  (a NON-required workflow → safe to path-filter)
+name: docker-build
+on:
+  pull_request:
+    paths:
+      - 'Dockerfile'
+      - 'docker/**'
+      - '.dockerignore'
+jobs:
+  docker-build:
+    runs-on: ubuntu-24.04        # single-arch host linux/amd64 (pixi linux-64)
+    steps:
+      - uses: actions/checkout@<sha>
+      - uses: docker/setup-buildx-action@<sha>
+      - run: docker buildx build --load -t hermes:smoke .   # BLOCKING, no continue-on-error
+```
+
+Still `unverified` overall — R1 remained a plan, never merged/executed — but the "is it actually
+a required check?" question was answered empirically, and the answer flipped the design.

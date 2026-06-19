@@ -3,9 +3,10 @@ name: ci-required-check-path-filter-pitfall
 description: "Use when: (1) an issue asks you to run a build/job ONLY on PRs that touch certain paths (e.g. a Dockerfile, a subdirectory) and the target workflow is a REQUIRED status check — adding a workflow-level on.pull_request.paths: filter is a trap that makes path-irrelevant PRs un-mergeable, (2) planning a smoke/build gate that you are tempted to soft-fail with continue-on-error: true (a repo may have a forbid-suppressions guard that fails CI on it), (3) tempted to rewrite a digest-pinned Dockerfile FROM to an mcr.microsoft.com mirror to dodge Docker Hub rate limits (this changes the shipped image digest), (4) deciding base-image arch for a pixi/conda smoke build (linux-64 workspace cannot build linux/arm64), (5) writing a CI implementation plan and you need an uncertain-assumptions checklist a reviewer can verify (is the workflow actually a required check? are cited line numbers fresh? is the action SHA verified upstream?)."
 category: ci-cd
 date: 2026-06-19
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 verification: unverified
+history: ci-required-check-path-filter-pitfall.history
 tags:
   - github-actions
   - branch-protection
@@ -30,7 +31,39 @@ tags:
 | **Outcome** | A transferable "don't path-filter a required workflow" rule, a resolution menu (unconditional job / separate non-required workflow / per-job `if:` on a changed-files step that still reports), and an uncertain-assumptions checklist for CI plans. |
 | **Verification** | **unverified** — this is a PLAN that was written but never executed or merged. The required-check claim was inferred from a filename, not confirmed via the branch-protection API. Treat every assertion as a hypothesis. |
 
+> ### CENTRAL RISK CONFIRMED (v1.1.0)
+>
+> The #1 flagged risk of this skill — *"is the workflow ACTUALLY a required status check?"* —
+> **materialized on a real repo.** In a re-plan, the assumption was finally checked with
+> `gh api repos/:owner/:repo/branches/<branch>/protection --jq '.required_status_checks.contexts'`
+> and the answer came back as a **short, fixed list that did NOT include the target workflow**.
+> The keystone premise (the workflow is required, so a `paths:` filter would brick PRs) was
+> **FALSE** — which flipped the correct design from *always-run* to a **dedicated path-filtered
+> workflow** (the literal, KISS, requirement-matching design). Leaving the premise unverified had
+> earned a reviewer **NOGO**. Lesson, now empirical, not hypothetical: **query branch protection
+> FIRST; never infer required-ness from a filename.** See "When to Use" for the exact command and
+> decision rule, and Results & Parameters for the verified example output.
+
 ## When to Use
+
+> **DO THIS FIRST — before any reasoning about required-check / path-filter interactions.**
+> Query branch protection to learn whether your workflow's check name is actually required:
+>
+> ```bash
+> gh api repos/:owner/:repo/branches/<branch>/protection \
+>   --jq '.required_status_checks.contexts'
+> ```
+>
+> **Decision rule:**
+> - The workflow's check name **IS in** that list → it **IS required**. A workflow-level `paths:`
+>   filter that can skip it will leave the required status **un-reported and block merge**.
+>   Do NOT path-filter it: use an always-run job, or move it to a separate **non-required**
+>   workflow.
+> - The workflow's check name is **NOT in** that list → it is **safe to path-filter**: a skip
+>   won't block merge, and a workflow-level `paths:` filter is the correct, **KISS**,
+>   requirement-matching design (it also matches an issue that literally asks for path scoping).
+>
+> Never infer required-ness from a filename (e.g. `_required.yml`) — verify it with the API.
 
 - An issue literally says "run a build/test only on PRs that touch `<path>`" (e.g. the Dockerfile) and the workflow you'd add it to is a **required** status check. The naive `paths:` filter CANNOT satisfy this without bricking unrelated PRs.
 - You are about to add a `paths:`/`paths-ignore:` block to a consolidated `_required.yml`-style workflow and want to know why that is wrong.
@@ -182,6 +215,8 @@ the full instantiated list):
 | Rewrite digest-pinned `FROM` to MCR mirror to dodge rate limits | Swapped a `FROM image@sha256:...` line to `mcr.microsoft.com/mirror/docker/library/...` for rate-limit relief | Changing the registry changes the image DIGEST → changes the shipped artifact; a "CI convenience" silently alters the deliverable | The MCR-mirror trick is for UNPINNED bases only; for a digest-pinned base, accept the flake or add auth, and state the trade-off explicitly |
 | Cite insertion point by line number | Plan anchored edits on `_required.yml:281/:283/:359`, `publish.yml:5/:28`, `Dockerfile:5,14` | Line numbers drift with concurrent edits; any merge to the workflow shifts them, so the cited insertion point becomes wrong | Anchor edits on job/section NAMES (after `readonly-fs-smoke`, before `security-dependency-scan`), not line numbers |
 | Assume the workflow is a required check from its name | Built the entire "don't path-filter" argument on the filename `_required.yml` + `pull_request: branches:[main]` | Never confirmed via `gh api repos/:owner/:repo/branches/main/protection`; if it is NOT a required check, a `paths:` filter is acceptable and the always-run design is needlessly conservative | Confirm required-check status with the branch-protection API before reasoning about it; flag it as the #1 unverified assumption otherwise |
+| Assumed `_required.yml` was a required check from its filename | Reasoning about path-filter safety on an unverified premise | `gh api .../protection` showed only 2 contexts required; the workflow was NOT among them → premise false, reviewer NOGO | ALWAYS query branch protection before reasoning about required-check / path-filter interactions; never infer required-ness from a filename |
+| Chose always-run-on-every-PR to avoid a (nonexistent) blocking-skip problem | Conservative design to dodge required-check skip | Wasted CI on every unrelated PR; reviewer flagged as non-KISS + a silent reinterpretation of the issue's path-scoped requirement | When the check is NOT required, path-filter it — matches the literal requirement and avoids wasted CI |
 | Copy an action SHA from a sibling workflow | Reused `docker/setup-buildx-action@8d2750c...  # v3` from `publish.yml` without checking upstream | If the sibling's pin is stale or wrong, the new job inherits the same staleness | Verify the action SHA against the upstream tag independently; do not propagate a pin you haven't checked |
 | Assume `docker buildx` is preinstalled on the runner | Assumed `ubuntu-24.04` GitHub-hosted runners ship buildx and that no setup action is strictly needed for a `--load` build | Not validated against the actual runner image; an assumption, not a fact | Include `docker/setup-buildx-action` defensively, but flag runner-tool availability as unverified rather than asserting it |
 | Ignore Docker Hub rate limits for a fresh CI build | Acknowledged the rate-limit risk but added no mitigation (no auth, no mirror — because the base is digest-pinned) | Shared runner IPs hit Docker Hub anonymous-pull limits — the #1 real-world flake for this exact change | Either accept the flake risk explicitly or add registry auth; do not leave the #1 flake unmitigated and unstated |
@@ -195,6 +230,29 @@ the full instantiated list):
 | **Central rule** | A workflow-level `paths:` filter on a REQUIRED workflow makes path-irrelevant PRs un-mergeable (required context never reports) |
 | **Chosen design** | Always-run cheap smoke job (Resolution A), single-arch `linux/amd64`, blocking (no `continue-on-error`), digest-pinned base kept as-is |
 | **Verification status** | **unverified** — plan only; CI never confirmed; required-check status never queried |
+
+### Branch-protection verification (copy-paste) — DO THIS FIRST
+
+```bash
+# List the required status-check contexts for a branch:
+gh api repos/:owner/:repo/branches/<branch>/protection \
+  --jq '.required_status_checks.contexts'
+```
+
+Example output from a real run (the empirical confirmation of this skill's #1 risk):
+
+```json
+["Secret Scanning (gitleaks)","justfile-check"]
+```
+
+The candidate workflow's check name was **NOT** in that list → it is **not** a required check →
+path-filtering it is the correct design. The earlier always-run plan (built on the unverified
+assumption it *was* required) was over-conservative and earned a reviewer NOGO.
+
+| Branch-protection result | Conclusion | Correct design |
+| ------------------------ | ---------- | -------------- |
+| Workflow's check name **IS** in `.required_status_checks.contexts` | It **IS** required | Do NOT path-filter (a skip leaves the required status un-reported → blocks merge). Use an always-run job, or move it to a separate non-required workflow |
+| Workflow's check name is **NOT** in the list | It is **not** required | Path-filtering is correct (a skip won't block merge). It matches the literal "run only on PRs touching `<path>`" requirement and avoids wasted CI — the KISS design |
 
 ### The uncertain assumptions (the reviewer-facing checklist)
 
@@ -218,4 +276,5 @@ the full instantiated list):
 
 | Project | Context | Details |
 | ------- | ------- | ------- |
-| ProjectHermes | Issue #562 — implementation plan | Add Dockerfile smoke build to `_required.yml`, path-scoped to Dockerfile PRs; **unverified** — plan written, never executed or merged; required-check status never confirmed via API |
+| ProjectHermes | Issue #562 — implementation plan (R0) | Add Dockerfile smoke build to `_required.yml`, path-scoped to Dockerfile PRs; **unverified** — plan written, never executed or merged; required-check status never confirmed via API |
+| ProjectHermes | Issue #562 — R1 re-plan (NOGO→re-plan) | **CENTRAL RISK CONFIRMED.** R1 ran `gh api repos/HomericIntelligence/ProjectHermes/branches/main/protection --jq '.required_status_checks.contexts'` → `["Secret Scanning (gitleaks)","justfile-check"]` ONLY. The docker-build workflow was NOT a required check → R0's keystone premise was FALSE → correct design is a dedicated path-filtered `.github/workflows/docker-build.yml` on `pull_request.paths`. Still `unverified` (R1 remained a plan), but the "is it actually required?" risk was empirically checked and proven decisive |
