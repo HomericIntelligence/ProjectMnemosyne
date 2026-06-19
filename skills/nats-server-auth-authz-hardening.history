@@ -1,0 +1,23 @@
+# Changelog — nats-server-auth-authz-hardening
+
+## v1.0.0 — 2026-06-19
+
+**What changed:** Initial creation.
+
+**Why:** Captured a PLANNING learning (verification: `unverified`) from an Odysseus
+session on how to plan NATS server-side auth/authz hardening for the
+HomericIntelligence mesh on top of the existing ADR-008 TLS PKI. The durable,
+generalizable lesson is to reuse the existing X.509 mutual-cert trust chain via
+`verify_and_map` (client) + `verify` (cluster/leafnode) and subject-scoped
+`accounts{}` mapped to the ADR-005 `hi.*` schema, rather than standing up
+decentralized operator/NKey/JWT (which needs an operator keypair, JWT resolver,
+and out-of-band issuance pipeline that do not exist on disk). AID v0.2.0 Ed25519
++ scoped JWT recorded as the documented FUTURE path.
+
+Key recorded findings: TLS already landed via ADR-008 (PRs #290/#292) on every
+listener; issue #175's cited line numbers (server.conf:12-21 "no tls block")
+were STALE; no `verify`/`accounts{}` present yet; ADRs are append-only (next was
+009, never edit ADR-008). The plan was NOT executed and no `nats-server -t`
+parse check was run, so the cert→user mapping semantics, JetStream API subject
+scoping, `accounts{}` syntax, and `accounts{}`-in-leaf.conf validity remain
+unverified risks.
