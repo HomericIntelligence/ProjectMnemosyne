@@ -1,9 +1,9 @@
 ---
 name: parallel-pr-worktree-workflow
-description: "Use when: (1) launching 2+ parallel rebase agents that need isolated git state to avoid branch collision, (2) implementing 5+ independent fixes in parallel PRs using git worktrees, (3) bulk-merging skill PRs with CI fixes and conflict resolution, (4) batching 10+ PRs across parallel sub-agents for maximum throughput, (5) launching >=2 concurrent sub-agents that each commit/push to the same git repo, (6) sub-agents report file bleed-over or unexpected `git checkout` reverts mid-task, (7) RESCUE pattern when parallel dispatch across distinct branches has already produced cross-contaminated commits — consolidate worker PRs into ONE branch via cherry-pick and close individual PRs, (8) doing ANY multi-fix work in a shared checkout that a concurrent foreign session/automation may also touch — use dedicated worktrees from the start so a foreign session cannot move your HEAD/branch, (9) arming auto-merge on a STACKED PR (base is another open/feature branch) — retarget to main BEFORE arming or it squash-merges into the intermediate base and can ORPHAN the change, (10) recovering an orphaned stacked merge (PR state=MERGED but content stranded on a dead intermediate branch) via cherry-pick onto a fresh main branch, (11) triaging GitHub PR CI where current-head checks are stale, absent, or blocked by merge conflicts — inspect job logs plus PR rollup/mergeability before editing and use one worktree per PR branch."
+description: "Use when: (1) launching 2+ parallel rebase agents that need isolated git state to avoid branch collision, (2) implementing 5+ independent fixes in parallel PRs using git worktrees, (3) bulk-merging skill PRs with CI fixes and conflict resolution, (4) batching 10+ PRs across parallel sub-agents for maximum throughput, (5) launching >=2 concurrent sub-agents that each commit/push to the same git repo, (6) sub-agents report file bleed-over or unexpected `git checkout` reverts mid-task, (7) RESCUE pattern when parallel dispatch across distinct branches has already produced cross-contaminated commits — consolidate worker PRs into ONE branch via cherry-pick and close individual PRs, (8) doing ANY multi-fix work in a shared checkout that a concurrent foreign session/automation may also touch — use dedicated worktrees from the start so a foreign session cannot move your HEAD/branch, (9) arming auto-merge on a STACKED PR (base is another open/feature branch) — retarget to main BEFORE arming or it squash-merges into the intermediate base and can ORPHAN the change, (10) recovering an orphaned stacked merge (PR state=MERGED but content stranded on a dead intermediate branch) via cherry-pick onto a fresh main branch, (11) triaging GitHub PR CI where current-head checks are stale, absent, or blocked by merge conflicts — inspect job logs plus PR rollup/mergeability before editing and use one worktree per PR branch, (12) diagnosing Inference360 PRs where stale green checks coexist with `mergeStateStatus=DIRTY` and `mergeable=CONFLICTING` — rebase before waiting on validate."
 category: ci-cd
-date: 2026-06-17
-version: "1.5.0"
+date: 2026-06-19
+version: "1.6.0"
 user-invocable: false
 verification: verified-ci
 history: parallel-pr-worktree-workflow.history
@@ -40,6 +40,10 @@ when a worktree is shared or dirty), `git-worktree-parallel-execution-lifecycle`
 - **(v1.5.0, verified-ci)** `gh pr checks` shows stale failures, or a required `validate`
   check disappears after a push. Inspect PR rollup, commits, mergeability, and rebase conflicted
   branches before assuming the workflow was skipped (see Phase 1b).
+- **(v1.6.0, verified-ci)** Inference360 PRs report `mergeStateStatus=DIRTY` and
+  `mergeable=CONFLICTING` even though visible checks are stale green. Rebase before waiting for
+  `validate`, resolve only real conflict blocks, and treat post-push `mergeable=UNKNOWN` with green
+  rollup as GitHub recomputation (see Phase 1b).
 
 **Do NOT use when:**
 - Issues are interdependent (use sequential PRs from `batch-pr-rebase-conflict-resolution-workflow`)
@@ -103,13 +107,21 @@ conflicted.
 
 ```bash
 REPO=LLM360/Inference360
-PR=149
+PR=155
+BRANCH=claude-config
+WT=/tmp/Inference360-claude-config
 
-# 1. Get the visible check summary, then open the real failing job log.
+# 1. Get the visible check summary.
 gh pr checks "$PR" --repo "$REPO"
+
+# 2. Confirm live mergeability and the current PR head before editing.
+gh pr view "$PR" --repo "$REPO" \
+  --json headRefOid,mergeStateStatus,mergeable,statusCheckRollup,url
+
+# 3. If a visible check is actually failing, open the real failing job log.
 gh run view --repo "$REPO" --job <job-id> --log
 
-# 2. Confirm the check rollup belongs to the current PR head and inspect mergeability.
+# 4. For broader assignment/debugging, include branch and commit metadata.
 gh pr view "$PR" --repo "$REPO" \
   --json headRefName,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,commits \
   --jq '{branch:.headRefName, head:.headRefOid, mergeable, mergeStateStatus,
@@ -125,21 +137,40 @@ Interpretation:
   first, push, then expect the next gate (often coverage) to surface.
 - If `validate` is missing after a push and the PR reports `mergeable: CONFLICTING`, rebase the
   branch. The workflow is not skipped; GitHub cannot synthesize the pull-request merge ref.
+- If `gh pr checks` is green but `mergeStateStatus=DIRTY` and `mergeable=CONFLICTING`, treat the
+  merge conflict as the blocker and rebase first. The green check summary can be stale for the old
+  head.
+- After a rebase push, GitHub may move from `mergeable=MERGEABLE` while checks run to
+  `mergeable=UNKNOWN` after all rollups are green. That is mergeability recomputation, not a CI
+  failure; keep polling instead of editing.
 
 Per-PR worktree recovery:
 
 ```bash
-PR=149
-BRANCH=feat/endpoint-status
-WT=/tmp/inference360-pr-$PR
+PR=155
+BRANCH=claude-config
+WT=/tmp/Inference360-claude-config
 
 git fetch origin master "$BRANCH"
-git worktree add -B "$BRANCH" "$WT" "origin/$BRANCH"
+git worktree add "$WT" "$BRANCH"  # or reuse an existing PR worktree
 cd "$WT"
 git rebase origin/master
-# Resolve conflicts, run focused tests, then:
-git push --force-with-lease origin HEAD:"$BRANCH"
+# Resolve conflicts, preserving current master behavior and the PR's intended behavior.
+git -c core.editor=true rebase --continue
+# Run focused tests/checks for the changed surface, then:
+git push --force-with-lease origin "$BRANCH"
 ```
+
+Conflict-resolution examples from the verified Inference360 follow-up:
+
+- PR #155: conflict in `scripts/endpoint_status.py` around `_positive_int`; keep master's current
+  error message wording and the PR's docstring.
+- PR #254: remove obsolete top-level duplicate server command parsers and do not revive the removed
+  dry-run parser; preserve master's `check preview`/`status` surface and the PR's unified
+  `start`/`stop` behavior.
+- Linked worktrees write metadata under the main repo's `.git/worktrees`. If sandboxing blocks the
+  Git operation, rerun that Git operation with the appropriate filesystem escalation; do not abandon
+  the worktree strategy.
 
 Delegation shape:
 
@@ -790,6 +821,10 @@ gh issue close <issue-number> --comment "Fixed in PR #<number>"
 | Treat the first Ruff failure as the complete PR fix (LLM360/Inference360, 2026-06-17, verified-ci) | Fixed Ruff format and `F821` undefined-name failures in the first `validate` log, then expected CI to go green | The next current-head `validate` run failed coverage because the new script had too little direct test coverage | After each push, poll current-head CI again. A first failure can mask the next gate; add focused tests for newly introduced scripts or behavior before declaring the PR rescued |
 | Trust stale `gh pr checks` output after a force-push (LLM360/Inference360, 2026-06-17, verified-ci) | Read `gh pr checks` as the live truth even though it still showed failed `validate` runs from earlier SHAs | The visible failure did not necessarily apply to the current head commit | Use `gh pr view --json headRefOid,mergeable,mergeStateStatus,statusCheckRollup,commits` to connect check state to the current PR head before assigning or editing |
 | Assume a missing `validate` check means the workflow was skipped (LLM360/Inference360, 2026-06-17, verified-ci) | Waited for a current-head `validate` run that never appeared after pushing fixes | The PR was `mergeable: CONFLICTING`; GitHub could not create the `pull_request` merge ref, so the required validate workflow never started | Inspect mergeability when a required check disappears. Rebase the branch onto current `origin/master`, resolve conflicts in its worktree, then `git push --force-with-lease`; validate appears after the merge ref is synthesizeable |
+| Wait for `validate` before rebasing (LLM360/Inference360 PRs #155/#254, 2026-06-19, verified-ci) | Saw visible checks that were green or stale and waited for GitHub to settle | `mergeStateStatus=DIRTY` and `mergeable=CONFLICTING` meant the PR could not be merged regardless of the visible check summary | Query mergeability before editing. If the PR is conflicting, fetch trunk and branch, rebase onto `origin/master` in an isolated worktree, then push with `--force-with-lease` |
+| Use `gh pr checks` alone for conflict triage (LLM360/Inference360 PRs #155/#254, 2026-06-19, verified-ci) | Treated the visible checks table as authoritative | `gh pr checks` can show stale green results from the old head while the live PR state remains `DIRTY`/`CONFLICTING` | Pair `gh pr checks <n>` with `gh pr view <n> --json headRefOid,mergeStateStatus,mergeable,statusCheckRollup,url` before deciding what to fix |
+| Treat post-push `mergeable=UNKNOWN` as failure (LLM360/Inference360 PRs #155/#254, 2026-06-19, verified-ci) | Considered launching another fix pass after checks were green but mergeability returned `UNKNOWN` | GitHub was recomputing mergeability after the push/check transition | If `statusCheckRollup` is green and no failure is present, keep polling. Do not invent a CI failure from `UNKNOWN` alone |
+| Change strategy when linked-worktree Git writes are sandbox-blocked | A linked worktree operation needed to update metadata under the main repo `.git/worktrees` | The filesystem block is an execution-environment issue, not a reason to stop using worktrees | Rerun the same Git operation with the appropriate filesystem escalation and keep the isolated `/tmp` worktree workflow |
 | Treat the full local suite as the single source of truth (LLM360/Inference360, 2026-06-17, verified-ci) | Tried to use the entire local suite as the final readiness signal while fixing PR branches | Local environment failures such as `portpicker.NoFreePortFoundError`, broken `just`, or submodule HEAD mismatch were not the PR's CI gate | Run focused tests that cover the edited surface locally, record unrelated environment failures, and use current-head GitHub CI as the PR rescue source of truth |
 
 ## Results & Parameters
@@ -845,6 +880,32 @@ cd /tmp/<repo-stem>-pr-<number>
 git rebase origin/master
 git push --force-with-lease origin HEAD:<pr-branch>
 ```
+
+### Inference360 Mergeability Rebase-Before-Validate Parameters (v1.6.0)
+
+```bash
+# Live-state check before editing. Do not rely on gh pr checks alone.
+gh pr view <number> --repo LLM360/Inference360 \
+  --json headRefOid,mergeStateStatus,mergeable,statusCheckRollup,url
+gh pr checks <number> --repo LLM360/Inference360
+
+# Rebase the conflicting PR branch before waiting for validate.
+git fetch origin master <branch>
+git worktree add /tmp/Inference360-<branch-or-pr> <branch>
+cd /tmp/Inference360-<branch-or-pr>
+git rebase origin/master
+
+# After resolving only real conflict blocks:
+git -c core.editor=true rebase --continue
+git push --force-with-lease origin <branch>
+```
+
+Observed focused validation from the verified follow-up:
+
+| PR | Branch | Focused local validation | GitHub result |
+| --- | --- | --- | --- |
+| #155 | `claude-config` | `.venv/bin/python -m pytest tests/test_endpoint_status.py tests/test_ifm_cli.py -q` -> `54 passed`; Ruff check/format on touched files passed; `bash -n scripts/setup_ifm_tool.sh` passed | Head `b24c97c`; `validate`, `python-sca`, `sast`, `secrets`, and CodeQL green |
+| #254 | server command parser branch | Focused CLI/control lifecycle pytest -> `343 passed, 7 skipped`; Ruff check/format passed; `bash -n scripts/multi_model_ifm_launch.sh` passed | Head `4086627`; `validate`, `python-sca`, `sast`, `secrets`, and CodeQL green |
 
 Inference360 branch mapping from the verified session:
 
@@ -916,3 +977,4 @@ executor: haiku      # Simple rebase, pre-commit fixes
 | ProjectHephaestus | output.log root-cause fixes, 2026-06-13 (verified-local). 6 root-cause fix PRs shipped as a stack — a shared format-drift prerequisite landed first, 5 independent fixes dispatched to 5 parallel sub-agents in dedicated worktrees branched off the prereq (one stacked on another fix). Surfaced a concurrent foreign-session hijack of the shared main checkout (recovered via patch-export + fresh worktree) and CC Safety-Net friction on `git checkout --` / `git branch -D` / `git stash drop`. Zero cross-contamination across the 5 worktree agents. | Phase 3b/3c + Dispatch Hygiene + Safety-Net Friction (v1.3.0) |
 | ProjectHephaestus | /myrmidon-swarm driving a stack of PRs to merge, 2026-06-14 (verified-local). Two PRs (RC2, RC6) were armed for auto-merge while still based on intermediate branches. They squash-merged into those intermediate bases, NOT main. RC6 folded harmlessly into an open base PR; RC2's base (`chore-ruff-format-drift`) was a CLOSED PR, so RC2's change was ORPHANED from main (`state=MERGED`, content on a dead branch). Recovered RC2 by cherry-picking the orphaned SHA onto a fresh main branch (`git cherry-pick -S`) and opening a NEW PR to main. Confirmed GitHub only auto-retargets stacked PRs when the base MERGES, not when it closes unmerged. | Phase 3d stacked-PR auto-merge hazard + orphan recovery (v1.4.0) |
 | LLM360/Inference360 | GitHub PR CI rescue session, 2026-06-17. Four failing PRs (#149 `feat/endpoint-status`, #155 `claude-config`, #156 `code-cleanup`, #157 `move-inference360-module`) were fixed in isolated PR worktrees using log-first triage, focused local tests, and current-head CI polling. #149/#155 needed rebase after `validate` disappeared because `mergeable: CONFLICTING` prevented the pull-request merge ref; #156/#157 merged after CI passed. | Phase 1b current-head CI triage + per-PR worktree rescue (v1.5.0, verified-ci) |
+| LLM360/Inference360 | PR merge-conflict/mergeability triage follow-up, 2026-06-19. PR #155 (`claude-config`) and PR #254 were failing because GitHub reported merge conflicts against `origin/master`; `gh pr checks` could be stale green while `mergeStateStatus=DIRTY` and `mergeable=CONFLICTING`. Rebased each branch in an isolated `/tmp` worktree, resolved only true conflict blocks, ran focused local validation, pushed with `--force-with-lease`, and verified GitHub checks green at heads `b24c97c` and `4086627`. | Rebase-before-validate mergeability triage (v1.6.0, verified-ci) |
