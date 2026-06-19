@@ -1,5 +1,40 @@
 # planning-verify-assumptions-before-enforcement-gate — History
 
+## v1.3.0 (2026-06-19)
+
+**Changed by:** Post-implementation session for Odysseus issue #179 / PR #310. The gate was shipped
+and PR review surfaced two implementation-level gaps not caught in planning.
+**Verification:** verified-ci (upgraded from unverified — gate ran in CI and PR review confirmed)
+
+### What changed
+
+- Upgraded `verification: unverified` → `verified-ci` (gate shipped in Odysseus PR #310).
+- Added 3 new implementation-level findings as Detailed Steps 13–15:
+  - `always_run: true` + `files:` in a pre-commit hook are mutually redundant; `files:` is dead config — drop it.
+  - Hook `description:` field must not contain the literal pattern the gate scans for — causes `.pre-commit-config.yaml` to be flagged by its own gate.
+  - `_git_tracked()` canonical implementation pattern using `subprocess.run(["git", "-C", str(root), "ls-files", "-z", *patterns], ...)`.
+- Added 2 new Failed Attempts rows for the implementation-level gaps found in PR review.
+- Added Quick Reference steps 12–14 for the implementation patterns.
+- Updated Results & Parameters with verified-ci findings (always_run vs files, hook description self-trigger, `_git_tracked()` canonical form, through-line updated).
+- Added `## Verified On` table (Odysseus issue #179, PR #310).
+- Updated description, Overview Objective/Outcome, and tags (`always-run-vs-files-redundancy`, `description-field-self-trigger`, `git-ls-files-implementation`, `verified-ci`).
+- Added 2 new When to Use bullets for `always_run: true` + `files:` and hook description self-trigger.
+- Removed the "Warning: not validated end-to-end" callout blocks (no longer accurate).
+- Bumped version 1.2.0 → 1.3.0 (minor: new implementation findings; existing recommendations extended, not replaced).
+
+### Why
+
+The implementation of Odysseus issue #179 was completed and PR #310 was reviewed. The PR review surfaced two MAJOR findings that were not caught in the three planning NOGOs: (1) the pre-commit hook had both `always_run: true` and `files:` which are mutually redundant — `always_run: true` fires on every commit unconditionally making `files:` dead config; (2) the hook `description:` field contained `GF_AUTH_ANONYMOUS_ENABLED=true` which the gate's own regex matched, causing `.pre-commit-config.yaml` to be flagged. Both were implementation-level gaps that only appeared when writing the actual YAML. These are extensions of the same skill theme (verify the gate against the actual artifact it produces), so this is an amendment (minor bump), not a new skill. Verification is now `verified-ci`.
+
+### Previous version (v1.2.0) snapshot
+
+The full v1.2.0 body is preserved in PR #2608 / the v1.2.0 commit. The v1.3.0 body supersedes it,
+preserving all v1.2.0 content and adding: Detailed Steps 13–15, Quick Reference steps 12–14, 2 new
+Failed Attempts rows, updated Results & Parameters, a new Verified On table, and updated
+verification/description/tags/Overview.
+
+---
+
 ## v1.2.0 (2026-06-19)
 
 **Changed by:** Third NOGO of issue #179 (prior two NOGOs — submodule scope, dead pytest harness — were fixed; this round fixed a matcher-vs-edit window mismatch). Forked `origin/main` because v1.1.0 (PR #2605) was already MERGED.

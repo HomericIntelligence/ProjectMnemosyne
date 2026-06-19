@@ -211,13 +211,35 @@ ANON_LOOKBACK = 2; context = lines[max(0, i-2):i+1]    # FIX: widen to 2, keep m
     comment at `i-1`) that PASSES, and (b) a boundary NEGATIVE case (marker at `i-3` must
     FAIL) to pin the window size.
 
-> **Through-line of all three NOGOs:** before finalizing an enforcement-gate plan, verify the
-> gate against the POST-FIX tree, not just the pre-fix tree. The three distinct ways this plan
-> initially broke the post-fix tree — (1) scanned unfixable submodule files (`rglob` vs
-> `git ls-files`), (2) referenced a nonexistent test runner (pytest vs stdlib self-test), (3)
-> the matcher window didn't cover the marker offset the edit produces — all share one root
-> cause: an assumption about the gate's runtime behavior that was never checked against the
-> concrete artifact the plan ships.
+13. **Drop `files:` when `always_run: true` is set — they are mutually redundant.**
+    When implementing the pre-commit hook entry for an enforcement gate, `always_run: true`
+    fires the hook on every commit regardless of which files were changed. A co-present
+    `files:` filter is dead configuration — it is never evaluated. Keeping `files:` creates
+    a false impression that the hook is path-scoped when it runs unconditionally. Use
+    `always_run: true` alone (so the gate fires even when only the script itself changes
+    in a commit) and remove the `files:` field entirely.
+
+14. **The hook `description:` field must not contain the literal pattern being scanned.**
+    If the pre-commit hook `description:` field mentions the exact string or regex the gate
+    is scanning for (e.g. `GF_AUTH_ANONYMOUS_ENABLED=true must be explicitly tagged`), the
+    gate will flag `.pre-commit-config.yaml` itself — a self-inflicted false positive that
+    makes the gate red on an otherwise clean tree. Reword the description to avoid the
+    scanned literal: use a functional description that does not reproduce the banned pattern
+    (e.g. `Enforce Grafana credential hygiene — anonymous-viewer flag requires e2e-only marker`).
+
+15. **Use the `_git_tracked()` helper pattern for all security scan script file enumeration.**
+    A security gate that calls `subprocess.run(["git", "-C", str(root), "ls-files", "-z",
+    *patterns], ...)` and splits on NUL bytes is the canonical way to enumerate the files
+    to scan. This excludes submodule content, gitignored worktrees, and untracked files
+    for free. Never use `Path.rglob()` or `glob.glob()` in a `scripts/check_*.py`
+    enforcement gate — both descend into submodule directories and produce unfixable
+    failures on CI for files this repo cannot edit.
+
+> **Through-line of all three NOGOs + implementation:** verify the gate against the POST-FIX tree
+> at every stage. Planning NOGOs 1–3 were caught before execution. Implementation findings 13–14
+> were caught in PR review (not planning), confirming that even a NOGO-resolved plan can carry
+> implementation-level gaps that only appear when you write the actual hook YAML and run the gate
+> against the full repo.
 
 ## Failed Attempts
 
@@ -233,8 +255,8 @@ ANON_LOOKBACK = 2; context = lines[max(0, i-2):i+1]    # FIX: widen to 2, keep m
 | Took prior-learnings skills as accurate prior art | Referenced `python-logging-and-silent-error-patterns`, `doc-config-drift-check`, `security-md-version-sync`, `security-scanning-and-supply-chain-hardening` from the issue | Their on-disk content was NOT opened during planning — they were trusted sight-unseen | Open referenced prior-learnings on disk before building a plan on top of them |
 | Sized the matcher window without reconciling it against the edit's offset | Compose rule used a 1-line look-back `context = lines[max(0,i-1):i+1]` (covers only the line above the flag) while the same plan's edit placed a TWO-line comment block above `GF_AUTH_ANONYMOUS_ENABLED`, landing the `e2e-only` marker at `i-2` | The marker fell OUTSIDE the window, so the plan's own "step 6: re-run gate → GREEN" would have FAILED — the new CI gate would be red on the very tree the plan produces (a self-inflicted correctness bug) | Matcher-vs-edit contract: when a plan ships BOTH the matcher AND the edit that must satisfy it, reconcile the window against the EXACT offset the edit produces (widen to `ANON_LOOKBACK = 2`, `lines[max(0,i-2):i+1]`, marker as the first comment line) — verify against the POST-FIX tree |
 | Wrote a self-test that did not mirror the SHIPPED edit layout | The passing fixture put the marker immediately above the flag (`i-1`) — a more lenient layout than the edit ships (`i-2` with an intervening comment) | The self-test passed while the real edit would have failed → false confidence; the lenient fixture never exercised the i-2 case the plan actually produces | Every gate self-test must include a fixture byte-for-byte matching the shipped edit (marker at `i-2`, comment at `i-1`) that PASSES plus a boundary negative (marker at `i-3` must FAIL) to pin the window size |
-
-> Every row above is an UNVERIFIED assumption baked into the plan, framed as a reviewer task: confirm the "Lesson Learned" / "verify Y first" column before relying on the gate.
+| Combined `always_run: true` with `files:` in the pre-commit hook | Hook YAML had `always_run: true` AND `files: \.ya?ml$\|\.md$` | `always_run: true` fires unconditionally regardless of changed paths; the `files:` filter is never evaluated — dead config that misleads maintainers into thinking the hook is path-scoped | Use only `always_run: true`; drop `files:` entirely — the gate runs on every commit, including commits that only change the script itself |
+| Used the literal scanned pattern in the hook description | `description: "GF_AUTH_ANONYMOUS_ENABLED=true must be explicitly tagged # e2e-only:"` | The gate's regex matched this description line in `.pre-commit-config.yaml`, flagging the config file itself — a self-inflicted false positive making the gate red on a clean tree | Reword the description to avoid the scanned literal pattern; use functional language describing intent (`Enforce Grafana credential hygiene`) rather than reproducing the banned string |
 
 ## Results & Parameters
 
@@ -251,11 +273,14 @@ ANON_LOOKBACK = 2; context = lines[max(0, i-2):i+1]    # FIX: widen to 2, keep m
 - **Opt-in marker:** `# e2e-only:` on a deliberate e2e relaxation so the gate distinguishes it from an accidental prod regression. NEW convention — documented only inline + in the gate's error text.
 - **Matcher-vs-edit contract (third NOGO + fix):** the compose look-back window was sized as `ANON_LOOKBACK = 1` → `context = lines[max(0,i-1):i+1]` (covers only `i-1`), but the edit placed a TWO-line comment block above `GF_AUTH_ANONYMOUS_ENABLED`, landing the `e2e-only` marker at `i-2` (outside the window). FIX: `ANON_LOOKBACK = 2` → `lines[max(0,i-2):i+1]`, marker kept as the FIRST of the two comment lines (`i-2`). Reconcile the window against the EXACT offset the edit produces; verify against the POST-FIX tree.
 - **Self-test mirrors shipped layout:** required fixtures — (a) PASS case byte-for-byte == the shipped edit (marker at `i-2`, intervening comment at `i-1`); (b) boundary NEGATIVE (marker at `i-3` must FAIL) to pin window size. The prior self-test's lenient PASS case (marker at `i-1`) gave false confidence because the real edit ships `i-2`.
-- **Through-line (all three NOGOs):** verify the gate against the POST-FIX tree, not just the pre-fix tree. The three defects — (1) `rglob` scanned unfixable submodule files (→ `git ls-files`), (2) referenced a nonexistent pytest runner (→ stdlib `--self-test`), (3) matcher window did not cover the marker offset the edit produces (→ widen to 2 + i-2 marker) — share one root cause: an assumption about the gate's runtime behavior never checked against the concrete artifact the plan ships.
-- **Open reviewer tasks (UNVERIFIED):**
-  - `git ls-files` needs git metadata present at gate runtime — confirmed locally, but in CI it depends on `actions/checkout` fetching the repo (not run in CI yet). Outside a git work tree, `git rev-parse --show-toplevel` fails.
-  - The self-test shells out to `git init`/`git add` in a tempdir; assumes `git` is on PATH in CI and pre-commit envs (true here, not guaranteed universally).
-  - The `e2e-only` marker convention is new — a future editor unaware of it could delete the marker, after which the gate would (correctly) fail; the convention is not documented beyond the inline comment + gate error text.
-  - The fix relies on the marker being EXACTLY at `i-2`; if a future editor inserts another comment line, the marker slides to `i-3` and the gate (correctly) goes red — the 2-line window is a deliberate-but-fragile contract documented only inline.
-  - e2e login dependence on `admin/admin`; on-disk content of the four referenced prior-learnings skills.
-  - End-to-end verification level is **unverified**: the plan and its line-offset arithmetic were reasoned through and grep-checked, but the gate script was NOT executed in CI on this repo (no PR run observed). Keep `verification: unverified`.
+- **Through-line (all three NOGOs + implementation):** verify the gate against the POST-FIX tree, not just the pre-fix tree. The planning defects — (1) `rglob` scanned unfixable submodule files (→ `git ls-files`), (2) referenced a nonexistent pytest runner (→ stdlib `--self-test`), (3) matcher window did not cover the marker offset the edit produces (→ widen to 2 + i-2 marker) — all share one root cause: an assumption never checked against the concrete artifact the plan ships. Implementation-level gaps (13–14) found in PR review: (4) `always_run: true` + `files:` co-present → drop `files:`, (5) hook `description:` containing scanned literal → reword description.
+- **always\_run vs files (verified-ci):** `always_run: true` fires on every commit; `files:` is dead config when co-present. Keep `always_run: true` only. Confirmed by PR #310 review finding (PR reviewer flagged `files: \.ya?ml$|\.md$` as misleading dead config).
+- **Hook description self-trigger (verified-ci):** pre-commit hook `description:` must not contain the literal `GF_AUTH_ANONYMOUS_ENABLED=true` — the gate's regex matched `.pre-commit-config.yaml` itself. Rewording to `Enforce Grafana credential hygiene — anonymous-viewer flag requires e2e-only marker` fixed the false positive. Confirmed in PR #310 review.
+- **`_git_tracked()` canonical implementation (verified-ci):** `subprocess.run(["git", "-C", str(root), "ls-files", "-z", *patterns], capture_output=True, text=True, check=True).stdout` split on NUL bytes. Used in `scripts/check_grafana_credentials.py`, confirmed excludes ~14 submodules.
+- **Verified On:** Odysseus issue #179, PR #310 (HomericIntelligence/Odysseus) — gate shipped, self-test confirmed passing in CI, PR reviewer confirmed MAJOR finding about always\_run+files fixed.
+
+## Verified On
+
+| Project | Context | Details |
+| ------- | ------- | ------- |
+| HomericIntelligence/Odysseus | Issue #179, PR #310 — Grafana credential hygiene gate (`scripts/check_grafana_credentials.py`) | verified-ci: gate shipped, all self-test cases pass, PR review confirmed MAJOR findings (always_run+files redundancy, hook description self-trigger) were addressed |
