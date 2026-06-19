@@ -1,6 +1,29 @@
 <!-- markdownlint-disable MD024 -->
 # pre-commit-hooks-and-linting-config -- History
 
+## v2.3.1 (2026-06-19) -- Add Bandit `pass_filenames: false` pattern for directory-scanning hooks (ProjectTelemachy issue #157)
+
+**Changed by:** ProjectTelemachy issue #157 Bandit SAST pre-commit hook implementation session
+**Verification:** verified-local
+
+### What changed
+
+- Added trigger (19) to frontmatter `description` for the Bandit `pass_filenames: false` requirement.
+- Added new "When to Use" bullet: adding a Bandit hook that scans via `--ini` must use `pass_filenames: false`.
+- Added new Verified Workflow section "Bandit SAST pre-commit hook: `pass_filenames: false` for directory-scanning INI-configured tools" with canonical YAML, rationale, and verification command.
+- Added Failed Attempts row: `pass_filenames: true` for Bandit directory-scanning hook — pre-commit appends individual filenames, bypassing `.bandit` INI `targets`/`recursive` settings.
+- Added "ProjectTelemachy issue #157" row to "Verified On" table.
+- Version bumped 2.3.0 → 2.3.1 (patch — additive clarification, no breaking change).
+- Date updated 2026-06-17 → 2026-06-19.
+
+### Why
+
+ProjectTelemachy issue #157 added a Bandit SAST pre-commit hook. During plan review, `pass_filenames: true` was identified as a bug: pre-commit would append individual changed filenames to the Bandit command, causing it to treat those files as explicit targets and bypass the `.bandit` INI's `targets`/`recursive` settings. The fix (`pass_filenames: false`) was implemented and verified. This is a general principle that applies to any directory-scanning tool whose scan scope is controlled by an INI/config file rather than positional arguments.
+
+### Previous version (v2.3.0) snapshot
+
+(see v2.3.0 entry below)
+
 ## v2.3.0 (2026-06-17) -- Add TOML validity and locked Ruff hook parity pattern (Inference360 PR #157)
 
 **Changed by:** Inference360 PR #157 TOML/pre-commit quality-gate fix
