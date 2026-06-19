@@ -1,13 +1,13 @@
 ---
 name: pre-commit-hooks-and-linting-config
-description: "Canonical guide to pre-commit hook configuration, single-source-of-truth versioning, CI/local parity, and integration of ruff/mypy/clang-format/yamllint/actionlint/golangci-lint/bandit/hadolint/shellcheck/markdownlint. Use when: (1) writing or amending .pre-commit-config.yaml, (2) diagnosing why a hook passes locally but fails in CI (version drift), (3) deciding fix-vs-suppress for lint findings, (4) adding a new linter to an existing pre-commit pipeline, (5) reconciling ruff/mypy/markdownlint config across multiple repos, (6) a pre-commit hook using a pixi console script false-fails locally even though CI passes — system-installed package in ~/.local/bin shadows the local dev version, (7) ruff I001/RUF059 fires on inline imports or unused tuple unpacking inside test functions after adding new tests, (8) mypy pre-commit hook fails because an UNTRACKED test file references methods not yet committed — the hook checks ALL .py files on disk including untracked ones, (9) CI ruff-format hook fails even though local `ruff check` passed — `ruff check` (lint) and `ruff format --check` (formatter) are SEPARATE tools sharing one binary and running only `check` never exercises the formatter, (10) running pre-commit against the full PR diff (every file changed since merge-base) with `--from-ref/--to-ref` not just `--files <current edit>` — a sub-agent's earlier commit can carry stale-formatter content that fails only in CI, (11) adding .editorconfig for cross-editor formatting consistency on non-Python files (YAML, JSON, Markdown, shell, Makefile), (12) an automated PR-reviewer flags lint/formatter/pre-commit-forced incidental churn as scope creep — toolchain-forced churn is exempt from YAGNI/scope review while author-chosen opportunistic work is still flagged, (13) removing a duplicate standalone markdownlint CI job when the lint job already runs pre-commit --all-files — MUST verify the job is NOT a required-check context in branch protection before deleting it, and MUST pre-scan the newly-in-scope files for violations that --fix cannot auto-fix, (14) the pre-commit hook exclude pattern for .claude/ may be LOAD-BEARING (not merely defensive) — confirm with git ls-files .claude/ before removing it; two tracked .md files (.claude/security/guidelines.md and .claude/workflows/development.md) exist in ProjectHephaestus and must remain excluded to match the standalone CI job's intent, (15) after removing a duplicate markdownlint CI job update every doc that names that job by its old CI name (e.g. docs/DEFINITION_OF_DONE.md and .github/README.md) or CI job name references become stale; (16) BOTH the required `lint` check AND the `pre-commit` check are red in a PR — they share the same `ruff format` hook, so a single `ruff format <files>` run clears both; do not debug as two separate problems; (17) adding a commit-msg-stage hook (e.g. conventional-commit validator) — must set `default_install_hook_types: [pre-commit, commit-msg]` in .pre-commit-config.yaml or plain `pre-commit install` silently omits the commit-msg stage and the hook is permanently inert for all contributors; (18) verifying that a commit-msg-stage hook actually fires — `pre-commit run --all-files` does NOT invoke commit-msg-stage hooks; drive them via `pre-commit run --hook-stage commit-msg --commit-msg-filename <file>` instead."
+description: "Canonical guide to pre-commit hook configuration, single-source-of-truth versioning, CI/local parity, and integration of ruff/mypy/clang-format/yamllint/actionlint/golangci-lint/bandit/hadolint/shellcheck/markdownlint. Use when: (1) writing or amending .pre-commit-config.yaml, (2) diagnosing why a hook passes locally but fails in CI (version drift), (3) deciding fix-vs-suppress for lint findings, (4) adding a new linter to an existing pre-commit pipeline, (5) reconciling ruff/mypy/markdownlint config across multiple repos, (6) a pre-commit hook using a pixi console script false-fails locally even though CI passes — system-installed package in ~/.local/bin shadows the local dev version, (7) ruff I001/RUF059 fires on inline imports or unused tuple unpacking inside test functions after adding new tests, (8) mypy pre-commit hook fails because an UNTRACKED test file references methods not yet committed — the hook checks ALL .py files on disk including untracked ones, (9) CI ruff-format hook fails even though local `ruff check` passed — `ruff check` (lint) and `ruff format --check` (formatter) are SEPARATE tools sharing one binary and running only `check` never exercises the formatter, (10) running pre-commit against the full PR diff (every file changed since merge-base) with `--from-ref/--to-ref` not just `--files <current edit>` — a sub-agent's earlier commit can carry stale-formatter content that fails only in CI, (11) adding .editorconfig for cross-editor formatting consistency on non-Python files (YAML, JSON, Markdown, shell, Makefile), (12) an automated PR-reviewer flags lint/formatter/pre-commit-forced incidental churn as scope creep — toolchain-forced churn is exempt from YAGNI/scope review while author-chosen opportunistic work is still flagged, (13) removing a duplicate standalone markdownlint CI job when the lint job already runs pre-commit --all-files — MUST verify the job is NOT a required-check context in branch protection before deleting it, and MUST pre-scan the newly-in-scope files for violations that --fix cannot auto-fix, (14) the pre-commit hook exclude pattern for .claude/ may be LOAD-BEARING (not merely defensive) — confirm with git ls-files .claude/ before removing it; two tracked .md files (.claude/security/guidelines.md and .claude/workflows/development.md) exist in ProjectHephaestus and must remain excluded to match the standalone CI job's intent, (15) after removing a duplicate markdownlint CI job update every doc that names that job by its old CI name (e.g. docs/DEFINITION_OF_DONE.md and .github/README.md) or CI job name references become stale; (16) BOTH the required `lint` check AND the `pre-commit` check are red in a PR — they share the same `ruff format` hook, so a single `ruff format <files>` run clears both; do not debug as two separate problems; (17) adding a commit-msg-stage hook (e.g. conventional-commit validator) — must set `default_install_hook_types: [pre-commit, commit-msg]` in .pre-commit-config.yaml or plain `pre-commit install` silently omits the commit-msg stage and the hook is permanently inert for all contributors; (18) verifying that a commit-msg-stage hook actually fires — `pre-commit run --all-files` does NOT invoke commit-msg-stage hooks; drive them via `pre-commit run --hook-stage commit-msg --commit-msg-filename <file>` instead; (19) adding a Bandit SAST hook that scans a whole directory via --ini config — must use `pass_filenames: false` or pre-commit appends individual changed filenames, bypassing the .bandit INI targets and recursive settings."
 category: tooling
-date: 2026-06-17
-version: "2.3.0"
+date: 2026-06-19
+version: "2.3.1"
 user-invocable: false
 verification: verified-ci
 history: pre-commit-hooks-and-linting-config.history
-tags: [merged, pre-commit, linting, ruff, mypy, clang-format, yamllint, actionlint, hooks, pixi-environment, bandit, markdownlint, sast, ruff-format, editorconfig, pr-diff, ci-parity, pr-review, yagni, commit-msg, default-install-hook-types, check-toml, toml, uv-lock]
+tags: [merged, pre-commit, linting, ruff, mypy, clang-format, yamllint, actionlint, hooks, pixi-environment, bandit, markdownlint, sast, ruff-format, editorconfig, pr-diff, ci-parity, pr-review, yagni, commit-msg, default-install-hook-types, check-toml, toml, uv-lock, pass_filenames]
 ---
 
 # Pre-commit Hooks and Linting Configuration
@@ -16,9 +16,9 @@ tags: [merged, pre-commit, linting, ruff, mypy, clang-format, yamllint, actionli
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-17 |
+| **Date** | 2026-06-19 |
 | **Objective** | Canonical single-entry-point for all pre-commit hook and linting advice across the HomericIntelligence ecosystem |
-| **Outcome** | Consolidated from 53 narrow skills; current TOML/Ruff hook parity amendment verified-ci |
+| **Outcome** | Consolidated from 53 narrow skills; TOML/Ruff parity verified-ci; Bandit `pass_filenames: false` pattern added (verified-local) |
 | **Verification** | verified-ci |
 | **History** | [changelog](./pre-commit-hooks-and-linting-config.history) |
 
@@ -63,6 +63,7 @@ tags: [merged, pre-commit, linting, ruff, mypy, clang-format, yamllint, actionli
 - A prior commit hand-wrapped a list/generator comprehension (or call) across multiple lines that fits within `line-length` — `ruff format` collapses it back to one line and `--check` reports "Would reformat"; the author never ran `ruff format` locally
 - Adding a `commit-msg`-stage hook (e.g. conventional-commit-format validator) and discovering it never fires — check whether `default_install_hook_types` is set; without it, plain `pre-commit install` only wires the `pre-commit` stage, leaving the hook permanently inert for every contributor
 - A commit-msg hook appears in `.pre-commit-config.yaml` with `stages: [commit-msg]` and `pre-commit run --all-files` returns green — but the hook has never actually been invoked; `--all-files` skips commit-msg-stage hooks entirely; use `pre-commit run --hook-stage commit-msg --commit-msg-filename <file>` to exercise it
+- Adding a Bandit SAST pre-commit hook that scans a whole directory tree via `--ini .bandit` — **always** use `pass_filenames: false`; with `pass_filenames: true` pre-commit appends individual changed filenames to the command, causing Bandit to treat those files as its targets and bypassing the `.bandit` INI's `targets`/`recursive` settings entirely; the `files:` regex still controls which file changes trigger the hook
 
 ## Verified Workflow
 
@@ -405,6 +406,47 @@ For each remaining MEDIUM+ finding, decide per finding:
 Do NOT blanket-suppress via `--skip` flags. Always add rationale comments for `# nosec`.
 
 Verified by ProjectHephaestus PR #657.
+
+#### Bandit SAST pre-commit hook: `pass_filenames: false` for directory-scanning INI-configured tools
+
+When adding a Bandit hook that scans a full directory tree via `--ini .bandit`, you **must** set
+`pass_filenames: false`. With the default `pass_filenames: true`, pre-commit appends each changed
+`.py` filename as a positional argument. Bandit treats those as explicit file targets, bypassing
+the `.bandit` INI's `targets` and `recursive` configuration. The `files:` regex still controls
+which file changes trigger the hook; only the actual scanning scope is affected.
+
+**Canonical Bandit hook pattern (verified-local, ProjectTelemachy issue #157):**
+
+```yaml
+- repo: local
+  hooks:
+    - id: bandit
+      name: "bandit (SAST, medium+ severity)"
+      description: >
+        AST-based Python security scan. Configured via .bandit INI;
+        findings at severity MEDIUM or higher fail the commit. Add
+        `# nosec <ID>  # <rationale>` inline to suppress per-site.
+      language: system
+      entry: pixi run python -m bandit -ll --ini .bandit
+      files: ^src/telemachy/.*\.py$
+      pass_filenames: false
+```
+
+**Key decisions:**
+
+- `pass_filenames: false` — Bandit scans the full directory tree as configured in `.bandit`; pre-commit does NOT append individual filenames.
+- `files: ^src/telemachy/.*\.py$` — controls TRIGGER conditions only (which changed files activate the hook); does NOT determine the scanning directory.
+- `language: system` + `pixi run python -m bandit` — uses the project's locked pixi environment. Use `python -m bandit` (module invocation) rather than the bare `bandit` console script to avoid PATH resolution issues in pixi environments.
+- `--ini .bandit` must be explicit; bandit only searches within passed target directories, not at the repo root.
+
+**Verification:**
+
+```bash
+pixi run pre-commit run bandit --all-files
+# Expected: bandit (SAST, medium+ severity)....................................................Passed
+```
+
+Verified locally on ProjectTelemachy issue #157.
 
 #### mypy pre-commit failure on untracked test file (multi-commit workflow)
 
@@ -1290,6 +1332,7 @@ feasible (e.g., constrained CI environments, conda-forge only providing old Go v
 | Treat `.claude/` exclude in pre-commit hook as purely defensive | Assumed `.claude/` was untracked (gitignored) so the exclude was safe to drop | Two tracked `.md` files exist in ProjectHephaestus (`.claude/security/guidelines.md`, `.claude/workflows/development.md`); removing the exclusion would expose them to markdownlint and widen scope beyond what the old standalone job covered | Always run `git ls-files .claude/ \| grep '\.md$'` before removing the `.claude/` exclusion; if any results, the exclusion is load-bearing |
 | Delete CI job without updating docs that reference the job by name | Removed `markdownlint` job from `_required.yml` without searching for the job name in docs | `docs/DEFINITION_OF_DONE.md:31` cited "CI job \`markdownlint\`" and `.github/README.md:44` listed `markdownlint` in the aggregated-checks list; those became stale and misleading | After deleting any CI job, grep for the job name across all docs and update every reference; common locations: DoD, README, CONTRIBUTING.md |
 | `bandit --exit-zero` to pass CI while investigating | Added `--exit-zero` flag during bandit hook integration | All real findings invisible to CI; defeating the purpose of SAST | Never suppress exit codes; fix each MEDIUM+ finding properly |
+| `pass_filenames: true` for Bandit directory-scanning hook | Added a Bandit hook without setting `pass_filenames: false`; pre-commit appended individual changed filenames to the entry command | Bandit treated the appended filenames as explicit targets, bypassing `.bandit` INI `targets`/`recursive` settings; the scan scope became per-file rather than whole-directory | Always set `pass_filenames: false` for any hook whose entry command scans a directory tree via INI config; use `files:` regex only to control TRIGGER conditions |
 | Security hook blocking workflow file `Edit` | Used `Edit` tool on `.github/workflows/pre-commit.yml` | Project security hook fires on all Actions workflow edits | Use `python3 -c "..."` via Bash to write the file instead |
 | mypy fails on untracked test file referencing not-yet-committed methods | Created both test file and implementation file but only staged the implementation for commit 1 | mypy pre-commit hook runs on ALL `.py` files on disk, including untracked ones; sees `attr-defined` / `module-attribute` errors in the untracked test | Temporarily move the untracked test file to `/tmp` before commit 1; restore and stage it for commit 2. Only needed for strict multi-commit atomic ordering. |
 | Removing `$# -eq 0` guard from `report_unmanaged()` | Cleaned up what appeared redundant | Broke bats test -- guard is needed in `report_unmanaged()` specifically | Only remove the guard from `get_unmanaged_names()`; keep it in `report_unmanaged()` |
@@ -1507,6 +1550,7 @@ indent_style = tab                 # Make syntax requires tabs
 | ProjectOdyssey | PR #5453 (full-PR-diff pre-commit scope fixed CI mojo-format on sub-agent files) | [history file](pre-commit-hooks-and-linting-config.history) |
 | ProjectScylla | PR #1556, audit finding S13 (.editorconfig cross-editor consistency) | [history file](pre-commit-hooks-and-linting-config.history) |
 | ProjectMnemosyne | Closed PR #2353 (commit-msg-stage hooks + `default_install_hook_types` learning) | [history file](pre-commit-hooks-and-linting-config.history) |
+| ProjectTelemachy | Issue #157 (Bandit SAST hook `pass_filenames: false` — directory-scanning tools must never receive per-file args from pre-commit) | verified-local |
 
 ## References
 
