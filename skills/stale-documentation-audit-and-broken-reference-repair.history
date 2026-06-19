@@ -2,6 +2,33 @@
 
 # stale-documentation-audit-and-broken-reference-repair — History
 
+## v1.11.0 (2026-06-19)
+
+Added phantom-recipe / stale-issue-description learnings from Odysseus Issue #182 (PR #312).
+
+Previous version snapshot: v1.10.0 (2026-06-13)
+
+Changes:
+
+- **Learning — Issue describes multiple phantom recipes, only a subset are live defects** (from
+  Odysseus #182): Issue claimed both `docs/onboarding.md:232` and `:233` had broken justfile
+  recipe references. Ground-truth grep (`grep -E "^[a-z]" justfile`) showed line 232's recipe
+  (`just start-agamemnon`) was already correct — only line 233 (`nestor-start` → `start-nestor`)
+  was a live defect. The correct call: fix only the live defect, not the stale issue description.
+  Added two new When-to-Use bullets (25–26), two new Failed-Attempts rows (issue line references
+  and mixed naming convention), new Verified-On row, and a bulk cross-check snippet in
+  Quick-Reference.
+- **Learning — Justfiles can use mixed naming conventions** (from Odysseus #182): Odysseus uses
+  verb-first (`start-agamemnon`, `start-nestor`) for Agamemnon/Nestor and prefix-first
+  (`hermes-start`, `argus-start`, `keystone-start`) for infrastructure services. A doc with a mix
+  of recipe references can have some correct and some phantom even in the same table section. Run
+  a bulk cross-check of ALL table entries against the justfile, never assume consistency from
+  seeing some entries correct.
+- Updated `description:` field with trigger conditions 25–26 for the new learnings.
+- Added four new tags: `phantom-recipe`, `justfile-ground-truth`, `stale-issue-description`,
+  `mixed-naming-convention`.
+- Bumped `version:` to `1.11.0`, updated `date:` to 2026-06-19.
+
 ## v1.10.0 (2026-06-13)
 
 Salvaged six dropped learnings from closed PRs #2351/#2352/#2372/#2373/#2397/#2398/#2399/#2401
