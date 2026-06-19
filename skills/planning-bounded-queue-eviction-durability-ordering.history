@@ -1,33 +1,56 @@
----
-name: planning-bounded-queue-eviction-durability-ordering
-description: "Planning-discipline meta-pattern: before deciding how to remediate a bounded in-memory collection (deque(maxlen=N), ring buffer, LRU cache) that 'drops'/'evicts' items, READ THE SOURCE to determine whether a DURABLE write precedes the in-memory append. If durable-write-precedes-eviction, the eviction is NOT data loss — it is loss of an inspection/view cache only — so the correct fix is a distinct WARNING + metric (log-and-continue), NOT rejecting the caller with an error (fail-fast / HTTP 503), which would falsely signal failure for an operation that already succeeded durably and may violate the service's documented contract. Ordering of durable-write vs in-memory mutation decides whether 'queue full' is a failure or a benign rollover. Detection subtlety: a deque(maxlen=N) never exceeds N, so a POST-append len() cannot detect eviction — you must capture fullness (len()==maxlen) BEFORE the append. Use when: (1) planning a fix for a 'queue/buffer full', 'backpressure', 'eviction', or 'dropped events' issue against a bounded in-memory structure, (2) choosing between fail-fast (reject/503) and log-and-continue remediation, (3) an issue offers option-a (reject request) vs option-b (warn + metric) and you must pick, (4) adding an eviction counter/metric to a maxlen deque, (5) the plan asserts an HTTP/contract behavior (e.g. '200 OK for accepted events') that the remediation might contradict, (6) the plan relies on unverified test seams (monkeypatching get_settings + cache_clear, prometheus_client private _value.get(), an assumed publish() signature) or drift-prone file:line citations."
-category: architecture
-date: 2026-06-19
-version: "1.1.0"
-history: planning-bounded-queue-eviction-durability-ordering.history
-user-invocable: false
-verification: unverified
-tags:
-  - planning-methodology
-  - bounded-collection
-  - deque-maxlen
-  - eviction
-  - backpressure
-  - durable-vs-volatile-ordering
-  - fail-fast-vs-log-and-continue
-  - http-contract
-  - metrics-counter
-  - prometheus-test-assertion
-  - monkeypatch-seam
-  - line-number-drift
-  - self-flagged-risk
-  - hot-path-log-accounting
-  - unverified
+# Changelog: planning-bounded-queue-eviction-durability-ordering
+
+Newest first. Each entry is a snapshot of the skill body as it stood at that version.
+
 ---
 
+## v1.1.0 — 2026-06-19
+
+- **Changed by:** ProjectHermes #533 plan review→re-plan cycle
+- **Verification:** unverified
+
+### What changed
+
+Folded in three new durable learnings surfaced by a REVIEW → NOGO → RE-PLAN cycle on the
+same Hermes #533 dead-letter eviction plan:
+
+1. **Self-flagged-but-unfixed is a NOGO trap.** The plan's own notes flagged that a test used
+   a private, version-fragile prometheus API (`Counter._value.get()`) and recommended the public
+   alternative — yet the plan body still shipped the private call. The reviewer graded it B/NOGO
+   *specifically because a risk the plan surfaced was not folded into the shipped code*. A
+   reviewed-but-not-fixed gap is treated as a defect even when the plan is otherwise A-grade.
+2. **Prefer public registry reads over private metric attributes in tests.** For
+   `prometheus_client`, assert via `REGISTRY.get_sample_value("metric_name")` (public,
+   version-stable) instead of `MetricObject._value.get()` (private). Guard with `... or 0.0` and
+   use a before/after delta assertion to tolerate the process-global counter singleton across
+   tests. Verify the convention already exists in-repo before adopting (here:
+   `tests/test_webhook.py:361-382`, `tests/test_metrics.py:316`).
+3. **Surface incidental side effects of an added signal.** Adding the eviction warning means an
+   evicting call at steady-state-full now emits THREE WARNING lines (new eviction + existing 80%
+   threshold alert + existing "no subject mapping" notice). When adding a log/alert on a hot path
+   that already logs, enumerate the total lines emitted per call and state whether the overlap is
+   intentional.
+
+### Why
+
+The first /learn captured the *durable-vs-volatile ordering* decision and the
+`deque(maxlen)` post-append detection bug. The review→re-plan cycle proved that surfacing a risk
+in plan notes is not enough — unresolved self-flagged risks are graded as defects — and added
+concrete, in-repo-verified guidance on prometheus test assertions and hot-path log accounting.
+Bumping minor (1.0.0 → 1.1.0): additive new findings + new Failed Attempts rows; no prior guidance
+reversed.
+
+---
+
+## v1.0.0 — 2026-06-19 (snapshot)
+
+- **Changed by:** ProjectHermes #533 initial plan (PR #2623)
+- **Verification:** unverified
+
+Full snapshot of the v1.0.0 skill body:
+
+````markdown
 # Planning: Bounded-Queue Eviction — Verify Durable-vs-Volatile Ordering Before Choosing Remediation
-
-**History:** [changelog](./planning-bounded-queue-eviction-durability-ordering.history)
 
 ## Overview
 
@@ -45,7 +68,6 @@ tags:
 - You are about to add an eviction counter/metric to a `deque(maxlen=N)`.
 - The plan asserts (or the service documents, e.g. in an ADR) an HTTP/API contract such as "200 OK for accepted/dead-lettered events" that a fail-fast remediation might silently break.
 - The plan leans on test seams or APIs you have NOT executed: monkeypatching a cached `get_settings()` (+ `cache_clear()`), reading a `prometheus_client` Counter via the private `._value.get()`, or an assumed function signature.
-- **The plan's OWN notes/learnings flag a risk (e.g. "this test uses a private API; prefer the public one") — that self-flagged risk MUST be resolved in the plan body, not merely noted.** A reviewed-but-not-fixed gap is graded as a defect (B/NOGO) even when the rest of the plan is A-grade. If you must defer it, say so explicitly with a justification.
 
 ## Proposed Workflow
 
@@ -72,10 +94,9 @@ The load-bearing decision is a single source-level fact. Find it before writing 
        logger.warning("dead-letter inspection cache full; oldest entry evicted (durable copy retained)")
        DEAD_LETTER_EVICTIONS.inc()
    ```
-5. **Avoid alert redundancy AND account for total log volume on the hot path.** If a threshold alert (e.g. fires at 80% of maxlen) ALREADY logs on every call once the queue is full, adding a second "100% full" warning per call is redundant and noisy. Decide whether the new signal is the eviction *event* (preferred: fires only on an actual eviction) vs another fullness *level* (redundant). Prefer signalling the eviction event. Then **enumerate the TOTAL log lines emitted per call at steady-state-full** and state whether the overlap is intentional — in #533, an evicting call now emits THREE WARNING lines (new eviction + existing 80%-threshold alert + existing "no subject mapping" notice); the re-plan documented this as intentional so the implementer isn't surprised by log volume.
-6. **Verify every test seam before trusting it** (see Failed Attempts). Do not assume the injection point, the metric-read API, or the function signature — open the `def` and run the test. For `prometheus_client`, assert via the public `REGISTRY.get_sample_value("metric_name")` (guard `... or 0.0`, use a before/after delta to tolerate the process-global counter singleton across tests), NOT the private `._value.get()`. Confirm the convention already exists in-repo before adopting it.
-7. **Resolve self-flagged risks in the plan body — do not just note them.** Before declaring the plan done, re-read your OWN notes/learnings: any risk you surfaced (e.g. "the test uses a private prometheus API; prefer the public read") MUST be folded into the shipped plan body, or explicitly deferred with justification. A reviewer treats a reviewed-but-not-fixed gap as a defect (B/NOGO) even when the rest of the plan is A-grade.
-8. **State the load-bearing assumption explicitly.** Because the recommendation flips entirely on step 2's ordering, write in the plan: "Recommendation assumes durable write at <file:line> precedes the in-memory append at <file:line>; if reversed, fail-fast becomes correct." Make the reviewer verify exactly that.
+5. **Avoid alert redundancy.** If a threshold alert (e.g. fires at 80% of maxlen) ALREADY logs on every call once the queue is full, adding a second "100% full" warning per call is redundant and noisy. Decide whether the new signal is the eviction *event* (preferred: fires only on an actual eviction) vs another fullness *level* (redundant). Prefer signalling the eviction event.
+6. **Verify every test seam before trusting it** (see Failed Attempts). Do not assume the injection point, the metric-read API, or the function signature — open the `def` and run the test.
+7. **State the load-bearing assumption explicitly.** Because the recommendation flips entirely on step 2's ordering, write in the plan: "Recommendation assumes durable write at <file:line> precedes the in-memory append at <file:line>; if reversed, fail-fast becomes correct." Make the reviewer verify exactly that.
 
 ### Quick Reference
 
@@ -96,14 +117,6 @@ rg -ni "200 OK|dead-letter|status" docs/adr/ADR-002*.md
 
 # Detect eviction CORRECTLY (maxlen deque never exceeds N):
 #   was_full = len(dq) == dq.maxlen   # BEFORE append, not after
-
-# Assert a prometheus counter via the PUBLIC registry (version-stable), with a delta:
-#   from prometheus_client import REGISTRY
-#   before = REGISTRY.get_sample_value("dead_letter_evictions_total") or 0.0
-#   ... trigger eviction ...
-#   after  = REGISTRY.get_sample_value("dead_letter_evictions_total") or 0.0
-#   assert after - before == 1.0     # delta tolerates the process-global singleton
-#   # NOT: COUNTER._value.get()  (private, version-fragile)
 ```
 
 ## Failed Attempts
@@ -117,17 +130,12 @@ rg -ni "200 OK|dead-letter|status" docs/adr/ADR-002*.md
 | Assume the publish() signature | Write tests calling `publisher.publish(payload)` positionally | The real signature has more optional params (`publish_timeout`, `publish_retries`, `request_id`); the assumed call may not match | Re-read the actual `def publish(...)` before writing call sites in tests/plan |
 | Trust cited line numbers | Cite `publisher.py:388-402`, `metrics.py:54-57`, `config.py:46-48`, `ADR-002 ~line 71` as stable anchors | Line numbers drift between filing and implementation; the file may have already changed | Re-grep by symbol/string against the CURRENT tree, not by line number; cite the symbol, not the offset |
 | Add a redundant 100%-full warning | Add a "queue 100% full" warning on top of the existing 80%-threshold alert | The 80% threshold alert already fires on every call once the queue passes 80%, so a second per-call warning at 100% is redundant noise | Signal the eviction EVENT (fires only when an item is actually evicted), not another fullness LEVEL |
-| Surface a risk in notes but ship the flawed code anyway | The plan's own learnings/notes flagged that the test used the private `Counter._value.get()` and recommended the public alternative — but the plan BODY still shipped the private call | The reviewer graded it B/NOGO **specifically because a risk the plan itself surfaced was not folded into the shipped code**. Surfacing a risk is not resolving it | When a plan surfaces a risk in its notes, it MUST also resolve it in the plan body (or explicitly justify deferring). A reviewed-but-not-fixed gap is a defect even when the plan is otherwise A-grade |
-| Read a counter via the private metric attribute | Assert with `MetricObject._value.get()` instead of the public registry | Private `prometheus_client` internals are version-fragile, and a single absolute read ignores the process-global counter singleton shared across tests | Assert via `REGISTRY.get_sample_value("metric_name")` (public, version-stable), guard with `... or 0.0`, and use a before/after DELTA assertion. Confirm the convention already exists in-repo first (here: `tests/test_webhook.py:361-382`, `tests/test_metrics.py:316`) |
-| Add a hot-path log without counting total lines | Add the eviction WARNING without enumerating what else already logs on that call | At steady-state-full an evicting call now emits THREE WARNING lines (new eviction + existing 80%-threshold alert + existing "no subject mapping" notice); an implementer unaware of the overlap is surprised by log volume | When adding a log/alert on a hot path that already logs, enumerate the TOTAL lines emitted per call and state whether the overlap is intentional (the #533 re-plan documented the 3-line overlap as intentional) |
 
 > These rows are the uncertain assumptions baked into the #533 plan. None were executed — each is a "verify-before-trusting" item for the next planner/reviewer.
 
 ## Results & Parameters
 
 **Verification level: `unverified`.** The plan was authored from source reading only — no tests run, no lint, no CI. The durable-before-append ordering (read as `js.publish` then `deque.append` at the cited publisher lines) is the single load-bearing claim; if reversed, the recommendation flips to fail-fast.
-
-**Updated by the #533 REVIEW → NOGO → RE-PLAN cycle (v1.1.0):** The first draft surfaced the private-prometheus-API risk in its own notes but still shipped `._value.get()` in the plan body; the reviewer graded it B/NOGO for exactly that unresolved-self-flagged gap. The re-plan (1) swapped to the public `REGISTRY.get_sample_value(...)` delta assertion (matching the in-repo convention at `tests/test_webhook.py:361-382` and `tests/test_metrics.py:316`), and (2) documented that an evicting call at steady-state-full emits three WARNING lines as intentional. Lesson baked into the workflow: a risk you surface in notes must be resolved in the body, and a new hot-path log must be accounted for against the lines already emitted per call.
 
 **Decision rule (project-agnostic):**
 
@@ -145,7 +153,7 @@ rg -ni "200 OK|dead-letter|status" docs/adr/ADR-002*.md
 **Reviewer focus (highest-risk items to verify before merge):**
 
 1. Is the durable-before-volatile ordering ACTUALLY true at the cited publisher lines? (load-bearing — flips the whole recommendation if false)
-2. The prometheus private-API test assertion (`._value.get()`) — swap to the public `REGISTRY.get_sample_value(...)` with a before/after delta (`... or 0.0`). This was the exact gap that earned the first draft a B/NOGO; verify the plan body actually uses the public read, not just the notes.
+2. The prometheus private-API test assertion (`._value.get()`) — swap to `REGISTRY.get_sample_value`.
 3. Test injection seam correctness (`get_settings` monkeypatch + `cache_clear()`).
 4. Is a distinct 100%-full warning redundant with the existing 80%-threshold alert that already fires every call once full?
 
@@ -158,15 +166,4 @@ if was_full:
     logger.warning("inspection cache full; oldest entry evicted (durable copy retained)")
     EVICTIONS_COUNTER.inc()  # assert via REGISTRY.get_sample_value(...), not ._value.get()
 ```
-
-**Public counter assertion (version-stable; tolerates the process-global singleton):**
-
-```python
-from prometheus_client import REGISTRY
-
-before = REGISTRY.get_sample_value("dead_letter_evictions_total") or 0.0
-# ... trigger one eviction ...
-after = REGISTRY.get_sample_value("dead_letter_evictions_total") or 0.0
-assert after - before == 1.0      # delta, not absolute — counter is shared across tests
-# Avoid: DEAD_LETTER_EVICTIONS._value.get()  (private prometheus_client internal)
-```
+````
