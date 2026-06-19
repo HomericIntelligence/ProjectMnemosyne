@@ -1,11 +1,11 @@
 ---
 name: dry-refactoring-workflow
-description: "Complete TDD-driven workflow for identifying and eliminating code duplication by extracting reusable helper methods. Use when: (1) extracting duplicated helper methods into a shared module using TDD (write a failing test against the canonical, delete the duplicate, run green); (2) creating a private leaf module with leading-underscore naming to centralize a repeated internal call (e.g. importlib.metadata version resolution, path construction) and prevent re-introduction across modules; (3) centralizing hardcoded path constants into a single module to prevent drift when directory structure changes (incl. phase-routed in_progress/completed splits); (4) deduplicating LLM JSON extraction, parser logic, or any call-site pattern copy-pasted across several files; (5) test structure must mirror source structure when extracting helpers; (6) running a full DRY consolidation pass (discovery via grep, classifying true duplicates vs intentional variants, dict-structure consolidation) and refactoring to a single canonical source; (7) extract-method / SRP decomposition of over-long functions (50-LOC) and methods (100-LOC), including converting a mutating closure into a method via a small mutable box; (8) extracting repeated cached lookups into an @lru_cache helper (and clearing the cache so unittest.mock.patch works); (9) removing stale scripts / deprecated stubs (grep callers first) and replacing hardcoded file lists with dynamic Path.rglob discovery; (10) PLANNING a consolidation of two OVERLAPPING but not-identical constant collections (frozensets / keyword lists / error-pattern tuples) — classify true-duplicate vs intentional-variant first, then extract only the shared CORE into one canonical immutable constant and have each consumer compose CORE | its-own-extras, proving anti-drift with CORE.issubset(consumer) parity tests, instead of a flat merge that would violate a deliberate behavioral contract. (11) behavior-preserving duplicate cleanup across test fakes, tiny strategy/kernel modules, and validation wrappers: keep public module exports stable, centralize only identical mechanics, preserve local wrapper names/error messages, and verify with focused + full suites before opening a PR. Also covers cryptographic commit signing requirements in PR workflows."
+description: "Complete TDD-driven workflow for identifying and eliminating code duplication by extracting reusable helper methods. Use when: (1) extracting duplicated helper methods into a shared module using TDD (write a failing test against the canonical, delete the duplicate, run green); (2) creating a private leaf module with leading-underscore naming to centralize a repeated internal call (e.g. importlib.metadata version resolution, path construction) and prevent re-introduction across modules; (3) centralizing hardcoded path constants into a single module to prevent drift when directory structure changes (incl. phase-routed in_progress/completed splits); (4) deduplicating LLM JSON extraction, parser logic, or any call-site pattern copy-pasted across several files; (5) test structure must mirror source structure when extracting helpers; (6) running a full DRY consolidation pass (discovery via grep, classifying true duplicates vs intentional variants, dict-structure consolidation) and refactoring to a single canonical source; (7) extract-method / SRP decomposition of over-long functions (50-LOC) and methods (100-LOC), including converting a mutating closure into a method via a small mutable box; (8) extracting repeated cached lookups into an @lru_cache helper (and clearing the cache so unittest.mock.patch works); (9) removing stale scripts / deprecated stubs (grep callers first) and replacing hardcoded file lists with dynamic Path.rglob discovery; (10) PLANNING a consolidation of two OVERLAPPING but not-identical constant collections (frozensets / keyword lists / error-pattern tuples) — classify true-duplicate vs intentional-variant first, then extract only the shared CORE into one canonical immutable constant and have each consumer compose CORE | its-own-extras, proving anti-drift with CORE.issubset(consumer) parity tests, instead of a flat merge that would violate a deliberate behavioral contract. (11) behavior-preserving duplicate cleanup across test fakes, tiny strategy/kernel modules, and validation wrappers: keep public module exports stable, centralize only identical mechanics, preserve local wrapper names/error messages, and verify with focused + full suites before opening a PR. Also covers cryptographic commit signing requirements in PR workflows. (12) stale issue body in dedup/consolidation tasks: issue 'Evidence:' sections go stale as prior PRs partially resolve them — grep the CURRENT state first; choose inlining over fixtures for pure bytes→str helpers; resolve remote branch divergence by pushing to a new branch rather than force-pushing or rebasing 84 conflicting commits."
 category: architecture
-date: 2026-06-18
-version: "1.6.0"
+date: 2026-06-19
+version: "1.7.0"
 user-invocable: false
-verification: verified-local
+verification: verified-ci
 history: dry-refactoring-workflow.history
 ---
 # DRY Refactoring Workflow
@@ -16,9 +16,9 @@ Complete TDD-driven workflow for identifying and eliminating code duplication by
 
 | Attribute | Details |
 | ----------- | --------- |
-| **Date** | 2026-06-18 |
+| **Date** | 2026-06-19 |
 | **Objective** | TDD-driven extraction of duplicated code into reusable helper modules, with emphasis on private module placement, test structure mirroring, and cryptographic commit signing |
-| **Outcome** | ✅ v1.0.0 (Feb 2026): Eliminated token aggregation duplication. v1.1.0 (Jun 2026): Extended with private module patterns, test mirroring enforcement, signing requirements. v1.3.0 (Jun 2026): Absorbed centralized path constants, LLM JSON extraction dedup, full DRY consolidation discovery/classify pass, and canonical-source refactor patterns (Pydantic type hierarchy, dict-structure consolidation, orphan relocation). v1.4.0 (Jun 2026): Restored SRP/extract-method (mutable-box closure), @lru_cache detection util (mock.patch/cache_clear gotcha), stale-script/stub cleanup, and dynamic Path.rglob discovery patterns from the nuance audit. ⚠️ v1.5.0 (Jun 2026, **planning-only / unverified**): Added Phase 10 — planning a consolidation of OVERLAPPING constant collections via the core/extras split (CORE \| consumer-extras) with subset parity anti-drift tests, classifying intentional-variant-with-overlap separately from "do not consolidate". v1.6.0 (Jun 2026): Added Radiance behavior-preserving duplicate cleanup pattern for route-test fakes, layout-only metric kernels, validation field wrappers, and stale tool deletion; verified locally with Ruff, full pytest, compileall, diff check, and pre-push pytest; PR CI pending. |
+| **Outcome** | ✅ v1.0.0 (Feb 2026): Eliminated token aggregation duplication. v1.1.0 (Jun 2026): Extended with private module patterns, test mirroring enforcement, signing requirements. v1.3.0 (Jun 2026): Absorbed centralized path constants, LLM JSON extraction dedup, full DRY consolidation discovery/classify pass, and canonical-source refactor patterns (Pydantic type hierarchy, dict-structure consolidation, orphan relocation). v1.4.0 (Jun 2026): Restored SRP/extract-method (mutable-box closure), @lru_cache detection util (mock.patch/cache_clear gotcha), stale-script/stub cleanup, and dynamic Path.rglob discovery patterns from the nuance audit. ⚠️ v1.5.0 (Jun 2026, **planning-only / unverified**): Added Phase 10 — planning a consolidation of OVERLAPPING constant collections via the core/extras split (CORE \| consumer-extras) with subset parity anti-drift tests, classifying intentional-variant-with-overlap separately from "do not consolidate". v1.6.0 (Jun 2026): Added Radiance behavior-preserving duplicate cleanup pattern for route-test fakes, layout-only metric kernels, validation field wrappers, and stale tool deletion; verified locally with Ruff, full pytest, compileall, diff check, and pre-push pytest; PR CI pending. v1.7.0 (Jun 2026): Added Phase 12 — stale issue body in dedup tasks (grep current state, don't trust 'Evidence:' section); inline vs fixture decision for pure bytes→str helpers; remote branch divergence resolution (new branch vs force-push). Verified CI via ProjectHermes PR #652. |
 | **Primary Issues** | #642 (original), #739 (private module extraction), #917 (pr-policy signing), #503 (LLM JSON dedup) |
 | **Primary PRs** | #714 (original), #900+ (refactoring), #137/#1738 (path constants), #505 (JSON dedup), #201 (DRY consolidation) |
 | **History** | [changelog](./dry-refactoring-workflow.history) |
@@ -61,6 +61,9 @@ Use this workflow when you encounter:
 - "Replace repeated tiny metric/operator kernel classes with one parameterized kernel while keeping module-level `KERNEL` exports stable"
 - "Share validation type checks but preserve each module's exception class, wrapper function names, and error message text"
 - "Remove an obsolete script and its Ruff exception after `rg` proves no first-party callers remain"
+- "The issue says 4 files have the duplicate but only one actually does — how to discover the current state?"
+- "Should I add a pytest fixture or just inline the shared helper call at each call site?"
+- "Remote rejected my push with non-fast-forward — the remote branch has a different solution; what now?"
 
 ## Verified Workflow
 
@@ -739,6 +742,74 @@ git diff --check
    validation tests, metric alias tests, then full Ruff/pytest/compileall/diff-check. If the repo
    has a pre-push hook, treat its full pytest rerun as an additional local signal, not CI.
 
+### Phase 12: Stale Issue Body, Inline vs Fixture, and Remote Branch Divergence (NEW in v1.7.0)
+
+Concrete lessons from ProjectHermes issue #329 — deduplicating a `_sign()` HMAC-SHA256 test
+helper across 4 files.
+
+#### 12a. Grep FIRST — issue "Evidence:" sections go stale
+
+Issue bodies list the *original* state of the codebase. Prior PRs may have partially resolved
+the duplication without closing the issue. The evidence in the body reflects the state at issue
+creation, not the current HEAD.
+
+```bash
+# ALWAYS do this BEFORE reading the issue "Evidence:" list:
+grep -rn "def _sign\|def sign_body\|from tests.helpers import" tests/ --include="*.py"
+```
+
+In #329, the body listed 4 files with a copy-pasted `_sign()`. By the time the work began:
+- A canonical `sign_body(body, secret)` already lived in `tests/helpers.py`
+- Three of the four files already imported and used `sign_body`
+- Only one file (`test_integration.py`) still had a thin local wrapper
+
+**Rule:** grep for the current call count/definition count before scoping the work. An "N-file
+dedup" issue may be a "1-file cleanup" when you get there.
+
+#### 12b. Inline vs fixture decision for pure test helpers
+
+When a thin wrapper is a pure `bytes → str` function that:
+- Closes over a **module-local** constant (e.g. `INTEGRATION_TEST_SECRET`, different from the shared `TEST_SECRET` in helpers.py)
+- Has a small number of call sites (< ~10)
+- Does no setup/teardown
+
+**Prefer inlining** the canonical call directly at each site (`sign_body(body_bytes, SECRET)`)
+over:
+- Adding a new pytest **fixture** — overkill for a pure function, leaks the fixture name into unrelated test function signatures
+- Adding a new entry in **conftest.py** — unnecessary indirection when the function is already importable
+
+Decision table for deduplicating a test helper:
+
+| Helper type | Call pattern | Preferred approach |
+|-------------|--------------|-------------------|
+| Pure function, module-local secret | `fn(body, LOCAL_SECRET)` | **Inline** the canonical call |
+| Pure function, shared secret | `fn(body, SHARED_SECRET)` | Import from `tests/helpers.py`, inline |
+| Stateful / async setup | fixture or async_generator | pytest fixture in conftest |
+| Complex parametrized prep | multiple args, reused shape | pytest fixture |
+
+#### 12c. Remote branch divergence — push to a new branch
+
+When `git push` is rejected (non-fast-forward) because the remote branch has diverged with a
+different solution:
+
+```bash
+# DON'T: force-push — overwrites the remote solution entirely
+git push --force  # NO
+
+# DON'T: rebase onto a conflicting remote — may produce 80+ conflict-laden commits
+git pull origin <remote-branch>  # triggers merge/rebase with 84 commits and multiple conflicts
+git rebase --abort               # bail out
+
+# DO: push as a new branch and open a PR against main
+git checkout -b <new-branch-name>          # e.g. 329-inline-sign-calls
+git push -u origin <new-branch-name>
+gh pr create --title "..." --body "..."
+```
+
+The remote branch's competing solution becomes a sibling PR. The project maintainer merges
+whichever approach is preferred. This is safer than force-pushing because it preserves both
+solutions for review.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -767,6 +838,10 @@ git diff --check
 | Replacing repeated validation wrappers directly with one module-specific helper | Considered importing one validation module's `_required_*` helpers into the others | Each validation module has its own exception class and message wording; sharing a wrapper would leak the wrong exception/message contract | Share only the primitive type checks and keep local wrappers that pass `error_type` plus exact message text |
 | Forcing all fake route apps into one route dictionary shape | A single fake app abstraction looked attractive for all server route tests | Tests intentionally index registered routes differently: by rule, by ordered list, by `(rule, method)`, or by `(method, rule)` | Share the decorator mechanics in a base helper, then keep explicit small storage adapters so test assertions remain clear |
 | Reusing a merged feature branch for a follow-up cleanup PR | Current branch already had a merged PR, so committing on it would have produced a confusing branch/PR relationship | GitHub reported the branch's prior PR as `MERGED`; a new PR needed a new branch from current trunk | Stash uncommitted work, fetch current trunk, create a fresh branch from `origin/<trunk>`, pop the stash, re-verify, sign, push, and open the new PR |
+| Trusting the issue body's "Evidence:" file list for a dedup scope | Assumed 4 files had `_sign()` per the issue; started planning a 4-file refactor | Prior PRs had partially resolved the issue — 3 of the 4 files had already migrated to the canonical `sign_body()`. Only 1 file had the wrapper remaining | **Grep first.** `grep -rn "def _sign"` shows current truth; the issue Evidence section reflects creation-time state, not current HEAD. |
+| Added a pytest fixture to conftest.py for a pure `bytes→str` HMAC helper | Wrapped `sign_body(body, INTEGRATION_TEST_SECRET)` as a pytest fixture so tests could receive it via DI | Introduced unnecessary indirection — the helper takes two args, one of which is a module-local constant, making the fixture callers less readable than just calling the function directly | For a pure `bytes→str` function closing over a local constant, **inline** the call (`sign_body(body_bytes, LOCAL_SECRET)`) at each call site; save fixtures for stateful or async setup |
+| Rebased onto the diverged remote branch that had a competing solution | `git pull origin 329-auto-impl` triggered a rebase with 84 commits and multiple conflicts | The remote had taken a different architectural approach; rebasing imported 84 unrelated commits and produced conflicts at every differing point | `git rebase --abort`; create a fresh local branch from current state; push as a new branch; open a new PR. The remote's competing solution becomes a sibling PR for maintainer review — don't overwrite it |
+
 ## Results & Parameters
 
 ### Radiance v1.6.0 Local Verification
@@ -851,6 +926,7 @@ def _aggregate_token_stats(self, tier_results: dict[TierID, TierResult]) -> Toke
 | ProjectScylla | dir-structure split | Path-constant bypass audit | verified-ci |
 | ProjectHephaestus | #1205 | Phase 10 core/extras split for overlapping `TRANSIENT_ERROR_PATTERNS` / `NETWORK_ERROR_KEYWORDS` | ⚠️ **unverified — planning only, NOT executed** (no code, no tests, no CI) |
 | LLM360/Radiance | PR #908 | Consolidated route-test fakes, layout-only metric kernels, validation field checks, and removed stale `hf_checkpoint_architecture_html.py` | verified-local — full local/pre-push test suite passed; PR CI pending at capture time |
+| ProjectHermes | #329 / PR #652 | Phase 12 — stale issue body (3 of 4 files already migrated), inline over fixture for pure HMAC helper, new-branch resolution for diverged remote | verified-ci — all pytest passed, signed commit, PR opened |
 
 ## Related Skills
 
@@ -860,10 +936,11 @@ def _aggregate_token_stats(self, tier_results: dict[TierID, TierResult]) -> Toke
 
 ## Tags
 
-`refactoring`, `dry-principle`, `helper-methods`, `radiance`, `test-fakes`, `validation-wrappers`, `layout-kernels`, `tdd`, `code-quality`, `python`, `pytest`, `private-modules`, `test-structure`, `git-signing`, `importlib-metadata`, `srp`, `extract-method`, `lru-cache`, `mock-patch`, `rglob`, `dead-code-removal`, `constants`, `frozenset`, `drift`, `intentional-variant`, `core-extras-split`, `planning`
+`refactoring`, `dry-principle`, `helper-methods`, `radiance`, `test-fakes`, `validation-wrappers`, `layout-kernels`, `tdd`, `code-quality`, `python`, `pytest`, `private-modules`, `test-structure`, `git-signing`, `importlib-metadata`, `srp`, `extract-method`, `lru-cache`, `mock-patch`, `rglob`, `dead-code-removal`, `constants`, `frozenset`, `drift`, `intentional-variant`, `core-extras-split`, `planning`, `stale-issue-body`, `inline-vs-fixture`, `remote-branch-divergence`, `hmac`, `test-helper-dedup`
 
 ## Version History
 
+- **v1.7.0** (2026-06-19): Added Phase 12 — three concrete lessons from ProjectHermes #329 (HMAC `_sign()` dedup): (1) grep the CURRENT state before trusting issue body "Evidence:" sections (prior PRs may have partially resolved it); (2) inline a pure `bytes→str` helper over adding a pytest fixture or conftest entry when the function closes over a module-local constant; (3) when a remote branch has diverged with a competing solution, push as a new branch rather than force-pushing or rebasing 84 conflicting commits. Added 3 Failed Attempts rows. Updated Verified On table. Verification: verified-ci via ProjectHermes PR #652. Prior v1.6.0 snapshot archived to history.
 - **v1.6.0** (2026-06-18): Added Phase 11, a locally verified Radiance behavior-preserving duplicate cleanup workflow. Captures shared server route test fakes, parameterized layout-only metric kernels via `LayoutReindexKernel`, shared primitive validation field checks with local wrappers preserving exception/message contracts, stale script deletion after caller audit, and the fresh-branch PR workflow when the current branch's old PR is already merged. Verification was local/pre-push only; PR #908 CI was pending at capture time. Prior v1.5.0 snapshot archived to history.
 - **v1.5.0** (2026-06-12): Added Phase 10 (PLANNING-ONLY, **unverified**) — the core/extras split for consolidating OVERLAPPING constant collections that are intentional-variants-with-overlap, not pure duplicates. Refines the Phase 8c classification table with a third middle path: extract only the shared CORE into one immutable frozenset, compose each consumer as `CORE | extras`, and prove anti-drift with `CORE.issubset(consumer)` parity tests while keeping public names/types. Added 3 Failed Attempts rows (flat-merge-violates-contract, drop-phrases-because-broad-substring-covers-them, recompose-changes-order/type) and a `## Verified On` table. Captured from planning ProjectHephaestus issue #1205; NOT executed end-to-end (no code, no tests, no CI). Prior v1.4.0 snapshot archived to history.
 - **v1.4.0** (2026-06-07): Restored SRP/LRU-cache/stale-script DRY patterns lost in the v1.3.0 absorption (nuance audit). Added Phase 9 + `### Detailed Steps`: extract-method/SRP decomposition with mutable-box closure conversion, `@lru_cache` detection util with the `mock.patch`/`cache_clear()` gotcha, stale-script/deprecated-stub cleanup (grep callers first, rewrite back-references self-contained), and dynamic `Path.rglob` discovery. Added 4 Failed Attempts rows.
