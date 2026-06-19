@@ -1,6 +1,50 @@
 <!-- markdownlint-disable MD024 -->
 # planning-verify-live-state-before-assuming-work-remains — History
 
+## v1.2.0 (2026-06-19)
+
+**Changed by:** Planning of GitHub issue #177 (Odysseus meta-repo) — flip GitHub rulesets from `enforcement: evaluate` to `active` + required-status-check context normalization. The plan was authored by STATIC file inspection only and never executed.
+**Verification:** verified-local for the existing core; the newly added issue #177 ruleset subsection is UNVERIFIED (static-only plan).
+
+### What changed
+
+- Added 6 new Failed Attempts rows, each framing an unverified assumption from the #177 plan as a
+  planning risk/lesson:
+  - Inferring "canonical files never enforce" from `apply-repo-rulesets.sh` / `justfile` defaults
+    instead of reading the live applied ruleset.
+  - Assuming required-status-check contexts are BARE job names (not workflow-prefixed) without
+    querying live state — the highest-risk assumption (wrong ⇒ bootstrap deadlock).
+  - Dropping the org's `typecheck` context as "safe" with no check that a workflow emits it.
+  - Silently reconciling the issue's 9-context claim to the files' 8.
+  - Deleting `-active.json` + the `--active` flag (irreversible; rollback/shadow-test path lost;
+    consumers only grepped within one repo) — scope creep on a "one-line" issue.
+  - Trusting `integration_id: 15368` = GitHub Actions app without independent confirmation.
+- Added a "Worked example: issue #177" subsection under Results & Parameters with an UNVERIFIED
+  warning, listing the most-uncertain assumptions, unverified external sources, reviewer-focus
+  risks (enforcement-by-runbook, irreversible deletes, scope creep), and the corrective `gh api`
+  workflow the plan should have used.
+- Extended the description with triggers (5) ruleset enforcement flip / required-check change from
+  static inspection, and (6) a "one-line" fix that also deletes files / removes flags / refactors.
+- Added two "When to Use" bullets and noted the unverified subsection in the Overview verification cell.
+- Bumped version 1.1.0 → 1.2.0 (minor: new findings + failed attempts + extended triggers); date 2026-06-19.
+
+### Why
+
+The #177 plan generalizes the v1.1.0 lesson "config is intent, not state" to a broader and
+higher-stakes surface: flipping a ruleset to `active` from static file reading alone, without
+`gh api` confirmation of the applied enforcement, the exact required-check context format, or
+consumers of soon-to-be-deleted files. Getting the context format wrong causes a bootstrap
+deadlock (PRs blocked with 0 failing checks). Same search surface as the existing skill (planning,
+ruleset, unverified, static, live state, gh api), so amended rather than split into a new file.
+
+### Previous version (v1.1.0) snapshot
+
+See git history (commit prior to skill/planning-verify-live-state-ruleset-enforcement) and the
+v1.1.0 entry below for the full prior content; the v1.2.0 change is purely additive (no rows or
+sections were removed or rewritten).
+
+---
+
 ## v1.1.0 (2026-06-19)
 
 **Changed by:** Re-planning of GitHub issue #24 ("Standardize default branch across ecosystem") after a NOGO review (same session, after PR #2583).
