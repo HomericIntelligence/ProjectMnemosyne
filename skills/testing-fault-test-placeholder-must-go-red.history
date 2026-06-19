@@ -1,0 +1,149 @@
+# testing-fault-test-placeholder-must-go-red — History
+
+## v1.1.0 (2026-06-19)
+
+**Changed by:** Re-plan of GitHub issue #184 (Odysseus e2e NATS crash-reconnect placeholder test) after a reviewer NOGO on the v1.0.0 plan.
+**Verification:** unverified (still planning discipline — the re-plan was never executed; no code run, no CI observed)
+
+### What changed
+
+- Added the durable lesson that the fix for an "unverified core assumption" review finding is to READ THE ACTUAL CLIENT/LIBRARY SOURCE, not to add hedging prose. Cited `natsConnection_ConnectTo` (libnats DEFAULT options = auto-reconnect ON: `AllowReconnect=true`, `MaxReconnect=60`, `ReconnectWait=2s`) which converted the #1 risk from "assumed" to "verified can-go-GREEN".
+- Added the lesson that a recovery test must be shown able to go BOTH RED and GREEN — proving only RED is necessary-but-insufficient.
+- Added the scope-DOWN lesson: dropping topology T4 (a documented-broken substrate) deleted an entire class of defects (the self-contradictory compose path M1, the port-override bug substrate M3, an over-generalized persistence rationale). Skip broken substrates explicitly with the bug cited inline.
+- Added the pre-existing-blocker lesson: reading code to fix one finding surfaced that the T1 launcher (`start_myrmidon_bg`) pointed at a non-existent `main.py` while the component is C++ (`main.cpp`) — a verification step that depends on a broken harness is "aspirational verification".
+- Added the DRY/divergence lesson: reference EXACT exported variables with `${VAR:?}` (fail-loud) instead of duplicating defaults like `${PORT:-18222}`.
+- Added 5 new Failed Attempts / anti-pattern rows.
+- Added reviewer-risk refinements to Results & Parameters (libnats version-dependent defaults, JetStream store-lock/port-rebind race, double `run_task_lifecycle` idempotency, derived 90s timeout budget, pixi-wraps-runner unconfirmed).
+- Added `history` frontmatter field; bumped version 1.0.0 -> 1.1.0 (MINOR); date stays 2026-06-19.
+
+### Why
+
+The v1.0.0 plan was reviewed NOGO because it answered an "unverified core assumption" finding
+with more prose rather than reading the client source, claimed multi-topology (T1+T4) support
+where T4 rests on a documented bug, shipped a code block contradicted by a trailing prose Note,
+and relied on a harness helper (myrmidon launcher) that could never pass on a clean run. The
+re-plan corrected all four by reading the actual source, scoping to the one working topology (T1),
+and validating helpers. The transferable lesson — verify assumptions by reading source, prove
+both RED and GREEN, scope down off broken substrates, and never let verification depend on an
+unopened/broken helper — is the durable value captured in this amendment.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: testing-fault-test-placeholder-must-go-red
+description: "Planning discipline for replacing a false-pass placeholder fault/chaos test (a hardcoded `pass`/`assert True` that never exercises the failure path) with a real one. Teaches: a fix is only credible if the new test can go RED (temporarily stub the recovery so it fails), proves recovery by an OBSERVABLE end-to-end effect (not by re-asserting design intent), and uses a clean SKIP — never a pass — where the fault is structurally inapplicable. Most importantly it catalogs the UNVERIFIED assumptions a planner makes when they write such a plan WITHOUT running code (does the client actually auto-reconnect? is the compose path right? does a hard-kill + same-port relaunch race? is the lifecycle helper idempotent?) so a reviewer knows exactly what to check. Use when: (1) planning a fix for an issue where a fault/chaos/resilience test is a hardcoded placeholder that always passes; (2) writing a NATS/broker crash-reconnect or kill-restart-recover test; (3) deciding skip-vs-fail semantics for an environment-conditional fault test; (4) reviewing such a plan and needing the high-risk assumptions enumerated; (5) any test that asserts a system property by re-reading source or restating design intent instead of exercising it."
+category: testing
+date: 2026-06-19
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags:
+  - testing
+  - chaos
+  - fault-injection
+  - placeholder-test
+  - red-green
+  - tdd
+  - nats
+  - reconnect
+  - planning
+  - unverified-assumptions
+  - observable-recovery
+  - skip-vs-fail
+---
+
+# Fault-Test Placeholder Must Be Able To Go Red
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-19 |
+| **Objective** | Plan a fix for a false-pass fault test: a NATS crash-reconnect e2e test that was a hardcoded `pass` placeholder (Odysseus e2e, GitHub issue #184) |
+| **Outcome** | Produced an implementation plan (add `nats_kill`/`nats_restart` lifecycle helpers; kill -> degrade -> restart -> prove reconnect via a real task lifecycle). Plan only — never executed. |
+| **Verification** | unverified (planning-discipline learning, no code run, no CI observed) |
+
+## When to Use
+
+- Planning a fix for an issue where a fault, chaos, or resilience test is a hardcoded placeholder (`pass`, `assert True`, `return 0`) that always passes without exercising the failure path.
+- Writing a broker/NATS crash-reconnect or kill-restart-recover test for the first time.
+- Deciding skip-vs-fail semantics for a fault test that only applies under some topologies/environments.
+- Reviewing such a plan: this skill enumerates the high-risk unverified assumptions the planner relied on.
+- Any test that "verifies" a property by re-reading source or restating design intent instead of exercising it.
+
+## Verified Workflow
+
+> **Warning:** This is a planning-discipline learning, not an executed workflow. Treat as a hypothesis until applied and confirmed.
+> _(Proposed — derived from a plan that was never run; the assumptions below are unverified against code or CI.)_
+
+### Quick Reference
+
+```text
+To fix a false-pass fault/chaos test, the plan MUST include:
+  1. A way to exercise the REAL fault path (e.g. kill/restart lifecycle helpers).
+  2. An explicit RED step: temporarily stub the recovery so the new test FAILS,
+     proving it can detect a broken path. A test that cannot go red is a slower placeholder.
+  3. A GREEN assertion that is an OBSERVABLE end-to-end effect (a brand-new task
+     lifecycle completing AFTER restart) — never "asserts the system is designed for X".
+  4. Clean SKIP (not pass) where the fault is structurally inapplicable for the topology.
+  5. Conventions MIRRORED from the repo (existing kill helpers, compose service name,
+     topology-gating precedent) — discovered by grep, not invented.
+```
+
+### Detailed Steps
+
+1. **Confirm the placeholder's sin.** The original test asserted design intent ("designed for graceful degradation") instead of exercising it. Re-asserting source or design is the same bug class you are fixing.
+2. **Add a real fault path.** Introduce lifecycle helpers (`nats_kill`, `nats_restart`) that actually SIGKILL the broker and relaunch it, mirroring existing repo kill helpers found by grep rather than inventing a new style.
+3. **Drive an observable effect.** After restart, run a brand-new end-to-end task lifecycle and assert it completes. Recovery is proven by the new work succeeding, not by re-reading config.
+4. **Add the RED step.** Before trusting the test, temporarily stub/disable the recovery (e.g. do not restart, or break reconnect) and confirm the test FAILS. Only then revert and confirm GREEN. This is the single check that distinguishes a real test from a placeholder.
+5. **Get skip-vs-fail semantics right.** "Structurally inapplicable" (the fault cannot occur in this topology) -> clean `skip_topology`/skip. "Should have worked but didn't" -> real fail. A pass where the fault cannot run is the same defect as the bug you are fixing.
+6. **Mark the plan's assumptions.** Explicitly list every reliance that was NOT verified by running code (see Failed Attempts + Results) so a reviewer can check them before trusting the plan.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Hardcoded pass placeholder | Test body was `pass` / `assert True`, never exercising the fault | Always green; cannot detect a broken recovery path | A fault test that can never go red is a slower placeholder — add an explicit RED step |
+| Assert design intent | Asserted "system is designed for graceful degradation" by re-reading source/config | Verifies the comment, not the behavior; passes even if recovery is broken | Prove recovery by an OBSERVABLE end-to-end effect (new task lifecycle completing post-restart) |
+| Pass where inapplicable | Returned pass when the topology cannot exercise the fault | Same bug class as the placeholder — silently green without exercising anything | Use a clean skip for structurally-inapplicable cases; reserve fail for real breakage |
+| Assume the client auto-reconnects | Plan relied on the NATS client reconnecting within timeout after restart, unverified | If the client does one-shot connect (KB warns nats-py `allow_reconnect` can hang / connect is one-shot) the post-restart lifecycle hangs and the "fix" is itself flaky/false | Verify reconnect behavior against the actual client code BEFORE trusting the plan (#1 risk) |
+| Wrong relative compose path | Helper wrote `$(_e2e_root)/docker-compose.e2e.yml` | Compose file lives at repo ROOT, asserted from a single `find` hit; `_e2e_root()` returns `e2e/`, so the file is one level up | Correct path is `$(_e2e_root)/../docker-compose.e2e.yml`; a path from one `find` hit is brittle and was never executed |
+
+## Results & Parameters
+
+**Verification level: `unverified`.** This plan (for issue #184) was never executed; no code ran and no CI was observed. The value below is the catalog of assumptions a planner relied on WITHOUT running code — a reviewer MUST check these.
+
+Uncertain assumptions / unverified reliances:
+
+- **Compose path is brittle.** Asserted from a single `find` hit that `docker-compose.e2e.yml` lives at repo root. The in-helper code first wrote `$(_e2e_root)/docker-compose.e2e.yml` (WRONG) and needed correction to `$(_e2e_root)/../docker-compose.e2e.yml`. The T4 branch was never run.
+- **Client auto-reconnect (#1 RISK).** Assumed Agamemnon's C++ `NatsClient` and the Python myrmidon auto-reconnect after the server restarts within the test timeout. NOT verified against client code. If either does a one-shot connect and never retries, the post-restart task lifecycle hangs/fails and the new test is itself flaky/false.
+- **Hard-kill + same-store relaunch race.** Assumed the T1 background NATS relaunch with the SAME `--store_dir` cleanly re-attaches JetStream state and that no stale lock/PID prevents rebinding the same ports immediately after SIGKILL. Port-rebind races and JetStream store locks after a hard kill were not tested.
+- **Lifecycle idempotency.** Assumed `run_task_lifecycle` is side-effect-safe to call twice in one run (baseline + post-restart) — i.e. creating a second agent/team/task does not collide. Not verified.
+- **Runner invocation.** Assumed `pixi run bash e2e/run-ipc-tests.sh ...` is valid; the runner is documented as `bash e2e/run-ipc-tests.sh` and whether it is wrapped by pixi/just was not confirmed.
+- **Line numbers drift.** Relied on point-in-time line numbers (`lib/process.sh:64-78`, `nats.sh:~108`, test lines 27-56) captured from one read; these will drift.
+
+Risks a reviewer should focus on (ordered):
+
+1. Does the actual NATS client auto-reconnect within timeout? Verify against Agamemnon `NatsClient` and myrmidon `main.py` before trusting the plan — if not, the new test is flaky/false.
+2. T4 compose path correctness; that `compose stop nats` / `start nats` targets the right service and the monitor port maps through.
+3. Hard-kill (SIGKILL) + immediate same-port/same-`store_dir` relaunch race on T1.
+4. Idempotency of calling `run_task_lifecycle` twice.
+5. Skip-vs-fail correctness for every topology — confirm no path silently passes without exercising the fault.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| Odysseus (e2e) | Planning fix for issue #184 — NATS crash-reconnect placeholder test | unverified; plan only, never executed |
+```
+
+---
+
+## v1.0.0 (2026-06-19)
+
+**Initial version.** Planning-discipline learning from the first plan for GitHub issue #184
+(Odysseus e2e NATS crash-reconnect placeholder test). Established the core rule that a fault
+test must be able to go RED, prove recovery by an observable end-to-end effect, and use a clean
+SKIP (never a pass) where the fault is structurally inapplicable — plus a catalog of the
+unverified assumptions a planner makes when writing such a plan without running code.
