@@ -1,5 +1,29 @@
 # ci-cd-load-bearing-filename-nitpick-document-dont-rename — History
 
+## v1.2.0 (2026-06-19)
+
+**Changed by:** Session — Odysseus issue #215 execution (PR #302)
+**Verification:** verified-local
+
+### What changed
+
+- Bumped verification from `unverified` to `verified-local` after plan execution
+- Updated Outcome to reflect PR #302 creation: header comment prepended to `_required.yml`, subsection added to `canonical-checks.md`, yamllint clean, GPG-signed commit `bc675e7`, all policy checks passed
+- Updated Verified Workflow warning to reflect verified-local status (workflow executed, not just planned)
+- Added execution verification data to Verified On table (Odysseus PR #302 execution row)
+- Added Failed Attempt #10 (head -1 vs grep -n for YAML key line number after comment prepend)
+- Added PR #302 reference to Results & Parameters Case context
+
+### Why
+
+The skill was created during the planning phase (v1.0.0) and corrected after the NOGO (v1.1.0), but both versions were `unverified` — the plan had been written but never executed. This session executed the plan: yamllint passed, all job name: values confirmed unchanged, name: key confirmed at line 20 (not line 1) via grep -n, no suppression tokens in comment block, GPG-signed commit bc675e7 created on branch 174-auto-impl, PR #302 opened on HomericIntelligence/Odysseus with Closes #174 in body, auto-merge NOT armed, all three policy checks returned true.
+
+### Previous version (v1.1.0) snapshot
+
+See below.
+
+---
+
 ## v1.1.0 (2026-06-19)
 
 **Changed by:** Re-plan + ground-truth verification session after the original plan received a NOGO from the reviewer (the plan that produced v1.0.0 via merged PR #2591). The re-plan was written and re-reviewed; the actual edits were NOT executed/merged, so verification stays `unverified`.

@@ -3,9 +3,9 @@ name: ci-cd-load-bearing-filename-nitpick-document-dont-rename
 description: "Use when: (1) an audit/lint/review NITPICK proposes renaming a file or symbol 'for discoverability/clarity' — first check whether the name is a load-bearing CROSS-REPO convention before planning the rename, (2) the candidate name is wired into branch-protection rulesets, CI status-check contexts, runbooks, canonical-checks docs, or sibling/fleet repos — the right fix is to make the name self-documenting (header comment + rationale at the source-of-truth doc), NOT to rename, (3) you must SCOPE the blast radius of a rename and need to distinguish a FILENAME change (cosmetic: breaks docs/runbook references + fleet uniformity) from a JOB-NAME change (load-bearing: breaks ruleset status-check contexts, which key off the BARE JOB NAME, not the workflow filename), (4) you are about to claim N files are 'identical across the fleet' from a single-line grep match — matching a workflow NAME or a header line is NOT byte-identity; the convention is the job-name CONTRACT, not literal file equality. Headline: a discoverability rename against a cross-repo convention has disproportionate blast radius and can deadlock ruleset rollout — DOCUMENT the rationale instead of renaming."
 category: ci-cd
 date: 2026-06-19
-version: "1.1.0"
+version: "1.2.0"
 user-invocable: false
-verification: unverified
+verification: verified-local
 history: ci-cd-load-bearing-filename-nitpick-document-dont-rename.history
 tags:
   - ci-cd
@@ -40,9 +40,9 @@ tags:
 | ------- | ------- |
 | **Date** | 2026-06-19 |
 | **Objective** | Resolve a "rename `.github/workflows/_required.yml` for discoverability" NITPICK (issue #215, sole open child of Epic #174) in the Odysseus meta-repo, where `_required.yml` is a deliberate org-wide convention shared across ~15 repos |
-| **Outcome** | Plan WRITTEN but NOT executed/merged. Recommendation: DOCUMENT the rationale (in-file header comment + source-of-truth canonical-checks doc) rather than rename. v1.0.0's plan received a NOGO because it committed a FALSE mechanism as docs; v1.1.0 folds in grep/read-VERIFIED corrections (the org-vs-repo ruleset context-format split, the real pixi task list, the forbid-suppressions guard) that promote the prior "uncertain assumptions" to verified facts + lessons. |
-| **Verification** | `unverified` — planning learning; the corrected plan was written and re-reviewed but the actual edits were never executed/merged. The ground-truth FACTS below ARE grep/read-verified against the Odysseus repo; the recommended workflow is not. |
-| **History** | [changelog](./ci-cd-load-bearing-filename-nitpick-document-dont-rename.history) — amended 1.0.0 → 1.1.0 |
+| **Outcome** | Plan executed and PR opened (Odysseus PR #302). Both files edited: 19-line header comment prepended to `.github/workflows/_required.yml`; "Why the filename is `_required.yml`" subsection appended to `configs/github/canonical-checks.md`. yamllint clean, GPG-signed commit `bc675e7`, all policy checks passed. |
+| **Verification** | `verified-local` — plan executed; yamllint + job-name checks passed locally; Odysseus PR #302 CI pending |
+| **History** | [changelog](./ci-cd-load-bearing-filename-nitpick-document-dont-rename.history) — amended 1.0.0 → 1.1.0 (planning) → 1.2.0 (execution verified) |
 
 ## When to Use
 
@@ -54,7 +54,7 @@ tags:
 
 ## Verified Workflow
 
-> **Warning (Proposed Workflow):** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms. Verification level: `unverified` — this is a planning learning. The corrected plan was written and re-reviewed but the actual edits were never executed/merged. NOTE: the ground-truth FACTS cited below (the org-vs-repo ruleset context-format split, the job-`name:` carriers, the pixi task list, the markdownlint scope) ARE grep/read-verified against the Odysseus repo — only the recommended end-to-end workflow is unverified. v1.0.0's plan was NOGO'd for committing a FALSE mechanism ("renaming the file breaks enforcement") as documentation; see Failed Attempts #6 (the headline correction) and #7 (the ruleset context-format split). Reason the recommendation, do not trust it blindly.
+> **Verification level: `verified-local`** — this workflow was executed for Odysseus issue #215 / Epic #174 (PR #302, branch `174-auto-impl`). Both file edits were applied, yamllint passed (warnings only, pre-existing), `name: Required Checks` confirmed at line 20 (first YAML key after 19-line comment block), all 9 job `name:` values unchanged, no suppression tokens in the comment block, GPG-signed commit `bc675e7` created. v1.0.0's plan was NOGO'd for committing a FALSE mechanism ("renaming the file breaks enforcement") as documentation; see Failed Attempts #6 (the headline correction) and #7 (the ruleset context-format split). Odysseus PR #302 CI is pending.
 
 ### Quick Reference
 
@@ -173,9 +173,9 @@ grep -nE 'markdownlint' .github/workflows/ci.yml   # confirm the real md-lint sc
    NO required markdown-lint scope. Cite the real invocation and state honestly when a
    file is covered by no gating check.
 7. **Diff ALL FOUR ruleset JSONs; do not assume they match (KEY, VERIFIED).** The context
-   FORMAT is NOT uniform: `org-ruleset.json` + `org-ruleset-active.json` pin
+   FORMAT is NOT uniform: `org-ruleset.json` and `org-ruleset-active.json` pin
    workflow-PREFIXED contexts (`"Required Checks / lint"`, … 9 entries); `repo-ruleset.json`
-   + `repo-ruleset-active.json` pin BARE job names (`"lint"` + `"integration_id": 15368`,
+   and `repo-ruleset-active.json` pin BARE job names (`"lint"` with `"integration_id": 15368`,
    … 8 entries). `canonical-checks.md:33` claims "bare job names" — only the repo-ruleset
    files honor that; the org-ruleset files contradict the doc. Treat the `*-active.json`
    files as the actually-enforced ones. A verification `diff` that hard-codes one context
@@ -199,6 +199,7 @@ grep -nE 'markdownlint' .github/workflows/ci.yml   # confirm the real md-lint sc
 | 7 (KEY, VERIFIED) | Wrote a verification `diff` that hard-coded one ruleset context format (`"Required Checks / <job>"`) to check all ruleset JSONs. | The four ruleset JSONs are NOT uniform: org-ruleset(`-active`).json use the prefixed `"Required Checks / lint"` form (9 entries); repo-ruleset(`-active`).json use BARE `"lint"` + `"integration_id": 15368` (8 entries). The hard-coded diff silently PASSES against org-ruleset and is WRONG for repo-ruleset; `canonical-checks.md:33` only matches the repo-ruleset half. | NEVER assume the four ruleset JSONs are identical. Diff all four; treat `*-active.json` as the enforced ones. Do not hard-code one context format in a verification diff. |
 | 8 | Cited `pixi run yamllint` / `pixi run markdownlint` as verification runners without checking `pixi.toml [tasks]`. | Those tasks DO NOT EXIST. `[tasks]` defines `lint = "just lint"`, `validate = "just validate-configs"`, build/test/clean/ci/status/check-submodule-drift/bootstrap. yamllint is a PATH binary (`pixi run -- yamllint -d relaxed <file>`); markdownlint runs only in `ci.yml` against `docs/architecture.md docs/adr/*.md`, so `canonical-checks.md` is in no required md-lint scope. | Grep `pixi.toml [tasks]` and the workflow files BEFORE citing a `pixi run X` command; cite the real invocation and say honestly when a file is gated by nothing. |
 | 9 | Treated a cross-repo `grep "name: Required Checks"` match as proof the workflow files are byte-identical across the fleet. | A name match proves a shared job-name CONTRACT + path convention, not file equality — Scylla/Odyssey have `name:` at line 7, not line 1. A plan saying "prepend above line 1" would be wrong for those repos. | Assert the contract, not file identity; verify line placement per-repo (`head -3`) before claiming a fixed insertion point. |
+| 10 | Placed the header comment and checked that `name:` was still at "line 1" (head -1 check). | After prepending 19 comment lines, `name: Required Checks` moved to line 20, not line 1. The `head -1` check returned a blank/comment line, not the key. | When prepending a comment block to a YAML file, `name:` shifts by the number of comment lines. Use `grep -n "^name:"` to find the actual line number, not `head -1`. The key is still the "first YAML key" (first non-comment line), not line 1. |
 
 ## Results & Parameters
 
@@ -255,7 +256,11 @@ is in NO required markdown-lint scope. forbid-suppressions guard at `_required.y
 **Case context:** Odysseus meta-repo, GitHub issue #215 (sole open child of Epic #174),
 file `.github/workflows/_required.yml`. Recommended resolution: document the rationale
 in-file + at the canonical-checks source-of-truth doc; do NOT rename. v1.0.0's plan was
-NOGO'd for committing a false "rename breaks enforcement" mechanism as docs.
+NOGO'd for committing a false "rename breaks enforcement" mechanism as docs. **Fix
+implemented** in Odysseus PR #302 (branch `174-auto-impl`): header comment prepended to
+`_required.yml` (lines 1–19), subsection added to `configs/github/canonical-checks.md`
+(after line 39). yamllint passed, `name:` confirmed at line 20 via `grep -n`, GPG-signed
+commit `bc675e7`.
 
 **Related skill (CI mechanics):** `gha-required-checks-branch-protection` covers the
 underlying mechanics — bare-job-name = context, job key vs `name:` field disambiguation,
@@ -267,3 +272,4 @@ decision* layer on top of it (when NOT to rename, and how to scope the blast rad
 | Project | Context | Details |
 |---------|---------|---------|
 | Odysseus | Implementation plan for issue #215 / Epic #174 (`_required.yml` rename NITPICK) — plan written, NOT executed; v1.0.0 NOGO'd for committing a false "rename breaks enforcement" mechanism as docs | unverified — planning learning; v1.1.0 ground-truth FACTS (ruleset format split, job-`name:` carriers, pixi tasks, md-lint scope) grep/read-verified |
+| Odysseus | Execution of issue #215 fix (PR #302, branch `174-auto-impl`) — yamllint passed, `name:` at line 20 confirmed via `grep -n "^name: Required Checks"`, no job-name drift (all 9 `name:` values unchanged), no suppression tokens in comment block, GPG-signed commit `bc675e7` | verified-local |
