@@ -1,0 +1,106 @@
+# ci-cd-load-bearing-filename-nitpick-document-dont-rename — History
+
+## v1.1.0 (2026-06-19)
+
+**Changed by:** Re-plan + ground-truth verification session after the original plan received a NOGO from the reviewer (the plan that produced v1.0.0 via merged PR #2591). The re-plan was written and re-reviewed; the actual edits were NOT executed/merged, so verification stays `unverified`.
+**Verification:** unverified (planning learning — corrected plan written + re-reviewed, edits not executed)
+
+### What changed
+
+- **Promoted the headline caveat from "assumption" to "verified fact" and CORRECTED it.** v1.0.0 said the plan "overstated blast radius" but left ruleset uniformity as an assumption. Now VERIFIED by grep/read of the Odysseus repo that the four ruleset JSONs do NOT share a uniform context format:
+  - `configs/github/org-ruleset.json` and `org-ruleset-active.json` pin **workflow-PREFIXED** contexts: `"Required Checks / lint"`, `"Required Checks / unit-tests"`, … (9 entries).
+  - `configs/github/repo-ruleset.json` and `repo-ruleset-active.json` pin **BARE** job names: `"lint"` + `"integration_id": 15368` (8 entries).
+  - The repo's own `canonical-checks.md:33` claims "context strings are bare job names" — only the repo-ruleset files honor that; the org-ruleset files contradict the doc.
+  - New lesson: NEVER assume the four JSONs are identical. Diff ALL four; treat `*-active.json` as the actually-enforced ones. A verification `diff` hard-coding ONE context format silently passes against org-ruleset and is wrong for repo-ruleset.
+- **Confirmed the load-bearing contract is the job `name:` values, not the filename.** Verified job names in `.github/workflows/_required.yml`: lint(16), unit-tests(150), build(240), schema-validation(261), deps/version-sync(279), plus non-required forbid-suppressions(66). Renaming the FILE changes no context; renaming/removing a JOB does. The prior plan's "renaming the file breaks enforcement" was FALSE and would have shipped as committed documentation — the core defect the reviewer (P7/POLA) caught.
+- **Corrected the verification-command tooling claims.** Verified `pixi.toml [tasks]` defines `lint = "just lint"`, `validate = "just validate-configs"`, plus build/test/clean/ci/status/check-submodule-drift/bootstrap. There is NO `pixi run yamllint` and NO `pixi run markdownlint`. Real invocations: `pixi run -- yamllint -d relaxed <file>` or `pixi run lint`. markdownlint runs ONLY in `ci.yml` against `docs/architecture.md docs/adr/*.md`, so `configs/github/canonical-checks.md` is in NO required markdown-lint scope.
+- **Confirmed the grep-identity fallacy.** `grep "name: Required Checks"` proves a shared job-name CONTRACT + path convention, not byte-identity — Scylla/Odyssey have `name:` at line 7, not line 1.
+- **New gotcha (forbid-suppressions guard).** When adding an explanatory comment block to a workflow, keep it free of suppression tokens (`noqa`, `nosec`, `disable=`, `# type: ignore`) so it cannot trip the `forbid-suppressions` job (`_required.yml:66`). `_required.yml` may already be excluded (`.pre-commit-config.yaml:63`) but don't rely on it.
+- Added 4 new Failed Attempts rows (6–9). Bumped 1.0.0 → 1.1.0 (new verified findings + new failed attempts, not a rewrite).
+
+### Why
+
+The v1.0.0 plan received a NOGO. Root cause: it committed a FALSE mechanism ("renaming the file breaks enforcement") as documentation, and it left ruleset uniformity as an unverified assumption. Ground-truth grep/read this session proved the org-vs-repo context-format split and the real pixi task list, correcting the skill's own caveats from "uncertain assumptions" to "verified facts + lessons."
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: ci-cd-load-bearing-filename-nitpick-document-dont-rename
+description: "Use when: (1) an audit/lint/review NITPICK proposes renaming a file or symbol 'for discoverability/clarity' — first check whether the name is a load-bearing CROSS-REPO convention before planning the rename, (2) the candidate name is wired into branch-protection rulesets, CI status-check contexts, runbooks, canonical-checks docs, or sibling/fleet repos — the right fix is to make the name self-documenting (header comment + rationale at the source-of-truth doc), NOT to rename, (3) you must SCOPE the blast radius of a rename and need to distinguish a FILENAME change (cosmetic: breaks docs/runbook references + fleet uniformity) from a JOB-NAME change (load-bearing: breaks ruleset status-check contexts, which key off the BARE JOB NAME, not the workflow filename), (4) you are about to claim N files are 'identical across the fleet' from a single-line grep match — matching a workflow NAME or a header line is NOT byte-identity; the convention is the job-name CONTRACT, not literal file equality. Headline: a discoverability rename against a cross-repo convention has disproportionate blast radius and can deadlock ruleset rollout — DOCUMENT the rationale instead of renaming."
+category: ci-cd
+date: 2026-06-19
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags:
+  - ci-cd
+  - planning-quality
+  - audit-nitpick
+  - discoverability-rename
+  - load-bearing-convention
+  - cross-repo-convention
+  - branch-protection
+  - required-status-checks
+  - ruleset-context
+  - bare-job-name
+  - blast-radius-scoping
+  - filename-vs-job-name
+  - document-dont-rename
+  - self-documenting-name
+  - fleet-uniformity
+  - grep-identity-fallacy
+---
+
+# CI/CD: Load-Bearing Filename NITPICK — Document, Don't Rename
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-06-19 |
+| **Objective** | Resolve a "rename `.github/workflows/_required.yml` for discoverability" NITPICK (issue #215, sole open child of Epic #174) in the Odysseus meta-repo, where `_required.yml` is a deliberate org-wide convention shared across ~15 repos |
+| **Outcome** | Plan WRITTEN but NOT executed/merged. Recommendation: DOCUMENT the rationale (in-file header comment + source-of-truth canonical-checks doc) rather than rename. The plan itself contained an overstatement of blast radius that this skill records as the key lesson. |
+| **Verification** | `unverified` — planning learning; plan never executed, and self-review (assumption #2) found the plan overstated the rename's impact on ruleset contexts |
+| **History** | n/a (initial version) |
+
+## When to Use
+
+- An **audit/lint/review NITPICK** says "rename file X / symbol Y **for discoverability** (or clarity)" and X/Y looks arbitrary — STOP and check whether the name is a load-bearing convention before you plan the rename.
+- The candidate name appears in **branch-protection rulesets, CI status-check contexts, runbooks, canonical-checks docs, or sibling/fleet repos**. If so, prefer making the name self-documenting (header comment + rationale doc) over renaming.
+- You need to **scope the blast radius** of a rename and must separate FILENAME impact (cosmetic) from JOB-NAME impact (load-bearing) — they are NOT the same in GitHub Actions branch protection.
+- You are about to assert "these N files are identical across the fleet" from a **single grep line match** (workflow `name:`, a header line) — that is a NAME/CONTRACT match, not byte identity.
+- You see a "low-effort cleanup" framed nitpick that, if executed, would touch many repos and could **deadlock a ruleset rollout**.
+
+## Verified Workflow
+
+> **Warning (Proposed Workflow):** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms. Verification level: `unverified` — this is a planning learning. The plan was written but never executed or merged, AND a self-review found the plan itself overstated the rename's blast radius (see Failed Attempt #2 — the filename-vs-job-name distinction is the key correction). Reason the recommendation, do not trust it blindly.
+
+### Quick Reference
+
+(decision-rule bash block — see v1.1.0 for the corrected version)
+
+### Detailed Steps
+
+1–7 (see v1.1.0 for corrected steps)
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+(rows 1–5 — see v1.1.0 for full table incl. new rows 6–9)
+
+## Results & Parameters
+
+(decision rule + blast-radius table — see v1.1.0 for corrected facts)
+
+## Verified On
+
+| Project | Context | Details |
+| Odysseus | Implementation plan for issue #215 / Epic #174 (`_required.yml` rename NITPICK) — plan written, NOT executed; self-review found a blast-radius overstatement | unverified — planning learning |
+```
+
+---
+
+## v1.0.0 (2026-06-19)
+
+**Initial version.** Created via merged PR #2591. Captured the planning learning: when an audit/lint NITPICK proposes renaming a file/symbol for discoverability, check if the name is a load-bearing cross-repo convention; document the rationale instead of renaming. The plan that produced it subsequently received a NOGO, prompting the v1.1.0 re-plan/correction.
