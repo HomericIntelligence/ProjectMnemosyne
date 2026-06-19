@@ -1,9 +1,9 @@
 ---
 name: planning-verify-live-state-before-assuming-work-remains
-description: "When an issue describes work to be done (a migration, rename, or config change), verify the LIVE external state FIRST with gh/grep before planning any edits — the work may already be complete, making the correct plan a verify-and-close plan with ZERO source edits. An issue body is a snapshot from when it was filed and drifts: the default branch, CI config, open-PR bases, and linked-issue states all change underneath it. Includes the gh-API gotcha that `gh api repos/ORG/REPO/branches/master` RETURNS the default branch via HTTP redirect for a MISSING branch (false positive that master exists) — use the `git/refs/heads` listing instead. Also covers the static-analysis-only planning trap: when fixing a 'one-line' GitHub ruleset enforcement/required-check issue purely by reading config files (e.g. flipping `enforcement: evaluate` → `active`), you have NOT confirmed what is actually applied to the live org/repo, whether required-status-check contexts are reported as bare job names vs workflow-prefixed, or whether deletes/refactors are reversible — all of which can cause a bootstrap deadlock (PRs BLOCKED with 0 failing checks). Use when: (1) an issue/ticket describes a migration or change that may already be done, (2) planning work whose premise depends on live external state (default branch, CI config, issue status), (3) before recommending edits driven by an issue's stated assumptions, (4) before writing any 'Files to Modify' that exist only because the issue said so, (5) planning a ruleset enforcement flip or required-status-check context change from static file inspection without querying `gh api .../rulesets`, (6) a 'one-line' config fix that also deletes files / removes flags / refactors scripts (scope-creep + irreversible-delete risk)."
+description: "When an issue describes work to be done (a migration, rename, or config change), verify the LIVE external state FIRST with gh/grep before planning any edits — the work may already be complete, OR the deployed state may be the OPPOSITE of what the issue claims, making the correct fix a drift-closure rather than a from-scratch change. An issue body is a snapshot from when it was filed and drifts: the default branch, CI config, open-PR bases, linked-issue states, AND the live applied ruleset all change underneath it. Includes the gh-API gotcha that `gh api repos/ORG/REPO/branches/master` RETURNS the default branch via HTTP redirect for a MISSING branch (false positive that master exists) — use the `git/refs/heads` listing instead. Also covers the static-analysis-only planning trap: fixing a 'one-line' GitHub ruleset enforcement/required-check issue purely by reading config files (e.g. flipping `enforcement: evaluate` → `active`) without confirming what is actually applied to the live org/repo — a single `gh api .../rulesets` query can confirm the live ruleset is ALREADY active (so re-applying the stale on-disk evaluate file via an idempotent PUT would DOWNGRADE it), prove the exact required-context format (bare names + integration_id), settle a docs 9-vs-8 count dispute, and confirm the org endpoint 404s on FREE plan — resolving several unverified assumptions at once. Use when: (1) an issue/ticket describes a migration or change that may already be done, (2) planning work whose premise depends on live external state (default branch, CI config, issue status, applied ruleset), (3) before recommending edits driven by an issue's stated assumptions, (4) before writing any 'Files to Modify' that exist only because the issue said so, (5) planning a ruleset enforcement flip or required-status-check context change from static file inspection without querying `gh api .../rulesets`, (6) a 'one-line' config fix that also deletes files / removes flags / refactors scripts (scope-creep + irreversible-delete + rollback-regression risk), (7) two in-repo docs disagree on a number — resolve it against the deployed system, not either doc."
 category: tooling
 date: 2026-06-19
-version: "1.2.0"
+version: "1.3.0"
 user-invocable: false
 verification: verified-local
 history: planning-verify-live-state-before-assuming-work-remains.history
@@ -19,7 +19,7 @@ tags: []
 | **Date** | 2026-06-19 |
 | **Objective** | When planning an issue that asserts work needs doing (e.g. "5 repos still on master, CI broken"), determine whether that work is already complete BEFORE writing edits — and if it is, produce a verify-and-close plan with zero source changes instead of a rename plan |
 | **Outcome** | Successful: live-state verification of GitHub issue #24 ("Standardize default branch name across ecosystem") revealed the migration was ALREADY COMPLETE — all 15 repos default to `main`, no `master` refs exist, all workflows target `main`, all open PRs are based on `main`, all 4 linked tracking issues were already CLOSED. The plan correctly became "verify-and-close, zero source edits." |
-| **Verification** | verified-local for the core branch-migration workflow (the gh/grep commands below were run this session and produced the cited outputs; not validated in ProjectMnemosyne CI). The v1.2.0 issue #177 ruleset-enforcement subsection is UNVERIFIED — a static-only plan, never executed; see the warning in that subsection. |
+| **Verification** | verified-local for the core branch-migration workflow (the gh/grep commands below were run this session and produced the cited outputs; not validated in ProjectMnemosyne CI). The issue #177 ruleset-enforcement findings are now VERIFIED-AGAINST-LIVE (v1.3.0): the re-plan ran `gh api .../rulesets` and confirmed the live ruleset (id 15556483) is already `active`, has exactly 8 bare-name contexts + `integration_id: 15368`, and the org endpoint 404s — replacing the v1.2.0 "unverified assumption" framing for those points. The #177 *implementation plan itself* remains proposed (NOT executed/merged); only the live-state findings are confirmed. |
 | **History** | [changelog](./planning-verify-live-state-before-assuming-work-remains.history) |
 
 ## When to Use
@@ -34,6 +34,11 @@ tags: []
 - A nominally "one-line" config fix whose plan also DELETES files, removes a flag/branch in a
   script, or rewrites a runbook — weigh scope-creep and irreversible-delete/rollback risk before
   bundling them with the minimal change.
+- Fixing a config that is *applied* to an external system (ruleset, branch protection, deployed
+  manifest): the on-disk file is intent, the live system is state, and the drift can be the OPPOSITE
+  of what the issue claims — re-applying a stale file can REGRESS the live system. Read live first.
+- Two in-repo docs disagree on a number (e.g. required-check count): resolve it against the deployed
+  system (the live ruleset's `required_status_checks` length), then fix the stale doc — don't pick a doc.
 
 ## Verified Workflow
 
@@ -103,6 +108,35 @@ gh issue view N --repo "$ORG/$REPO" --json state --jq .state
     forward-looking verify-and-close plan (state the verification commands and their outputs, then the
     single close step) with an explicit "zero source edits" note — not a rename plan, and not a bare
     retrospective status note.
+11. **Assume the deployed state may be the OPPOSITE of the issue's claim — not just "ahead" of it.**
+    The drift is not always "work already done." For a config that is *applied* to an external system,
+    the on-disk file is *intent* and the live system is *state*; they can diverge in the direction that
+    inverts the fix. In #177 the issue said `repo-ruleset.json` was in `evaluate` mode (not enforcing),
+    but `gh api .../rulesets` showed the LIVE ruleset (id 15556483) was already `active`. The on-disk
+    file was the stale one. Because the apply path is an idempotent PUT-if-exists, naively re-applying
+    the on-disk `evaluate` file would have DOWNGRADED the live `active` ruleset. Reframe the fix from
+    "enable from scratch" to "close the drift" (make the on-disk file match the already-correct live
+    state), and add a guard so re-apply cannot regress enforcement.
+12. **Spend one live query to collapse several unverified assumptions at once.** The single
+    `gh api repos/$ORG/$REPO/rulesets` the reviewer flagged as missing resolved THREE separate NOGO
+    findings simultaneously in #177: (a) the bare-vs-prefixed required-check format dispute — the live
+    ruleset proved bare names + `integration_id: 15368` are correct (no bootstrap deadlock); (b) the
+    9-vs-8 required-context count dispute — the live ruleset has exactly 8 (the workflow's 9th job
+    `forbid-suppressions` is deliberately non-required; docs saying "9" counted jobs, not contexts);
+    (c) the org-endpoint availability — `gh api orgs/$ORG/rulesets` → 404/needs admin:org, so the
+    `org-ruleset.json` file is non-functional on this plan and must not be cited as an activation path
+    or used in a verification command. Run the cheap live query BEFORE writing the plan, not after a NOGO.
+13. **Reconcile doc-vs-doc disagreements against the deployed system, not against either doc.** When
+    two in-repo docs disagree on a number (#177: `canonical-checks.md` implied 8, the runbook said
+    "9 jobs"), the live applied state is the tiebreaker. Read the live ruleset's `required_status_checks`
+    length (8), then fix the stale doc wording — don't silently pick one doc.
+14. **For a narrowly-scoped issue, prefer ADDITIVE changes and never remove an existing operational
+    safety/rollback path as a side effect.** The first #177 plan bundled file deletions, script-branching
+    removal, and a runbook rewrite into a one-line-fix issue — and REGRESSED the rollback path (it deleted
+    the only evaluate-mode file, then told operators to "pass an evaluate copy" that no longer existed).
+    The re-plan reverted to minimal additive scope: line-4 `evaluate`→`active` flips + one ADDITIVE
+    evaluate-mode file + one ADDITIVE `--evaluate` flag + two doc wording fixes; it deleted nothing.
+    Treat "cleanup of now-redundant files" as a separate issue.
 
 ## Failed Attempts
 
@@ -120,7 +154,10 @@ gh issue view N --repo "$ORG/$REPO" --json state --jq .state
 | (#177, UNVERIFIED) Drop the org's `typecheck` context as "safe" | Removed `typecheck` because it's absent from the 8-check canonical list and the repo file | No check that some workflow emits or depends on `typecheck`; absence from a doc list ≠ absence from CI | Before dropping a required context, grep the actual workflows for a job/check that produces it; a context no live workflow emits, if kept under `active`, deadlocks every PR |
 | (#177, UNVERIFIED) Silently reconcile 9-vs-8 context count | Issue said "9 required status check contexts"; canonical list + repo file had 8; plan quietly used 8 | Never established which count is authoritative; a silent reconcile hides a real discrepancy from the reviewer | When the issue's stated count disagrees with the files, surface the mismatch explicitly and verify the live ruleset's count rather than picking one silently |
 | (#177, UNVERIFIED) Delete `-active.json` + the `--active` flag as cleanup | Plan removed `org-ruleset-active.json`/`repo-ruleset-active.json` and the `--active`/`ENFORCEMENT` branching, verified "byte-identical except line 4" by reading the 4 files | Files can drift; the delete is irreversible and removes the evaluate-mode shadow-testing path (changes the rollback story). Only grepped within Odysseus — never across submodules/external automation for consumers | Before deleting a config or removing a flag, grep ALL consumers (submodules + external CI/automation), not just the current repo; and weigh whether the deleted path is a rollback/shadow-test capability worth keeping. Scope-creep on a "one-line" issue: a reviewer may prefer the minimal line-4-only change |
-| (#177, UNVERIFIED) Trust `integration_id: 15368` = GitHub Actions app | Carried `integration_id: 15368` from the existing repo file + team KB as the GitHub Actions app id | Taken from a file + KB, not independently confirmed against the live app installation | Confirm an app/integration id against the live install (`gh api .../installations` or the applied ruleset) before relying on it in an enforcing ruleset |
+| (#177, UNVERIFIED) Trust `integration_id: 15368` = GitHub Actions app | Carried `integration_id: 15368` from the existing repo file + team KB as the GitHub Actions app id | Taken from a file + KB, not independently confirmed against the live app installation | Confirm an app/integration id against the live install (`gh api .../installations` or the applied ruleset) before relying on it in an enforcing ruleset (re-plan: the live ruleset 15556483 confirmed bare names + `integration_id: 15368`) |
+| (#177, re-plan) Trust the issue's stated state without querying live | Issue said `repo-ruleset.json` is in `evaluate` (not enforcing); first plan accepted that and planned to "enable" it | The LIVE ruleset (id 15556483) was already `active`; the on-disk file was the stale one. Because the apply path is an idempotent PUT-if-exists, re-applying the on-disk `evaluate` file would have DOWNGRADED live enforcement back to evaluate | Query the live applied state (`gh api .../rulesets`) before fixing an applied config; the file is intent, not state, and the drift can INVERT the fix (drift-closure, not enable-from-scratch) |
+| (#177, re-plan) Static-only first plan | Authored the entire #177 plan by reading config files (`apply-repo-rulesets.sh`, the JSON files, the justfile, docs) with NO `gh api` query | Reviewer NOGO on 5 MAJOR findings (live enforcement state, bare-vs-prefixed contexts, 9-vs-8 count, org-endpoint availability, integration id) — every one "taken on faith" from static files | One cheap live query (`gh api .../rulesets`) the reviewer flagged as missing collapsed all of those at once; run it BEFORE writing the plan, not after a NOGO |
+| (#177, re-plan) Bundle deletions/refactor into a one-line fix | First plan deleted `-active.json` files, removed the `--active`/`ENFORCEMENT` script branching, and rewrote the runbook for a "flip enforcement to active" issue | Scope creep on a narrow issue AND a rollback regression: it deleted the only evaluate-mode file, then instructed operators to "pass an evaluate copy" that no longer existed — removing the shadow-test/rollback path | Keep narrowly-scoped fixes additive; never remove an existing operational safety/rollback path as a side effect; file "cleanup of redundant files" as a separate issue. Re-plan: additive evaluate file + additive `--evaluate` flag, deleted nothing |
 
 ## Results & Parameters
 
@@ -156,48 +193,38 @@ verification loop to the whole population when an issue is ecosystem-wide.
 - The closing step (closing issue #24) was specified in the plan but NOT executed by the planner —
   it remains an action for the implementer.
 
-### Worked example: issue #177 ruleset enforcement flip (UNVERIFIED, static-only plan)
+### Worked example: issue #177 ruleset enforcement flip (re-planned, live-verified)
 
-> **Warning:** This subsection documents a PLANNING-PROCESS learning from a plan that was authored
-> by static file inspection only and never executed or CI-validated. Treat each item below as an
-> unverified assumption / reviewer-risk, not a confirmed fact. The live org/repo ruleset state was
-> NEVER queried with `gh api` during planning.
+> **Status:** This is a two-pass case. The FIRST plan was static-only (see the v1.2.0 warning,
+> preserved in `.history`) and got a NOGO on 5 MAJOR findings. The SECOND plan (this round) re-grounded
+> every flagged point with actual `gh api` queries. The live-state FINDINGS below are now confirmed
+> (observed live this session); the implementation PLAN itself is still proposed — it was NOT executed
+> or merged. So: findings = verified-against-live; plan = proposed.
 
-**Plan summary (Odysseus meta-repo, HomericIntelligence):** flip
-`configs/github/org-ruleset.json` and `configs/github/repo-ruleset.json` from
-`"enforcement": "evaluate"` (logs hits, does not block) to `"active"`; delete duplicate
-`-active.json` files plus the `--active`/`ENFORCEMENT` branching in `apply-repo-rulesets.sh`;
-normalize org-ruleset contexts to bare-name + `integration_id: 15368`; drop a stale `typecheck`
-context; update the justfile and rollout runbook; add a documented pre-flight check.
+**Live findings that replaced the v1.2.0 unverified assumptions (`gh api`, 2026-06-19):**
+- **Live enforcement is the OPPOSITE of the issue's claim.** The issue said `repo-ruleset.json` is in
+  `evaluate` (not enforcing). `gh api repos/HomericIntelligence/Odysseus/rulesets` showed the live
+  ruleset **id 15556483** is already `"enforcement":"active"`. The on-disk file is the stale one →
+  the fix is drift-closure, NOT enable-from-scratch. Naively re-applying the on-disk `evaluate` file
+  via the idempotent PUT-if-exists apply path would have DOWNGRADED live enforcement.
+- **Required-check format is bare names + `integration_id: 15368`** (confirmed on the live ruleset),
+  so there is no bootstrap-deadlock risk from a prefixed/`Required Checks / lint` form. The earlier
+  bare-vs-prefixed dispute is settled.
+- **Exactly 8 required contexts on the live ruleset** — settling the 9-vs-8 dispute. The workflow's
+  9th job, `forbid-suppressions`, is deliberately NON-required; docs that said "9" were counting jobs,
+  not required contexts. Fix the stale doc wording to "8 required contexts."
+- **Org endpoint is unavailable on this plan.** `gh api orgs/HomericIntelligence/rulesets` →
+  404 / needs `admin:org`. So `org-ruleset.json` is non-functional here and must NOT be cited as an
+  activation path or used in any verification command. Use repo-level rulesets only.
 
-**Highest-risk assumption (bootstrap deadlock):** flipping to `active` with any required-status-check
-context that no workflow emits on `main` — or in a context-string format GitHub does not report —
-BLOCKS every PR with 0 failing checks. The required-check format (bare `lint` vs prefixed
-`Required Checks / lint`) was assumed bare from a doc + KB, never confirmed against the live
-applied ruleset. The repo file used bare+`integration_id`; the org file used prefixed — the
-divergence might be intentional, not a bug.
+**Re-planned minimal scope (additive, deletes nothing):** line-4 `evaluate`→`active` flips on the
+repo ruleset config; ONE additive evaluate-mode file (preserving the shadow-test/rollback path the
+first plan would have destroyed); ONE additive `--evaluate` flag on the apply script; two doc wording
+fixes (the 8-vs-9 count reconciliation). No file deletions, no `--active` flag removal, no runbook
+rewrite — those are deferred as a separate cleanup issue.
 
-**External sources relied on WITHOUT direct verification:**
-- Live GitHub org/repo ruleset state — never queried via `gh api .../rulesets` (entire plan static).
-- `integration_id: 15368` = GitHub Actions app id — taken from the repo file + team KB.
-- canonical-checks.md's "Verified 2026-04-26: GitHub reports bare names" — trusted as-is.
-- Whether any consumer (other CI workflow, submodule, external automation) references the
-  `-active.json` files before deleting them — only grepped within Odysseus.
-- The 9-vs-8 required-context count: issue says 9, canonical list + repo file have 8; reconciled
-  to 8 without confirming which is authoritative.
-
-**Reviewer focus / risks (what to weigh, beyond the assumptions):**
-- *Enforcement-by-runbook vs by-code:* the pre-flight (confirm every active context is emitted by a
-  live `main` workflow) is documented in the runbook but NOT enforced in code/CI — is a runbook step
-  sufficient guard against the bootstrap deadlock?
-- *Irreversible deletes:* removing `-active.json` + the `--active` flag eliminates the evaluate-mode
-  shadow-testing path and changes the rollback story.
-- *Scope creep:* the issue is narrowly "flip enforcement to active"; the plan also refactors scripts,
-  edits the justfile, deletes files, and rewrites a runbook. A reviewer may prefer the minimal
-  line-4-only change.
-
-**Corrective action the plan SHOULD have taken (apply this skill):** before flipping to `active`,
-run `gh api repos/HomericIntelligence/<repo>/rulesets` (and `/rulesets/<id>`) to read the live
-enforcement state and the exact `required_status_checks` context strings + integration ids; grep
-the live `.github/workflows/*` for every context to be made required; surface the 9-vs-8 mismatch
-explicitly; and grep all submodules/external automation for `-active.json` consumers before deleting.
+**Why the re-plan worked (apply this skill):** the single `gh api .../rulesets` query the reviewer
+flagged as missing collapsed five NOGO findings at once (live enforcement state, bare-vs-prefixed
+contexts, 9-vs-8 count, org-endpoint availability, integration id). Run it BEFORE writing the plan.
+The on-disk config is intent; the live ruleset is state; resolve doc-vs-doc disagreements against the
+deployed system, not against either doc.
