@@ -1,13 +1,15 @@
 ---
 name: gha-security-scanning-supply-chain
-description: "Use when: (1) adding CodeQL SAST to TypeScript/JavaScript workflows or Semgrep/Gitleaks to any PR pipeline, (2) CI security scans only trigger on push to main — not PRs — and need promotion to PR gates, (3) Gitleaks SARIF parsing uses grep instead of jq causing always-fail required checks, (4) enforcing pinned SHA-based action versions instead of mutable tags, (5) auditing or porting curl|bash installers with SHA-256 verification, (6) a GHA job fails at 'Set up job' due to unresolved transitive action dependency, (7) adding Bandit SAST as a required CI check for Python/pixi projects."
+description: "Use when: (1) adding CodeQL SAST to TypeScript/JavaScript workflows or Semgrep/Gitleaks to any PR pipeline, (2) CI security scans only trigger on push to main — not PRs — and need promotion to PR gates, (3) Gitleaks SARIF parsing uses grep instead of jq causing always-fail required checks, (4) enforcing pinned SHA-based action versions instead of mutable tags, (5) auditing or porting curl|bash installers with SHA-256 verification, (6) a GHA job fails at 'Set up job' due to unresolved transitive action dependency, (7) adding Bandit SAST as a required CI check for Python/pixi projects, (8) triaging and remediating CodeQL PR alerts when gh reports a check-run id instead of a workflow run id."
 category: ci-cd
 date: 2026-06-19
-version: "1.2.0"
+version: "1.3.0"
 user-invocable: false
 history: gha-security-scanning-supply-chain.history
+verification: verified-local
 tags:
   - codeql
+  - code-scanning
   - semgrep
   - gitleaks
   - sarif
@@ -29,6 +31,8 @@ tags:
   - bandit
   - python-sast
   - nosec
+  - weak-hashing
+  - command-injection
 ---
 
 # GitHub Actions Security Scanning and Supply-Chain Hardening
@@ -39,7 +43,7 @@ tags:
 |-------|-------|
 | Date | 2026-06-19 |
 | Objective | Set up security scanning (CodeQL/Semgrep/Gitleaks SAST + secrets + Bandit Python SAST), harden CI supply-chain (action SHA pinning, dependency scanning), and pin/verify curl\|bash installers with SHA-256 |
-| Outcome | Consolidated guidance for security gate setup, scan-trigger gaps, SARIF parsing fixes, action SHA pinning, transitive-pin diagnosis, installer trust-model hardening, and Bandit SAST integration for Python/pixi projects |
+| Outcome | Consolidated guidance for security gate setup, scan-trigger gaps, SARIF parsing fixes, action SHA pinning, transitive-pin diagnosis, installer trust-model hardening, Bandit SAST integration for Python/pixi projects, and CodeQL PR alert remediation |
 | Verification | verified-local |
 
 ## When to Use
@@ -56,6 +60,10 @@ tags:
 - Adding automated dependency vulnerability scanning (pip-audit/npm audit + Dependabot)
 - Isolating `security-events: write` permission from base required checks
 - Adding Bandit SAST as a required CI check for Python/pixi projects (medium+ severity, JSON report artifact)
+- `gh pr checks` shows a failing CodeQL identifier but `gh run view` cannot find it because the
+  identifier is a check-run id, not a workflow run id
+- CodeQL flags weak sensitive-data hashing, command-line injection, or similar findings that need
+  code fixes plus targeted regression tests
 - Performing a security code review where static-analysis output is noisy with false positives
 
 ## Verified Workflow
@@ -79,6 +87,12 @@ grep -rn "curl\|wget" .github/workflows/*.yml | grep "|.*sh\b\|bash\b"
 
 # Validate workflow YAML
 python3 -c "import yaml; yaml.safe_load(open('.github/workflows/codeql.yml'))" && echo OK
+
+# Inspect a failing CodeQL check-run id from gh pr checks
+gh api "repos/<owner>/<repo>/check-runs/<check_run_id>" \
+  --jq '{name,conclusion,details_url,html_url}'
+gh api "repos/<owner>/<repo>/check-runs/<check_run_id>/annotations" --paginate
+gh api "repos/<owner>/<repo>/code-scanning/alerts?pr=<pr>&tool_name=CodeQL" --paginate
 ```
 
 ### Detailed Steps
@@ -200,6 +214,45 @@ paths = ['''k8s/secrets.yaml''', '''docs/KUBERNETES_DEPLOYMENT.md''', '''tests/.
 ```
 
 Fix the parser first to see real findings, then add the allowlist — both in the same PR.
+
+#### CodeQL PR alert triage and remediation
+
+When `gh pr checks` reports a failing CodeQL identifier, do not assume it is a workflow run id.
+GitHub can show a **check-run id** in the PR checks table; `gh run view <id>` will fail or inspect
+the wrong object. Query the check-run and CodeQL alerts directly:
+
+```bash
+gh api "repos/<owner>/<repo>/check-runs/<check_run_id>" \
+  --jq '{name,status,conclusion,started_at,completed_at,details_url,html_url}'
+gh api "repos/<owner>/<repo>/check-runs/<check_run_id>/annotations" --paginate
+gh api "repos/<owner>/<repo>/code-scanning/alerts?pr=<pr>&tool_name=CodeQL" --paginate
+```
+
+Read the rule id, path, line, state, and most recent instance before editing. The alerts API also
+shows when older alerts are fixed while newer alerts remain open, which prevents declaring the
+security gate done after only the first finding disappears.
+
+For `py/weak-sensitive-data-hashing` on user/login identifiers:
+
+- Replace MD5 with SHA-256 when the value is a non-secret salted tracking identifier and policy
+  requires SHA-2.
+- Add regression tests proving deterministic output for the same salt/input pair and a 64-character
+  hexadecimal digest.
+- Do **not** use bare SHA-256 for low-entropy secrets or passwords. Use a password hashing or KDF
+  primitive such as Argon2, bcrypt, scrypt, or PBKDF2 according to the project's policy.
+
+For `py/command-line-injection` around a generic subprocess wrapper:
+
+- Reject an empty command before any subprocess call.
+- Convert arguments to strings and reject any argument containing a NUL byte.
+- Select executables from hard-coded literals, for example an `if`/`elif` ladder or dict allowlist
+  of scheduler commands; do not pass through arbitrary `argv[0]`.
+- Reconstruct the safe argv from the selected literal executable plus validated arguments, then call
+  `subprocess.run`.
+- Add tests proving unsupported executables are rejected before `subprocess.run` is called.
+
+After pushing the fix, treat CodeQL and the normal validate/test job as separate gates: CodeQL can
+be fixed while validate still fails for an unrelated CI-environment difference.
 
 ### Detailed Steps: scanner version bumps and pin discovery
 
@@ -450,6 +503,9 @@ threshold.`
 | Pre-emptive skip of B101 in `.bandit` | Added `skips = B101` before any asserts existed in `src/` | YAGNI — adds a suppression rule with zero benefit; flagged in review | Start `.bandit` with no `skips`; only add suppressions when an actual finding requires it |
 | `actions/upload-artifact@v7` | Pinned upload artifact action to `@v7` | Tag `v7` does not exist on GitHub.com (latest is v4/v5); workflow fails at "Set up job" | Pin to full SHA for v5.0.0: `actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0`; verify tags with `gh api repos/actions/upload-artifact/git/refs/tags/v5.0.0 -q '.object.sha'` |
 | Global `.bandit` skip for false positive | Widened `skips = B108` for a single hardcoded `/tmp` default | Suppresses B108 globally across all files; any future real hardcoded path would be silently missed | Use inline `# nosec B108 — ephemeral agent working directory` at the specific site only |
+| Treating a CodeQL check-run id as a workflow run id | Ran `gh run view <check_run_id>` from the value shown by `gh pr checks` | The id belonged to a check-run, so the workflow-run API did not expose the alert details | Use `gh api repos/<owner>/<repo>/check-runs/<check_run_id>` and the matching annotations/alerts APIs |
+| Hash replacement without data classification | Replaced MD5 mechanically without deciding whether the material was a tracking id or a password/secret | SHA-256 is acceptable for non-secret salted IDs under SHA-2 policy, but not for low-entropy secrets | Classify the data first: SHA-256 for salted non-secret identifiers, password hashing/KDF for secrets |
+| Sanitizing a generic subprocess wrapper after command selection | Validated argument strings but still accepted arbitrary executables | CodeQL still had a path from caller-controlled command names to `subprocess.run` | Choose the executable from a hard-coded allowlist before reconstructing argv |
 
 ## Results & Parameters
 
@@ -483,6 +539,15 @@ threshold.`
 | npm audit flags | `--omit=dev --audit-level=high` | Production-only, actionable CVEs |
 | Node install | `npm ci` (v20) | Locked, reproducible |
 
+### CodeQL PR remediation reference
+
+| Finding | Preferred pattern | Regression test |
+|---------|-------------------|-----------------|
+| Check-run id from `gh pr checks` | Query `check-runs/<check_run_id>`, `check-runs/<check_run_id>/annotations`, and `code-scanning/alerts?pr=<pr>&tool_name=CodeQL` | Confirm rule id, path, line, and open/fixed state before editing |
+| Weak hashing for non-secret salted IDs | Replace MD5 with SHA-256 when policy requires SHA-2 | Same salt/input is deterministic; digest length is 64 hex characters |
+| Low-entropy secret/password hashing | Use a password hashing/KDF primitive, not bare SHA-256 | Verify project-approved parameters and migration behavior |
+| Command-line injection in subprocess wrapper | Select executable from a hard-coded allowlist, validate args, reject NUL bytes, reconstruct argv | Unsupported executable is rejected before `subprocess.run` is called |
+
 ### Installer SHA-256 values (verified from GitHub releases)
 
 ```
@@ -507,7 +572,7 @@ just   v1.36.0 linux-x86_64:   bc7c9f377944f8de9cd0418b11d2955adebfa25a488c0b5e3
 | Severity threshold | `-ll` (medium+) | Low-severity findings are noise in most projects |
 | Report format (CI) | `-f json -o bandit.json` | Machine-readable; upload as artifact; parseable on pass AND fail |
 | INI file | `--ini .bandit` | Centralizes config; scoped to project `targets` + `skips` |
-| Initial `skips` list | _(empty)_ | YAGNI — only add when a real finding requires suppression |
+| Initial `skips` list | *(empty)* | YAGNI — only add when a real finding requires suppression |
 | False-positive suppression | `# nosec B<ID>  # <rationale>` inline | Site-specific; auditable; `.bandit` skips stay clean |
 | Pixi invocation (bare task) | `pixi run bandit` | Only when the pixi task embeds all needed flags |
 | Pixi invocation (extra flags) | `pixi run python -m bandit -ll --ini .bandit -r src/<pkg>` | Use when adding `-f`, `-o`, or other flags beyond the task default |
@@ -545,3 +610,4 @@ jq '[.runs[].results[].ruleId] | unique' results.sarif # rule IDs
 | ProjectOdyssey | Issue #755, PR #869 — pip-audit + Dependabot | dependency scanning |
 | ProjectAgamemnon | PR #400 — transitive trivy pin failure | two-strikes-and-drop |
 | ProjectTelemachy | Issue #157 — Bandit SAST as required CI check (pixi project, `_required.yml`) | verified-local (2026-06-19) |
+| Sanitized PR session | CodeQL weak hashing + command injection remediation after a rebase | verified-ci (2026-06-19): CodeQL and validate gates green |
