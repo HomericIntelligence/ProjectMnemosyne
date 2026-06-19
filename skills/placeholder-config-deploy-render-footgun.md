@@ -3,9 +3,10 @@ name: placeholder-config-deploy-render-footgun
 description: "Fix-completeness / blast-radius discipline for de-hardcoding a value out of a CANONICAL config file when the config engine cannot interpolate it at startup, so the committed file must carry an UNRESOLVED placeholder (e.g. ${NOMAD_SERVER_IP}). The placeholder is a POLA footgun: any deployment path that consumes the committed file RAW feeds the literal ${...} to the daemon. The fix is NOT done until EVERY raw-consumption path (deployment docs, runbooks, disaster-recovery) renders the file first. Render to a DEPLOY-LOCAL dir (not back into configs/) so no rendered file enters the repo and no .gitignore band-aid is needed; keep ONE file that IS the template (placeholder + loud GENERATED header) rather than a separate .tmpl + resolved sibling; and add a doc-level grep gate plus a validate-configs placeholder guard. Use when: (1) a committed config in configs/ must keep an unresolved ${VAR}/<placeholder> because the engine cannot expand it at startup, (2) docs/runbooks bind-mount or -config the committed file directly, (3) you are choosing between one self-documenting template file vs a .tmpl + resolved sibling, (4) you want the fix to be enforced so it cannot silently regress in code OR docs."
 category: architecture
 date: 2026-06-19
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 verification: verified-local
+history: placeholder-config-deploy-render-footgun.history
 tags: [config, placeholder, envsubst, render, nomad, nats, deployment-docs, runbook, blast-radius, pola, grep-gate, validate-configs, tailscale, planning]
 ---
 
@@ -39,6 +40,7 @@ This skill captures a durable learning from re-planning Odysseus GitHub issue #1
 4. **Keep ONE file that IS the template.** Prefer the committed `.hcl`/`.conf` itself carrying the placeholder plus a loud header comment (`# GENERATED — render before use (just render-nomad-configs); do NOT launch this file raw`) over a separate `.tmpl` sibling next to a committed resolved `.hcl`. Two files invite editing/mounting the wrong one (the unrendered or a stale resolved copy); one file with a loud header is unambiguous.
 5. **Guard against silent re-hardcoding** with a `validate-configs` check that asserts the placeholder is still present: `grep -q '${NOMAD_SERVER_IP}' configs/nomad/client.hcl || exit 1`. If someone re-bakes a literal IP, the placeholder disappears and the gate fails.
 6. **Add a DOC-LEVEL grep gate** — docs drift is part of the fix surface and needs its own check, just like code. Assert every runbook renders before launch AND none still does `-config configs/nomad/*.hcl` raw (no raw bind-mount of `configs/nomad/*.hcl` either). Docs are not exempt from the regression gate.
+7. **Shared render recipes require ALL vars for ALL templates they process — document the surprise at the call site.** When a single recipe (e.g. `render-nomad-configs`) renders multiple config files (both `client.hcl` and `server.hcl`), the recipe must satisfy the union of all variable requirements across every template. This means a client-only host must export server-only vars (e.g. `NOMAD_ADVERTISE_ADDR`) even though the client never uses the `advertise{}` block and the resulting `/etc/nomad.d/server.hcl` is unused on that host. The resolution is NOT to split the shared recipe into per-role recipes (that sacrifices simplicity). Instead, add a comment at the call site — the runbook export line — explaining why the operator must export a var that seems irrelevant to their role: e.g. `# NOMAD_ADVERTISE_ADDR is required by the shared render recipe (templates both client.hcl and server.hcl) even though a client-only host only uses client.hcl.`
 
 ### Quick Reference
 
@@ -101,6 +103,7 @@ servers = ["${NOMAD_SERVER_IP}:4647"]
 | Render into `configs/` | Rendering back into `configs/` | Rendered file with a real IP can get committed; needs gitignore band-aid | Render to a deploy-local dir (/etc/nomad.d); gap designed out |
 | Two-file template | Separate `.tmpl` + resolved `.hcl` sibling | Ambiguous which file to edit/mount; easy to mount the unrendered or stale one | One file = the template, loud GENERATED header, validate-configs placeholder guard |
 | Grep only code | Only grepping code for the old IP | Docs/runbooks still carried the raw-mount path | Add a doc-level grep gate: every runbook renders before launch, none uses `-config configs/...` raw |
+| Shared render recipe with unequal var requirements | A single `render-nomad-configs` recipe renders both `client.hcl` and `server.hcl`; client-only host operator confused by mandatory `export NOMAD_ADVERTISE_ADDR` which client never uses | Operator on client-only host sees a server-only var required at export time plus an unused `/etc/nomad.d/server.hcl` rendered by the recipe — POLA violation surfaced in PR review | Keep the shared recipe (simpler); add a comment at the call site (runbook) explaining that the shared recipe templates ALL files and requires the union of their vars, even vars the local role ignores |
 
 ## Results & Parameters
 

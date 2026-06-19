@@ -1,0 +1,11 @@
+<!-- version archive — newest first -->
+
+## v1.0.0 — 2026-06-19
+
+```yaml
+name: placeholder-config-deploy-render-footgun
+version: "1.0.0"
+date: 2026-06-19
+```
+
+Initial version. Captured blast-radius discipline for committed placeholder configs: every raw-consumption path in docs/runbooks must render-then-launch; render to a deploy-local dir (not back into configs/); one file is the template; validate-configs placeholder guard; doc-level grep gate. Sourced from Odysseus issue #181 re-planning rounds.
