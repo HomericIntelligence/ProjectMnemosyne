@@ -1,9 +1,9 @@
 ---
 name: multi-repo-pr-automation-loop-orchestration
-description: "Use when: (1) running an automation loop (drive-prs-green, hephaestus-automation-loop, loop_runner.py, ci_driver.py) across multiple repos and it skips PRs, reports success incorrectly, silently no-ops, or never arms auto-merge, (2) a multi-repo swarm is orchestrating PRs across 3+ HomericIntelligence repos with sequential-within-repo merge ordering, (3) an ecosystem-wide sweep implements every planned issue across all repos in parallel waves, (4) the automation driver logs success but live GitHub state shows open failing PRs — always cross-check live state per repo before reporting done, (5) a hephaestus automation loop deadlocks because the drive-green phase skips iterations or the implementer returns early before labeling with state:implementation-go, (6) an org-wide issue backlog across 10+ repos needs parallel implementation with one signed auto-merge PR per issue, (7) automated review-plan files (claude-review-fix-*.md) need to be bulk-processed across stale PR branches, (8) _wait_for_pr_terminal polls the full timeout on a BLOCKED PR — add early-exit guarded by both _failing_required_check_names and _pending_required_check_names"
+description: "Use when: (1) running an automation loop (drive-prs-green, hephaestus-automation-loop, loop_runner.py, ci_driver.py) across multiple repos and it skips PRs, reports success incorrectly, silently no-ops, or never arms auto-merge, (2) a multi-repo swarm is orchestrating PRs across 3+ HomericIntelligence repos with sequential-within-repo merge ordering, (3) an ecosystem-wide sweep implements every planned issue across all repos in parallel waves, (4) the automation driver logs success but live GitHub state shows open failing PRs — always cross-check live state per repo before reporting done, (5) a hephaestus automation loop deadlocks because the drive-green phase skips iterations or the implementer returns early before labeling with state:implementation-go, (6) an org-wide issue backlog across 10+ repos needs parallel implementation with one signed auto-merge PR per issue, (7) automated review-plan files (claude-review-fix-*.md) need to be bulk-processed across stale PR branches, (8) _wait_for_pr_terminal polls the full timeout on a BLOCKED PR — add early-exit guarded by both _failing_required_check_names and _pending_required_check_names, (9) PLANNING (not driving) against a STALE completed-sweep / status-report issue (a myrmidon sweep report listing 'flagged for human' PRs, dated weeks ago) — re-verify the LIVE state of every flagged item before trusting ANY action item, because most have already changed state (merged, fixed, or re-gated) and the report's stated root causes are stale, (10) classifying an open PR's mergeStateStatus=BLOCKED at PLAN time: BLOCKED with ZERO failing AND zero pending required checks ⇒ branch-protection / review gate ⇒ the action is approve+merge, NOT a CI fix; BLOCKED with failing/pending checks ⇒ real CI work"
 category: ci-cd
-date: 2026-06-08
-version: "1.2.0"
+date: 2026-06-20
+version: "1.3.0"
 user-invocable: false
 history: multi-repo-pr-automation-loop-orchestration.history
 tags:
@@ -31,6 +31,12 @@ tags:
   - wait-for-pr-terminal
   - issues-scoped-drive-green
   - bot-pr-discovery-scope
+  - stale-sweep-report-replan
+  - completed-sweep-issue
+  - blocked-zero-failures
+  - branch-protection-review-gate
+  - cheap-live-verification
+  - re-verify-before-trusting
 ---
 
 # Multi-Repo PR Automation Loop and Swarm Orchestration
@@ -39,9 +45,9 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-08 |
+| **Date** | 2026-06-20 |
 | **Objective** | One canonical for driving PRs to green across many HomericIntelligence repos via an automation loop or a myrmidon swarm: make the driver report honestly (no silent no-op, wait for the real terminal state, gate "repo done" on live open-PR count), cross-check every run summary against live GitHub state before reporting success, unblock the loop-runner / implementer deadlocks (drive-green discovery + the `state:implementation-go` labeling deadlock), orchestrate parallel waves across 3+ repos with sequential-within-repo merge ordering, run ecosystem-wide and org-wide planned-issue sweeps, and bulk-process automated review-plan files across stale PR branches. |
-| **Outcome** | Driver hardened across five ProjectHephaestus releases (PRs #833/#837/#839 → #876 → #879 → #1090) from "lies success" → "honest reporting" → "waits for the real outcome" → "re-arms, survives concurrency, resolves conflicts, never self-inflicts a lint failure" → "BLOCKED early-exit (PR #1090 closes #1088)". Existing-PR labeling deadlock shipped fixed (PRs #1073/#1075/#1077/#1079). Report-vs-live-state protocol surfaced honesty gaps merged as PR #849. Swarm pattern merged 87 PRs across 8 repos and ran ecosystem sweeps (51+ PRs / 78 issues retired, 0 broken-main events). Org-wide planned-issue swarm piloted ~51 signed squash-auto-merge PRs across 5 repos (430 plan-carrying issues detected). Batch review-plan processing cleared 14 OPEN PRs in ~20-30 min. |
+| **Outcome** | Driver hardened across five ProjectHephaestus releases (PRs #833/#837/#839 → #876 → #879 → #1090) from "lies success" → "honest reporting" → "waits for the real outcome" → "re-arms, survives concurrency, resolves conflicts, never self-inflicts a lint failure" → "BLOCKED early-exit (PR #1090 closes #1088)". Existing-PR labeling deadlock shipped fixed (PRs #1073/#1075/#1077/#1079). Report-vs-live-state protocol surfaced honesty gaps merged as PR #849. Swarm pattern merged 87 PRs across 8 repos and ran ecosystem sweeps (51+ PRs / 78 issues retired, 0 broken-main events). Org-wide planned-issue swarm piloted ~51 signed squash-auto-merge PRs across 5 repos (430 plan-carrying issues detected). Batch review-plan processing cleared 14 OPEN PRs in ~20-30 min. v1.3.0 extends report-vs-live-state to PLAN time: re-planning a 20-day-stale completed-sweep report (Odysseus #299) found ~13 "flagged for human" PRs mostly already merged and every surviving root cause stale — adding the stale-report re-verify pattern, a plan-time BLOCKED-zero-failures-vs-with-failures classification, and four cheap live-state verification commands. |
 | **Verification** | verified-ci |
 
 ## When to Use
@@ -55,6 +61,9 @@ tags:
 - An org-wide planned-issue backlog (issues carrying a `# Implementation Plan` comment) across 10+ repos needs one signed squash-auto-merge PR per issue.
 - Automated review-plan files (`review-plan-*.md` + `review-*.json` with `phase=failed`) need bulk processing across 10+ stale PR branches.
 - A `--issues`-scoped drive-green run still pulls in unrelated bot PRs or scans/arms every open PR and fails `rc=1` on out-of-scope PRs.
+- You are PLANNING (not driving) against a STALE completed-sweep / status-report issue — e.g. a myrmidon "open-PR health + auto-fix sweep" report, marked COMPLETED weeks ago, that lists ~13 "flagged for human" PRs. Do NOT trust the report's action items or root causes; re-verify the LIVE state of every flagged PR first.
+- The plan you are about to write classifies an open PR as `mergeStateStatus=BLOCKED` and you are tempted to prescribe a "CI fix" — first confirm whether BLOCKED is caused by failing/pending required checks (real CI work) or by a branch-protection / review gate with all required checks green (approve+merge, NOT a CI fix).
+- A report's stated root cause is a specific defect (a stale lockfile format version, a not-yet-removed file, a workflow `--tmpfs …:noexec` mount) — verify it still exists at the live HEAD/branch before planning a fix for it; the fix may have already landed.
 
 ## Verified Workflow
 
@@ -80,6 +89,26 @@ for r in "${REPOS[@]}"; do
   open=$(gh pr list --repo HomericIntelligence/$r --state open --json number --jq length)
   echo "$r live-open=$open"   # cross-check against the run's _summary.json
 done
+```
+
+Re-verifying a STALE completed-sweep report at PLAN time (cheap live-state checks):
+
+```bash
+# A. Drop already-resolved flagged PRs: most are MERGED/CLOSED weeks later
+gh pr view <N> --repo <O>/<R> --json state,mergeStateStatus,statusCheckRollup
+
+# B. BLOCKED classification: all required contexts SUCCESS yet BLOCKED ⇒ review/branch-protection
+#    gate ⇒ approve+merge, NOT a CI fix
+gh api repos/<O>/<R>/branches/main/protection/required_status_checks --jq .contexts
+
+# C. "Stale lockfile format-version" claim — decode + grep instead of trusting the report
+gh api repos/<O>/<R>/contents/pixi.lock?ref=<BRANCH> --jq .content | base64 -d | grep -m1 '^version:'
+
+# D. "Remove file X" prescription already landed? 404 ⇒ already gone (check branch .gitignore too)
+gh api repos/<O>/<R>/contents/<file>?ref=<BRANCH>   # 404 ⇒ removed
+
+# E. Root-cause WORKFLOW defect gone? grep the LIVE workflow files at HEAD, not the report snippet
+gh api repos/<O>/<R>/contents/.github/workflows?ref=<BRANCH> --jq '.[].name'   # then grep each
 ```
 
 End-to-end per-PR iteration in the driver (the four compounding guards):
@@ -216,6 +245,77 @@ live GitHub state per repo first:
    merged fix (one session: `Telemachy #246` MERGED 29s after it was reported failed).
 5. Deliver the Reality-vs-Claim table, not the banner.
 
+#### Planning against a STALE completed-sweep / status-report issue (re-verify before trusting)
+
+The report-vs-live-state rule applies just as hard at PLAN time as at drive time. A myrmidon
+"open-PR health + auto-fix sweep" issue is a SNAPSHOT report: it lists "flagged for human" PRs with
+stated root causes, and is often marked COMPLETED. Re-planning that issue weeks later, **every action
+item and every root cause is suspect** — re-verify each flagged PR's LIVE state before writing any
+plan step. In one session (Odysseus #299, report dated 2026-05-31, re-planned 2026-06-20, 20 days
+later): of ~13 "flagged for human" PRs, MOST were already MERGED; only 7 remained open, and the report's
+stated root causes for the survivors had all gone stale. The reusable triage:
+
+1. **`gh pr view <N> --json state,mergeStateStatus,statusCheckRollup` every flagged PR first.**
+   Most are already MERGED/CLOSED — drop them from the plan before doing anything else.
+
+2. **Classify each still-open BLOCKED PR by its required-check state (PLAN-time analogue of the driver's
+   v1.3.0 early-exit).** `mergeStateStatus=BLOCKED` with ZERO failing AND zero pending required checks =
+   a branch-protection / review gate → the action is **approve+merge, NOT a CI fix**. BLOCKED with
+   failing/pending required checks = real CI work. Confirm by comparing the rollup to the required
+   contexts:
+
+   ```bash
+   # required contexts the branch enforces
+   gh api repos/<O>/<R>/branches/main/protection/required_status_checks --jq .contexts
+   # this PR's check conclusions — if every required context is SUCCESS yet state is BLOCKED,
+   # the blocker is a review/branch-protection gate, not CI
+   gh pr view <N> --json mergeStateStatus,statusCheckRollup
+   ```
+
+   Evidence: 4 Scylla dependabot PRs had all 17 checks SUCCESS but were BLOCKED — by a newly-added
+   1-approving-review rule (Odysseus commit d34e291) — so the action was approve+merge, not "fix CI".
+
+3. **Verify a "stale lockfile / format-version" root-cause claim cheaply** by decoding the file at the
+   relevant refs and grepping the version, instead of trusting the report's quoted version:
+
+   ```bash
+   gh api repos/<O>/<R>/contents/pixi.lock?ref=<BRANCH> --jq .content | base64 -d | grep -m1 '^version:'
+   ```
+
+   Evidence: the report's "Scylla pixi.lock format-v7 vs CI max-v6" root cause was GONE — both `main`
+   and the dependabot branches returned `version: 6`.
+
+4. **Confirm a prescribed fix hasn't ALREADY landed.** A `404` on the file the report says to "remove"
+   means it is already gone; also check the branch `.gitignore`:
+
+   ```bash
+   gh api repos/<O>/<R>/contents/<file>?ref=<BRANCH>   # 404 ⇒ already removed
+   ```
+
+   Evidence: Nestor #103's prescribed fix ("remove `CMakeUserPresets.json`, gitignore it") had already
+   landed (404 on the file at `ref=12-impl`; entry present in the branch `.gitignore`). The remaining
+   blocker was purely DIRTY/CONFLICTING with 0 failing checks → action became **rebase**, not the
+   report's fix. Several AchaeanFleet PRs (#691) similarly just needed a rebase to pick up fixes already
+   on `main`.
+
+5. **Confirm a root-cause WORKFLOW DEFECT is gone by grepping the live workflow files at HEAD**, not the
+   report's quoted snippet. Evidence: the "codebuff tmpfs-noexec" root cause was gone — a grep of all
+   workflows for `tmpfs|/home/agent/.config|codebuff` found no `--tmpfs …:noexec` mount and no smoke-test
+   step. Also watch for the blocker-file anti-pattern in survivors (AchaeanFleet #683 carried a stray
+   committed `.github/CI_FIX_683.md` plus a conflict).
+
+**Known gaps when re-planning from a report (record these in the plan honestly).** The cheap live-state
+DISCOVERY/triage above is verified-local — the queries were run and observed. But a re-plan's prescribed
+FIXES are unverified hypotheses until executed. Mark them as such. From the same session, three honest
+gaps that the report seeded and were NOT independently confirmed:
+
+- A "populate `GIT_COMMIT`/`BUILD_UID`/`BUILD_GID` in `_required.yml`" fix (Keystone #568) where the
+  actual `podman-compose up` job and the `docker-compose.yml` name template were NEVER opened — the
+  `env:` snippet and the `BUILD_UID/GID=1000` values are guesses from the report, not from reading files.
+- "Scylla requires 1 approving review" was INFERRED from an Odysseus commit title, not confirmed against
+  Scylla's live ruleset (only that all required *status* contexts pass while state is BLOCKED).
+- Dependabot rebase mechanics (`@dependabot rebase` vs manual force-push) were not tested live.
+
 #### Hephaestus loop deadlocks (drive-green discovery + labeling)
 
 Two complementary deadlocks keep `hephaestus-automation-loop` from driving PRs to green:
@@ -317,6 +417,11 @@ Bulk-process automated `review-plan-*.md` + `review-*.json` (`phase=failed`) acr
 | BLOCKED early-exit guarded only by `not failing` (v1.3.0) | Added early-exit on `mergeStateStatus=BLOCKED` when `_failing_required_check_names` returns empty — no pending check | GitHub reports `BLOCKED` for both (a) branch-protection gates (unresolved threads — never self-heals) AND (b) required checks still in-flight (transient — must keep polling). Guard on `not failing` alone exits early while CI is still running, abandoning a PR that would have self-healed | Guard on BOTH: `not failing` AND `not pending` (`_pending_required_check_names` returns empty). Only then is BLOCKED definitively a branch-protection gate (all required checks concluded green). If either failing OR pending is non-empty, keep polling. |
 | Tell the agent to commit a blocker file | Prompt said "commit a file documenting the blocker" | The `CI_BLOCKER.md` itself failed markdownlint (turning one red check into two) and orphaned Dependabot PRs | Forbid the blocker file (use a `BLOCKED:` line); require every edited file lint-clean, no rule disabled |
 | Trust the summary banner / `rc=0` | Reported from `_summary.json` (`Driven 8 / Failed 4`) | "Driven" only means the driver was invoked; 7/8 had 0 in-scope PRs, 3/4 "Failed" were false | Cross-check live `gh pr list --state open` per repo before reporting; classify each failure mode |
+| Plan directly from a completed-sweep report's action items | Took the ~13 "flagged for human" PRs and their stated root causes from a 20-day-old myrmidon sweep report (Odysseus #299) as the plan input | Most flagged PRs were already MERGED (only 7 still open) and every surviving root cause was stale (lockfile version, removed file, workflow mount) | Re-`gh pr view` every flagged PR FIRST; drop merged/closed ones; re-verify each root cause at live HEAD before planning any fix |
+| Prescribe a "CI fix" for a BLOCKED PR at plan time | Saw `mergeStateStatus=BLOCKED` and assumed CI work, as the report implied | 4 Scylla PRs had all 17 required checks SUCCESS but were BLOCKED only by a newly-added 1-approving-review rule — a CI fix would have been wasted effort | At plan time classify BLOCKED the same way the driver does: 0 failing AND 0 pending required checks ⇒ branch-protection/review gate ⇒ approve+merge, NOT a CI fix |
+| Trust the report's "stale pixi.lock format-v7 vs CI v6" root cause | Believed the report's quoted lockfile format version | `base64 -d` of `pixi.lock` at `main` AND the dependabot branches returned `version: 6` on both — the root cause was already gone | Decode the file at the actual refs and grep the version (`gh api .../contents/pixi.lock?ref=B --jq .content \| base64 -d \| grep '^version:'`) instead of trusting the report |
+| Plan the report's prescribed file-removal / workflow fix | Was about to plan "remove CMakeUserPresets.json + gitignore it" (Nestor #103) and "remove the tmpfs:noexec mount" (AchaeanFleet) | Both had ALREADY landed — the file 404'd at `ref=12-impl` and was in the branch `.gitignore`; grep of live workflows found no `--tmpfs …:noexec` mount | Confirm the fix hasn't shipped: `gh api .../contents/<file>?ref=B` (404 ⇒ removed), grep the LIVE workflow files at HEAD; the residual blocker was just a rebase, not the report's fix |
+| Record report-seeded fixes as verified in the plan | Wrote the Keystone `_required.yml` env fix + "Scylla needs 1 review" + dependabot-rebase steps as if confirmed | The compose job/name-template were never opened (env keys + `BUILD_UID/GID=1000` guessed), the review rule was inferred from a commit title, and rebase mechanics were untested | Mark report-seeded prescribed fixes as UNVERIFIED hypotheses with a "Known gaps" note; only the live-state DISCOVERY queries were verified-local |
 | `hephaestus-automation-loop --phases drive-green --loops N` | Increased loop budget / set `--loops 1` | Not-final-loop gate + zero-work early-exit make N>1 unreachable; `--loops 1` discovers `@me` issues not PRs | Bypass via `drive_prs_green.py --issues <N> --force-run`; fix is PR-based discovery (#818-#821) |
 | "Skip existing PRs to avoid clobbering" early-return | `_implement_issue` hard-returned before the review loop | Existing PRs never reviewed → never labeled `state:implementation-go` → never armed; 9 green PRs stuck | Replace the skip with `sync_worktree_to_remote_branch`; gate idempotency on the terminal label |
 | Run drive-green with `--issues` but leave bot-PR discovery + the open-PR done/arming gate repo-wide | Scoped `--issues 725,711` but `_discover_bot_prs()` stayed default-ON and `_list_open_prs_remaining()` returned the full paginated open-PR set | Scoped run pulled in unrelated Dependabot PRs (e.g. #1032) and armed/failed `rc=1` on all 59 open PRs the operator never selected | Gate bot-PR discovery on `not options.issues` (mirror the #819 failing-PR gate) and filter the done-gate/arming to `pr_map.values()` when scoped; the unscoped sweep stays repo-wide |
@@ -396,3 +501,4 @@ merge-conflict ~1.
 | HomericIntelligence ecosystem | Ecosystem sweeps | v1: 5 repos, 717 issues classified, 51 PRs merged, 78 retired (2026-05-12); v2: 11 bundle PRs, 7 merged (2026-05-16); sequential rebase cleared 12 stuck PRs (2026-05-18). |
 | 12 HomericIntelligence repos | Org-wide planned-issue swarm | 430 plan-carrying issues; ~51 piloted across 5 repos with signed squash-auto-merge PRs; L0-only fan-out + closing-keyword dedup + plan reconciliation (verified-local, 2026-05-29). |
 | ProjectOdyssey | Batch review-plan pipeline | 24 failed review plans triaged; 14 OPEN PRs rebased/fixed/pushed with auto-merge, ~20-30 min (2026-03-06). |
+| Odysseus meta-repo | Re-plan stale completed-sweep report (#299) | Report dated 2026-05-31 re-planned 2026-06-20 (20 days later). Live `gh pr view` showed ~13 "flagged for human" PRs were mostly already MERGED (Nestor #91/#95/#101/#102, Hermes #645, Odyssey #5471/#5488, AchaeanFleet #681/#682/#684-#690); only 7 remained open. Every surviving root cause was stale: Scylla "pixi.lock v7 vs v6" gone (`version: 6` on both refs); 4 Scylla PRs all-checks-SUCCESS but BLOCKED by a new 1-review rule (approve+merge, not CI fix); Nestor #103 fix already landed (file 404 + in `.gitignore`, residual = rebase); AchaeanFleet tmpfs:noexec mount gone from live workflows; #683 carried a stray committed `.github/CI_FIX_683.md`. Discovery/triage queries verified-local; prescribed fixes are UNVERIFIED hypotheses (PLAN never executed). |

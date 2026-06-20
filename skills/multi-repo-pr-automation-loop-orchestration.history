@@ -2,6 +2,39 @@
 
 # History: multi-repo-pr-automation-loop-orchestration
 
+## v1.3.0 (2026-06-20)
+
+**Changed by:** Odysseus #299 re-plan session (re-planning a STALE completed-sweep "open-PR health + auto-fix" report 20 days after it was filed)
+**Verification:** verified-local for the live-state DISCOVERY/triage queries (run and observed); the re-plan's prescribed FIXES were never executed and are recorded as unverified hypotheses with a Known-gaps note.
+
+### What changed
+
+- Added two "## When to Use" triggers (and description triggers (9) and (10)) for PLANNING — not driving — against a stale completed-sweep / status-report issue, and for plan-time `mergeStateStatus=BLOCKED` classification.
+- Added a new detailed-steps subsection **"Planning against a STALE completed-sweep / status-report issue (re-verify before trusting)"** under the Report-vs-live-state area, with the 5-step re-triage, the plan-time BLOCKED-zero-failures-vs-with-failures distinction (the PLAN-time analogue of the driver's v1.3.0 early-exit), and a "Known gaps" honesty note for report-seeded prescribed fixes.
+- Added a cheap-live-state-verification block to `### Quick Reference` (decode `pixi.lock` version; required-context vs rollup comparison; 404-check for an already-landed file removal; grep live workflows at HEAD).
+- Added 5 Failed-Attempts rows (plan-from-report action items; prescribe-CI-fix-for-BLOCKED; trust-stale-lockfile-claim; plan-already-landed-fix; record-report-seeded-fixes-as-verified).
+- Added a "Verified On" row for the Odysseus #299 re-plan.
+- Added 6 tags; updated `date:` 2026-06-08 → 2026-06-20; bumped version 1.2.0 → 1.3.0 (minor: new triggers + new failed attempts + extended workflow, same core recommendation).
+
+### Why
+
+The skill already carried a "Report-vs-live-state verification" section and a v1.3.0(driver) BLOCKED dual-cause distinction, but only at DRIVE time inside `ci_driver`. Re-planning Odysseus #299 (a myrmidon sweep report dated 2026-05-31, re-planned 2026-06-20) showed the SAME rule is needed at PLAN time: of ~13 "flagged for human" PRs, most were already MERGED and every surviving root cause was stale — the report's "Scylla pixi.lock v7 vs v6" was gone (`version: 6` on both refs), 4 Scylla PRs were all-checks-green but BLOCKED by a NEW 1-approving-review rule (approve+merge, not a CI fix), Nestor #103's prescribed file-removal had already landed (404 + in `.gitignore`, residual = rebase), and the AchaeanFleet tmpfs:noexec mount was gone from the live workflows. The four cheap `gh api`/`base64`/grep checks turn "trust the report" into "verify in seconds." Note the driver-internal early-exit collides on the same `## v1.3.0` heading by design (MD024 is disabled at the top of this file); this entry is the SKILL's v1.3.0 amendment.
+
+### Pre-amendment v1.2.0 body snapshot (Report-vs-live-state area)
+
+> #### Report-vs-live-state verification
+>
+> Automation summaries are observation reports, not ground truth. `Driven: 8` only means the driver
+> was invoked, not that PRs reached green. NEVER report success from `_summary.json` alone — cross-check
+> live GitHub state per repo first: (1) suspect every field; (2) `gh pr list --state open` per "Driven"
+> repo; (3) confirm each claimed-pushed head landed in the run window; (4) classify each "Failed";
+> (5) deliver the Reality-vs-Claim table, not the banner.
+> (At v1.2.0 this section had NO plan-time subsection — the report-vs-live-state rule was documented only
+> for the DRIVE path, with no stale-completed-sweep re-plan triage, no plan-time BLOCKED classification,
+> and no cheap `pixi.lock`/404/workflow-grep verification commands.)
+
+---
+
 ## v1.2.0 (2026-06-08)
 
 **Changed by:** ProjectHephaestus PR #1110 (scope drive-green to `--issues`)
