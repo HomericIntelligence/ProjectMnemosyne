@@ -1,6 +1,83 @@
 <!-- markdownlint-disable MD024 -->
 # persistence-backing-store-test-harness-driven-choice — History
 
+## v1.2.0 (2026-06-20)
+
+**Changed by:** issue #71 R2 post-NOGO. Third-round (R2) planning re-learning for
+Odysseus issue #71 ("Agamemnon/Nestor in-memory stores need persistent backing").
+The R1 plan (v1.1.0) received a NOGO from the reviewer. This R2 pass captures the
+durable, generalizable lessons learned from FIXING those NOGO findings. AMENDS the
+same skill (MINOR bump 1.1.0 -> 1.2.0).
+
+**Verification:** unverified — nothing was built or run this pass either. The R2
+decisions are reasoned from the reviewer's findings and in-repo precedent; no
+`conan install`, `just deps`, `just lint`, or `ctest` was executed.
+
+### What changed (R2)
+
+- **MINOR bump (1.1.0 -> 1.2.0):** 7 new durable findings folded into the workflow
+  + 8 new/updated Failed Attempts rows + 4 still-unverified caveats. The core
+  test-harness-driven backing-store heuristic is UNCHANGED and remains primary.
+- **CRITICAL NOGO finding:** NOLINT suppresses static analysis (clang-tidy/cppcheck)
+  ONLY — it does NOT suppress compiler `-W`/`-Werror` warnings. R1 proposed
+  "mitigating" raw SQLite C-API warnings in a CMake *library* target (built with
+  `set_project_warnings()` applying `-Wold-style-cast -Wcast-align -Wconversion
+  -Wsign-conversion …`) via NOLINT — which does nothing for those. Distinguish the
+  two independent gate families: (a) compiler warnings (suppressed only by
+  `-Wno-xxx` compile options or code/casts) vs (b) static-analysis lint
+  (suppressed by NOLINT/inline-suppr).
+- **Per-target warning strictness:** `set_project_warnings()` is applied only to
+  specific targets (main `${PROJECT_NAME}` lib + `_server` exe); the `_server` exe
+  ALSO carries its own `-Wno-*` block for C-API/external-header noise, while other
+  libs (Nestor `_core`) get neither. Fix: put raw-C-API source in a DEDICATED
+  static-lib target carrying the same `-Wno-*` block the server uses, linked into
+  both server and tests, leaving the strict main library untouched.
+- **Check every backend return code:** R1's `upsert_`/`erase_row_`/`load_all_`
+  ignored `sqlite3_prepare_v2`/`bind`/`step`/`finalize` rc — a failed write would
+  mutate the in-memory cache and return success, voiding durability. Fix: check
+  every rc and `throw` with `sqlite3_errmsg`.
+- **Total recompute over read API:** R1's Nestor `load_all_()` recomputed only
+  `pending`/`completed` but `get_stats()` also exposes `active`; any "active" item
+  reloaded as `pending` (breaks AC4). Fix: explicit N-way mapping over all exposed
+  counters, persist a per-item `status`, assert each counter in the restart test.
+- **Absolute, location-stable default path:** R1's `default_db_path()` returned a
+  bare `"agamemnon.db"` (cwd-dependent) — re-introducing the loss-of-state bug.
+  Fix: resolve an ABSOLUTE path under `$XDG_STATE_HOME` / `$HOME/.local/state` and
+  `mkdir -p` the parent.
+- **Concrete AC checks:** AC3 ("recovery needs no manual apply-all") was only
+  inferred in R1; R2 asserts the restart-test path contains NO apply-all/manifest
+  re-application call (prove the absence).
+- **Acknowledge forced cross-submodule duplication:** the `throw_sqlite`/`upsert_`/
+  `load_all_` boilerplate is copied into two independently-versioned submodule
+  `store.cpp` files; consolidating would couple two repos — name the trade-off.
+- Added 4 still-unverified caveats to Failed Attempts: Conan version now
+  `sqlite3/3.45.3` placeholder + imported-target name (`SQLite::SQLite3` vs
+  `sqlite3::sqlite3`) still not confirmed by `just deps`; dedicated `_store` lib
+  with `-Wno-*` clearing the full `ci` preset not built/run; `std::system("mkdir
+  -p …")` shell-injection/portability smell (prefer `std::filesystem::
+  create_directories`) not substituted; nothing compiled or run.
+- Updated date 2026-06-20; bumped version 1.1.0 -> 1.2.0; kept
+  `verification: unverified`.
+
+### Why (R2)
+
+The R1 plan was internally contradictory (conflated NOLINT with compiler-warning
+suppression) and shipped silent-failure modes that defeated the very durability
+goal of issue #71 — earning a NOGO. The transferable methodology of fixing it:
+separate the two gate families and their suppression mechanisms; verify which
+target compiles your file and mirror an existing `-Wno-*` precedent instead of
+relaxing the whole project; error-check every storage call (durability is
+correctness, not polish); make the load path total over the read API; make
+durable file paths absolute and cwd-independent; map every AC to an observable
+check including the absence of an action; and explicitly acknowledge DRY
+violations forced by repo boundaries. Remains unverified because nothing was built.
+
+### Previous snapshot (v1.1.0, 2026-06-20)
+
+See the `## v1.1.0 (2026-06-20)` entry below for the full v1.1.0 changelog and the
+embedded v1.0.0 snapshot. The v1.1.0 `.md` is preserved in the git history of this
+file (immediately prior commit); its content is summarized in that entry.
+
 ## v1.1.0 (2026-06-20)
 
 **Changed by:** Second-round (R1) planning re-learning for Odysseus issue #71
