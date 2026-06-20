@@ -1,0 +1,111 @@
+<!-- markdownlint-disable MD024 -->
+# History: planning-generated-doc-from-source-headers
+
+This file preserves prior full snapshots of the skill, newest entry at the top.
+
+## v1.1.0 (2026-06-20)
+
+**What changed:** Added five new durable lessons (Failed Attempts rows + Verified Workflow steps) and a headline meta-lesson distilled from a full plan→review→replan session on the Odysseus issue #199 e2e matrix generator:
+
+1. `grep -rl <phrase>` over a directory over-matches — it catches the phrase ANYWHERE in the file (including runtime `skip_topology` strings), not just the line-2 header. The header-derived T4-only count is 7, not the 8 a whole-file grep returned.
+2. Quoting ID ranges as contiguous ("A01–A18 … = 64") is a fabrication trap; the real IDs are non-contiguous (C skips C10/C13/C14, D skips D04/D05, E sparse) — actual unique count is **65**.
+3. Line-3 description format has an unstated exception: `subject-routing.sh:3` uses no colon (`# Validates …`) while 36/37 use `# Validates:`/`# Measures:`. A colon-anchored regex silently drops it.
+4. Position-based (line 2 / line 3) parsing is fragile to any inserted line; the mitigation is a `--validate` mode that asserts every file parses and exits non-zero NAMING the offender, with the run's OUTPUT pasted into the plan.
+5. Host a new `python3` CI gate in a job that ALREADY runs bare `python3` on the same runner (Odysseus `_required.yml` `unit-tests`), rather than asserting "python3 is present"; for the local path, declare the interpreter in `pixi.toml`.
+
+**Why:** Last round's R0 plan got a NOGO even though it cited this skill — it applied the lessons as prose claims ("verified across all 37 files") yet still shipped three falsified facts. The meta-lesson: citing the skill is not applying it; the deliverable of the "run the parser over all inputs" rule is pasted command OUTPUT (37/37 conform, count=65, T4=7), not the sentence "verified across all files." A reviewer can falsify a prose claim against the real repo in minutes. Also bumped `verification` from `unverified` to `verified-local` (ground-truth facts verified via real grep/sed/xxd against the Odysseus repo this session; generator + CI not yet executed).
+
+**Bump:** minor (1.0.0 → 1.1.0). Existing lessons (full-parse-coverage, byte-exact-diff normalization, assumed-interpreter, em-dash glyph, non-greedy capture, over-broad ID regex, circular count verification) retained and strengthened.
+
+### Previous snapshot (v1.0.0, 2026-06-20)
+
+```markdown
+---
+name: planning-generated-doc-from-source-headers
+description: "When planning a task that generates a doc/index/matrix by parsing a convention out of many source files (e.g. a README from per-file headers), the load-bearing assumption is the textual convention itself — and it is almost always UNENFORCED. Use when: (1) planning a task that generates a doc/index/matrix by parsing a convention out of many source files, (2) a plan quotes counts derived from grep/sed spot-checks as if they were facts, (3) adding a `--check`/drift gate over a committed generated artifact, (4) a plan adds a `python3`/tool CI step assuming the interpreter is present on the runner. Headline lessons: (a) run the REAL parser over ALL inputs and assert 100% parse coverage before trusting any count; (b) a committed generated artifact + a `--check` drift gate is a chicken-and-egg that must be sequenced so the committed file is produced by the exact generator version CI runs, and compared structurally (not byte-exact)."
+category: documentation
+date: 2026-06-20
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags:
+  - planning
+  - documentation-generation
+  - generated-file
+  - drift-gate
+  - source-convention
+  - header-parsing
+  - verification
+  - regex-brittleness
+  - ci-assumptions
+  - unenforced-convention
+---
+
+# Planning: Generate a Doc/Matrix by Parsing a Source-File Convention
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-06-20 |
+| **Objective** | Capture the durable planning pattern for tasks that generate a doc/index/matrix by parsing a textual convention out of many source files — and the unverified assumptions that silently corrupt the output |
+| **Outcome** | Plan written but NOT executed (the generator script was never run, the regex was never run against the real files, CI never ran). Recorded as a hypothesis: the convention is load-bearing and unenforced, and the plan trusted spot-checks/grep counts in place of a full parse over all inputs |
+| **Verification** | unverified |
+
+The concrete trigger was a plan to generate a test-coverage matrix README for the `e2e/tests` directory (issue #199): every one of 37 test files was claimed to carry a deterministic 2-line header, and a generator would parse those headers into a table. The plan asserted the convention held based on a `sed -n '2,4p'` spot-check of a couple of files plus a `grep` count — it never ran the actual parser regex over all 37 files, so nothing proved the regex parses them.
+
+## When to Use
+
+Use this skill when:
+
+- Planning a task that generates a doc / index / matrix / table by parsing a convention out of many source files (a README from per-file headers, a coverage matrix from test-file titles, an API index from docstrings).
+- A plan quotes counts as facts ("37 tests, 64 IDs, 8 T4-only") that were actually derived from a `grep`/`sed` spot-check rather than from running the real parser.
+- Adding a `--check` / drift gate over a committed generated artifact (CI regenerates and diffs against the committed file).
+- A plan adds a `python3 ...` (or any tool) CI step on the assumption the interpreter is present on that job's runner/declared env.
+- Any plan whose output correctness depends on a textual source-file convention that is not mechanically enforced.
+
+## Verified Workflow
+
+> **Warning:** This workflow has not been validated end-to-end (proposed — unverified). Treat as a hypothesis until CI confirms.
+
+### Quick Reference
+
+The headline checks before trusting a header-driven generator plan:
+
+(bash block: parse-coverage proof, independent enumeration, generate committed artifact with final script, confirm interpreter)
+
+### Detailed Steps (proposed planning checklist)
+
+1. Treat the convention as the load-bearing assumption.
+2. Add a step that runs the real parser over ALL inputs and asserts 100% parse coverage BEFORE trusting any count.
+3. Audit the regex for the specific brittle features.
+4. Cross-check every quoted count against an INDEPENDENT enumeration.
+5. Sequence the committed-artifact + drift-gate explicitly.
+6. Verify environment assumptions.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| Spot-check instead of full parse | Asserted "all 37 files have a deterministic 2-line header" from a sed spot-check + grep count | The parser regex was never run over all 37 files | Run the real parser over ALL inputs and assert 100% parse coverage |
+| Em-dash topology flag | HEADER_RE uses literal em-dash to detect "— T4 only" | Hyphen/en-dash sets the flag silently wrong | Detecting semantics from an exact glyph is brittle |
+| Non-greedy title vs optional group | Title capture before an OPTIONAL t4 group | Non-T4 lines can capture empty/partial | Test against a REAL non-T4 line |
+| Over-broad ID regex | IDs matched with \b[ABCDE][0-9]{2}\b anywhere | Matches stray prose tokens | Anchor ID extraction to its field |
+| Byte-exact drift diff | CI --check compared byte-for-byte | Trailing-newline/CRLF/locale flip the diff | Normalize or compare structurally |
+| Assumed python3 in CI | Added python3 step assuming 3.13 present | python3 not a declared pixi dependency | Confirm the interpreter is guaranteed on the runner |
+| Circular count verification | Verification greps for the same numbers the plan derived | Both sides come from the same grep | Cross-check against an INDEPENDENT enumeration |
+
+## Results & Parameters
+
+(brittle regex example; corrected verification commands; sequencing the committed artifact + drift gate; expected output of a correct plan)
+
+## Verified On
+
+| ProjectMnemosyne | e2e/tests matrix generator plan for issue #199 — plan written, NOT executed | This skill |
+
+## References
+
+- planning-verify-full-population-not-just-named-entities
+- planning-verify-assumptions-before-enforcement-gate
+- ci-matrix-yaml-multiformat-regex-fallback
+- doc-comment-count-drift-verify-frozen-test
+```
