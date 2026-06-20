@@ -1,0 +1,36 @@
+# planning-verify-issue-claims-and-required-check-gating — History
+
+## v1.0.0 (2026-06-20)
+
+**Changed by:** ProjectProteus issue #184 planning session (follow-up from #97). The issue
+claimed a cross-repo host-contract test was "wired into CI" as done (commit 6a851c5), but live
+verification showed the test ran in a standalone `dispatch-contract-test` job that was NOT a
+required status-check context in the `homeric-main-baseline` ruleset — running, not gating. The
+issue also misstated the job name (claimed `integration-tests`; it was a separate job) and the
+test's coverage (claimed "RFC 1123 + allowlist validation"; a repo-wide grep found no such
+logic — the test only checks host-presence / fail-closed). The test also leaked `err.txt` into
+CWD, caught only by `git status --porcelain`.
+**Verification:** verified-local — the `gh api repos/.../rulesets`, grep, and test commands were
+run against the live repo and confirmed the gating reality and the falsified claims; the plan's
+edits (fold the test into the already-required `integration-tests` job) were NOT merged or
+CI-confirmed.
+
+### What changed
+
+- Initial version. Two planning-time verification disciplines:
+  1. A CI job that RUNS is not branch-protection-GATED unless it is a required status-check
+     context. Confirm with `gh api repos/<org>/<repo>/rulesets` (enumerate ids, then per-id
+     `required_status_checks[].context`) — NOT by reading the workflow YAML. A job absent from
+     that list runs but does not block PRs.
+  2. Treat an issue's own factual claims — which job a step lives in, what a test covers — as
+     CLAIMS to grep-verify against the codebase, because they drift from reality.
+- Worked example ProjectProteus #184: gating-reality falsified (`dispatch-contract-test` not in
+  the required list), job-name claim falsified (naming drift), coverage claim falsified (no
+  RFC 1123 / allowlist logic exists), hermeticity gap caught (`err.txt` leak).
+- Chosen fix folds the test into the already-required `integration-tests` job → gating with no
+  destructive ruleset PUT.
+- Cross-links to `gha-required-checks-branch-protection` (the YAML/aggregator fix mechanics) and
+  `verify-issue-premise-against-code-before-planning` (grep-the-premise discipline).
+- Frontmatter: category `ci-cd`, version 1.0.0, `verification: verified-local`,
+  `user-invocable: false`, tags include planning, verification, required-status-checks,
+  branch-protection, issue-claims, evidence-grounded, ci-cd, dispatch-apply.
