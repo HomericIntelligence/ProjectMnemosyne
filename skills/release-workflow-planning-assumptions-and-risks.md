@@ -3,7 +3,7 @@ name: release-workflow-planning-assumptions-and-risks
 description: "Planning-phase risk checklist for designing an automated release workflow in a repo (especially a meta-repo) that has NEVER shipped a versioned release. The implementation mechanics live in `gha-release-package-workflow-patterns` and `lockfile-and-release-pipeline-management`; this skill is the DIFFERENT search surface a plan REVIEWER reaches for — 'are the plan's release assumptions verified?' not 'how do I write release.yml'. Core thesis: a first-release plan is full of assertions that look like decisions but are actually unverified guesses — the target version, the CHANGELOG link-footer tags, the TOML table name, the runner Python version, and signing-key availability. Each must be VERIFIED during implementation, not asserted in the plan. Use when: (1) reviewing or writing a plan that bumps a manifest version to 'match' the CHANGELOG without reconciling against real git tags + GitHub Releases, (2) a plan hard-codes keepachangelog compare-URLs (.../compare/vA...vB) that assume those tags exist as real refs, (3) a reused consistency script hard-indexes pixi['workspace']['version'] (or assumes [project]) without reading the target file's actual table name, (4) scripts `import tomllib` with no `tomli` fallback and the CI runner Python version is unconfirmed, (5) a justfile/release recipe uses `git tag -s` but signing-key availability in CI/local was never confirmed, (6) the issue body cites commit SHAs or file states that do not match the live repo and the plan does not flag the mismatch, (7) a third-party action SHA was copied from a skill/template rather than re-looked-up at plan time."
 category: ci-cd
 date: 2026-06-20
-version: "1.1.0"
+version: "1.2.0"
 user-invocable: false
 verification: unverified
 history: release-workflow-planning-assumptions-and-risks.history
@@ -33,6 +33,12 @@ tags:
   - required-check-wiring
   - unverified-assumptions
   - verify-dont-assert
+  - changelog-footer
+  - compare-url
+  - root-commit
+  - cross-artifact-consistency
+  - test-artifact-parity
+  - tomllib
 ---
 
 # Release Workflow Planning: Assumptions & Risks (First-Release / Meta-Repo)
@@ -44,8 +50,8 @@ tags:
 | Field | Value |
 | ------- | ------- |
 | **Date** | 2026-06-20 |
-| **Objective** | Capture the durable PLANNING-PHASE risks — and now the EXACT verification commands that resolve them — surfaced while writing (R0) then re-planning (R1) an implementation plan to add an automated release workflow to the Odysseus meta-repo (GitHub issue #189), a repo that had never shipped a versioned release. R0 made assertions that LOOK like decisions but were unverified guesses (target version, CHANGELOG link-footer tags, TOML table name, runner Python version, signing-key availability) and got a NOGO. R1 resolved each by checking ground truth (`git tag --list`, `gh release list`, `git log`, ruleset `name:` contexts) and added the meta-repo required-check wiring pattern. Each must be VERIFIED, not asserted. |
-| **Outcome** | Hypothesis only — no CI run validated the plan, so verification stays `unverified`. But the R1 ground-truth inspections (empty tag/release lists, absent issue SHAs, pinned ruleset contexts) were REAL and resolved every R0 finding. This skill is a reviewer/author checklist plus a resolution-command cheat-sheet, not a verified procedure. |
+| **Objective** | Capture the durable PLANNING-PHASE risks — and now the EXACT verification commands that resolve them — surfaced while writing (R0), re-planning (R1), then re-re-planning (R2) an implementation plan to add an automated release workflow to the Odysseus meta-repo (GitHub issue #189), a repo that had never shipped a versioned release. R0 made assertions that LOOK like decisions but were unverified guesses (target version, CHANGELOG link-footer tags, TOML table name, runner Python version, signing-key availability) and got a NOGO. R1 resolved each by checking ground truth (`git tag --list`, `gh release list`, `git log`, ruleset `name:` contexts) and added the meta-repo required-check wiring pattern — but R1 itself got a NOGO on a single CROSS-ARTIFACT finding: the same plan shipped a CHANGELOG footer (`…/commits/main`) and a regression test (`compare/…HEAD` regex) that asserted DIFFERENT forms — the prescribed file could not pass the prescribed test. R2 resolved it with the tagless root-SHA compare form and a producer/validator cross-check. Each must be VERIFIED, not asserted — AND the plan's own producer must satisfy the plan's own validator. |
+| **Outcome** | Hypothesis only — no CI run validated the plan, so verification stays `unverified`. But the R1 ground-truth inspections (empty tag/release lists, absent issue SHAs, pinned ruleset contexts) and the R2 root-commit lookup (`git rev-list --max-parents=0 HEAD` = `b10bfdd`) were REAL and resolved every finding. This skill is a reviewer/author checklist plus a resolution-command cheat-sheet, not a verified procedure. |
 | **Verification** | unverified |
 
 > **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
@@ -62,6 +68,8 @@ Reach for this when REVIEWING or WRITING a first-release / meta-repo release pla
 - The **issue body cites commit SHAs or file states that do not match the live repo** (e.g. issue #189 cited commits `b52a678`, `9d29e37`, `41ac0b8` as "adding significant features"; the real CHANGELOG content differed entirely). The plan should FLAG the mismatch to the reviewer, not silently ignore it.
 - A **third-party action SHA** (e.g. `softprops/action-gh-release@de2c0eb…` / v0.1.15) was copied from a skill/template rather than re-looked-up at plan time — it may be outdated or yanked. Re-verify at plan time: `gh api repos/<owner>/<repo>/git/ref/tags/<vX.Y.Z>`.
 - The plan adds a **new release gate as a standalone job to a non-required workflow** (e.g. a `release-contract-test` job in `ci.yml`) in a fleet/meta-repo whose branch-protection rulesets pin specific status-check contexts. In Odysseus, `.github/workflows/_required.yml` job `name:` values ARE the contexts pinned by `configs/github/org-ruleset*.json` (`"Required Checks / <name>"`) and `repo-ruleset*.json` (bare `"<name>"` + `integration_id: 15368`), documented in `configs/github/canonical-checks.md`. A new job in a non-required workflow is SILENTLY non-blocking — the gate exists but never blocks a merge.
+- The plan authors BOTH a **producer** (a file/edit it prescribes — e.g. the CHANGELOG `[Unreleased]` footer string) AND its **validator** (a test/grep/regex it prescribes — e.g. `release.test.sh` test #3) but states them in TWO DIFFERENT forms, so the prescribed file cannot pass the prescribed test. In R1 the footer was `[Unreleased]: …/commits/main` while the regression test asserted `compare/…HEAD` — the plan literally cannot execute as written; the implementer is forced to pick between two stated "facts". This is a NOGO even with ZERO external/factual errors, because the artifact is internally inconsistent. The reviewer WILL grep the generated artifact against the generated test — so the plan author must run that exact cross-grep first. (This is a DIFFERENT axis from issue-vs-reality: it is plan-vs-plan internal consistency, not plan-vs-repo.)
+- The plan emits an `[Unreleased]` footer for a **never-tagged repo** and oscillates between a phantom `compare/v0.1.0...HEAD` (404s — no such tag) and `…/commits/main` (valid but does NOT match a `compare/…HEAD` convention the test/skill expects). "Valid URL" and "matches the team-convention regex" are TWO requirements; only the tagless root-SHA compare form (`…/compare/<root-sha>...HEAD`) satisfies both.
 
 ## Proposed Workflow
 
@@ -85,6 +93,8 @@ Run these checks at PLAN time (or demand them as implementation acceptance crite
 | 4 | Scripts `import tomllib` | Confirm CI runner `python --version` >= 3.11, OR add `tomli` fallback | Runner < 3.11 and no fallback → `ModuleNotFoundError` |
 | 5 | `git tag -s` in the release recipe | Branch on `git config --get user.signingkey` — sign when present, else `git tag -a` | No key → hard `git tag -s` fails; signed *commits* in pre-commit do NOT cover tags |
 | 6 | New release gate as a standalone job in a non-required workflow | `grep -nE 'name: (deps/version-sync|unit-tests)'` (contexts unchanged) **+** `grep -n '<script>'` (step attached to a required job) | Gate lives in `ci.yml` not `_required.yml` → silently non-blocking |
+| 7 | Plan ships a file AND a test that checks it, in two different forms | Cross-grep the prescribed footer string against the prescribed test regex — confirm a verbatim match BEFORE submitting | Producer form ≠ validator form → the prescribed file fails the prescribed test (internal NOGO) |
+| 8 | `[Unreleased]` footer for a never-tagged repo | Use root SHA as compare base: `git rev-list --max-parents=0 HEAD` → `…/compare/<root-sha>...HEAD` | Phantom `compare/v0.1.0...HEAD` 404s; bare `…/commits/main` fails a `compare/…HEAD` regex |
 
 **Plan-time verification command sequence** — run this exact block (or demand it as acceptance criteria) BEFORE choosing a target version or wiring any gate:
 
@@ -96,9 +106,23 @@ gh release list
 # entry (0.2.0/0.3.0/0.4.0 are documented-but-never-shipped). Leave the
 # manifest as-is; make the next tag a fresh forward version.
 
-# (B) CHANGELOG link-footer gate: with zero tags, the ONLY valid [Unreleased]
-# target is .../commits/<default-branch>, never compare/<tag>...HEAD.
-grep -c "releases/tag/v\|compare/v0" CHANGELOG.md   # MUST be 0 when no tags exist
+# (B) CHANGELOG link-footer gate for a NEVER-TAGGED repo: do NOT use a phantom
+# compare/v0.1.0...HEAD (404 — no tag) and do NOT settle for a bare
+# .../commits/main (valid but fails a compare/...HEAD convention regex).
+# Use the ROOT commit as the compare base — valid for any reachable ref, no tag needed:
+ROOT_SHA=$(git rev-list --max-parents=0 HEAD)     # Odysseus root = b10bfdd
+# Footer:  [Unreleased]: https://github.com/<slug>/compare/${ROOT_SHA}...HEAD
+# Positive assertion (tolerant of a SHA base now AND a vX.Y.Z base later):
+grep -qE "compare/[0-9a-fv.]+\.\.\.HEAD" CHANGELOG.md          # MUST match
+# Negative assertion (reject phantom v-tag links); the root-SHA base (no 'v' prefix)
+# must NOT trip this — design the two assertions so they cannot conflict:
+grep -qE "releases/tag/v[0-9]|compare/v[0-9]" CHANGELOG.md && echo "PHANTOM v-tag -> NOGO" || echo "OK no phantom v-tag"
+
+# (B') Producer/validator cross-check: the footer STRING the plan writes and the
+# REGEX the plan's test asserts must be stated ONCE and confirmed to match verbatim.
+FOOTER="[Unreleased]: https://github.com/<slug>/compare/${ROOT_SHA}...HEAD"
+echo "$FOOTER" | grep -qE "compare/[0-9a-fv.]+\.\.\.HEAD" \
+  && echo "OK producer satisfies validator" || echo "MISMATCH -> internal NOGO"
 
 # (C) Required-check wiring: prove the gate attaches to an EXISTING required job
 # (whose name: is the pinned ruleset context) — not a new job in a non-required workflow.
@@ -114,6 +138,7 @@ Two cross-cutting source-trust rules:
 
 - **Issue-vs-reality mismatch:** if the issue's cited SHAs / file states don't match the live repo, STATE the contradiction explicitly and cite the live `file:line` (e.g. issue #189 claimed `[Unreleased]` empty + cited `b52a678`/`9d29e37`/`41ac0b8`, but live `CHANGELOG.md:8-50` is richly populated and those SHAs are absent from `git log`). Don't silently route around phantom evidence and solve a different problem.
 - **Re-verify third-party action SHAs at plan time** against the published tag: `gh api repos/<owner>/<repo>/git/ref/tags/<vX.Y.Z>` — skill-carried SHAs go stale.
+- **Cross-grep every generated artifact against every generated test that checks it (plan-vs-plan).** The reviewer WILL (and in R1 did) grep the prescribed file against the prescribed test — so the author must do the same first. For every assertion in a generated test, confirm the generated artifact it checks satisfies it VERBATIM. This is a distinct axis from issue-vs-reality: even with zero external errors, a plan whose producer and validator disagree is internally inconsistent and a NOGO.
 
 ### Detailed Steps
 
@@ -170,6 +195,8 @@ The rows above are plan assertions that looked like decisions but were unverifie
 | --------- | ---------------- | --------------- | ---------------- |
 | Trusting issue-body evidence over the live repo | Issue #189 claimed `[Unreleased]` was empty and cited commits `b52a678`, `9d29e37`, `41ac0b8` as "adding significant features" | Live `CHANGELOG.md:8-50` is richly populated (contradicting "empty") and those SHAs are ABSENT from `git log`. R0 silently routed around the phantom evidence and solved a different problem instead of flagging the contradiction | RESOLUTION: when issue evidence contradicts the live repo, STATE the contradiction explicitly and cite the live `file:line`. Verify with `git log --oneline -5` and by reading the cited file (`git cat-file -e <sha>` to confirm a SHA exists). Don't silently route around it |
 | Copying a third-party action SHA from a skill | Pinned `softprops/action-gh-release@de2c0eb…` (v0.1.15) straight from the team skill | The SHA came from a stored skill, not a fresh lookup — skill-carried SHAs go stale (outdated or yanked) | RESOLUTION: re-verify at plan time against the published tag — `gh api repos/<owner>/<repo>/git/ref/tags/<vX.Y.Z>` |
+| Cross-artifact self-contradiction: the plan shipped a file AND a test that disagreed | R1 told the implementer to write the CHANGELOG footer as `[Unreleased]: …/commits/main`, but the SAME plan's `release.test.sh` test #3 asserted the footer matched `compare/…HEAD` | The prescribed footer FAILS the prescribed test — the plan literally cannot execute as written; the implementer is forced to pick between two stated "facts". This is a NOGO even with ZERO external/factual errors, because the artifact is internally inconsistent (plan-vs-plan, not plan-vs-repo) | RESOLUTION/LESSON: whenever a plan authors BOTH a producer (file/edit) and its validator (test/grep/regex), state them in ONE canonical form and cross-check in the plan — show the exact string and the exact regex side by side and confirm a verbatim match. A reviewer will grep one against the other. Add a planning self-check: "for every assertion in a generated test, does the generated artifact it checks satisfy it verbatim?" |
+| Phantom v-tag compare footer vs bare commits-URL for a never-tagged repo | Iterations oscillated between `compare/v0.1.0...HEAD` (404 — no such tag) and `…/commits/main` (valid but didn't match the `compare/…HEAD` convention the test/skill expected) | "Valid URL" and "matches the team-convention regex" are TWO separate requirements — the phantom v-tag link satisfies neither (404s); the bare commits-URL satisfies validity but not the convention | RESOLUTION: use the repo ROOT commit as the compare base — `git rev-list --max-parents=0 HEAD` (Odysseus root = `b10bfdd`). `…/compare/<root-sha>...HEAD` is a valid non-404 URL for any reachable ref, needs no tag, AND fits a `compare/…HEAD` regex. Make the regex tolerant of both the SHA base now and a `vX.Y.Z` base later: `compare/[0-9a-fv.]+\.\.\.HEAD`. Pair with a SEPARATE assertion that rejects phantom v-tag links (`releases/tag/v[0-9]\|compare/v[0-9]` must be absent) — the root-SHA base (no `v` prefix) does not trip it. Design the positive-form and negative-phantom assertions so they cannot conflict |
 
 ## Results & Parameters
 
@@ -182,9 +209,12 @@ This skill produced no execution results (it is `unverified`). What it produces 
 git tag --list 'v*' --sort=-v:refname
 gh release list
 
-# R2: CHANGELOG footer must not reference refs that don't exist.
-grep -c "releases/tag/v\|compare/v0" CHANGELOG.md     # MUST be 0 when zero tags exist
-# Only valid [Unreleased] target with zero tags: .../commits/<default-branch>
+# R2: CHANGELOG footer for a NEVER-TAGGED repo — use the ROOT commit as compare base.
+ROOT_SHA=$(git rev-list --max-parents=0 HEAD)        # Odysseus root = b10bfdd
+# Footer: [Unreleased]: https://github.com/<slug>/compare/${ROOT_SHA}...HEAD
+grep -qE "compare/[0-9a-fv.]+\.\.\.HEAD" CHANGELOG.md            # positive: MUST match
+grep -qE "releases/tag/v[0-9]|compare/v[0-9]" CHANGELOG.md \
+  && echo "PHANTOM v-tag -> NOGO" || echo "OK"                  # negative: phantom v-tag absent
 
 # R3: two-mode consistency guard (see script sketch below).
 python scripts/check_version_consistency.py            # pre-commit: manifest parses + declares a version
@@ -232,6 +262,48 @@ for t in v0.1.0 v0.1.1 v0.2.0 v0.4.0; do
     && echo "OK   $t" || echo "MISSING $t  -> https://github.com/$SLUG/compare/...$t will 404"
 done
 ```
+
+**Tagless `[Unreleased]` footer for a NEVER-TAGGED repo (root-SHA compare base):**
+
+A keepachangelog `[Unreleased]` footer needs a compare base, but a never-tagged repo has no `vX.Y.Z` ref. Two wrong answers and the right one:
+
+- WRONG `…/compare/v0.1.0...HEAD` — 404s, the tag does not exist.
+- WRONG `…/commits/main` — valid, but does NOT match a `compare/…HEAD` team-convention regex.
+- RIGHT `…/compare/<root-sha>...HEAD` — the repo ROOT commit is always a reachable ref, needs no tag, gives a non-404 compare URL, AND fits a `compare/…HEAD` regex.
+
+```bash
+SLUG=$(git remote get-url origin | sed -E 's#.*github.com[:/](.+/.+)(\.git)?$#\1#; s#\.git$##')
+ROOT_SHA=$(git rev-list --max-parents=0 HEAD)        # Odysseus root = b10bfdd
+echo "[Unreleased]: https://github.com/$SLUG/compare/${ROOT_SHA}...HEAD"
+
+# Positive assertion — tolerant of a SHA base NOW and a vX.Y.Z base LATER:
+grep -qE "compare/[0-9a-fv.]+\.\.\.HEAD" CHANGELOG.md     # MUST match
+
+# Negative assertion — reject phantom v-tag links. The root-SHA base (no 'v'
+# prefix) does NOT trip this, so the two assertions cannot conflict:
+grep -qE "releases/tag/v[0-9]|compare/v[0-9]" CHANGELOG.md && exit 1 || true
+```
+
+"Valid URL" and "matches the team-convention regex" are TWO requirements; the root-SHA compare form satisfies both. Design the positive-form and negative-phantom assertions so the chosen base cannot trip the rejection.
+
+**Producer/validator cross-check checklist (plan-vs-plan internal consistency):**
+
+When a plan authors BOTH a producer (a file/edit) and its validator (a test/grep/regex), the prescribed file MUST satisfy the prescribed test verbatim — or the plan cannot execute as written (a NOGO with zero external errors). Before submitting:
+
+```bash
+# State the producer string and the validator regex in ONE place, side by side,
+# and prove the string satisfies the regex BEFORE the reviewer greps them apart.
+ROOT_SHA=$(git rev-list --max-parents=0 HEAD)
+FOOTER="[Unreleased]: https://github.com/<slug>/compare/${ROOT_SHA}...HEAD"   # producer
+REGEX="compare/[0-9a-fv.]+\.\.\.HEAD"                                          # validator
+echo "$FOOTER" | grep -qE "$REGEX" \
+  && echo "OK producer satisfies validator" \
+  || { echo "MISMATCH -> internal NOGO"; exit 1; }
+```
+
+- For EVERY assertion in a generated test, confirm the generated artifact it checks satisfies it verbatim.
+- The R1 failure: footer written as `…/commits/main` but test #3 asserted `compare/…HEAD` — the prescribed file failed the prescribed test. A reviewer greps one against the other; so must the author.
+- This is a DIFFERENT axis from issue-vs-reality (plan-vs-repo). It is plan-vs-plan: the plan contradicting itself.
 
 **`tomllib` fallback snippet (Python < 3.11 safe):**
 
@@ -340,7 +412,7 @@ jobs:
 
 Proof the wiring is correct: `grep -nE 'name: (deps/version-sync|unit-tests)' .github/workflows/_required.yml` (contexts unchanged) and `grep -n 'check_version_consistency' .github/workflows/_required.yml` (step present in a required job). Required-check status is conferred by the job `name:` being pinned in `configs/github/*ruleset*.json`, not by the test existing somewhere in CI.
 
-**Reviewer focus list (the risks, condensed):** (1) target version reconciled against real tags + Releases — never-released repo => no historical-CHANGELOG bump; (2) every compare-URL/tag footer ref is a real ref (regression grep == 0); (3) two-mode consistency guard (strict three-way only at tag push); (4) `[workspace]` vs `[project]` table + Python 3.11+/`tomllib` availability; (5) new gates wired into existing `_required.yml` jobs (contexts unchanged), not a standalone job in a non-required workflow; (6) signing-key detected and degraded gracefully, never hard-called.
+**Reviewer focus list (the risks, condensed):** (1) target version reconciled against real tags + Releases — never-released repo => no historical-CHANGELOG bump; (2) every compare-URL/tag footer ref is a real ref — never-tagged repo uses the root-SHA compare base (`compare/<root-sha>...HEAD`), no phantom v-tag; (3) two-mode consistency guard (strict three-way only at tag push); (4) `[workspace]` vs `[project]` table + Python 3.11+/`tomllib` availability; (5) new gates wired into existing `_required.yml` jobs (contexts unchanged), not a standalone job in a non-required workflow; (6) signing-key detected and degraded gracefully, never hard-called; (7) producer/validator cross-check — every prescribed file satisfies the prescribed test that checks it verbatim (plan-vs-plan consistency, distinct from plan-vs-repo).
 
 ## Related Skills
 
