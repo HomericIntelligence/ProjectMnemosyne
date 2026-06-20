@@ -1,9 +1,9 @@
 ---
 name: homeric-crosshost-deployment-and-mesh-topology
-description: "Deploy and operate the HomericIntelligence mesh across multiple Tailscale hosts using NATS JetStream, compose overlays, and justfile launchers. Use when: (1) splitting the E2E stack across multiple physical hosts via compose overlay or per-component launchers, (2) bringing up Agamemnon/Nestor/Hermes natively or via containers on any new Tailnet host from cold state, (3) running hub+remote-worker topology for cross-host myrmidon dispatch, (4) configuring NATS connections (direct or leafnode) over Tailscale, (5) implementing NATS JetStream publish retry with exponential backoff, (6) debugging Hermes webhook event types, compose healthchecks, or podman rootlessport/DNS quirks, (7) PLANNING credential-based authentication for a NATS leaf/server config and scrutinizing the uncertain assumptions a reviewer must verify in such a plan, (8) PLANNING Grafana anonymous-access hardening in the e2e compose stack (disable anonymous, fall back to admin login) and scrutinizing the unverified health-probe/provisioning assumptions a reviewer must confirm, (9) PLANNING a NATS TLS security runbook (cert provisioning via step-ca, zero-downtime cert rotation via SIGHUP, key-compromise response) for the canonical configs that now carry TLS per ADR-008, and scrutinizing the unverified step/nats-server/monitoring-API claims a reviewer must confirm."
+description: "Deploy and operate the HomericIntelligence mesh across multiple Tailscale hosts using NATS JetStream, compose overlays, and justfile launchers. Use when: (1) splitting the E2E stack across multiple physical hosts via compose overlay or per-component launchers, (2) bringing up Agamemnon/Nestor/Hermes natively or via containers on any new Tailnet host from cold state, (3) running hub+remote-worker topology for cross-host myrmidon dispatch, (4) configuring NATS connections (direct or leafnode) over Tailscale, (5) implementing NATS JetStream publish retry with exponential backoff, (6) debugging Hermes webhook event types, compose healthchecks, or podman rootlessport/DNS quirks, (7) PLANNING credential-based authentication for a NATS leaf/server config and scrutinizing the uncertain assumptions a reviewer must verify in such a plan, (8) PLANNING Grafana anonymous-access hardening in the e2e compose stack (disable anonymous, fall back to admin login) and scrutinizing the unverified health-probe/provisioning assumptions a reviewer must confirm, (9) PLANNING a NATS TLS security runbook (cert provisioning via step-ca, zero-downtime cert rotation via SIGHUP, key-compromise response) for the canonical configs that now carry TLS per ADR-008, and scrutinizing the unverified step/nats-server/monitoring-API claims a reviewer must confirm, (10) PLANNING NATS client-cert mTLS wiring into ProjectTelemachy (config-layer `build_ssl_context()`/`nats_connect_kwargs()` because Telemachy has NO live `nats.connect()`), and scrutinizing the unverified nats-py-kwarg/Hermes-analogy/ADR-009/runbook/`cryptography`-fixture assumptions a reviewer must confirm."
 category: architecture
 date: 2026-06-20
-version: "1.5.0"
+version: "1.6.0"
 user-invocable: false
 verification: unverified
 history: homeric-crosshost-deployment-and-mesh-topology.history
@@ -54,6 +54,11 @@ tags:
   - sighup
   - key-compromise
   - runbook
+  - mtls
+  - client-cert
+  - telemachy
+  - ssl-context
+  - issue-304
 ---
 
 # HomericIntelligence Cross-Host Deployment and Mesh Topology
@@ -64,8 +69,8 @@ tags:
 | ------- | ------- |
 | **Date** | 2026-06-20 |
 | **Objective** | Deploy and operate the HomericIntelligence mesh across multiple Tailscale hosts using NATS JetStream, compose overlays, justfile launchers, and resilient publish patterns; and plan credential-based authentication for the credential-less NATS leaf/server config |
-| **Outcome** | Deployment patterns verified-local (two-host + 6-host). The NATS leaf/server auth fix is still an UNVERIFIED PLAN for issue #176 (R1, post-NOGO) — the full plan was not run end-to-end and no CI passed. BUT the config-block-presence validator was PROTOTYPED this session (verified-local: exit 0 on the fixed fixture, exit 1 on the repo's current configs). The Grafana anonymous-access hardening (issue #206) is an UNVERIFIED PLAN — no container was run; the load-bearing untested assumption is that Grafana's `/api/health` stays unauthenticated when anonymous access is disabled (so e2e health probes survive). The NATS TLS security RUNBOOK (issue #208 — cert provisioning, rotation, compromise response) is an UNVERIFIED PLAN — no commands run, no CI. **IMPORTANT premise correction:** the #176-era claim that `configs/nats/*.conf` ship with NO TLS is now STALE — ADR-008 (Status: Proposed) is already merged into the configs, so both `server.conf` and `leaf.conf` now carry top-level `tls {}`, `leafnodes { port=7422; tls{} }`, and cluster TLS referencing `/etc/nats/certs/{server-cert.pem,server-key.pem,ca.pem}`, and leaf.conf's remote is now `nats+tls://<ip>:7422`. The plan's highest-value content remains its catalogue of uncertain assumptions a reviewer must verify, now sharpened by concrete NOGO causes and the stale-premise correction. |
-| **Verification** | unverified OVERALL for the NATS auth-planning section (the full plan was not exercised end-to-end); the brace-depth config-block validator specifically is verified-local (prototyped 2026-06-19 against fixed + current fixtures). The Grafana anonymous-access hardening subsection is unverified (no container run; `/api/health`-unaffected claim untested). The NATS TLS security-runbook section (issue #208) is unverified (no commands run; `step` CLI flags, NATS SIGHUP cert hot-reload, and the `/varz` `tls_required` field name were all written from memory). The exception: the `.gitignore` cert-key coverage claim (`*.pem`/`*.key`/`*.crt`/`secrets/`/`*.secret`) was actually grepped from the file this session and is TRUE. Verified-local for all prior deployment content (Odysseus sessions 2026-04-03 to 2026-05-03). |
+| **Outcome** | Deployment patterns verified-local (two-host + 6-host). The NATS leaf/server auth fix is still an UNVERIFIED PLAN for issue #176 (R1, post-NOGO) — the full plan was not run end-to-end and no CI passed. BUT the config-block-presence validator was PROTOTYPED this session (verified-local: exit 0 on the fixed fixture, exit 1 on the repo's current configs). The Grafana anonymous-access hardening (issue #206) is an UNVERIFIED PLAN — no container was run; the load-bearing untested assumption is that Grafana's `/api/health` stays unauthenticated when anonymous access is disabled (so e2e health probes survive). The NATS TLS security RUNBOOK (issue #208 — cert provisioning, rotation, compromise response) is an UNVERIFIED PLAN — no commands run, no CI. The ProjectTelemachy NATS client-cert mTLS wiring (issue #304) is an UNVERIFIED PLAN — no code run, no CI; **its load-bearing finding is that Telemachy has NO live `nats.connect()` call** (`_monitor_completion` HTTP-polls Agamemnon, it is not a NATS subscriber), so the plan satisfies "wire into the NATS client connection" at the CONFIG layer (`build_ssl_context()` + `nats_connect_kwargs()` helpers a future connection consumes, mirroring Hermes). The plan also flags that ADR-009 and `docs/runbooks/enable-nats-auth.md` — both cited by the issue — do NOT exist in the repo. **IMPORTANT premise correction:** the #176-era claim that `configs/nats/*.conf` ship with NO TLS is now STALE — ADR-008 (Status: Proposed) is already merged into the configs, so both `server.conf` and `leaf.conf` now carry top-level `tls {}`, `leafnodes { port=7422; tls{} }`, and cluster TLS referencing `/etc/nats/certs/{server-cert.pem,server-key.pem,ca.pem}`, and leaf.conf's remote is now `nats+tls://<ip>:7422`. The plan's highest-value content remains its catalogue of uncertain assumptions a reviewer must verify, now sharpened by concrete NOGO causes and the stale-premise correction. |
+| **Verification** | unverified OVERALL for the NATS auth-planning section (the full plan was not exercised end-to-end); the brace-depth config-block validator specifically is verified-local (prototyped 2026-06-19 against fixed + current fixtures). The Grafana anonymous-access hardening subsection is unverified (no container run; `/api/health`-unaffected claim untested). The NATS TLS security-runbook section (issue #208) is unverified (no commands run; `step` CLI flags, NATS SIGHUP cert hot-reload, and the `/varz` `tls_required` field name were all written from memory). The Telemachy mTLS-wiring section (issue #304) is unverified (no code run; the nats-py `tls=`/`tls_hostname` kwarg names, Hermes' actual consumption of `build_ssl_context()` at a connect site, and `cryptography` availability in Telemachy's pixi env were all assumed-by-analogy, not confirmed — the verified facts are only the ABSENCE of a live `nats.connect()`, of ADR-009, and of `enable-nats-auth.md`). The exception: the `.gitignore` cert-key coverage claim (`*.pem`/`*.key`/`*.crt`/`secrets/`/`*.secret`) was actually grepped from the file this session and is TRUE. Verified-local for all prior deployment content (Odysseus sessions 2026-04-03 to 2026-05-03). |
 | **History** | [changelog](./homeric-crosshost-deployment-and-mesh-topology.history) |
 
 ## When to Use
@@ -81,6 +86,7 @@ tags:
 - Planning credential-based authentication for the canonical credential-less `configs/nats/leaf.conf` + `server.conf` (issue #176) and reviewing such a plan for unverified assumptions
 - Planning Grafana anonymous-access hardening in `docker-compose.e2e.yml` (issue #206) — disabling `GF_AUTH_ANONYMOUS_ENABLED`, falling back to admin login, and reviewing the unverified `/api/health` / provisioning assumptions
 - Planning a NATS TLS security runbook (issue #208) — cert provisioning (step-ca), zero-downtime cert rotation (SIGHUP), and key-compromise response — against the canonical configs that NOW carry TLS per ADR-008, and reviewing the unverified `step`/`nats-server`/`/varz` claims
+- Planning NATS client-cert mTLS wiring into ProjectTelemachy (issue #304) — config-layer `build_ssl_context()` + `nats_connect_kwargs()` helpers because Telemachy has NO live `nats.connect()` site — and reviewing the unverified nats-py-kwarg / Hermes-analogy / ADR-009-and-`enable-nats-auth.md`-existence / `cryptography`-fixture assumptions a reviewer must confirm
 
 ## Verified Workflow
 
@@ -654,6 +660,87 @@ docker compose config | grep -A4 'healthcheck' | grep -q '/<binary>' && ! (docke
 docker compose ps | grep -E '<service>.*healthy'
 ```
 
+## Proposed Workflow — Telemachy NATS Client-Cert mTLS Wiring (UNVERIFIED, issue #304)
+
+> **Warning:** This section is an UNVERIFIED PLAN. No code was run, no CI passed. The
+> nats-py connect kwarg names, Hermes' actual consumption of `build_ssl_context()` at a
+> connect site, and `cryptography` availability in Telemachy's pixi env were all
+> assumed-by-analogy and NOT confirmed. ADR-009 and `docs/runbooks/enable-nats-auth.md`
+> are cited by the issue but do NOT exist in the repo. Treat every step as a
+> reviewer-must-verify hypothesis. The highest-value content is the reviewer-risk
+> catalogue in **Results & Parameters** — read it before trusting any step.
+
+Issue #304 asks to wire NATS client-cert mTLS into ProjectTelemachy so it presents a client
+cert to a `verify_and_map=true` NATS server. The plan's load-bearing finding reshapes the task.
+
+### Load-Bearing Finding: Telemachy has NO live `nats.connect()` site
+
+```bash
+# Verified this session — returns NOTHING:
+grep -rn "nats.connect\|import nats\|from nats" provisioning/ProjectTelemachy/src
+```
+
+`executor.py:265-300` (`_monitor_completion`) is **HTTP polling of Agamemnon `get_tasks`**, NOT
+a NATS subscription. CONSEQUENCE: the issue's "wire these into the NATS client connection"
+requirement has **no existing connection site to modify**. The plan satisfies it at the CONFIG
+layer instead:
+
+- a `build_ssl_context()` helper (loads CA + client cert/key into an `ssl.SSLContext`), and
+- a `nats_connect_kwargs()` helper that returns the dict a future/embedded `nats.connect()`
+  would consume — mirroring how Hermes exposes `settings.build_ssl_context()` for its publisher.
+
+This proves the client-cert **LOADING path only** (like Hermes' own `test_tls_config.py`, which
+also does not open a socket). **REVIEWER RISK:** confirm the issue author accepts config-layer
+wiring as sufficient for the acceptance criterion "Telemachy connects to a NATS server with
+verify_and_map=true" — otherwise scope expands to adding a real NATS subscriber.
+
+### Proposed config-layer helpers (UNVERIFIED nats-py kwargs)
+
+```python
+# settings/config layer — PROPOSED. kwarg names UNVERIFIED against installed nats-py.
+import ssl
+
+def build_ssl_context(ca_path, cert_path, key_path) -> ssl.SSLContext:
+    ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=ca_path)
+    ctx.load_cert_chain(certfile=cert_path, keyfile=key_path)  # client cert for mTLS
+    return ctx
+
+def nats_connect_kwargs(url, ssl_ctx, server_hostname) -> dict:
+    # UNVERIFIED: confirm `tls=`/`tls_hostname` vs `tls_handshake_first` for the
+    # installed nats-py version, AND confirm Hermes actually passes the context at a
+    # connect site (publisher.py:91 nats.connect(...) was seen; the TLS-arg wiring was NOT).
+    return {"servers": [url], "tls": ssl_ctx, "tls_hostname": server_hostname}
+```
+
+### Test path and the `.gitignore` fixture conflict
+
+The test asserts the **cert-LOADING depth**: `ssl.SSLContext.load_cert_chain` on a real
+cert/key — a malformed PEM raises. Two ways to source the cert/key:
+
+1. Generate at test time via `cryptography` — **UNVERIFIED that `cryptography` is in Telemachy's
+   pixi env** (`pixi.toml` lists pydantic, pydantic-settings, nats-py, pytest, pytest-asyncio,
+   pytest-cov; `cryptography` was NOT seen as a direct dep). If absent, the test fails to import.
+2. Commit a static throwaway PEM pair under `tests/fixtures/` (preferred — no runtime dep). BUT
+   the team skill notes `.gitignore` covers `*.pem`/`*.key`/`*.crt`, which would **BLOCK
+   committing the fixture**. This is a real conflict to resolve (e.g. a scoped `!tests/fixtures/`
+   negation) — confirm before relying on either path.
+
+### Non-existent referenced artifacts (do NOT fabricate)
+
+```bash
+ls docs/adr | grep 009            # empty — only 001-007 exist; 008 referenced as "Proposed"
+ls docs/runbooks/                 # enable-nats-auth.md is ABSENT
+```
+
+- **ADR-009 does NOT exist.** The issue cites it as the governing decision and the runbook header
+  links to it. Either ADR-009 lands in a sibling PR (issue #175 / parent) or the plan must stop
+  asserting it as present. Do NOT fabricate ADR-009.
+- **`docs/runbooks/enable-nats-auth.md` does NOT exist** (present: add-new-agent-type, add-new-host,
+  branch-protection-rollout, disaster-recovery, no-silent-failures, wsl2-podman-setup). The issue
+  says Telemachy is "documented in" it as if it exists; the plan CREATES it. **REVIEWER RISK:** if a
+  Hermes/#175 PR also creates this same runbook, two PRs collide on the same new file — confirm
+  ownership of `enable-nats-auth.md` before creating it.
+
 ### After NATS Restart
 
 Agamemnon and Nestor do NOT auto-reconnect after NATS restarts. Always kill and restart them:
@@ -721,6 +808,12 @@ pkill -f ProjectNestor_server    || kill $(pgrep -f ProjectNestor_server)
 | Editing an append-only ADR for a back-link | Plan proposed adding a References line to ADR-008 | CLAUDE.md principle 3: ADRs are append-only / never edited once accepted | Link one-directionally (runbook→ADR); satisfy discoverability via the docs/README index row, not by editing the ADR |
 | Trusting docs/README runbook table as complete | Used the README table as the runbook inventory | Table already omits `branch-protection-rollout.md` and `no-silent-failures.md` | The hand-maintained README table drifts; enumerate runbooks with `ls docs/runbooks/`, not the index |
 | Trusting `/varz` `tls_required` field name from memory | Plan greps `curl :8222/varz \| ... d.get('tls_required')` to confirm TLS-on-client | The exact JSON key for "TLS required on client port" in the running NATS monitoring API was not confirmed | Don't assert monitoring-API JSON key names from memory; curl `/varz` against the running version and read the actual keys |
+| Assuming Telemachy has a live `nats.connect()` to wire mTLS into | Planned to modify Telemachy's NATS client connection per issue #304 | `grep -rn "nats.connect\|import nats\|from nats" provisioning/ProjectTelemachy/src` returns NOTHING; `_monitor_completion` (executor.py:265-300) HTTP-polls Agamemnon, it is not a NATS subscriber | There is no connection site to modify. Satisfy "wire into the NATS client" at the CONFIG layer (`build_ssl_context()` + `nats_connect_kwargs()` helpers a future connection consumes), mirroring Hermes; grep for the connect call before assuming it exists |
+| Asserting nats-py `tls=` kwarg "exactly as Hermes does" without verifying | Plan used `nats.connect(url, tls=ssl_ctx, tls_hostname=...)` claiming Hermes consumes `build_ssl_context()` at its connect site | Hermes `publisher.py:91 nats.connect(...)` was seen but the TLS-arg wiring was NEVER grepped; `build_ssl_context()` exists in Hermes config but its call site passing the context was not confirmed | Verify the exact nats-py kwarg (`tls` vs `tls_handshake_first`/`tls_hostname`) against the installed version AND confirm Hermes actually passes the context at a connect site before claiming "exactly as Hermes does" |
+| Referencing ADR-009 as the governing decision | Issue #304 cites ADR-009; plan's runbook header links to it | `ls docs/adr \| grep 009` is empty — only 001-007 exist (008 referenced as "Proposed"); ADR-009 does NOT exist in the repo | Do NOT fabricate ADR-009. Either it lands in a sibling PR (#175/parent) or stop asserting it as present; verify ADR existence with `ls docs/adr` before citing |
+| Assuming `docs/runbooks/enable-nats-auth.md` exists | Issue says Telemachy is "documented in enable-nats-auth.md (step 3)" as if present | `ls docs/runbooks/` shows it is ABSENT (present: add-new-agent-type, add-new-host, branch-protection-rollout, disaster-recovery, no-silent-failures, wsl2-podman-setup) | The plan CREATES the runbook; confirm ownership first — a Hermes/#175 PR may also create the same new file and collide. Enumerate runbooks with `ls docs/runbooks/`, never trust the issue body |
+| Assuming `cryptography` is in Telemachy's pixi env for a test cert | Test plan generates a self-signed cert/key via `cryptography` "already transitively present" | `pixi.toml` lists pydantic, pydantic-settings, nats-py, pytest, pytest-asyncio, pytest-cov — `cryptography` was NOT seen as a direct dep | Don't assume a transitive dep is importable in tests; prefer a checked-in static throwaway PEM pair under `tests/fixtures/` (no runtime dep), or confirm `cryptography` is declared |
+| Committing a test PEM fixture without checking `.gitignore` | Plan to commit a throwaway cert/key pair under `tests/fixtures/` | The team skill notes `.gitignore` covers `*.pem`/`*.key`/`*.crt`/`secrets/`/`*.secret` — which would BLOCK committing the fixture | A `.gitignore` that ignores cert keys conflicts with a checked-in test fixture; resolve with a scoped negation (`!tests/fixtures/*.pem`) and confirm the file is actually staged before relying on it |
 
 ## Results & Parameters
 
@@ -929,6 +1022,54 @@ Durable PLANNING lessons that generalize beyond NATS:
   not, the claim inverts into a downtime + manual-restart procedure. Always tie the reload mechanism
   to a verified signal/behavior before claiming zero downtime.
 
+### Uncertain Assumptions a Reviewer MUST Verify (Telemachy NATS client-cert mTLS, issue #304 — unverified)
+
+No code was run this session; these are blocking questions, not settled facts.
+
+1. **HIGHEST RISK — config-layer wiring vs a live connection.** Telemachy has NO `nats.connect()`
+   (verified: the grep returns nothing; `_monitor_completion` HTTP-polls Agamemnon). The plan
+   satisfies "wire into the NATS client connection" with `build_ssl_context()` +
+   `nats_connect_kwargs()` helpers and proves only the client-cert LOADING path (like Hermes'
+   `test_tls_config.py`, which opens no socket). A reviewer may read the acceptance criterion
+   "Telemachy connects to a NATS server with verify_and_map=true" as requiring a LIVE
+   connection/integration test. Confirm the issue author accepts config-layer wiring, or scope
+   expands to adding a real NATS subscriber.
+2. **nats-py connect kwarg names are UNVERIFIED.** The plan asserts
+   `nats.connect(url, tls=ssl.SSLContext, tls_hostname=...)`. The `tls=` kwarg matches Hermes by
+   analogy, but Hermes' publisher passing `build_ssl_context()` into `nats.connect` was NOT grepped
+   (only `publisher.py:91 nats.connect(...)` was seen). Verify the exact kwarg (`tls` vs
+   `tls_handshake_first`/`tls_hostname`) against the installed nats-py version AND confirm Hermes
+   actually consumes `build_ssl_context()` at a connect site — the central "exactly as Hermes does"
+   analogy was assumed, not verified end-to-end.
+3. **ADR-009 does NOT exist in the repo.** `ls docs/adr | grep 009` -> empty (only 001-007; 008 is
+   "Proposed"). The issue cites ADR-009 as governing; the runbook header links to it. Either ADR-009
+   lands in a sibling PR (#175/parent) or the plan must stop asserting it as present. Do NOT fabricate it.
+4. **`docs/runbooks/enable-nats-auth.md` does NOT exist.** The issue references it as if present; the
+   plan CREATES it. If a Hermes/#175 PR also creates the same new file, the two PRs collide — confirm
+   ownership of `enable-nats-auth.md` before creating it.
+5. **`cryptography` availability in Telemachy's pixi env is UNVERIFIED.** The test cert/key generation
+   assumes `cryptography` is transitively present; `pixi.toml` does not list it as a direct dep.
+   FALLBACK: commit a static throwaway PEM pair under `tests/fixtures/` — but `.gitignore`'s
+   `*.pem`/`*.key`/`*.crt` coverage would BLOCK that fixture. Resolve the conflict (scoped negation)
+   and confirm the fixture is actually staged.
+6. **Hermes line-number citations may have drifted.** `config.py:101-156`, `:102-105`,
+   `publisher.py:91`, and Telemachy `executor.py:265-300` were taken from the issue body / a single
+   read. Re-grep before editing; precision claims invite precision checks.
+
+```yaml
+# PROPOSED Telemachy NATS client-cert mTLS wiring (config layer) — issue #304
+telemachy_mtls_plan:
+  load_bearing_finding: "Telemachy has NO live nats.connect() — _monitor_completion HTTP-polls Agamemnon (executor.py:265-300)"
+  approach: "config-layer build_ssl_context() + nats_connect_kwargs() helpers a future/embedded connection consumes (mirrors Hermes)"
+  proves: "client-cert LOADING path only (like Hermes test_tls_config.py — no socket opened)"
+  nats_py_kwargs: "tls=ssl.SSLContext, tls_hostname=... — UNVERIFIED; confirm vs tls_handshake_first for installed nats-py AND confirm Hermes consumes build_ssl_context() at a connect site"
+  adr_009: "does NOT exist (ls docs/adr | grep 009 empty); do NOT fabricate — may land via #175/parent"
+  runbook: "docs/runbooks/enable-nats-auth.md does NOT exist; plan CREATES it — confirm ownership vs a colliding #175 PR"
+  test_cert_source: "cryptography UNVERIFIED in pixi env; FALLBACK static PEM under tests/fixtures/ — but .gitignore blocks *.pem/*.key/*.crt (resolve with scoped negation)"
+  acceptance_risk: "reviewer may demand a LIVE verify_and_map=true connection; plan only proves loading — confirm config-layer wiring is sufficient"
+  verification: "unverified — no code run, no CI"
+```
+
 ```yaml
 # PROPOSED Grafana anon-hardening env (docker-compose.e2e.yml grafana service) — issue #206
 grafana_anon_hardening_env:
@@ -995,3 +1136,4 @@ config_auth_gate:
 | Odysseus | Plan R2 for issue #154 (Argus distroless dashboard healthcheck, post-NOGO) | unverified planning learning — distroless `static` images have no shell/wget; use binary self-probe `["CMD","/<binary>","-healthcheck"]`; `docker compose config` validates structure only. No container built or observed healthy |
 | Odysseus | Plan for issue #206 (Grafana anonymous-access hardening, docker-compose.e2e.yml) | unverified planning learning — disable `GF_AUTH_ANONYMOUS_ENABLED`, remove dead `GF_AUTH_ANONYMOUS_ORG_ROLE`, add env-overridable admin creds. Load-bearing untested assumption: `/api/health` stays unauthenticated with anon off so e2e probes survive. No container run |
 | Odysseus | Plan for issue #208 (NATS TLS security runbook — cert provisioning, rotation, compromise) | unverified planning learning — adds `docs/runbooks/nats-security.md` + README row. KEY correction: ADR-008 already added TLS to the configs (the #176-era "credential-less" premise is stale). `step` flags, SIGHUP cert hot-reload, and `/varz` `tls_required` key all written from memory (reviewer-must-verify). `.gitignore` cert-key coverage VERIFIED grepped. No commands run |
+| ProjectTelemachy | Plan for issue #304 (NATS client-cert mTLS wiring) | unverified planning learning — LOAD-BEARING FINDING: Telemachy has NO live `nats.connect()` (`_monitor_completion` HTTP-polls Agamemnon), so the plan wires mTLS at the CONFIG layer (`build_ssl_context()` + `nats_connect_kwargs()`, mirroring Hermes) and proves only the client-cert LOADING path. nats-py `tls=` kwarg + Hermes' connect-site consumption assumed-by-analogy (unverified). ADR-009 and `docs/runbooks/enable-nats-auth.md` both cited by the issue but do NOT exist in the repo. `cryptography` test-dep unverified; committing a PEM fixture conflicts with `.gitignore`. No code run |
