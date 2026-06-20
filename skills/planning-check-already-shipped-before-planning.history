@@ -1,5 +1,84 @@
 # planning-check-already-shipped-before-planning — History
 
+## v1.5.0 (2026-06-19)
+
+**Changed by:** ProjectAgamemnon extraction-epic #1 RE-PLAN session — after the v1.4.0
+verification-and-closeout reframe, the re-plan was NOGO'd by the plan-loop reviewer NOT for its
+conclusion but for a FALSE evidentiary premise underneath it. The re-plan claimed 3 failing `ctest`
+cases came from "an untracked file from a different branch's WIP"; the reviewer disproved the
+premise by checking git provenance precisely. The correction is the durable learning.
+**Verification:** verified-local — the corrected git-provenance commands (`git cat-file -e HEAD:`,
+`git status --short`, `git show HEAD:… | grep`) and the ctest label runs were executed this session
+and confirmed the findings; the downstream plan was NOT executed end-to-end in CI. Keystone CI
+remains unobserved (the local sibling `../ProjectKeystone` is on main HEAD e28b649); the pagination
+bug root cause is asserted from test behavior, not yet confirmed by reading the brief→store path.
+
+### What changed
+
+- Added the PRIMARY new lesson (Verified-Workflow step 14): when dismissing a failing test as "out
+  of scope," verify the test artifact's git PROVENANCE precisely before writing it off. The test
+  `.cpp` was `??` (untracked) BUT its wiring into `test/CMakeLists.txt` was an uncommitted `M` edit
+  in the CURRENT tree — so the failures were real-and-local, not foreign. The out-of-scope
+  conclusion was right, but reached via a false premise = verification defect = NOGO. Correct
+  technique: `git cat-file -e HEAD:<path>` (in HEAD?), `git status --short <path>` (?? vs M),
+  `git show HEAD:<wiring> | grep <entry>` (build wiring committed?). Untracked file + uncommitted
+  wiring = THIS tree's local WIP, not in HEAD, not on any branch.
+- Added the RED-CI-DISPOSITION lesson (step 15): a closeout/docs PR must ship green — explicitly do
+  NOT stage failing WIP, cut from `main`, run only the deliverable's labels (`ctest --preset debug
+  -L agents`), and route the underlying bug to its own issue ("Never merge with red CI").
+- Added the CROSS-REPO-EDIT lesson (step 16): a fix touching a sibling repo (`../OtherRepo/...`)
+  needs its OWN PR there; "OtherRepo CI passes" is `gh pr checks` in THAT repo, never a local
+  `cmake` build (smoke test, not the criterion).
+- Added the INTERNAL-CONSISTENCY lesson (step 17): reconcile every count across every section —
+  run the count once, reuse one number; reconcile the issue's LOC estimate against landed LOC.
+- Added 4 When-to-Use triggers; sharpened the existing "dismiss failing tests" Failed Attempts row
+  (the real defect was the false provenance premise, not the scope conclusion) and added 3 new
+  Failed Attempts rows (bundle-WIP-into-green-PR; bundle-sibling-repo-edit; inconsistent-counts).
+- Added a Results & Parameters worked example (Agamemnon epic #1 RE-PLAN NOGO) with the exact
+  provenance commands and corrected disposition; corrected the third honest caveat in the prior
+  Agamemnon example to reflect the false-premise diagnosis.
+- Extended the planner decision tree: the SOME-FAIL branch now runs provenance checks before
+  dismissing failures, and a new "cross-cutting plan-hygiene gates" block covers sibling-repo split
+  and count reconciliation. Added a Verified On row for the RE-PLAN NOGO.
+- Frontmatter: bumped `version` 1.4.0 → 1.5.0 (MINOR, additive), kept `date` 2026-06-19, broadened
+  `description` (provenance/red-CI/cross-repo/consistency clauses + trigger 7), added tags
+  (`git-provenance`, `false-premise-nogo`, `red-ci-disposition`, `cross-repo-pr-split`,
+  `internal-consistency`, `replan`), kept `verification: verified-local`.
+
+### Why
+
+v1.4.0 taught the verification-and-closeout reframe for already-delivered extraction epics. The
+RE-PLAN of that same epic then failed for a DIFFERENT reason: a confident-but-false evidentiary
+claim about where a failing test came from. The lesson is that provenance ("whose tree is this
+artifact from?") is a distinct question from scope ("is it part of my issue?") — `??` does not mean
+"foreign branch," because an uncommitted `M` wiring edit makes an untracked file fail the LOCAL
+build. A right conclusion via a false premise is still a NOGO. The amendment also captures the
+correct dispositions that resolve such a NOGO: don't stage failing WIP, split sibling-repo edits
+into their own PRs, and reconcile counts across the plan.
+
+### Previous version (v1.4.0) snapshot
+
+```markdown
+---
+name: planning-check-already-shipped-before-planning
+description: "Before writing an implementation plan, verify the ACTUAL on-disk state — grep/wc/test the real source — instead of trusting the issue body's stated starting condition (LOC counts, method counts, \"needs to be done\"). The fix may already be merged, OR already landed uncommitted in a sibling worktree that git log will NOT show. This applies HARDEST to a large extraction/migration/\"do X\" EPIC filed months earlier: the work is often ALREADY DELIVERED under a different ADR/PR, so the correct plan is verification-and-closeout, NOT re-implementation — run cheap existence checks first (find target/src, ls source/src/<moved-dir> expecting ABSENT, grep -rl MovedSymbol source-repo), map every acceptance criterion to a runnable command, and build+run the actual suite to prove \"CI passes with the new code\" is ALREADY true. And even when the work IS already on disk, the plan-loop still demands a FORWARD-LOOKING plan — a retrospective status note gets NOGO'd, gates you defer to the reviewer are stage-handoff failures, and an EMPTY/placeholder artifact (output withheld while a background job runs) is an automatic Grade F. Use when: (1) planning a follow-up, consolidation, or EXTRACTION/MIGRATION epic, (2) issue body cites specific file paths or LOC/method counts, (3) git status shows an untracked sibling worktree directory, (4) the plan-loop reviewer NOGO'd your plan as a 'status note' / retrospective, (5) you're tempted to wait on a background job / Monitor / long test run before producing a due plan or review artifact, (6) an epic's premise asserts work must move from repo A to repo B and you have not confirmed it didn't already happen."
+category: architecture
+date: 2026-06-19
+version: "1.4.0"
+user-invocable: false
+verification: verified-local
+history: planning-check-already-shipped-before-planning.history
+tags: [planning, already-shipped, stale-issue-premise, extraction-epic, migration, verification-and-closeout, reframe, cross-repo, adr-attribution, acceptance-criteria-mapping, ifdef-guarded-untested, residuals, ctest, cpp]
+---
+```
+
+(The v1.5.0 edits are purely additive — 4 triggers, Verified-Workflow steps 14–17, 3 new Failed
+Attempts rows plus a sharpened existing row, a Results subsection, two decision-tree additions, and
+a Verified On row; the full v1.4.0 body is reconstructable from this changelog plus the v1.4.0
+entry below.)
+
+---
+
 ## v1.4.0 (2026-06-19)
 
 **Changed by:** ProjectAgamemnon extraction-epic #1 planning session — a months-old epic asked to
