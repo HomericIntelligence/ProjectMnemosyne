@@ -1,9 +1,9 @@
 ---
 name: gha-security-scanning-supply-chain
-description: "Use when: (1) adding CodeQL SAST to TypeScript/JavaScript workflows or Semgrep/Gitleaks to any PR pipeline, (2) CI security scans only trigger on push to main — not PRs — and need promotion to PR gates, (3) Gitleaks SARIF parsing uses grep instead of jq causing always-fail required checks, (4) enforcing pinned SHA-based action versions instead of mutable tags, (5) auditing or porting curl|bash installers with SHA-256 verification, (6) a GHA job fails at 'Set up job' due to unresolved transitive action dependency, (7) adding Bandit SAST as a required CI check for Python/pixi projects, (8) triaging and remediating CodeQL PR alerts when gh reports a check-run id instead of a workflow run id."
+description: "Use when: (1) adding CodeQL SAST to TypeScript/JavaScript workflows or Semgrep/Gitleaks to any PR pipeline, (2) CI security scans only trigger on push to main — not PRs — and need promotion to PR gates, (3) Gitleaks SARIF parsing uses grep instead of jq causing always-fail required checks, (4) enforcing pinned SHA-based action versions instead of mutable tags, (5) auditing or porting curl|bash installers with SHA-256 verification, (6) a GHA job fails at 'Set up job' due to unresolved transitive action dependency, (7) adding Bandit SAST as a required CI check for Python/pixi projects, (8) triaging and remediating CodeQL PR alerts when gh reports a check-run id instead of a workflow run id, (9) planning a SARIF -> GitHub Code Scanning (Security tab) upload via upload-sarif (gitleaks/trivy/codeql) and need a planning-stage verification checklist."
 category: ci-cd
 date: 2026-06-19
-version: "1.3.0"
+version: "1.4.0"
 user-invocable: false
 history: gha-security-scanning-supply-chain.history
 verification: verified-local
@@ -33,6 +33,12 @@ tags:
   - nosec
   - weak-hashing
   - command-injection
+  - upload-sarif
+  - code-scanning-upload
+  - security-tab
+  - if-always
+  - least-privilege
+  - planning
 ---
 
 # GitHub Actions Security Scanning and Supply-Chain Hardening
@@ -43,7 +49,7 @@ tags:
 |-------|-------|
 | Date | 2026-06-19 |
 | Objective | Set up security scanning (CodeQL/Semgrep/Gitleaks SAST + secrets + Bandit Python SAST), harden CI supply-chain (action SHA pinning, dependency scanning), and pin/verify curl\|bash installers with SHA-256 |
-| Outcome | Consolidated guidance for security gate setup, scan-trigger gaps, SARIF parsing fixes, action SHA pinning, transitive-pin diagnosis, installer trust-model hardening, Bandit SAST integration for Python/pixi projects, and CodeQL PR alert remediation |
+| Outcome | Consolidated guidance for security gate setup, scan-trigger gaps, SARIF parsing fixes, action SHA pinning, transitive-pin diagnosis, installer trust-model hardening, Bandit SAST integration for Python/pixi projects, CodeQL PR alert remediation, and planning-stage verification for SARIF -> GitHub Code Scanning (Security tab) uploads via `upload-sarif` |
 | Verification | verified-local |
 
 ## When to Use
@@ -65,6 +71,9 @@ tags:
 - CodeQL flags weak sensitive-data hashing, command-line injection, or similar findings that need
   code fixes plus targeted regression tests
 - Performing a security code review where static-analysis output is noisy with false positives
+- Planning a change that uploads a scanner's SARIF output (gitleaks/trivy/codeql) to the GitHub
+  Code Scanning (Security) tab via `github/codeql-action/upload-sarif`, especially when the scan
+  step fails the build on findings (`--exit-code 1`)
 
 ## Verified Workflow
 
@@ -175,6 +184,66 @@ are observable without blocking the pipeline.
 
 The `gitleaks/gitleaks-action` wrapper does NOT expose conditional `--exit-code`; use the direct
 binary. Always SHA-256-verify the download. Omit `--no-git` so the full branch history is scanned.
+
+#### A2. Upload scanner SARIF to GitHub Code Scanning (Security tab) — planning checklist
+
+When planning a change that pipes a scanner's SARIF output into the GitHub Code Scanning / Security
+tab via `github/codeql-action/upload-sarif`, verify these before writing the workflow. This list was
+built from a plan-only review (read the workflow, did not run actionlint or execute CI) — treat each
+item as something to CONFIRM, not assume.
+
+```yaml
+# Target shape for a gitleaks SARIF -> Security tab upload, in a job that runs untrusted
+# repo content (the scan). security-events: write is scoped to THIS job, not workflow-wide.
+gitleaks-scan:
+  runs-on: ubuntu-latest
+  permissions:
+    contents: read
+    security-events: write   # per-job, mirror an existing least-privilege job in the same repo
+  steps:
+    - uses: actions/checkout@<SHA>  # v4
+    - name: Run gitleaks (fails build on findings)
+      run: ./gitleaks detect --source=. --report-format sarif --report-path gitleaks.sarif --exit-code 1
+    - name: Upload gitleaks SARIF to code scanning
+      # LOAD-BEARING: the scan step uses --exit-code 1, so without `if: always()` this step is
+      # SKIPPED exactly when there ARE findings — the Security tab would then never receive them.
+      if: always() && hashFiles('gitleaks.sarif') != ''
+      uses: github/codeql-action/upload-sarif@<repo-existing-SHA>  # reuse the SHA already pinned in-repo
+      with:
+        sarif_file: gitleaks.sarif
+        category: gitleaks   # keep findings distinct from CodeQL/Trivy in the same tab
+```
+
+**Planning-stage verification checklist (confirm each before/at implementation):**
+
+1. **`if: always()` is load-bearing when the scan uses `--exit-code 1`.** A SARIF scan that fails the
+   build on findings will SKIP every later step unless that step uses `if: always()`. The upload-sarif
+   step MUST be `if: always() && hashFiles('<file>.sarif') != ''`, otherwise findings never reach the
+   Security tab *precisely when there are findings*. This is the single highest-risk assumption — verify
+   it first.
+2. **`security-events: write` must be scoped per-job, not workflow-wide.** When a job runs untrusted
+   repo content (a scan), elevating the whole workflow leaks the write scope to every job. Mirror an
+   existing least-privilege job in the same repo as the pattern source rather than hoisting the
+   permission to the top level.
+3. **Reuse the `codeql-action` SHA already pinned elsewhere in the same repo** (e.g. an existing
+   `init`/`analyze` step) instead of introducing a new pin or a mutable `@v3` tag — one auditable SHA
+   across the repo. Confirm the SHA maps to a real release; do not trust a copied comment blindly.
+4. **`category:` keeps tool findings distinct** (e.g. `category: gitleaks`) so gitleaks alerts do not
+   collide with CodeQL/Trivy alerts in the same Security tab.
+
+**Confirm-don't-assume list (each of these was unverified at plan time and a reviewer should check):**
+
+- Line numbers cited in a plan (read directly from the file) do NOT equal actionlint/CI verification.
+  A plan that only reads the workflow stays `verified-local` at best — never claim `verified-ci` until
+  the modified workflow actually runs in CI.
+- A `codeql-action` SHA copied from another workflow step (e.g. `sanitizers.yml`) is trusted to map to
+  the commented release tag, but verify it against GitHub's tag:
+  `gh api repos/github/codeql-action/git/refs/tags/<tag> -q '.object.sha'`.
+- `upload-sarif` resolving a relative `sarif_file:` from the workspace root is the expected behavior
+  (consistent with how artifact steps reference the same path), but confirm against the action docs if
+  the file lives outside the workspace root.
+- The `actions/upload-artifact` major version assumed "already in the repo" may be stale — re-confirm
+  the actual pinned major before reusing it (`@v7` does not exist; latest is v4/v5).
 
 #### B. Close scan-trigger / masking gaps in existing workflows
 
@@ -506,6 +575,9 @@ threshold.`
 | Treating a CodeQL check-run id as a workflow run id | Ran `gh run view <check_run_id>` from the value shown by `gh pr checks` | The id belonged to a check-run, so the workflow-run API did not expose the alert details | Use `gh api repos/<owner>/<repo>/check-runs/<check_run_id>` and the matching annotations/alerts APIs |
 | Hash replacement without data classification | Replaced MD5 mechanically without deciding whether the material was a tracking id or a password/secret | SHA-256 is acceptable for non-secret salted IDs under SHA-2 policy, but not for low-entropy secrets | Classify the data first: SHA-256 for salted non-secret identifiers, password hashing/KDF for secrets |
 | Sanitizing a generic subprocess wrapper after command selection | Validated argument strings but still accepted arbitrary executables | CodeQL still had a path from caller-controlled command names to `subprocess.run` | Choose the executable from a hard-coded allowlist before reconstructing argv |
+| Omitting `if: always()` on upload-sarif when scan uses `--exit-code 1` | Added an `upload-sarif` step after a gitleaks step that exits 1 on findings, with no `if:` guard | The scan step fails the job on findings, so the upload step is SKIPPED exactly when there ARE findings — the Security tab silently receives nothing | Always use `if: always() && hashFiles('<file>.sarif') != ''` on the upload-sarif step so findings reach the tab even when the scan fails the build |
+| Elevating `security-events: write` workflow-wide | Set `security-events: write` at the top-level workflow `permissions` instead of on the scan job | The scan job runs untrusted repo content, so workflow-wide elevation leaks the write scope to every other job | Scope `security-events: write` per-job on the scan job only; mirror an existing least-privilege job in the same repo as the pattern source |
+| Mutable `@v3` tag for codeql-action upload-sarif | Pinned `github/codeql-action/upload-sarif@v3` instead of reusing the repo's existing pinned SHA | Reintroduces a floating-version supply-chain risk and creates a second, divergent codeql-action reference in the same repo | Reuse the exact `codeql-action` SHA already pinned elsewhere in the repo (e.g. its `init`/`analyze` steps); verify with `gh api repos/github/codeql-action/git/refs/tags/<tag> -q '.object.sha'` |
 
 ## Results & Parameters
 
@@ -611,3 +683,4 @@ jq '[.runs[].results[].ruleId] | unique' results.sarif # rule IDs
 | ProjectAgamemnon | PR #400 — transitive trivy pin failure | two-strikes-and-drop |
 | ProjectTelemachy | Issue #157 — Bandit SAST as required CI check (pixi project, `_required.yml`) | verified-local (2026-06-19) |
 | Sanitized PR session | CodeQL weak hashing + command injection remediation after a rebase | verified-ci (2026-06-19): CodeQL and validate gates green |
+| ProjectAgamemnon | Issue #269 — plan to upload gitleaks SARIF to the Code Scanning tab in `_required.yml` | verified-local (2026-06-19): plan-only — workflow read directly, NOT run through actionlint/CI; planning-stage `upload-sarif` checklist captured |
