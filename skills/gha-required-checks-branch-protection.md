@@ -1,9 +1,9 @@
 ---
 name: gha-required-checks-branch-protection
-description: "Use when: (1) PRs are permanently BLOCKED because a required status-check context is a job gated by if: github.event_name != 'pull_request' (skipped != satisfied), (2) consolidating duplicate CI jobs into a reusable workflow so _required.yml is a thin aggregator, (3) validating GitHub branch protection API responses and writing synthetic tests for bash enforcement scripts, (4) a summary aggregator job pattern is needed to replace N individual required contexts with one that handles skip semantics correctly, (5) adding a RESULTS-loop aggregator gate to _required.yml with a guard test asserting all non-excluded jobs are wired into needs, (6) guard test needs a provable negative path to catch silently-inverted conditions [verified-local: _unwired_jobs helper pattern, PR #1343], (7) job key vs context name disambiguation for branch protection contexts, (8) GET-before-PUT mitigation for destructive branch protection API, (9) requirements deviation must be disclosed explicitly in implementation plans, (10) you are placing a merge-blocking CI guard and must confirm its job is a pinned required status-check context, not an advisory job — enumerate the ruleset's required contexts and check your target job name is in that set, else the guard is green-but-non-blocking and a regression merges clean."
+description: "Use when: (1) PRs are permanently BLOCKED because a required status-check context is a job gated by if: github.event_name != 'pull_request' (skipped != satisfied), (2) consolidating duplicate CI jobs into a reusable workflow so _required.yml is a thin aggregator, (3) validating GitHub branch protection API responses and writing synthetic tests for bash enforcement scripts, (4) a summary aggregator job pattern is needed to replace N individual required contexts with one that handles skip semantics correctly, (5) adding a RESULTS-loop aggregator gate to _required.yml with a guard test asserting all non-excluded jobs are wired into needs, (6) guard test needs a provable negative path to catch silently-inverted conditions [verified-local: _unwired_jobs helper pattern, PR #1343], (7) job key vs context name disambiguation for branch protection contexts, (8) GET-before-PUT mitigation for destructive branch protection API, (9) requirements deviation must be disclosed explicitly in implementation plans, (10) you are placing a merge-blocking CI guard and must confirm its job is a pinned required status-check context, not an advisory job — enumerate the ruleset's required contexts and check your target job name is in that set, else the guard is green-but-non-blocking and a regression merges clean, (11) an issue claims a prerequisite PR already 'added'/'landed'/'introduced' a CI job that a new required-context depends on — verify that PR is actually merged to the default branch (gh pr view <n> --json state,mergedAt + grep the file on main) BEFORE adding the context, else the never-posted context bricks the merge queue."
 category: ci-cd
 date: 2026-06-20
-version: "1.5.0"
+version: "1.6.0"
 user-invocable: false
 history: gha-required-checks-branch-protection.history
 tags:
@@ -24,6 +24,8 @@ tags:
   - pinned-context
   - merge-blocking
   - green-but-non-blocking
+  - premise-verification
+  - prerequisite-pr
 ---
 
 # GitHub Actions Required Checks and Branch Protection
@@ -35,7 +37,7 @@ tags:
 | **Date** | 2026-06-20 (v1.5.0) · 2026-06-14 (v1.4.0) |
 | **Objective** | Make required status checks satisfiable and maintainable: handle skip-vs-success semantics with a `summary` aggregator, consolidate duplicate jobs into a reusable `workflow_call` workflow, validate branch-protection API writes with read-back, smoke-test workflow structure, add a RESULTS-loop gate with guard test, and document guard-test negative-path, job-key vs context-name disambiguation, destructive PUT mitigation, requirements-deviation disclosure, and (v1.5.0) required-status-check PLACEMENT — before placing a merge-blocking guard, enumerate the ruleset's required contexts and confirm the target job is one of them |
 | **Outcome** | Consolidated guidance covering ten interacting concerns; specific cases preserved as examples |
-| **Verification** | verified-ci (core patterns); verified-local (section F: _unwired_jobs helper + 3-test pattern, PR #1343; section J: required-context enumeration `jq` query WAS run, returned the listed contexts — but the proposed guard placement itself is **unverified** / planning-only) |
+| **Verification** | verified-ci (core patterns); verified-local (section F: _unwired_jobs helper + 3-test pattern, PR #1343; section J: required-context enumeration `jq` query WAS run, returned the listed contexts — but the proposed guard placement itself is **unverified** / planning-only; section K: the prerequisite-PR premise-check technique WAS run — `gh pr view 264` returned OPEN/`mergedAt:null` and the `main` grep returned empty — but the proposed ruleset-edit runbook is **unverified** / planning-only) |
 
 ## When to Use
 
@@ -47,6 +49,7 @@ tags:
 - An existing workflow-smoke-test gate covers only one workflow and additional critical workflows need regression protection.
 - You want a compact `RESULTS` env-var bash-loop aggregator (instead of one env var per job) and a guard unit test that asserts all non-excluded jobs are wired into the gate's `needs:` list — catching gaps automatically as the workflow grows.
 - **(v1.5.0)** You are about to ADD a merge-blocking guard (an enforcement-drift assertion, a value-check, a regression guard) and must decide which job/workflow it lives in — a guard placed in a job that is NOT a pinned required status-check context blocks nothing: the PR shows green and a regression merges clean (green-but-non-blocking security-theater). Enumerate the ruleset's required contexts first and confirm your target job `name:` is in that set.
+- **(v1.6.0)** An issue's body asserts a prerequisite PR already "added"/"landed"/"introduced" the CI job that POSTS the context you are about to make required (e.g. "PR #264 added the SAST job"). Before writing any runbook ordering that depends on it, VERIFY the PR is actually merged to the default branch (`gh pr view <n> --json state,mergedAt` AND grep the file on `main`). The issue body is a claim, not ground truth — if the posting job is not yet on `main`, adding the required context permanently bricks the merge queue (Section A hazard). Gate the change on the merge.
 
 ## Verified Workflow
 
@@ -457,6 +460,71 @@ constraint), `architecture-executable-convention-guard-pattern` (prose invariant
 check), and `config-governance-fix-scope-all-variant-files` (the sibling planning-discipline skill
 for issue #309 — verify the issue premise and scope across variant files).
 
+#### K. Verify the issue's prerequisite-PR premise before ordering the runbook (planning learning — verified-local technique, unverified runbook)
+
+> **Verification:** the premise-FALSIFICATION technique below is **verified-local** — during
+> planning of ProjectMnemosyne issue #284 I actually ran `gh pr view 264 --json state,mergedAt`
+> (returned `state: OPEN, mergedAt: null`) and `grep -n "sast" .github/workflows/_required.yml` on
+> `main` (returned nothing), observing those results this session. The proposed runbook itself —
+> the ruleset PUT that adds `security/sast-scan` to the `homeric-main-baseline` ruleset (id
+> 15556487) and its read-back — was **NOT executed**: it is planning-only / **unverified**
+> end-to-end. Treat the premise-check as a tested technique, the runbook as a proposal. (Same
+> mixed-level shape as Section J.)
+
+This is a planning-discipline lesson that complements Sections A and G. Section A says a required
+context whose posting job is skipped/absent bricks the merge queue forever; Section G says the
+pinned context is the job `name:`, not the YAML key. Section K is about **where the premise comes
+from**: the issue body is a *claim*, not ground truth, and a false past-tense premise INVERTS the
+safe ordering of the runbook.
+
+**The failure that triggered this learning (issue #284):** the issue's body asserted *"PR #264
+added the `security-sast-scan` CI job to `.github/workflows/_required.yml`"* and asked to add
+`security/sast-scan` to the `homeric-main-baseline` ruleset (id 15556487) as a required status
+check. Taken at face value, the past-tense "added" reads as already-landed, so the obvious runbook
+would add the required context immediately. **Verifying the premise showed it was FALSE on `main`:**
+
+```bash
+# 1. Is the prerequisite PR actually merged? (state + mergedAt, not just "exists")
+gh pr view 264 --json state,mergedAt
+# -> { "state": "OPEN", "mergedAt": null }   # NOT merged
+
+# 2. Is the posting job actually on the default branch?
+git checkout main && grep -n "sast" .github/workflows/_required.yml
+# -> (no output)   # the job that POSTS security/sast-scan does not exist on main yet
+```
+
+**Why this inverts the safety ordering.** Per Section A and the "context never posts → BLOCKED
+forever" Failed Attempt: adding a required status-check context whose posting job is NOT yet on
+`main` permanently bricks the merge queue — every subsequent PR waits forever for a context that is
+never reported. So the ruleset edit MUST be **gated** on PR #264 actually merging first. The issue's
+past-tense premise made it sound already done; trusting it would have ordered the ruleset PUT before
+the prerequisite existed.
+
+**Generalizable rule:** *when an issue says a prerequisite PR "added"/"landed"/"introduced"
+something, verify it is actually merged to the default branch (`gh pr view <n> --json
+state,mergedAt` AND grep the file on `main`) BEFORE writing any ordering that depends on it. The
+issue body is a claim, not ground truth. Add a HARD prerequisite gate to the runbook — not a
+"recommended" step.*
+
+**Sub-learning — context-name verification from an UNMERGED sibling PR's diff.** The pinned context
+name is the job `name:` field, not the YAML job key (Section G). Reading PR #264's diff confirmed
+job key `security-sast-scan:` posts context `name: security/sast-scan`:
+
+```bash
+gh pr diff 264 | grep -iE "sast"
+# -> shows  security-sast-scan:   (job key)
+#           name: security/sast-scan   (pinned context name)
+```
+
+But because PR #264 is **unmerged**, that name is only as stable as the unmerged PR — it could still
+change before merge. Re-confirm the context name from the diff at the moment PR #264 merges, not at
+plan time, before pinning it into the ruleset.
+
+**Cross-references:** Section A (never-posts → BLOCKED-forever hazard, the consequence this gate
+prevents), Section G (job-key vs context-name, the basis for the sub-learning), and
+`config-governance-fix-scope-all-variant-files` (the sibling planning-discipline skill that also
+turns "verify the issue premise" into explicit pre-work).
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -475,6 +543,7 @@ for issue #309 — verify the issue premise and scope across variant files).
 | Requirements deviation left implicit | Plan dropped two `test` contexts from required list without flagging the deviation | Reviewer flagged as undisclosed scope change (NOGO finding) | Always call out deviations from issue literal text explicitly in the plan or PR body; flag for issue-author confirmation |
 | Pass `jobs` dict (not full `wf` dict) to `_unwired_jobs` | Refactored positive-path test kept the `jobs` fixture signature instead of switching to `workflow` | `_unwired_jobs(wf, excluded)` calls `wf["jobs"]` internally; passing the jobs dict directly raises `KeyError: 'jobs'` | Change the positive-path test to accept the `workflow` fixture (full document), not the `jobs` fixture |
 | Place the drift guard in ci.yml's `validate` job | Added the enforcement-value assertion as a step in the most obvious config-validation job (`ci.yml`) | `validate` is NOT a pinned required context (only `_required.yml`'s jobs are, per the ruleset's `required_status_checks` contexts); a regression would still merge clean — green-but-non-blocking | Enumerate required contexts from the ruleset (`jq … required_status_checks[].context`) and place the guard in a job whose `name:` is in that set; verify the step's JOB is required, not just that it parses |
+| Trusted the issue body's "PR #264 added the SAST job" premise | Planned to add `security/sast-scan` to the ruleset as required, taking the issue's past-tense claim that the posting job already landed at face value | PR #264 was still OPEN (`mergedAt: null`); the job is not on `main`, so the context never posts — adding it as required would permanently block the merge queue (Section A hazard) | Verify prerequisite PRs are actually merged to the default branch (`gh pr view <n> --json state,mergedAt` + grep the file on `main`) before writing runbook ordering that depends on them; gate the change on the merge, don't assume it |
 
 ## Results & Parameters
 
@@ -607,6 +676,7 @@ jq -r '.rules[]|select(.type=="required_status_checks")
 | ProjectHephaestus | Issue #1315 NOGO review cycle (2026-06-13) | Guard-test negative-path (`_unwired_jobs` helper + 3-test pattern), job-key vs context-name disambiguation, GET-before-PUT mitigation, requirements-deviation disclosure pattern; **unverified** — planning phase captures |
 | ProjectHephaestus | Issue #1338 / PR #1343 — extract _unwired_jobs helper | 6/6 tests pass locally; CI pending |
 | ProjectMnemosyne | Issue #309 R1 re-planning (2026-06-20) | Section J — required-context PLACEMENT: enumeration `jq` query WAS run (verified-local), returned the 8 pinned contexts; guard placement into `_required.yml`'s `schema-validation` job is **unverified** (planning only) |
+| ProjectMnemosyne | Issue #284 planning (2026-06-20) | Section K — prerequisite-PR premise check: `gh pr view 264` returned OPEN/`mergedAt:null` and the `main` grep for `sast` was empty (verified-local); the proposed ruleset PUT adding `security/sast-scan` to ruleset 15556487 is **unverified** (planning only — must be gated on PR #264 merging) |
 
 ## References
 
