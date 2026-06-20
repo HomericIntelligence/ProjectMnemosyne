@@ -3,11 +3,11 @@ name: tracking-doc-checkbox-sync-regression-guard
 description: "When a tracking DOCUMENT (remediation plan, roadmap, status table, audit-checklist markdown FILE) encodes issue/PR state as `- [ ]` / `- [x]` checkboxes, that state silently rots. The PREFERRED guard is a self-contained COMMITTED-FIXTURE INVARIANT TABLE: embed an explicit `declare -A EXPECT=([key]=state ...)` in the test, derive ONE stable key per line (leading `#NNN`, else `PR-X`, else a phrase), and diff each line's actual checkbox char against the expected char — no network, no `gh`, no auth, no SKIP path, deterministic everywhere (including required-CI runners with no issue-read token). Add bidirectional coverage cross-checks via a SEEN set: fail `__MISSING__` if a tracked line's key is absent from EXPECT, and fail if any EXPECT key was never SEEN (deleted/renamed line). Key by the line's STABLE PRIMARY TOKEN, not by scanning every `#NNN`, so an open bundle line with a closed child never false-FAILs. Do NOT use a live `gh issue view` guard: it SKIPs to a no-op when unauthenticated — exactly the required-CI state — giving ZERO protection, and it is non-deterministic. Use when: (1) editing a markdown tracking/remediation/roadmap doc whose checkboxes claim issue state, (2) adding a guard against checkbox drift, (3) a doc line bundles multiple `#NNN`, (4) you need a guard that the committed file itself passes deterministically in offline/sandboxed CI. This applies code-quality-enforcement-gates §5 ('assert the property via static analysis, NOT a live runtime check'); for ISSUE-BODY checklists see planning-roadmap-tracking-issue-reconciliation; for verify-findings-vs-ground-truth see code-quality-enforcement-gates §10."
 category: documentation
 date: 2026-06-20
-version: "2.0.0"
+version: "2.1.0"
 user-invocable: false
 verification: verified-local
 history: tracking-doc-checkbox-sync-regression-guard.history
-tags: [tracking-doc, remediation-plan, roadmap, checkbox, doc-sync, regression-guard, invariant-table, committed-fixture, static-analysis-not-runtime, deterministic, offline-ci, no-network, bidirectional-coverage, seen-set, missing-sentinel, stable-key, bundle-line, verify-ground-truth, audit, property-not-snapshot, planning, verified-local]
+tags: [tracking-doc, remediation-plan, roadmap, checkbox, doc-sync, regression-guard, invariant-table, committed-fixture, hermetic-test, shimmed-test, static-analysis-not-runtime, deterministic, offline-ci, no-network, no-silent-failures, forbid-suppressions, bidirectional-coverage, seen-set, missing-sentinel, stable-key, bundle-line, pr-group-scoped, re-verify-same-pr, verify-ground-truth, audit, property-not-snapshot, planning, verified-local, unverified-subpattern]
 ---
 
 # Tracking-Doc Checkbox Sync + Regression Guard
@@ -19,9 +19,9 @@ tags: [tracking-doc, remediation-plan, roadmap, checkbox, doc-sync, regression-g
 | **Date** | 2026-06-20 |
 | **Objective** | Keep `- [ ]` / `- [x]` checkbox state in a tracking markdown FILE (`docs/audit-2026-04-28/remediation-plan.md`) honest, and add a regression guard that (a) the committed file itself passes, and (b) actually protects in a required-CI runner that has NO issue-read token |
 | **Outcome** | R1 (re-plan) of ProjectProteus issue #183. The R0 live-`gh` guard got a NOGO (offline-SKIP = zero CI protection; committed artifact failed its own test). R1 replaces it with a committed-fixture INVARIANT TABLE that runs with no network and PASSES deterministically. The embedded test logic was executed this session: PASS on a matching fixture, FAIL on each of 3 negative fixtures (drift / new line / deleted line) as designed |
-| **Verification** | verified-local — the EXPECT-table test logic was run this session and behaved as specified; the consuming repo's CI was not run |
+| **Verification** | verified-local for the v2.0.0 EXPECT-table test logic. The v2.1.0 additions (a re-planning session for **ProjectProteus issue #186**) are a DESIGN: the offline-fixture test was NOT implemented or CI-run this session, so the v2.1.0 sub-pattern is **unverified** until the PR lands and CI runs |
 | **History** | [changelog](./tracking-doc-checkbox-sync-regression-guard.history) |
-| **Related** | `code-quality-enforcement-gates` §5 (assert the property via static analysis, NOT a live runtime check) and §10 (verify findings vs ground truth); `planning-roadmap-tracking-issue-reconciliation` (issue-BODY checklists); `automation-moot-issue-regression-guard-pattern` (property-as-test) |
+| **Related** | `code-quality-enforcement-gates` §5 (assert the property via static analysis, NOT a live runtime check) and §10 (verify findings vs ground truth); `planning-roadmap-tracking-issue-reconciliation` (issue-BODY checklists); `automation-moot-issue-regression-guard-pattern` (property-as-test). The repo's anti-silent-failure policy — `forbid-suppressions` job (`.github/workflows/_required.yml:53-105`) + `docs/runbooks/no-silent-failures.md` — is the REASON the live-`gh` skip-on-unauth design is disallowed |
 
 ## When to Use
 
@@ -30,6 +30,9 @@ tags: [tracking-doc, remediation-plan, roadmap, checkbox, doc-sync, regression-g
 - A single doc line bundles MORE THAN ONE `#NNN` (e.g. a Wave-3 PR row that ships several issues together) and you must not false-FAIL when one bundled child closes while the row stays `[ ]`.
 - You are tempted to query `gh issue view` at test time — read the Failed Attempts first; that design is demoted here.
 - You are wiring a state-drift check into the repo's aggregate task (e.g. justfile `check`) and need it deterministic offline.
+- The repo has an anti-silent-failure CI policy (e.g. a `forbid-suppressions` job, a `no-silent-failures` runbook) that BANS `|| true` / unconditional `exit 0` / skip-on-error paths — so any test that SKIPs when `gh` is unauthenticated is a policy violation, not just a weak guard.
+- You want to PROVE the committed guard is not a no-op (a reviewer demanded it) — see the temp-tree proof in the workflow.
+- You are mirroring an existing repo test as a model: mirror its PROPERTY (hermetic/deterministic — e.g. `tests/dispatch-apply.test.sh` shims `curl`, uses a fake token, hits no network), not merely its file location.
 
 ## Verified Workflow
 
@@ -95,6 +98,61 @@ declare -A EXPECT=(
    diffs the EXPECT table against live `gh` issue state and opens an issue on drift. This is the
    belt-and-suspenders complement that restores freshness-detection without sacrificing the determinism
    of the required guard.
+
+### v2.1.0 sub-pattern (UNVERIFIED design — ProjectProteus #186 re-plan)
+
+> **Warning:** The following sub-pattern is from a re-planning session for ProjectProteus issue #186.
+> The offline-fixture test shape below is a DESIGN — it was NOT implemented or CI-run this session. It is
+> **unverified** until the PR lands and CI runs. The v2.0.0 core workflow above remains `verified-local`.
+
+8. **Reconcile the guard against the repo's anti-silent-failure POLICY before choosing a design.** A
+   live-`gh`-in-CI test that SKIPs (exit 0 + `::notice::`) when `gh` is unauthenticated is not merely a
+   weak guard — in a repo with a `forbid-suppressions` job (`.github/workflows/_required.yml:53-105`) and
+   a `docs/runbooks/no-silent-failures.md` runbook, it is a POLICY VIOLATION: a false-green no-op that
+   the reviewer NOGO'd on P1/KISS + P7/POLA grounds. The policy is the REASON to go fully offline, not
+   just a nicety. The CORRECT design is the committed-fixture invariant table above: deterministic, zero
+   network, fails loudly.
+
+9. **Mirror the PROPERTY of an existing repo test, not just its file location.** When you claim to
+   "mirror" an existing test, mirror its core property. The repo's `tests/dispatch-apply.test.sh` is
+   HERMETIC: it shims `curl`, uses a fake token, and hits no network. A live-`gh` test placed in the same
+   `tests/` dir INVERTS that property (network-dependent, non-deterministic) — that is not mirroring, it
+   is a regression. Mirror hermetic/deterministic; embed the `EXPECTED` map as a committed fixture.
+
+10. **Ground-truth at AUTHORING time, not test time.** Build the `EXPECTED` map by running `gh issue view`
+    on every referenced issue WHILE PLANNING (not in the test). For #186 this enumerated all 38 referenced
+    issues and surfaced TWO stale entries (#92, #100) that the issue body never mentioned — exactly the
+    drift a body-trusting plan would have missed. The committed map is a snapshot; the test reads no network.
+
+11. **Mitigate snapshot staleness with a `# RE-VERIFY:` comment + the same-PR rule.** Annotate the fixture
+    with `# RE-VERIFY: ran gh issue view <YYYY-MM-DD>` and enforce the rule "**the fixture and the doc change
+    land in the SAME PR**". This bounds the window in which a reopened issue (e.g. a `[x]` issue that gets
+    reopened) can desync the snapshot from reality.
+
+12. **Tick Wave-3 / PR-GROUP lines only when EVERY issue on the line is CLOSED.** PR-group lines are
+    group-scoped, not per-issue: a group box stays `[ ]` until ALL of its bundled issues are CLOSED. For
+    #186 the groups with open children (#98 / #101 / #103) must stay unticked — ticking on the first child
+    closing is a false-checked violation.
+
+13. **PROVE the guard is not a no-op (runnable temp-tree proof).** A reviewer will (rightly) reject a
+    verification step that merely SAYS "point the test at `$tmp`" without doing it. Actually copy the test
+    into a throwaway tree so its `$0`-relative `REPO_ROOT` retargets, mutate a checkbox to introduce drift,
+    run it, and ASSERT a nonzero exit:
+
+    ```bash
+    work="$(mktemp -d)"
+    mkdir -p "$work/tests" "$work/docs/audit-2026-04-28"
+    cp tests/check-remediation-checkboxes.sh "$work/tests/"      # $0-relative REPO_ROOT now points at $work
+    cp docs/audit-2026-04-28/remediation-plan.md "$work/docs/audit-2026-04-28/"
+    # Introduce drift: flip a known-CLOSED issue's box from [x] to [ ]
+    sed -i 's/- \[x\] #84/- [ ] #84/' "$work/docs/audit-2026-04-28/remediation-plan.md"
+    if ( cd "$work" && bash tests/check-remediation-checkboxes.sh ); then
+      echo "PROOF FAILED: guard passed on drifted doc -> it is a no-op"; exit 1
+    else
+      echo "PROOF OK: guard exited nonzero on drift -> not a no-op"
+    fi
+    rm -rf "$work"
+    ```
 
 ```bash
 #!/usr/bin/env bash
@@ -173,6 +231,12 @@ echo "PASS: all tracked lines match the invariant table"
 | Treat the invariant table as freshness against GitHub | Assumed a passing EXPECT-table test means the doc matches live issue state | The table is HAND-MAINTAINED: it enforces file-vs-table consistency, NOT file-vs-live-GitHub. If a human flips neither the checkbox nor the table entry when an issue closes, the test passes but the doc is stale | Be honest: this guard trades freshness-detection for determinism. Add a SEPARATE non-required tokened nightly job to diff the table against live `gh` and open an issue on drift (future enhancement, not part of this required guard) |
 | Assume keys are always unique | Keyed each line by its leading token without checking for collisions | If two lines share a leading token (two `PR-C` rows, or one `#NNN` leading two lines) the SEEN/table mapping collapses — last write wins, coverage is lost silently | Verify keys are distinct for the target file (25 distinct keys here). It is a structural assumption; a duplicate-key pre-check would harden it |
 | Cite the justfile wire-in point by line number | Referenced `justfile:73` / `:76` for the `check` recipe | Line numbers are read live but drift on any edit above them | Cite the recipe NAME (`check`) and grep for it; never hard-code a line number |
+| Live-`gh issue view` in a REQUIRED CI test that skips on unauth (#186) | Required test ran `gh issue view <n>` and exited 0 (`::notice::`) when `gh` was unauthenticated | False-green no-op AND a policy violation: the repo's `forbid-suppressions` job (`_required.yml:53-105`) + `no-silent-failures` runbook ban skip-on-error; reviewer NOGO'd on P1/KISS + P7/POLA | Use an offline committed fixture asserted against the doc; verify GitHub state at AUTHORING time, not test time. Reconcile the design with the repo's anti-silent-failure policy BEFORE choosing it |
+| Claimed to "mirror" the repo's existing test but inverted its core property (#186) | Said the new live-`gh` test "mirrors" `tests/dispatch-apply.test.sh` because both live in `tests/` | `dispatch-apply.test.sh` is HERMETIC (shims `curl`, fake token, no network); the live-`gh` test was network-dependent — the opposite property | Mirror the PROPERTY (hermetic/deterministic), not just the file location. Shim/embed; never reach the network in a required test |
+| 41 network calls to verify a static doc fact (#186) | Designed the guard to make ~one `gh` call per checkbox at test time | Slow, rate-limit-prone, non-deterministic, and pointless: the fact being asserted is static and committed | A doc-vs-fixture string assertion needs ZERO network. Do the live lookups once at authoring time to build the fixture |
+| Trusted the issue body's stale-entry list (#186) | Accepted #186's body as the complete list of stale checkboxes | The body omitted #92 and #100 — two stale entries it never mentioned | Enumerate EVERY checkbox and ground-truth each during planning; the body is a self-report, not an index |
+| Treated Wave-3 PR-group lines as per-issue (#186) | Would tick a group box when any one bundled child closed | Groups with open children (#98 / #101 / #103) would be falsely checked | Tick a group line only when ALL of its issues are CLOSED — PR-group lines are group-scoped |
+| Verification step that says "point the test at `$tmp`" without doing it (#186) | Wrote a verification step describing the temp-tree proof but never executed it | Unexecuted hand-wave; the reviewer flagged it as no evidence the guard isn't a no-op | Actually copy the test into `$work/tests/` so its `$0`-relative `REPO_ROOT` retargets the temp tree, introduce drift, run it, and assert a NONZERO exit |
 
 ## Results & Parameters
 
@@ -214,3 +278,4 @@ non-required tokened nightly drift job for that).
 | Project | Context |
 |---------|---------|
 | ProjectProteus | issue #183 remediation-plan checkbox guard, R1 re-plan. Replaced the R0 live-`gh` guard (NOGO: offline-SKIP gave zero CI protection; committed artifact failed its own test) with a committed-fixture invariant table. Embedded test logic executed locally: PASS on a matching fixture, FAIL on drift / new-line / deleted-line fixtures as designed. Consuming-repo CI not run — `verified-local` |
+| ProjectProteus | issue #186 re-plan (v2.1.0 sub-pattern). First plan NOGO'd for a live-`gh` skip-on-unauth required test (false-green no-op; violates `forbid-suppressions` (`_required.yml:53-105`) + `no-silent-failures` runbook; P1/P7). Re-plan: offline committed `EXPECTED` fixture mirroring the hermetic `tests/dispatch-apply.test.sh`, ground-truthed at authoring time (38 issues; surfaced stale #92/#100), `# RE-VERIFY:` same-PR rule, PR-group ticking only when all issues CLOSED, plus a runnable temp-tree not-a-no-op proof. **Unverified** — the offline test was a DESIGN, not implemented or CI-run this session |

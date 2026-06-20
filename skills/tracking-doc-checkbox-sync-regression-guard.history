@@ -1,5 +1,79 @@
 # tracking-doc-checkbox-sync-regression-guard — History
 
+## v2.1.0 (2026-06-20)
+
+**Changed by:** ProjectProteus issue #186, a RE-PLANNING session. The first plan
+got a NOGO; this entry captures the durable regression-guard learnings of the
+re-plan. This is a planning session — the offline-fixture test was NOT implemented
+or CI-run.
+**Verification:** unverified for the v2.1.0 additions (a design from a re-planning
+session; the offline-fixture test shape is unverified until the PR lands and CI runs).
+The v2.0.0 core workflow remains `verified-local`; the skill frontmatter `verification`
+field is intentionally NOT raised, and the new content is labelled unverified inline.
+
+### What changed (MINOR — additive sub-pattern, no core-workflow change)
+
+- **Policy reconciliation as the REASON to go offline.** Added the explicit anti-pattern:
+  a live-`gh`-in-CI test that SKIPs (exit 0) when `gh` is unauthenticated is a FALSE-GREEN
+  no-op AND a violation of the repo's anti-silent-failure policy — the `forbid-suppressions`
+  job at `.github/workflows/_required.yml:53-105` plus `docs/runbooks/no-silent-failures.md`.
+  The reviewer NOGO'd it on P1/KISS + P7/POLA.
+- **Mirror-the-PROPERTY rule.** Added the precedent of the repo's existing HERMETIC test
+  `tests/dispatch-apply.test.sh` (shims `curl`, fake token, no network) as the model to
+  mirror — mirror the hermetic/deterministic PROPERTY, not just the `tests/` file location.
+- **Ground-truth at AUTHORING time.** Reaffirmed building the `EXPECTED` map via
+  `gh issue view` while planning (not at test time); for #186 this enumerated 38 issues and
+  surfaced TWO stale entries (#92, #100) the issue body never mentioned.
+- **`# RE-VERIFY:` comment + same-PR rule** to bound snapshot staleness (e.g. a reopened issue):
+  fixture and doc change land in the SAME PR.
+- **PR-group-scoped ticking rule:** tick a Wave-3 / group box only when EVERY issue on the
+  line is CLOSED (groups with open children #98/#101/#103 stay unticked).
+- **Runnable "guard-is-not-a-no-op" temp-tree proof:** copy the test into `$work/tests/` so its
+  `$0`-relative `REPO_ROOT` retargets the temp tree, introduce drift, run it, assert nonzero exit.
+- **Six new Failed Attempts rows** (all tagged #186): live-`gh` skip-on-unauth required test;
+  claimed-to-mirror-but-inverted-the-property; 41 network calls for a static fact; trusted the
+  issue body's stale-entry list (omitted #92/#100); treated PR-group lines as per-issue;
+  verification step that says "point the test at `$tmp`" without doing it.
+- Bumped version 2.0.0 -> 2.1.0; date 2026-06-20.
+
+### Why
+
+The v2.0.0 entry established the offline committed-fixture design as the answer to the
+live-`gh` NOGO. The #186 re-plan independently rediscovered the SAME core lesson and added
+the missing connective tissue: WHY offline is mandatory (the repo's `forbid-suppressions` /
+`no-silent-failures` policy, not just determinism), WHAT to mirror (the hermetic property of
+`dispatch-apply.test.sh`), and HOW to PROVE the guard is not a no-op (an actually-executed
+temp-tree drift proof, after a reviewer flagged an unexecuted hand-wave). These are additive,
+so MINOR — the core EXPECT-table workflow is unchanged.
+
+### Previous version (v2.0.0) snapshot
+
+<!-- The full v2.0.0 skill content is preserved below for auditability. -->
+
+```markdown
+---
+name: tracking-doc-checkbox-sync-regression-guard
+category: documentation
+date: 2026-06-20
+version: "2.0.0"
+verification: verified-local
+---
+
+# Tracking-Doc Checkbox Sync + Regression Guard
+
+(See git history at commit 444c6f94 for the full verbatim v2.0.0 body. Summary:
+verified-local committed-fixture invariant-table guard for #183 R1: embed
+`declare -A EXPECT`, key each line by its stable primary token, diff actual vs
+expected checkbox char, add SEEN-set bidirectional coverage with a `__MISSING__`
+sentinel, constrain the checkbox regex, wire into the justfile `check` recipe by
+name. Failed Attempts covered: live-`gh` skip-to-no-op guard (demoted),
+scan-every-#NNN bundle mis-fire, positional snapshot, trusting the issue body's
+grouping, treating the table as live freshness, assuming unique keys, and citing
+the justfile by line number.)
+```
+
+---
+
 ## v2.0.0 (2026-06-20)
 
 **Changed by:** ProjectProteus issue #183, R1 (re-plan) iteration. The R0 plan
