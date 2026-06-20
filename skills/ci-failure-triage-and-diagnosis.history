@@ -1,5 +1,48 @@
 # ci-failure-triage-and-diagnosis — History
 
+## v1.1.0 (2026-06-20) — Add "read the failing log first" triage discipline
+
+**Changed by:** Learn workflow, Odysseus issue #252 re-plan session
+**Verification:** verified-local (triage commands run live against ProjectOdyssey run 25217481782)
+
+### What changed
+
+Minor amendment capturing a PLANNING/TRIAGE discipline learned while re-planning a fix for Odysseus issue #252 ("validate-configs fails in CI, passes locally"). The first plan was NOGO'd (grade D) for hypothesizing a root cause from the recipe's internals WITHOUT reading the actual failing CI log. The real cause — visible only via `gh run view --job=<id> --log-failed` — was `just: command not found` / exit 127: the recipe never ran. The failure was furthermore ALREADY FIXED on main by PR #254 (commit 5a996cb, "fix(ci): install just in build"); the latest three `_required.yml` runs on main were all green.
+
+- Added a `## Verified Workflow` **PHASE 0** Quick Reference block: fetch the failing-step log, note action versions, check whether the fix already landed on main, before proposing any fix.
+- Added **Step 0 — Triage discipline** under Detailed Steps.
+- Added three new **When to Use** triggers (write-a-plan-before-reading-the-log; "no output via API" claim; not-yet-checked-if-fixed-on-main).
+- Added four **Failed Attempts** rows (hypothesize-from-internals; trust-the-"no-API-output"-claim; propose-without-checking-main; cite-a-tool-not-in-the-env).
+- Added a **Most Uncertain Assumptions** subsection surfacing that the downstream Odysseus pixi-yamllint hardening is a *proposal* (unverified), distinct from the verified-local triage discipline.
+- Added an Odysseus #252 **Verified On** row.
+- Bumped version 1.0.0 → 1.1.0; updated frontmatter `date` to 2026-06-20. All prior content kept intact.
+
+### Snapshot of previous version (v1.0.0)
+
+```markdown
+---
+name: ci-failure-triage-and-diagnosis
+description: "Canonical workflow for triaging CI failures: log analysis, core dump capture, subprocess hang diagnosis, container forensics, libKGEN/JIT crash retrieval, GHA-only vs cross-environment failures, PR-specific vs systemic failure separation. Use when: (1) a CI run failed and you need to identify the root cause, (2) deciding whether a failure is PR-induced or pre-existing, (3) capturing core dumps from container environments, (4) reproducing a GHA-only crash locally, (5) GraphQL/REST rate-limited CI monitoring."
+category: ci-cd
+date: 2026-05-18
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+history: ci-failure-triage-and-diagnosis.history
+tags: [merged, ci-failure, triage, log-analysis, core-dump, forensics, coredump, gdb, podman, mojo, libkgen, github-actions, rate-limit, subprocess, signal, avx-512, cpu-survey, workflow-dispatch]
+---
+
+# CI Failure Triage and Diagnosis
+
+(Full prior body preserved in git history at the parent commit of this amendment;
+the v1.0.0 frontmatter and section structure are reproduced above. The body — Overview,
+When to Use, Verified Workflow (8 phases + 7 detailed steps), Failed Attempts (16 rows),
+Results & Parameters, Verified On, References — was carried forward unmodified except for
+the additive changes listed under "What changed".)
+```
+
+---
+
 ## v1.0.0 (2026-05-18) — Merge of 14 skills
 
 **Changed by:** Skill-merge swarm (Phase B Wave 1, M5 / #1779)

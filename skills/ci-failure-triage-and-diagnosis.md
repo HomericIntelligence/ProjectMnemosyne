@@ -2,8 +2,8 @@
 name: ci-failure-triage-and-diagnosis
 description: "Canonical workflow for triaging CI failures: log analysis, core dump capture, subprocess hang diagnosis, container forensics, libKGEN/JIT crash retrieval, GHA-only vs cross-environment failures, PR-specific vs systemic failure separation. Use when: (1) a CI run failed and you need to identify the root cause, (2) deciding whether a failure is PR-induced or pre-existing, (3) capturing core dumps from container environments, (4) reproducing a GHA-only crash locally, (5) GraphQL/REST rate-limited CI monitoring."
 category: ci-cd
-date: 2026-05-18
-version: "1.0.0"
+date: 2026-06-20
+version: "1.1.0"
 user-invocable: false
 verification: verified-local
 history: ci-failure-triage-and-diagnosis.history
@@ -31,12 +31,31 @@ tags: [merged, ci-failure, triage, log-analysis, core-dump, forensics, coredump,
 - GitHub API 403 rate-limit errors during batch CI diagnostic loops
 - Debug CI instrumentation (gdb, coredump capture) is slowing every PR run and you need an opt-in gate
 - pixi.lock stale across multiple PR branches
+- You are writing an implementation plan / fix for a reported CI failure and have NOT yet fetched the actual failing-step log — STOP and fetch it first (`gh run view --job=<id> --log-failed`) before forming any root-cause hypothesis
+- An issue reports a CI failure with a run ID/URL and says "no detailed error output available via API" — the per-step log IS still retrievable; the issue author simply did not fetch it
+- Before proposing any CI fix, you have not yet checked whether the reported failure was already resolved by a later commit/PR on main
 
 ## Verified Workflow
 
 ### Quick Reference
 
 ```bash
+# ── PHASE 0: BEFORE writing any plan/fix — read the ACTUAL failing log ──
+#    (verified-local against ProjectOdyssey run 25217481782, issue #252)
+# 0a. List jobs/steps; the failing step shows an X
+gh run view <RUN_ID> --repo <org>/<repo>
+# 0b. Pull the ACTUAL failing-step log — works even when the issue claims "no output via API"
+gh run view --job=<JOB_ID> --repo <org>/<repo> --log-failed \
+  | grep -iE "command not found|exit code|error|traceback" | head
+# 0c. Note action VERSIONS in the failing log (e.g. setup-pixi@v0.8.1). A stale version
+#     proves the workflow changed since the run — the fix may already exist on main.
+# 0d. Check whether the fix already landed on main BEFORE proposing anything:
+git log -S "<the fix string, e.g. Install just>" --oneline -- .github/workflows/<file>
+gh run list --repo <org>/<repo> --workflow=<file> --branch main --limit 3 \
+  --json conclusion --jq '.[].conclusion'   # all "success" => already fixed; document, don't re-fix
+# exit 127 / "command not found" => the recipe NEVER RAN (missing tool/interpreter on PATH),
+# the failure is BEFORE the recipe body — not inside it.
+
 # ── PHASE 1: Is main broken? Check BEFORE rebasing any downstream PR ──
 gh run list --branch main --limit 5 --json conclusion,status,name,createdAt
 # If "Build and Test" or "Static Analysis" show conclusion=failure → fix main FIRST
@@ -95,6 +114,23 @@ gh run list --branch <branch> --json databaseId,conclusion \
 ```
 
 ### Detailed Steps
+
+#### Step 0 — Triage discipline: read the failing log before forming a hypothesis (verified-local)
+
+When planning a fix for a *reported* CI failure (an issue links a run ID/URL), the FIRST action is to fetch the actual failing-step log — never hypothesize a root cause from the recipe's internals.
+
+1. `gh run view <RUN_ID> --repo <org>/<repo>` to find the failing job ID (failing step shows an X).
+2. `gh run view --job=<JOB_ID> --repo <org>/<repo> --log-failed` to pull the exact error line. This works even when the issue says "no detailed error output available via API" — that narration is not authoritative; the author simply did not fetch it.
+3. Read the error literally:
+   - `command not found` / exit code **127** → the recipe/tool **never ran**; the runner lacked the interpreter or tool on PATH (e.g. `just: command not found` because the job had no "Install just" step). This is a whole class of "fails in CI, passes locally" failures that have nothing to do with the recipe body. "Passes locally + recipe exits 0 locally" is a strong signal the failure happened **before** the recipe body executed.
+4. Reconcile the failing run's workflow snapshot against current main. The failing log captures the action **versions** in effect at run time (e.g. `setup-pixi@v0.8.1`); if current main pins a newer version (`v0.9.6`), the workflow changed since the run and the fix may already exist.
+5. Check whether the failure was already resolved on main BEFORE proposing a fix:
+   - `git log -S "<fix string>" --oneline -- .github/workflows/<file>` to find the landing commit/PR.
+   - `gh run list --workflow=<file> --branch main --limit 3 --json conclusion --jq '.[].conclusion'` — all `success` ⇒ already fixed.
+   - An "investigate" issue can be legitimately resolved by DOCUMENTING that the failure is already fixed plus a minimal residual hardening — not by inventing a large fix.
+6. Any tool you cite in a `verification:` block must actually exist in the repo's env. Grep the dependency manifest first (`pixi.toml`, `pyproject.toml`) and mirror how the repo's own jobs invoke it — e.g. do not write `pixi run check-jsonschema` if `check-jsonschema` is installed via pip in the schema-validation job rather than declared in `pixi.toml`.
+
+> Verification note: the triage commands in this step (`gh run view --log-failed`, `git log -S`, `gh run list --branch main`) are **verified-local** — run live against ProjectOdyssey run 25217481782 (issue #252) this session. The downstream Odysseus hardening they informed (sourcing yamllint from pixi) is a **proposal**, not yet applied or CI-verified.
 
 #### Step 1 — Pre-flight: Is main broken?
 
@@ -353,6 +389,10 @@ Key invariants:
 | `as_completed()` + `future.result()` for parallel subprocess wait | Standard concurrent.futures pattern | Blocks indefinitely when no future completes; main thread never checks shutdown flag | Use `wait(timeout=2.0, return_when=FIRST_COMPLETED)` to poll with interruptibility windows |
 | Gate debug CI instrumentation at step level with `if:` | Added `if: github.event_name == 'workflow_dispatch' && inputs.X` to each gdb step | Duplicates logic per job; cannot toggle env-var-driven behavior inside a step that always runs | Gate at job-level `env:` — the env var propagates to all steps including container exec |
 | Default debug gate to `true` for safety during libKGEN investigation | Kept default `true` so cores still captured during investigation | Every PR pays the gdb cost; defeats the opt-in purpose | Debug gates must be `default: false`; dispatch manually when cores needed |
+| Hypothesized root cause from the recipe internals without reading the failing log | Wrote a full plan blaming unpinned yamllint + a silent-no-op `yamllint configs/` | The recipe never ran — real error was `just: command not found` / exit 127, visible only in the per-step log; plan got NOGO grade D | ALWAYS `gh run view --job=<id> --log-failed` BEFORE forming a root-cause hypothesis |
+| Trusted the issue's claim that "no detailed error output is available via API" | Skipped log retrieval because the issue said the log was unavailable | `--log-failed` returned the exact error line; the issue author simply hadn't fetched it | Issue narration about missing logs is not authoritative — try `gh run view --log-failed` yourself |
+| Proposed a fix without checking if the failure was already resolved on main | Planned recipe changes for an already-green build job | PR #254 had already added the missing `Install just` step; latest main runs were all green | Before any CI fix: `git log -S` for the fix + `gh run list --branch main` to confirm current status |
+| Cited a verification tool not in the repo env | `pixi run check-jsonschema` in the verification block | `check-jsonschema` absent from `pixi.toml`; the schema-validation job installs it via pip, so the command would itself fail | Grep the dependency manifest before putting a tool in a verification command; mirror how the repo's own jobs invoke it |
 
 ## Results & Parameters
 
@@ -400,6 +440,14 @@ systemd-coredump: stopped      # must stop both systemd-coredump.socket and appo
 
 Always emit metadata + symbols even when no cores exist (signals that capture ran vs capture broken).
 
+### Most Uncertain Assumptions (reviewer focus for the Odysseus #252 hardening proposal)
+
+These are unverified at plan time — flagged so a reviewer reuses the TRIAGE discipline (verified-local) without inheriting the unverified downstream fix as fact:
+
+- `yamllint >=1.35,<2` resolving on conda-forge `linux-64` is NOT yet run (gated behind `pixi install` with a `yamllint = "*"` fallback; resolution unconfirmed).
+- Removing the `pip install yamllint` CI step is safe ONLY if `pixi.lock` is correctly regenerated and committed; if the lock is not updated, `pixi run yamllint` hard-breaks the currently-green build job — a self-inflicted regression risk.
+- The local verification of `pixi run yamllint` used an ambient yamllint 1.38.0 from an unrelated active env (Hephaestus), NOT the Odysseus pixi env, so the "verified" tool behavior is partly ambient.
+
 ### CPU Survey Table Format
 
 ```text
@@ -418,6 +466,7 @@ Always emit metadata + symbols even when no cores exist (signals that capture ra
 | ProjectScylla | PR #1515 — E2E runner hang and signal handling | 6 signal/hang bugs fixed, 4924 tests pass, 77.74% coverage; verified-ci |
 | AchaeanFleet | Batch investigation of 13 open PRs, 2026-04-24 | Rate limit exhaustion observed; bulk endpoint patterns verified |
 | HomericIntelligence ecosystem | All 14 repos triaged, 2026-05-01; ProjectMnemosyne 5 unrelated PRs with identical lint failure, 2026-05-18 | Broken-main pattern, transient-vs-reproducible triage, fix-at-root vs per-PR suppression |
+| Odysseus | Issue #252 ("validate-configs fails in CI, passes locally"), run 25217481782, 2026-06-20 | Step 0 triage discipline (verified-local): `--log-failed` surfaced `just: command not found`/exit 127; `git log -S "Install just"` + `gh run list --branch main` confirmed PR #254 had already fixed it. Downstream pixi-yamllint hardening is a proposal, not yet CI-verified. |
 
 ## References
 
