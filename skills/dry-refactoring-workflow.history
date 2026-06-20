@@ -1,6 +1,68 @@
 <!-- markdownlint-disable MD024 -->
 # dry-refactoring-workflow — History
 
+## v1.9.0 (2026-06-20)
+
+**Changed by:** ProjectHephaestus issue #1383 planning — /learn
+**Verification:** unverified (for the new Phase 14; the rest of the skill remains verified-ci)
+
+### What changed
+
+- Added Phase 14 (PLANNING-ONLY, **unverified**) — planning a behavior-preserving
+  method→free-function extraction when the duplicated method is a patched test seam.
+  Five sub-sections:
+  - 14a: Patch-by-name test seams force you to KEEP the method as a thin wrapper, not delete
+    it. Grep `patch.object(.*"_method"` before planning the deletion.
+  - 14b: "Near-identical" methods differ in non-asserted ways (log level, extra debug line,
+    exception wording) — read the actual test bodies to confirm which diffs are
+    behavior-bearing vs incidental before collapsing.
+  - 14c: Reuse the target module's established convention (free function with explicit args,
+    not a mixin/base-class method) — grep its existing helpers first.
+  - 14d: Hedge unverified import/boundary assumptions a planner did not execute (Path import
+    present?, existing `from ._review_utils import ...` line to extend?, automation→library
+    runtime import safe with no cycle?, new helper absent from base `import hephaestus`
+    surface?).
+  - 14e: Verification-by-criterion for a pure extraction — single-canonical-source grep that
+    must return exactly one hit, plus the PRE-EXISTING per-class behavioral suites staying
+    green as the real acceptance gate.
+- Added 5 Failed Attempts rows (delete-the-patched-seam, collapse-logging-without-checking-tests,
+  invent-new-sharing-mechanism, assert-un-run-imports-as-true, accept-structural-tests-as-proof).
+- Added a Verified On entry for ProjectHephaestus #1383 (planning only, unverified).
+- Added trigger phrases and tags (`patched-test-seam`, `thin-wrapper`,
+  `free-function-extraction`, `automation-library-boundary`).
+- Bumped frontmatter `version` to 1.9.0 (date stays 2026-06-20); frontmatter `verification`
+  stays `verified-ci` because the bulk of the skill is still CI-verified, but Phase 14 carries
+  its own inline unverified warning (like Phases 10 and 13).
+
+### Why
+
+ProjectHephaestus issue #1383 produced an IMPLEMENTATION PLAN (no code written, no tests run,
+no CI) to DRY-extract a duplicated `_load_impl_session_id` method (on `CIDriver` and
+`AddressReviewer`) into a shared free function
+`load_impl_session_id(state_dir, issue_number, agent)` in `hephaestus/automation/_review_utils.py`.
+The durable, reusable PLANNING insights — preserve patched test seams via thin wrappers,
+distinguish behavior-bearing from incidental "near-identical" diffs by reading the tests, match
+the target module's free-function convention, hedge un-run import/boundary assumptions, and prove
+a pure extraction with a single-hit grep plus the EXISTING behavioral suites — were not yet
+captured. This landed alongside the sibling #1381 v1.8.0/Phase 13 (stale-count claims) the same
+day; #1383 became v1.9.0/Phase 14 to avoid clobbering #1381's content. Because the session was
+planning-only, Phase 14 is marked unverified.
+
+### Previous version (v1.8.0) snapshot
+
+````markdown
+---
+name: dry-refactoring-workflow
+description: "Complete TDD-driven workflow for identifying and eliminating code duplication by extracting reusable helper methods. Use when: (1) ... (13) PLANNING an extraction whose issue claims 'N nearly-identical, M byte-for-byte identical' methods: the COUNT and 'byte-for-byte identical' assertions go STALE exactly like the 'Evidence:' section — count and DIFF every claimed-duplicate body in full before scoping; ... parameterize those as kwargs-with-defaults to guarantee zero behavior change, and place the helper in an EXISTING established-dedup module rather than a new leaf module or base-class method."
+category: architecture
+date: 2026-06-20
+version: "1.8.0"
+user-invocable: false
+verification: verified-ci
+history: dry-refactoring-workflow.history
+---
+````
+
 ## v1.8.0 (2026-06-20)
 
 **Changed by:** ProjectHephaestus #1381 — PLANNING "Extract shared print_worker_summary helper"
