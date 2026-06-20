@@ -123,7 +123,7 @@ git grep -n 'check_field_length' src/routes.cpp   # re-find by string at edit ti
 
 5. **For security-critical compares, preserve the exact rejection semantics.** Changing
    `key == expected` into `set.count(key)` is a behavioral change at a security boundary. Pin
-   down: empty `Bearer ` must still reject; empty `X-API-Key` must still reject. The mechanism
+   down: empty `Bearer` must still reject; empty `X-API-Key` must still reject. The mechanism
    that guarantees this — **never insert empty/whitespace strings into the set, so `count("")==0`**
    — must be an explicit, tested invariant, not an emergent accident.
 
@@ -197,7 +197,7 @@ git grep -n 'check_field_length' src/routes.cpp   # re-find by string at edit ti
 | Dead-code claim from source grep | Asserted `validate_api_key` in `src/auth_middleware.hpp` is dead code ("zero callers") from a single source grep excluding `.claude/` | A source `#include` grep cannot see a standalone translation unit listed in a CMake target; the file was never confirmed absent from any build target or include list | When proposing to DELETE a file, grep the BUILD SYSTEM (`CMakeLists.txt`, `*.cmake`) too — empty source-callers does not prove "unreferenced" |
 | Exact line numbers as ground truth | Cited `src/auth.cpp:20/29/35`, `src/server_main.cpp:114-119`, `docs/api/openapi.yaml:885-895`, `test/src/test_auth.cpp:114` as fixed locations | Line numbers were read at plan time and drift as the tree changes; an implementer trusting them edits the wrong line | Label all `file:line` citations as plan-time snapshots; re-resolve each by symbol/string search at edit time |
 | Doc edit without reading the block | Cited `openapi.yaml`/`README.md` line ranges to insert a sentence, but read only the range, not the surrounding prose | Inserted wording may not match the existing voice/format of the doc block | Read the full surrounding paragraph before drafting an inserted doc sentence |
-| `==` → set membership without pinning rejection | Replaced a single `==` key compare with `set.count(key)` for multi-key support | At a security boundary this can silently accept an empty `Bearer ` / empty `X-API-Key` if an empty string ever enters the set | Make "never insert empty/whitespace into the set so `count(\"\")==0`" an explicit tested invariant; keep empty-credential rejection tests |
+| `==` → set membership without pinning rejection | Replaced a single `==` key compare with `set.count(key)` for multi-key support | At a security boundary this can silently accept an empty `Bearer` / empty `X-API-Key` if an empty string ever enters the set | Make "never insert empty/whitespace into the set so `count(\"\")==0`" an explicit tested invariant; keep empty-credential rejection tests |
 | Relaxed fail-secure with no abort test | Allowed startup with only the new `AGAMEMNON_API_KEYS` (relaxing "abort unless `AGAMEMNON_API_KEY` set") and added no negative test | An all-empty/whitespace `AGAMEMNON_API_KEYS` yields an empty accepted set and could let the server start insecurely | When relaxing a fail-secure rule, always add the negative/abort test for the degenerate (all-empty) input |
 | Independent dead-code-removal commit | Split into core / docs / dead-code-removal so the deletion could merge on its own | If a hidden build reference exists, the deletion commit breaks the build independently of the rest | Order/scope multi-commit splits so no single commit can break the build; gate deletion on the build-grep being empty |
 | Applied skills/APIs by description only | Used team-KB skills (`config-env-double-underscore-nesting`, `backward-compat-removal`) from their summary, and assumed `std::getline`/`std::isspace`/httplib header API behavior without compiling | Description-level use and uncompiled stdlib/library assumptions are unverified; behavior may differ | Read skill bodies and compile/verify stdlib + library assumptions, or explicitly flag each as unverified in the plan body |
@@ -232,7 +232,7 @@ if (valid_keys.empty()) abort_startup();               // fail-secure: all-empty
 
 **Reviewer focus checklist (copy into the PR description):**
 
-- [ ] Empty `Bearer ` and empty `X-API-Key` are still REJECTED (no empty string ever enters the set).
+- [ ] Empty `Bearer` and empty `X-API-Key` are still REJECTED (no empty string ever enters the set).
 - [ ] All-empty / all-whitespace `AGAMEMNON_API_KEYS` still ABORTS startup (fail-secure preserved).
 - [ ] Relaxation of the startup rule (start with only `*_KEYS`) is confirmed intentional.
 - [ ] Any deleted "dead code" verified absent from CMake/build targets, not just source includes.

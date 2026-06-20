@@ -148,8 +148,8 @@ groups:
 
 The most uncertain parts of this plan, listed verbatim:
 
-* The specific numeric targets (50ms, 99.5%, 100 tasks/min, 5s) are INVENTED placeholders, not derived from measured baselines or stakeholder agreement.
-* The Prometheus metric NAMES (nats_event_duration_seconds, agamemnon_tasks_total, nats_reconnect_duration_seconds) are ASSUMED — they were not verified to exist in ProjectArgus/Agamemnon/Hermes; the actual emitted metric names were never grepped in those submodules.
-* The claim "ProjectArgus owns the Prometheus rule files" and the file location for slo_alerts.yml in Argus were NOT verified against the Argus repo layout.
-* `docs/architecture.md:167-178` line numbers and `docs/adr/README.md:13-20` table bounds are point-in-time and may drift.
-* promtool was assumed available for validation but never confirmed installed.
+- The specific numeric targets (50ms, 99.5%, 100 tasks/min, 5s) are INVENTED placeholders, not derived from measured baselines or stakeholder agreement.
+- The Prometheus metric NAMES (nats_event_duration_seconds, agamemnon_tasks_total, nats_reconnect_duration_seconds) are ASSUMED — they were not verified to exist in ProjectArgus/Agamemnon/Hermes; the actual emitted metric names were never grepped in those submodules.
+- The claim "ProjectArgus owns the Prometheus rule files" and the file location for slo_alerts.yml in Argus were NOT verified against the Argus repo layout.
+- `docs/architecture.md:167-178` line numbers and `docs/adr/README.md:13-20` table bounds are point-in-time and may drift.
+- promtool was assumed available for validation but never confirmed installed.

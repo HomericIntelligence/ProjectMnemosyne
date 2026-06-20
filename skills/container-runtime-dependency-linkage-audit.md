@@ -40,7 +40,7 @@ tags:
 ## Verified Workflow
 
 > **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms. The originating plan (ProjectAgamemnon #279) was produced from static source reading only — no build, no `ldd`, no image build was ever run.
-
+>
 > **Heading note:** The repository validator (`scripts/validate_plugins.py`) hard-requires the literal section string `## Verified Workflow`, so the canonical steps are emitted under that heading to keep validation green. This skill is a PLANNING methodology captured at `unverified` level. Read every step below as **proposed**, per the warning above.
 
 ### Quick Reference
