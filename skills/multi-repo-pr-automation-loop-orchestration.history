@@ -2,6 +2,68 @@
 
 # History: multi-repo-pr-automation-loop-orchestration
 
+## v1.4.0 (2026-06-20)
+
+**Changed by:** Odysseus #299 R1 re-plan session — a SECOND-iteration planning learning. The same plan
+(closing out the stale completed-sweep report) got a NOGO from the plan reviewer; the revision is the
+durable learning: the report's ROOT-CAUSE diagnosis for the one real-fix PR was not just stale but flat
+WRONG, and live verification (branch files at the PR ref + the latest failing CI log) proved it.
+**Verification:** verified-local for the DIAGNOSIS techniques (the Keystone #568 failing run
+`27831294048 --log-failed` was read; `docker-compose.yml`/`action.yml`/`podman-version.env` were read at
+`ref=501-impl`; the Scylla ruleset `required_approving_review_count` was queried). The specific Keystone
+FIX VALUE — the replacement podman apt version — is UNVERIFIED (deferred to an implementer running
+`apt-cache madison podman`); Dependabot rebase mechanics remain untested.
+
+### What changed
+
+- Added description trigger (11) and four "## When to Use" triggers for: trusting a stale report's ROOT
+  CAUSE on a still-failing PR; asserting a scope reduction without a per-PR state loop; inferring a
+  required-review gate from a commit title.
+- Extended the "Planning against a STALE completed-sweep / status-report issue" subsection with three new
+  steps (6: the root cause can be WRONG not merely stale — read file@ref AND `gh run view --log-failed`,
+  with the Keystone #568 worked example; 7: lock scope reductions with a per-PR `gh pr view --json state`
+  loop; 8: confirm review gates against the live `required_pull_request_reviews`).
+- Rewrote the "Known gaps" note to show R1's three gaps and how R2 closed two (Keystone diagnosis, Scylla
+  ruleset) and left one open (Dependabot rebase).
+- Added 3 Failed-Attempts rows (trust stale root cause on a still-failing PR; assert scope reduction without
+  a state check; infer a review gate from a commit title).
+- Added a "Verified On" row for the Odysseus #299 R1 re-plan hardening.
+- Updated the Overview Outcome + Verification rows; added 5 tags; bumped version 1.3.0 → 1.4.0 (minor:
+  new triggers + new failed attempts + extended workflow, same core re-verify-before-trusting recommendation).
+
+### Why
+
+v1.3.0 already said "re-verify a stale report's root cause at live HEAD before planning a fix," but its
+checks targeted causes that had *gone away* (fix already landed, file removed, version bumped). The R1
+re-plan of Odysseus #299 hit a stronger failure: a report can be RIGHT that a PR is red and WRONG about WHY.
+Keystone #568 was genuinely failing, so R1 trusted the report's "empty-envvar container name → populate the
+envvars in `_required.yml`" diagnosis and wrote that fix. Reading the branch disproved it — `container_name`
+is a static literal and the envvars were already exported — and the live failing log showed the real cause
+was an unavailable pinned podman apt version (`action.yml:97` / `podman-version.env:1`). The sharper rule:
+before targeting a report-named file/line, READ that file at the PR's ref AND pull the latest failing CI log;
+a still-failing PR is not evidence the report's causal claim holds. The reviewer additionally forced two
+verification disciplines worth recording: lock a scope-reduction claim with a runnable per-PR state loop
+(16 PRs confirmed MERGED), and confirm a review gate against the target repo's LIVE ruleset rather than
+inferring it from a commit title (Scylla `required_approving_review_count = 1`).
+
+### Pre-amendment v1.3.0 body snapshot (stale-report subsection, before the wrong-root-cause hardening)
+
+> #### Planning against a STALE completed-sweep / status-report issue (re-verify before trusting)
+> The report-vs-live-state rule applies at PLAN time. A myrmidon "open-PR health + auto-fix sweep" issue is a
+> SNAPSHOT report; re-planning it weeks later, EVERY action item and root cause is suspect. The reusable
+> triage had FIVE steps: (1) `gh pr view <N> --json state,mergeStateStatus,statusCheckRollup` every flagged
+> PR — drop merged/closed; (2) classify each still-open BLOCKED PR by required-check state (0 failing AND 0
+> pending ⇒ approve+merge, not a CI fix); (3) verify a "stale lockfile/format-version" claim by decoding the
+> file and grepping; (4) confirm a prescribed file-removal hasn't already landed (404 ⇒ gone); (5) confirm a
+> root-cause workflow defect is gone by grepping live workflows at HEAD.
+> (At v1.3.0 this subsection had NO step 6/7/8: no "the root cause can be WRONG not merely stale — read
+> file@ref AND the failing CI log" rule with the Keystone #568 worked example, no scope-reduction per-PR
+> state-loop lock, and no live-ruleset required-review-gate check. The Known-gaps note recorded the Keystone
+> `_required.yml` env fix as an unverified hypothesis from the report — it had NOT yet been disproven by
+> reading the branch.)
+
+---
+
 ## v1.3.0 (2026-06-20)
 
 **Changed by:** Odysseus #299 re-plan session (re-planning a STALE completed-sweep "open-PR health + auto-fix" report 20 days after it was filed)

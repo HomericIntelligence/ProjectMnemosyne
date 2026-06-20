@@ -1,9 +1,9 @@
 ---
 name: multi-repo-pr-automation-loop-orchestration
-description: "Use when: (1) running an automation loop (drive-prs-green, hephaestus-automation-loop, loop_runner.py, ci_driver.py) across multiple repos and it skips PRs, reports success incorrectly, silently no-ops, or never arms auto-merge, (2) a multi-repo swarm is orchestrating PRs across 3+ HomericIntelligence repos with sequential-within-repo merge ordering, (3) an ecosystem-wide sweep implements every planned issue across all repos in parallel waves, (4) the automation driver logs success but live GitHub state shows open failing PRs — always cross-check live state per repo before reporting done, (5) a hephaestus automation loop deadlocks because the drive-green phase skips iterations or the implementer returns early before labeling with state:implementation-go, (6) an org-wide issue backlog across 10+ repos needs parallel implementation with one signed auto-merge PR per issue, (7) automated review-plan files (claude-review-fix-*.md) need to be bulk-processed across stale PR branches, (8) _wait_for_pr_terminal polls the full timeout on a BLOCKED PR — add early-exit guarded by both _failing_required_check_names and _pending_required_check_names, (9) PLANNING (not driving) against a STALE completed-sweep / status-report issue (a myrmidon sweep report listing 'flagged for human' PRs, dated weeks ago) — re-verify the LIVE state of every flagged item before trusting ANY action item, because most have already changed state (merged, fixed, or re-gated) and the report's stated root causes are stale, (10) classifying an open PR's mergeStateStatus=BLOCKED at PLAN time: BLOCKED with ZERO failing AND zero pending required checks ⇒ branch-protection / review gate ⇒ the action is approve+merge, NOT a CI fix; BLOCKED with failing/pending checks ⇒ real CI work"
+description: "Use when: (1) running an automation loop (drive-prs-green, hephaestus-automation-loop, loop_runner.py, ci_driver.py) across multiple repos and it skips PRs, reports success incorrectly, silently no-ops, or never arms auto-merge, (2) a multi-repo swarm is orchestrating PRs across 3+ HomericIntelligence repos with sequential-within-repo merge ordering, (3) an ecosystem-wide sweep implements every planned issue across all repos in parallel waves, (4) the automation driver logs success but live GitHub state shows open failing PRs — always cross-check live state per repo before reporting done, (5) a hephaestus automation loop deadlocks because the drive-green phase skips iterations or the implementer returns early before labeling with state:implementation-go, (6) an org-wide issue backlog across 10+ repos needs parallel implementation with one signed auto-merge PR per issue, (7) automated review-plan files (claude-review-fix-*.md) need to be bulk-processed across stale PR branches, (8) _wait_for_pr_terminal polls the full timeout on a BLOCKED PR — add early-exit guarded by both _failing_required_check_names and _pending_required_check_names, (9) PLANNING (not driving) against a STALE completed-sweep / status-report issue (a myrmidon sweep report listing 'flagged for human' PRs, dated weeks ago) — re-verify the LIVE state of every flagged item before trusting ANY action item, because most have already changed state (merged, fixed, or re-gated) and the report's stated root causes are stale, (10) classifying an open PR's mergeStateStatus=BLOCKED at PLAN time: BLOCKED with ZERO failing AND zero pending required checks ⇒ branch-protection / review gate ⇒ the action is approve+merge, NOT a CI fix; BLOCKED with failing/pending checks ⇒ real CI work, (11) a stale status/sweep report names a ROOT CAUSE for a still-failing PR (a specific file/line, an empty-envvar, a missing config) and prescribes a fix — the report's CAUSAL diagnosis can be flat WRONG, not merely outdated; before writing any fix that targets a report-named file/line, READ that file at the PR's ref AND pull the latest failing CI log (gh run view --log-failed), because the prescribed fix may already be in place and the real cause something else entirely; also: NEVER assert a scope reduction (these N already merged) without a runnable per-PR gh pr view --json state loop, and NEVER infer a required-review gate from a commit title — query the repo's live required_pull_request_reviews"
 category: ci-cd
 date: 2026-06-20
-version: "1.3.0"
+version: "1.4.0"
 user-invocable: false
 history: multi-repo-pr-automation-loop-orchestration.history
 tags:
@@ -37,6 +37,11 @@ tags:
   - branch-protection-review-gate
   - cheap-live-verification
   - re-verify-before-trusting
+  - wrong-root-cause-report
+  - read-file-at-ref
+  - read-failing-ci-log
+  - scope-reduction-lock
+  - required-review-gate-check
 ---
 
 # Multi-Repo PR Automation Loop and Swarm Orchestration
@@ -47,8 +52,8 @@ tags:
 | ------- | ------- |
 | **Date** | 2026-06-20 |
 | **Objective** | One canonical for driving PRs to green across many HomericIntelligence repos via an automation loop or a myrmidon swarm: make the driver report honestly (no silent no-op, wait for the real terminal state, gate "repo done" on live open-PR count), cross-check every run summary against live GitHub state before reporting success, unblock the loop-runner / implementer deadlocks (drive-green discovery + the `state:implementation-go` labeling deadlock), orchestrate parallel waves across 3+ repos with sequential-within-repo merge ordering, run ecosystem-wide and org-wide planned-issue sweeps, and bulk-process automated review-plan files across stale PR branches. |
-| **Outcome** | Driver hardened across five ProjectHephaestus releases (PRs #833/#837/#839 → #876 → #879 → #1090) from "lies success" → "honest reporting" → "waits for the real outcome" → "re-arms, survives concurrency, resolves conflicts, never self-inflicts a lint failure" → "BLOCKED early-exit (PR #1090 closes #1088)". Existing-PR labeling deadlock shipped fixed (PRs #1073/#1075/#1077/#1079). Report-vs-live-state protocol surfaced honesty gaps merged as PR #849. Swarm pattern merged 87 PRs across 8 repos and ran ecosystem sweeps (51+ PRs / 78 issues retired, 0 broken-main events). Org-wide planned-issue swarm piloted ~51 signed squash-auto-merge PRs across 5 repos (430 plan-carrying issues detected). Batch review-plan processing cleared 14 OPEN PRs in ~20-30 min. v1.3.0 extends report-vs-live-state to PLAN time: re-planning a 20-day-stale completed-sweep report (Odysseus #299) found ~13 "flagged for human" PRs mostly already merged and every surviving root cause stale — adding the stale-report re-verify pattern, a plan-time BLOCKED-zero-failures-vs-with-failures classification, and four cheap live-state verification commands. |
-| **Verification** | verified-ci |
+| **Outcome** | Driver hardened across five ProjectHephaestus releases (PRs #833/#837/#839 → #876 → #879 → #1090) from "lies success" → "honest reporting" → "waits for the real outcome" → "re-arms, survives concurrency, resolves conflicts, never self-inflicts a lint failure" → "BLOCKED early-exit (PR #1090 closes #1088)". Existing-PR labeling deadlock shipped fixed (PRs #1073/#1075/#1077/#1079). Report-vs-live-state protocol surfaced honesty gaps merged as PR #849. Swarm pattern merged 87 PRs across 8 repos and ran ecosystem sweeps (51+ PRs / 78 issues retired, 0 broken-main events). Org-wide planned-issue swarm piloted ~51 signed squash-auto-merge PRs across 5 repos (430 plan-carrying issues detected). Batch review-plan processing cleared 14 OPEN PRs in ~20-30 min. v1.3.0 extends report-vs-live-state to PLAN time: re-planning a 20-day-stale completed-sweep report (Odysseus #299) found ~13 "flagged for human" PRs mostly already merged and every surviving root cause stale — adding the stale-report re-verify pattern, a plan-time BLOCKED-zero-failures-vs-with-failures classification, and four cheap live-state verification commands. v1.4.0 sharpens that pattern after a reviewer NOGO on the R1 re-plan: a stale report's ROOT-CAUSE diagnosis can be not just outdated but actively WRONG — the Keystone #568 report blamed an empty-envvar container name and a `_required.yml` env fix that reading the branch DISPROVED (static `container_name`, envvars already set), while the live failing log showed the real cause was an unavailable pinned podman apt version (`action.yml:97` / `podman-version.env:1`); plus two reviewer-forced verification rules (lock scope reductions with a per-PR state loop; confirm review gates against the live ruleset). |
+| **Verification** | verified-ci (driver hardening); the v1.4.0 wrong-root-cause DIAGNOSIS techniques are verified-local (live failing CI log read + branch files read at ref + ruleset API queried), but the specific Keystone #568 FIX VALUE — the replacement podman version — is UNVERIFIED |
 
 ## When to Use
 
@@ -64,6 +69,9 @@ tags:
 - You are PLANNING (not driving) against a STALE completed-sweep / status-report issue — e.g. a myrmidon "open-PR health + auto-fix sweep" report, marked COMPLETED weeks ago, that lists ~13 "flagged for human" PRs. Do NOT trust the report's action items or root causes; re-verify the LIVE state of every flagged PR first.
 - The plan you are about to write classifies an open PR as `mergeStateStatus=BLOCKED` and you are tempted to prescribe a "CI fix" — first confirm whether BLOCKED is caused by failing/pending required checks (real CI work) or by a branch-protection / review gate with all required checks green (approve+merge, NOT a CI fix).
 - A report's stated root cause is a specific defect (a stale lockfile format version, a not-yet-removed file, a workflow `--tmpfs …:noexec` mount) — verify it still exists at the live HEAD/branch before planning a fix for it; the fix may have already landed.
+- A report names a ROOT CAUSE for a PR that is STILL failing and prescribes a fix targeting a specific file/line — do NOT trust the causal claim even though the PR is genuinely red. The report can be both right that the PR fails AND wrong about WHY. Before writing the fix, READ the named file at the PR's ref (`gh api .../contents/<f>?ref=<branch>` or check it out) AND pull the latest failing run (`gh run view <id> --log-failed`). The prescribed fix may already be in place and the true failing step something else.
+- You are about to assert "these N PRs already merged, so the sweep scope shrinks from X→Y" from a report or from memory — back it with a runnable per-PR loop (`for p in …; do gh pr view $p --json state --jq .state; done`) before relying on it; an unverified scope reduction silently drops still-open work.
+- You are about to justify "approve+merge, don't fix" for a BLOCKED-with-zero-failing-checks PR by inferring its review requirement from a commit title or another repo — query the TARGET repo's live ruleset (`gh api repos/<O>/<R>/branches/main/protection/required_pull_request_reviews --jq .required_approving_review_count`) before acting.
 
 ## Verified Workflow
 
@@ -304,17 +312,86 @@ stated root causes for the survivors had all gone stale. The reusable triage:
    step. Also watch for the blocker-file anti-pattern in survivors (AchaeanFleet #683 carried a stray
    committed `.github/CI_FIX_683.md` plus a conflict).
 
+6. **The report's ROOT CAUSE can be WRONG, not merely stale — even for a PR that is STILL FAILING
+   (v1.4.0).** Steps 1-5 above catch causes that have *gone away* (the fix already landed, the file is
+   removed, the version bumped). This rule is stronger: a report can be correct that a PR is red while
+   being flat WRONG about *why*. A still-failing PR is NOT evidence that the report's diagnosis holds.
+   Before writing a fix that targets a report-named file/line, do BOTH:
+   (a) READ that file at the PR's ref, and (b) pull the LATEST failing CI log — never plan from the
+   report's causal sentence alone.
+
+   ```bash
+   # (a) read the named file at the PR's branch — does the claimed defect even exist there?
+   gh api repos/<O>/<R>/contents/<file>?ref=<BRANCH> --jq .content | base64 -d | sed -n '40,50p'
+   # (b) read the LATEST failing run for the branch — what step actually fails NOW?
+   run_id=$(gh run list --repo <O>/<R> --branch <BRANCH> --json databaseId,conclusion \
+     --jq '[.[]|select(.conclusion=="failure")][0].databaseId')
+   gh run view "$run_id" --repo <O>/<R> --log-failed | tail -60
+   ```
+
+   **Worked example — Keystone #568 (ProjectKeystone, branch `501-impl`, R1 re-plan 2026-06-19).**
+   The report's diagnosis: *"container name built from empty `GIT_COMMIT`/`BUILD_UID`/`BUILD_GID` →
+   `projectkeystone-dev-`; `podman-compose exec` fails."* Prescribed fix: *"populate the envvars in the
+   workflow."* Reading the branch DISPROVED BOTH halves:
+   - `docker-compose.yml:45` → `container_name: projectkeystone-dev` is a STATIC literal — there is no
+     `${GIT_COMMIT}` interpolation, so it can never produce a trailing-dash name. The "empty-var name"
+     story is fiction.
+   - `.github/actions/install-build-deps/action.yml:106-110` ALREADY exports all three
+     (`GIT_COMMIT=${{ github.sha }}`, `BUILD_UID=$(id -u)`, `BUILD_GID=$(id -g)`) into `$GITHUB_ENV`
+     BEFORE `podman-compose up -d dev` at `action.yml:138`. The prescribed fix was already done.
+
+   The ACTUAL current cause, from the live failing run (`gh run view 27831294048 --log-failed`, 2026-06-19):
+   `action.yml:97` runs `sudo apt-get install -y "podman=${PODMAN_APT_VERSION}" podman-compose` → exit 100
+   (*"has no installation candidate"*) → cascades to exit 127. `podman-version.env:1` pins
+   `PODMAN_APT_VERSION=5.0.2+ds1-4ubuntu1`, which is no longer present in the `ubuntu-24.04` runner image
+   (release 20260615). All 5 failing checks (benchmarks, NATS integration, lint, coverage×2) share that one
+   setup-step failure. The real fix: re-pin to a runner-available podman version (discover via
+   `apt-cache madison podman` on the matching image) or drop the exact `=${VERSION}` pin. **NOTE: this fix
+   VALUE is UNVERIFIED — the exact replacement version was not pinned down; the DIAGNOSIS (failing log read)
+   is verified-local, the FIX is deferred to an implementer.**
+
+7. **Lock a scope-reduction claim with evidence; never assert it (v1.4.0).** When re-planning a stale
+   multi-PR sweep, the "these N already merged, so scope shrinks X→Y" claim must be backed by a runnable
+   loop, not memory:
+
+   ```bash
+   for p in <PR numbers>; do echo -n "#$p "; gh pr view "$p" --repo <O>/<R> --json state --jq .state; done
+   ```
+
+   Evidence: 16 PRs confirmed MERGED this way. An unverified scope reduction silently drops still-open work.
+
+8. **Confirm a branch-protection / required-review gate against the LIVE ruleset, not an inference from a
+   commit title (v1.4.0).** "Approve+merge, don't fix" for a BLOCKED-with-zero-failing-checks PR is only
+   justified once the TARGET repo's review requirement is confirmed directly:
+
+   ```bash
+   gh api repos/<O>/<R>/branches/main/protection/required_pull_request_reviews \
+     --jq .required_approving_review_count
+   ```
+
+   Evidence: Scylla's `1` (ruleset `homeric-main-baseline`, active) was CONFIRMED this way after the reviewer
+   flagged that R1 had INFERRED it from Odysseus commit title `d34e291` — an inference that may not apply to
+   the target repo at all.
+
 **Known gaps when re-planning from a report (record these in the plan honestly).** The cheap live-state
 DISCOVERY/triage above is verified-local — the queries were run and observed. But a re-plan's prescribed
-FIXES are unverified hypotheses until executed. Mark them as such. From the same session, three honest
-gaps that the report seeded and were NOT independently confirmed:
+FIXES are unverified hypotheses until executed. Mark them as such.
 
-- A "populate `GIT_COMMIT`/`BUILD_UID`/`BUILD_GID` in `_required.yml`" fix (Keystone #568) where the
-  actual `podman-compose up` job and the `docker-compose.yml` name template were NEVER opened — the
-  `env:` snippet and the `BUILD_UID/GID=1000` values are guesses from the report, not from reading files.
-- "Scylla requires 1 approving review" was INFERRED from an Odysseus commit title, not confirmed against
-  Scylla's live ruleset (only that all required *status* contexts pass while state is BLOCKED).
-- Dependabot rebase mechanics (`@dependabot rebase` vs manual force-push) were not tested live.
+The R1 re-plan ITSELF seeded three of these gaps and got a NOGO from the plan reviewer; the R2 revision
+closed two by reading files at the ref / live logs (see steps 6-8 above) and recorded the third honestly:
+
+- **CLOSED (was the biggest miss): the Keystone #568 fix.** R1 wrote a "populate
+  `GIT_COMMIT`/`BUILD_UID`/`BUILD_GID` in `_required.yml`" fix straight from the report WITHOUT opening the
+  `docker-compose.yml` name template or the `podman-compose up` action. Reading the branch in R2 showed the
+  report's root cause was WRONG (static `container_name`, envvars already exported) and the real cause was an
+  unavailable pinned podman apt version — see the worked example in step 6. The DIAGNOSIS is now verified-local;
+  the exact replacement podman version is STILL a gap (deferred to an implementer running
+  `apt-cache madison podman` on the matching runner image).
+- **CLOSED: "Scylla requires 1 approving review."** R1 INFERRED this from Odysseus commit title `d34e291`;
+  the reviewer flagged it; R2 confirmed `required_approving_review_count = 1` against Scylla's live ruleset
+  `homeric-main-baseline` (see step 8).
+- **STILL OPEN: Dependabot rebase mechanics** (`@dependabot rebase` vs manual force-push) were acknowledged
+  but not tested live.
 
 #### Hephaestus loop deadlocks (drive-green discovery + labeling)
 
@@ -422,6 +499,9 @@ Bulk-process automated `review-plan-*.md` + `review-*.json` (`phase=failed`) acr
 | Trust the report's "stale pixi.lock format-v7 vs CI v6" root cause | Believed the report's quoted lockfile format version | `base64 -d` of `pixi.lock` at `main` AND the dependabot branches returned `version: 6` on both — the root cause was already gone | Decode the file at the actual refs and grep the version (`gh api .../contents/pixi.lock?ref=B --jq .content \| base64 -d \| grep '^version:'`) instead of trusting the report |
 | Plan the report's prescribed file-removal / workflow fix | Was about to plan "remove CMakeUserPresets.json + gitignore it" (Nestor #103) and "remove the tmpfs:noexec mount" (AchaeanFleet) | Both had ALREADY landed — the file 404'd at `ref=12-impl` and was in the branch `.gitignore`; grep of live workflows found no `--tmpfs …:noexec` mount | Confirm the fix hasn't shipped: `gh api .../contents/<file>?ref=B` (404 ⇒ removed), grep the LIVE workflow files at HEAD; the residual blocker was just a rebase, not the report's fix |
 | Record report-seeded fixes as verified in the plan | Wrote the Keystone `_required.yml` env fix + "Scylla needs 1 review" + dependabot-rebase steps as if confirmed | The compose job/name-template were never opened (env keys + `BUILD_UID/GID=1000` guessed), the review rule was inferred from a commit title, and rebase mechanics were untested | Mark report-seeded prescribed fixes as UNVERIFIED hypotheses with a "Known gaps" note; only the live-state DISCOVERY queries were verified-local |
+| Trust the stale report's ROOT CAUSE for a still-failing PR (v1.4.0) | R1 wrote a fix from the report's diagnosis ("empty `GIT_COMMIT`/`BUILD_UID`/`BUILD_GID` → bad container name; populate the envvars") for Keystone #568, reasoning that since the PR was genuinely red the report's cause must hold | Reading the branch DISPROVED both halves: `docker-compose.yml:45` `container_name: projectkeystone-dev` is a STATIC literal (no `${GIT_COMMIT}`), and `action.yml:106-110` ALREADY exports all three envvars before `podman-compose up`. The fix targeted an already-correct file; the REAL cause was an unavailable pinned podman apt version (`action.yml:97` / `podman-version.env:1`, exit 100→127 in run 27831294048) | A still-failing PR is NOT evidence the report's diagnosis is right — the cause can be WRONG, not just stale. Before targeting a report-named file/line, READ that file at the PR's ref AND `gh run view <id> --log-failed` the latest failing run |
+| Assert a scope reduction without a per-PR state check (v1.4.0) | Claimed "these N already merged, so the sweep shrinks X→Y" from the report / from memory, without enumerating each PR's live state | An unverified scope reduction silently DROPS still-open work — a PR assumed merged may still be open and needing action | Back every "already merged" claim with a runnable loop: `for p in …; do gh pr view $p --json state --jq .state; done` (here 16 confirmed MERGED) before relying on the reduced scope |
+| Infer a required-review gate from a commit title (v1.4.0) | Inferred "Scylla needs 1 approving review" (justifying approve+merge over fix) from Odysseus commit title `d34e291`, which mentioned a review-rule change | A commit title in one repo may not describe the TARGET repo's live ruleset; the reviewer flagged the inference | Query the target repo's live gate directly: `gh api repos/<O>/<R>/branches/main/protection/required_pull_request_reviews --jq .required_approving_review_count` (confirmed `1`, ruleset `homeric-main-baseline`) before justifying approve+merge |
 | `hephaestus-automation-loop --phases drive-green --loops N` | Increased loop budget / set `--loops 1` | Not-final-loop gate + zero-work early-exit make N>1 unreachable; `--loops 1` discovers `@me` issues not PRs | Bypass via `drive_prs_green.py --issues <N> --force-run`; fix is PR-based discovery (#818-#821) |
 | "Skip existing PRs to avoid clobbering" early-return | `_implement_issue` hard-returned before the review loop | Existing PRs never reviewed → never labeled `state:implementation-go` → never armed; 9 green PRs stuck | Replace the skip with `sync_worktree_to_remote_branch`; gate idempotency on the terminal label |
 | Run drive-green with `--issues` but leave bot-PR discovery + the open-PR done/arming gate repo-wide | Scoped `--issues 725,711` but `_discover_bot_prs()` stayed default-ON and `_list_open_prs_remaining()` returned the full paginated open-PR set | Scoped run pulled in unrelated Dependabot PRs (e.g. #1032) and armed/failed `rc=1` on all 59 open PRs the operator never selected | Gate bot-PR discovery on `not options.issues` (mirror the #819 failing-PR gate) and filter the done-gate/arming to `pr_map.values()` when scoped; the unscoped sweep stays repo-wide |
@@ -502,3 +582,4 @@ merge-conflict ~1.
 | 12 HomericIntelligence repos | Org-wide planned-issue swarm | 430 plan-carrying issues; ~51 piloted across 5 repos with signed squash-auto-merge PRs; L0-only fan-out + closing-keyword dedup + plan reconciliation (verified-local, 2026-05-29). |
 | ProjectOdyssey | Batch review-plan pipeline | 24 failed review plans triaged; 14 OPEN PRs rebased/fixed/pushed with auto-merge, ~20-30 min (2026-03-06). |
 | Odysseus meta-repo | Re-plan stale completed-sweep report (#299) | Report dated 2026-05-31 re-planned 2026-06-20 (20 days later). Live `gh pr view` showed ~13 "flagged for human" PRs were mostly already MERGED (Nestor #91/#95/#101/#102, Hermes #645, Odyssey #5471/#5488, AchaeanFleet #681/#682/#684-#690); only 7 remained open. Every surviving root cause was stale: Scylla "pixi.lock v7 vs v6" gone (`version: 6` on both refs); 4 Scylla PRs all-checks-SUCCESS but BLOCKED by a new 1-review rule (approve+merge, not CI fix); Nestor #103 fix already landed (file 404 + in `.gitignore`, residual = rebase); AchaeanFleet tmpfs:noexec mount gone from live workflows; #683 carried a stray committed `.github/CI_FIX_683.md`. Discovery/triage queries verified-local; prescribed fixes are UNVERIFIED hypotheses (PLAN never executed). |
+| Odysseus meta-repo | Re-plan #299 R1 hardening after reviewer NOGO | R1 re-plan (2026-06-19) drew a NOGO from the plan reviewer; the durable finding is wrong-root-cause hardening. Keystone #568 (`ProjectKeystone`, branch `501-impl`): the report blamed an empty-envvar container name + a `_required.yml` env fix, but reading the branch DISPROVED both (`docker-compose.yml:45` static `container_name: projectkeystone-dev`; `action.yml:106-110` already exports `GIT_COMMIT`/`BUILD_UID`/`BUILD_GID` before `podman-compose up` at `:138`). Live failing run `27831294048 --log-failed` (2026-06-19) showed the real cause: `action.yml:97` `apt-get install podman=${PODMAN_APT_VERSION}` → exit 100→127, `podman-version.env:1` pins `5.0.2+ds1-4ubuntu1` no longer in `ubuntu-24.04` (image 20260615); all 5 failing checks share that setup step. Reviewer also forced: scope reduction locked by a per-PR loop (16 PRs confirmed MERGED via `gh pr view --json state`); Scylla review gate confirmed against the LIVE ruleset (`required_approving_review_count = 1`, `homeric-main-baseline`) instead of inferring from commit `d34e291`. Verified-local: live CI log read + branch file reads at ref + ruleset API. UNVERIFIED: the replacement podman version (deferred to `apt-cache madison podman`) and Dependabot rebase mechanics. |
