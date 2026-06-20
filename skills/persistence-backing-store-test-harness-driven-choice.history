@@ -1,0 +1,164 @@
+<!-- markdownlint-disable MD024 -->
+# persistence-backing-store-test-harness-driven-choice — History
+
+## v1.1.0 (2026-06-20)
+
+**Changed by:** Second-round (R1) planning re-learning for Odysseus issue #71
+("Agamemnon/Nestor in-memory stores need persistent backing"). The R0 plan
+(v1.0.0) proposed SQLite-WAL behind the existing C++ `Store` API but FLAGGED
+several unverified external-dependency assumptions for the reviewer. This R1 pass
+turned those flagged risks into VERIFIED-by-inspection decisions by reading the
+actual repo config (`conanfile.py`, `cmake/StaticAnalyzers.cmake`,
+`cmake/CompilerWarnings.cmake`, `cmake/StandardSettings.cmake`,
+`cmake/SourcesAndHeaders.cmake`) and cross-repo skills. This AMENDS the same skill
+rather than duplicating it.
+
+**Verification:** unverified — nothing was built or run this pass either. The R1
+decisions are grounded in inspected config files and in-repo precedent, but no
+`conan install`, `just deps`, `just lint`, or `ctest` was executed.
+
+### What changed
+
+- **MINOR bump (1.0.0 -> 1.1.0):** new findings + new Failed Attempts rows +
+  extended workflow. The core R0 heuristic (test-harness-driven backing-store
+  choice; prefer in-process/embedded over networked store when the suite runs
+  without that network dep) is UNCHANGED and remains primary.
+- **Reversed the dependency-mechanism decision.** R0 said "use a hand-written
+  FetchContent URL for SQLite, do NOT introduce Conan." R1 inspected
+  `conanfile.py` and found the repo ALREADY pulls every dep via Conan
+  (`self.requires("cpp-httplib/...")`, `self.requires("nlohmann_json/...")`,
+  resolved by `find_package(... REQUIRED)`). New decision: add
+  `self.requires("sqlite3/3.46.0")` + `find_package(SQLite3 REQUIRED)` and link
+  the prebuilt `SQLite::SQLite3` imported target. This eliminates the guessed
+  amalgamation URL AND removes the self-compiled `sqlite3_amalg` static-lib
+  target. (The R0 "FetchContent is the repo idiom" claim was itself the kind of
+  unverified premise this skill warns against.)
+- Added the general lesson: when a plan introduces a new third-party lib, prefer
+  the project's existing package-manager path (Conan/vcpkg/etc.) over a
+  hand-written FetchContent/URL fetch — it removes an unverifiable assumption and
+  inherits the project's pinning/caching.
+- Added the CI-gate-strictness verification step: read
+  `cmake/StaticAnalyzers.cmake` (clang-tidy ON + cppcheck `--enable=all` ON;
+  `CMAKE_CXX_CLANG_TIDY` applied to every project source),
+  `cmake/CompilerWarnings.cmake` (`-Werror`), `cmake/StandardSettings.cmake`
+  (`WARNINGS_AS_ERRORS=ON`). Raw SQLite C-API (owning `sqlite3_stmt*`,
+  `reinterpret_cast` on `sqlite3_column_text`) WILL trip clang-tidy/cppcheck under
+  -Werror; mirror the existing `nats_client.cpp` NOLINT precedent (lines 3, 177,
+  184) and add a `just lint` + `ctest --preset ci` verification step.
+- Added the package-manager-vs-self-compiled liability point: a self-compiled dep
+  target is a warnings-as-errors liability; Conan's prebuilt `SQLite::SQLite3`
+  imported target sidesteps `-Werror`/`WARNINGS_AS_ERRORS` for sqlite3.c entirely
+  (you never compile it yourself) — only your `store.cpp` (which CALLS the API)
+  stays subject to the gates.
+- Added the build-constraint-premise check: confirmed `SourcesAndHeaders.cmake`'s
+  exclusion comment is about `main.cpp`'s `main()` symbol, not store sources —
+  `store.cpp` has no `main()`, so linking it into the Agamemnon library is safe.
+- Added the response-shape-citation point: the restart-survival test reads
+  `create_team(...)["team"]["id"]` / `create_task(...)["task"]["id"]` (the
+  `.team.id` / `.task.id` wrap shape), cross-checked against team skill
+  `homeric-crosshost-deployment-and-mesh-topology` (`jq -r '.team.id'  # NOT .id`).
+- Added the JetStream nuance: JetStream already persists (`js_FileStorage`,
+  `nats_client.cpp:90 cfg.Storage = js_FileStorage`) but to the EVENT STREAM, not
+  the Store maps, and needs a live server CI does not have — reinforcing why
+  in-process SQLite (server-less) is correct for deterministic unit tests.
+- Added 5 new Failed Attempts rows for the still-unverified R1 items (unconfirmed
+  Conan version `sqlite3/3.46.0`; assumed `SQLite::SQLite3` imported-target name
+  from the Conan-generated config; unconfirmed exact NOLINT categories; nothing
+  compiled/run) plus restated the JetStream-rejected-because-no-live-NATS-in-CI
+  point. Updated the prior FetchContent-URL and Conan rows to reflect the reversal.
+- Added `history:` frontmatter pointer; updated date 2026-06-20; bumped version to
+  1.1.0; kept `verification: unverified`.
+- Added tags: conan, find-package, clang-tidy, cppcheck, werror, nolint,
+  imported-target, package-manager.
+
+### Why
+
+The R0 skill flagged its single most-uncertain external dependency (a
+hand-written SQLite amalgamation URL guessed from memory) and several CI/build
+assumptions as UNVERIFIED. The transferable methodology of the R1 pass is exactly
+how to retire such flags WITHOUT building: de-risk the most-uncertain external
+dependency by switching to the repo's already-proven dependency mechanism;
+verify the CI gate's strictness against the actual cmake files before assuming new
+code passes; verify a stated build constraint's premise against the real file; and
+cite a confirmed source for any asserted API/JSON shape. Capturing this turns the
+R0 "open questions" into a reusable de-risking procedure. It remains unverified
+because no `conan install` / `just lint` / `ctest` was run this round.
+
+### Previous snapshot (v1.0.0, 2026-06-19)
+
+```markdown
+---
+name: persistence-backing-store-test-harness-driven-choice
+description: "Choosing a persistence/backing-store technology for a C++ service (Agamemnon/Nestor Store API) when the obvious reuse-the-stack answer (JetStream KV) conflicts with the CI test harness. Use when: (1) planning to add durable backing behind an existing in-memory Store/repository in ProjectAgamemnon or ProjectNestor, (2) deciding between an in-process embedded store (SQLite) vs a networked store (NATS JetStream KV), (3) reviewing a persistence plan whose tests must stay deterministic and run with NO live NATS server in ctest."
+category: architecture
+date: 2026-06-19
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags: [persistence, backing-store, sqlite, wal, jetstream, in-memory, test-harness, ci, embedded, fetchcontent, store-api, cpp, planning]
+---
+
+# Persistence Backing-Store Selection: Let the Test Harness, Not the Richest Stack Component, Pick the Store
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-06-19 |
+| **Objective** | Capture the durable PLANNING methodology for adding file-backed persistence behind the existing in-memory `Store` C++ API in ProjectAgamemnon and ProjectNestor (Odysseus issue #71) |
+| **Outcome** | Plan only — proposed SQLite (WAL) embedded store via FetchContent, behind an unchanged `Store` public API. No code was compiled or run. |
+| **Verification** | unverified (planning-stage methodology / hypothesis) |
+
+> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms. None of the proposed code below was built or run.
+
+## When to Use
+
+- Planning to give an in-memory C++ `Store` (or repository/cache) durable backing in ProjectAgamemnon or ProjectNestor.
+- A teammate or audit says "you already FetchContent nats.c v3.9.1 and have a working JetStream context — just use JetStream KV." Reach for this skill before agreeing.
+- Deciding between an **in-process embedded store** (SQLite amalgamation) and a **networked store** (NATS JetStream KV, Redis, Postgres).
+- Reviewing a persistence plan where the existing unit/ctest suite must stay deterministic and dependency-free.
+- Any time a stated concern ("multi-writer needs JetStream/locking") is about to drive a design decision — verify its premise against the actual code first.
+
+## Verified Workflow
+
+> **Status:** unverified. This is a **Proposed Workflow** — a planning heuristic, not an executed recipe.
+
+### Quick Reference
+
+(decision heuristic: in-process SQLite+WAL via FetchContent when tests run
+without the networked dep; preserve Store API with defaulted ctor; save-on-
+mutation inside the lock; recompute derived counters on load; mirror the nats.c
+FetchContent idiom and add a sqlite3_amalg static lib target.)
+
+### Proposed Steps
+
+1. Inventory how the existing test suite runs (ctest links the lib, no live NATS).
+2. Reject "reuse the stack" (JetStream KV) when it breaks step 1.
+3. Choose in-process SQLite (WAL) via FetchContent amalgamation.
+4. Preserve the Store public API with a defaulted constructor.
+5. Persist incrementally, inside the lock (not save-at-end).
+6. Never trust persisted derived state; recompute on load.
+7. Mirror the repo's FetchContent idiom; add a sqlite3_amalg static lib target.
+8. Verify a stated concern's premise (shared multi-writer) before designing for it.
+9. Hold the sqlite3* handle as a member, per object lifetime.
+10. Write restart-survival tests with WAL sidecar (.db/-wal/-shm) cleanup.
+
+## Failed Attempts (v1.0.0)
+
+- JetStream KV as the backing store (CI has no live NATS).
+- Save-at-end batch persist (crash-loss).
+- Trusting persisted derived counters (drift).
+- Introducing Conan for the SQLite dep (R0 rejected it as a new mechanism — REVERSED in v1.1.0).
+- Designing for shared multi-writer locking (false premise).
+- Assumed SQLite amalgamation URL/version (UNVERIFIED).
+- Assumed clang-tidy/strict warnings pass on raw sqlite3 C API (UNVERIFIED).
+- Assumed adding store.cpp to the Agamemnon library target is safe (UNVERIFIED).
+- Assumed `:memory:` gives per-Store isolation (UNVERIFIED).
+
+## Results & Parameters (v1.0.0)
+
+Backing store: SQLite WAL via FetchContent amalgamation + sqlite3_amalg static lib;
+schema one table per entity (id TEXT PRIMARY KEY, doc TEXT); defaulted ctor;
+load-on-construction + save-on-mutation; sqlite3* member handle; derived counters
+recomputed on load. Overall verification: unverified.
+```
