@@ -1,0 +1,51 @@
+<!-- markdownlint-disable MD024 -->
+# History: config-governance-fix-scope-all-variant-files
+
+This file preserves prior versions of the
+`config-governance-fix-scope-all-variant-files` skill.
+
+## v1.1.0 (2026-06-20)
+
+**What changed:** Added a PLANNING-PHASE premise-verification finding from a
+session that planned a CI guard for issue #309 ("ruleset configs must stay
+enforcement=active"). The issue's embedded fix sketch asserted PR #177 flipped
+the two BASE files (`repo-ruleset.json:4`, `org-ruleset.json:4`) from
+`evaluate` to `active` and prescribed a guard looping ALL FOUR ruleset files
+asserting `enforcement=="active"`. Running `jq -r .enforcement` on all four
+files showed the actual on-disk state is `evaluate, active, evaluate, active` —
+the base files are intentionally `evaluate` and only the `*-active.json`
+variants are `active` (a two-form split documented in
+`configs/github/canonical-checks.md:58-62`). The issue sketch's guard would
+have been red-on-day-one against a correct repo. Added: a new Failed Attempts
+row (adopt-the-blanket-guard), a `### Verify the issue premise before planning
+to it` subsection under the workflow with a Quick Reference, a per-file
+expected-enforcement map guard (catches drift in BOTH directions), new
+unverified-reliance caveats, and cross-references to
+`architecture-executable-convention-guard-pattern` and
+`ci-hygiene-and-validation-gates` Pattern 2. Bumped `version` 1.0.0 → 1.1.0
+(MINOR — additive findings/triggers), `date` → 2026-06-20.
+
+**Why:** An issue that prescribes a literal assertion over named files can carry
+a factually wrong premise; only an on-disk `jq`/grep check against current HEAD
+reveals it. The premise-verification technique here is **verified-local** (the
+`jq` premise check WAS run during planning and confirmed
+`evaluate,active,evaluate,active`); the proposed guard/CI wiring is
+**unverified** (planning only). Searchers for "verify issue premise",
+"enforcement drift guard", "ruleset evaluate vs active" should land here.
+
+### Snapshot of v1.0.0 (superseded 2026-06-20)
+
+The full v1.0.0 markdown body (frontmatter + the original When to Use, Verified
+Workflow, six Failed Attempts rows, and Results & Parameters) is preserved in
+git history at the commit immediately preceding the v1.1.0 amendment. The
+v1.0.0 frontmatter was:
+
+```yaml
+name: config-governance-fix-scope-all-variant-files
+category: ci-cd
+date: 2026-06-19
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: []
+```
