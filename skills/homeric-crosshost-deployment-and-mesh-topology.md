@@ -2,8 +2,8 @@
 name: homeric-crosshost-deployment-and-mesh-topology
 description: "Deploy and operate the HomericIntelligence mesh across multiple Tailscale hosts using NATS JetStream, compose overlays, and justfile launchers. Use when: (1) splitting the E2E stack across multiple physical hosts via compose overlay or per-component launchers, (2) bringing up Agamemnon/Nestor/Hermes natively or via containers on any new Tailnet host from cold state, (3) running hub+remote-worker topology for cross-host myrmidon dispatch, (4) configuring NATS connections (direct or leafnode) over Tailscale, (5) implementing NATS JetStream publish retry with exponential backoff, (6) debugging Hermes webhook event types, compose healthchecks, or podman rootlessport/DNS quirks, (7) PLANNING credential-based authentication for a credential-less NATS leaf/server config and scrutinizing the uncertain assumptions a reviewer must verify in such a plan."
 category: architecture
-date: 2026-06-19
-version: "1.2.0"
+date: 2026-06-20
+version: "1.3.0"
 user-invocable: false
 verification: unverified
 history: homeric-crosshost-deployment-and-mesh-topology.history
@@ -16,6 +16,8 @@ tags:
   - jetstream
   - podman
   - docker
+  - distroless
+  - healthcheck
   - justfile
   - per-component
   - launcher
@@ -49,7 +51,7 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-19 |
+| **Date** | 2026-06-20 |
 | **Objective** | Deploy and operate the HomericIntelligence mesh across multiple Tailscale hosts using NATS JetStream, compose overlays, justfile launchers, and resilient publish patterns; and plan credential-based authentication for the credential-less NATS leaf/server config |
 | **Outcome** | Deployment patterns verified-local (two-host + 6-host). The NATS leaf/server auth fix is still an UNVERIFIED PLAN for issue #176 (R1, post-NOGO) — the full plan was not run end-to-end and no CI passed. BUT the config-block-presence validator was PROTOTYPED this session (verified-local: exit 0 on the fixed fixture, exit 1 on the repo's current configs). The plan's highest-value content remains its catalogue of uncertain assumptions a reviewer must verify, now sharpened by concrete NOGO causes. |
 | **Verification** | unverified OVERALL for the NATS auth-planning section (the full plan was not exercised end-to-end); the brace-depth config-block validator specifically is verified-local (prototyped 2026-06-19 against fixed + current fixtures). Verified-local for all prior deployment content (Odysseus sessions 2026-04-03 to 2026-05-03). |
@@ -436,6 +438,44 @@ healthcheck:
   test: "wget -q -O /dev/stdout http://localhost:8222/healthz 2>/dev/null | grep -q ok"
 ```
 
+#### Distroless app images — binary self-probe healthcheck (planning learning, unverified)
+
+> **Unverified planning learning (R2, issue #154).** The self-probe pattern below was
+> derived from a plan, NOT tested end-to-end. No container was built or observed reaching
+> `healthy`. Treat it as the correct distroless-safe shape, but confirm at runtime.
+
+**Rule:** distroless `static`/`base` images (`gcr.io/distroless/static-*`,
+`gcr.io/distroless/base-*`) contain ONLY the static binary — **no shell, no wget, no curl,
+no busybox**. A `wget`/`curl`/`sh` healthcheck command simply does not exist in the
+container, so it fails permanently and the service never reports `healthy`. Compose
+healthchecks ALWAYS run inside the container, so there is no shell-free external-tool
+option. The ONLY in-container probe is the binary self-checking.
+
+```yaml
+# Distroless runtime (gcr.io/distroless/static-*): NO shell/wget/busybox.
+# The ONLY in-container probe is the binary self-checking. Requires the app
+# binary to expose a -healthcheck flag (localhost GET /healthz, exit 0/1).
+healthcheck:
+  test: ["CMD", "/argus-dashboard", "-healthcheck"]
+  interval: 30s
+  timeout: 5s
+  retries: 3
+  start_period: 15s   # Go/static binaries cold-start; avoid early flapping
+```
+
+**Cross-issue coordination note:** the self-probe creates a dependency on the binary owning
+a `-healthcheck` flag. When the Dockerfile/binary is delivered by a different issue/PR than
+the compose wiring, name that flag explicitly as a blocking note — never assume it exists.
+
+**Verification discipline (do BOTH — structural config validation is insufficient):**
+
+```bash
+# Assert the healthcheck does NOT shell out to wget/sh (would fail on distroless)
+docker compose config | grep -A4 'healthcheck' | grep -q '/<binary>' && ! (docker compose config | grep -E 'test:.*wget')
+# Post-build, assert the container ACTUALLY reaches healthy (config alone is insufficient)
+docker compose ps | grep -E '<service>.*healthy'
+```
+
 ### After NATS Restart
 
 Agamemnon and Nestor do NOT auto-reconnect after NATS restarts. Always kill and restart them:
@@ -490,6 +530,9 @@ pkill -f ProjectNestor_server    || kill $(pgrep -f ProjectNestor_server)
 | Assuming a recipe wired into justfile runs in CI | Claimed validator "already runs on pull_request via ci.yml" | `ci.yml`'s validate job inlines its own steps and never invokes `just validate-configs`/`pixi run validate` | Don't assume CI calls your `just` recipe — READ the workflow. Add an explicit CI step (or confirm the recipe is invoked) or the gate doesn't exist |
 | Parse check gated on `command -v nats-server` | `command -v nats-server && nats-server -t ... \|\| echo skipped` | The tool is absent in CI, so the check silently skips — the fail-closed assumption is never actually tested | If a verification matters, INSTALL the tool in CI (pinned release) and run it unconditionally; a `command -v ... \|\|` guard turns the check into a no-op |
 | Asserting `.gitignore` coverage from a pattern | Claimed `/etc/nats/certs/` was already git-ignored | `grep -n "certs\|creds\|nats" .gitignore` → no matches; the claim was fabricated from the certs convention | Grep the actual file before claiming a path is ignored. "It follows the convention" is not evidence the entry exists |
+| `wget` healthcheck against a distroless app image | Used `["CMD","wget","-qO-","http://localhost:PORT/healthz"]` (matching sibling services that use slim/alpine images) on a service whose runtime is `gcr.io/distroless/static-debian12:nonroot` | Distroless `static` images have NO shell, wget, busybox, or any external tool — the healthcheck command does not exist in the container, so it fails permanently and the container never reports `healthy` | A wget/curl/sh healthcheck is unusable on a distroless runtime. Use a binary self-probe `["CMD","/<binary>","-healthcheck"]`; the app binary must expose a healthcheck flag that does a localhost GET and exits 0/1. Compose healthchecks always run INSIDE the container — there is no shell-free external option |
+| Trusting `docker compose config` as proof the healthcheck works | Plan's verification ran `docker compose config` and passed, treated as evidence the service would be healthy | `docker compose config` only validates STRUCTURE/syntax — it never executes the healthcheck command, so a healthcheck pointing at a nonexistent binary (wget in distroless) passes config but fails at runtime | Structural compose validation is NOT runtime validation. For a healthcheck on a distroless image, separately assert the probe does not shell out to wget/sh AND (post-build) assert the container actually reaches `healthy` |
+| "matches every existing service" reasoning for healthcheck form | Justified the wget array healthcheck because 4 sibling services use the identical form | The siblings run slim/alpine images (wget present); the new service runs distroless (wget absent) — the convention does not transfer across base-image families | Convention-matching is only valid when the BASE IMAGE family matches. Check the target service's runtime image before copying a sibling's healthcheck |
 
 ## Results & Parameters
 
@@ -603,6 +646,23 @@ These are the durable PLANNING lessons the NOGO cycle taught — independent of 
   hides a validator that rejects everything — including the fix. Assert exit 1 on broken AND exit 0
   on fixed.
 
+**Distroless healthcheck planning lessons (R2, issue #154 — unverified, plan only):**
+
+- **Before copying a sibling service's healthcheck, check the TARGET service's runtime base image.**
+  wget/curl/sh healthchecks silently break on distroless (`gcr.io/distroless/static-*` has no
+  shell/wget/busybox); the convention only transfers within the same base-image family.
+- **`docker compose config` passing is NOT evidence a healthcheck works** — it validates structure,
+  never executes the probe. A plan whose only health verification is `compose config` can be green
+  while the acceptance criterion ("shows healthy") fails at runtime. Separately assert the container
+  actually reaches `healthy` post-build.
+- **When the healthcheck binary/flag is owned by a DIFFERENT issue than the compose wiring, the
+  self-probe introduces a cross-issue coordination dependency** — name the `-healthcheck` flag
+  explicitly as a blocking note, never assume it exists.
+- **An issue body's verbatim YAML/code block is a desired end-state, not a guaranteed-correct
+  literal** — it may encode a healthcheck that cannot run against the chosen runtime image. Re-derive
+  correctness from the actual base image, don't copy blindly. (This generalizes the prior "issue
+  snippet ≠ literal diff" lesson already in the skill from the duplicate-recipe learning.)
+
 ```yaml
 # PROPOSED NATS auth env vars (mirror existing $NATS_MONITORING_PASSWORD pattern)
 nats_auth_env_vars:
@@ -637,3 +697,4 @@ config_auth_gate:
 | HomericIntelligence/Odysseus | 2026-05-03 Atlas 6-host cold-start | 6 hosts started (4 podman, 1 pixi native, 1 docker); Agamemnon API confirmed |
 | Odysseus | Plan for issue #176 (NATS leaf auth) | unverified plan — no code run, no CI; value is the reviewer-risk catalogue of uncertain assumptions |
 | Odysseus | Plan R1 for issue #176 (NATS leaf auth, post-NOGO) | validator prototyped verified-local (brace-depth `block()`: exit 0 on fixed fixture, exit 1 on current configs); full plan still unverified |
+| Odysseus | Plan R2 for issue #154 (Argus distroless dashboard healthcheck, post-NOGO) | unverified planning learning — distroless `static` images have no shell/wget; use binary self-probe `["CMD","/<binary>","-healthcheck"]`; `docker compose config` validates structure only. No container built or observed healthy |
