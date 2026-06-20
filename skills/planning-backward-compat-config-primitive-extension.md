@@ -1,15 +1,21 @@
 ---
 name: planning-backward-compat-config-primitive-extension
-description: "Reusable checklist for writing TRUSTWORTHY implementation plans that extend a config-driven auth/config primitive (e.g. add a comma-separated AGAMEMNON_API_KEYS env var alongside the existing single AGAMEMNON_API_KEY, unioned for backward compatibility) WITHOUT breaking the old behavior or the security posture. Use when: (1) planning to add a new multi-value env var / config knob that must coexist with a legacy single-value one, (2) a plan proposes DELETING a file or symbol it claims is dead code based on a source grep alone, (3) a plan cites exact file:line locations as ground truth, (4) a plan changes a security-critical equality compare (==) into set/collection membership, (5) a plan RELAXES a fail-secure startup invariant (e.g. now allowing startup with only the new var), (6) a plan splits the change into multiple commits where one commit deletes 'dead' code that another part of the build may still reference."
+description: "Reusable checklist for writing TRUSTWORTHY implementation plans that make a hardcoded constant configurable via an env var, or extend a config-driven auth/config primitive, in a C++ service WITHOUT breaking old behavior. Covers both the auth case (add comma-separated AGAMEMNON_API_KEYS unioned with single AGAMEMNON_API_KEY) and the general 'make constant env-configurable' case (e.g. a RouteLimits struct read from AGAMEMNON_* and threaded through register_routes()). Use when: (1) planning to add a new env var / config knob (single OR multi-value) that must coexist with existing behavior, (2) a plan adds a source file to a build target but did not READ the build file that DEFINES the target, (3) a plan claims a trailing defaulted-parameter signature change is non-breaking, (4) a plan cites exact file:line locations as ground truth, (5) a plan opportunistically fixes an adjacent bug or deprecates an existing env knob, (6) a plan consolidates two env knobs that use different units, (7) a plan changes a security-critical == compare into set membership or RELAXES a fail-secure startup invariant, (8) a plan proposes DELETING a file it calls dead code based on a source grep alone."
 category: architecture
 date: 2026-06-19
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 verification: unverified
+history: planning-backward-compat-config-primitive-extension.history
 tags:
   - planning-methodology
   - backward-compatibility
   - config-env-var
+  - make-constant-configurable
+  - defaulted-parameter
+  - build-target-verification
+  - scope-creep
+  - unit-conversion
   - auth-security
   - dead-code-removal
 ---
@@ -21,19 +27,22 @@ tags:
 | Field | Value |
 |-------|-------|
 | **Date** | 2026-06-19 |
-| **Objective** | Make implementation plans for "extend a config-driven auth/config primitive while preserving backward compatibility" tasks trustworthy by codifying the assumptions a reviewer MUST re-verify before approving. |
-| **Outcome** | Planning methodology only — captured from a plan for ProjectAgamemnon issue #260 (add comma-separated `AGAMEMNON_API_KEYS` env var, unioned with the existing single `AGAMEMNON_API_KEY` in the C++ `AuthMiddleware`). Plan was NOT executed end-to-end. |
+| **Objective** | Make implementation plans for "make a hardcoded constant configurable via env var" and "extend a config-driven config/auth primitive" tasks in a C++ service trustworthy, by codifying the assumptions a reviewer MUST re-verify before approving. |
+| **Outcome** | Planning methodology only — distilled from two ProjectAgamemnon plans: issue #260 (add comma-separated `AGAMEMNON_API_KEYS`, unioned with the single `AGAMEMNON_API_KEY` in the C++ `AuthMiddleware`) and issue #275 (expose input-length limits as an `AGAMEMNON_*`-driven `RouteLimits` struct threaded through `register_routes()`). Neither plan was executed end-to-end. |
 | **Verification** | unverified |
-| **History** | n/a (initial version) |
+| **History** | [changelog](./planning-backward-compat-config-primitive-extension.history) |
 
 ## When to Use
 
-- You are planning a change that adds a new **multi-value** config/env var (e.g. comma-separated `*_KEYS`) that must coexist with — and be **unioned** with — an existing **single-value** one (`*_KEY`), so old deployments keep working unchanged.
-- A plan proposes to **DELETE a file or symbol** ("dead code", "zero callers") and the conclusion was drawn from a **source-only grep**.
-- A plan cites **exact `file:line` locations** (e.g. `src/auth.cpp:20`, `docs/api/openapi.yaml:885-895`) as if they are stable ground truth.
-- A plan changes a **security-critical `==` compare into set/collection membership** (e.g. `key == expected` → `valid_keys.count(key)`).
-- A plan **RELAXES a fail-secure startup invariant** (e.g. previously aborted unless `*_KEY` was set; now also accepts only `*_KEYS`).
-- A plan **splits into multiple commits** where a later "dead-code removal" commit could merge independently and break the build if a hidden reference exists.
+- You are planning to **make a hardcoded constant configurable** via a new `*_*` env var (e.g. an `AGAMEMNON_*`-driven `RouteLimits` struct read by a `from_env()` factory and threaded through a function like `register_routes()`).
+- A plan **adds a new source file to a build target** (`add_library`/`add_executable`/`target_sources`) but the **build file that DEFINES the target was not read** — its structure was inferred from files that merely *reference* the target.
+- A plan claims a **trailing defaulted-parameter** signature change "keeps every existing caller compiling" — verify the **complete caller census** first.
+- You are adding a new **multi-value** config/env var (comma-separated `*_KEYS`) that must coexist with — and be **unioned** with — an existing **single-value** one (`*_KEY`), so old deployments keep working unchanged.
+- A plan **opportunistically fixes an adjacent bug** or **deprecates an existing env knob** in favor of a new one (with a back-compat fallback) — beyond the issue's stated ask.
+- A plan **consolidates two env knobs that use different units** (e.g. MEGABYTES vs BYTES) — the conversion is a high-risk line.
+- A plan cites **exact `file:line` locations** as if they are stable ground truth, especially when the plan's own earlier steps edit lines above them.
+- A plan changes a **security-critical `==` compare into set/collection membership**, or **RELAXES a fail-secure startup invariant**.
+- A plan proposes to **DELETE a file or symbol** ("dead code", "zero callers") from a **source-only grep**, or **splits into multiple commits** where a later deletion commit could break the build alone.
 
 ## Proposed Workflow
 
@@ -67,6 +76,24 @@ sed -n '1,30p' docs/api/openapi.yaml   # read the block, not just the cited rang
 # === Negative tests the plan MUST include (the easy-to-forget ones) ===
 # 1. empty "Bearer " / empty "X-API-Key" still REJECTED (never insert "" into the set; count("")==0)
 # 2. all-empty / all-whitespace AGAMEMNON_API_KEYS still ABORTS startup (fail-secure preserved)
+
+# === MAKE-CONSTANT-CONFIGURABLE: read the build file that DEFINES the target ===
+# A plan that adds a new .cpp to a build target MUST read the file that DECLARES the target,
+# not a file that merely references it (e.g. test/CMakeLists.txt mentioning ProjectAgamemnon_core).
+grep -rn 'add_library(ProjectAgamemnon_core' $(git ls-files '*CMakeLists.txt' '*.cmake')  # find the DEFINING block
+sed -n '1,200p' src/CMakeLists.txt   # READ it — confirm add_library/target_sources shape before planning the insert
+
+# === Complete CALLER CENSUS before claiming a defaulted-arg change is non-breaking ===
+# Listing "the test files" is NOT a census. Grep the WHOLE repo for the symbol.
+git grep -n 'register_routes'        # enumerate EVERY call site: src, tests, integration tests, benchmarks, other binaries
+
+# === Anchor find-replace on SYMBOLS/STRINGS, not absolute line numbers ===
+# routes.cpp line numbers (312/315/.../633) drift once step 5 edits earlier lines first.
+git grep -n 'check_field_length' src/routes.cpp   # re-find by string at edit time, never trust the cited offset
+
+# === Unit-conversion consolidation: the fallback line is high-risk ===
+# SERVER_REQUEST_SIZE_LIMIT_MB is MEGABYTES; AGAMEMNON_MAX_BODY_BYTES is BYTES.
+# fallback bytes = mb * 1024 * 1024  (MiB). Test BOTH knobs and the precedence between them.
 ```
 
 ### Detailed Steps
@@ -123,6 +150,46 @@ sed -n '1,30p' docs/api/openapi.yaml   # read the block, not just the cited rang
    reviewer treats an acknowledged-but-unverified assumption the same as an unacknowledged one,
    so resolve or explicitly flag each in the plan, not in a side note.
 
+### Make-a-constant-env-configurable checklist (issue #275 class)
+
+10. **Read the build file that DEFINES the target, not one that references it.** When a plan adds
+    a new source file to a build target (e.g. `add_library(ProjectAgamemnon_core ...)`), READ the
+    actual `src/CMakeLists.txt` (or wherever the target is declared). Inferring the `add_library`
+    shape from `test/CMakeLists.txt` lines that merely *link against* the target is not
+    verification — the defining file may use `target_sources`, a glob, or a different layout than
+    assumed. An "add the file here" instruction grounded in the wrong file is a build break.
+
+11. **Run a complete caller census before claiming a defaulted-arg change is non-breaking.** A
+    trailing defaulted parameter only preserves backward compatibility if EVERY call site is
+    accounted for. `git grep` the function name across the WHOLE repo — source, unit tests,
+    integration tests, benchmarks, other binaries — and enumerate each. A defaulted-param
+    "keeps everything compiling" claim backed by a partial (test-only) list is unverified.
+
+12. **Anchor find-replace on symbols/strings, not absolute line numbers.** Cite the searchable
+    string (e.g. each `check_field_length(...)` call) rather than `routes.cpp:312/315/.../633`.
+    Line numbers from a single read drift the moment earlier edits land — and these plans often
+    edit earlier lines first, invalidating every later offset. Instruct the implementer to
+    re-find by symbol/string at edit time.
+
+13. **Flag adjacent-bug fixes and deprecations as SCOPE EXPANSION for sign-off.** If the plan
+    goes beyond the issue's ask — e.g. also fixing a latent body-cap override bug, or silently
+    deprecating `SERVER_REQUEST_SIZE_LIMIT_MB` in favor of `AGAMEMNON_MAX_BODY_BYTES` with a
+    back-compat fallback — call it out explicitly as out-of-issue scope requiring reviewer
+    sign-off. Opportunistic fixes folded silently into a "make it configurable" plan inflate
+    blast radius and review risk.
+
+14. **Make the code sample match the prose EXACTLY.** A classic source of
+    defined-but-not-implemented behavior is prose describing a back-compat fallback (read the new
+    var, else fall back to the legacy var) while the shown `from_env()` code sample reads ONLY the
+    new var. If the prose says there is a fallback, the sample MUST show it; a divergence between
+    narration and sample means the behavior will likely never be implemented.
+
+15. **Call out unit conversions as a high-risk line and test both knobs.** When consolidating two
+    env knobs with different units (`*_MB` in MEGABYTES vs `*_BYTES` in BYTES), the fallback must
+    multiply by 1 MiB (`mb * 1024 * 1024`). This single conversion line is high-risk: write it
+    explicitly in the plan, define the precedence between the two knobs, and require a test for
+    BOTH the legacy MB knob and the new bytes knob.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -134,6 +201,11 @@ sed -n '1,30p' docs/api/openapi.yaml   # read the block, not just the cited rang
 | Relaxed fail-secure with no abort test | Allowed startup with only the new `AGAMEMNON_API_KEYS` (relaxing "abort unless `AGAMEMNON_API_KEY` set") and added no negative test | An all-empty/whitespace `AGAMEMNON_API_KEYS` yields an empty accepted set and could let the server start insecurely | When relaxing a fail-secure rule, always add the negative/abort test for the degenerate (all-empty) input |
 | Independent dead-code-removal commit | Split into core / docs / dead-code-removal so the deletion could merge on its own | If a hidden build reference exists, the deletion commit breaks the build independently of the rest | Order/scope multi-commit splits so no single commit can break the build; gate deletion on the build-grep being empty |
 | Applied skills/APIs by description only | Used team-KB skills (`config-env-double-underscore-nesting`, `backward-compat-removal`) from their summary, and assumed `std::getline`/`std::isspace`/httplib header API behavior without compiling | Description-level use and uncompiled stdlib/library assumptions are unverified; behavior may differ | Read skill bodies and compile/verify stdlib + library assumptions, or explicitly flag each as unverified in the plan body |
+| Assumed build-target structure (issue #275) | Asserted `src/CMakeLists.txt` contains an `add_library(ProjectAgamemnon_core ...)` block and named where to insert the new source — but inferred it ONLY from `test/CMakeLists.txt:62,100` referencing the target; the actual `src/CMakeLists.txt` was never read | A file that *references* a target does not reveal how the target is *defined* (`target_sources`, glob, different layout); an "add the file here" step grounded in the wrong file breaks the build | When a plan adds a source to a build target, READ the build file that DEFINES the target, not just files that reference it |
+| Defaulted-param "non-breaking" without full census (issue #275) | Claimed a trailing defaulted parameter on `register_routes()` "keeps every existing caller compiling," listing a few test files | The list was not a complete caller census — integration tests, benchmarks, and other binaries were never grepped; a defaulted-arg backward-compat claim is only as good as a COMPLETE caller enumeration | Before claiming a defaulted-arg signature change is non-breaking, `git grep` the function name across the WHOLE repo and enumerate every call site |
+| Absolute line numbers that the plan itself shifts (issue #275) | Cited exact `routes.cpp` line numbers (312/315/318/.../633) for `check_field_length` calls from a single read | The plan's own step 5 edits earlier lines first, shifting every later offset; an implementer trusting the cited line edits the wrong place | Anchor find-replace on searchable symbols/strings, not absolute line numbers, when later edits shift the file |
+| Scope-creep with prose/code divergence (issue #275) | Expanded beyond "make limits configurable" to also fix a body-cap override bug AND silently deprecate `SERVER_REQUEST_SIZE_LIMIT_MB` for `AGAMEMNON_MAX_BODY_BYTES`; described a back-compat fallback in prose but the `from_env()` code sample read ONLY `AGAMEMNON_MAX_BODY_BYTES` | Unflagged scope expansion inflates blast radius; the prose-vs-sample divergence is a classic defined-but-not-implemented bug — the fallback would likely never ship | (a) Flag adjacent-bug fixes / deprecations as scope expansion for reviewer sign-off; (b) make the code sample match the prose EXACTLY |
+| Unit mismatch on consolidated knobs (issue #275) | Folded `SERVER_REQUEST_SIZE_LIMIT_MB` (MEGABYTES) into `AGAMEMNON_MAX_BODY_BYTES` (BYTES) with a fallback, without highlighting the unit difference | A fallback that copies the MB value as bytes is off by 1,048,576x; the conversion line is silent and easy to get wrong | When consolidating two env knobs with different units, treat the conversion (`mb * 1024 * 1024`) as a high-risk line: state it explicitly and test both knobs |
 
 ## Results & Parameters
 
@@ -168,8 +240,32 @@ if (valid_keys.empty()) abort_startup();               // fail-secure: all-empty
 - [ ] Dead-code-removal commit cannot break the build if reviewed/merged independently.
 - [ ] Reviewer note: key match is NOT constant-time (pre-existing timing side-channel on a touched surface).
 
+**Second concrete instance — "make a constant configurable" (ProjectAgamemnon issue #275):**
+
+> *"Expose input length limits as configurable server settings"* — introduce an `AGAMEMNON_*`-driven
+> `RouteLimits` struct (via a `from_env()` factory) threaded through `register_routes()`, replacing
+> hardcoded `check_field_length` constants. The plan also claimed to fix a latent body-cap override
+> bug and to deprecate `SERVER_REQUEST_SIZE_LIMIT_MB`.
+
+Top unverified assumptions a reviewer MUST re-check for this class:
+
+- [ ] `src/CMakeLists.txt` was actually READ — the `add_library`/`target_sources` shape was confirmed,
+      not inferred from `test/CMakeLists.txt:62,100` references to `ProjectAgamemnon_core`.
+- [ ] COMPLETE caller census for `register_routes()` (`git grep`), not just the listed test files,
+      before accepting the defaulted-parameter "non-breaking" claim.
+- [ ] All `routes.cpp` line citations (312/315/.../633) re-resolved by string at edit time — the
+      plan edits earlier lines first, so the offsets drift.
+- [ ] The body-cap "bug fix" and the `SERVER_REQUEST_SIZE_LIMIT_MB` → `AGAMEMNON_MAX_BODY_BYTES`
+      deprecation are flagged as SCOPE EXPANSION and signed off by the issue owner.
+- [ ] The `from_env()` code sample SHOWS the back-compat fallback the prose describes (no
+      prose-vs-sample divergence — the sample must read the legacy var too, not only the new one).
+- [ ] Unit conversion is explicit: `AGAMEMNON_MAX_BODY_BYTES` (BYTES) fallback from
+      `SERVER_REQUEST_SIZE_LIMIT_MB` (MEGABYTES) multiplies by 1 MiB (`mb * 1024 * 1024`); BOTH
+      knobs and their precedence are tested.
+
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectAgamemnon | Implementation-plan review for issue #260 (multi-key `AGAMEMNON_API_KEYS` in C++ `AuthMiddleware`); plan only, not executed end-to-end | unverified |
+| ProjectAgamemnon | Implementation-plan review for issue #275 (make input-length limits configurable via an `AGAMEMNON_*` `RouteLimits` struct threaded through `register_routes()`); plan only, not executed end-to-end | unverified |
