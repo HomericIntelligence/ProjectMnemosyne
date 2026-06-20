@@ -1,6 +1,56 @@
 <!-- markdownlint-disable MD024 -->
 # dry-refactoring-workflow — History
 
+## v1.9.0 (2026-06-20)
+
+**Changed by:** ProjectHephaestus issue #1380 planning
+**Verification:** unverified (planning-only — no code written, no tests run, no CI)
+
+### What changed
+
+- Added Phase 14 (PLANNING-ONLY, flagged with a `> **Warning:**` note mirroring Phase 10):
+  "'N Identical Copies' — DIFF Them First, Inject the Behavior-Bearing Variants." Five
+  sub-sections:
+  - 14a: DIFF the supposed duplicates byte-for-byte BEFORE designing the helper signature.
+  - 14b: Preserve each caller's behavior by INJECTING the variants — `find_fn` parameter for
+    the delegated `find_pr_for_issue` strategy set, and an optional
+    `on_missing: Callable[[int], None]` callback for the missing-PR log line's exact
+    level/wording.
+  - 14c: A third "(optional, can simplify)" near-duplicate (`CIDriver._discover_prs`) is a
+    prompt to CLASSIFY as an intentional variant — cross-reference comment, do NOT
+    consolidate, because it feeds downstream dedup/`shared_pr_issues` fan-out/bot-PR-union.
+  - 14d: Flag the naming divergence — issue's `_discover_prs_simple` vs the module's
+    underscore-free convention `discover_prs_simple`.
+  - 14e: Assumptions a reviewer/implementer must verify on disk (line numbers, no `__all__`,
+    `collections.abc.Callable` house-style, helper name).
+- Added 2 Failed Attempts rows: the naive "extract the identical body" trap (collapses log
+  level/wording + lookup strategy → silent behavior change) and the "treat (optional) third
+  site as something to consolidate" trap.
+- Appended a v1.9.0 line to the in-skill Version History and a v1.9.0 ⚠️ note to the Outcome row.
+- Bumped frontmatter `version` 1.7.0 → 1.9.0 and `date` to 2026-06-20. Overall `verification`
+  stays `verified-ci`; only the new Phase 14 is marked planning-only / unverified.
+
+### Why
+
+ProjectHephaestus issue #1380 asked for a DRY refactor extracting a shared
+`discover_prs_simple` helper from two `_discover_prs` methods the issue called "2 identical
+copies." Reading both bodies showed they are NOT byte-identical — they differ in a missing-PR
+log line (level AND wording) and in the delegated `find_pr_for_issue` strategy set. A naive
+flat extraction would silently change log output and PR-lookup behavior. The durable planning
+lesson: diff supposed duplicates before designing the signature, inject the behavior-bearing
+differences as parameters, and classify (don't blindly consolidate) any "(optional)" third
+near-duplicate that feeds downstream logic. This is a PLAN only — no code was run.
+
+### Numbering note
+
+Numbered Phase 14 rather than 13 because a concurrent amend for issue #1381 also targeted this
+skill at v1.8.0 with a Phase 13; this amend uses v1.9.0 / Phase 14 to avoid a version and
+heading collision. If #1381 has not landed when this rebases, renumbering may be revisited.
+
+### Previous version (v1.7.0) snapshot
+
+The full v1.7.0 frontmatter and Phase 12 content are preserved in the v1.7.0 entry below.
+
 ## v1.7.0 (2026-06-19)
 
 **Changed by:** ProjectHermes #329 / PR #652 — HMAC `_sign()` dedup

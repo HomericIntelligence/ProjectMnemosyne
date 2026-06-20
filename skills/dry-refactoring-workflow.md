@@ -2,8 +2,8 @@
 name: dry-refactoring-workflow
 description: "Complete TDD-driven workflow for identifying and eliminating code duplication by extracting reusable helper methods. Use when: (1) extracting duplicated helper methods into a shared module using TDD (write a failing test against the canonical, delete the duplicate, run green); (2) creating a private leaf module with leading-underscore naming to centralize a repeated internal call (e.g. importlib.metadata version resolution, path construction) and prevent re-introduction across modules; (3) centralizing hardcoded path constants into a single module to prevent drift when directory structure changes (incl. phase-routed in_progress/completed splits); (4) deduplicating LLM JSON extraction, parser logic, or any call-site pattern copy-pasted across several files; (5) test structure must mirror source structure when extracting helpers; (6) running a full DRY consolidation pass (discovery via grep, classifying true duplicates vs intentional variants, dict-structure consolidation) and refactoring to a single canonical source; (7) extract-method / SRP decomposition of over-long functions (50-LOC) and methods (100-LOC), including converting a mutating closure into a method via a small mutable box; (8) extracting repeated cached lookups into an @lru_cache helper (and clearing the cache so unittest.mock.patch works); (9) removing stale scripts / deprecated stubs (grep callers first) and replacing hardcoded file lists with dynamic Path.rglob discovery; (10) PLANNING a consolidation of two OVERLAPPING but not-identical constant collections (frozensets / keyword lists / error-pattern tuples) — classify true-duplicate vs intentional-variant first, then extract only the shared CORE into one canonical immutable constant and have each consumer compose CORE | its-own-extras, proving anti-drift with CORE.issubset(consumer) parity tests, instead of a flat merge that would violate a deliberate behavioral contract. (11) behavior-preserving duplicate cleanup across test fakes, tiny strategy/kernel modules, and validation wrappers: keep public module exports stable, centralize only identical mechanics, preserve local wrapper names/error messages, and verify with focused + full suites before opening a PR. Also covers cryptographic commit signing requirements in PR workflows. (12) stale issue body in dedup/consolidation tasks: issue 'Evidence:' sections go stale as prior PRs partially resolve them — grep the CURRENT state first; choose inlining over fixtures for pure bytes→str helpers; resolve remote branch divergence by pushing to a new branch rather than force-pushing or rebasing 84 conflicting commits."
 category: architecture
-date: 2026-06-19
-version: "1.7.0"
+date: 2026-06-20
+version: "1.9.0"
 user-invocable: false
 verification: verified-ci
 history: dry-refactoring-workflow.history
@@ -18,7 +18,7 @@ Complete TDD-driven workflow for identifying and eliminating code duplication by
 | ----------- | --------- |
 | **Date** | 2026-06-19 |
 | **Objective** | TDD-driven extraction of duplicated code into reusable helper modules, with emphasis on private module placement, test structure mirroring, and cryptographic commit signing |
-| **Outcome** | ✅ v1.0.0 (Feb 2026): Eliminated token aggregation duplication. v1.1.0 (Jun 2026): Extended with private module patterns, test mirroring enforcement, signing requirements. v1.3.0 (Jun 2026): Absorbed centralized path constants, LLM JSON extraction dedup, full DRY consolidation discovery/classify pass, and canonical-source refactor patterns (Pydantic type hierarchy, dict-structure consolidation, orphan relocation). v1.4.0 (Jun 2026): Restored SRP/extract-method (mutable-box closure), @lru_cache detection util (mock.patch/cache_clear gotcha), stale-script/stub cleanup, and dynamic Path.rglob discovery patterns from the nuance audit. ⚠️ v1.5.0 (Jun 2026, **planning-only / unverified**): Added Phase 10 — planning a consolidation of OVERLAPPING constant collections via the core/extras split (CORE \| consumer-extras) with subset parity anti-drift tests, classifying intentional-variant-with-overlap separately from "do not consolidate". v1.6.0 (Jun 2026): Added Radiance behavior-preserving duplicate cleanup pattern for route-test fakes, layout-only metric kernels, validation field wrappers, and stale tool deletion; verified locally with Ruff, full pytest, compileall, diff check, and pre-push pytest; PR CI pending. v1.7.0 (Jun 2026): Added Phase 12 — stale issue body in dedup tasks (grep current state, don't trust 'Evidence:' section); inline vs fixture decision for pure bytes→str helpers; remote branch divergence resolution (new branch vs force-push). Verified CI via ProjectHermes PR #652. |
+| **Outcome** | ✅ v1.0.0 (Feb 2026): Eliminated token aggregation duplication. v1.1.0 (Jun 2026): Extended with private module patterns, test mirroring enforcement, signing requirements. v1.3.0 (Jun 2026): Absorbed centralized path constants, LLM JSON extraction dedup, full DRY consolidation discovery/classify pass, and canonical-source refactor patterns (Pydantic type hierarchy, dict-structure consolidation, orphan relocation). v1.4.0 (Jun 2026): Restored SRP/extract-method (mutable-box closure), @lru_cache detection util (mock.patch/cache_clear gotcha), stale-script/stub cleanup, and dynamic Path.rglob discovery patterns from the nuance audit. ⚠️ v1.5.0 (Jun 2026, **planning-only / unverified**): Added Phase 10 — planning a consolidation of OVERLAPPING constant collections via the core/extras split (CORE \| consumer-extras) with subset parity anti-drift tests, classifying intentional-variant-with-overlap separately from "do not consolidate". v1.6.0 (Jun 2026): Added Radiance behavior-preserving duplicate cleanup pattern for route-test fakes, layout-only metric kernels, validation field wrappers, and stale tool deletion; verified locally with Ruff, full pytest, compileall, diff check, and pre-push pytest; PR CI pending. v1.7.0 (Jun 2026): Added Phase 12 — stale issue body in dedup tasks (grep current state, don't trust 'Evidence:' section); inline vs fixture decision for pure bytes→str helpers; remote branch divergence resolution (new branch vs force-push). Verified CI via ProjectHermes PR #652. ⚠️ v1.9.0 (Jun 2026, **planning-only / unverified**): Added Phase 14 — DRY-extraction issue claims 'N identical copies' that are NOT byte-identical: DIFF them first, then INJECT the behavior-bearing differences (a missing-PR log line and a delegated `find_pr_for_issue` variant) via `find_fn` + an optional `on_missing` callback instead of flattening; classify a third '(optional, can simplify)' near-duplicate (CIDriver, feeds dedup/fan-out) as an intentional variant; flag the issue-name vs module-convention naming divergence (`_discover_prs_simple` vs `discover_prs_simple`). Captured from planning ProjectHephaestus issue #1380; NOT executed (no code, no tests, no CI). |
 | **Primary Issues** | #642 (original), #739 (private module extraction), #917 (pr-policy signing), #503 (LLM JSON dedup) |
 | **Primary PRs** | #714 (original), #900+ (refactoring), #137/#1738 (path constants), #505 (JSON dedup), #201 (DRY consolidation) |
 | **History** | [changelog](./dry-refactoring-workflow.history) |
@@ -810,6 +810,132 @@ The remote branch's competing solution becomes a sibling PR. The project maintai
 whichever approach is preferred. This is safer than force-pushing because it preserves both
 solutions for review.
 
+### Phase 14: "N Identical Copies" — DIFF Them First, Inject the Behavior-Bearing Variants (NEW in v1.9.0, PLANNING-ONLY)
+
+> **Warning:** This phase is a **proposed workflow** captured from PLANNING ProjectHephaestus
+> issue #1380. It was **NOT validated end-to-end** — no code was written, no tests were run,
+> and no CI confirmed it. Treat every step below as a hypothesis until CI confirms it on a
+> real PR. The rest of this skill is `verified-ci`; this phase alone is unverified.
+
+**The trap this phase exists to avoid:** a DRY-extraction issue whose title/body claims two (or
+more) methods are "N identical copies." Issue #1380 claimed `PRReviewer._discover_prs` and
+`AddressReviewer._discover_prs` are "2 identical copies" of a `_discover_prs` loop. They are
+**not byte-identical** — they differ in two *behavior-bearing* ways. A naive "extract the
+identical body" collapses both differences and silently changes runtime behavior.
+
+This extends Phase 8c (true-duplicate vs intentional-variant classification) and Phase 12a
+(grep the current state, don't trust the issue body) into the specific case where the issue's
+*own framing* ("identical copies", "optional, can simplify") misleads the design. It overlaps
+deliberately with the sibling Phase that captures the stale-duplicate-*count* lesson; this one
+focuses on the *byte-for-byte-identical* claim and on **injecting** the differences as helper
+parameters.
+
+#### 14a. Diff the supposed duplicates byte-for-byte BEFORE designing the helper signature
+
+Do not design the extracted helper's signature from the issue's prose. Open both bodies and
+diff them on disk:
+
+```bash
+# Pull both method bodies and diff them directly, don't trust "identical" in the issue:
+sed -n '434,456p' hephaestus/automation/pr_reviewer.py   > /tmp/a.txt
+sed -n '387,404p' hephaestus/automation/address_review.py > /tmp/b.txt
+diff /tmp/a.txt /tmp/b.txt
+```
+
+In #1380 the two "identical" copies differed in exactly two places, both behavior-bearing:
+
+1. **The per-issue missing-PR log differs in BOTH level and wording:**
+   - `PRReviewer`: `logger.warning("No open PR found for issue #%s")`
+   - `AddressReviewer`: `logger.info("Issue #%s: no open PR found, skipping")`
+2. **The delegated `_find_pr_for_issue` call differs:**
+   - `PRReviewer` uses the two-strategy `find_pr_for_issue(n)`
+   - `AddressReviewer` uses the three-strategy `find_pr_for_issue(n, extra_strategies=True, _load_review_state_fn=...)`
+
+A flat "extract the identical body" would have collapsed BOTH — changing one caller's log
+level/wording and silently swapping its PR-lookup strategy.
+
+#### 14b. Preserve each caller's behavior by INJECTING the variants as parameters
+
+When the bodies differ only in a log line and a delegated-call variant, the behavior-preserving
+design injects those variants rather than hardcoding either copy:
+
+- Pass the bound `self._find_pr_for_issue` as a `find_fn` parameter, so each caller keeps its
+  own strategy set.
+- Pass the missing-PR log action as an optional `on_missing: Callable[[int], None] | None`
+  callback, so each caller keeps its exact level **and** wording.
+
+```python
+# In _review_utils.py — module-level, underscore-free per local convention:
+def discover_prs_simple(
+    issue_numbers: Iterable[int],
+    find_fn: Callable[[int], PRRef | None],
+    on_missing: Callable[[int], None] | None = None,
+) -> dict[int, PRRef]:
+    pr_map: dict[int, PRRef] = {}
+    for n in issue_numbers:
+        pr = find_fn(n)
+        if pr is None:
+            if on_missing is not None:
+                on_missing(n)
+            continue
+        pr_map[n] = pr
+    return pr_map
+
+# PRReviewer caller keeps its exact warning:
+discover_prs_simple(
+    nums,
+    self._find_pr_for_issue,
+    on_missing=lambda n: logger.warning("No open PR found for issue #%s", n),
+)
+# AddressReviewer caller keeps its exact info wording + three-strategy find_fn:
+discover_prs_simple(
+    nums,
+    self._find_pr_for_issue,   # bound: extra_strategies=True, _load_review_state_fn=...
+    on_missing=lambda n: logger.info("Issue #%s: no open PR found, skipping", n),
+)
+```
+
+**Rule:** if the only differences between "duplicates" are (a) a log line or (b) a delegated
+call, those differences are the *parameters of the helper*, not noise to be flattened.
+
+#### 14c. A third "optional, can simplify" near-duplicate is a prompt to CLASSIFY, not to change
+
+Issue #1380's "files affected" list flagged a third call site, `CIDriver._discover_prs`
+(`ci_driver.py:410`), as "(optional, can simplify)." Classify it as an **intentional variant**
+and keep it separate:
+
+- CIDriver's loop shares the *shape* but writes to a local `raw_map` (not the returned
+  `pr_map`) that downstream **dedup / `shared_pr_issues` fan-out / bot-PR-union** logic
+  consumes.
+- Delegating to the helper would not simplify it and would *couple* the helper to CIDriver's
+  downstream consumers.
+- Per Phase 8c: mark it with a cross-reference comment (`# Intentional variant of
+  discover_prs_simple — feeds dedup/fan-out; do not consolidate`), do **not** consolidate.
+
+**Lesson:** an issue listing a file as "(optional, can simplify)" is an instruction to
+**classify** that file (true-duplicate vs intentional-variant), not a license to change it.
+
+#### 14d. Flag the naming divergence: issue name vs local module convention
+
+The issue title named the helper `_discover_prs_simple` (leading underscore). The plan named it
+`discover_prs_simple` (underscore-free, module-level public). Module-level helpers in
+`_review_utils.py` are already underscore-free (e.g. `find_pr_for_issue`), so dropping the
+underscore matches local convention — but it is a **deliberate deviation from the issue's
+literal name** and should be called out in the plan so a reviewer does not flag it as a typo.
+
+#### 14e. Assumptions a reviewer/implementer must verify on disk
+
+The plan was written from a read of the current tree; these are the most uncertain assumptions
+and should be re-confirmed at implementation time (they drift between plan and HEAD):
+
+- **Exact line numbers** — `pr_reviewer.py:434-456`, `address_review.py:387-404`,
+  `_review_utils.py:25`/`:260`, `ci_driver.py:410`. Re-read; line numbers drift.
+- **`_review_utils.py` has no `__all__`** — the helper is exported by direct
+  `from ._review_utils import discover_prs_simple`. Confirmed by grep during planning; re-grep.
+- **House style: `from collections.abc import Callable`** (PEP 585) rather than
+  `typing.Callable`. Confirm by grepping the repo's existing imports, do not assume.
+- **The helper name** (`discover_prs_simple` vs the issue's `_discover_prs_simple`) — see 14d.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -841,6 +967,8 @@ solutions for review.
 | Trusting the issue body's "Evidence:" file list for a dedup scope | Assumed 4 files had `_sign()` per the issue; started planning a 4-file refactor | Prior PRs had partially resolved the issue — 3 of the 4 files had already migrated to the canonical `sign_body()`. Only 1 file had the wrapper remaining | **Grep first.** `grep -rn "def _sign"` shows current truth; the issue Evidence section reflects creation-time state, not current HEAD. |
 | Added a pytest fixture to conftest.py for a pure `bytes→str` HMAC helper | Wrapped `sign_body(body, INTEGRATION_TEST_SECRET)` as a pytest fixture so tests could receive it via DI | Introduced unnecessary indirection — the helper takes two args, one of which is a module-local constant, making the fixture callers less readable than just calling the function directly | For a pure `bytes→str` function closing over a local constant, **inline** the call (`sign_body(body_bytes, LOCAL_SECRET)`) at each call site; save fixtures for stateful or async setup |
 | Rebased onto the diverged remote branch that had a competing solution | `git pull origin 329-auto-impl` triggered a rebase with 84 commits and multiple conflicts | The remote had taken a different architectural approach; rebasing imported 84 unrelated commits and produced conflicts at every differing point | `git rebase --abort`; create a fresh local branch from current state; push as a new branch; open a new PR. The remote's competing solution becomes a sibling PR for maintainer review — don't overwrite it |
+| (PLANNING #1380) Extract the "identical body" of two `_discover_prs` methods the issue called "2 identical copies" | Planned a single `discover_prs_simple` containing the loop verbatim, hard-coding one copy's log line and one copy's `find_pr_for_issue` call | The two bodies were NOT byte-identical: the missing-PR log differed in BOTH level and wording (`logger.warning("No open PR found for issue #%s")` vs `logger.info("Issue #%s: no open PR found, skipping")`), and the delegated lookup differed (two-strategy `find_pr_for_issue(n)` vs three-strategy `find_pr_for_issue(n, extra_strategies=True, _load_review_state_fn=...)`). A flat extraction would silently change one caller's log level/wording AND swap its PR-lookup strategy | DIFF the supposed duplicates byte-for-byte before designing the signature. When bodies differ only in a log line + a delegated call, INJECT those as parameters: pass `self._find_pr_for_issue` as `find_fn` and the log action as an optional `on_missing: Callable[[int], None]` callback, so each caller keeps its exact behavior |
+| (PLANNING #1380) Treat the issue's "(optional, can simplify)" third call site (`CIDriver._discover_prs`) as something to consolidate | Considered delegating `CIDriver._discover_prs` to the new helper because the issue listed it as optionally-includable | CIDriver writes to a local `raw_map` (not the returned `pr_map`) that downstream dedup / `shared_pr_issues` fan-out / bot-PR-union logic consumes; delegating wouldn't simplify it and would couple the helper to those consumers | "(optional, can simplify)" is a prompt to CLASSIFY (true-duplicate vs intentional-variant), not an instruction to change. Per Phase 8c, keep it separate with a cross-reference comment; do not consolidate |
 
 ## Results & Parameters
 
@@ -940,6 +1068,7 @@ def _aggregate_token_stats(self, tier_results: dict[TierID, TierResult]) -> Toke
 
 ## Version History
 
+- **v1.9.0** (2026-06-20, PLANNING-ONLY, **unverified**): Added Phase 14 — DRY-extraction issue claims "N identical copies" that are NOT byte-identical. DIFF the supposed duplicates before designing the helper signature (#1380's two `_discover_prs` differed in a missing-PR log line's level+wording AND in the delegated `find_pr_for_issue` strategy set). Preserve each caller's behavior by INJECTING the variants: pass `self._find_pr_for_issue` as `find_fn` and the log action as an optional `on_missing: Callable[[int], None]` callback, rather than hardcoding one copy. Classify the third "(optional, can simplify)" near-duplicate (`CIDriver._discover_prs`, which feeds downstream dedup/`shared_pr_issues` fan-out/bot-PR-union) as an intentional variant — cross-reference comment, do NOT consolidate. Flagged the issue-name vs module-convention naming divergence (`_discover_prs_simple` vs underscore-free `discover_prs_simple`). Added 2 Failed Attempts rows. Captured from planning ProjectHephaestus issue #1380; NOT executed end-to-end (no code, no tests, no CI). Numbered Phase 14 (not 13) to avoid collision with a concurrent #1381 amend also targeting this skill.
 - **v1.7.0** (2026-06-19): Added Phase 12 — three concrete lessons from ProjectHermes #329 (HMAC `_sign()` dedup): (1) grep the CURRENT state before trusting issue body "Evidence:" sections (prior PRs may have partially resolved it); (2) inline a pure `bytes→str` helper over adding a pytest fixture or conftest entry when the function closes over a module-local constant; (3) when a remote branch has diverged with a competing solution, push as a new branch rather than force-pushing or rebasing 84 conflicting commits. Added 3 Failed Attempts rows. Updated Verified On table. Verification: verified-ci via ProjectHermes PR #652. Prior v1.6.0 snapshot archived to history.
 - **v1.6.0** (2026-06-18): Added Phase 11, a locally verified Radiance behavior-preserving duplicate cleanup workflow. Captures shared server route test fakes, parameterized layout-only metric kernels via `LayoutReindexKernel`, shared primitive validation field checks with local wrappers preserving exception/message contracts, stale script deletion after caller audit, and the fresh-branch PR workflow when the current branch's old PR is already merged. Verification was local/pre-push only; PR #908 CI was pending at capture time. Prior v1.5.0 snapshot archived to history.
 - **v1.5.0** (2026-06-12): Added Phase 10 (PLANNING-ONLY, **unverified**) — the core/extras split for consolidating OVERLAPPING constant collections that are intentional-variants-with-overlap, not pure duplicates. Refines the Phase 8c classification table with a third middle path: extract only the shared CORE into one immutable frozenset, compose each consumer as `CORE | extras`, and prove anti-drift with `CORE.issubset(consumer)` parity tests while keeping public names/types. Added 3 Failed Attempts rows (flat-merge-violates-contract, drop-phrases-because-broad-substring-covers-them, recompose-changes-order/type) and a `## Verified On` table. Captured from planning ProjectHephaestus issue #1205; NOT executed end-to-end (no code, no tests, no CI). Prior v1.4.0 snapshot archived to history.
