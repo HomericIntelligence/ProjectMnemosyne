@@ -1,9 +1,9 @@
 ---
 name: dry-refactoring-workflow
-description: "Complete TDD-driven workflow for identifying and eliminating code duplication by extracting reusable helper methods. Use when: (1) extracting duplicated helper methods into a shared module using TDD (write a failing test against the canonical, delete the duplicate, run green); (2) creating a private leaf module with leading-underscore naming to centralize a repeated internal call (e.g. importlib.metadata version resolution, path construction) and prevent re-introduction across modules; (3) centralizing hardcoded path constants into a single module to prevent drift when directory structure changes (incl. phase-routed in_progress/completed splits); (4) deduplicating LLM JSON extraction, parser logic, or any call-site pattern copy-pasted across several files; (5) test structure must mirror source structure when extracting helpers; (6) running a full DRY consolidation pass (discovery via grep, classifying true duplicates vs intentional variants, dict-structure consolidation) and refactoring to a single canonical source; (7) extract-method / SRP decomposition of over-long functions (50-LOC) and methods (100-LOC), including converting a mutating closure into a method via a small mutable box; (8) extracting repeated cached lookups into an @lru_cache helper (and clearing the cache so unittest.mock.patch works); (9) removing stale scripts / deprecated stubs (grep callers first) and replacing hardcoded file lists with dynamic Path.rglob discovery; (10) PLANNING a consolidation of two OVERLAPPING but not-identical constant collections (frozensets / keyword lists / error-pattern tuples) — classify true-duplicate vs intentional-variant first, then extract only the shared CORE into one canonical immutable constant and have each consumer compose CORE | its-own-extras, proving anti-drift with CORE.issubset(consumer) parity tests, instead of a flat merge that would violate a deliberate behavioral contract. (11) behavior-preserving duplicate cleanup across test fakes, tiny strategy/kernel modules, and validation wrappers: keep public module exports stable, centralize only identical mechanics, preserve local wrapper names/error messages, and verify with focused + full suites before opening a PR. Also covers cryptographic commit signing requirements in PR workflows. (12) stale issue body in dedup/consolidation tasks: issue 'Evidence:' sections go stale as prior PRs partially resolve them — grep the CURRENT state first; choose inlining over fixtures for pure bytes→str helpers; resolve remote branch divergence by pushing to a new branch rather than force-pushing or rebasing 84 conflicting commits."
+description: "Complete TDD-driven workflow for identifying and eliminating code duplication by extracting reusable helper methods. Use when: (1) extracting duplicated helper methods into a shared module using TDD (write a failing test against the canonical, delete the duplicate, run green); (2) creating a private leaf module with leading-underscore naming to centralize a repeated internal call (e.g. importlib.metadata version resolution, path construction) and prevent re-introduction across modules; (3) centralizing hardcoded path constants into a single module to prevent drift when directory structure changes (incl. phase-routed in_progress/completed splits); (4) deduplicating LLM JSON extraction, parser logic, or any call-site pattern copy-pasted across several files; (5) test structure must mirror source structure when extracting helpers; (6) running a full DRY consolidation pass (discovery via grep, classifying true duplicates vs intentional variants, dict-structure consolidation) and refactoring to a single canonical source; (7) extract-method / SRP decomposition of over-long functions (50-LOC) and methods (100-LOC), including converting a mutating closure into a method via a small mutable box; (8) extracting repeated cached lookups into an @lru_cache helper (and clearing the cache so unittest.mock.patch works); (9) removing stale scripts / deprecated stubs (grep callers first) and replacing hardcoded file lists with dynamic Path.rglob discovery; (10) PLANNING a consolidation of two OVERLAPPING but not-identical constant collections (frozensets / keyword lists / error-pattern tuples) — classify true-duplicate vs intentional-variant first, then extract only the shared CORE into one canonical immutable constant and have each consumer compose CORE | its-own-extras, proving anti-drift with CORE.issubset(consumer) parity tests, instead of a flat merge that would violate a deliberate behavioral contract. (11) behavior-preserving duplicate cleanup across test fakes, tiny strategy/kernel modules, and validation wrappers: keep public module exports stable, centralize only identical mechanics, preserve local wrapper names/error messages, and verify with focused + full suites before opening a PR. Also covers cryptographic commit signing requirements in PR workflows. (12) stale issue body in dedup/consolidation tasks: issue 'Evidence:' sections go stale as prior PRs partially resolve them — grep the CURRENT state first; choose inlining over fixtures for pure bytes→str helpers; resolve remote branch divergence by pushing to a new branch rather than force-pushing or rebasing 84 conflicting commits. (13) PLANNING an extraction whose issue claims 'N nearly-identical, M byte-for-byte identical' methods: the COUNT and 'byte-for-byte identical' assertions go STALE exactly like the 'Evidence:' section — count and DIFF every claimed-duplicate body in full before scoping; prior refactors may have already delegated one to a richer printer or changed another's signature/model, and even the truly-similar bodies often hide call-site-varying string args (count noun, header) that a flat merge would silently change — parameterize those as kwargs-with-defaults to guarantee zero behavior change, and place the helper in an EXISTING established-dedup module rather than a new leaf module or base-class method."
 category: architecture
-date: 2026-06-19
-version: "1.7.0"
+date: 2026-06-20
+version: "1.8.0"
 user-invocable: false
 verification: verified-ci
 history: dry-refactoring-workflow.history
@@ -16,9 +16,9 @@ Complete TDD-driven workflow for identifying and eliminating code duplication by
 
 | Attribute | Details |
 | ----------- | --------- |
-| **Date** | 2026-06-19 |
+| **Date** | 2026-06-20 |
 | **Objective** | TDD-driven extraction of duplicated code into reusable helper modules, with emphasis on private module placement, test structure mirroring, and cryptographic commit signing |
-| **Outcome** | ✅ v1.0.0 (Feb 2026): Eliminated token aggregation duplication. v1.1.0 (Jun 2026): Extended with private module patterns, test mirroring enforcement, signing requirements. v1.3.0 (Jun 2026): Absorbed centralized path constants, LLM JSON extraction dedup, full DRY consolidation discovery/classify pass, and canonical-source refactor patterns (Pydantic type hierarchy, dict-structure consolidation, orphan relocation). v1.4.0 (Jun 2026): Restored SRP/extract-method (mutable-box closure), @lru_cache detection util (mock.patch/cache_clear gotcha), stale-script/stub cleanup, and dynamic Path.rglob discovery patterns from the nuance audit. ⚠️ v1.5.0 (Jun 2026, **planning-only / unverified**): Added Phase 10 — planning a consolidation of OVERLAPPING constant collections via the core/extras split (CORE \| consumer-extras) with subset parity anti-drift tests, classifying intentional-variant-with-overlap separately from "do not consolidate". v1.6.0 (Jun 2026): Added Radiance behavior-preserving duplicate cleanup pattern for route-test fakes, layout-only metric kernels, validation field wrappers, and stale tool deletion; verified locally with Ruff, full pytest, compileall, diff check, and pre-push pytest; PR CI pending. v1.7.0 (Jun 2026): Added Phase 12 — stale issue body in dedup tasks (grep current state, don't trust 'Evidence:' section); inline vs fixture decision for pure bytes→str helpers; remote branch divergence resolution (new branch vs force-push). Verified CI via ProjectHermes PR #652. |
+| **Outcome** | ✅ v1.0.0 (Feb 2026): Eliminated token aggregation duplication. v1.1.0 (Jun 2026): Extended with private module patterns, test mirroring enforcement, signing requirements. v1.3.0 (Jun 2026): Absorbed centralized path constants, LLM JSON extraction dedup, full DRY consolidation discovery/classify pass, and canonical-source refactor patterns (Pydantic type hierarchy, dict-structure consolidation, orphan relocation). v1.4.0 (Jun 2026): Restored SRP/extract-method (mutable-box closure), @lru_cache detection util (mock.patch/cache_clear gotcha), stale-script/stub cleanup, and dynamic Path.rglob discovery patterns from the nuance audit. ⚠️ v1.5.0 (Jun 2026, **planning-only / unverified**): Added Phase 10 — planning a consolidation of OVERLAPPING constant collections via the core/extras split (CORE \| consumer-extras) with subset parity anti-drift tests, classifying intentional-variant-with-overlap separately from "do not consolidate". v1.6.0 (Jun 2026): Added Radiance behavior-preserving duplicate cleanup pattern for route-test fakes, layout-only metric kernels, validation field wrappers, and stale tool deletion; verified locally with Ruff, full pytest, compileall, diff check, and pre-push pytest; PR CI pending. v1.7.0 (Jun 2026): Added Phase 12 — stale issue body in dedup tasks (grep current state, don't trust 'Evidence:' section); inline vs fixture decision for pure bytes→str helpers; remote branch divergence resolution (new branch vs force-push). Verified CI via ProjectHermes PR #652. ⚠️ v1.8.0 (Jun 2026, **planning-only / unverified**): Added Phase 13 — stale 'N identical duplicates' claims in extraction issues: count and DIFF every claimed-duplicate body before scoping (the duplicate COUNT and 'byte-for-byte identical' assertion go stale like 'Evidence:'); parameterize call-site-varying string args (count noun, failed-header) as kwargs-with-defaults to guarantee zero behavior change instead of flattening; prefer an EXISTING established-dedup home over a new leaf module. Captured from planning ProjectHephaestus issue #1381; NOT executed (no code, no tests, no CI). |
 | **Primary Issues** | #642 (original), #739 (private module extraction), #917 (pr-policy signing), #503 (LLM JSON dedup) |
 | **Primary PRs** | #714 (original), #900+ (refactoring), #137/#1738 (path constants), #505 (JSON dedup), #201 (DRY consolidation) |
 | **History** | [changelog](./dry-refactoring-workflow.history) |
@@ -810,6 +810,92 @@ The remote branch's competing solution becomes a sibling PR. The project maintai
 whichever approach is preferred. This is safer than force-pushing because it preserves both
 solutions for review.
 
+### Phase 13: Stale "N identical duplicates" claims in extraction issues — count and DIFF before scoping (NEW in v1.8.0, PLANNING-ONLY)
+
+> **Warning:** This phase is a **proposed workflow** captured from PLANNING ProjectHephaestus
+> issue #1381 ("Extract shared `print_worker_summary` helper"). It was **NOT validated
+> end-to-end** — no code was written, no tests were run, and no CI confirmed it. Treat every
+> step below as a hypothesis until CI confirms it on a real PR. The rest of this skill is
+> `verified-ci` (except Phase 10, which is also planning-only); this phase alone is unverified.
+
+**The trap this phase exists to avoid:** an extraction issue confidently states a duplicate
+COUNT and a strength claim ("6 nearly-identical methods, 5 byte-for-byte identical"). That
+count and the "byte-for-byte identical" assertion go **stale exactly like the issue's
+'Evidence:' section** (Phase 12a). Prior refactors silently erode them: one duplicate may
+have already been delegated to a richer printer class, another may operate on a different
+model with a different signature. And even the bodies that *are* still similar often hide
+call-site-varying string literals that a naive flat merge would silently change. This phase
+is a **refinement of Phase 12a** (stale Evidence) applied to the *duplicate count and
+identical-ness claim* specifically, plus a **refinement of Phase 8c classify-before-merge**
+applied to a *shared function's call-site-varying string args* rather than to constant
+collections.
+
+#### Quick Reference
+
+```text
+issue claims "N nearly-identical, M byte-for-byte identical" methods
+  └─ DON'T trust the count. For EACH claimed duplicate:
+       1. grep its definition + READ the full body
+       2. DIFF the bodies against each other (not just eyeball them)
+       3. drop out-of-scope ones: already-delegated to a richer printer,
+          different signature, different model (e.g. PlanResult vs WorkerResult)
+  └─ among the REAL duplicates, find call-site-varying literals
+       (e.g. "Total PRs:" vs "Total issues:"; leading-newline header vs none)
+       └─ PARAMETERIZE them as kwargs-with-defaults (count_noun=, failed_header=)
+          → guarantees ZERO behavior change, vs a flat merge that flattens them away
+  └─ PLACEMENT: prefer an EXISTING established-dedup module that already fits the
+       boundary over a new leaf module or a new base-class method
+```
+
+#### The #1381 worked example
+
+The issue claimed **6** `_print_summary` methods, "5 byte-for-byte identical." Grepping and
+reading all 6 bodies in full showed only **4** were true duplicates:
+
+- `IssueImplementer._print_summary` had already been refactored to delegate to a richer
+  printer class (`ImplementationSummaryPrinter`) — out of scope.
+- `Planner._print_summary` had a different signature and operated on a different model
+  (`PlanResult` vs `WorkerResult`) — out of scope.
+
+So an issue scoped as "6 methods, ~100 lines removed" was really "4 methods, ~70 lines."
+Even among the 4 "identical" methods, two real behavioral differences would have been
+silently changed by a flat merge:
+
+1. one logged `"Total PRs:"` where the other three logged `"Total issues:"`;
+2. two used a leading-newline header `"\nFailed issues:"` and two did not.
+
+The fix is to **parameterize** these as keyword arguments with defaults
+(`count_noun="issues"`, `failed_header="Failed issues:"`) so each call site reproduces its
+exact prior output — guaranteeing zero behavior change — rather than flattening four call
+sites onto one hard-coded string. "Looks identical in a review" is **not** "is identical";
+only a literal diff of the bodies proves it.
+
+#### Placement decision
+
+Put the helper as a **module-level function in the EXISTING `_review_utils.py`** (which
+already houses the reviewer-trio dedup from #599 and already exposes a module `logger`) —
+not a new leaf module, and not a base-class method. **Lesson:** prefer an existing
+established-dedup home that already fits the architecture boundary (automation-layer helper,
+no upward library import) over creating a new module. A `TYPE_CHECKING`-only import of
+`WorkerResult` keeps the helper light (the plan confirmed via `models.py:110-133` that the
+helper only needs `.success` and `.error`).
+
+#### Most-uncertain assumptions (recorded honestly as risks — this is a PLAN)
+
+These were relied on WITHOUT full verification during planning and must be checked before/during implementation:
+
+- Assumed each of the 4 worker files already has a `from ._review_utils import (...)` group
+  to extend — `_review_utils.py` was confirmed to exist and to be imported by reviewers, but
+  the exact import-statement shape in each of the 4 files was **not** opened/confirmed.
+- Assumed no unit test asserts on `_print_summary` output or logger name (a `tests/` grep for
+  `_print_summary` returned only unrelated validation tests) — **the suites were not run**.
+- Assumed emitting through `_review_utils`'s `logger` (record `name` =
+  `hephaestus.automation._review_utils`) instead of each class's own logger causes no
+  regression. No test asserts logger name, but this is an **unverified behavioral change** to
+  the log record's `name` field.
+- The "~100 lines removed" figure is the issue's number; the actual removal is **~70 lines**
+  (4 methods), since 2 of the 6 are out of scope.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -841,6 +927,9 @@ solutions for review.
 | Trusting the issue body's "Evidence:" file list for a dedup scope | Assumed 4 files had `_sign()` per the issue; started planning a 4-file refactor | Prior PRs had partially resolved the issue — 3 of the 4 files had already migrated to the canonical `sign_body()`. Only 1 file had the wrapper remaining | **Grep first.** `grep -rn "def _sign"` shows current truth; the issue Evidence section reflects creation-time state, not current HEAD. |
 | Added a pytest fixture to conftest.py for a pure `bytes→str` HMAC helper | Wrapped `sign_body(body, INTEGRATION_TEST_SECRET)` as a pytest fixture so tests could receive it via DI | Introduced unnecessary indirection — the helper takes two args, one of which is a module-local constant, making the fixture callers less readable than just calling the function directly | For a pure `bytes→str` function closing over a local constant, **inline** the call (`sign_body(body_bytes, LOCAL_SECRET)`) at each call site; save fixtures for stateful or async setup |
 | Rebased onto the diverged remote branch that had a competing solution | `git pull origin 329-auto-impl` triggered a rebase with 84 commits and multiple conflicts | The remote had taken a different architectural approach; rebasing imported 84 unrelated commits and produced conflicts at every differing point | `git rebase --abort`; create a fresh local branch from current state; push as a new branch; open a new PR. The remote's competing solution becomes a sibling PR for maintainer review — don't overwrite it |
+| (PLANNING #1381) Trust the issue's duplicate COUNT and "byte-for-byte identical" claim | Issue stated "6 nearly-identical `_print_summary` methods, 5 byte-for-byte identical"; planned a 6-method extraction removing ~100 lines | Stale. Only 4 were true duplicates: `IssueImplementer` had already been refactored to delegate to a richer `ImplementationSummaryPrinter`; `Planner` had a different signature and operated on a different model (`PlanResult` vs `WorkerResult`). Real scope was 4 methods / ~70 lines | The duplicate COUNT and "byte-for-byte identical" assertion go stale exactly like the "Evidence:" section (extends Phase 12a). DIFF every claimed-duplicate body in full before scoping — don't trust the count |
+| (PLANNING #1381) Flat-merge the 4 "identical" methods into one hard-coded helper | The 4 bodies looked identical in review, so a single helper with fixed strings seemed safe | Two real behavioral diffs would have been silently changed: (a) one logged `"Total PRs:"` vs the others' `"Total issues:"`; (b) two used a leading-newline `"\nFailed issues:"` header, two did not | "Looks identical in review" != "is identical." Parameterize call-site-varying string args as kwargs-with-defaults (`count_noun=`, `failed_header=`) to guarantee zero behavior change — an application of Phase 8c classify-before-merge to a shared function's varying string args |
+| (PLANNING #1381) Put the new helper in a new leaf module or a base-class method | Considered a fresh `_summary_printing.py` module or a mixin/base-class `_print_summary` | A new module/base class adds a layer when an established-dedup home already fits the boundary; `_review_utils.py` already houses reviewer-trio dedup (#599) and a module `logger`, and is an automation-layer helper with no upward library import | Prefer an EXISTING established-dedup module that already fits the architecture boundary over creating a new leaf module or base-class method |
 
 ## Results & Parameters
 
@@ -927,6 +1016,7 @@ def _aggregate_token_stats(self, tier_results: dict[TierID, TierResult]) -> Toke
 | ProjectHephaestus | #1205 | Phase 10 core/extras split for overlapping `TRANSIENT_ERROR_PATTERNS` / `NETWORK_ERROR_KEYWORDS` | ⚠️ **unverified — planning only, NOT executed** (no code, no tests, no CI) |
 | LLM360/Radiance | PR #908 | Consolidated route-test fakes, layout-only metric kernels, validation field checks, and removed stale `hf_checkpoint_architecture_html.py` | verified-local — full local/pre-push test suite passed; PR CI pending at capture time |
 | ProjectHermes | #329 / PR #652 | Phase 12 — stale issue body (3 of 4 files already migrated), inline over fixture for pure HMAC helper, new-branch resolution for diverged remote | verified-ci — all pytest passed, signed commit, PR opened |
+| ProjectHephaestus | #1381 | Phase 13 — stale "6 methods / 5 byte-for-byte identical" claim (only 4 real duplicates), parameterize call-site-varying `count_noun`/`failed_header` instead of flat-merge, place helper in existing `_review_utils.py` | ⚠️ **unverified — planning only, NOT executed** (no code, no tests, no CI) |
 
 ## Related Skills
 
@@ -936,10 +1026,11 @@ def _aggregate_token_stats(self, tier_results: dict[TierID, TierResult]) -> Toke
 
 ## Tags
 
-`refactoring`, `dry-principle`, `helper-methods`, `radiance`, `test-fakes`, `validation-wrappers`, `layout-kernels`, `tdd`, `code-quality`, `python`, `pytest`, `private-modules`, `test-structure`, `git-signing`, `importlib-metadata`, `srp`, `extract-method`, `lru-cache`, `mock-patch`, `rglob`, `dead-code-removal`, `constants`, `frozenset`, `drift`, `intentional-variant`, `core-extras-split`, `planning`, `stale-issue-body`, `inline-vs-fixture`, `remote-branch-divergence`, `hmac`, `test-helper-dedup`
+`refactoring`, `dry-principle`, `helper-methods`, `radiance`, `test-fakes`, `validation-wrappers`, `layout-kernels`, `tdd`, `code-quality`, `python`, `pytest`, `private-modules`, `test-structure`, `git-signing`, `importlib-metadata`, `srp`, `extract-method`, `lru-cache`, `mock-patch`, `rglob`, `dead-code-removal`, `constants`, `frozenset`, `drift`, `intentional-variant`, `core-extras-split`, `planning`, `stale-issue-body`, `inline-vs-fixture`, `remote-branch-divergence`, `hmac`, `test-helper-dedup`, `stale-duplicate-count`, `diff-before-merge`, `parameterize-defaults`, `print-summary`, `existing-dedup-home`
 
 ## Version History
 
+- **v1.8.0** (2026-06-20, **planning-only / unverified**): Added Phase 13 — stale "N identical duplicates" claims in extraction issues. Captured from PLANNING ProjectHephaestus issue #1381 ("Extract shared `print_worker_summary` helper"); NOT executed end-to-end (no code, no tests, no CI). Lessons: (1) an issue's duplicate COUNT and "byte-for-byte identical" assertion go stale exactly like its "Evidence:" section (extends Phase 12a) — an issue claiming "6 methods, 5 byte-for-byte identical" had only 4 true duplicates (one already delegated to a richer `ImplementationSummaryPrinter`, one with a different signature/model `PlanResult` vs `WorkerResult`); count and DIFF every claimed-duplicate body before scoping. (2) Even the 4 "identical" bodies hid two call-site-varying literals (`"Total PRs:"` vs `"Total issues:"`; leading-newline `"\nFailed issues:"` header vs none) — parameterize as kwargs-with-defaults (`count_noun=`, `failed_header=`) to guarantee zero behavior change, an application of Phase 8c classify-before-merge to a shared function's string args. (3) Placement: prefer an EXISTING established-dedup module (`_review_utils.py`, already houses #599 reviewer-trio dedup + a module `logger`) over a new leaf module or base-class method. Added 3 Failed Attempts rows and a Verified On row. Recorded most-uncertain planning assumptions as explicit risks. Prior v1.7.0 snapshot archived to history.
 - **v1.7.0** (2026-06-19): Added Phase 12 — three concrete lessons from ProjectHermes #329 (HMAC `_sign()` dedup): (1) grep the CURRENT state before trusting issue body "Evidence:" sections (prior PRs may have partially resolved it); (2) inline a pure `bytes→str` helper over adding a pytest fixture or conftest entry when the function closes over a module-local constant; (3) when a remote branch has diverged with a competing solution, push as a new branch rather than force-pushing or rebasing 84 conflicting commits. Added 3 Failed Attempts rows. Updated Verified On table. Verification: verified-ci via ProjectHermes PR #652. Prior v1.6.0 snapshot archived to history.
 - **v1.6.0** (2026-06-18): Added Phase 11, a locally verified Radiance behavior-preserving duplicate cleanup workflow. Captures shared server route test fakes, parameterized layout-only metric kernels via `LayoutReindexKernel`, shared primitive validation field checks with local wrappers preserving exception/message contracts, stale script deletion after caller audit, and the fresh-branch PR workflow when the current branch's old PR is already merged. Verification was local/pre-push only; PR #908 CI was pending at capture time. Prior v1.5.0 snapshot archived to history.
 - **v1.5.0** (2026-06-12): Added Phase 10 (PLANNING-ONLY, **unverified**) — the core/extras split for consolidating OVERLAPPING constant collections that are intentional-variants-with-overlap, not pure duplicates. Refines the Phase 8c classification table with a third middle path: extract only the shared CORE into one immutable frozenset, compose each consumer as `CORE | extras`, and prove anti-drift with `CORE.issubset(consumer)` parity tests while keeping public names/types. Added 3 Failed Attempts rows (flat-merge-violates-contract, drop-phrases-because-broad-substring-covers-them, recompose-changes-order/type) and a `## Verified On` table. Captured from planning ProjectHephaestus issue #1205; NOT executed end-to-end (no code, no tests, no CI). Prior v1.4.0 snapshot archived to history.
