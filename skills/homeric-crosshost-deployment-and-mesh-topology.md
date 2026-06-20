@@ -1,9 +1,9 @@
 ---
 name: homeric-crosshost-deployment-and-mesh-topology
-description: "Deploy and operate the HomericIntelligence mesh across multiple Tailscale hosts using NATS JetStream, compose overlays, and justfile launchers. Use when: (1) splitting the E2E stack across multiple physical hosts via compose overlay or per-component launchers, (2) bringing up Agamemnon/Nestor/Hermes natively or via containers on any new Tailnet host from cold state, (3) running hub+remote-worker topology for cross-host myrmidon dispatch, (4) configuring NATS connections (direct or leafnode) over Tailscale, (5) implementing NATS JetStream publish retry with exponential backoff, (6) debugging Hermes webhook event types, compose healthchecks, or podman rootlessport/DNS quirks, (7) PLANNING credential-based authentication for a credential-less NATS leaf/server config and scrutinizing the uncertain assumptions a reviewer must verify in such a plan, (8) PLANNING Grafana anonymous-access hardening in the e2e compose stack (disable anonymous, fall back to admin login) and scrutinizing the unverified health-probe/provisioning assumptions a reviewer must confirm."
+description: "Deploy and operate the HomericIntelligence mesh across multiple Tailscale hosts using NATS JetStream, compose overlays, and justfile launchers. Use when: (1) splitting the E2E stack across multiple physical hosts via compose overlay or per-component launchers, (2) bringing up Agamemnon/Nestor/Hermes natively or via containers on any new Tailnet host from cold state, (3) running hub+remote-worker topology for cross-host myrmidon dispatch, (4) configuring NATS connections (direct or leafnode) over Tailscale, (5) implementing NATS JetStream publish retry with exponential backoff, (6) debugging Hermes webhook event types, compose healthchecks, or podman rootlessport/DNS quirks, (7) PLANNING credential-based authentication for a NATS leaf/server config and scrutinizing the uncertain assumptions a reviewer must verify in such a plan, (8) PLANNING Grafana anonymous-access hardening in the e2e compose stack (disable anonymous, fall back to admin login) and scrutinizing the unverified health-probe/provisioning assumptions a reviewer must confirm, (9) PLANNING a NATS TLS security runbook (cert provisioning via step-ca, zero-downtime cert rotation via SIGHUP, key-compromise response) for the canonical configs that now carry TLS per ADR-008, and scrutinizing the unverified step/nats-server/monitoring-API claims a reviewer must confirm."
 category: architecture
 date: 2026-06-20
-version: "1.4.0"
+version: "1.5.0"
 user-invocable: false
 verification: unverified
 history: homeric-crosshost-deployment-and-mesh-topology.history
@@ -47,6 +47,13 @@ tags:
   - anonymous-access
   - observability
   - hardening
+  - tls
+  - certificates
+  - cert-rotation
+  - step-ca
+  - sighup
+  - key-compromise
+  - runbook
 ---
 
 # HomericIntelligence Cross-Host Deployment and Mesh Topology
@@ -57,8 +64,8 @@ tags:
 | ------- | ------- |
 | **Date** | 2026-06-20 |
 | **Objective** | Deploy and operate the HomericIntelligence mesh across multiple Tailscale hosts using NATS JetStream, compose overlays, justfile launchers, and resilient publish patterns; and plan credential-based authentication for the credential-less NATS leaf/server config |
-| **Outcome** | Deployment patterns verified-local (two-host + 6-host). The NATS leaf/server auth fix is still an UNVERIFIED PLAN for issue #176 (R1, post-NOGO) — the full plan was not run end-to-end and no CI passed. BUT the config-block-presence validator was PROTOTYPED this session (verified-local: exit 0 on the fixed fixture, exit 1 on the repo's current configs). The Grafana anonymous-access hardening (issue #206) is an UNVERIFIED PLAN — no container was run; the load-bearing untested assumption is that Grafana's `/api/health` stays unauthenticated when anonymous access is disabled (so e2e health probes survive). The plan's highest-value content remains its catalogue of uncertain assumptions a reviewer must verify, now sharpened by concrete NOGO causes. |
-| **Verification** | unverified OVERALL for the NATS auth-planning section (the full plan was not exercised end-to-end); the brace-depth config-block validator specifically is verified-local (prototyped 2026-06-19 against fixed + current fixtures). The Grafana anonymous-access hardening subsection is unverified (no container run; `/api/health`-unaffected claim untested). Verified-local for all prior deployment content (Odysseus sessions 2026-04-03 to 2026-05-03). |
+| **Outcome** | Deployment patterns verified-local (two-host + 6-host). The NATS leaf/server auth fix is still an UNVERIFIED PLAN for issue #176 (R1, post-NOGO) — the full plan was not run end-to-end and no CI passed. BUT the config-block-presence validator was PROTOTYPED this session (verified-local: exit 0 on the fixed fixture, exit 1 on the repo's current configs). The Grafana anonymous-access hardening (issue #206) is an UNVERIFIED PLAN — no container was run; the load-bearing untested assumption is that Grafana's `/api/health` stays unauthenticated when anonymous access is disabled (so e2e health probes survive). The NATS TLS security RUNBOOK (issue #208 — cert provisioning, rotation, compromise response) is an UNVERIFIED PLAN — no commands run, no CI. **IMPORTANT premise correction:** the #176-era claim that `configs/nats/*.conf` ship with NO TLS is now STALE — ADR-008 (Status: Proposed) is already merged into the configs, so both `server.conf` and `leaf.conf` now carry top-level `tls {}`, `leafnodes { port=7422; tls{} }`, and cluster TLS referencing `/etc/nats/certs/{server-cert.pem,server-key.pem,ca.pem}`, and leaf.conf's remote is now `nats+tls://<ip>:7422`. The plan's highest-value content remains its catalogue of uncertain assumptions a reviewer must verify, now sharpened by concrete NOGO causes and the stale-premise correction. |
+| **Verification** | unverified OVERALL for the NATS auth-planning section (the full plan was not exercised end-to-end); the brace-depth config-block validator specifically is verified-local (prototyped 2026-06-19 against fixed + current fixtures). The Grafana anonymous-access hardening subsection is unverified (no container run; `/api/health`-unaffected claim untested). The NATS TLS security-runbook section (issue #208) is unverified (no commands run; `step` CLI flags, NATS SIGHUP cert hot-reload, and the `/varz` `tls_required` field name were all written from memory). The exception: the `.gitignore` cert-key coverage claim (`*.pem`/`*.key`/`*.crt`/`secrets/`/`*.secret`) was actually grepped from the file this session and is TRUE. Verified-local for all prior deployment content (Odysseus sessions 2026-04-03 to 2026-05-03). |
 | **History** | [changelog](./homeric-crosshost-deployment-and-mesh-topology.history) |
 
 ## When to Use
@@ -73,6 +80,7 @@ tags:
 - Debugging cross-host service communication, NATS leafnode config, or podman networking issues
 - Planning credential-based authentication for the canonical credential-less `configs/nats/leaf.conf` + `server.conf` (issue #176) and reviewing such a plan for unverified assumptions
 - Planning Grafana anonymous-access hardening in `docker-compose.e2e.yml` (issue #206) — disabling `GF_AUTH_ANONYMOUS_ENABLED`, falling back to admin login, and reviewing the unverified `/api/health` / provisioning assumptions
+- Planning a NATS TLS security runbook (issue #208) — cert provisioning (step-ca), zero-downtime cert rotation (SIGHUP), and key-compromise response — against the canonical configs that NOW carry TLS per ADR-008, and reviewing the unverified `step`/`nats-server`/`/varz` claims
 
 ## Verified Workflow
 
@@ -236,6 +244,17 @@ authentication: the `leafnodes {}` listener accepts anonymous leaf connections, 
 host that can reach port 7422 can join the mesh and relay traffic. This is the plan for
 closing that hole. `configs/` is canonical — fixing it propagates to every host that
 copies the config.
+
+> **STALE-PREMISE CORRECTION (2026-06-20, issue #208):** The "ship with NO TLS / NO auth"
+> premise above is the #176-era state and has DRIFTED. ADR-008 ("Require TLS for All NATS
+> Inter-Service Communication", Status: Proposed) is now MERGED into the configs: both
+> `server.conf` and `leaf.conf` carry top-level `tls {}` blocks, `leafnodes { port=7422;
+> tls{} }`, and cluster TLS, all referencing `/etc/nats/certs/{server-cert.pem,
+> server-key.pem,ca.pem}`; leaf.conf's remote is now `nats+tls://<ip>:7422`. The auth
+> (credential) gap may still exist, but the **TLS gap is closed**. LESSON: re-read the
+> canonical configs every session before asserting their security posture — a documented
+> gap may already be closed by a later ADR/PR. See the **NATS TLS Security Runbook** section
+> and its reviewer-risk catalogue below for the full #208 plan.
 
 ### Proposed Steps
 
@@ -495,6 +514,92 @@ Cited line numbers seen once this session (may have drifted — re-grep before e
 `:160-162` (admin creds region), sibling `provisioning/ProjectKeystone/k8s/grafana.yaml:95,100-101`,
 `docs/e2e-walkthrough-report.md:290`.
 
+## Proposed Workflow — NATS TLS Security Runbook (UNVERIFIED, issue #208)
+
+> **Warning:** This section is an UNVERIFIED PLAN. No commands were run, no CI passed.
+> The `step` CLI flags, the NATS SIGHUP cert hot-reload behavior, and the `/varz`
+> `tls_required` field name below were ALL written from memory, NOT exercised. Treat every
+> command as a reviewer-must-verify hypothesis. The highest-value content is the
+> reviewer-risk catalogue in **Results & Parameters** — read it before trusting any step.
+
+Issue #208 (§9) reported there is no runbook for NATS authentication setup or certificate
+rotation. The plan adds `docs/runbooks/nats-security.md` (TLS cert provisioning, rotation,
+compromise response) plus one row in `docs/README.md`'s runbook index. This is the
+operational-runbook complement to the #176 NATS-auth planning above.
+
+**Premise the whole plan rests on (CORRECTED):** the canonical configs are NO LONGER
+credential-less for TLS. ADR-008 (Status: **Proposed**) already added full TLS to both
+`server.conf` and `leaf.conf`: top-level `tls {}`, `leafnodes { port=7422; tls{} }`,
+cluster TLS — all referencing `/etc/nats/certs/{server-cert.pem,server-key.pem,ca.pem}`,
+with the leaf remote now `nats+tls://<ip>:7422`. The runbook OPERATIONALIZES this existing
+TLS config; it does not introduce it.
+
+### Proposed Steps (cert lifecycle)
+
+1. **Provision certs with `step-ca`** (`/etc/nats/certs/`), matching ADR-008's path
+   convention. Permissions: private key `600`, cert + CA `644`. **`step` flags below are
+   UNVERIFIED — `step ca init` flags in particular vary by version:**
+
+   ```bash
+   # UNVERIFIED step CLI syntax (written from memory; confirm against installed step version)
+   step ca init --name "HomericIntelligence" --dns ca.internal --address :443 --provisioner admin
+   step ca certificate "<host>" /etc/nats/certs/server-cert.pem /etc/nats/certs/server-key.pem --san <ip>
+   step ca root /etc/nats/certs/ca.pem
+   chmod 600 /etc/nats/certs/server-key.pem
+   chmod 644 /etc/nats/certs/server-cert.pem /etc/nats/certs/ca.pem
+   ```
+
+2. **Scenario 2 — zero-downtime rotation via SIGHUP (UNVERIFIED claim).** The plan claims
+   `kill -HUP <nats-server pid>` makes NATS re-read the cert files in place without dropping
+   JetStream state. NATS DOES support config reload on SIGHUP, but whether the running
+   version re-reads cert files in-place (vs requiring a full restart) was NOT exercised.
+   **If SIGHUP does NOT re-read certs, the "zero-downtime" claim is false** and a full
+   restart is needed — and per the **After NATS Restart** section, Agamemnon and Nestor do
+   NOT auto-reconnect, so they must be manually restarted too. Tie the claim to a verified
+   reload signal before trusting it.
+
+   ```bash
+   # UNVERIFIED: replace the cert files on disk, then signal a reload
+   kill -HUP "$(pgrep -f nats-server)"     # claim: hot-reloads TLS certs, JetStream survives
+   # If this does NOT re-read certs, a full restart is required (then restart Agamemnon+Nestor)
+   ```
+
+3. **Scenario 3 — key-compromise response.** Revoke the compromised cert, rotate the CA if
+   the CA key is compromised, re-issue all leaf/server certs, push to every host (`configs/`
+   is canonical), reload/restart. `step ca revoke --cert <cert>` — **flag UNVERIFIED.**
+
+4. **Verify TLS is actually required (UNVERIFIED field name).** The plan greps the NATS
+   monitoring API:
+
+   ```bash
+   # UNVERIFIED: the exact JSON key for "TLS required on client port" was NOT confirmed
+   curl -s http://127.0.0.1:8222/varz \
+     | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tls_required'))"
+   ```
+
+5. **Do NOT edit ADR-008.** CLAUDE.md principle 3: ADRs are append-only — once accepted,
+   never edited. The plan's optional back-reference line into ADR-008's References is
+   DROPPABLE. Prefer one-directional linking (runbook → ADR); discoverability is satisfied
+   by the `docs/README.md` index row alone.
+
+6. **Confirm ADR-008 is still the source of truth.** Its Status is "Proposed", not
+   "Accepted". The cert-path convention, permissions, and three provisioning strategies are
+   treated as settled by the plan — confirm ADR-008 has not been superseded before relying
+   on them.
+
+### Discipline that was DONE RIGHT this session (contrast with #176's fabrication)
+
+- **`.gitignore` cert-key coverage was actually GREPPED, not assumed.** `*.pem`, `*.key`,
+  `*.crt`, `.env`, `.env*.local`, `secrets/`, `*.secret` are ALL present in `.gitignore`, so
+  cert keys / creds won't be committed. This is the correct discipline — it directly
+  reinforces the #176 lesson that the EARLIER `.gitignore` claim was fabricated. Grep the
+  actual file; don't infer coverage from a convention.
+
+- **Use `ls docs/runbooks/` to enumerate runbooks — NOT the `docs/README.md` table.** The
+  README runbook table (lines ~35-41) is hand-maintained and already MISSING existing
+  runbooks `branch-protection-rollout.md` and `no-silent-failures.md`. The index drifts;
+  don't trust it as a complete inventory.
+
 ### Compose Healthchecks (Dual-Runtime: podman-compose 1.5.0 + Docker Compose v2/v5)
 
 ```yaml
@@ -610,6 +715,12 @@ pkill -f ProjectNestor_server    || kill $(pgrep -f ProjectNestor_server)
 | Left `GF_AUTH_ANONYMOUS_ORG_ROLE` after disabling anon | Set `GF_AUTH_ANONYMOUS_ENABLED=false` but kept the org-role var | Once anonymous is off the role var is dead config; it misleads a reviewer into thinking anonymous is only downgraded | REMOVE `GF_AUTH_ANONYMOUS_ORG_ROLE` when disabling anonymous — it has no effect and obscures intent |
 | Disabling Grafana anon without an admin credential | Set `GF_AUTH_ANONYMOUS_ENABLED=false` with no `GF_SECURITY_ADMIN_*` | With anon off Grafana falls back to the login screen; no usable credential means a locked-out e2e stack | Supply env-overridable admin creds (`${GRAFANA_ADMIN_USER:-admin}`/`${GRAFANA_ADMIN_PASSWORD:-admin}`) so the one-command e2e stack still logs in |
 | Assuming `compose config` proves the Grafana health probe still works | Ran `compose config` (syntax OK) and treated it as proof `:3001/api/health` survives anon disable | `compose config` validates structure only — it never starts Grafana or curls health; the `/api/health`-unaffected claim is untested | Structural compose validation is NOT runtime validation. Actually `up -d grafana` + curl `/api/health` (expect `database=ok`) before claiming probes survive |
+| Asserting configs are credential-less from the #176-era skill | Planned #208 assuming `configs/nats/*.conf` still ship with no TLS/auth | ADR-008 already added full TLS (`tls{}`, leafnodes port 7422 + tls, cluster tls, `/etc/nats/certs/`) to both configs | Re-read the canonical configs each session; a documented security gap may already be closed by a later ADR/PR |
+| Writing `step ca ...` flags from memory | Plan used `step ca init/certificate/root/revoke` with specific flags, unrun | `step` subcommand flags vary by version and were never executed | Treat external CLI syntax as unverified; install/run the tool or mark every flag reviewer-must-verify |
+| Claiming SIGHUP gives zero-downtime cert rotation | `kill -HUP <nats pid>` asserted to hot-reload TLS certs without JetStream loss | Reload-reads-certs-in-place behavior not exercised for the running NATS version | Tie any "zero-downtime" claim to a verified reload signal; if certs need a restart, dependent services (Agamemnon/Nestor) need manual restart too |
+| Editing an append-only ADR for a back-link | Plan proposed adding a References line to ADR-008 | CLAUDE.md principle 3: ADRs are append-only / never edited once accepted | Link one-directionally (runbook→ADR); satisfy discoverability via the docs/README index row, not by editing the ADR |
+| Trusting docs/README runbook table as complete | Used the README table as the runbook inventory | Table already omits `branch-protection-rollout.md` and `no-silent-failures.md` | The hand-maintained README table drifts; enumerate runbooks with `ls docs/runbooks/`, not the index |
+| Trusting `/varz` `tls_required` field name from memory | Plan greps `curl :8222/varz \| ... d.get('tls_required')` to confirm TLS-on-client | The exact JSON key for "TLS required on client port" in the running NATS monitoring API was not confirmed | Don't assert monitoring-API JSON key names from memory; curl `/varz` against the running version and read the actual keys |
 
 ## Results & Parameters
 
@@ -766,6 +877,58 @@ No container was run this session; these are blocking questions, not settled fac
    sibling `provisioning/ProjectKeystone/k8s/grafana.yaml:95,100-101`, `docs/e2e-walkthrough-report.md:290`
    were read once. Re-grep before editing.
 
+### Uncertain Assumptions a Reviewer MUST Verify (NATS TLS security runbook, issue #208 — unverified)
+
+No commands were run this session; these are blocking questions, not settled facts.
+
+1. **THE CONFIGS CHANGED — re-read them (single most important correction).** The #176-era
+   premise that `configs/nats/*.conf` ship with NO TLS is STALE. ADR-008 (Status: Proposed) is
+   already merged: both `server.conf` and `leaf.conf` now carry top-level `tls {}`,
+   `leafnodes { port=7422; tls{} }`, and cluster TLS referencing
+   `/etc/nats/certs/{server-cert.pem,server-key.pem,ca.pem}`; leaf.conf's remote is now
+   `nats+tls://<ip>:7422`. LESSON: re-read the canonical configs each session before asserting
+   their security posture; a documented gap may already be closed by a later ADR/PR.
+2. **`step` CLI command syntax was NOT verified.** `step ca init --name ... --dns ... --address :443
+   --provisioner admin`, `step ca certificate <name> cert key --san <ip>`, `step ca root ca.pem`,
+   and `step ca revoke --cert ...` were written from memory. `step ca init` flags in particular
+   vary across versions — confirm against the installed `step` version.
+3. **NATS SIGHUP cert reload was NOT verified.** The plan claims `kill -HUP <nats pid>` reloads TLS
+   certs without dropping JetStream state. NATS supports config reload on SIGHUP, but whether it
+   re-reads cert files in-place (vs requiring a full restart) for the running version was not
+   exercised. If SIGHUP does not re-read certs, Scenario 2's "zero-downtime" claim inverts into a
+   downtime + manual-restart procedure (and Agamemnon/Nestor must be restarted too).
+4. **`/varz` `tls_required` field name unverified.** The exact JSON key for "TLS required on client
+   port" in the running NATS monitoring API was not confirmed. Curl `/varz` and read the actual keys.
+5. **ADR-008 Status is "Proposed", not "Accepted".** The plan operationalizes a Proposed ADR and
+   treats its cert-path convention (`/etc/nats/certs/...`), permissions (key 600 / cert+ca 644), and
+   three provisioning strategies as settled. Confirm ADR-008 is still the source of truth and has not
+   been superseded.
+6. **Append-only-ADR tension.** The plan's optional back-reference line into ADR-008's References
+   conflicts with CLAUDE.md principle 3 (ADRs append-only / never edited). Drop it; link
+   one-directionally (runbook → ADR); satisfy discoverability via the `docs/README.md` index row.
+7. **Runbook-index drift observed (correct-discipline lesson).** `docs/README.md`'s runbook table
+   (lines ~35-41) is MISSING existing runbooks `branch-protection-rollout.md` and
+   `no-silent-failures.md`. Enumerate runbooks with `ls docs/runbooks/`, not the index table.
+8. **`.gitignore` cert-key coverage — VERIFIED this time (contrast with #176's fabrication).** The
+   claim that `*.pem`, `.env*`, `*.secret`, `secrets/` are git-ignored was actually grepped and is
+   TRUE (`*.key`, `*.pem`, `*.crt`, `.env`, `.env*.local`, `secrets/`, `*.secret` all present). This
+   is the correct discipline (grep the actual file) — directly reinforcing the #176 lesson that the
+   earlier `.gitignore` claim was fabricated.
+
+### Reviewer-risk + Meta-Lessons (NATS TLS runbook planning, issue #208 — unverified)
+
+Durable PLANNING lessons that generalize beyond NATS:
+
+- **A skill premise of the form "X has no security config" has a SHELF LIFE.** Security gaps get
+  closed by other issues/ADRs between sessions. Verify the current file state before building a plan
+  on top of a documented gap — here, ADR-008 had already added TLS the #176-era skill said was absent.
+- **External CLI command syntax written from memory is an unverified-assumption CLASS.** `step`,
+  `nats-server` flags, and monitoring-API JSON keys must each be flagged reviewer-must-verify, never
+  presented as fact. Install/run the tool or mark every flag uncertain.
+- **A "zero-downtime rotation" claim hinges on whether the daemon HOT-RELOADS certs.** If it does
+  not, the claim inverts into a downtime + manual-restart procedure. Always tie the reload mechanism
+  to a verified signal/behavior before claiming zero downtime.
+
 ```yaml
 # PROPOSED Grafana anon-hardening env (docker-compose.e2e.yml grafana service) — issue #206
 grafana_anon_hardening_env:
@@ -777,6 +940,22 @@ grafana_anon_hardening_env:
   load_bearing_assumption: "/api/health stays unauthenticated with anon off — UNTESTED, confirm at runtime"
   runtime_check:   "podman compose -f docker-compose.e2e.yml up -d grafana && curl :3001/api/health  # expect database=ok"
   verification:    "unverified — no container run; compose config validates syntax only, not health"
+```
+
+```yaml
+# PROPOSED NATS TLS security runbook (docs/runbooks/nats-security.md + docs/README row) — issue #208
+nats_tls_runbook:
+  premise: "configs NOW carry TLS per ADR-008 (Proposed) — NOT credential-less; runbook operationalizes existing TLS"
+  cert_paths: "/etc/nats/certs/{server-cert.pem,server-key.pem,ca.pem}"
+  permissions: "key 600; cert+ca 644"
+  provisioning: "step-ca — step CLI flags UNVERIFIED (init/certificate/root/revoke; vary by version)"
+  rotation: "Scenario 2 = SIGHUP hot-reload — UNVERIFIED whether NATS re-reads cert files in place; if not, full restart + restart Agamemnon/Nestor"
+  compromise: "Scenario 3 = revoke cert (+rotate CA if CA key compromised), re-issue, push canonical configs, reload/restart"
+  tls_required_check: "curl :8222/varz | d.get('tls_required') — JSON key name UNVERIFIED"
+  adr_link: "one-directional runbook->ADR-008 ONLY; ADRs are append-only — do NOT edit ADR-008"
+  runbook_index: "add ONE row to docs/README.md; enumerate runbooks via `ls docs/runbooks/` (README table drifts)"
+  gitignore: "VERIFIED grepped: *.pem,*.key,*.crt,.env,.env*.local,secrets/,*.secret all present"
+  verification: "unverified — no commands run, no CI; step/SIGHUP/varz claims written from memory"
 ```
 
 ```yaml
@@ -815,3 +994,4 @@ config_auth_gate:
 | Odysseus | Plan R1 for issue #176 (NATS leaf auth, post-NOGO) | validator prototyped verified-local (brace-depth `block()`: exit 0 on fixed fixture, exit 1 on current configs); full plan still unverified |
 | Odysseus | Plan R2 for issue #154 (Argus distroless dashboard healthcheck, post-NOGO) | unverified planning learning — distroless `static` images have no shell/wget; use binary self-probe `["CMD","/<binary>","-healthcheck"]`; `docker compose config` validates structure only. No container built or observed healthy |
 | Odysseus | Plan for issue #206 (Grafana anonymous-access hardening, docker-compose.e2e.yml) | unverified planning learning — disable `GF_AUTH_ANONYMOUS_ENABLED`, remove dead `GF_AUTH_ANONYMOUS_ORG_ROLE`, add env-overridable admin creds. Load-bearing untested assumption: `/api/health` stays unauthenticated with anon off so e2e probes survive. No container run |
+| Odysseus | Plan for issue #208 (NATS TLS security runbook — cert provisioning, rotation, compromise) | unverified planning learning — adds `docs/runbooks/nats-security.md` + README row. KEY correction: ADR-008 already added TLS to the configs (the #176-era "credential-less" premise is stale). `step` flags, SIGHUP cert hot-reload, and `/varz` `tls_required` key all written from memory (reviewer-must-verify). `.gitignore` cert-key coverage VERIFIED grepped. No commands run |
