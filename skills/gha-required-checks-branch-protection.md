@@ -1,9 +1,9 @@
 ---
 name: gha-required-checks-branch-protection
-description: "Use when: (1) PRs are permanently BLOCKED because a required status-check context is a job gated by if: github.event_name != 'pull_request' (skipped != satisfied), (2) consolidating duplicate CI jobs into a reusable workflow so _required.yml is a thin aggregator, (3) validating GitHub branch protection API responses and writing synthetic tests for bash enforcement scripts, (4) a summary aggregator job pattern is needed to replace N individual required contexts with one that handles skip semantics correctly, (5) adding a RESULTS-loop aggregator gate to _required.yml with a guard test asserting all non-excluded jobs are wired into needs, (6) guard test needs a provable negative path to catch silently-inverted conditions [verified-local: _unwired_jobs helper pattern, PR #1343], (7) job key vs context name disambiguation for branch protection contexts, (8) GET-before-PUT mitigation for destructive branch protection API, (9) requirements deviation must be disclosed explicitly in implementation plans, (10) you are placing a merge-blocking CI guard and must confirm its job is a pinned required status-check context, not an advisory job — enumerate the ruleset's required contexts and check your target job name is in that set, else the guard is green-but-non-blocking and a regression merges clean, (11) an issue claims a prerequisite PR already 'added'/'landed'/'introduced' a CI job that a new required-context depends on — verify that PR is actually merged to the default branch (gh pr view <n> --json state,mergedAt + grep the file on main) BEFORE adding the context, else the never-posted context bricks the merge queue."
+description: "Use when: (1) PRs are permanently BLOCKED because a required status-check context is a job gated by if: github.event_name != 'pull_request' (skipped != satisfied), (2) consolidating duplicate CI jobs into a reusable workflow so _required.yml is a thin aggregator, (3) validating GitHub branch protection API responses and writing synthetic tests for bash enforcement scripts, (4) a summary aggregator job pattern is needed to replace N individual required contexts with one that handles skip semantics correctly, (5) adding a RESULTS-loop aggregator gate to _required.yml with a guard test asserting all non-excluded jobs are wired into needs, (6) guard test needs a provable negative path to catch silently-inverted conditions [verified-local: _unwired_jobs helper pattern, PR #1343], (7) job key vs context name disambiguation for branch protection contexts, (8) GET-before-PUT mitigation for destructive branch protection API, (9) requirements deviation must be disclosed explicitly in implementation plans, (10) you are placing a merge-blocking CI guard and must confirm its job is a pinned required status-check context, not an advisory job — enumerate the ruleset's required contexts and check your target job name is in that set, else the guard is green-but-non-blocking and a regression merges clean, (11) an issue claims a prerequisite PR already 'added'/'landed'/'introduced' a CI job that a new required-context depends on — verify that PR is actually merged to the default branch (gh pr view <n> --json state,mergedAt + grep the file on main) BEFORE adding the context, else the never-posted context bricks the merge queue, (12) you are writing a runbook for a destructive full-replacement API write (branch-protection/ruleset PUT) and must include an explicit ROLLBACK (re-PUT the snapshot on read-back failure), not just a read-back; and derive sibling foreign keys (integration_id) dynamically from the live object rather than hardcoding a literal."
 category: ci-cd
 date: 2026-06-20
-version: "1.6.0"
+version: "1.7.0"
 user-invocable: false
 history: gha-required-checks-branch-protection.history
 tags:
@@ -26,6 +26,8 @@ tags:
   - green-but-non-blocking
   - premise-verification
   - prerequisite-pr
+  - rollback
+  - destructive-put
 ---
 
 # GitHub Actions Required Checks and Branch Protection
@@ -37,7 +39,7 @@ tags:
 | **Date** | 2026-06-20 (v1.5.0) · 2026-06-14 (v1.4.0) |
 | **Objective** | Make required status checks satisfiable and maintainable: handle skip-vs-success semantics with a `summary` aggregator, consolidate duplicate jobs into a reusable `workflow_call` workflow, validate branch-protection API writes with read-back, smoke-test workflow structure, add a RESULTS-loop gate with guard test, and document guard-test negative-path, job-key vs context-name disambiguation, destructive PUT mitigation, requirements-deviation disclosure, and (v1.5.0) required-status-check PLACEMENT — before placing a merge-blocking guard, enumerate the ruleset's required contexts and confirm the target job is one of them |
 | **Outcome** | Consolidated guidance covering ten interacting concerns; specific cases preserved as examples |
-| **Verification** | verified-ci (core patterns); verified-local (section F: _unwired_jobs helper + 3-test pattern, PR #1343; section J: required-context enumeration `jq` query WAS run, returned the listed contexts — but the proposed guard placement itself is **unverified** / planning-only; section K: the prerequisite-PR premise-check technique WAS run — `gh pr view 264` returned OPEN/`mergedAt:null` and the `main` grep returned empty — but the proposed ruleset-edit runbook is **unverified** / planning-only) |
+| **Verification** | verified-ci (core patterns); verified-local (section F: _unwired_jobs helper + 3-test pattern, PR #1343; section J: required-context enumeration `jq` query WAS run, returned the listed contexts — but the proposed guard placement itself is **unverified** / planning-only; section K: the prerequisite-PR premise-check technique WAS run — `gh pr view 264` returned OPEN/`mergedAt:null` and the `main` grep returned empty — but the proposed ruleset-edit runbook is **unverified** / planning-only; section L: the reviewer NOGO on issue #284 R0 that motivated the rollback/dynamic-integration_id learning is real and **verified-local**, but the proposed rollback runbook + dynamic-`integration_id` jq merge are **unverified** / planning-only — the ruleset PUT/rollback was NOT executed) |
 
 ## When to Use
 
@@ -50,6 +52,7 @@ tags:
 - You want a compact `RESULTS` env-var bash-loop aggregator (instead of one env var per job) and a guard unit test that asserts all non-excluded jobs are wired into the gate's `needs:` list — catching gaps automatically as the workflow grows.
 - **(v1.5.0)** You are about to ADD a merge-blocking guard (an enforcement-drift assertion, a value-check, a regression guard) and must decide which job/workflow it lives in — a guard placed in a job that is NOT a pinned required status-check context blocks nothing: the PR shows green and a regression merges clean (green-but-non-blocking security-theater). Enumerate the ruleset's required contexts first and confirm your target job `name:` is in that set.
 - **(v1.6.0)** An issue's body asserts a prerequisite PR already "added"/"landed"/"introduced" the CI job that POSTS the context you are about to make required (e.g. "PR #264 added the SAST job"). Before writing any runbook ordering that depends on it, VERIFY the PR is actually merged to the default branch (`gh pr view <n> --json state,mergedAt` AND grep the file on `main`). The issue body is a claim, not ground truth — if the posting job is not yet on `main`, adding the required context permanently bricks the merge queue (Section A hazard). Gate the change on the merge.
+- **(v1.7.0)** You are writing a runbook for a **destructive full-replacement API write** (a branch-protection or ruleset PUT that overwrites the whole object). A read-back that DETECTS corruption is only half a safeguard — the runbook must also state the explicit ROLLBACK (re-PUT the pre-edit snapshot when the read-back assert fails), and prove BEFORE any PUT that the snapshot itself is a valid restore target (parses + carries the expected pre-edit context count). Separately, when the new array entry must carry a foreign key matching its siblings (e.g. `integration_id`), DERIVE that key from a sibling in the live object via `jq` rather than pasting a literal copied from an issue body or an unmerged diff — the literal is a drift hazard, the derivation is self-consistent by construction.
 
 ## Verified Workflow
 
@@ -525,6 +528,111 @@ prevents), Section G (job-key vs context-name, the basis for the sub-learning), 
 `config-governance-fix-scope-all-variant-files` (the sibling planning-discipline skill that also
 turns "verify the issue premise" into explicit pre-work).
 
+#### L. Destructive full-replacement writes need an explicit ROLLBACK, not just a read-back; and derive sibling foreign keys (integration_id) dynamically (planning learning — unverified runbook, verified-local NOGO origin)
+
+> **Verification:** the reviewer NOGO that motivated this section is **verified-local** — during R1
+> re-planning of ProjectMnemosyne issue #284 (add `security/sast-scan` to ruleset 15556487 as a
+> required status check) the R0 plan actually RECEIVED a NOGO (Grade B) for the concrete gap below,
+> and R1 fixed it; that NOGO and its gap are real and were observed this session. The proposed
+> rollback runbook and the dynamic-`integration_id` `jq` merge are **UNVERIFIED** / planning-only —
+> the ruleset PUT and its rollback were **NOT executed** against the live API or in CI. Treat the
+> NOGO origin as real, the runbook as a proposal. (Same mixed-level shape as Sections J and K.)
+
+This extends Section H (GET-before-PUT + read-back for destructive full-replacement writes). Section
+H already mandates the snapshot and the read-back. The R0 plan for issue #284 DID take the
+`/tmp/ruleset-before.json` snapshot and DID assert a read-back — yet a reviewer still NOGO'd it,
+because the plan never stated the **restore action** if the read-back failed. "Snapshot taken,
+restore unstated" is the single thing a reviewer wants written down for a runbook whose headline risk
+is data loss.
+
+**Learning 1 — a read-back that detects corruption with no restore step is only half a safeguard.**
+For any destructive full-replacement API write, the runbook must contain THREE things, not two:
+(1) GET snapshot, (2) read-back assert, (3) explicit ROLLBACK = re-PUT the snapshot on assert-failure.
+After the read-back, if the asserted invariant fails (e.g. the live required-context count ≠ expected,
+or any prior context is missing), **immediately re-PUT the pre-edit snapshot to restore**, then abort
+WITHOUT marking the task done (do not close the issue). And BEFORE any PUT, prove the snapshot itself
+is a valid restore target — a corrupt snapshot means there is no rollback target at all:
+
+```bash
+# 0. PRE-PUT: prove the snapshot is a valid restore target (parses + carries the
+#    expected pre-edit context count). A corrupt snapshot = no rollback target.
+SNAP=/tmp/ruleset-before.json
+gh api "repos/$ORG/$REPO/rulesets/$RULESET_ID" > "$SNAP"
+EXPECTED_BEFORE=8   # the pre-edit required-context count you intend to grow to 9
+jq empty "$SNAP" || { echo "ABORT: snapshot is not valid JSON — no rollback target"; exit 1; }
+before_count=$(jq '[.rules[]|select(.type=="required_status_checks")
+                   |.parameters.required_status_checks[]] | length' "$SNAP")
+[ "$before_count" = "$EXPECTED_BEFORE" ] \
+  || { echo "ABORT: snapshot context count $before_count != expected $EXPECTED_BEFORE — bad restore target"; exit 1; }
+
+# ... (construct merged payload, then PUT) ...
+gh api --method PUT "repos/$ORG/$REPO/rulesets/$RULESET_ID" --input /tmp/ruleset-after.json >/dev/null
+
+# 2. READ-BACK ASSERT + 3. ROLLBACK on failure (re-PUT the snapshot, abort, do NOT close issue)
+live_count=$(gh api "repos/$ORG/$REPO/rulesets/$RULESET_ID" \
+  --jq '[.rules[]|select(.type=="required_status_checks")
+        |.parameters.required_status_checks[]] | length')
+EXPECTED_AFTER=$((EXPECTED_BEFORE + 1))
+if [ "$live_count" != "$EXPECTED_AFTER" ]; then
+  echo "::error::read-back assert FAILED (live=$live_count expected=$EXPECTED_AFTER) — ROLLING BACK"
+  gh api --method PUT "repos/$ORG/$REPO/rulesets/$RULESET_ID" --input "$SNAP" >/dev/null
+  echo "restored pre-edit snapshot; ABORTING without marking task done"
+  exit 1
+fi
+```
+
+**Generalizable rule:** *for any destructive full-replacement API write, the runbook must contain
+three steps, not two: (1) GET snapshot, (2) read-back assert, (3) explicit rollback = re-PUT the
+snapshot on assert-failure. A read-back that detects corruption but has no restore action is only
+half a safeguard. Add a pre-PUT check that the snapshot is a valid restore target (parses + carries
+the expected pre-edit context count) before any PUT.*
+
+**Learning 2 — source mutable foreign keys (like `integration_id`) dynamically from a sibling entry
+in the same payload, not from a hardcoded literal copied from an issue body.** The R0 plan hardcoded
+`integration_id: 15368` straight from the issue body. R1 hardened this: the `jq` merge reads the
+`integration_id` off an existing sibling required-status-check entry in the LIVE ruleset and reuses
+it for the new entry:
+
+```bash
+# Derive integration_id from a sibling required-status-check entry in the live ruleset,
+# then append the new context carrying that same id. Self-consistent by construction.
+jq '
+  (.rules[] | select(.type=="required_status_checks")
+            | .parameters.required_status_checks) as $checks
+  | ($checks | map(select(.context=="security/dependency-scan")) | .[0].integration_id) as $iid
+  | (.rules[] | select(.type=="required_status_checks")
+              | .parameters.required_status_checks)
+      += [{ "context": "security/sast-scan", "integration_id": $iid }]
+' /tmp/ruleset-before.json > /tmp/ruleset-after.json
+```
+
+Rationale: a literal copied from an issue body or an unmerged PR diff can silently DRIFT from what
+GitHub actually stores (the app/integration may have been reinstalled, the id rotated, or the issue
+body simply transcribed wrong). Deriving it from a sibling in the same live object guarantees
+consistency with what GitHub actually has. **Generalizable rule:** *when adding an array entry that
+must carry a foreign key matching its siblings (app/integration id, owner id, type tag), derive that
+key from a sibling in the live object via `jq` (`map(select(.context=="<sibling>")) | .[0].<key>`)
+rather than pasting a literal — the literal is a drift hazard, the derivation is self-consistent by
+construction.*
+
+**Sub-point — confirm "the context posts at least once" against a SHA where a PR workflow actually
+RAN, not against `main` blindly.** A check-run only exists on a commit where the workflow executed.
+Query the latest merged PR's head SHA, not `commits/main/check-runs`:
+
+```bash
+SHA=$(gh pr list --repo "$ORG/$REPO" --state merged --limit 1 --json headRefOid --jq '.[0].headRefOid')
+gh api "repos/$ORG/$REPO/commits/$SHA/check-runs" --jq '.check_runs[].name' | grep -qx "security/sast-scan" \
+  || echo "context never posted on a PR-workflow SHA yet — do NOT pin it as required"
+```
+Querying `commits/main/check-runs` blindly can miss the context simply because the PR workflow never
+ran on the `main` HEAD commit, producing a false negative.
+
+**Cross-references:** Section H (GET-before-PUT + read-back — this section adds the missing third leg,
+rollback), Section G (job-key vs context-name, the basis for the check-run-SHA sub-point and the
+`integration_id` sibling lookup keyed on `context`), Section K (the prerequisite-PR premise check —
+same issue #284, the gate that must precede this PUT), and Section A (the never-posts → BLOCKED
+hazard the check-run-SHA confirmation guards against).
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -544,6 +652,8 @@ turns "verify the issue premise" into explicit pre-work).
 | Pass `jobs` dict (not full `wf` dict) to `_unwired_jobs` | Refactored positive-path test kept the `jobs` fixture signature instead of switching to `workflow` | `_unwired_jobs(wf, excluded)` calls `wf["jobs"]` internally; passing the jobs dict directly raises `KeyError: 'jobs'` | Change the positive-path test to accept the `workflow` fixture (full document), not the `jobs` fixture |
 | Place the drift guard in ci.yml's `validate` job | Added the enforcement-value assertion as a step in the most obvious config-validation job (`ci.yml`) | `validate` is NOT a pinned required context (only `_required.yml`'s jobs are, per the ruleset's `required_status_checks` contexts); a regression would still merge clean — green-but-non-blocking | Enumerate required contexts from the ruleset (`jq … required_status_checks[].context`) and place the guard in a job whose `name:` is in that set; verify the step's JOB is required, not just that it parses |
 | Trusted the issue body's "PR #264 added the SAST job" premise | Planned to add `security/sast-scan` to the ruleset as required, taking the issue's past-tense claim that the posting job already landed at face value | PR #264 was still OPEN (`mergedAt: null`); the job is not on `main`, so the context never posts — adding it as required would permanently block the merge queue (Section A hazard) | Verify prerequisite PRs are actually merged to the default branch (`gh pr view <n> --json state,mergedAt` + grep the file on `main`) before writing runbook ordering that depends on them; gate the change on the merge, don't assume it |
+| Destructive ruleset PUT runbook with read-back but no rollback | Planned GET-snapshot + PUT + read-back assert for a full-replacement ruleset write, but left the restore action unstated when the read-back fails | Reviewer NOGO (issue #284 R0, Grade B): a read-back that DETECTS corruption with no restore step is only half a safeguard — the snapshot was taken but never re-PUT | A destructive full-replacement write needs THREE steps: GET snapshot, read-back assert, AND explicit rollback (re-PUT the snapshot on assert-failure); add a pre-PUT check that the snapshot is a valid restore target |
+| Hardcoded integration_id literal from the issue body | Copied `integration_id: 15368` from the issue text into the new required-status-check entry | A literal copied from prose/an unmerged diff can drift from what GitHub actually stores | Derive the integration_id from a sibling entry in the live ruleset via jq (`map(select(.context=="<sibling>")) | .[0].integration_id`) — self-consistent by construction |
 
 ## Results & Parameters
 
@@ -677,6 +787,7 @@ jq -r '.rules[]|select(.type=="required_status_checks")
 | ProjectHephaestus | Issue #1338 / PR #1343 — extract _unwired_jobs helper | 6/6 tests pass locally; CI pending |
 | ProjectMnemosyne | Issue #309 R1 re-planning (2026-06-20) | Section J — required-context PLACEMENT: enumeration `jq` query WAS run (verified-local), returned the 8 pinned contexts; guard placement into `_required.yml`'s `schema-validation` job is **unverified** (planning only) |
 | ProjectMnemosyne | Issue #284 planning (2026-06-20) | Section K — prerequisite-PR premise check: `gh pr view 264` returned OPEN/`mergedAt:null` and the `main` grep for `sast` was empty (verified-local); the proposed ruleset PUT adding `security/sast-scan` to ruleset 15556487 is **unverified** (planning only — must be gated on PR #264 merging) |
+| ProjectMnemosyne | Issue #284 R1 re-planning (2026-06-20) | Section L — destructive full-replacement write needs explicit ROLLBACK (re-PUT the snapshot on read-back failure), not just a read-back; derive `integration_id` from a live sibling via `jq` instead of hardcoding `15368`. The R0 NOGO (Grade B) that motivated it is real and **verified-local**; the proposed rollback runbook + dynamic-`integration_id` merge are **unverified** (planning only — the ruleset PUT/rollback was NOT executed) |
 
 ## References
 

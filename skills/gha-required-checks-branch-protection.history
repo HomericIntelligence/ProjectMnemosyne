@@ -2,6 +2,79 @@
 
 # gha-required-checks-branch-protection — History
 
+## v1.7.0 (2026-06-20)
+
+**Changed by:** ProjectMnemosyne issue #284 R1 re-planning (add `security/sast-scan` to the
+`homeric-main-baseline` ruleset id 15556487 as a required status check) — driven by a reviewer
+NOGO (Grade B) on the R0 plan.
+**Verification:** verified-local for the reviewer-NOGO ORIGIN (the R0 plan really received a Grade-B
+NOGO this session for the unstated-rollback gap, and R1 fixed it); **unverified** for the proposed
+runbook content (the ruleset PUT, its rollback re-PUT, and the dynamic-`integration_id` `jq` merge
+were NOT executed against the live API or in CI — planning only). Mirrors Sections J/K mixed-level
+shape.
+
+**Stacking note:** this entry builds ON TOP of v1.6.0 (#2735, which added Section K — the
+prerequisite-PR premise check). On-disk `main` already carries v1.6.0 with Section K present
+(PR #2735 merged), so Section L is added cleanly on top; no Section K reconciliation was needed.
+The version was bumped straight to 1.7.0 (not 1.6.x) to avoid colliding with #2735's number.
+
+### What changed
+
+- Added **Section L: Destructive full-replacement writes need an explicit ROLLBACK, not just a
+  read-back; and derive sibling foreign keys (integration_id) dynamically** — a planning-discipline
+  learning from the R0→R1 NOGO cycle on issue #284. Two learnings:
+  1. **Rollback completes the safeguard.** Section H already mandates GET-before-PUT + read-back;
+     the R0 plan took the `/tmp/ruleset-before.json` snapshot and asserted a read-back but never
+     stated the RESTORE action on read-back failure. A read-back that DETECTS corruption with no
+     re-PUT is only half a safeguard. The runbook must contain THREE steps: (1) GET snapshot,
+     (2) read-back assert, (3) explicit rollback = re-PUT the snapshot on assert-failure (abort
+     WITHOUT marking the task done / closing the issue). Plus a PRE-PUT check that the snapshot is
+     a valid restore target (parses + carries the expected pre-edit context count) — a corrupt
+     snapshot means no rollback target.
+  2. **Dynamic foreign-key sourcing.** R0 hardcoded `integration_id: 15368` from the issue body.
+     R1 derives it from a sibling required-status-check entry in the LIVE ruleset via `jq`
+     (`($checks | map(select(.context=="security/dependency-scan")) | .[0].integration_id) as $iid`)
+     and reuses it for the new entry — self-consistent by construction; a copied literal is a drift
+     hazard.
+  - Sub-point: the "context posts at least once" confirmation must query a commit SHA where a PR
+    workflow actually RAN (resolve the latest merged PR's `headRefOid`, then
+    `commits/<sha>/check-runs`), NOT `commits/main/check-runs` blindly — a check-run only exists
+    where the workflow executed.
+- Added two Failed Attempts rows: (a) "Destructive ruleset PUT runbook with read-back but no
+  rollback" → reviewer NOGO (issue #284 R0, Grade B); (b) "Hardcoded integration_id literal from
+  the issue body" → drift hazard, derive from a live sibling via `jq`.
+- Added description trigger (12): writing a runbook for a destructive full-replacement API write
+  must include an explicit ROLLBACK (re-PUT the snapshot on read-back failure), not just a
+  read-back; and derive sibling foreign keys (integration_id) dynamically from the live object.
+- Added a When-to-Use trigger mirroring the description addition.
+- Added tags: `rollback`, `destructive-put`.
+- Updated the Overview Verification cell to record Section L's mixed level (NOGO origin
+  verified-local; rollback runbook + dynamic-`integration_id` merge unverified / planning-only).
+- Added a Verified On row for ProjectMnemosyne issue #284 R1 re-planning.
+
+### Why
+
+R1 re-planning of issue #284 received a reviewer NOGO (Grade B) on the R0 plan for one concrete
+gap: the R0 runbook for a destructive full-replacement ruleset PUT TOOK the pre-edit snapshot and
+asserted a read-back, but never stated what to do when the read-back fails. For a runbook whose
+headline risk is data loss, "snapshot taken, restore unstated" is exactly the thing a reviewer
+wants written down. The fix makes rollback the explicit third leg of the safeguard (GET → assert →
+re-PUT-on-failure) and adds a pre-PUT validity check on the snapshot so the rollback target is known
+good before any write. Separately, R0 hardcoded `integration_id: 15368` from the issue body; a
+literal copied from prose or an unmerged diff can silently drift from what GitHub actually stores,
+so R1 derives the id from a sibling entry in the live ruleset — self-consistent by construction.
+These are planning-discipline learnings: the NOGO and its gap are real (verified-local), but the
+runbook itself (the actual ruleset PUT/rollback) was NOT executed — planning only.
+
+### Previous version (v1.6.0) snapshot
+
+Previous version: v1.6.0 (#2735) — added Section K (prerequisite-PR premise check), the issue #284
+Failed Attempts row, description trigger (11), and tags `premise-verification`/`prerequisite-pr`.
+See the v1.6.0 history entry below for its full snapshot and the earlier entries for the v1.5.0 and
+prior bodies. Sections touched in v1.7.0: frontmatter (`description`, `version`→1.7.0, `date`, tags
+`rollback`/`destructive-put`), Overview Verification cell, When to Use (v1.7.0 trigger), new
+**Section L**, two Failed Attempts rows, and a Verified On row.
+
 ## v1.6.0 (2026-06-20)
 
 **Changed by:** ProjectMnemosyne issue #284 planning (add `security/sast-scan` to the
