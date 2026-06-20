@@ -212,14 +212,14 @@ Assumptions" in the plan body, with the tool-call evidence for each:
 | # | Assumption | Tool call that resolves it | Plan body line |
 |---|------------|----------------------------|----------------|
 | 1 | Workflow file content matches the audit excerpt | `Read .github/workflows/<wf>.yml` | "Confirmed against file on disk at SHA `<sha>`" |
-| 2 | The downstream consumer actually reads the new path | `grep -n <filename> scripts/<consumer>.py` | "Consumer reads <filename> at `scripts/<consumer>.py:<line>`" |
+| 2 | The downstream consumer actually reads the new path | `grep -n <filename> scripts/<consumer>.py` | "Consumer reads \<filename> at `scripts/<consumer>.py:<line>`" |
 | 3 | No `paths-ignore:` is present | `grep -nE "paths-ignore:" .github/workflows/<wf>.yml` | "No `paths-ignore:` present (or: present, see resolution X)" |
 | 4 | Symmetric `push:` trigger has compatible semantics | Manual workflow inspection | "`push:` block has no `paths:` → already covers; OR `push.paths:` also needs the edit" |
 | 5 | No `merge_group:` event in use | `gh api repos/:owner/:repo/rules/branches/main` | "No `merge_queue` rule configured" |
 | 6 | Self-test will run in-PR | Include a touch to the new path in the same PR | "PR includes `touch <newpath>` to exercise the new trigger" |
 | 7 | Job is blocking / non-blocking | `gh api repos/:owner/:repo/branches/main/protection --jq '.required_status_checks.contexts'` | "Job is non-blocking (not in required-checks list) → trigger regressions have no CI signal" |
 
-### Decision matrix — pull_request.paths: vs push.paths: vs merge_group:
+### Decision matrix — pull_request.paths vs push.paths vs merge_group
 
 | Coverage need | `pull_request.paths:` | `push.paths:` (main) | `merge_group:` |
 |---------------|----------------------|---------------------|----------------|
