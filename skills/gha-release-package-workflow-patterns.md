@@ -2,8 +2,8 @@
 name: gha-release-package-workflow-patterns
 description: "Use when: (1) creating a tag-triggered release workflow with keepachangelog CHANGELOG format and semver version consistency checks across manifests, (2) implementing automated package building via GitHub Actions with artifact publication and GitHub Release creation, (3) adding pre-commit script validation of Python version drift between pyproject.toml classifiers and Dockerfile FROM line, (4) adding CI steps that replace fragile shell printf emoji byte-escape encoding with dedicated Python scripts for better portability."
 category: ci-cd
-date: 2026-06-07
-version: "1.1.0"
+date: 2026-06-20
+version: "1.2.0"
 user-invocable: false
 history: gha-release-package-workflow-patterns.history
 tags:
@@ -26,10 +26,10 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-07 |
+| **Date** | 2026-06-20 |
 | **Objective** | Capture reusable GitHub Actions patterns for release and packaging automation: tag-triggered release workflows with keepachangelog CHANGELOG and cross-manifest semver consistency, package building with artifact publication and GitHub Release creation, pre-commit checks that catch Python version drift between `pyproject.toml` classifiers and the Dockerfile `FROM` line, and CI portability fixes that replace fragile shell `printf` emoji byte-escapes with dedicated Python scripts. |
-| **Outcome** | Operational across multiple repos — release.yml validates tag/CHANGELOG/manifest consistency before publishing; version-drift checks block silent mismatches; printf-emoji removal makes report-building locale-independent. |
-| **Verification** | verified-ci |
+| **Outcome** | Operational across multiple repos — release.yml validates tag/CHANGELOG/manifest consistency before publishing; version-drift checks block silent mismatches; printf-emoji removal makes report-building locale-independent. v1.2.0 fixes a release-notes extraction bug where the end-anchor absorbed the CHANGELOG link-reference footer into the published release body (footer-bleed fix verified-local). |
+| **Verification** | verified-ci (footer-bleed fix verified-local) |
 
 ## When to Use
 
@@ -51,7 +51,7 @@ tags:
 | Manifest version consistency | `scripts/check_version_consistency.py` (pre-commit + release.yml) | All manifests + CHANGELOG agree on version |
 | CHANGELOG format | keepachangelog: `[Unreleased]` + `## [X.Y.Z] - YYYY-MM-DD` | release.yml requires both sections present |
 | Package publish | `softprops/action-gh-release` after `validate` job | `publish` job `needs: validate` |
-| Release notes body | Python step regexes the dated CHANGELOG section into `RELEASE_NOTES` | `body: ${{ steps.notes.outputs.RELEASE_NOTES }}` (empty body = missing step) |
+| Release notes body | Python step regexes the dated CHANGELOG section into `RELEASE_NOTES` (end-anchor stops at next `## [`, the link-ref footer, or EOF) | `body: ${{ steps.notes.outputs.RELEASE_NOTES }}` (empty body = missing step; footer in body = missing `\n\[[^\]]+\]: ` anchor) |
 | Signed release tag | `git tag -s -a vX.Y.Z` + `git log --format='%h %G? %s'` | Every line shows `G` (good signature) |
 | Python version drift | `scripts/check_python_version_consistency.py` | Highest `pyproject.toml` classifier == Dockerfile `FROM python:X.Y` |
 | CI emoji portability | `scripts/build_<report>.py` Python script | pytest asserts `b"\xf0\x9f"` not in output |
@@ -220,8 +220,13 @@ jobs:
           version = os.environ["VERSION"]
           with open("CHANGELOG.md", "r", encoding="utf-8") as f:
               content = f.read()
-          # Match "## [X.Y.Z] - YYYY-MM-DD" up to the next "## [" or EOF.
-          pattern = rf"## \[{re.escape(version)}\] - \d{{4}}-\d{{2}}-\d{{2}}\n(.*?)(?=\n## \[|$)"
+          # Match "## [X.Y.Z] - YYYY-MM-DD" up to the next "## [" header, the first
+          # keepachangelog link-reference footer line, or EOF. The `\n\[[^\]]+\]: `
+          # alternative is REQUIRED: for the top/most-recent dated section there is no
+          # next "## [" below it, only the link-reference footer
+          # ([Unreleased]: .../compare/..., [X.Y.Z]: .../releases/tag/...), so without it
+          # `.*?` (re.DOTALL) runs to EOF and bleeds those footer lines into the body.
+          pattern = rf"## \[{re.escape(version)}\] - \d{{4}}-\d{{2}}-\d{{2}}\n(.*?)(?=\n## \[|\n\[[^\]]+\]: |$)"
           match = re.search(pattern, content, re.DOTALL)
           if not match:
               print("::error::Could not extract release notes for version", version)
@@ -244,9 +249,14 @@ jobs:
 The release-notes extraction step is what wires the CHANGELOG into the release `body`. Without
 it the `Create GitHub Release` step publishes an **empty** release. Key details:
 
-- **Regex** `## \[VERSION\] - \d{4}-\d{2}-\d{2}\n(.*?)(?=\n## \[|$)` with `re.DOTALL` so `.`
-  spans newlines; capture group 1 is everything between this version header and the next
-  `## [` header (or EOF). `re.escape(version)` guards the dotted version.
+- **Regex** `## \[VERSION\] - \d{4}-\d{2}-\d{2}\n(.*?)(?=\n## \[|\n\[[^\]]+\]: |$)` with
+  `re.DOTALL` so `.` spans newlines; capture group 1 is everything between this version header
+  and the next `## [` header, the first keepachangelog link-reference footer line, or EOF.
+  `re.escape(version)` guards the dotted version. The `\n\[[^\]]+\]: ` alternative in the
+  end-anchor is **required** to stop footer-bleed: the top/most-recent dated section (the common
+  case — you just promoted `[Unreleased]` to vX.Y.Z) has no next `## [` below it, only the
+  link-reference footer, so without it `.*?` runs to EOF and the published body absorbs
+  `[Unreleased]: .../compare/...` and `[X.Y.Z]: .../releases/tag/...`.
 - **GitHub-output escaping**: `%`→`%25`, `\n`→`%0A`, `\r`→`%0D` (escape `%` first so the
   later replacements are not double-escaped). This lets a multi-line CHANGELOG section survive a
   single-line `>> "$GITHUB_OUTPUT"` write.
@@ -404,6 +414,7 @@ A pytest guard asserts the bytes are gone: `assert b"\xf0\x9f" not in out.read_b
 | Leaving emoji in `comment-marker` YAML | Kept `"\U0001F4CA Test Metrics Report"` while making the file body plain text | The marker locates existing bot comments; a unicode escape is inconsistent with the new plain header | Set the marker to plain ASCII to match the script's header string |
 | Release published with empty notes | Wired only `tag_name` into `action-gh-release` and assumed it would pull notes from the CHANGELOG automatically | `softprops/action-gh-release` does not read CHANGELOG.md — with no `body`, the release notes are blank | Add an explicit extraction step (regex the dated section, escape `%`/`\n`/`\r` for `$GITHUB_OUTPUT`) and wire `body: ${{ steps.notes.outputs.RELEASE_NOTES }}` |
 | Pushing an unsigned (or lightweight) release tag | Ran `git tag v0.1.0` / `git tag -a v0.1.0` and pushed | The tag had no signature, so authorship could not be verified and `%G?` showed `N` | Sign the tag with `git tag -s -a vX.Y.Z -m "..."` and gate the release on `git log --format='%h %G? %s'` showing `G` |
+| Release notes absorbed the CHANGELOG link-footer | Extracted the dated section with end-anchor `(?=\n## \[\|$)` | For the top/most-recent dated section there is no next `## [` below it — only the keepachangelog link-reference footer — so `.*?` (re.DOTALL) ran to EOF and pulled `[Unreleased]: …/compare/…` and `[X.Y.Z]: …/releases/tag/…` into the published release body (verified-local: synthetic top-section fixture, old anchor → footer in body) | Extend the end-anchor to also stop at the first link-reference line: `(?=\n## \[\|\n\[[^\]]+\]: \|$)`; prove it with a synthetic top-section CHANGELOG fixture asserting `compare/`/`releases/tag/` are absent from the body |
 
 ## Results & Parameters
 
@@ -437,6 +448,41 @@ python3 scripts/check_python_version_consistency.py --repo-root /path/to/repo
 Regex patterns: `r"^\s*FROM\s+python:(\d+\.\d+)"` (IGNORECASE | MULTILINE) and `r"Programming Language :: Python :: (\d+\.\d+)$"`. Verified with 31 unit tests across 3 classes (classifier parsing, Dockerfile parsing, consistency check).
 
 **release.yml execution flow on `git push origin v0.1.0`:** GitHub detects the tag → `validate` job extracts version, checks tag format, verifies all manifests + CHANGELOG agree, runs regression tests → on success `publish` job creates the GitHub Release with notes from the CHANGELOG section → any failure stops the workflow.
+
+**Release-notes footer-bleed guard (verified-local):**
+
+The end-anchor must stop at the keepachangelog link-reference footer, not just the next `## [`
+header or EOF. The dangerous case is the **topmost** dated section (you just promoted
+`[Unreleased]` to vX.Y.Z), which sits directly above the footer with no `## [` below it. Prove
+the fix with a synthetic CHANGELOG fixture where the dated section is topmost and assert the
+footer URLs do not bleed into the extracted body:
+
+```python
+import re
+
+def extract_notes(content: str, version: str) -> str:
+    # Note the `\n\[[^\]]+\]: ` alternative — without it the top section bleeds the footer.
+    pattern = rf"## \[{re.escape(version)}\] - \d{{4}}-\d{{2}}-\d{{2}}\n(.*?)(?=\n## \[|\n\[[^\]]+\]: |$)"
+    m = re.search(pattern, content, re.DOTALL)
+    return m.group(1).strip()
+
+def test_release_notes_no_footer_bleed() -> None:
+    # Dated section is TOPMOST; link-reference footer directly below it.
+    changelog = (
+        "# Changelog\n\n"
+        "## [1.2.0] - 2026-06-20\n\n"
+        "### Added\n\n- Footer-bleed fix\n- Another bullet\n\n"
+        "[Unreleased]: https://github.com/OWNER/REPO/compare/v1.2.0...HEAD\n"
+        "[1.2.0]: https://github.com/OWNER/REPO/releases/tag/v1.2.0\n"
+    )
+    body = extract_notes(changelog, "1.2.0")
+    assert "compare/" not in body       # [Unreleased] footer must not bleed in
+    assert "releases/tag/" not in body  # [X.Y.Z] footer must not bleed in
+    assert body.endswith("- Another bullet")  # stops at the last bullet
+```
+
+With the old `(?=\n## \[|$)` anchor this test fails (both footer lines land in `body`); with the
+`\n\[[^\]]+\]: ` alternative added it passes.
 
 **Emoji-removal test:**
 
