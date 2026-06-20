@@ -1,5 +1,24 @@
 # meta-repo-build-root-pattern — History
 
+## v1.2.0 (2026-06-20)
+
+**Changed by:** Planning session for Odysseus issue #154 (Atlas dashboard Compose registration + justfile targets). Plan only — NOT executed.
+**Verification:** unverified (plan only, no code run, no CI)
+
+### What changed
+- Added 3 Failed Attempts rows capturing planning lessons:
+  1. Re-adding `atlas-review-dispatch`/`atlas-review-aggregate` recipes verbatim from the issue #154 snippet — they already existed at justfile:704-709, causing a hard `just` duplicate-recipe parse error. An issue's fenced code block is a desired END STATE, not a literal diff.
+  2. Assuming the `dashboard/` build context exists — it is delivered by the still-OPEN dependency issue #153, so verification must be scoped to structure-only.
+  3. Re-declaring `NATS_URL`/`AGAMEMNON_URL` in `.env.example` with different (compose-service-name) values — dotenv last-wins silently overrides the earlier cross-host Tailscale values.
+- Added a "Reviewer-risk / planning learnings (unverified)" subsection cataloguing the 6 most-uncertain assumptions in the #154 plan (env-key collision, #153 dependency contract, line-number drift, distroless wget/healthcheck risk, `depends_on` condition support, 15-vs-19 env-count mismatch).
+- Added project-agnostic meta planning lessons (issue snippet = end state; distroless makes shell/wget healthchecks suspect; sibling-issue claims are UNVERIFIED).
+- Bumped minor version 1.1.0 -> 1.2.0. Existing verified-local content kept intact.
+
+### Why
+The #154 plan was written but never executed. The durable value is the reviewer-risk catalogue plus the concrete planning lesson that an issue body's snippet can instruct you to ADD recipes/env keys that already exist, producing duplicate-definition errors. This skill already owns Odysseus root/submodule justfile orchestration, so it is the correct home.
+
+---
+
 ## v1.1.0 (2026-03-29)
 
 **Changed by:** Odysseus full e2e build session — all 5 targets passing
