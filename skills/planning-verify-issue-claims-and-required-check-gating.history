@@ -1,5 +1,26 @@
 # planning-verify-issue-claims-and-required-check-gating — History
 
+## v1.1.1 (2026-06-20)
+
+**Changed by:** ProjectTelemachy issue #282 (follow-up from #157) `/learn` session — captured the
+rulesets-API "add a required check" mechanics + the require-before-it-exists ordering hazard as a
+NEW dedicated skill (`github-ruleset-required-status-checks-management`).
+**Verification:** verified-local (no change to this skill's verification level).
+
+### What changed
+
+- Added one cross-reference bullet under "Related skills" pointing to the new
+  `github-ruleset-required-status-checks-management` skill (the rulesets-API GET->append->PUT
+  mechanics, integration_id derivation, and the require-before-it-exists ordering hazard).
+- Patch bump (1.1.0 -> 1.1.1): documentation-only cross-link; no workflow or finding changed.
+
+### Why
+
+The new skill is the rulesets-API "add a required check" counterpart to this planning-discipline
+skill; a reader here planning to ADD (not just verify) a required check should be routed to it.
+
+---
+
 ## v1.1.0 (2026-06-20)
 
 **Changed by:** ProjectProteus issue #184 R1 plan-review NOGO→revision (2026-06-20). A NOGO

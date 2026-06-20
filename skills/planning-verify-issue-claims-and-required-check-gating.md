@@ -3,7 +3,7 @@ name: planning-verify-issue-claims-and-required-check-gating
 description: "Before planning a change to CI gating, distinguish a job that RUNS from a job that GATES the PR — a test 'wired into CI' is not actually enforced unless its job is a REQUIRED status-check context in the branch ruleset. Confirm the gate is real with `gh api repos/<org>/<repo>/rulesets` (and per-id `required_status_checks[].context`); a job absent from that list runs but does NOT block merges. SEPARATELY, treat an issue's own factual claims — WHICH job a step lives in, WHAT a test covers — as CLAIMS to grep-verify against the codebase, because they drift from reality. Worked example (ProjectProteus #184, follow-up from #97): the issue claimed a host-contract test was 'wired into CI' as done, but it ran in a standalone `dispatch-contract-test` job that was NOT in the required list (`lint, unit-tests, integration-tests, security/dependency-scan, security/secrets-scan, build, schema-validation, deps/version-sync`) — running, not gating. The issue also said the step lived in `integration-tests` (naming drift — it was a separate job) and that the test covers 'RFC 1123 format + allowlist validation' (a `grep -rniE 'rfc.?1123|allowlist|hostname'` over scripts/ .github/ docs/ returned NOTHING — no such logic exists; the test only checks host-presence/fail-closed). The fix folds the test into the already-required `integration-tests` job so no destructive ruleset PUT is needed. Use when: (1) an issue claims a fix is 'already done' / 'wired into CI' — confirm the wiring is ENFORCED (required context), not merely running; (2) an issue names WHERE a change lives (a job) or WHAT a test covers — verify against the actual files first; (3) planning any change to required CI checks / branch protection. Cross-link: gha-required-checks-branch-protection (the YAML/aggregator fix mechanics), verify-issue-premise-against-code-before-planning (grep-the-premise discipline)."
 category: ci-cd
 date: 2026-06-20
-version: "1.1.0"
+version: "1.1.1"
 history: planning-verify-issue-claims-and-required-check-gating.history
 user-invocable: false
 verification: verified-local
@@ -179,6 +179,10 @@ suppression" is factually wrong and a reviewer will flag it (P2/YAGNI).
 - `verify-issue-premise-against-code-before-planning` — grep the issue's premise tokens to
   disambiguate WHICH file/job a premise matches. THIS skill adds the gating-reality and
   coverage-claim verification specific to CI work.
+- `github-ruleset-required-status-checks-management` — when the planned change is to ADD a required
+  status check to a ruleset: the rulesets-API GET->append->PUT mechanics, integration_id
+  derivation, and the require-before-it-exists ordering hazard (requiring a check whose job is not
+  yet on the default branch permanently blocks all PRs).
 
 ## Verified On
 
