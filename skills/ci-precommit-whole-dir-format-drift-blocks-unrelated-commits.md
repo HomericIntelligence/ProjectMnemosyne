@@ -1,9 +1,9 @@
 ---
 name: ci-precommit-whole-dir-format-drift-blocks-unrelated-commits
-description: "Pre-commit hooks configured with `pass_filenames: false` re-run over WHOLE DIRECTORIES (the entire tree, not just staged files) on every commit, so a pre-existing violation already committed on `origin/main` aborts EVERY new commit — even ones touching completely unrelated files — with 'files were modified by this hook' (`ruff format` drift) or a hook failure on an untouched file (`ruff check` lint, e.g. `SIM102`). Use when: (1) you stage only your own clean files but `git commit -S` / `pre-commit run` reformats or fails on a DIFFERENT set of files you never touched (empty `git diff` vs origin/main), then aborts; (2) reverting/ignoring it makes it reappear on the next commit because the violation lives in main's committed tree; (3) `ruff format --check hephaestus/ scripts/ tests/` reports `Would reformat:` OR `ruff check hephaestus/ scripts/ tests/` reports a lint error (e.g. `SIM102` nested-if) for files unrelated to your change. Fix: land a separate one-file `chore(lint)` / `fix(lint)` PR first, merge it to re-green main, then stack your feature branches on it. Note `ruff check --fix` may NOT auto-resolve the lint (e.g. SIM102 under an elif chain is a manual hand-edit)."
+description: "Pre-commit hooks configured with `pass_filenames: false` re-run over WHOLE DIRECTORIES (the entire tree, not just staged files) on every commit, so a pre-existing violation already committed on `origin/main` aborts EVERY new commit — even ones touching completely unrelated files — with 'files were modified by this hook' (`ruff format` drift), a hook failure on an untouched file (`ruff check` lint, e.g. `SIM102`), OR a tree-wide TYPE error (`pixi run mypy` whole-tree hook, often after a mypy version bump newly flagging pre-existing code under `warn_unused_ignores=true` / `implicit_reexport=false`). The same whole-tree hook drives the required `lint`/Required Checks job, so a single error makes main's CI RED and blocks every commit/PR locally and in CI. Use when: (1) you stage only your own clean files but `git commit -S` / `pre-commit run` reformats, lint-fails, or type-errors on a DIFFERENT set of files you never touched (empty `git diff` vs origin/main), then aborts; (2) reverting/ignoring it makes it reappear on the next commit because the violation lives in main's committed tree; (3) `ruff format --check hephaestus/ scripts/ tests/` reports `Would reformat:`, `ruff check hephaestus/ scripts/ tests/` reports a lint error (e.g. `SIM102` nested-if), OR `pixi run mypy` reports a type error for files unrelated to your change. Fix: land a separate one-file `chore(lint)` / `fix(lint)` PR first, merge it to re-green main, then stack your feature branches on it. Note `ruff check --fix` may NOT auto-resolve the lint (e.g. SIM102 under an elif chain is a manual hand-edit), and mypy fixes mean the EXACT ignore code (`# type: ignore[method-assign]`, not blanket or `[attr-defined]`) and importing names from their canonical module under `implicit_reexport=false`. Do NOT pass a file arg to the bare `pixi run mypy` task (→ 'Duplicate module' error), and beware a 'pass' `lint` check that was actually SKIPPED by a changes-gate on an auto-merge event."
 category: ci-cd
-date: 2026-06-14
-version: "1.1.0"
+date: 2026-06-19
+version: "1.2.0"
 user-invocable: false
 verification: verified-ci
 history: ci-precommit-whole-dir-format-drift-blocks-unrelated-commits.history
@@ -17,20 +17,27 @@ tags: []
 This skill is about **repo-wide / whole-dir pre-commit hooks configured with
 `pass_filenames: false`**: they re-run over the ENTIRE tree on every commit, so a
 **pre-existing violation already committed on `origin/main` blocks unrelated
-commits on every branch**. Two variants share this exact signature:
+commits on every branch**. Three variants share this exact signature:
 
 - **`ruff format` drift** — the hook reformats untouched files and aborts with
   "files were modified by this hook" (the original v1.0.0 case).
 - **`ruff check` lint violation** (e.g. `SIM102`) — the hook *fails* on an
   untouched file with a lint error; `--fix` may NOT auto-resolve it, so you must
   hand-edit (the v1.1.0 case).
+- **`pixi run mypy` whole-tree TYPE error** — the `mypy-check-python` hook runs
+  `entry: pixi run mypy` with `pass_filenames: false` and
+  `files: ^(hephaestus|scripts|tests)/.*\.py$`, so it type-checks the entire tree
+  on every commit. A mypy **version bump** (here 2.1.0) can newly flag
+  pre-existing code, so a single tree-wide type error aborts every commit/PR and
+  makes main's required `lint` job RED (the v1.2.0 case). CI's required `lint`
+  job runs the SAME hook, so local == CI.
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-14 |
-| **Objective** | Unblock feature PRs in ProjectHephaestus whose commits kept aborting because a whole-dir (`pass_filenames: false`) pre-commit hook re-hit a pre-existing violation already committed on `origin/main` — `ruff format` drift (v1.0.0) or a `ruff check` `SIM102` lint (v1.1.0) |
-| **Outcome** | Successful — a separate one-file lint/format PR re-greened main first, then dependent feature branches stacked on it commit cleanly. v1.0.0: `chore(lint)` PR #1325 unblocked a 6-PR stack. v1.1.0: `fix(lint)` PR #1352 (issue #1351) re-greened main and the 4 dependents #1353–#1356 (based on `fix-main-sim102-lint`, auto-retargeted to main on merge) all merged green |
-| **Verification** | verified-ci — the `SIM102` fix PR #1352 and all 4 dependents merged green through the required-checks gate (#1353–#1356). The original v1.0.0 format-drift case was verified-local |
+| **Date** | 2026-06-19 |
+| **Objective** | Unblock feature PRs in ProjectHephaestus whose commits kept aborting because a whole-dir (`pass_filenames: false`) pre-commit hook re-hit a pre-existing violation already committed on `origin/main` — `ruff format` drift (v1.0.0), a `ruff check` `SIM102` lint (v1.1.0), or a tree-wide `pixi run mypy` type error after a mypy 2.1.0 bump (v1.2.0) |
+| **Outcome** | Successful — a separate one-file lint/format/type PR re-greened main first, then dependent feature branches stacked on it commit cleanly. v1.0.0: `chore(lint)` PR #1325 unblocked a 6-PR stack. v1.1.0: `fix(lint)` PR #1352 (issue #1351) re-greened main and the 4 dependents #1353–#1356 (based on `fix-main-sim102-lint`, auto-retargeted to main on merge) all merged green. v1.2.0: `[Fix]` PR #1530 (issue #1529) repaired two mypy 2.1.0 errors to re-green main's `lint` gate, then #1531/#1533/#1535/#1537 stacked on it all merged green |
+| **Verification** | verified-ci — the `SIM102` fix PR #1352 and all 4 dependents merged green through the required-checks gate (#1353–#1356); the mypy fix PR #1530 merged green and `pixi run mypy` then reported `Success: no issues found in N source files`, with the 4 dependents (#1531/#1533/#1535/#1537) all merging green. The original v1.0.0 format-drift case was verified-local |
 
 ## When to Use
 
@@ -39,6 +46,9 @@ commits on every branch**. Two variants share this exact signature:
 - Reverting those reformats with `git checkout --` / `git stash` just makes them reappear on the next commit attempt — because the drift lives in the committed tree on `main`, not in your working changes.
 - The pre-commit config runs the formatter/linter over whole directory arguments (e.g. `ruff format hephaestus/ scripts/ tests/`) rather than only the staged files passed by pre-commit — i.e. the hook uses `pass_filenames: false`, so it lints/formats the ENTIRE tree on every commit regardless of what is staged.
 - **Lint-check variant (not just format):** the `ruff-check-python` hook runs `ruff check --fix hephaestus/ scripts/ tests/` with `pass_filenames: false`, so a pre-existing **lint** violation on main (e.g. `SIM102` "Use a single if statement instead of nested if statements") aborts every signed commit on every feature branch — your `git diff` vs origin/main is empty, yet the hook fails on a file you never touched. KEY: `ruff check --fix` may **NOT** auto-resolve it (e.g. `SIM102` for a nested `if` under an `elif` chain is a manual/unsafe fix), so re-running the formatter does nothing — you must hand-edit (combine the nested `if` into the `elif` with `and`).
+- **Type-check variant (mypy — v1.2.0):** the `mypy-check-python` hook runs `entry: pixi run mypy` with `pass_filenames: false` and `files: ^(hephaestus|scripts|tests)/.*\.py$`, so it type-checks the ENTIRE `hephaestus/ scripts/ tests/` tree on every commit. A **mypy version bump** (here 2.1.0) can newly flag pre-existing code, so a single tree-wide type error aborts EVERY commit and EVERY PR — including ones that don't touch the offending files — and makes main's required `lint`/Required Checks RED. The required `lint` CI job runs the SAME pre-commit hook, so local == CI. Detect it on a clean main with the bare task: `pixi run mypy`. Two real triggers under `warn_unused_ignores=true` / `implicit_reexport=false` in `pyproject.toml`:
+  - A `mock.MagicMock()` assigned to a method carried `# type: ignore[attr-defined]`, but mypy 2.1.0 emits `[method-assign]` there → each line errors TWICE (Unused "type: ignore" + an unsuppressed method-assign). Fix: change the code to `# type: ignore[method-assign]` (NOT a blanket `# type: ignore`, NOT `[attr-defined]`).
+  - A test referenced `pr_manager.AGENT_COMMIT_MESSAGE` / `pr_manager.AGENT_PR_MESSAGE`, which `pr_manager` only IMPORTS (does not re-export); under `implicit_reexport=false` mypy rejects that. Fix: import the constants from their canonical home (`session_naming`) instead.
 
 Use this specific skill when **main already has format drift OR a lint violation** and a whole-dir hook is therefore blocking unrelated commits. This is a DIFFERENT root cause from `ci-ruff-format-collapses-handwrapped-comprehensions` (where YOUR OWN clause-deletion edit collapses a comprehension you just touched) — see also that skill and `pre-commit-hooks-and-linting-config`. If the reformatted files are the ones you edited, you are in the wrong skill; the signature here is that the reformatted files are unrelated to your change and already drifted on main.
 
@@ -76,7 +86,7 @@ git checkout -b 1234-my-feature chore/lint-format-drift
 
 2. **Confirm the diagnosis cheaply.** Run `ruff format --check hephaestus/ scripts/ tests/` (with the repo's pinned ruff) against the committed `origin/main` content. If it lists files unrelated to your change, main itself carries drift. This happens when those files were committed before a ruff version/range resolved differently, or merged via a PR whose own gate passed under a slightly different ruff.
 
-3. **Land a SEPARATE format-only PR first.** Branch off main, run `ruff format` + `ruff check --fix` over the whole tree, and commit exactly the drift-fix diff — no logic change. Verify behavior-preserving by running the affected modules' tests (here: 199 automation tests passed unchanged). This is the `chore(lint)` PR (#1325 in ProjectHephaestus).
+3. **Land a SEPARATE one-file fix PR first (the core pattern — applies to format, lint, AND mypy).** Branch off main, fix exactly the offending file(s) — `ruff format` + `ruff check --fix` for drift/lint, or the precise mypy edit for a type error (correct `# type: ignore[<code>]`, or import re-exported names from their canonical module under `implicit_reexport=false`) — and commit only that diff, no logic change. Verify behavior-preserving by running the affected modules' tests (format case: 199 automation tests passed unchanged; mypy case: `pixi run mypy` → `Success: no issues found in N source files`). This is the prereq PR (`chore(lint)` #1325, `fix(lint)` #1352, or `[Fix]` mypy #1530 in ProjectHephaestus) that re-greens main FIRST; then stack the feature PRs on it.
 
 4. **Stack your feature branches on the chore branch.** Base each feature branch on the chore branch so its commits land cleanly (the hook finds nothing to reformat). Once the chore PR merges to main, GitHub auto-retargets the stacked PRs to main.
 
@@ -91,6 +101,9 @@ git checkout -b 1234-my-feature chore/lint-format-drift
 | Bundle the unrelated reformats into the feature commit | Let the hook reformat the drifted files and committed them alongside the feature change | Pollutes the PR with unrelated whole-tree formatting noise, obscuring the actual feature diff in review | Keep format-only changes in their own `chore(lint)` PR; stack the feature on it |
 | Re-run `ruff format` to clear the `SIM102` failure | Ran `ruff format hephaestus/ scripts/ tests/` expecting it to fix the blocking error | `SIM102` is a `ruff check` **lint** rule, not a format issue — the formatter never touches it; the failure persisted | A `ruff check` lint and a `ruff format` drift are different hooks; diagnose which one is failing before reaching for the formatter |
 | Revert / ignore the unrelated lint-flagged file | Tried reverting the file the hook flagged, or considered skipping the hook for it | The `SIM102` is committed on `origin/main` (via PR #1346); every branch's whole-tree `ruff check --fix` re-hits it, and `--no-verify` is banned | Hand-fix the lint on main in a one-file `fix(lint)` PR, merge first; `ruff check --fix` won't auto-resolve `SIM102` (combine nested `if` into the `elif` with `and`) |
+| Silence the mypy error with a blanket `# type: ignore` or the wrong code `[attr-defined]` | Added a broad `# type: ignore` (or kept `[attr-defined]`) on the `mock.MagicMock()` method assignment | Under `warn_unused_ignores=true`, mypy 2.1.0 emits the *new* `[method-assign]` error there, so a blanket/`[attr-defined]` ignore is both unused (Unused "type: ignore") AND fails to suppress the real error — the line double-errors | Use the EXACT narrow code mypy reports: `# type: ignore[method-assign]`. Never blanket-ignore under `warn_unused_ignores` |
+| Pass a file arg to `pixi run mypy` | Ran `pixi run mypy path/to/file.py` to check one file | The `mypy` task already includes its own paths; adding a file arg makes mypy see the same module twice → `Duplicate module named "..."` error | Run the BARE task `pixi run mypy` — it already type-checks the configured tree; never append a path |
+| Trust a "pass" `lint` check on an auto-merge event | Saw the `lint` check green after arming/disarming auto-merge and assumed the type errors were fixed | The `lint` job is behind a `changes-gate`: it is SKIPPED on `labeled`/`auto_merge_enabled`/`auto_merge_disabled` events (only runs on push/synchronize/opened). A *skipped* `lint` counts as PASS at the `required-checks-gate`, so the "pass" was vacuous | Get a genuine `lint` run from a real code event (push a commit, or rely on the opened/synchronize run) before trusting it — a skip is not a pass |
 
 ## Results & Parameters
 
@@ -151,12 +164,57 @@ FIRST to re-green main, then base/stack the dependent fix PRs on it. Here:
 to main on its merge, and they dropped the now-redundant lint commit on rebase.
 All 5 PRs merged green through the required-checks gate (verified-ci).
 
+**Type-check variant (v1.2.0 — `pixi run mypy` whole-tree error on main):**
+
+A mypy **2.1.0** version bump newly flagged pre-existing test code on
+`origin/main`, so the `mypy-check-python` hook (`entry: pixi run mypy`,
+`pass_filenames: false`, `files: ^(hephaestus|scripts|tests)/.*\.py$`) failed
+tree-wide on every commit and made main's required `lint`/Required Checks RED —
+even for PRs that never touched the offending files. Two concrete errors, both
+pre-existing code freshly flagged under `warn_unused_ignores=true` /
+`implicit_reexport=false`:
+
+1. `tests/.../test_stage_phases.py`: a `mock.MagicMock()` assigned to a method
+   carried `# type: ignore[attr-defined]`, but mypy 2.1.0 emits `[method-assign]`
+   there → each line errored TWICE (Unused "type: ignore" + unsuppressed
+   method-assign). **Fix:** change the code to `# type: ignore[method-assign]`
+   (NOT a blanket `# type: ignore`, NOT `[attr-defined]`).
+2. `tests/.../test_pr_manager.py`: referenced
+   `pr_manager.AGENT_COMMIT_MESSAGE` / `pr_manager.AGENT_PR_MESSAGE`, which
+   `pr_manager` only IMPORTS (does not re-export); under `implicit_reexport=false`
+   mypy rejects that. **Fix:** import the constants from their canonical home
+   `session_naming` instead.
+
+Detect it on a clean main with the BARE task — do NOT pass a file arg (a file
+arg makes the task double-see a module → `Duplicate module named "..."`):
+
+```bash
+pixi run mypy            # bare task; do NOT append a path
+# After the fix:
+# Success: no issues found in N source files
+```
+
+Fix shape is identical to the format/lint variants: land a small one-file/prereq
+PR FIRST to re-green main, then stack the feature PRs on it. Here: `[Fix] Repair
+mypy 2.1.0 errors blocking main lint gate` PR #1530 (issue #1529) merged green
+through the required-checks gate, then the dependent fix PRs #1531/#1533/#1535/#1537
+all merged green.
+
+**`changes-gate` skipped-lint caveat (v1.2.0):** the CI `lint` job is gated by a
+`changes-gate` — it is SKIPPED on `labeled`/`auto_merge_enabled`/`auto_merge_disabled`
+events and only runs on real code events (push/synchronize/opened). A *skipped*
+`lint` counts as a PASS at the `required-checks-gate`. So after arming/disarming
+auto-merge, a `lint` you see "pass" may actually have been SKIPPED — push a real
+commit (or rely on the opened/synchronize run) to get a genuine `lint` result
+before trusting it.
+
 **Verified On:**
 
 | Project | Scenario | Result |
 | ------- | -------- | ------- |
 | ProjectHephaestus | 2026-06-14 `SIM102` broken-main blocked 4-way fan-out | PR #1352 re-greened main, #1353–#1356 merged |
+| ProjectHephaestus | 2026-06-19 mypy 2.1.0 tree-wide type error broke main `lint` gate | PR #1530 (issue #1529) re-greened main; `pixi run mypy` → `Success: no issues found in N source files`; dependents #1531/#1533/#1535/#1537 merged |
 
 **Distinction from related skills:** This skill is specifically *"main already has a pre-existing violation (format drift OR a lint error) → a whole-dir (`pass_filenames: false`) hook re-hits it on unrelated commits → blocks every branch → fix via a separate one-file lint/format PR merged first + stack dependents"*. It is NOT `ci-ruff-format-collapses-handwrapped-comprehensions` (clause-deletion collapse of a comprehension YOU just edited — a different root cause). See also `pre-commit-hooks-and-linting-config` for hook configuration background.
 
-**Verification:** verified-ci — the v1.1.0 `SIM102` fix PR #1352 and its 4 dependents (#1353–#1356) all merged green through the required-checks gate. The original v1.0.0 format-drift case was verified-local (`ruff format` / `ruff check --fix` run locally, `pre-commit run` clean on the chore branch; format-fix PR #1325 built a 6-PR stack with the merge train pending at capture time).
+**Verification:** verified-ci — the v1.2.0 mypy fix PR #1530 (issue #1529) merged green through the required-checks gate, `pixi run mypy` then reported `Success: no issues found in N source files`, and its 4 dependents (#1531/#1533/#1535/#1537) all merged green; the v1.1.0 `SIM102` fix PR #1352 and its 4 dependents (#1353–#1356) all merged green through the required-checks gate. The original v1.0.0 format-drift case was verified-local (`ruff format` / `ruff check --fix` run locally, `pre-commit run` clean on the chore branch; format-fix PR #1325 built a 6-PR stack with the merge train pending at capture time).

@@ -3,6 +3,217 @@
 
 This file preserves previous versions of the skill before amendments.
 
+## v1.2.0 (2026-06-19)
+
+**Changed by:** ProjectHephaestus — 2026-06-19 mypy 2.1.0 broken-main session.
+
+**Verification:** verified-ci (the fix-main PR #1530 merged green through the
+required-checks gate; `pixi run mypy` then reported `Success: no issues found in
+N source files`; all 4 dependent PRs merged green).
+
+**What changed:** Added a THIRD tool variant of the same `pass_filenames: false`
+whole-tree-hook root cause: `pixi run mypy`. The `mypy-check-python` pre-commit
+hook (`entry: pixi run mypy`, `pass_filenames: false`,
+`files: ^(hephaestus|scripts|tests)/.*\.py$`) type-checks the ENTIRE tree on
+every commit, so a mypy 2.1.0 version bump that newly flagged pre-existing test
+code aborted every commit/PR (including unrelated ones) and made main's required
+`lint`/Required Checks RED — CI's `lint` job runs the SAME hook, so local == CI.
+Extended the `description` (mypy type-error variant + version-bump trigger),
+added a mypy bullet to "When to Use" (with the two concrete 2.1.0 errors), added
+three Failed Attempts rows (blanket / `[attr-defined]` ignore vs the correct
+`[method-assign]` under `warn_unused_ignores=true`; passing a file arg to
+`pixi run mypy` → "Duplicate module" error; trusting a `lint` "pass" that was
+actually SKIPPED by the `changes-gate` on an auto-merge event), extended
+Results & Parameters with the type-check variant, the changes-gate skipped-lint
+caveat, PR/issue refs (#1530, issue #1529; dependents #1531/#1533/#1535/#1537),
+and the expected `Success: no issues found in N source files` output. Reinforced
+the "fix broken main FIRST in a one-file prereq PR, then stack" pattern as
+applying to mypy. Bumped Overview to "three variants" and date to 2026-06-19.
+
+**Why:** A sibling root cause surfaced under the SAME diagnostic signature
+("pre-commit fails on a file I never touched; empty `git diff` vs origin/main;
+main's required `lint` is already RED"). This time the blocker was a tree-wide
+mypy TYPE error after a mypy 2.1.0 bump, not `ruff format` drift or a
+`ruff check` lint. Two real fixes: (1) change a `mock.MagicMock()` method
+assignment's ignore from `[attr-defined]` to the EXACT `[method-assign]` code
+mypy 2.1.0 now emits (a blanket ignore double-errors under
+`warn_unused_ignores=true`); (2) import `AGENT_COMMIT_MESSAGE` /
+`AGENT_PR_MESSAGE` from their canonical module `session_naming` instead of via
+`pr_manager`, which only imports (not re-exports) them and is rejected under
+`implicit_reexport=false`. Two new secondary gotchas: do NOT pass a file arg to
+the bare `pixi run mypy` task (→ "Duplicate module" error), and a `lint` check
+can show "pass" while actually SKIPPED by the `changes-gate` on an auto-merge
+event (a skip counts as PASS at the required-checks-gate). The fix shape matched
+the original skill: land prereq PR #1530 (issue #1529) merged FIRST to re-green
+main, then stack the dependents #1531/#1533/#1535/#1537 on it; all merged green.
+
+### v1.1.0 full content
+
+````markdown
+---
+name: ci-precommit-whole-dir-format-drift-blocks-unrelated-commits
+description: "Pre-commit hooks configured with `pass_filenames: false` re-run over WHOLE DIRECTORIES (the entire tree, not just staged files) on every commit, so a pre-existing violation already committed on `origin/main` aborts EVERY new commit — even ones touching completely unrelated files — with 'files were modified by this hook' (`ruff format` drift) or a hook failure on an untouched file (`ruff check` lint, e.g. `SIM102`). Use when: (1) you stage only your own clean files but `git commit -S` / `pre-commit run` reformats or fails on a DIFFERENT set of files you never touched (empty `git diff` vs origin/main), then aborts; (2) reverting/ignoring it makes it reappear on the next commit because the violation lives in main's committed tree; (3) `ruff format --check hephaestus/ scripts/ tests/` reports `Would reformat:` OR `ruff check hephaestus/ scripts/ tests/` reports a lint error (e.g. `SIM102` nested-if) for files unrelated to your change. Fix: land a separate one-file `chore(lint)` / `fix(lint)` PR first, merge it to re-green main, then stack your feature branches on it. Note `ruff check --fix` may NOT auto-resolve the lint (e.g. SIM102 under an elif chain is a manual hand-edit)."
+category: ci-cd
+date: 2026-06-14
+version: "1.1.0"
+user-invocable: false
+verification: verified-ci
+history: ci-precommit-whole-dir-format-drift-blocks-unrelated-commits.history
+tags: []
+---
+
+# Pre-commit Whole-Directory Hook Blocks Unrelated Commits (Format Drift OR Lint Violation on Main)
+
+## Overview
+
+This skill is about **repo-wide / whole-dir pre-commit hooks configured with
+`pass_filenames: false`**: they re-run over the ENTIRE tree on every commit, so a
+**pre-existing violation already committed on `origin/main` blocks unrelated
+commits on every branch**. Two variants share this exact signature:
+
+- **`ruff format` drift** — the hook reformats untouched files and aborts with
+  "files were modified by this hook" (the original v1.0.0 case).
+- **`ruff check` lint violation** (e.g. `SIM102`) — the hook *fails* on an
+  untouched file with a lint error; `--fix` may NOT auto-resolve it, so you must
+  hand-edit (the v1.1.0 case).
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-06-14 |
+| **Objective** | Unblock feature PRs in ProjectHephaestus whose commits kept aborting because a whole-dir (`pass_filenames: false`) pre-commit hook re-hit a pre-existing violation already committed on `origin/main` — `ruff format` drift (v1.0.0) or a `ruff check` `SIM102` lint (v1.1.0) |
+| **Outcome** | Successful — a separate one-file lint/format PR re-greened main first, then dependent feature branches stacked on it commit cleanly. v1.0.0: `chore(lint)` PR #1325 unblocked a 6-PR stack. v1.1.0: `fix(lint)` PR #1352 (issue #1351) re-greened main and the 4 dependents #1353–#1356 (based on `fix-main-sim102-lint`, auto-retargeted to main on merge) all merged green |
+| **Verification** | verified-ci — the `SIM102` fix PR #1352 and all 4 dependents merged green through the required-checks gate (#1353–#1356). The original v1.0.0 format-drift case was verified-local |
+
+## When to Use
+
+- You stage ONLY your own clean files, run `git commit -S` (or `pre-commit run`), and the hook reformats a **different** set of files you never touched, then aborts the commit with "files were modified by this hook".
+- `ruff format --check hephaestus/ scripts/ tests/` against the committed `origin/main` content reports `Would reformat: <files>` for files **unrelated** to your change.
+- Reverting those reformats with `git checkout --` / `git stash` just makes them reappear on the next commit attempt — because the drift lives in the committed tree on `main`, not in your working changes.
+- The pre-commit config runs the formatter/linter over whole directory arguments (e.g. `ruff format hephaestus/ scripts/ tests/`) rather than only the staged files passed by pre-commit — i.e. the hook uses `pass_filenames: false`, so it lints/formats the ENTIRE tree on every commit regardless of what is staged.
+- **Lint-check variant (not just format):** the `ruff-check-python` hook runs `ruff check --fix hephaestus/ scripts/ tests/` with `pass_filenames: false`, so a pre-existing **lint** violation on main (e.g. `SIM102` "Use a single if statement instead of nested if statements") aborts every signed commit on every feature branch — your `git diff` vs origin/main is empty, yet the hook fails on a file you never touched. KEY: `ruff check --fix` may **NOT** auto-resolve it (e.g. `SIM102` for a nested `if` under an `elif` chain is a manual/unsafe fix), so re-running the formatter does nothing — you must hand-edit (combine the nested `if` into the `elif` with `and`).
+
+Use this specific skill when **main already has format drift OR a lint violation** and a whole-dir hook is therefore blocking unrelated commits. This is a DIFFERENT root cause from `ci-ruff-format-collapses-handwrapped-comprehensions` (where YOUR OWN clause-deletion edit collapses a comprehension you just touched) — see also that skill and `pre-commit-hooks-and-linting-config`. If the reformatted files are the ones you edited, you are in the wrong skill; the signature here is that the reformatted files are unrelated to your change and already drifted on main.
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Confirm the diagnosis cheaply — does main itself carry drift?
+#    (use the repo's pinned ruff so the version matches CI)
+/path/to/.pixi/envs/default/bin/ruff format --check hephaestus/ scripts/ tests/
+# -> lists drifted files. If they are UNRELATED to your change AND on main,
+#    a separate format-fix PR is the clean unblock.
+
+# 2. Create the format-only chore branch off main and fix the WHOLE tree:
+git checkout -b chore/lint-format-drift origin/main
+ruff format hephaestus/ scripts/ tests/
+ruff check --fix hephaestus/ scripts/ tests/
+
+# 3. Verify behavior-preserving (run the affected modules' tests):
+pixi run pytest tests/unit/automation -q   # 199 passed, unchanged
+
+# 4. Commit EXACTLY the drift-fix diff (no logic change), signed:
+git add -A && git commit -S -m "chore(lint): clear ruff-format drift on main"
+pre-commit run --all-files   # now passes clean
+
+# 5. Stack feature branches on the chore branch so they commit cleanly:
+git checkout -b 1234-my-feature chore/lint-format-drift
+# ...work + commit; once the chore PR merges, GitHub auto-retargets stacked PRs to main.
+```
+
+### Detailed Steps
+
+1. **Recognize the signature.** You commit clean, unrelated files and the hook reformats a *different* file set, then aborts. This is not your edit's fault — the drift is in main's committed tree.
+
+2. **Confirm the diagnosis cheaply.** Run `ruff format --check hephaestus/ scripts/ tests/` (with the repo's pinned ruff) against the committed `origin/main` content. If it lists files unrelated to your change, main itself carries drift. This happens when those files were committed before a ruff version/range resolved differently, or merged via a PR whose own gate passed under a slightly different ruff.
+
+3. **Land a SEPARATE format-only PR first.** Branch off main, run `ruff format` + `ruff check --fix` over the whole tree, and commit exactly the drift-fix diff — no logic change. Verify behavior-preserving by running the affected modules' tests (here: 199 automation tests passed unchanged). This is the `chore(lint)` PR (#1325 in ProjectHephaestus).
+
+4. **Stack your feature branches on the chore branch.** Base each feature branch on the chore branch so its commits land cleanly (the hook finds nothing to reformat). Once the chore PR merges to main, GitHub auto-retargets the stacked PRs to main.
+
+5. **Never bypass.** Do not `--no-verify`, do not scope the hook to staged-only as a workaround, and do not silently bundle the unrelated reformats into your feature commit — that pollutes the PR. Fix the drift on main in its own PR.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| ------- | -------------- | ------------- | -------------- |
+| Revert the unrelated reformats each commit attempt | `git checkout --` / `git stash` the files the hook reformatted, then re-run `git commit -S` | The reformats reappear on the next commit attempt because the drift lives in main's committed tree, not in your working changes — it is whack-a-mole | Stop reverting; land a separate format-fix PR that fixes the drift on main once |
+| Scope the hook to staged-only / bypass it | Tried to limit the hook to staged files, or considered `--no-verify` to skip the reformat | Bypassing hooks is banned in this org, and it does not address the root cause — main is still drifted, so the next contributor hits the same wall | Fix the drift on main, don't hide it; never use `--no-verify` or any hook bypass |
+| Bundle the unrelated reformats into the feature commit | Let the hook reformat the drifted files and committed them alongside the feature change | Pollutes the PR with unrelated whole-tree formatting noise, obscuring the actual feature diff in review | Keep format-only changes in their own `chore(lint)` PR; stack the feature on it |
+| Re-run `ruff format` to clear the `SIM102` failure | Ran `ruff format hephaestus/ scripts/ tests/` expecting it to fix the blocking error | `SIM102` is a `ruff check` **lint** rule, not a format issue — the formatter never touches it; the failure persisted | A `ruff check` lint and a `ruff format` drift are different hooks; diagnose which one is failing before reaching for the formatter |
+| Revert / ignore the unrelated lint-flagged file | Tried reverting the file the hook flagged, or considered skipping the hook for it | The `SIM102` is committed on `origin/main` (via PR #1346); every branch's whole-tree `ruff check --fix` re-hits it, and `--no-verify` is banned | Hand-fix the lint on main in a one-file `fix(lint)` PR, merge first; `ruff check --fix` won't auto-resolve `SIM102` (combine nested `if` into the `elif` with `and`) |
+
+## Results & Parameters
+
+**Context:** ProjectHephaestus. The pre-commit hooks run `ruff format hephaestus/ scripts/ tests/` and `ruff check --fix hephaestus/ scripts/ tests/` over WHOLE DIRECTORIES, not just staged files. When `origin/main` itself carries ruff-format drift, every new commit — even one touching completely unrelated files — triggers the hook to reformat the drifted files, reports "files were modified by this hook", and aborts.
+
+**Diagnostic signature:**
+
+- Stage only your own clean files, run `git commit -S` / `pre-commit run` → the hook reformats a *different* set of files you never touched, then aborts.
+- `ruff format --check hephaestus/ scripts/ tests/` against committed `origin/main` reports `Would reformat: <files>` for files unrelated to your change.
+- Reverting the reformats (`git checkout --` / `git stash`) makes them reappear next commit, because the drift is in main's committed tree.
+
+**The fix (verified this session):**
+
+```bash
+# Confirm the drift on main (repo's pinned ruff so the version matches CI):
+/path/to/.pixi/envs/default/bin/ruff format --check hephaestus/ scripts/ tests/
+
+# Land a separate format-only chore(lint) PR FIRST:
+git checkout -b chore/lint-format-drift origin/main
+ruff format hephaestus/ scripts/ tests/
+ruff check --fix hephaestus/ scripts/ tests/
+pixi run pytest tests/unit/automation -q   # 199 passed, behavior-preserving
+git add -A && git commit -S -m "chore(lint): clear ruff-format drift on main"
+
+# Then stack feature branches on the chore branch.
+```
+
+**Outcome:** The format-only PR (#1325) committed exactly the drift-fix diff with zero logic change (199 automation tests passed unchanged). It unblocked a stack of 6 fix PRs — each feature branch was based on the chore branch and committed cleanly. Once the chore PR merges to main, GitHub auto-retargets the stacked PRs to main.
+
+**Lint-violation variant (v1.1.0 — `ruff check` `SIM102` on main):**
+
+A pre-existing `SIM102` ("Use a single if statement instead of nested if
+statements") landed on `origin/main` via PR #1346 (HEAD `580ab43`) in
+`tests/unit/automation/test_ci_driver_failing_pr_discovery.py:348`. Because the
+`ruff-check-python` hook runs `ruff check --fix hephaestus/ scripts/ tests/`
+with `pass_filenames: false`, it lints the whole tree on every commit — so the
+unrelated `SIM102` aborted EVERY signed commit on EVERY feature branch. Multiple
+parallel fix agents all failed at commit time with the same untouched-file error
+(empty `git diff` vs origin/main).
+
+Detect it on a clean main without touching your branch:
+
+```bash
+# Either lint the whole tree on a clean main checkout:
+ruff check hephaestus/ scripts/ tests/
+
+# Or check just the suspected file straight from origin/main:
+git show origin/main:tests/unit/automation/test_ci_driver_failing_pr_discovery.py \
+  | ruff check --stdin-filename tests/unit/automation/test_ci_driver_failing_pr_discovery.py -
+```
+
+Fix (same shape as the format case, but hand-edited): land a one-file
+`fix(lint)` PR that manually combines the nested `if` into the `elif` with `and`
+(`ruff check --fix` will NOT auto-resolve `SIM102` under an elif chain), merge it
+FIRST to re-green main, then base/stack the dependent fix PRs on it. Here:
+`fix(lint)` PR #1352 (issue #1351) re-greened main; the 4 dependent fix PRs
+(#1353–#1356) were based on `fix-main-sim102-lint`, GitHub auto-retargeted them
+to main on its merge, and they dropped the now-redundant lint commit on rebase.
+All 5 PRs merged green through the required-checks gate (verified-ci).
+
+**Verified On:**
+
+| Project | Scenario | Result |
+| ------- | -------- | ------- |
+| ProjectHephaestus | 2026-06-14 `SIM102` broken-main blocked 4-way fan-out | PR #1352 re-greened main, #1353–#1356 merged |
+
+**Distinction from related skills:** This skill is specifically *"main already has a pre-existing violation (format drift OR a lint error) → a whole-dir (`pass_filenames: false`) hook re-hits it on unrelated commits → blocks every branch → fix via a separate one-file lint/format PR merged first + stack dependents"*. It is NOT `ci-ruff-format-collapses-handwrapped-comprehensions` (clause-deletion collapse of a comprehension YOU just edited — a different root cause). See also `pre-commit-hooks-and-linting-config` for hook configuration background.
+
+**Verification:** verified-ci — the v1.1.0 `SIM102` fix PR #1352 and its 4 dependents (#1353–#1356) all merged green through the required-checks gate. The original v1.0.0 format-drift case was verified-local (`ruff format` / `ruff check --fix` run locally, `pre-commit run` clean on the chore branch; format-fix PR #1325 built a 6-PR stack with the merge train pending at capture time).
+````
+
 ## v1.1.0 (2026-06-14)
 
 **Changed by:** ProjectHephaestus — 2026-06-14 SIM102 broken-main session.
