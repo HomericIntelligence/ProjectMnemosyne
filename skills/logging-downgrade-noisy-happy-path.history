@@ -1,0 +1,343 @@
+# logging-downgrade-noisy-happy-path -- History
+
+## v1.1.0 (2026-06-20)
+
+**Changed by:** ProjectHephaestus output.log noise cleanup, PR #1557 (Closes #1556)
+**Verification:** verified-ci
+
+### What changed
+- Refined the core guidance from "downgrade noisy WARNING/ERROR to INFO" to a
+  two-tier choice: **DEBUG (verbose-only)** when the message describes a CORRECT
+  automatic fallback the operator rarely needs to see, vs **INFO** when the
+  success-path message is still worth surfacing on a normal run. When `-v`/`--verbose`
+  maps the root logger to DEBUG (default INFO), `logger.info(...)` still prints on
+  every default run, so DEBUG is the only level that achieves true verbose-gating.
+- Added the **benign-vs-misconfig discriminator** (KEY nuance): within the SAME
+  function, keep genuinely-actionable misconfiguration (a human supplied a wrong
+  value) at WARNING while downgrading the benign default (an unset value that falls
+  back correctly) to DEBUG. The test: "is this an automatic fallback that always
+  works, or did a human supply something wrong?" Concrete site:
+  `hephaestus/config/paths.py::resolve_projects_dir` — unset PROJECTS_ROOT -> DEBUG,
+  PROJECTS_ROOT set to a non-existent path -> stays WARNING.
+- Added the **per-iteration noise signal**: a benign message that fires once per
+  loop iteration (N times per loop) is an especially strong DEBUG candidate.
+  Concrete site: `hephaestus/automation/prompts/_shared.py::_relativize_path` logged
+  a cross-repo "not under repo_root; injecting absolute path" WARNING once per issue;
+  cross-repo paths are expected and the absolute path works -> DEBUG.
+- Added the **two-level caplog test technique** (verified-ci): lock the contract by
+  asserting NOTHING is recorded at INFO (`assert caplog.records == []`) AND the
+  message IS present at DEBUG (`caplog.records[0].levelno == logging.DEBUG`), using
+  `with caplog.at_level(..., logger="<logger.name>")` scoped to the logger under
+  test. This proves verbose-gating, not merely "the warning is gone." Real tests:
+  `tests/unit/config/test_paths.py` and `tests/unit/automation/prompts/test_shared.py`.
+- Added two new Failed Attempts rows: (a) downgraded to INFO -> still printed on
+  every default run; the user wanted verbose-only, so DEBUG was required;
+  (b) blanket-downgraded the misconfig case too -> lost a real signal; keep
+  human-supplied-wrong at WARNING.
+- Added new detailed steps 7-9 (INFO-vs-DEBUG verbose gating, the discriminator,
+  the two-level caplog technique) and expanded the Quick Reference decision tree,
+  the When-to-Use triggers, the Overview table, the description, and the decision
+  matrix to cover the DEBUG/verbose-only case.
+- Added a new "Verified On" data point: ProjectHephaestus PR #1557 (merged, commit
+  5798d5a), files `config/paths.py` + `automation/prompts/_shared.py`.
+- Bumped version 1.0.0 -> 1.1.0, date 2026-06-20; set `verification: verified-ci`;
+  added tags `verbose-gating` and `debug-level`.
+
+### Why
+The user explicitly asked for benign fallback warnings to be shown "only unless
+verbose mode is specified." INFO is insufficient because it still prints on every
+default run — in this codebase `-v`/`--verbose` maps the root logger to DEBUG while
+the default is INFO, so the correct level for benign-fallback messages is
+`logger.debug(...)` (silent by default, visible under -v). The discriminator nuance
+(keep human-supplied-wrong at WARNING while downgrading the benign default) and the
+two-level caplog technique are durable, reusable refinements of the original skill,
+so they are folded in rather than discarded. Shipped in a merged PR with full CI
+green, hence `verified-ci`.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: logging-downgrade-noisy-happy-path
+description: "Downgrade noisy WARNING and ERROR log levels to INFO for happy-path scenarios that are not failures. Use when: (1) a script checks for optional files/configs and logs WARNING when they're absent (but this is an acceptable skip path), (2) a validation function logs ERROR on format mismatch but continues successfully, (3) test suites log WARNING for expected fallback behavior, (4) any logging statement fires in scenarios that return True/success and are not genuine failures."
+category: ci-cd
+date: 2026-06-05
+version: "1.0.0"
+user-invocable: false
+history: logging-downgrade-noisy-happy-path.history
+tags:
+  - python
+  - logging
+  - observability
+  - happy-path
+  - noise-reduction
+  - TDD
+  - capsys
+  - happy-path-logging
+---
+
+# Logging: Downgrade Noisy Messages in Happy Path
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Theme** | Downgrade WARNING and ERROR log levels to INFO in happy-path scenarios where execution succeeds |
+| **Scope** | Optional configuration files, absent CI matrices, acceptable fallback paths, tests for optional behavior |
+| **Diagnostic strategy** | Ask: "Does this code path return success (True, 0, success)?" If yes, the log should not be WARNING/ERROR |
+| **Languages** | Python 3.10+ (but pattern applies to any language) |
+
+## When to Use
+
+- A script checks for an optional CI workflow file and logs WARNING when absent — but absence is OK, function returns True
+- A validation function logs ERROR when a python-version matrix is missing — but missing matrix is acceptable, function returns True
+- Test suites log WARNING during expected fallback behavior that exercises both success branches
+- Any logging statement fires when execution succeeds but was labeled WARNING or ERROR
+- Pre-commit hooks or CI scripts have noisy logs cluttering CI output for legitimate skip paths
+- Monitoring/alerting systems trigger on WARNING but the scenario was never a failure
+
+## Verified Workflow
+
+### Quick Reference: Decision Tree
+
+```
+Does the code path execute successfully (returns True/0/success)?
+├─ YES → Downgrade WARNING/ERROR to INFO
+│   └─ Don't delete the log — preserve observability for troubleshooting
+├─ NO (actual failure) → Keep WARNING/ERROR, but verify return code matches
+└─ UNCERTAIN → Add TDD test with capsys; assert SUCCESS and LOG LEVEL match
+```
+
+### Step-by-Step Pattern
+
+#### 1. Identify Noisy Happy-Path Logs
+
+**Symptom**: CI output flooded with WARNING messages that occur on every run, but the script still passes.
+
+```python
+# BEFORE (noisy)
+def check_ci_matrix_coverage(repo_root: Path) -> bool:
+    ci_workflow = repo_root / ".github" / "workflows" / "test.yml"
+    if not ci_workflow.exists():
+        print(f"WARNING: CI workflow not found at {ci_workflow} — skipping matrix check")
+        return True  # ← Returns SUCCESS
+```
+
+**Key insight**: If the function returns `True` (success), the log should not be `WARNING`.
+
+---
+
+#### 2. Use TDD to Verify Level Change
+
+**Write test first** that will fail on current WARNING:
+
+```python
+def test_returns_true_when_no_ci_workflow(
+    self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Returns True with INFO (not WARNING) when CI workflow file does not exist."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text('"Programming Language :: Python :: 3.10",\n')
+
+    # Call the function
+    assert check_ci_matrix_coverage(tmp_path) is True
+
+    # Verify log level, not log content
+    captured = capsys.readouterr().out
+    assert "INFO:" in captured
+    assert "WARNING:" not in captured
+```
+
+Run test first — watch it fail because output contains `WARNING:`:
+
+```
+AssertionError: assert False
+  where False = 'WARNING:' not in 'WARNING: CI workflow not found...'
+```
+
+---
+
+#### 3. Downgrade the Log Level
+
+**Never delete the log.** Downgrade instead:
+
+```python
+# AFTER (observability preserved, noise reduced)
+def check_ci_matrix_coverage(repo_root: Path) -> bool:
+    ci_workflow = repo_root / ".github" / "workflows" / "test.yml"
+    if not ci_workflow.exists():
+        print(f"INFO: CI workflow not found at {ci_workflow} — skipping matrix check")
+        return True
+```
+
+Run test — now it passes:
+
+```
+✓ test_returns_true_when_no_ci_workflow PASSED
+```
+
+---
+
+#### 4. Do Not Use logging Module for Simple Scripts
+
+**Anti-pattern**: introduce `import logging` and `logging.getLogger()` for a single print statement:
+
+```python
+# WRONG — over-engineered for simple script
+import logging
+logger = logging.getLogger(__name__)
+
+if not ci_workflow.exists():
+    logger.warning("CI workflow not found...")
+    return True
+```
+
+**Correct approach**: use plain `print()` with a consistent prefix:
+
+```python
+# RIGHT — simple, clear, testable with capsys
+if not ci_workflow.exists():
+    print(f"INFO: CI workflow not found...")
+    return True
+```
+
+Reason: simple scripts don't need logging infrastructure; plain `print()` to stdout is testable with `capsys` and doesn't add dependencies.
+
+---
+
+#### 5. Apply to All Happy-Path Messages
+
+If a function/method returns `True`/`success`/`0` and logs `WARNING` or `ERROR`, downgrade to `INFO`:
+
+```python
+# BEFORE
+if not matrix_versions:
+    print(f"WARNING: No python-version matrix found — skipping check")
+    return True
+
+# AFTER
+if not matrix_versions:
+    print(f"INFO: No python-version matrix found — skipping check")
+    return True
+```
+
+---
+
+#### 6. Write Tests for Each Happy-Path Message
+
+If there are multiple happy-path logs, add a test for each:
+
+```python
+def test_returns_true_when_no_ci_workflow(
+    self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Returns True with INFO when CI workflow file does not exist."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text('"Programming Language :: Python :: 3.10",\n')
+    assert check_ci_matrix_coverage(tmp_path) is True
+    captured = capsys.readouterr().out
+    assert "INFO:" in captured
+    assert "WARNING:" not in captured
+
+def test_returns_true_when_no_matrix_in_workflow(
+    self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Returns True with INFO when workflow has no python-version matrix."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text('"Programming Language :: Python :: 3.10",\n')
+    workflow_dir = tmp_path / ".github" / "workflows"
+    workflow_dir.mkdir(parents=True)
+    (workflow_dir / "test.yml").write_text("jobs:\n  test:\n    runs-on: ubuntu-latest\n")
+    assert check_ci_matrix_coverage(tmp_path) is True
+    captured = capsys.readouterr().out
+    assert "INFO:" in captured
+    assert "WARNING:" not in captured
+```
+
+---
+
+### Example: Issue #789 Full Diff
+
+| Change | Location | Before | After |
+| -------- | ----------- | --------- | ------- |
+| Downgrade message 1 | Line 164 | `print(f"WARNING: CI workflow not found...` | `print(f"INFO: CI workflow not found...` |
+| Downgrade message 2 | Line 171 | `print(f"WARNING: No python-version matrix...` | `print(f"INFO: No python-version matrix...` |
+| Add test 1 | test_check_python_version_consistency.py | N/A (no test) | test_returns_true_when_no_ci_workflow with capsys |
+| Add test 2 | test_check_python_version_consistency.py | N/A (no test) | test_returns_true_when_no_matrix_in_workflow with capsys |
+
+**Result**: CI output has less noise; observability preserved via INFO level; 34 tests pass.
+
+---
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Delete the log entirely | Remove print statement for missing CI workflow | Removes observability; harder to debug why matrix check was skipped | Keep the log; downgrade the level instead |
+| Introduce logging module for simple script | Import logging; use logger.warning() for single message | Over-engineering for a simple script; adds dependency bloat | Use plain print() for scripts; logging module for libraries |
+| Test with string matching | `assert "WARNING" in output` | Does not enforce log level; a WARNING message with "WARNING" in text passes | Test both positive (INFO present) and negative (WARNING absent) assertions |
+| Write only one test | Add test_returns_true_when_no_ci_workflow only | Second happy-path log (no matrix) was missed; incomplete coverage | Write a test for each distinct happy-path message |
+| Assume print level from label text | Rely on prefix text "WARNING:" to signal log level | Text is just a string; doesn't control alerts or CI filters | Use logging module (if applicable) or be explicit in CI about what levels matter |
+| Skip TDD; edit code blindly | Change WARNING to INFO without writing test first | Misses edge cases; hard to verify the downgrade worked | Write test first (TDD RED), watch it fail on old level, then downgrade (GREEN) |
+
+## Results & Parameters
+
+### Log output before/after (issue #789)
+
+```
+# Before (noisy CI output):
+WARNING: CI workflow not found at /repo/.github/workflows/test.yml — skipping matrix check
+WARNING: No python-version matrix found in /repo/.github/workflows/test.yml — skipping matrix check
+
+# After (preserved observability, reduced noise):
+INFO: CI workflow not found at /repo/.github/workflows/test.yml — skipping matrix check
+INFO: No python-version matrix found in /repo/.github/workflows/test.yml — skipping matrix check
+```
+
+### Test assertion patterns
+
+```python
+# Verify happy-path log level with capsys
+captured = capsys.readouterr().out
+assert "INFO:" in captured
+assert "WARNING:" not in captured
+
+# For logging module (if used):
+def test_logs_info_not_warning(self, caplog):
+    with caplog.at_level(logging.INFO):
+        result = check_function()
+    assert result is True
+    # Check that no WARNING records were emitted
+    warnings = [r for r in caplog.records if r.levelno >= logging.WARNING]
+    assert len(warnings) == 0
+```
+
+### Decision matrix for log level
+
+| Scenario | Return Value | Log Level | Rationale |
+| --------- | -------------- | ----------- | ----------- |
+| CI workflow found, matrix matches | True | INFO/DEBUG | ✓ Success, no action needed |
+| CI workflow not found | True | INFO | ✓ Success, acceptable skip path |
+| No matrix in workflow | True | INFO | ✓ Success, acceptable skip path |
+| Missing versions in matrix | False | WARNING | ✗ Actual failure, return False |
+| Invalid YAML in workflow | False | ERROR | ✗ Actual failure, unable to continue |
+
+### Test coverage for happy-path logging
+
+```python
+# Minimum coverage: one test per happy-path print statement
+# Each test should:
+# 1. Set up scenario (missing file, empty matrix, etc.)
+# 2. Call function and assert it returns True
+# 3. Capture output with capsys
+# 4. Assert "INFO:" in captured
+# 5. Assert "WARNING:" not in captured
+```
+
+## Verified On
+
+| Project | Issue | Context | Details |
+| --------- | ------- | --------- | --------- |
+| ProjectHephaestus | #789 | Downgrade in check_python_version_consistency.py | 34 tests pass, all CI pre-commit checks pass, merged |
+| ProjectHephaestus | #789 | TDD approach with capsys | Both happy-path tests added before downgrade (RED), then downgrade applied (GREEN) |
+```
