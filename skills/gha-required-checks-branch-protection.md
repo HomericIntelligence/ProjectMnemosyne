@@ -1,9 +1,9 @@
 ---
 name: gha-required-checks-branch-protection
-description: "Use when: (1) PRs are permanently BLOCKED because a required status-check context is a job gated by if: github.event_name != 'pull_request' (skipped != satisfied), (2) consolidating duplicate CI jobs into a reusable workflow so _required.yml is a thin aggregator, (3) validating GitHub branch protection API responses and writing synthetic tests for bash enforcement scripts, (4) a summary aggregator job pattern is needed to replace N individual required contexts with one that handles skip semantics correctly, (5) adding a RESULTS-loop aggregator gate to _required.yml with a guard test asserting all non-excluded jobs are wired into needs, (6) guard test needs a provable negative path to catch silently-inverted conditions [verified-local: _unwired_jobs helper pattern, PR #1343], (7) job key vs context name disambiguation for branch protection contexts, (8) GET-before-PUT mitigation for destructive branch protection API, (9) requirements deviation must be disclosed explicitly in implementation plans, (10) you are placing a merge-blocking CI guard and must confirm its job is a pinned required status-check context, not an advisory job — enumerate the ruleset's required contexts and check your target job name is in that set, else the guard is green-but-non-blocking and a regression merges clean, (11) an issue claims a prerequisite PR already 'added'/'landed'/'introduced' a CI job that a new required-context depends on — verify that PR is actually merged to the default branch (gh pr view <n> --json state,mergedAt + grep the file on main) BEFORE adding the context, else the never-posted context bricks the merge queue, (12) you are writing a runbook for a destructive full-replacement API write (branch-protection/ruleset PUT) and must include an explicit ROLLBACK (re-PUT the snapshot on read-back failure), not just a read-back; and derive sibling foreign keys (integration_id) dynamically from the live object rather than hardcoding a literal."
+description: "Use when: (1) PRs are permanently BLOCKED because a required status-check context is a job gated by if: github.event_name != 'pull_request' (skipped != satisfied), (2) consolidating duplicate CI jobs into a reusable workflow so _required.yml is a thin aggregator, (3) validating GitHub branch protection API responses and writing synthetic tests for bash enforcement scripts, (4) a summary aggregator job pattern is needed to replace N individual required contexts with one that handles skip semantics correctly, (5) adding a RESULTS-loop aggregator gate to _required.yml with a guard test asserting all non-excluded jobs are wired into needs, (6) guard test needs a provable negative path to catch silently-inverted conditions [verified-local: _unwired_jobs helper pattern, PR #1343], (7) job key vs context name disambiguation for branch protection contexts, (8) GET-before-PUT mitigation for destructive branch protection API, (9) requirements deviation must be disclosed explicitly in implementation plans, (10) you are placing a merge-blocking CI guard and must confirm its job is a pinned required status-check context, not an advisory job — enumerate the ruleset's required contexts and check your target job name is in that set, else the guard is green-but-non-blocking and a regression merges clean, (11) an issue claims a prerequisite PR already 'added'/'landed'/'introduced' a CI job that a new required-context depends on — verify that PR is actually merged to the default branch (gh pr view <n> --json state,mergedAt + grep the file on main) BEFORE adding the context, else the never-posted context bricks the merge queue, (12) you are writing a runbook for a destructive full-replacement API write (branch-protection/ruleset PUT) and must include an explicit ROLLBACK (re-PUT the snapshot on read-back failure), not just a read-back; and derive sibling foreign keys (integration_id) dynamically from the live object rather than hardcoding a literal, (13) verifying a job is a pinned required status-check context in a fleet that uses BOTH org-level and repo-level rulesets — enumerate both and normalize the org `Required Checks / <job>` prefix vs the bare repo form, because checking one ruleset or matching only the bare name yields a false negative/positive on the other."
 category: ci-cd
 date: 2026-06-20
-version: "1.7.0"
+version: "1.8.0"
 user-invocable: false
 history: gha-required-checks-branch-protection.history
 tags:
@@ -28,6 +28,11 @@ tags:
   - prerequisite-pr
   - rollback
   - destructive-put
+  - org-ruleset
+  - repo-ruleset
+  - context-form
+  - false-negative
+  - dual-ruleset
 ---
 
 # GitHub Actions Required Checks and Branch Protection
@@ -39,7 +44,7 @@ tags:
 | **Date** | 2026-06-20 (v1.5.0) · 2026-06-14 (v1.4.0) |
 | **Objective** | Make required status checks satisfiable and maintainable: handle skip-vs-success semantics with a `summary` aggregator, consolidate duplicate jobs into a reusable `workflow_call` workflow, validate branch-protection API writes with read-back, smoke-test workflow structure, add a RESULTS-loop gate with guard test, and document guard-test negative-path, job-key vs context-name disambiguation, destructive PUT mitigation, requirements-deviation disclosure, and (v1.5.0) required-status-check PLACEMENT — before placing a merge-blocking guard, enumerate the ruleset's required contexts and confirm the target job is one of them |
 | **Outcome** | Consolidated guidance covering ten interacting concerns; specific cases preserved as examples |
-| **Verification** | verified-ci (core patterns); verified-local (section F: _unwired_jobs helper + 3-test pattern, PR #1343; section J: required-context enumeration `jq` query WAS run, returned the listed contexts — but the proposed guard placement itself is **unverified** / planning-only; section K: the prerequisite-PR premise-check technique WAS run — `gh pr view 264` returned OPEN/`mergedAt:null` and the `main` grep returned empty — but the proposed ruleset-edit runbook is **unverified** / planning-only; section L: the reviewer NOGO on issue #284 R0 that motivated the rollback/dynamic-integration_id learning is real and **verified-local**, but the proposed rollback runbook + dynamic-`integration_id` jq merge are **unverified** / planning-only — the ruleset PUT/rollback was NOT executed) |
+| **Verification** | verified-ci (core patterns); verified-local (section F: _unwired_jobs helper + 3-test pattern, PR #1343; section J: required-context enumeration `jq` query WAS run, returned the listed contexts — but the proposed guard placement itself is **unverified** / planning-only; section K: the prerequisite-PR premise-check technique WAS run — `gh pr view 264` returned OPEN/`mergedAt:null` and the `main` grep returned empty — but the proposed ruleset-edit runbook is **unverified** / planning-only; section L: the reviewer NOGO on issue #284 R0 that motivated the rollback/dynamic-integration_id learning is real and **verified-local**, but the proposed rollback runbook + dynamic-`integration_id` jq merge are **unverified** / planning-only — the ruleset PUT/rollback was NOT executed; section J2 (v1.8.0): the repo-ruleset enumeration leg is **verified-local** (8 bare contexts incl. `schema-validation` returned this session) but the org-ruleset `Required Checks / <job>` prefix parity is **unverified** — documentation-derived from `canonical-checks.md:58-62`, `org-ruleset.json` not opened/grepped this iteration) |
 
 ## When to Use
 
@@ -53,6 +58,7 @@ tags:
 - **(v1.5.0)** You are about to ADD a merge-blocking guard (an enforcement-drift assertion, a value-check, a regression guard) and must decide which job/workflow it lives in — a guard placed in a job that is NOT a pinned required status-check context blocks nothing: the PR shows green and a regression merges clean (green-but-non-blocking security-theater). Enumerate the ruleset's required contexts first and confirm your target job `name:` is in that set.
 - **(v1.6.0)** An issue's body asserts a prerequisite PR already "added"/"landed"/"introduced" the CI job that POSTS the context you are about to make required (e.g. "PR #264 added the SAST job"). Before writing any runbook ordering that depends on it, VERIFY the PR is actually merged to the default branch (`gh pr view <n> --json state,mergedAt` AND grep the file on `main`). The issue body is a claim, not ground truth — if the posting job is not yet on `main`, adding the required context permanently bricks the merge queue (Section A hazard). Gate the change on the merge.
 - **(v1.7.0)** You are writing a runbook for a **destructive full-replacement API write** (a branch-protection or ruleset PUT that overwrites the whole object). A read-back that DETECTS corruption is only half a safeguard — the runbook must also state the explicit ROLLBACK (re-PUT the pre-edit snapshot when the read-back assert fails), and prove BEFORE any PUT that the snapshot itself is a valid restore target (parses + carries the expected pre-edit context count). Separately, when the new array entry must carry a foreign key matching its siblings (e.g. `integration_id`), DERIVE that key from a sibling in the live object via `jq` rather than pasting a literal copied from an issue body or an unmerged diff — the literal is a drift hazard, the derivation is self-consistent by construction.
+- **(v1.8.0)** You are verifying that a job is a pinned required status-check context in a fleet that pins checks through BOTH an org-level ruleset AND a repo-level ruleset — and the two use DIFFERENT context-string conventions (the repo ruleset pins the BARE job name `schema-validation` with `integration_id: 15368`; the org ruleset pins the PREFIXED form `Required Checks / schema-validation`). Enumerating only `repo-ruleset.json`, or matching only the bare name (`grep -qx schema-validation`), gives a false negative/positive on the org file. Enumerate BOTH rulesets and normalize the org-vs-repo FORM (`grep -qxE 'schema-validation|Required Checks / schema-validation'`) before asserting membership. This is the inverse detail of Section J: Section J says "place the guard where the context is pinned"; this says "and when you verify that, check both rulesets and both context-string forms, or your verification itself is wrong."
 
 ## Verified Workflow
 
@@ -444,7 +450,9 @@ verification = step-exists AND job-is-a-pinned-required-context.
 
 - Only the **repo-level** `configs/github/repo-ruleset.json` was read. The org-level ruleset's
   required contexts were **assumed** to MATCH the repo-level set; if org rules differ, placement
-  could still miss. (Enumerate the org ruleset too when in doubt.)
+  could still miss. (Enumerate the org ruleset too when in doubt.) **v1.8.0 closes this gap — see
+  the sub-finding J2 below: you must enumerate BOTH rulesets AND normalize the org-vs-repo
+  context-string FORM before asserting membership.**
 - `_required.yml` job `name:` values were assumed byte-for-byte equal to the pinned contexts (the
   workflow's own header comment asserts this), but this was **not** cross-checked against the live
   GitHub branch-protection API — only against the on-disk ruleset JSON.
@@ -462,6 +470,59 @@ hazard — deleting/renaming a pinned context bricks the merge queue; the same m
 constraint), `architecture-executable-convention-guard-pattern` (prose invariant → tested blocking
 check), and `config-governance-fix-scope-all-variant-files` (the sibling planning-discipline skill
 for issue #309 — verify the issue premise and scope across variant files).
+
+##### J2. A required-context check must span BOTH rulesets AND normalize the org-vs-repo context-string FORM (v1.8.0 — issue #309 R2, partly unverified)
+
+> **Verification:** the REPO-ruleset enumeration leg below is **verified-local** — the
+> `jq … required_status_checks[].context` query against `configs/github/repo-ruleset.json` WAS run
+> earlier this session and returned the eight bare contexts (incl. `schema-validation`). The
+> ORG-ruleset parity leg is **UNVERIFIED** — the `Required Checks / <job>` prefix claim is
+> *documentation-derived* from `configs/github/canonical-checks.md:58-62` plus the `_required.yml`
+> header comment; `org-ruleset.json` was NOT opened and its `.context` values were NOT grepped this
+> iteration. The `ORG REQUIRED` step added below is the check that WOULD confirm it at
+> implementation time. `integration_id: 15368` on the repo rulesets is likewise taken from
+> canonical-checks.md, not re-confirmed against the live API.
+
+Section J fixed the *placement* of a guard. This is its **inverse detail**: when you *verify* that
+placement, the verification itself is wrong if it queries only one ruleset, or matches only one
+context-string form. This repo pins required status checks through TWO ruleset forms that use
+DIFFERENT context-string conventions (documented in `configs/github/canonical-checks.md:58-62`):
+
+- `repo-ruleset*.json` pin the **BARE** job name, e.g. `schema-validation` (with
+  `integration_id: 15368`).
+- `org-ruleset*.json` pin the **PREFIXED** form, e.g. `Required Checks / schema-validation`.
+
+**Why "enumerate one ruleset, match the bare name" is a verification bug:**
+
+1. **Enumerating ONLY `repo-ruleset.json` is insufficient.** The org ruleset could pin a different
+   (or differently named) set. You must query BOTH `configs/github/repo-ruleset.json` AND
+   `configs/github/org-ruleset.json`.
+2. **A bare exact match FALSELY reports "not required" against the org file.** A
+   `grep -qx schema-validation` against the org ruleset misses, because the org context is literally
+   `Required Checks / schema-validation`. Use a form-tolerant matcher:
+   `grep -qxE 'schema-validation|Required Checks / schema-validation'`.
+3. **Generalizable rule:** when a fleet uses BOTH org-level and repo-level rulesets, a
+   placement/verification check for "is this job a required context?" must **(a) enumerate BOTH
+   rulesets** and **(b) normalize for the org-vs-repo context-string FORM** (prefixed vs bare)
+   before asserting membership. Checking one ruleset, or matching only the bare form, yields a false
+   negative/positive on the other.
+
+**Form-tolerant dual-ruleset membership check (replaces the single-file Section J `grep -qx`):**
+
+```bash
+for rs in configs/github/repo-ruleset.json configs/github/org-ruleset.json; do
+  jq -r '.rules[]|select(.type=="required_status_checks")|.parameters.required_status_checks[].context' "$rs"
+done | grep -qxE 'schema-validation|Required Checks / schema-validation' && echo "REQUIRED under both forms"
+```
+
+**Caveats for this capture (R2):**
+
+- Repo-level `jq` enumeration WAS run earlier this session (8 bare contexts incl.
+  `schema-validation`) → **verified-local**. The org-level leg was NOT run (`org-ruleset.json` not
+  opened) → **unverified**; the `Required Checks / <job>` prefix is documentation-derived only.
+- `integration_id: 15368` is from `canonical-checks.md`, not re-confirmed against the live API.
+- Guard implementation itself remains **planning-only / unverified** (never added or CI-run).
+- Line numbers (`canonical-checks.md:58-62`, `_required.yml:279-308`) read at plan time; drift-prone.
 
 #### K. Verify the issue's prerequisite-PR premise before ordering the runbook (planning learning — verified-local technique, unverified runbook)
 
@@ -654,6 +715,7 @@ hazard the check-run-SHA confirmation guards against).
 | Trusted the issue body's "PR #264 added the SAST job" premise | Planned to add `security/sast-scan` to the ruleset as required, taking the issue's past-tense claim that the posting job already landed at face value | PR #264 was still OPEN (`mergedAt: null`); the job is not on `main`, so the context never posts — adding it as required would permanently block the merge queue (Section A hazard) | Verify prerequisite PRs are actually merged to the default branch (`gh pr view <n> --json state,mergedAt` + grep the file on `main`) before writing runbook ordering that depends on them; gate the change on the merge, don't assume it |
 | Destructive ruleset PUT runbook with read-back but no rollback | Planned GET-snapshot + PUT + read-back assert for a full-replacement ruleset write, but left the restore action unstated when the read-back fails | Reviewer NOGO (issue #284 R0, Grade B): a read-back that DETECTS corruption with no restore step is only half a safeguard — the snapshot was taken but never re-PUT | A destructive full-replacement write needs THREE steps: GET snapshot, read-back assert, AND explicit rollback (re-PUT the snapshot on assert-failure); add a pre-PUT check that the snapshot is a valid restore target |
 | Hardcoded integration_id literal from the issue body | Copied `integration_id: 15368` from the issue text into the new required-status-check entry | A literal copied from prose/an unmerged diff can drift from what GitHub actually stores | Derive the integration_id from a sibling entry in the live ruleset via jq (`map(select(.context=="<sibling>")) | .[0].integration_id`) — self-consistent by construction |
+| Verify required-context membership against repo-ruleset.json with a bare-name exact match | `jq … required_status_checks[].context configs/github/repo-ruleset.json \| grep -qx schema-validation` and stopped there | The ORG ruleset pins the SAME check under a different string form (`Required Checks / schema-validation`) and was not queried at all; a bare `grep -qx` would also have falsely reported "not required" against the org file | Enumerate BOTH org and repo rulesets and match form-tolerantly (`grep -qxE 'name\|Required Checks / name'`); org-vs-repo context strings differ by a `Required Checks / ` prefix (see canonical-checks.md:58-62) |
 
 ## Results & Parameters
 
@@ -773,6 +835,28 @@ jq -r '.rules[]|select(.type=="required_status_checks")
 - Guard step + `just` recipe NOT implemented or CI-run (planning only); only the enumeration ran.
 - Line numbers (`_required.yml:279-308`, `justfile:694`/`696`) read at plan time; drift-prone.
 
+### Org-vs-repo required-context FORM (v1.8.0 — issue #309 R2)
+
+The fleet pins the SAME required check under two rulesets with DIFFERENT context-string forms
+(per `configs/github/canonical-checks.md:58-62`). A membership check must span both files AND
+normalize the form, or it produces a false negative/positive:
+
+| Ruleset file | Context-string form | Example | Extra field |
+| ------------ | ------------------- | ------- | ----------- |
+| `configs/github/repo-ruleset*.json` | BARE job name | `schema-validation` | `integration_id: 15368` |
+| `configs/github/org-ruleset*.json` | PREFIXED | `Required Checks / schema-validation` | — |
+
+```bash
+# verified-local: repo leg ran (8 bare contexts). org leg UNVERIFIED (org-ruleset.json not opened).
+for rs in configs/github/repo-ruleset.json configs/github/org-ruleset.json; do
+  jq -r '.rules[]|select(.type=="required_status_checks")|.parameters.required_status_checks[].context' "$rs"
+done | grep -qxE 'schema-validation|Required Checks / schema-validation' && echo "REQUIRED under both forms"
+```
+
+**Risks:** org-ruleset prefix is documentation-derived (canonical-checks.md), not re-grepped this
+iteration; `integration_id: 15368` from canonical-checks.md, not live-API-confirmed; guard itself
+planning-only.
+
 ## Verified On
 
 | Project | Context | Details |
@@ -788,6 +872,7 @@ jq -r '.rules[]|select(.type=="required_status_checks")
 | ProjectMnemosyne | Issue #309 R1 re-planning (2026-06-20) | Section J — required-context PLACEMENT: enumeration `jq` query WAS run (verified-local), returned the 8 pinned contexts; guard placement into `_required.yml`'s `schema-validation` job is **unverified** (planning only) |
 | ProjectMnemosyne | Issue #284 planning (2026-06-20) | Section K — prerequisite-PR premise check: `gh pr view 264` returned OPEN/`mergedAt:null` and the `main` grep for `sast` was empty (verified-local); the proposed ruleset PUT adding `security/sast-scan` to ruleset 15556487 is **unverified** (planning only — must be gated on PR #264 merging) |
 | ProjectMnemosyne | Issue #284 R1 re-planning (2026-06-20) | Section L — destructive full-replacement write needs explicit ROLLBACK (re-PUT the snapshot on read-back failure), not just a read-back; derive `integration_id` from a live sibling via `jq` instead of hardcoding `15368`. The R0 NOGO (Grade B) that motivated it is real and **verified-local**; the proposed rollback runbook + dynamic-`integration_id` merge are **unverified** (planning only — the ruleset PUT/rollback was NOT executed) |
+| ProjectMnemosyne | Issue #309 R2 re-planning (2026-06-20) | Sub-finding J2 — a required-context check must span BOTH org and repo rulesets AND normalize the org `Required Checks / <job>` prefix vs the bare repo form. Repo-ruleset enumeration WAS run (8 bare contexts incl. `schema-validation`) → **verified-local**; the org-ruleset `Required Checks / <job>` prefix parity is **unverified** (documentation-derived from `canonical-checks.md:58-62`; `org-ruleset.json` not opened/grepped this iteration); guard implementation planning-only |
 
 ## References
 

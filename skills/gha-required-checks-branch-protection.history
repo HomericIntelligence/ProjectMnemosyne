@@ -2,6 +2,62 @@
 
 # gha-required-checks-branch-protection — History
 
+## v1.8.0 (2026-06-20)
+
+**Changed by:** ProjectMnemosyne issue #309 R2 re-planning — capturing ONE incremental learning not
+covered by the two prior /learn runs for the same issue (PR #2719 amended
+`config-governance-fix-scope-all-variant-files` → premise-verification; PR #2721 added Section J —
+required-context PLACEMENT). R2 adds the inverse DETAIL of Section J: when you VERIFY that a guard's
+job is a pinned required context, the verification itself must span BOTH the org-level and
+repo-level rulesets and normalize their differing context-string FORMs.
+**Verification:** **verified-local** for the repo-ruleset enumeration technique (the
+`jq … required_status_checks[].context` query against `repo-ruleset.json` WAS run this session and
+returned the 8 bare contexts incl. `schema-validation`); **unverified** for the org-ruleset parity
+assertion (the `Required Checks / <job>` prefix is documentation-derived from
+`canonical-checks.md:58-62` + the `_required.yml` header comment — `org-ruleset.json` was NOT opened
+or grepped this iteration) and for the guard implementation (planning-only, never added or CI-run).
+`integration_id: 15368` is taken from canonical-checks.md, not re-confirmed against the live API.
+
+**Stacking note:** on-disk `main` already carried v1.7.0 (Sections J + K + L present; PRs #2721,
+#2735, #2736 all merged). The task brief was written when the skill was at v1.5.0 and asked for a
+1.6.0 bump; bumping to 1.6.0/1.7.0 would collide with the already-merged versions and regress the
+file, so the version was bumped straight to **1.8.0** (next free number) and the R2 learning was
+added as **sub-finding J2 EXTENDING the existing Section J** rather than as a duplicate or a new
+skill — exactly as the brief instructed (amend the same skill, extend Section J's context-pinning
+material). The first Section-J caveat ("org-level ruleset assumed to match the repo-level set") is
+now explicitly closed by a pointer to J2.
+
+### What changed
+
+- Added **sub-finding J2: a required-context check must span BOTH rulesets AND normalize the
+  org-vs-repo context-string FORM** under Section J. The repo pins required status checks through
+  two ruleset forms with DIFFERENT conventions (`canonical-checks.md:58-62`): `repo-ruleset*.json`
+  pin the BARE job name (`schema-validation`, `integration_id: 15368`); `org-ruleset*.json` pin the
+  PREFIXED form (`Required Checks / schema-validation`). Three points: (1) enumerating only
+  `repo-ruleset.json` is insufficient; query BOTH. (2) a bare `grep -qx schema-validation` FALSELY
+  reports "not required" against the org file (its context is literally `Required Checks /
+  schema-validation`) — use a form-tolerant matcher
+  `grep -qxE 'schema-validation|Required Checks / schema-validation'`. (3) generalizable rule:
+  enumerate BOTH rulesets and normalize for the prefixed-vs-bare FORM before asserting membership.
+  This is the inverse detail of Section J ("place the guard where the context is pinned" →
+  "and when you verify that, check both rulesets and both context-string forms").
+- Added a **When to Use** trigger (13) for the dual-ruleset / context-form verification case, and a
+  matching `description` "Use when: (13) …" clause.
+- Added a **Failed Attempts** row (bare-name exact match against repo-ruleset.json only → false
+  negative on the org file's prefixed form).
+- Added a **Results & Parameters** "Org-vs-repo required-context FORM" table (repo = bare `<job>` +
+  `integration_id 15368`; org = `Required Checks / <job>`) plus the form-tolerant dual-ruleset
+  Quick-Reference snippet.
+- Added tags: `org-ruleset`, `repo-ruleset`, `context-form`, `false-negative`, `dual-ruleset`.
+- Added a **Verified On** row (issue #309 R2): repo-leg verified-local, org-leg unverified.
+- Updated the Overview **Verification** cell with the J2 honesty banner (repo leg verified-local,
+  org leg unverified / documentation-derived).
+
+**Snapshot pointer:** the immediately-prior accepted version is **v1.7.0 (2026-06-20)** — Section L
+(destructive full-replacement write needs explicit ROLLBACK; dynamic `integration_id` sourcing),
+PR #2736. v1.8.0 builds on top of it with no change to Sections A–L themselves; only Section J
+gained sub-finding J2 and the cross-cutting trigger/table/row/tags above.
+
 ## v1.7.0 (2026-06-20)
 
 **Changed by:** ProjectMnemosyne issue #284 R1 re-planning (add `security/sast-scan` to the
