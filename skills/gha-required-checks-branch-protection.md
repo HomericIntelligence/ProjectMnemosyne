@@ -1,9 +1,9 @@
 ---
 name: gha-required-checks-branch-protection
-description: "Use when: (1) PRs are permanently BLOCKED because a required status-check context is a job gated by if: github.event_name != 'pull_request' (skipped != satisfied), (2) consolidating duplicate CI jobs into a reusable workflow so _required.yml is a thin aggregator, (3) validating GitHub branch protection API responses and writing synthetic tests for bash enforcement scripts, (4) a summary aggregator job pattern is needed to replace N individual required contexts with one that handles skip semantics correctly, (5) adding a RESULTS-loop aggregator gate to _required.yml with a guard test asserting all non-excluded jobs are wired into needs, (6) guard test needs a provable negative path to catch silently-inverted conditions [verified-local: _unwired_jobs helper pattern, PR #1343], (7) job key vs context name disambiguation for branch protection contexts, (8) GET-before-PUT mitigation for destructive branch protection API, (9) requirements deviation must be disclosed explicitly in implementation plans."
+description: "Use when: (1) PRs are permanently BLOCKED because a required status-check context is a job gated by if: github.event_name != 'pull_request' (skipped != satisfied), (2) consolidating duplicate CI jobs into a reusable workflow so _required.yml is a thin aggregator, (3) validating GitHub branch protection API responses and writing synthetic tests for bash enforcement scripts, (4) a summary aggregator job pattern is needed to replace N individual required contexts with one that handles skip semantics correctly, (5) adding a RESULTS-loop aggregator gate to _required.yml with a guard test asserting all non-excluded jobs are wired into needs, (6) guard test needs a provable negative path to catch silently-inverted conditions [verified-local: _unwired_jobs helper pattern, PR #1343], (7) job key vs context name disambiguation for branch protection contexts, (8) GET-before-PUT mitigation for destructive branch protection API, (9) requirements deviation must be disclosed explicitly in implementation plans, (10) you are placing a merge-blocking CI guard and must confirm its job is a pinned required status-check context, not an advisory job — enumerate the ruleset's required contexts and check your target job name is in that set, else the guard is green-but-non-blocking and a regression merges clean."
 category: ci-cd
-date: 2026-06-14
-version: "1.4.0"
+date: 2026-06-20
+version: "1.5.0"
 user-invocable: false
 history: gha-required-checks-branch-protection.history
 tags:
@@ -21,6 +21,9 @@ tags:
   - guard-test
   - results-loop
   - ci-hardening
+  - pinned-context
+  - merge-blocking
+  - green-but-non-blocking
 ---
 
 # GitHub Actions Required Checks and Branch Protection
@@ -29,10 +32,10 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-14 |
-| **Objective** | Make required status checks satisfiable and maintainable: handle skip-vs-success semantics with a `summary` aggregator, consolidate duplicate jobs into a reusable `workflow_call` workflow, validate branch-protection API writes with read-back, smoke-test workflow structure, add a RESULTS-loop gate with guard test, and document guard-test negative-path, job-key vs context-name disambiguation, destructive PUT mitigation, and requirements-deviation disclosure |
-| **Outcome** | Consolidated guidance covering nine interacting concerns; specific cases preserved as examples |
-| **Verification** | verified-ci (core patterns); verified-local (section F: _unwired_jobs helper + 3-test pattern, PR #1343) |
+| **Date** | 2026-06-20 (v1.5.0) · 2026-06-14 (v1.4.0) |
+| **Objective** | Make required status checks satisfiable and maintainable: handle skip-vs-success semantics with a `summary` aggregator, consolidate duplicate jobs into a reusable `workflow_call` workflow, validate branch-protection API writes with read-back, smoke-test workflow structure, add a RESULTS-loop gate with guard test, and document guard-test negative-path, job-key vs context-name disambiguation, destructive PUT mitigation, requirements-deviation disclosure, and (v1.5.0) required-status-check PLACEMENT — before placing a merge-blocking guard, enumerate the ruleset's required contexts and confirm the target job is one of them |
+| **Outcome** | Consolidated guidance covering ten interacting concerns; specific cases preserved as examples |
+| **Verification** | verified-ci (core patterns); verified-local (section F: _unwired_jobs helper + 3-test pattern, PR #1343; section J: required-context enumeration `jq` query WAS run, returned the listed contexts — but the proposed guard placement itself is **unverified** / planning-only) |
 
 ## When to Use
 
@@ -43,6 +46,7 @@ tags:
 - You need to synthetically test a bash branch-protection enforcement script without hitting the live GitHub API.
 - An existing workflow-smoke-test gate covers only one workflow and additional critical workflows need regression protection.
 - You want a compact `RESULTS` env-var bash-loop aggregator (instead of one env var per job) and a guard unit test that asserts all non-excluded jobs are wired into the gate's `needs:` list — catching gaps automatically as the workflow grows.
+- **(v1.5.0)** You are about to ADD a merge-blocking guard (an enforcement-drift assertion, a value-check, a regression guard) and must decide which job/workflow it lives in — a guard placed in a job that is NOT a pinned required status-check context blocks nothing: the PR shows green and a regression merges clean (green-but-non-blocking security-theater). Enumerate the ruleset's required contexts first and confirm your target job `name:` is in that set.
 
 ## Verified Workflow
 
@@ -97,6 +101,24 @@ jq '[.[] | select(.context as $c | ["test-images","security-scan","build-and-pus
   /tmp/cur.json > /tmp/new.json
 jq -n --slurpfile checks /tmp/new.json '{strict:false, checks:$checks[0]}' > /tmp/patch.json
 gh api -X PATCH repos/$ORG/$REPO/branches/main/protection/required_status_checks --input /tmp/patch.json
+```
+
+```bash
+# 5. BEFORE placing a merge-blocking guard: enumerate the REQUIRED status-check
+#    contexts from the ruleset, then confirm your target job NAME is in that set.
+#    A guard in a non-required job is green-but-non-blocking — a regression merges clean.
+jq -r '.rules[] | select(.type=="required_status_checks")
+       | .parameters.required_status_checks[].context' configs/github/repo-ruleset.json
+# -> lint, unit-tests, integration-tests, security/dependency-scan,
+#    security/secrets-scan, build, schema-validation, deps/version-sync
+
+# Prove the placement BLOCKS, not just that the step parses: assert the target job
+# name is byte-for-byte one of the pinned contexts (here: schema-validation).
+TARGET=schema-validation
+jq -r '.rules[]|select(.type=="required_status_checks")
+       |.parameters.required_status_checks[].context' configs/github/repo-ruleset.json \
+  | grep -qx "$TARGET" \
+  || { echo "PLACEMENT BUG: '$TARGET' is NOT a pinned required context — guard blocks nothing"; exit 1; }
 ```
 
 ### Detailed Steps
@@ -364,6 +386,77 @@ Burying a deviation as an implied consequence of the gate pattern = NOGO. Review
 
 The disclosure is cheap (one sentence); the NOGO cycle it prevents is expensive.
 
+#### J. Place a merge-blocking guard in a PINNED required context (planning learning — partly unverified)
+
+> **Verification:** the required-context ENUMERATION technique below is **verified-local** — the
+> `jq … required_status_checks[].context` query WAS run during R1 re-planning of ProjectMnemosyne
+> issue #309 and returned exactly the eight contexts listed. The proposed guard PLACEMENT (moving
+> the assertion into `_required.yml`'s `schema-validation` job) is **UNVERIFIED** — designed at
+> planning time only, never implemented and never run in CI. Treat the placement as a proposal,
+> the enumeration as a tested technique.
+
+This is the inverse of the hazards in Sections A and G. Sections A/G are about a *deletion/skip*
+of a pinned context bricking the merge queue; Section J is about *adding* a guard to a job that was
+never pinned in the first place — so it runs, goes green, and **blocks nothing**. A regression
+still "merges clean." That is security-theater: green-but-non-blocking.
+
+**The failure that triggered this learning (issue #309, R0 plan):** the new enforcement-drift guard
+was placed as a step in `ci.yml`'s `validate` job — the most obvious config-validation job. A
+reviewer NOGO'd it (major finding): `validate` is **not** a pinned required status-check context.
+Only the jobs whose `name:` appears in the ruleset's `required_status_checks` contexts actually
+block a merge. A check living only in `ci.yml` is advisory — green, but never blocking.
+
+**Root-cause resolution (R1 re-planning):**
+
+1. **Enumerate the REQUIRED contexts from the ruleset / branch-protection config** — do not guess
+   from workflow filenames:
+   ```bash
+   jq -r '.rules[] | select(.type=="required_status_checks")
+          | .parameters.required_status_checks[].context' configs/github/repo-ruleset.json
+   # -> lint, unit-tests, integration-tests, security/dependency-scan,
+   #    security/secrets-scan, build, schema-validation, deps/version-sync
+   ```
+2. **Map each required context to a job `name:`** (NOT a workflow filename — see Section G; GitHub
+   pins the job `name:` as the context). Here every required context maps to a job in the canonical
+   fleet "required checks" workflow `.github/workflows/_required.yml`. `ci.yml`'s `validate` job is
+   **not** in that list, so any check living only in `ci.yml` is advisory.
+3. **Place the guard in a job that IS a pinned required context.** The fix moves the assertion into
+   `_required.yml`'s `schema-validation` job — a pinned required context that **already loops the
+   exact same four ruleset JSON files** (asserting `required_approving_review_count >= 1`). The new
+   enforcement-value assertion is a natural sibling step there, reusing the existing file-loop.
+4. **Verify BOTH the step exists AND its job is pinned.** Proving the guard "parses" is not enough;
+   prove it "blocks." Assert the job `name:` is byte-for-byte one of the ruleset's required contexts
+   (`grep -qx <jobname>` against the enumerated set). A guard that runs in a green-but-non-required
+   job is worse than no guard — it gives false assurance.
+
+**Generalizable rule:** *before placing any merge-blocking guard, enumerate the repo's
+required-status-check contexts from the ruleset/branch-protection config and confirm your target JOB
+NAME is in that set.* The job `name:` (not the workflow filename) is the pinned context. Two-sided
+verification = step-exists AND job-is-a-pinned-required-context.
+
+**Caveats / unverified reliances for this capture:**
+
+- Only the **repo-level** `configs/github/repo-ruleset.json` was read. The org-level ruleset's
+  required contexts were **assumed** to MATCH the repo-level set; if org rules differ, placement
+  could still miss. (Enumerate the org ruleset too when in doubt.)
+- `_required.yml` job `name:` values were assumed byte-for-byte equal to the pinned contexts (the
+  workflow's own header comment asserts this), but this was **not** cross-checked against the live
+  GitHub branch-protection API — only against the on-disk ruleset JSON.
+- `jq` was assumed preinstalled on `ubuntu-latest` (standard, but not asserted by a CI run here).
+- **Planning-only:** the guard step + `just` recipe were NOT implemented or CI-run. The
+  required-context ENUMERATION was actually executed (verified-local); the proposed placement is
+  unverified end-to-end.
+- Line numbers (`_required.yml:279-308`, `justfile:694`/`696`) were read at plan time and are
+  drift-prone — re-grep at apply time.
+
+**Cross-references (same context-pinning model, inverse hazards):**
+`ci-driver-blocked-required-context-drift` and the Section A/G material above document the inverse
+hazard — deleting/renaming a pinned context bricks the merge queue; the same model is why
+*placement* matters here. See also `ci-hygiene-and-validation-gates` Pattern 4 (pinned-context
+constraint), `architecture-executable-convention-guard-pattern` (prose invariant → tested blocking
+check), and `config-governance-fix-scope-all-variant-files` (the sibling planning-discipline skill
+for issue #309 — verify the issue premise and scope across variant files).
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -381,6 +474,7 @@ The disclosure is cheap (one sentence); the NOGO cycle it prevents is expensive.
 | `enforce_admins: true` in PUT payload | Set to `true` to "harden" branch protection | Removes admin emergency escape valves; admins can no longer force-push to fix emergencies | Use `false` unless threat model explicitly requires hardened admin lockout |
 | Requirements deviation left implicit | Plan dropped two `test` contexts from required list without flagging the deviation | Reviewer flagged as undisclosed scope change (NOGO finding) | Always call out deviations from issue literal text explicitly in the plan or PR body; flag for issue-author confirmation |
 | Pass `jobs` dict (not full `wf` dict) to `_unwired_jobs` | Refactored positive-path test kept the `jobs` fixture signature instead of switching to `workflow` | `_unwired_jobs(wf, excluded)` calls `wf["jobs"]` internally; passing the jobs dict directly raises `KeyError: 'jobs'` | Change the positive-path test to accept the `workflow` fixture (full document), not the `jobs` fixture |
+| Place the drift guard in ci.yml's `validate` job | Added the enforcement-value assertion as a step in the most obvious config-validation job (`ci.yml`) | `validate` is NOT a pinned required context (only `_required.yml`'s jobs are, per the ruleset's `required_status_checks` contexts); a regression would still merge clean — green-but-non-blocking | Enumerate required contexts from the ruleset (`jq … required_status_checks[].context`) and place the guard in a job whose `name:` is in that set; verify the step's JOB is required, not just that it parses |
 
 ## Results & Parameters
 
@@ -451,6 +545,55 @@ VERIFY_RULES_FIXTURE="$f" bash scripts/verify-branch-protection.sh   # expect no
 - **Aggregator (chosen for PR #5406):** one required context regardless of job count; scales with the matrix. Cost: workflow edit + branch-protection edit.
 - **Step-level `if:`:** no branch-protection edit. Cost: every conditional job needs a no-op success step; less obvious why the job exists on PRs at all.
 
+### Required-context placement (v1.5.0 — issue #309 R1 re-planning)
+
+**Enumerate the pinned required contexts before placing a merge-blocking guard:**
+
+```bash
+# verified-local: this jq query WAS run; returned exactly the eight contexts below.
+jq -r '.rules[] | select(.type=="required_status_checks")
+       | .parameters.required_status_checks[].context' configs/github/repo-ruleset.json
+```
+
+```text
+Required status-check contexts (pinned) returned by the query:
+  lint
+  unit-tests
+  integration-tests
+  security/dependency-scan
+  security/secrets-scan
+  build
+  schema-validation        <- target job for the new enforcement-value guard
+  deps/version-sync
+
+R0 placement (NOGO):  ci.yml job `validate`  -> NOT in the pinned set -> green-but-non-blocking
+R1 placement (fixed): _required.yml job `schema-validation` -> pinned -> actually blocks merges
+                      (it already loops the same four ruleset JSON files for the
+                       required_approving_review_count >= 1 assertion; the new
+                       enforcement-value check is a sibling step)
+Verification:         enumeration technique = verified-local (jq WAS run);
+                      proposed guard placement + just/CI wiring = UNVERIFIED (planning only)
+```
+
+**Two-sided placement guard (prove it BLOCKS, not just parses):**
+
+```bash
+TARGET=schema-validation   # the job you placed the guard in
+jq -r '.rules[]|select(.type=="required_status_checks")
+       |.parameters.required_status_checks[].context' configs/github/repo-ruleset.json \
+  | grep -qx "$TARGET" \
+  || { echo "PLACEMENT BUG: '$TARGET' is NOT a pinned required context"; exit 1; }
+```
+
+**Unverified reliances recorded as risks (v1.5.0):**
+
+- Only `configs/github/repo-ruleset.json` was read; org-level ruleset contexts ASSUMED to match.
+- `_required.yml` job `name:` values ASSUMED byte-for-byte equal to pinned contexts (per the
+  workflow header comment), NOT cross-checked against the live branch-protection API.
+- `jq` ASSUMED preinstalled on `ubuntu-latest`; not asserted by a CI run here.
+- Guard step + `just` recipe NOT implemented or CI-run (planning only); only the enumeration ran.
+- Line numbers (`_required.yml:279-308`, `justfile:694`/`696`) read at plan time; drift-prone.
+
 ## Verified On
 
 | Project | Context | Details |
@@ -463,6 +606,7 @@ VERIFY_RULES_FIXTURE="$f" bash scripts/verify-branch-protection.sh   # expect no
 | ProjectHephaestus | Issue #1315 planning phase | RESULTS-loop aggregator + guard test pattern; **unverified** — not yet implemented or CI-verified |
 | ProjectHephaestus | Issue #1315 NOGO review cycle (2026-06-13) | Guard-test negative-path (`_unwired_jobs` helper + 3-test pattern), job-key vs context-name disambiguation, GET-before-PUT mitigation, requirements-deviation disclosure pattern; **unverified** — planning phase captures |
 | ProjectHephaestus | Issue #1338 / PR #1343 — extract _unwired_jobs helper | 6/6 tests pass locally; CI pending |
+| ProjectMnemosyne | Issue #309 R1 re-planning (2026-06-20) | Section J — required-context PLACEMENT: enumeration `jq` query WAS run (verified-local), returned the 8 pinned contexts; guard placement into `_required.yml`'s `schema-validation` job is **unverified** (planning only) |
 
 ## References
 

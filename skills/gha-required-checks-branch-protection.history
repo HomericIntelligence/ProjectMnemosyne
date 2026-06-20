@@ -2,6 +2,56 @@
 
 # gha-required-checks-branch-protection — History
 
+## v1.5.0 (2026-06-20)
+
+**Changed by:** ProjectMnemosyne issue #309 R1 re-planning (iteration 2 of the planning issue)
+**Verification:** verified-local for the required-context ENUMERATION technique (the
+`jq … required_status_checks[].context` query WAS run and returned the eight pinned contexts);
+**unverified** for the proposed guard placement (planning only — never implemented or CI-run).
+
+### What changed
+
+- Added **Section J: Place a merge-blocking guard in a PINNED required context** — the inverse of
+  Sections A/G. A guard added to a job that is NOT a pinned required status-check context runs,
+  goes green, and blocks nothing; a regression still "merges clean" (green-but-non-blocking
+  security-theater). Captures the enumerate-then-verify discipline.
+- Added a When-to-Use trigger (10): placing a merge-blocking guard and confirming its job is a
+  pinned required context.
+- Added a description trigger (10) mirroring the When-to-Use addition.
+- Added Quick Reference item 5: the `jq` required-context enumeration one-liner plus a `grep -qx`
+  two-sided placement guard that proves the target job BLOCKS (not merely that the step parses).
+- Added a Failed Attempts row: placing the drift guard in `ci.yml`'s `validate` job (a NON-required
+  job) → green-but-non-blocking; reviewer NOGO; fix = move into `_required.yml`'s `schema-validation`
+  (pinned) job.
+- Added a Results & Parameters subsection (the enumerated 8 contexts; R0 NOGO → R1 fixed placement;
+  unverified reliances recorded as risks).
+- Added a Verified On row for ProjectMnemosyne issue #309 R1.
+- Added tags: pinned-context, merge-blocking, green-but-non-blocking.
+- Bumped Overview Date/Objective/Outcome/Verification to reflect ten concerns and the partly-
+  unverified Section J.
+
+### Why
+
+The R0 plan for issue #309 placed a new enforcement-drift guard in `ci.yml`'s `validate` job — the
+most obvious config-validation job. A reviewer NOGO'd it: `validate` is not a pinned required
+status-check context, so the guard would be advisory and a regression could still merge clean. R1
+re-planning enumerated the ruleset's required contexts with `jq` (returning `lint, unit-tests,
+integration-tests, security/dependency-scan, security/secrets-scan, build, schema-validation,
+deps/version-sync`), confirmed each maps to a job `name:` in the canonical `_required.yml`, and moved
+the guard into the pinned `schema-validation` job (which already loops the same four ruleset files).
+Generalizable lesson: before placing any merge-blocking guard, enumerate the repo's
+required-status-check contexts and confirm the target JOB NAME is in that set — the job `name:`, not
+the workflow filename, is the pinned context. This is the inverse of the
+`ci-driver-blocked-required-context-drift` / Section A/G hazard (deleting/renaming a pinned context
+bricks the merge queue), and a sibling to `config-governance-fix-scope-all-variant-files` (the other
+issue-#309 planning-discipline skill).
+
+### Previous version (v1.4.0) snapshot
+
+[See v1.4.0 entry below]
+
+---
+
 ## v1.4.0 (2026-06-14)
 
 **Changed by:** ProjectHephaestus issue #1338 / PR #1343 — verified _unwired_jobs helper pattern
