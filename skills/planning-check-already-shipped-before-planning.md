@@ -1,13 +1,13 @@
 ---
 name: planning-check-already-shipped-before-planning
-description: "Before writing an implementation plan, verify the ACTUAL on-disk state — grep/wc/test the real source — instead of trusting the issue body's stated starting condition (LOC counts, method counts, \"needs to be done\"). The fix may already be merged, OR already landed uncommitted in a sibling worktree that git log will NOT show. And even when the work IS already on disk, the plan-loop still demands a FORWARD-LOOKING plan — a retrospective status note gets NOGO'd, gates you defer to the reviewer are stage-handoff failures, and an EMPTY/placeholder artifact (output withheld while a background job runs) is an automatic Grade F. Use when: (1) planning a follow-up or consolidation issue, (2) issue body cites specific file paths or LOC/method counts, (3) git status shows an untracked sibling worktree directory, (4) the plan-loop reviewer NOGO'd your plan as a 'status note' / retrospective, (5) you're tempted to wait on a background job / Monitor / long test run before producing a due plan or review artifact."
+description: "Before writing an implementation plan, verify the ACTUAL on-disk state — grep/wc/test the real source — instead of trusting the issue body's stated starting condition (LOC counts, method counts, \"needs to be done\"). The fix may already be merged, OR already landed uncommitted in a sibling worktree that git log will NOT show. This applies HARDEST to a large extraction/migration/\"do X\" EPIC filed months earlier: the work is often ALREADY DELIVERED under a different ADR/PR, so the correct plan is verification-and-closeout, NOT re-implementation — run cheap existence checks first (find target/src, ls source/src/<moved-dir> expecting ABSENT, grep -rl MovedSymbol source-repo), map every acceptance criterion to a runnable command, and build+run the actual suite to prove \"CI passes with the new code\" is ALREADY true. And even when the work IS already on disk, the plan-loop still demands a FORWARD-LOOKING plan — a retrospective status note gets NOGO'd, gates you defer to the reviewer are stage-handoff failures, and an EMPTY/placeholder artifact (output withheld while a background job runs) is an automatic Grade F. Use when: (1) planning a follow-up, consolidation, or EXTRACTION/MIGRATION epic, (2) issue body cites specific file paths or LOC/method counts, (3) git status shows an untracked sibling worktree directory, (4) the plan-loop reviewer NOGO'd your plan as a 'status note' / retrospective, (5) you're tempted to wait on a background job / Monitor / long test run before producing a due plan or review artifact, (6) an epic's premise asserts work must move from repo A to repo B and you have not confirmed it didn't already happen."
 category: architecture
-date: 2026-06-15
-version: "1.3.0"
+date: 2026-06-19
+version: "1.4.0"
 user-invocable: false
 verification: verified-local
 history: planning-check-already-shipped-before-planning.history
-tags: []
+tags: [planning, already-shipped, stale-issue-premise, extraction-epic, migration, verification-and-closeout, reframe, cross-repo, adr-attribution, acceptance-criteria-mapping, ifdef-guarded-untested, residuals, ctest, cpp]
 ---
 
 # Planning: Check If Already Shipped Before Writing a Plan
@@ -16,16 +16,18 @@ tags: []
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-15 |
-| **Objective** | Detect whether a GitHub issue's fix is already done before writing an implementation plan — and, even when it IS done, still emit a FORWARD-LOOKING plan (not a retrospective status note) and run every gate yourself instead of deferring to the plan reviewer |
-| **Outcome** | Successful — caught both a shipped fix (PR #1308, merged) and a fix that had already landed uncommitted in an untracked `1-fix` worktree (issue #1357); then diagnosed why a "status note" plan for that landed work was NOGO'd (Grade D), and why a SUBSEQUENT plan that withheld its content while a background `pytest` ran was NOGO'd even harder (Grade F, empty placeholder), and what resolves each |
-| **Verification** | verified-local (the uncommitted-worktree finding ran a SUBSET of tests; the boundary/mypy/ruff gates ran GREEN this session; the original merged-fix example remains verified-ci) |
+| **Date** | 2026-06-19 |
+| **Objective** | Detect whether a GitHub issue's fix is already done before writing an implementation plan — covering merged fixes, uncommitted-worktree work, AND large EXTRACTION/MIGRATION epics already delivered under a different ADR/PR — and, even when it IS done, still emit a FORWARD-LOOKING plan (not a retrospective status note) and run every gate yourself instead of deferring to the plan reviewer |
+| **Outcome** | Successful — caught a shipped fix (PR #1308, merged), a fix that had already landed uncommitted in an untracked `1-fix` worktree (issue #1357), and a months-old ProjectAgamemnon extraction epic whose move was ALREADY delivered under a different ADR (586/589 tests pass, agents+integration labels 100% green) so the plan reframed to verification-and-closeout; also diagnosed why a "status note" plan for landed work was NOGO'd (Grade D), and why a SUBSEQUENT plan that withheld its content while a background `pytest` ran was NOGO'd even harder (Grade F, empty placeholder), and what resolves each |
+| **Verification** | verified-local — the extraction-epic INVESTIGATION procedure (find/ls/grep + `cmake --build --preset debug` + `ctest --preset debug -L`) was actually run this session and confirmed the move complete, but the downstream PLAN was NOT executed end-to-end in CI; cross-repo Keystone build, ADR-015 attribution, the 3 failing tests, the `#ifdef ENABLE_GRPC` path, and the 3,393-line figure all remain inferred/unreconciled. The earlier uncommitted-worktree finding ran a SUBSET of tests; the boundary/mypy/ruff gates ran GREEN; the original merged-fix example remains verified-ci |
 | **History** | [changelog](./planning-check-already-shipped-before-planning.history) |
 
 ## When to Use
 
 - Planning a follow-up or consolidation issue (issue body may lag behind actual implementation)
+- **Planning a large EXTRACTION / MIGRATION / "move X from repo A to repo B" epic filed weeks or months ago** — these are the single highest-risk class for "already delivered." A big move tends to land under a NEW ADR / PR that does not reference the old epic number, so the epic sits OPEN long after the work shipped. Before planning the move, prove it didn't already happen: `find <target>/src -name '*.cpp'` (does the moved code already live in the destination?), `ls <source-repo>/src/<moved-dir>` (expect ABSENT if moved), `grep -rl <MovedSymbol> <source-repo>` (expect no compiled hits). The correct plan is then **verification-and-closeout**, not re-implementation.
 - Issue body cites specific file paths, line numbers, **or LOC/method counts** (e.g. "3,570 lines, ~60 methods, god-class needing decomposition") — these go stale after merges OR after the work lands uncommitted
+- **The epic lists acceptance criteria phrased as future work** ("CI passes with the new code", "the type no longer exists in repo A", "downstream repo still builds") — map EACH criterion to a runnable command and check current state rather than assuming it is unmet; the criteria are often ALREADY satisfied
 - Picking up an issue from a batch/backlog queue — the fix may have been merged hours or days ago
 - **`git status` shows an untracked sibling worktree directory** (e.g. `1-fix/`) — the implementation may already be done there but not yet committed/merged, so `git log` on `main` shows nothing
 - The issue describes a refactor/decomposition as FUTURE work but a parallel branch/worktree may have already completed it
@@ -64,6 +66,14 @@ git show --stat <sha>
 #    gate artifact of the subset, NOT a code failure. Run the FULL suite + mypy + ruff
 #    before claiming "done"; a green subset is only verified-local.
 pixi run pytest tests/unit/path/to/relevant_tests.py -v
+
+# 6. EXTRACTION/MIGRATION EPIC: prove the move already happened with cheap existence checks FIRST.
+find <target-repo>/src -name '*.cpp'                 # moved code already in the destination?
+ls <source-repo>/src/agents 2>&1                      # expect "No such file" if it moved out
+grep -rl "<MovedSymbol>" <source-repo>/src            # expect NO compiled hits (residuals are .ifdef/comments only)
+# Then map every acceptance criterion to a command and BUILD + RUN the real suite:
+cmake --build --preset debug
+ctest --preset debug -L <label>                       # e.g. -L agents -L integration → "CI passes" is ALREADY true
 ```
 
 ### Detailed Steps
@@ -92,6 +102,10 @@ pixi run pytest tests/unit/path/to/relevant_tests.py -v
 
 11. **NEVER gate the emission of a due artifact on an in-flight background job** — Emit the COMPLETE forward-looking plan (or review verdict) from the evidence already in hand: line counts, grep'd stubs, already-green gates. If one verification is still running (a background `pytest`, a `Monitor` you launched, an external job), mark THAT one criterion as "not yet confirmed — open risk, run before completion" INSIDE the Verification section, and emit the rest of the artifact anyway. A plan that is 95% confirmed + 1 flagged open risk is gradeable; a placeholder is an automatic Grade F. Distinguish two situations: (a) a **transient external dependency still in progress when you have NO deadline** — fine to keep working/waiting; (b) **an artifact is due THIS turn** ("your output IS the posted artifact") — you MUST emit now from evidence in hand, never output nothing. Pausing the turn to wait for a background full-suite count, then submitting the literal placeholder "Output not yet flushed. I'll wait for the monitor notification rather than polling.", fails EVERY rubric dimension (Requirements / Completeness / Concreteness / Risk / Verification / Stage-Handoff all F) and is STRICTLY WORSE than the status-note NOGO of step 9 — it addresses none of the prior findings either.
 
+12. **EXTRACTION/MIGRATION EPIC: verify the premise before planning the move, and run the CHEAP existence checks first** — A large "extract/move X from repo A into repo B" epic is the highest-risk class for already-being-done, because big moves land under a NEW ADR/PR that does not back-reference the old epic, so the epic stays OPEN long after delivery. Run the cheapest disconfirming checks FIRST, in this order, because each instantly reveals "already moved": (a) `find <target-repo>/src -name '*.cpp'` — does the moved implementation already live in the destination? (b) `ls <source-repo>/src/<moved-dir>` — expect "No such file or directory" if it really moved OUT. (c) `grep -rl "<MovedSymbol>" <source-repo>/src` — expect NO hits in compiled code. Then **map every acceptance criterion in the epic to a runnable command** and check current state rather than assuming the criteria are unmet — "the type no longer exists in A", "downstream still builds", "CI passes with the new code" are usually ALREADY satisfied. Confirm the strongest criterion ("CI passes with the new code") by actually building and running the suite: `cmake --build --preset debug` then `ctest --preset debug -L <label>` (e.g. `-L agents -L integration`). When this all holds, the correct plan is **verification-and-closeout**, not re-implementation.
+
+13. **Distinguish residuals that MATTER from harmless ones — do not over-scope the closeout** — After concluding "already moved," a `grep` for the moved symbol in the source repo may still return hits. Triage them before deciding the move is incomplete: a hit inside ACTIVELY-COMPILED code (a moved type still referenced from a `.cpp` that the default build compiles) is a real residual the closeout must address; a hit inside a `#ifdef`-guarded include that the current build config never compiles, or inside a Doxygen `@code`/comment example, is harmless and must NOT inflate the closeout scope. **Caveat the build-config gap explicitly:** an `#ifdef ENABLE_GRPC`-guarded path (e.g. a coordinator-submission branch) never compiles in the default preset, so "extraction complete" covers only the non-guarded surface — the guarded path is UNTESTED in this build and must be flagged as an open risk, not silently claimed done.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -108,6 +122,12 @@ pixi run pytest tests/unit/path/to/relevant_tests.py -v
 | Run `pixi run mypy <paths>` | Passed explicit file paths to the mypy task to type-check only the touched files | `error: Duplicate module named ...` — the `pixi run mypy` task already targets the whole tree, so extra paths double-register modules | Run `pixi run mypy` bare (no arguments); it already covers the whole source tree |
 | Run subset `pixi run pytest <files>` without `--no-cov` | Invoked an ad-hoc subset pytest run to check a few modules | `pytest: error: unrecognized arguments: --cov` — the pixi pytest task injects `--cov`, which the bare pytest invocation rejects | Add `--no-cov` (or `-p no:cov`) for ad-hoc subset runs; and treat any low TOTAL-coverage number from a subset as an artifact, not a result |
 | Pause the turn on a background job, submit an empty artifact | Started a long-running background `pytest tests/unit/automation` / `Monitor` to get a full-suite pass count, then PAUSED and deferred the turn — so the submitted plan artifact was the literal placeholder "Output not yet flushed. I'll wait for the monitor notification rather than polling." | NOGO, Grade F — an empty/placeholder artifact fails EVERY rubric dimension (Requirements / Completeness / Concreteness / Risk / Verification / Stage-Handoff all F); STRICTLY WORSE than the status-note NOGO and addresses none of the prior findings | Never gate a due artifact on an in-flight background job. Emit the complete plan from evidence in hand; a still-running gate becomes a flagged open-risk line in Verification, never a reason to output nothing. "No deadline → may wait" vs "artifact due this turn → emit from evidence + flag open risk" |
+| Assume an extraction epic = unstarted work | Treated an "extract agents from repo A into repo B" epic (filed months earlier) as future work to plan top-to-bottom | The extraction was ALREADY delivered under a different ADR/PR that never back-referenced the epic; `find <target>/src`, `ls <source>/src/agents` (absent), and a `grep` for the moved symbol proved the move was complete and the suite (586/589) already green | A large move filed long ago is the highest-risk class for "already done" — run cheap existence checks FIRST and reframe to verification-and-closeout, never re-implement |
+| Trust a sibling working tree for a cross-repo "still builds" claim | Asserted "ProjectKeystone CI still passes" (an epic acceptance step) from a local `cmake` build in the sibling `../ProjectKeystone` working tree | The local clone could be stale/dirty; a local build is NOT the repo's CI on its main branch — the claim was inferred, not observed | Cross-repo "downstream still builds/CI passes" claims must be confirmed against that repo's actual CI/main, not a local sibling tree; label sibling-tree builds as "inferred, local only" |
+| Attribute provenance from an in-repo comment | Concluded the work was "delivered under ADR-015 / Odysseus#143" because `CMakeLists.txt` comments said so | The ADR doc itself was never opened; an in-repo comment is hearsay, not the ADR | Verify "delivered under ADR-N" against the ADR document, not a code comment that cites it |
+| Dismiss failing tests as out-of-scope WIP | Wrote off 3 failing tests as another branch's work-in-progress because `git status` showed the file as untracked (`??`) | If that file is actually within the epic's intended scope, dismissing it is wrong — untracked ≠ unrelated | Before dismissing failures as out-of-scope, confirm the file is NOT part of the issue's acceptance scope; untracked status alone does not prove irrelevance |
+| Claim "extraction complete" while a path is `#ifdef`-guarded out | Declared the move done after a green build/suite, when the gRPC/coordinator-submission path sat behind `#ifdef ENABLE_GRPC` and never compiled in the default preset | "Complete" covered only the non-guarded surface; the guarded coordinator path in `chief_architect_agent.cpp` was UNTESTED in this config | A guarded path that the current build never compiles is an open risk, not a verified surface — flag it explicitly; don't claim coverage you didn't compile |
+| Treat the move as byte-for-byte complete from the epic's LOC figure | Implicitly trusted the epic's "3,393 lines" scope estimate as the size of the moved code | Actual counts (1,732 src + 4,349 hdr) did not reconcile to 3,393 — the original estimate and the delivered code differ | An epic's LOC estimate is a forecast, not a manifest; don't assume the move is byte-for-byte complete because a count "roughly matches" — they often don't |
 
 ## Results & Parameters
 
@@ -240,10 +260,68 @@ a documented open-risk line item, never a reason to emit nothing. Distinguish "t
 dependency still in progress" (legit to keep working/waiting when you have NO deadline) from "an
 artifact is due THIS turn" (must emit now from evidence in hand).
 
+### Concrete example (ProjectAgamemnon extraction epic #1 — already delivered under a different ADR)
+
+The epic asked to EXTRACT the agent layer out of a source repo and into ProjectAgamemnon, with
+acceptance criteria phrased as future work ("the types no longer exist in the source repo",
+"downstream still builds", "CI passes with the new code"). The epic had been open for months.
+
+Cheap existence checks run THIS session, in order, each disconfirming the "not started" premise:
+
+```bash
+find <agamemnon>/src -name '*.cpp'        # the moved agent .cpp files are ALREADY in the destination
+ls <source-repo>/src/agents               # → "No such file or directory" — the dir moved OUT
+grep -rl "<MovedAgentSymbol>" <source-repo>/src   # → no hits in compiled code (only .ifdef/comment residuals)
+```
+
+Then the strongest criterion ("CI passes with the new code") was confirmed by actually building
+and running the suite, not assumed:
+
+```text
+cmake --build --preset debug
+ctest --preset debug -L agents        # green
+ctest --preset debug -L integration   # green
+# → 586 / 589 tests pass; agents + integration labels 100% green
+```
+
+Conclusion: the extraction was COMPLETE; the correct plan was **verification-and-closeout**, not
+re-implementation. The lesson is the discipline of catching that BEFORE planning the move.
+
+Caveats recorded honestly (why this finding is `verified-local` and NOT `verified-ci`, and the
+exact assumptions a reviewer should re-check — the investigation procedure WAS run locally this
+session, but the downstream plan was NOT executed end-to-end in CI):
+
+- **Cross-repo "Keystone CI still passes" was inferred from a local `cmake` build in the sibling
+  `../ProjectKeystone` working tree, NOT from Keystone's actual CI/main** — the local clone could
+  be stale or dirty; treat this as inferred, not observed.
+- **The "delivered under ADR-015 / Odysseus#143" attribution came from `CMakeLists.txt` comments,
+  not from reading the ADR doc itself** — provenance rests on an in-repo comment.
+- **The 3 failing tests (of 589) were dismissed as out-of-scope WIP from another branch** based
+  only on `git status` showing the file as untracked (`??`); if that file is actually within the
+  epic's intended scope, dismissing it is wrong.
+- **The gRPC/coordinator path is behind `#ifdef ENABLE_GRPC` and never compiles in this preset** —
+  `chief_architect_agent.cpp`'s coordinator-submission branch is UNTESTED here, so "extraction
+  complete" covers only the non-gRPC surface.
+- **Line counts do not reconcile to the epic's 3,393-line figure** (found 1,732 src + 4,349 hdr) —
+  the original scope estimate and the actual moved code differ; do not treat the move as
+  byte-for-byte complete.
+
 ### Decision tree for planners
 
 ```
 Before writing any implementation plan:
+│
+├─ Is this a large EXTRACTION / MIGRATION / "move X from repo A to repo B" epic filed weeks/months ago?
+│   └─ YES → run cheap existence checks FIRST (each instantly disconfirms "not started"):
+│           find <target>/src -name '*.cpp'      (moved code already in destination?)
+│           ls <source>/src/<moved-dir>           (expect ABSENT if moved out)
+│           grep -rl <MovedSymbol> <source>/src   (expect NO compiled hits)
+│       ├─ ALREADY MOVED → map each acceptance criterion to a command; build+run the suite
+│       │   (cmake --build --preset debug; ctest --preset debug -L <label>); if green →
+│       │   plan = VERIFICATION-AND-CLOSEOUT, not re-implementation. Triage residuals:
+│       │   compiled-code hit = real; #ifdef-guarded / Doxygen @code hit = harmless (don't over-scope).
+│       │   Flag #ifdef-guarded paths as UNTESTED-in-this-config open risk.
+│       └─ NOT moved → proceed with normal extraction planning
 │
 ├─ 0. git status --porcelain + git worktree list
 │   └─ untracked sibling worktree (?? 1-fix/) → INSPECT IT; the work may be done-but-uncommitted
@@ -287,3 +365,4 @@ When the artifact is DUE this turn (plan-loop / review verdict):
 | ProjectHephaestus | Issue #1357 — CIDriver god-class decomposition already landed in an uncommitted `1-fix` worktree | `ci_driver.py` measured 2,449 lines (≤ target), all 4 collaborator modules present, 211 subset tests green; full gate not run (verified-local) |
 | ProjectHephaestus | Issue #1357 — plan-loop NOGO (Grade D) on a retrospective "status note" for the landed work | Reshaped into a forward plan + ran the deferred gates: boundary tests 2 passed, `pixi run mypy` clean (402 files), ruff clean, 25 delegation stubs; full automation suite count unconfirmed (verified-local) |
 | ProjectHephaestus | Issue #1357 — SECOND plan-loop NOGO (Grade F) on an EMPTY placeholder artifact (output withheld while a background `pytest`/Monitor ran) | Fix verified: emit the complete plan from evidence in hand and flag the still-running gate as an open risk — the very next iteration got a complete, gradeable plan (verified-local) |
+| ProjectAgamemnon | Epic #1 — "extract the agent layer into Agamemnon" was already delivered under a different ADR/PR | Existence checks (`find <agamemnon>/src`, `ls <source>/src/agents` absent, `grep -rl <MovedSymbol>`) + `cmake --build --preset debug` + `ctest --preset debug -L agents -L integration` confirmed the move complete: 586/589 tests pass, agents+integration labels 100% green → plan = verification-and-closeout (verified-local; investigation run this session, downstream plan NOT executed in CI; cross-repo Keystone build, ADR-015 attribution, the 3 failing tests, the `#ifdef ENABLE_GRPC` path, and the 3,393-line figure all remain inferred/unreconciled) |

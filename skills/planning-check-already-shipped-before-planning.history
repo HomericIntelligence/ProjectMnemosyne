@@ -1,5 +1,79 @@
 # planning-check-already-shipped-before-planning — History
 
+## v1.4.0 (2026-06-19)
+
+**Changed by:** ProjectAgamemnon extraction-epic #1 planning session — a months-old epic asked to
+EXTRACT the agent layer into Agamemnon, but cheap existence checks plus a real build/test run proved
+the move was ALREADY delivered under a different ADR/PR, so the correct plan was
+verification-and-closeout, not re-implementation.
+**Verification:** verified-local — the investigation procedure (find/ls/grep + `cmake --build
+--preset debug` + `ctest --preset debug -L agents -L integration`) was actually run this session and
+confirmed the extraction complete (586/589 tests pass, agents+integration labels 100% green). The
+downstream PLAN was NOT executed end-to-end in CI, so this is NOT verified-ci.
+
+### What changed
+
+- Added the core NEW lesson: a large EXTRACTION/MIGRATION/"move X from repo A to repo B" epic filed
+  weeks/months ago is the highest-risk class for already-being-done, because big moves land under a
+  NEW ADR/PR that never back-references the old epic. Verify the premise before planning the move:
+  run the cheapest disconfirming checks FIRST (`find <target>/src -name '*.cpp'`,
+  `ls <source>/src/<moved-dir>` expecting absent, `grep -rl <MovedSymbol> <source>/src`), map every
+  acceptance criterion to a runnable command, and build+run the actual suite
+  (`cmake --build --preset debug`; `ctest --preset debug -L <label>`) to confirm "CI passes with the
+  new code" is ALREADY true. The plan reframes to verification-and-closeout.
+- Added the residual-triage lesson: distinguish residuals that MATTER (a moved type still referenced
+  from actively-compiled code) from harmless ones (a `#ifdef`-guarded include, a Doxygen `@code`
+  comment); a `#ifdef ENABLE_GRPC`-guarded path that the default preset never compiles is UNTESTED
+  and must be flagged as an open risk, not claimed done.
+- Added two When-to-Use triggers (extraction/migration epic; acceptance-criteria-as-future-work).
+- Added Verified-Workflow steps 12 (verify-the-extraction-premise + cheap-checks-first) and 13
+  (residual triage / `#ifdef` build-config caveat), plus a `# 6.` block in the Quick Reference.
+- Added 7 Failed Attempts rows surfacing the reviewer-focus risks: assume-epic-unstarted;
+  trust-sibling-tree-for-cross-repo-CI claim; attribute-provenance-from-CMake-comment (ADR-015);
+  dismiss-failing-tests-as-out-of-scope-from-untracked-status; claim-complete-while-`#ifdef`-guarded;
+  treat-move-byte-for-byte-complete-from-LOC-estimate.
+- Added a Results & Parameters worked example (ProjectAgamemnon epic #1) with all five honest
+  caveats (cross-repo Keystone inference, ADR-015-from-comment, 3 dismissed tests, `#ifdef
+  ENABLE_GRPC` untested surface, 3,393-line figure not reconciling to 1,732 src + 4,349 hdr).
+- Extended the planner decision tree with an extraction-epic branch; added a Verified On row;
+  updated the Overview table (Date/Objective/Outcome/Verification).
+- Frontmatter: bumped `version` 1.3.0 → 1.4.0, updated `date` 2026-06-15 → 2026-06-19, broadened
+  `description` (added the extraction-epic clause + trigger 6), populated `tags`, kept
+  `verification: verified-local`.
+
+### Why
+
+v1.3.0 covered already-merged fixes, uncommitted-worktree work, and the plan-artifact-shape lessons
+(status note → Grade D; empty placeholder → Grade F). It did not cover the EXTRACTION/MIGRATION
+epic variant, where a months-old "move X" epic is often already delivered under a different ADR/PR.
+The Agamemnon session learned to disconfirm the premise cheaply (find/ls/grep) and confirm "CI
+passes with the new code" by actually building and running the suite, then reframe to
+verification-and-closeout — and to triage residuals so a harmless `#ifdef`/comment hit does not
+inflate the closeout scope while a real compiled-code hit does.
+
+### Previous version (v1.3.0) snapshot
+
+```markdown
+---
+name: planning-check-already-shipped-before-planning
+description: "Before writing an implementation plan, verify the ACTUAL on-disk state — grep/wc/test the real source — instead of trusting the issue body's stated starting condition (LOC counts, method counts, \"needs to be done\"). The fix may already be merged, OR already landed uncommitted in a sibling worktree that git log will NOT show. And even when the work IS already on disk, the plan-loop still demands a FORWARD-LOOKING plan — a retrospective status note gets NOGO'd, gates you defer to the reviewer are stage-handoff failures, and an EMPTY/placeholder artifact (output withheld while a background job runs) is an automatic Grade F. Use when: (1) planning a follow-up or consolidation issue, (2) issue body cites specific file paths or LOC/method counts, (3) git status shows an untracked sibling worktree directory, (4) the plan-loop reviewer NOGO'd your plan as a 'status note' / retrospective, (5) you're tempted to wait on a background job / Monitor / long test run before producing a due plan or review artifact."
+category: architecture
+date: 2026-06-15
+version: "1.3.0"
+user-invocable: false
+verification: verified-local
+history: planning-check-already-shipped-before-planning.history
+tags: []
+---
+```
+
+(The v1.4.0 edits are purely additive — two triggers, Verified-Workflow steps 12–13, a Quick
+Reference block, 7 Failed Attempts rows, a Results subsection, a decision-tree branch, and a
+Verified On row; the full v1.3.0 body is reconstructable from this changelog plus the snapshots
+below.)
+
+---
+
 ## v1.3.0 (2026-06-15)
 
 **Changed by:** ProjectHephaestus issue #1357 planning session (continued) — after the status-note
