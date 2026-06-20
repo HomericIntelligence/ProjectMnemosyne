@@ -3,7 +3,7 @@ name: planning-verify-issue-claims-and-required-check-gating
 description: "Before planning a change to CI gating, distinguish a job that RUNS from a job that GATES the PR — a test 'wired into CI' is not actually enforced unless its job is a REQUIRED status-check context in the branch ruleset. Confirm the gate is real with `gh api repos/<org>/<repo>/rulesets` (and per-id `required_status_checks[].context`); a job absent from that list runs but does NOT block merges. SEPARATELY, treat an issue's own factual claims — WHICH job a step lives in, WHAT a test covers — as CLAIMS to grep-verify against the codebase, because they drift from reality. Worked example (ProjectProteus #184, follow-up from #97): the issue claimed a host-contract test was 'wired into CI' as done, but it ran in a standalone `dispatch-contract-test` job that was NOT in the required list (`lint, unit-tests, integration-tests, security/dependency-scan, security/secrets-scan, build, schema-validation, deps/version-sync`) — running, not gating. The issue also said the step lived in `integration-tests` (naming drift — it was a separate job) and that the test covers 'RFC 1123 format + allowlist validation' (a `grep -rniE 'rfc.?1123|allowlist|hostname'` over scripts/ .github/ docs/ returned NOTHING — no such logic exists; the test only checks host-presence/fail-closed). The fix folds the test into the already-required `integration-tests` job so no destructive ruleset PUT is needed. Use when: (1) an issue claims a fix is 'already done' / 'wired into CI' — confirm the wiring is ENFORCED (required context), not merely running; (2) an issue names WHERE a change lives (a job) or WHAT a test covers — verify against the actual files first; (3) planning any change to required CI checks / branch protection. Cross-link: gha-required-checks-branch-protection (the YAML/aggregator fix mechanics), verify-issue-premise-against-code-before-planning (grep-the-premise discipline)."
 category: ci-cd
 date: 2026-06-20
-version: "1.0.0"
+version: "1.1.0"
 history: planning-verify-issue-claims-and-required-check-gating.history
 user-invocable: false
 verification: verified-local
@@ -21,6 +21,8 @@ tags:
   - grep-the-claim
   - naming-drift
   - working-tree-clean
+  - guard-dependency-floor
+  - scope-discipline
 ---
 
 # Verify Issue Claims and the Reality of CI Gating Before Planning
@@ -116,6 +118,25 @@ git status --porcelain   # must be empty
    issue's claims don't match the tree, say so explicitly with grep/`gh api` evidence rather
    than silently re-targeting.
 
+### Keep regression guards at the host's dependency floor
+
+When you add a structural guard to an EXISTING test, match the host's toolchain — do not import
+new dependencies. A shell test gets a bash/grep/awk guard, NOT an `import yaml` block: the shell
+test also runs locally/standalone where pyyaml may be absent, so a hidden python+pyyaml
+dependency is a Principle-of-Least-Astonishment violation. For a 2-space-indented GitHub Actions
+job, extract just that job's block (no YAML parser needed) and `grep` inside it:
+
+```bash
+awk '/^  JOBNAME:/{grab=1;print;next} grab&&/^  [A-Za-z0-9_-]+:/{exit} grab{print}' "$wf" \
+  | grep -q "<expected-line>"
+```
+
+Likewise, do NOT bundle opportunistic cleanups into a scoped fix. If you do touch something
+adjacent, verify the rationale against the actual enforcement code: before citing a CI guard as
+justification, READ the guard's literal regex (e.g. `_required.yml:85,100`) — a guard that greps
+for `\|\| true` and `continue-on-error: true` does NOT match `&& exit 0`, so "same class of
+suppression" is factually wrong and a reviewer will flag it (P2/YAGNI).
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -124,6 +145,8 @@ git status --porcelain   # must be empty
 | Trust the issue's description of the job name | Issue said the step was added to `integration-tests` | It was a separate standalone job (`dispatch-contract-test`); naming drift | Read the workflow file; don't trust the issue's location claim |
 | Trust the issue's description of test coverage | Issue said the test covers "RFC 1123 + allowlist validation" | No such logic exists anywhere (`grep -rniE 'rfc.?1123|allowlist|hostname'` returned nothing); the test only checks host-presence / fail-closed | grep the codebase to verify factual claims before planning around them |
 | Assume the test was hermetic | Ran the test and checked only the exit code | The test leaked `err.txt` into CWD (no cleanup), dirtying the working tree; only `git status --porcelain` after the run caught it | Add a working-tree-clean assertion to the verification, not just an exit-code check |
+| Rode an opportunistic out-of-scope edit into a focused plan | Plan removed a trailing `&& exit 0` from `_required.yml:150` as "same class as `\|\| true`" | The repo's `forbid-suppressions` CI job greps for `\|\| true` and `continue-on-error: true` ONLY — it does NOT match `&& exit 0`, so the justification was factually wrong; and the `exit 0` was inert as the step's last command. Reviewer flagged P2/YAGNI | Before citing a CI guard as justification, READ the guard's actual regex (`_required.yml:85,100`). Don't bundle opportunistic cleanups into a scoped fix; if you do, verify the rationale against the actual enforcement code |
+| Added a regression guard that silently imported a new dependency | Appended a `python3 -c "import yaml"` block to a pure-shell test to parse the workflow YAML | The shell test also runs locally/standalone where pyyaml may be absent; a shell test gaining a hidden python+pyyaml dependency is a POLA violation (reviewer P7) | A regression guard should use only tools its host already depends on. Rewrite YAML structural checks as pure-bash `awk`/`grep` (extract a job block with `awk '/^  job:/{g=1}...'` then `grep`) when the test is shell |
 
 ## Results & Parameters
 
@@ -138,7 +161,12 @@ git status --porcelain   # must be empty
   `integration-tests` AND that `dispatch-contract-test` is gone — but it does NOT assert
   `integration-tests` is itself a required context (that lives in the ruleset API, not the
   YAML). If someone later drops `integration-tests` from the ruleset, the guard still passes.
-  Note this gap explicitly in the plan/PR.
+  Note this gap explicitly in the plan/PR. This residual gap RECURS: a structural unit/shell
+  guard that asserts a test is wired into job X cannot detect X later being dropped from the
+  branch ruleset (that membership lives in the rulesets API). Correct handling = assert it at
+  runtime in the verification command via `gh api .../rulesets`, and deliberately DO NOT couple
+  a unit/shell test to a live API call — disclose the residual gap explicitly in the PR body
+  instead.
 - **`verified-local` justification:** the `gh api` / grep / test commands were executed against
   the live repo and confirmed both the gating reality and the falsified claims; the plan's edits
   are NOT yet merged or CI-confirmed.
@@ -157,3 +185,4 @@ git status --porcelain   # must be empty
 | Project | Context | Details |
 | --- | --- | --- |
 | ProjectProteus | Issue #184 planning (follow-up from #97) | verified-local; ruleset `homeric-main-baseline` checked via `gh api`, claims grep-verified (RFC 1123 / allowlist coverage falsified, `integration-tests` job-name claim falsified), test hermeticity caught via `git status --porcelain`. Plan edits not merged/CI-run. |
+| ProjectProteus | Issue #184 R1 (NOGO→revision) | verified-local; `forbid-suppressions` regex read live (`_required.yml:85,100`) to confirm it matches `\|\| true`/`continue-on-error: true` but NOT `&& exit 0`; regression guard rewritten from a `python3 import yaml` block to a pure-bash `awk`+`grep` job-block check. Plan edits not merged/CI-run. |

@@ -1,5 +1,39 @@
 # planning-verify-issue-claims-and-required-check-gating — History
 
+## v1.1.0 (2026-06-20)
+
+**Changed by:** ProjectProteus issue #184 R1 plan-review NOGO→revision (2026-06-20). A NOGO
+review of the revised plan caught two durable planning traps: (1) the plan removed a trailing
+`&& exit 0` from `_required.yml:150`, justifying it as "the same class as `|| true`" — but the
+repo's `forbid-suppressions` CI job greps for `|| true` and `continue-on-error: true` ONLY and
+does NOT match `&& exit 0`, so the citation was factually wrong (and the `exit 0` was inert as
+the step's last command); reviewer flagged P2/YAGNI. (2) A regression guard appended a
+`python3 -c "import yaml"` block to a pure-shell test, silently adding a python/pyyaml dependency
+to a shell test that also runs standalone where pyyaml may be absent (POLA, reviewer P7).
+**Verification:** verified-local — the `forbid-suppressions` regex was read live
+(`_required.yml:85,100`) and the guard was rewritten as a pure-bash `awk`+`grep` job-block check
+against the live repo; the plan's edits were NOT merged or CI-confirmed.
+
+### What changed
+
+- +2 Failed Attempts rows:
+  1. Mis-justified out-of-scope `&& exit 0` edit — cited the `forbid-suppressions` guard without
+     reading its actual regex (`|| true` / `continue-on-error: true` only; NOT `&& exit 0`).
+     Lesson: read a CI guard's literal regex before citing it; don't bundle opportunistic
+     cleanups into a scoped fix.
+  2. Regression guard that silently added a python/pyyaml dependency to a shell test. Lesson:
+     a guard should use only tools its host already depends on; rewrite YAML structural checks
+     as pure-bash `awk`/`grep` when the test is shell.
+- + "Keep regression guards at the host's dependency floor" design principle (new subsection in
+  Detailed Steps) with the 2-space-indent GitHub Actions job-block `awk` extraction idiom.
+- Reinforced the live-ruleset-membership residual-gap note in Results & Parameters: a structural
+  unit/shell guard cannot detect a job later being dropped from the branch ruleset; assert
+  membership at runtime via `gh api .../rulesets` and disclose the residual gap in the PR body
+  rather than coupling a unit/shell test to a live API call.
+- Added tags `guard-dependency-floor`, `scope-discipline`. Bumped version 1.0.0 → 1.1.0.
+- Added a Verified On row: ProjectProteus, Issue #184 R1 (NOGO→revision), verified-local —
+  `&& exit 0` regex check and pure-bash guard rewrite.
+
 ## v1.0.0 (2026-06-20)
 
 **Changed by:** ProjectProteus issue #184 planning session (follow-up from #97). The issue
