@@ -1,9 +1,9 @@
 ---
 name: homeric-crosshost-deployment-and-mesh-topology
-description: "Deploy and operate the HomericIntelligence mesh across multiple Tailscale hosts using NATS JetStream, compose overlays, and justfile launchers. Use when: (1) splitting the E2E stack across multiple physical hosts via compose overlay or per-component launchers, (2) bringing up Agamemnon/Nestor/Hermes natively or via containers on any new Tailnet host from cold state, (3) running hub+remote-worker topology for cross-host myrmidon dispatch, (4) configuring NATS connections (direct or leafnode) over Tailscale, (5) implementing NATS JetStream publish retry with exponential backoff, (6) debugging Hermes webhook event types, compose healthchecks, or podman rootlessport/DNS quirks, (7) PLANNING credential-based authentication for a NATS leaf/server config and scrutinizing the uncertain assumptions a reviewer must verify in such a plan, (8) PLANNING Grafana anonymous-access hardening in the e2e compose stack (disable anonymous, fall back to admin login) and scrutinizing the unverified health-probe/provisioning assumptions a reviewer must confirm, (9) PLANNING a NATS TLS security runbook (cert provisioning via step-ca, zero-downtime cert rotation via SIGHUP, key-compromise response) for the canonical configs that now carry TLS per ADR-008, and scrutinizing the unverified step/nats-server/monitoring-API claims a reviewer must confirm, (10) PLANNING NATS client-cert mTLS wiring into ProjectTelemachy (config-layer `build_ssl_context()`/`nats_connect_kwargs()` because Telemachy has NO live `nats.connect()`), now with R1 (#304) verified-local facts: Hermes' `build_ssl_context()` is DEFINED-BUT-UNUSED at its connect site (no `tls=` kwarg), nats-py 2.14.0 `Client.connect` really accepts `tls`/`tls_hostname` (inspect `Client.connect`, NOT the `nats.connect` wrapper), `.gitignore` blocks committed PEM fixtures and no cert lib is installed so generate certs with the `openssl` binary into pytest `tmp_path`, and ADR-008 (not the cited ADR-009) is the real NATS TLS ADR; R2 (#304) adds the CONFIRMED `cli.py` insertion point (the `tls://` preflight goes INSIDE the existing `_run_with_signals()` async wrapper at `cli.py:141`, before the `async with AgamemnonClient(...)` at `cli.py:178` — do NOT add a second `asyncio.run`) and notes the R1 plan PASSED review; R3 (#304) RESOLVES the R2 review's two MINOR POLA findings (design/framing round, nothing newly executed): the preflight failure path now wraps `nats.connect(...)` and re-raises a typed `NatsConnectionError` (mirroring `AgamemnonError` at `agamemnon_client.py:13`) which the CLI catches and exits via `typer.Exit(1)` (no bare traceback out of `asyncio.run`), and the handshake-only preflight is framed as a DELIBERATE, DOCUMENTED, fail-closed verification gate (intent in docstring+CLI comment+CLAUDE.md+runbook) rather than a probe — plan now A/B-clean. (11) PLANNING a NATS e2e SIGKILL→restart port-bind-race fix (Odysseus #328, UNVERIFIED — planning only, no code run, no CI): a relaunch helper that only polls the CLIENT port (`NATS_PORT`) free ignores the MONITOR port (`-m NATS_MONITOR_PORT`), which lingers in TIME_WAIT after SIGKILL → the `-m` bind fails and the health-wait times out ('NATS did not return healthy after restart'). Fix design: a `wait_port_free` helper (returns 0 only when a port REFUSES connections) gating BOTH client and monitor ports before relaunch, PLUS a bind-retry fallback loop (nats-server exposes no SO_REUSEADDR to callers, so TIME_WAIT can outlive the poll window). Scrutinize the planning-stage reviewer risks: the issue body cited a STALE path (`e2e/lib/nats.sh:157` / `nats_restart`/`nats_kill`) — VERIFIED `nats.sh` is 139 lines of pure curl-monitoring and the real port-binding code is `e2e/lib/process.sh` (`start_nats_bg` binds `-p`/`-m`; defaults `NATS_PORT=14222`/`NATS_MONITOR_PORT=18222`); the named restart helpers DO NOT EXIST yet (the A02 test `e2e/tests/fault/nats-crash-reconnect.sh` is currently PASSIVE) so the plan SHIPS the helper (check parent PR #184 for merge-conflict); the TIME_WAIT-on-monitor causal chain is the issue author's UNREPRODUCED hypothesis; and `pixi run shellcheck`/`pixi run bash` wiring was NOT confirmed (fall back to bare `shellcheck`/`bash`; the e2e harness runs via `e2e/run-ipc-tests.sh`)."
+description: "Deploy and operate the HomericIntelligence mesh across multiple Tailscale hosts using NATS JetStream, compose overlays, and justfile launchers. Use when: (1) splitting the E2E stack across multiple physical hosts via compose overlay or per-component launchers, (2) bringing up Agamemnon/Nestor/Hermes natively or via containers on any new Tailnet host from cold state, (3) running hub+remote-worker topology for cross-host myrmidon dispatch, (4) configuring NATS connections (direct or leafnode) over Tailscale, (5) implementing NATS JetStream publish retry with exponential backoff, (6) debugging Hermes webhook event types, compose healthchecks, or podman rootlessport/DNS quirks, (7) PLANNING credential-based authentication for a NATS leaf/server config and scrutinizing the uncertain assumptions a reviewer must verify in such a plan, (8) PLANNING Grafana anonymous-access hardening in the e2e compose stack (disable anonymous, fall back to admin login) and scrutinizing the unverified health-probe/provisioning assumptions a reviewer must confirm, (9) PLANNING a NATS TLS security runbook (cert provisioning via step-ca, zero-downtime cert rotation via SIGHUP, key-compromise response) for the canonical configs that now carry TLS per ADR-008, and scrutinizing the unverified step/nats-server/monitoring-API claims a reviewer must confirm, (10) PLANNING NATS client-cert mTLS wiring into ProjectTelemachy (config-layer `build_ssl_context()`/`nats_connect_kwargs()` because Telemachy has NO live `nats.connect()`), now with R1 (#304) verified-local facts: Hermes' `build_ssl_context()` is DEFINED-BUT-UNUSED at its connect site (no `tls=` kwarg), nats-py 2.14.0 `Client.connect` really accepts `tls`/`tls_hostname` (inspect `Client.connect`, NOT the `nats.connect` wrapper), `.gitignore` blocks committed PEM fixtures and no cert lib is installed so generate certs with the `openssl` binary into pytest `tmp_path`, and ADR-008 (not the cited ADR-009) is the real NATS TLS ADR; R2 (#304) adds the CONFIRMED `cli.py` insertion point (the `tls://` preflight goes INSIDE the existing `_run_with_signals()` async wrapper at `cli.py:141`, before the `async with AgamemnonClient(...)` at `cli.py:178` — do NOT add a second `asyncio.run`) and notes the R1 plan PASSED review; R3 (#304) RESOLVES the R2 review's two MINOR POLA findings (design/framing round, nothing newly executed): the preflight failure path now wraps `nats.connect(...)` and re-raises a typed `NatsConnectionError` (mirroring `AgamemnonError` at `agamemnon_client.py:13`) which the CLI catches and exits via `typer.Exit(1)` (no bare traceback out of `asyncio.run`), and the handshake-only preflight is framed as a DELIBERATE, DOCUMENTED, fail-closed verification gate (intent in docstring+CLI comment+CLAUDE.md+runbook) rather than a probe — plan now A/B-clean. (11) PLANNING a NATS e2e SIGKILL→restart fix in a MULTI-PROCESS test harness (Odysseus #328, UNVERIFIED — planning only, no code run, no CI; R1 re-plan after the R0 plan got a NOGO/grade D). The CORRECTED R1 root cause is a PROCESS-MODEL defect, not the R0's TIME_WAIT race: each e2e test runs as a separate forked `bash $script` CHILD (`run-ipc-tests.sh:64`) while NATS is started in the PARENT (`topology.sh:21` → `start_nats_bg`), and the runner exports only PORTS not PIDs (`run-ipc-tests.sh:50`), so a `_NATS_PID` shell global is EMPTY in the child test process — a kill against it is a NO-OP and a relaunch on still-held ports makes the flake DETERMINISTIC. Corrected fix design: a port-keyed PID/meta FILE under /tmp (mirror the repo's `doctor.sh:292` aardvark.pid idiom), a store_dir-PRESERVING `start_nats_bg_at <dir>` relaunch (the existing `start_nats_bg` mktemps a fresh `--store_dir` each call → silently discards JetStream state the A01/A02 continuity asserts depend on), and bind-RETRY-with-backoff as the CORRECTNESS gate (a port free-poll is latency-only, NOT a gate: a TIME_WAIT socket has no listener so connect() refuses and the poll reports the port free while the kernel still RESERVES it for ~2MSL → the bind fails anyway). Always exercise the REAL cross-process harness path (`run-ipc-tests.sh --topology t1 --test ...`), not just a convenient single-shell unit test where the global IS visible. Scrutinize the planning-stage reviewer risks: the whole plan is UNVERIFIED (neither the new unit test nor the real A02 was executed; the unit test even admits it was never executed); the named `nats_restart`/`nats_kill` helpers DO NOT EXIST on main (check parent PR #184 for merge-conflict); `pixi run bash`/`pixi run shellcheck` wiring is unconfirmed (fall back to bare binaries; harness is `bash e2e/run-ipc-tests.sh`); and the 1→2→4→8s bind-retry backoff (~15s max) may NOT outlast Linux default 2MSL ≈ 60s — a residual risk a reviewer must weigh (a longer backoff or an SO_REUSEADDR alternative may be needed)."
 category: architecture
 date: 2026-06-20
-version: "1.8.0"
+version: "1.9.0"
 user-invocable: false
 verification: unverified
 history: homeric-crosshost-deployment-and-mesh-topology.history
@@ -87,7 +87,7 @@ tags:
 | **Date** | 2026-06-20 |
 | **Objective** | Deploy and operate the HomericIntelligence mesh across multiple Tailscale hosts using NATS JetStream, compose overlays, justfile launchers, and resilient publish patterns; and plan credential-based authentication for the credential-less NATS leaf/server config |
 | **Outcome** | Deployment patterns verified-local (two-host + 6-host). The NATS leaf/server auth fix is still an UNVERIFIED PLAN for issue #176 (R1, post-NOGO) — the full plan was not run end-to-end and no CI passed. BUT the config-block-presence validator was PROTOTYPED this session (verified-local: exit 0 on the fixed fixture, exit 1 on the repo's current configs). The Grafana anonymous-access hardening (issue #206) is an UNVERIFIED PLAN — no container was run; the load-bearing untested assumption is that Grafana's `/api/health` stays unauthenticated when anonymous access is disabled (so e2e health probes survive). The NATS TLS security RUNBOOK (issue #208 — cert provisioning, rotation, compromise response) is an UNVERIFIED PLAN — no commands run, no CI. The ProjectTelemachy NATS client-cert mTLS wiring (issue #304) is an UNVERIFIED PLAN overall (no CI) but R1 (post-NOGO) VERIFIED-LOCAL several facts the R0 round had only flagged as reviewer-risk: **(a)** Telemachy has NO live `nats.connect()` call (`_monitor_completion` HTTP-polls Agamemnon, it is not a NATS subscriber — re-confirmed); **(b)** Hermes does NOT consume `build_ssl_context()` at its connect site — `grep` shows ONLY the method DEFINITION at `config.py:126`, and `publisher.py:91-97` calls `nats.connect(...)` with NO `tls=` kwarg, so "wire it exactly as Hermes does" mirrors a connect site that DOES NOT EXIST (Hermes has the same latent gap); **(c)** nats-py **2.14.0** `nats.aio.client.Client.connect` really accepts `tls`, `tls_hostname`, and `tls_handshake_first` (inspect `Client.connect`, NOT the module-level `nats.connect` wrapper, which does not expose them); **(d)** the root + Telemachy `.gitignore` block committed `*.pem`/`*.key`/`*.crt` fixtures AND neither `cryptography` nor `trustme` is installed in the Telemachy pixi env — but the `openssl` binary IS on PATH (OpenSSL 3.6.2), so the working approach is to generate certs at test time into pytest `tmp_path`; **(e)** ADR-009 does NOT exist (only 001-008; ADR-008 IS the NATS TLS encryption ADR) and `docs/runbooks/enable-nats-auth.md` is ABSENT — both cited by the issue. Because a config-builder alone CANNOT satisfy AC1 ("Telemachy connects to NATS"), the honest fix is to ADD a minimal real consumed `nats_client.connect_nats()` (CLI `run` `tls://` preflight), not ship an unconsumed `nats_connect_kwargs()` helper (YAGNI, flagged in the NOGO). **IMPORTANT premise correction:** the #176-era claim that `configs/nats/*.conf` ship with NO TLS is now STALE — ADR-008 (Status: Proposed) is already merged into the configs, so both `server.conf` and `leaf.conf` now carry top-level `tls {}`, `leafnodes { port=7422; tls{} }`, and cluster TLS referencing `/etc/nats/certs/{server-cert.pem,server-key.pem,ca.pem}`, and leaf.conf's remote is now `nats+tls://<ip>:7422`. The plan's highest-value content remains its catalogue of uncertain assumptions a reviewer must verify, now sharpened by concrete NOGO causes and the stale-premise correction. **R2 increment (#304):** the R1 plan PASSED review (no new NOGO), and the `cli.py` preflight insertion point is now CONFIRMED — the `tls://` preflight (`nc = await connect_nats(settings); await nc.drain()`) goes INSIDE the existing `_run_with_signals()` async wrapper (`cli.py:141`, already used by the `run` command at `cli.py:120` with SIGINT/SIGTERM handlers + a Rich `Progress` context), AFTER the signal handlers are installed and BEFORE the `async with AgamemnonClient(...)` block (`cli.py:178`); do NOT add a second `asyncio.run` or block at import time. **R3 increment (#304):** the R2 plan got a narrow B/NOGO with ONLY two MINOR POLA findings; this design/framing round RESOLVES both inside the plan body (nothing newly executed). **(1)** Preflight failure handling: `connect_nats()` wraps `nats.connect(...)` in `try/except Exception` and re-raises a typed `NatsConnectionError` (mirroring the existing `AgamemnonError` at `agamemnon_client.py:13`) with an operator-guiding message ("confirm TLS_CERT_FILE/TLS_KEY_FILE/TLS_CA_BUNDLE are set and the cert is CA-signed"); the CLI `run` preflight catches `NatsConnectionError`, prints a red `console` line, and exits via `typer.Exit(1)` (matching the existing failure style at `cli.py:68-80`) — so a raw `ssl.SSLError`/`nats.errors.*` never escapes `asyncio.run()` as a bare traceback. **(2)** "Handshake-only preflight = connects" is RESOLVED by framing the connection as a DELIBERATE, DOCUMENTED, fail-closed verification gate: intent stated in the helper docstring, the CLI comment, the CLAUDE.md env-var row, AND the runbook; named as the single real connection site future data paths reuse; hard-failing (non-zero exit) on rejection so it complements the existing pre-connection `require_tls` gate at `agamemnon_client.py`. Both resolutions are decisions stated in-plan, not new investigation — a minors-only NOGO is closable that way. |
-| **Verification** | unverified OVERALL for the NATS auth-planning section (the full plan was not exercised end-to-end); the brace-depth config-block validator specifically is verified-local (prototyped 2026-06-19 against fixed + current fixtures). The Grafana anonymous-access hardening subsection is unverified (no container run; `/api/health`-unaffected claim untested). The NATS TLS security-runbook section (issue #208) is unverified (no commands run; `step` CLI flags, NATS SIGHUP cert hot-reload, and the `/varz` `tls_required` field name were all written from memory). The Telemachy mTLS-wiring section (issue #304) is unverified OVERALL (no CI), but R1 (post-NOGO) CONVERTED the prior round's assumed-by-analogy claims into VERIFIED-LOCAL facts this session: the nats-py `tls=`/`tls_hostname` kwargs are confirmed on `nats.aio.client.Client.connect` for the installed **nats-py 2.14.0** (via `inspect.signature`); Hermes' `build_ssl_context()` is confirmed DEFINED-BUT-UNUSED at its connect site (`publisher.py:91-97` passes NO `tls=`); `cryptography`/`trustme` are confirmed ABSENT from the Telemachy pixi env while the `openssl` binary (3.6.2) IS present; and `.gitignore` is confirmed to block `*.pem`/`*.key`/`*.crt`. Still verified this round: the ABSENCE of a live `nats.connect()`, of ADR-009 (ADR-008 is the TLS ADR), and of `enable-nats-auth.md`. The exception: the `.gitignore` cert-key coverage claim (`*.pem`/`*.key`/`*.crt`/`secrets/`/`*.secret`) was actually grepped from the file this session and is TRUE. R2 (#304) adds one verified-local detail: the `cli.py` structure (the `run` command at `:120` wraps execution in `_run_with_signals()` at `:141`, which opens `async with AgamemnonClient(...)` at `:178`) was read this session, confirming the preflight insertion point; the R1 plan also PASSED review (no NOGO). R3 (#304) added NOTHING newly executed — it is a design/framing round that RESOLVED R2's two minor POLA findings by specifying behavior (the typed `NatsConnectionError` + `typer.Exit(1)` failure path) and re-framing a judgment call (the handshake preflight as a documented fail-closed verification gate) inside the plan; no CI ran and no new external claims were made. Verified-local for all prior deployment content (Odysseus sessions 2026-04-03 to 2026-05-03). The NATS e2e SIGKILL→restart port-bind-race section (Odysseus #328) is **unverified** — a planning session: no code was run, no unit test executed, no CI passed; the FIX DESIGN (dual-port free-poll + bind-retry) and the TIME_WAIT-on-monitor causal chain are unexecuted hypotheses. Verified-local ONLY for the premise greps run this session: `e2e/lib/nats.sh` is 139 lines of pure curl-monitoring (the cited `nats.sh:157`/`nats_restart`/`nats_kill` refs are STALE); the real port-binding code is `e2e/lib/process.sh` (`start_nats_bg` 64-79); `NATS_PORT=14222`/`NATS_MONITOR_PORT=18222` are the e2e defaults; and the A02 test `nats-crash-reconnect.sh` is currently PASSIVE (the restart helpers do not exist yet). |
+| **Verification** | unverified OVERALL for the NATS auth-planning section (the full plan was not exercised end-to-end); the brace-depth config-block validator specifically is verified-local (prototyped 2026-06-19 against fixed + current fixtures). The Grafana anonymous-access hardening subsection is unverified (no container run; `/api/health`-unaffected claim untested). The NATS TLS security-runbook section (issue #208) is unverified (no commands run; `step` CLI flags, NATS SIGHUP cert hot-reload, and the `/varz` `tls_required` field name were all written from memory). The Telemachy mTLS-wiring section (issue #304) is unverified OVERALL (no CI), but R1 (post-NOGO) CONVERTED the prior round's assumed-by-analogy claims into VERIFIED-LOCAL facts this session: the nats-py `tls=`/`tls_hostname` kwargs are confirmed on `nats.aio.client.Client.connect` for the installed **nats-py 2.14.0** (via `inspect.signature`); Hermes' `build_ssl_context()` is confirmed DEFINED-BUT-UNUSED at its connect site (`publisher.py:91-97` passes NO `tls=`); `cryptography`/`trustme` are confirmed ABSENT from the Telemachy pixi env while the `openssl` binary (3.6.2) IS present; and `.gitignore` is confirmed to block `*.pem`/`*.key`/`*.crt`. Still verified this round: the ABSENCE of a live `nats.connect()`, of ADR-009 (ADR-008 is the TLS ADR), and of `enable-nats-auth.md`. The exception: the `.gitignore` cert-key coverage claim (`*.pem`/`*.key`/`*.crt`/`secrets/`/`*.secret`) was actually grepped from the file this session and is TRUE. R2 (#304) adds one verified-local detail: the `cli.py` structure (the `run` command at `:120` wraps execution in `_run_with_signals()` at `:141`, which opens `async with AgamemnonClient(...)` at `:178`) was read this session, confirming the preflight insertion point; the R1 plan also PASSED review (no NOGO). R3 (#304) added NOTHING newly executed — it is a design/framing round that RESOLVED R2's two minor POLA findings by specifying behavior (the typed `NatsConnectionError` + `typer.Exit(1)` failure path) and re-framing a judgment call (the handshake preflight as a documented fail-closed verification gate) inside the plan; no CI ran and no new external claims were made. Verified-local for all prior deployment content (Odysseus sessions 2026-04-03 to 2026-05-03). The NATS e2e SIGKILL→restart section (Odysseus #328) is **unverified** — a planning session (R1 re-plan after the R0 plan got a NOGO/grade D): no code was run, the corrected unit test was DESIGNED but admits it "was never executed", the real cross-process A02 harness path was not run, no CI passed. The CORRECTED R1 root cause (a PROCESS-MODEL defect: a `_NATS_PID` shell global is EMPTY in the forked `bash "$script"` child because the runner exports PORTS not PIDs, so the kill no-ops) and the corrected fix (port-keyed meta FILE + store_dir-preserving `start_nats_bg_at` + bind-RETRY-with-backoff) are unexecuted hypotheses. Verified-LOCAL this session: `e2e/run-ipc-tests.sh:64` forks each test via `bash "$script"` and line 50 exports only `AGAMEMNON_PORT NATS_PORT NATS_MONITOR_PORT HERMES_PORT IPC_TOPOLOGY` (no PIDs); `e2e/lib/topology.sh:21` starts NATS in the PARENT (`start_nats_bg`); `e2e/lib/process.sh` `start_nats_bg` (64-79) mktemps a fresh `--store_dir` per call (65,74) and binds `-p`/`-m` (defaults `NATS_PORT=14222`/`NATS_MONITOR_PORT=18222`), `_kill_if_alive` (16-24) returns 0 on an empty/dead pid, `cleanup_all` (120-123); `common.sh:127` `topology_supports` is the gating idiom; PID-file precedent `doctor.sh:292` (aardvark.pid); `pkill -f` precedent `start-hermes-hub.sh:197`; and the A02 test `nats-crash-reconnect.sh:38-56` is currently PASSIVE (never kills/restarts NATS). RESIDUAL risk a reviewer must weigh: the 1→2→4→8s bind-retry backoff (~15s) may NOT outlast Linux default 2MSL ≈ 60s. |
 | **History** | [changelog](./homeric-crosshost-deployment-and-mesh-topology.history) |
 
 ## When to Use
@@ -104,7 +104,7 @@ tags:
 - Planning Grafana anonymous-access hardening in `docker-compose.e2e.yml` (issue #206) — disabling `GF_AUTH_ANONYMOUS_ENABLED`, falling back to admin login, and reviewing the unverified `/api/health` / provisioning assumptions
 - Planning a NATS TLS security runbook (issue #208) — cert provisioning (step-ca), zero-downtime cert rotation (SIGHUP), and key-compromise response — against the canonical configs that NOW carry TLS per ADR-008, and reviewing the unverified `step`/`nats-server`/`/varz` claims
 - Planning NATS client-cert mTLS wiring into ProjectTelemachy (issue #304) — config-layer helpers because Telemachy has NO live `nats.connect()` site — now with R1 (post-NOGO) verified-local facts: Hermes' `build_ssl_context()` is DEFINED-BUT-UNUSED at its connect site (no `tls=` kwarg — the "exactly as Hermes does" analogy mirrors a site that does not exist); nats-py 2.14.0 `Client.connect` accepts `tls`/`tls_hostname` (inspect `Client.connect`, NOT the `nats.connect` wrapper); generate test certs with the `openssl` binary into pytest `tmp_path` because `.gitignore` blocks PEM fixtures and no cert lib is installed; ADR-008 (not the cited ADR-009) is the real NATS TLS ADR; and a config-builder alone cannot meet AC1 — add a minimal real consumed `connect_nats()` rather than an unconsumed helper (YAGNI)
-- Planning a NATS e2e SIGKILL→restart **port-bind-race** fix (Odysseus #328, UNVERIFIED — planning only) — designing a `wait_port_free` dual-port (client + monitor) free-poll plus a bind-retry fallback for the TIME_WAIT-on-monitor-port flake, and scrutinizing the planning-stage reviewer risks (a STALE issue file:line ref, restart helpers that do NOT exist yet, an UNREPRODUCED causal chain, and unconfirmed `pixi run shellcheck/bash` tooling). See the "Proposed Workflow — NATS e2e SIGKILL→restart port-bind-race fix" section below
+- Planning a NATS e2e SIGKILL→restart fix in a MULTI-PROCESS test harness (Odysseus #328, UNVERIFIED — planning only; R1 re-plan after a NOGO/grade D) — the corrected root cause is a PROCESS-MODEL defect (each e2e test is a forked `bash "$script"` child and the runner exports PORTS not PIDs, so a `_NATS_PID` shell global is EMPTY in the child and the kill no-ops), so the fix uses a port-keyed PID/meta FILE under /tmp, a store_dir-PRESERVING `start_nats_bg_at` relaunch, and bind-RETRY-with-backoff as the correctness gate (the port free-poll is latency-only — a TIME_WAIT socket reports "free" yet the kernel still reserves the port for ~2MSL). Always exercise the REAL cross-process harness path, not just a single-shell unit test, before claiming a parent/child bug is fixed. See the "Proposed Workflow — NATS e2e SIGKILL→restart port-bind-race fix" section below
 
 ## Verified Workflow
 
@@ -880,90 +880,118 @@ pkill -f ProjectNestor_server    || kill $(pgrep -f ProjectNestor_server)
 ## Proposed Workflow — NATS e2e SIGKILL→restart port-bind-race fix (UNVERIFIED, Odysseus issue #328)
 
 > **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI
-> confirms. This was a PLANNING session for Odysseus #328 — no code was run, no unit test was
-> executed, and no CI passed. The premise-verification greps (file lengths, symbol existence, port
-> defaults) WERE run locally; the FIX DESIGN and the TIME_WAIT causal chain are unexecuted
-> hypotheses.
+> confirms. This is a PLANNING session for Odysseus #328 (R1 re-plan after the R0 plan got a
+> NOGO/grade D) — no code was run, the corrected unit test was DESIGNED but never executed, the real
+> cross-process A02 harness path was not run, and no CI passed. The process-boundary facts below
+> (who forks whom, what is exported) WERE verified locally this session; the FIX DESIGN and the
+> corrected root-cause mechanism are unexecuted hypotheses.
 
-### The flake and the fix design
+### The CORRECTED root cause (R1): a process-model defect, not a TIME_WAIT race
 
-A SIGKILL→relaunch race in the e2e NATS fault-injection helpers: a relaunch that only polls the
-**client** port (`NATS_PORT`) free before rebinding ignores the **monitor** port
-(`-m NATS_MONITOR_PORT`). After `kill -9`, the monitor socket lingers in `TIME_WAIT`, so the new
-`nats-server`'s `-m` bind fails, the server exits, the health-wait times out, and the test flakes
-with "NATS did not return healthy after restart."
+The R0 plan diagnosed this as a single-process port-bind race (a `TIME_WAIT` socket on the monitor
+port surviving a `kill -9`) and proposed killing NATS via a `_NATS_PID` shell global. That earned a
+NOGO for a CRITICAL process-model defect plus a misdiagnosed primary mechanism. The corrected R1
+diagnosis:
 
-The proposed fix has two parts:
+**Each e2e test runs as a separate `bash "$script"` CHILD** (`e2e/run-ipc-tests.sh:64`). NATS is
+started in the PARENT (`e2e/lib/topology.sh:21` → `start_nats_bg`), and the runner exports ONLY
+PORTS, not PIDs (`run-ipc-tests.sh:50` exports `AGAMEMNON_PORT NATS_PORT NATS_MONITOR_PORT
+HERMES_PORT IPC_TOPOLOGY`). So in the child test process a freshly-sourced `_NATS_PID` is `""` — a
+kill against it is a NO-OP. The R0 design therefore killed nothing, then "relaunched" on
+still-held ports: that makes the flake DETERMINISTIC, not intermittent.
 
-1. **`wait_port_free` helper, gating BOTH ports.** A port is "free" only when it *refuses*
-   connections. Probe with bash `/dev/tcp` and invert the result; require it for the client AND the
-   monitor port before relaunch.
+The misdiagnosed secondary mechanism: the R0 "free-poll" (treating `echo >/dev/tcp/localhost/$port`
+failing as proof the port is free) is NOT a correctness gate. A socket in `TIME_WAIT` has NO
+listener, so `connect()` is refused and the poll reports "free" — yet the kernel still RESERVES the
+port for ~2MSL, so a subsequent `bind()` still fails `EADDRINUSE`. The free-poll is a latency
+optimization only.
+
+### The corrected fix design (R1, unverified)
+
+1. **Cross-process kill needs a PID/meta FILE, not a shell global.** Record the NATS PID (and its
+   `--store_dir`) in a port-keyed meta file under `/tmp` so the forked child can find and kill the
+   parent-started NATS. Mirror the repo's existing PID-file idiom (`doctor.sh:292` writes
+   `aardvark.pid`); `pkill -f` is also precedented (`start-hermes-hub.sh:197`).
 
    ```bash
-   # Returns 0 only when $port REFUSES a TCP connection (i.e. is free).
-   wait_port_free() {
-     local port="$1" deadline=$(( SECONDS + ${2:-10} ))
-     while (( SECONDS < deadline )); do
-       # A successful open means the port is STILL bound -> keep waiting.
-       if ! (echo >"/dev/tcp/localhost/$port") 2>/dev/null; then
-         return 0          # connection refused == port is free
-       fi
-       sleep 0.2
-     done
-     return 1
-   }
+   # Parent writes a port-keyed meta file when it starts NATS; the child reads it.
+   _nats_meta_file() { printf '/tmp/homeric-nats-%s.meta' "${NATS_MONITOR_PORT:-18222}"; }
 
-   # Before relaunch, free-poll BOTH ports (best-effort; the real gate is the retry+health-wait):
-   wait_port_free "$NATS_PORT"          10 || true
-   wait_port_free "$NATS_MONITOR_PORT"  10 || true
+   nats_kill() {
+     local meta; meta="$(_nats_meta_file)"
+     [ -f "$meta" ] || return 0
+     local pid; pid="$(sed -n '1p' "$meta")"
+     _kill_if_alive "$pid"      # process.sh:16-24 — returns 0 if pid empty/dead
+     kill -9 "$pid" 2>/dev/null || true
+   }
    ```
 
-2. **Bind-retry fallback loop.** `nats-server` exposes no `SO_REUSEADDR` to its callers, so a
-   `TIME_WAIT` socket can outlive the free-poll window. Retry `launch + health-wait` N times; the
-   health-wait is the AUTHORITATIVE gate.
+2. **Relaunch AT the original `--store_dir`, do not mktemp a fresh one.** `start_nats_bg`
+   (`process.sh:64-79`) mktemps a NEW `--store_dir` on every call (lines 65,74) — a "clean restart"
+   that silently EMPTIES the JetStream streams. A02/A01 assert message continuity
+   (`nats_msg_count`, "messages flowing"), so a fresh store breaks them. Record the original store
+   dir in the meta file and relaunch at it:
 
    ```bash
-   # The free-poll above is best-effort; THIS loop is what actually guarantees a healthy restart.
-   for attempt in 1 2 3; do
-     start_nats_bg            # binds -p "$NATS_PORT" and -m "$NATS_MONITOR_PORT"
-     if nats_wait_healthy; then break; fi   # authoritative gate (curl :$NATS_MONITOR_PORT/healthz)
-     _kill_if_alive "$NATS_PID"             # reap the failed bind before retrying
-     wait_port_free "$NATS_MONITOR_PORT" 10 || true
+   start_nats_bg_at() {  # like start_nats_bg but binds an EXISTING --store_dir
+     local store="$1"
+     nats-server -p "$NATS_PORT" -m "$NATS_MONITOR_PORT" -js -sd "$store" &
+     printf '%s\n%s\n' "$!" "$store" > "$(_nats_meta_file)"
+   }
+   nats_restart() {
+     local store; store="$(sed -n '2p' "$(_nats_meta_file)")"
+     nats_kill
+     start_nats_bg_at "$store"           # preserve JetStream state
+   }
+   # After restart, spot-check continuity (do NOT just trust "healthy"):
+   nats_stream_exists "$STREAM" || fail "stream lost across restart"
+   ```
+
+3. **Gate on bind-RETRY-with-backoff, not on a port free-poll.** The free-poll is latency-only; the
+   authoritative correctness gate is a retry loop whose backoff outlasts the kernel's 2MSL window.
+
+   ```bash
+   for delay in 1 2 4 8; do           # ~15s total — see the RESIDUAL RISK below
+     nats_restart
+     if nats_wait_healthy; then break; fi
+     sleep "$delay"
    done
    ```
 
-   The `|| true` on the free-poll is acceptable ONLY because the subsequent health-wait + retry is
-   the authoritative gate — it masks no assertion. This is the single line a reviewer scrutinizes
-   most: if the retry/health-wait gate is ever removed, the `|| true` becomes a silent failure.
+   **RESIDUAL RISK a reviewer MUST weigh:** on Linux the default 2MSL ≈ 60s, so a ~15s backoff may
+   NOT clear `TIME_WAIT` in the worst case. A longer backoff, or a `--store_dir`-preserving
+   `SO_REUSEADDR` alternative, may be required. This is the line a reviewer scrutinizes most.
 
 ### Proposed Steps
 
-1. **Grep the named symbols repo-wide BEFORE trusting the issue's cited file:line.** Issue #328's
-   body cited `e2e/lib/nats.sh:157-160` and functions `nats_restart`/`nats_kill`/`start_nats_bg`.
-   Verified locally: `e2e/lib/nats.sh` is only 139 lines of pure curl-monitoring (no process
-   management); the real port-binding code is `e2e/lib/process.sh` (`start_nats_bg` at lines 64-79
-   binds `-p` and `-m`). The cited line refs are auto-generated from a sibling PR branch and are
-   WRONG against main. Always `grep -rn` the named symbols before editing the cited path.
-2. **Confirm the helpers actually exist before planning to "patch" them.** `grep -rn nats_restart`
-   / `nats_kill` returned NOTHING — they do not exist yet. The A02 test
-   (`e2e/tests/fault/nats-crash-reconnect.sh:38-56`) is currently PASSIVE: lines 27-36 explicitly
-   defer the kill as "topology-dependent," so it never actually kills+restarts NATS. The plan
-   therefore SHIPS the missing helper rather than patching an existing poll loop. Check parent
-   PR #184 for whether these helpers already landed on another branch (merge-conflict risk).
-3. **Read the real port model from `process.sh`, not the deployment skill's 4222/8222 model.** The
-   e2e defaults are `NATS_PORT=14222` / `NATS_MONITOR_PORT=18222` (verified locally this session) —
-   NOT the 4222/8222 single-host model elsewhere in this skill. Bind both with `-p`/`-m`.
-4. **Treat the TIME_WAIT-on-monitor causal chain as the issue author's hypothesis.** It was NOT
-   reproduced this session. The unit test is DESIGNED to repro the tight kill→restart loop but was
-   never executed. A reviewer should run it before trusting the diagnosis.
-5. **Do NOT assume the test runner.** `pixi run shellcheck` / `pixi run bash` were NOT confirmed
-   wired in this repo; the plan hedges with a "fall back to bare `shellcheck`/`bash`" note. The e2e
-   harness is invoked via `e2e/run-ipc-tests.sh`, which exports `NATS_PORT`/`NATS_MONITOR_PORT` etc.
-   — confirm the real runner before wiring a lint/test gate.
-6. **Reap the SIGKILLed PID before each retry.** `_kill_if_alive` (`process.sh:16-24`) and the
-   `cleanup_pids` reap pattern (`process.sh:37-43`) were READ but the new `nats_kill` reap path was
-   NOT executed. `wait` on a SIGKILLed background PID and its reaping semantics are unverified —
-   confirm the reap actually clears the PID before the bind-retry relaunch.
+1. **Map the process boundary BEFORE designing PID/state handling.** Confirm who forks whom and what
+   is inherited vs exported. Verified this session: `run-ipc-tests.sh:64` forks each test via
+   `bash "$script"`; line 50 exports only the four PORT vars + `IPC_TOPOLOGY` (no PIDs);
+   `topology.sh:21` starts NATS in the PARENT (`start_nats_bg`) for T1; `topology_stop` →
+   `cleanup_all` (`process.sh:120-123`). A `_NATS_PID` shell global set in the parent is invisible
+   to the forked child — this is the defect the R0 plan missed.
+2. **Use a port-keyed PID/meta FILE for cross-process kill, not a shell global.** Mirror
+   `doctor.sh:292` (aardvark.pid); `pkill -f` precedented at `start-hermes-hub.sh:197`. The named
+   `nats_restart`/`nats_kill` helpers DO NOT EXIST on main today — the plan SHIPS them; check parent
+   PR #184 for whether they already landed on another branch (merge-conflict risk).
+3. **Preserve `--store_dir` across the restart.** `start_nats_bg` (`process.sh:64-79`) mktemps a
+   fresh store_dir each call (65,74) and binds `-p NATS_PORT`/`-m NATS_MONITOR_PORT` (defaults
+   `NATS_PORT=14222`/`NATS_MONITOR_PORT=18222`). Record the original store dir in the meta file and
+   relaunch via `start_nats_bg_at <dir>`; spot-check `nats_stream_exists` after restart so the
+   A01/A02 continuity asserts survive.
+4. **Gate on bind-retry-with-backoff; treat the port free-poll as latency, not correctness.** A
+   `TIME_WAIT` socket reports "free" to a connect-poll yet still fails `bind()` for ~2MSL. Diagnose
+   the actual kernel mechanism before picking the primary fix. Weigh the residual risk that
+   1→2→4→8s (~15s) does NOT outlast Linux default 2MSL ≈ 60s.
+5. **Exercise the REAL harness path before claiming the bug is fixed.** Run
+   `run-ipc-tests.sh --topology t1 --test ...` (cross-process), NOT just a convenient single-shell
+   unit test where the global IS visible — that single-shell test is a FALSE POSITIVE for a
+   parent/child defect. `topology_supports "<t>"` (`common.sh:127`) is the gating idiom
+   (case-sensitive; `IPC_TOPOLOGY` is lowercase `t1`).
+6. **Do NOT assume the test runner or `nats-server` availability.** `pixi run bash` /
+   `pixi run shellcheck` wiring is unconfirmed (fall back to bare binaries; the harness normally
+   runs via `bash e2e/run-ipc-tests.sh`). `nats-server` presence on the runner is assumed. Neither
+   the new unit test nor the real A02 was executed this session — the whole plan remains UNVERIFIED.
 
 ## Failed Attempts
 
@@ -1040,6 +1068,10 @@ The proposed fix has two parts:
 | (#328, planning) Poll only the client port free before relaunch | Reintroduces the exact flake | the monitor port `-m` bind fails on a lingering TIME_WAIT socket even after the client port is free | Free-poll BOTH ports; nats-server binds `-p` (`NATS_PORT`) AND `-m` (`NATS_MONITOR_PORT`) |
 | (#328, planning) Rely on the free-poll alone (no retry) | TIME_WAIT can outlive the poll window so the bind still fails intermittently | nats-server exposes no `SO_REUSEADDR` to the caller | Add a bind-retry fallback loop; the health-wait is the authoritative gate, the free-poll is best-effort (`\|\| true`) |
 | (#328, planning) Assume `nats_restart`/`nats_kill` already exist to patch | There is nothing to patch — `grep -rn` returns nothing | the A02 test `nats-crash-reconnect.sh` is PASSIVE (defers the kill as "topology-dependent"); the helpers are absent | The plan must SHIP the helper, not patch a poll loop; check parent PR #184 for whether they already landed on another branch (conflict risk) |
+| (#328, R1) Use a `_NATS_PID` shell global to kill NATS from a fault test | Kills nothing — the global is empty in the test process | Each e2e test runs as a separate `bash "$script"` CHILD (`run-ipc-tests.sh:64`); NATS is started in the PARENT (`topology.sh:21` → `start_nats_bg`); the runner exports only PORTS not PIDs (`run-ipc-tests.sh:50`), so the child's freshly-sourced `_NATS_PID=""`. A no-op kill + relaunch on still-held ports makes the flake DETERMINISTIC | Cross-process kill needs a PID/meta FILE (port-keyed, under /tmp), not a shell global. Mirror the repo's existing PID-file idiom (`doctor.sh:292` aardvark.pid) |
+| (#328, R1) Treat a port "free-poll" (`echo >/dev/tcp/localhost/$port` fails) as the fix for a TIME_WAIT bind race | Free-poll PASSES yet `bind()` still fails EADDRINUSE | A socket in TIME_WAIT has NO listener, so connect() refuses and the poll reports "free", but the kernel still RESERVES the port for ~2MSL → the relaunch bind fails anyway | The free-poll is latency-only, NOT a correctness gate. The real fix is bind-RETRY-with-backoff that outlasts the 2MSL window. Diagnose the actual kernel mechanism before picking the primary fix |
+| (#328, R1) Restart NATS by calling a `start_nats_bg` that mktemps a fresh `--store_dir` each call | Silently discards JetStream state across the "clean restart" | A02/A01 assert message continuity (`nats_msg_count`, "messages flowing"); a new store_dir empties the streams | Record the original store_dir in the meta file and relaunch AT it (`start_nats_bg_at <dir>`); spot-check `nats_stream_exists` after restart |
+| (#328, R1) Claim the A02 repro is fixed after the single-shell unit test passes | The unit test runs in ONE shell where the global IS visible; the real A02 runs cross-process and still breaks — masking the defect | The unit harness is not how A02 actually runs (`bash "$script"` fork) | Always exercise the REAL harness path (`run-ipc-tests.sh --topology t1 --test ...`), not just the convenient single-shell test, before claiming a parent/child bug is fixed |
 
 ## Results & Parameters
 
@@ -1371,35 +1403,53 @@ config_auth_gate:
   validator_status: "prototyped verified-local: exit 0 on fixed fixture, exit 1 on current configs"
 ```
 
-### Uncertain Assumptions a Reviewer MUST Verify (NATS e2e SIGKILL→restart port-bind-race, issue #328 — unverified)
+### Uncertain Assumptions a Reviewer MUST Verify (NATS e2e SIGKILL→restart, issue #328 — unverified, R1 re-plan)
 
-This is the highest-value content of the #328 planning session: the assumptions and external
-references a reviewer must check before trusting a shell-based e2e fault-injection fix in the
-Homeric mesh.
+This is the highest-value content of the #328 planning session: the assumptions a reviewer must
+scrutinize before trusting a shell-based e2e fault-injection fix in a MULTI-PROCESS harness. The R1
+re-plan (post-NOGO) corrected the primary mechanism — the defect is the process boundary, NOT a
+TIME_WAIT race — and converted the process-model claims into VERIFIED-LOCAL facts.
+
+VERIFIED-LOCAL this session (confirmed, not assumed):
+
+- `e2e/run-ipc-tests.sh:64` forks each test via `bash "$script"`; line 50 exports ONLY
+  `AGAMEMNON_PORT NATS_PORT NATS_MONITOR_PORT HERMES_PORT IPC_TOPOLOGY` (no PIDs).
+- `e2e/lib/topology.sh:21` starts NATS in the PARENT (`start_nats_bg`) for T1;
+  `topology_stop` → `cleanup_all` (`process.sh:120-123`).
+- `e2e/lib/process.sh`: `start_nats_bg` (64-79) mktemps `--store_dir` per call (65,74) and binds
+  `-p NATS_PORT`/`-m NATS_MONITOR_PORT`; defaults `NATS_PORT=14222`/`NATS_MONITOR_PORT=18222`;
+  `_kill_if_alive` (16-24) returns 0 when the pid is empty/dead; `cleanup_all` (120-123).
+- `e2e/lib/common.sh:127` `topology_supports "<t>"` is the repo gating idiom (case-sensitive;
+  `IPC_TOPOLOGY` is lowercase `t1`).
+- PID-file precedent: `doctor.sh:292` (aardvark.pid); `pkill -f` precedent: `start-hermes-hub.sh:197`.
+- The current A02 (`e2e/tests/fault/nats-crash-reconnect.sh:38-56`) is PASSIVE — never kills/restarts NATS.
 
 | # | Assumption / external reference | Status this session | What a reviewer MUST do |
 |---|----------------------------------|---------------------|--------------------------|
-| 1 | The issue cited `e2e/lib/nats.sh:157-160` + `nats_restart`/`nats_kill`/`start_nats_bg` as the code to fix | STALE — VERIFIED: `nats.sh` is 139 lines of pure curl-monitoring; the real port-binding code is `e2e/lib/process.sh` (`start_nats_bg` 64-79 binds `-p`/`-m`). Refs auto-generated from a sibling PR branch | `grep -rn` the named symbols repo-wide; never edit the cited path on faith |
-| 2 | `nats_restart`/`nats_kill` already exist to patch | DO NOT EXIST — `grep -rn` returned nothing; the A02 test `nats-crash-reconnect.sh:38-56` is PASSIVE (kill deferred at 27-36 as "topology-dependent") | Confirm parent PR #184 has not already added these helpers on another branch (merge-conflict risk); the plan SHIPS the helper |
-| 3 | Port model: client 14222 / monitor 18222 | VERIFIED locally — `process.sh` defaults `NATS_PORT=14222` / `NATS_MONITOR_PORT=18222` (NOT the 4222/8222 single-host model elsewhere in this skill) | Re-confirm against `process.sh`; bind both `-p` and `-m` |
-| 4 | TIME_WAIT-on-the-monitor-port is what causes the flake | NOT reproduced — it is the issue author's hypothesis, accepted on its face; the unit test is designed to repro the tight kill→restart loop but was never executed | Run the unit test before trusting the diagnosis |
-| 5 | `pixi run shellcheck` / `pixi run bash` are wired in this repo | NOT verified — plan hedges with a "fall back to bare `shellcheck`/`bash`" note | Confirm the real runner; the e2e harness runs via `e2e/run-ipc-tests.sh` (exports `NATS_PORT`/`NATS_MONITOR_PORT`) |
-| 6 | `wait` on a SIGKILLed background PID reaps cleanly before relaunch | READ not executed — `_kill_if_alive` (`process.sh:16-24`), `cleanup_pids` reap (`process.sh:37-43`); the new `nats_kill` reap path was not run | Exercise the reap path; confirm the PID is cleared before the bind-retry relaunch |
-| 7 | `(echo >/dev/tcp/localhost/$port) \|\| return 0` reliably detects a free port, and `\|\| true` on the free-poll masks no assertion | Design hypothesis — the authoritative gate is the subsequent health-wait + bind-retry | Scrutinize this line most: if the retry/health-wait gate is ever removed, the `\|\| true` becomes a silent failure |
+| 1 | The whole plan is correct | UNVERIFIED — neither the new unit test nor the real A02 was executed; the unit test even admits it "was never executed"; `nats-server` availability on the runner is assumed | Run the REAL harness path before trusting any of it |
+| 2 | Parent PR #184 has NOT already added `nats_restart`/`nats_kill` on another branch | These functions do NOT exist on main today; a sibling branch may add them | Check PR #184 for a colliding implementation (merge-conflict risk); the plan SHIPS the helper |
+| 3 | `pixi run bash` / `pixi run shellcheck` are wired in this repo | UNCONFIRMED — plan hedges with a bare-binary fallback; the harness normally runs via `bash e2e/run-ipc-tests.sh` | Confirm the real runner before wiring a lint/test gate |
+| 4 | The 1→2→4→8s bind-retry backoff (~15s) outlasts the platform's TIME_WAIT 2MSL window | NOT measured — on Linux default 2MSL ≈ 60s, so worst case the backoff may NOT clear it | RESIDUAL RISK: weigh a longer backoff or a `--store_dir`-preserving `SO_REUSEADDR` alternative |
+| 5 | The meta-file approach is safe | Assumes a SINGLE NATS instance per `NATS_MONITOR_PORT` and no concurrent T1 runs sharing /tmp | Confirm no concurrent T1 runs collide on the port-keyed `/tmp` meta file |
+| 6 | The primary mechanism is a process-model defect (empty `_NATS_PID` in the forked child), NOT a TIME_WAIT race | VERIFIED-LOCAL for the process boundary (fork + exported-vars); the kill-no-op → deterministic-flake chain is the corrected R1 diagnosis but unexecuted | Exercise the cross-process path; confirm the kill actually reaches the parent NATS |
+| 7 | Relaunch preserves JetStream state | `start_nats_bg` mktemps a NEW store_dir each call (silently empties streams); the fix records + reuses the original | Spot-check `nats_stream_exists` after restart; the A01/A02 continuity asserts depend on it |
 
-### Reviewer-risk + Meta-Lessons (NATS e2e restart port-race planning, issue #328 — unverified)
+### Reviewer-risk + Meta-Lessons (NATS e2e restart, issue #328 — unverified, R1 re-plan)
 
-- **A cited file:line in an auto-generated follow-up issue is a CLAIM, not evidence.** #328's
-  `e2e/lib/nats.sh:157` was wrong (that file is pure monitoring). Grep the named symbols repo-wide
-  before editing.
-- **"Patch the existing helper" can be a fiction.** The named restart helpers did not exist; the
-  A02 test was passive. The deliverable is to SHIP the helper, not patch a poll loop — and to check
-  the parent PR for a colliding implementation.
-- **Two-port resource, two-port poll.** nats-server binds `-p` AND `-m`; a free-poll that covers
-  only the client port reintroduces the exact flake on the monitor port.
-- **A best-effort poll is not a gate.** Because nats-server gives callers no `SO_REUSEADDR`, the
-  free-poll can race a lingering TIME_WAIT socket; the authoritative gate must be a retry +
-  health-wait loop. Only that authority makes the `|| true` on the poll acceptable.
+- **META-LESSON (most durable): map the process boundary FIRST.** When planning a fix to a
+  process-lifecycle helper in a multi-process test harness, map who forks whom and what is inherited
+  vs exported BEFORE designing PID/state handling. A shell global that works in one shell silently
+  no-ops across `bash "$script"` — that single defect graded the R0 plan a D.
+- **Separate "latency optimization" from "correctness gate" explicitly.** The R0 free-poll was
+  framed as the fix; it is only a latency optimization (a TIME_WAIT socket reports "free" to a
+  connect-poll yet still fails `bind()` for ~2MSL). State which mechanism actually carries the load
+  so a reviewer can see it — here the correctness gate is bind-RETRY-with-backoff.
+- **Cross-process kill needs a FILE, not a global.** Record the PID (and store_dir) in a port-keyed
+  `/tmp` meta file the forked child can read; mirror the repo's `doctor.sh:292` aardvark.pid idiom.
+- **A "clean restart" that mktemps a fresh store_dir is a silent data-loss bug.** A01/A02 assert
+  message continuity; relaunch AT the recorded `--store_dir` and spot-check the stream survives.
+- **Always exercise the REAL harness path before claiming a parent/child bug is fixed.** A
+  single-shell unit test where the global IS visible is a FALSE POSITIVE for a cross-process defect.
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
@@ -1418,4 +1468,5 @@ Homeric mesh.
 | ProjectTelemachy | Plan R1 for issue #304 (NATS client-cert mTLS, post-NOGO) | R1 VERIFIED-LOCAL (no CI): Hermes `build_ssl_context()` is DEFINED-BUT-UNUSED (`config.py:126`); `publisher.py:91-97 nats.connect(...)` passes NO `tls=` — the "exactly as Hermes does" analogy mirrors a connect site that does not exist. nats-py **2.14.0** `nats.aio.client.Client.connect` confirmed to accept `tls`/`tls_hostname`/`tls_handshake_first` (inspect `Client.connect`, NOT the `nats.connect` wrapper). `cryptography`+`trustme` both ModuleNotFoundError and `.gitignore` blocks `*.pem`/`*.key`/`*.crt` → generate certs via the `openssl` binary (3.6.2) into pytest `tmp_path`. ADR-009 absent (`ls docs/adr/` -> 001-008; 008 IS the TLS ADR); `enable-nats-auth.md` absent. AC1 needs a real consumed `connect_nats()` (`tls://` preflight), NOT an unconsumed helper (YAGNI). Stacks on #2717's v1.6.0 |
 | ProjectTelemachy | Plan R2 for issue #304 (NATS client-cert mTLS, plan APPROVED) | R2 (PATCH, no CI): the R1 plan PASSED review — no new NOGO; preflight-handshake scope ACCEPTED. CONFIRMED insertion point (verified-local): the `tls://` preflight goes INSIDE the existing `_run_with_signals()` async wrapper (`cli.py:141`, used by the `run` command at `:120` with SIGINT/SIGTERM handlers + a Rich `Progress` context), after the signal handlers and BEFORE the `async with AgamemnonClient(...)` block (`cli.py:178`); do NOT add a second `asyncio.run` or block at import time. Stacks on #2717 (v1.6.0) and #2720 (v1.7.0) |
 | HomericIntelligence/Odysseus | Plan for issue #328 (NATS e2e SIGKILL→restart port-bind-race) | UNVERIFIED planning learning — no code run, no unit test executed, no CI. FIX DESIGN: a `wait_port_free` helper (port is free only when it REFUSES connections) gating BOTH `NATS_PORT` and `NATS_MONITOR_PORT` before relaunch, PLUS a bind-retry fallback loop (no `SO_REUSEADDR` exposed to callers; health-wait is the authoritative gate; `\|\| true` on the free-poll masks no assertion). VERIFIED-LOCAL premise greps: the issue's cited `e2e/lib/nats.sh:157`/`nats_restart`/`nats_kill` refs are STALE (nats.sh is 139 lines of pure curl-monitoring); the real port code is `e2e/lib/process.sh` (`start_nats_bg` 64-79; `NATS_PORT=14222`/`NATS_MONITOR_PORT=18222`); the restart helpers DO NOT EXIST yet and the A02 test `nats-crash-reconnect.sh` is PASSIVE (so the plan SHIPS the helper — check parent PR #184 for conflicts). UNREPRODUCED: the TIME_WAIT-on-monitor causal chain (issue author's hypothesis). Tooling (`pixi run shellcheck`/`bash`) unconfirmed; harness runs via `e2e/run-ipc-tests.sh` |
+| HomericIntelligence/Odysseus | Plan R1 for issue #328 (NATS e2e SIGKILL→restart, post-NOGO/grade D) | UNVERIFIED planning learning — no code run; the corrected unit test was DESIGNED but never executed; the real cross-process A02 was not run; no CI. CORRECTED ROOT CAUSE: a PROCESS-MODEL defect, not a TIME_WAIT race — each e2e test is a forked `bash "$script"` CHILD (`run-ipc-tests.sh:64`) and the runner exports PORTS not PIDs (`run-ipc-tests.sh:50`), so a `_NATS_PID` shell global is EMPTY in the child and the kill no-ops, making the flake DETERMINISTIC. The R0 free-poll was misdiagnosed as the fix: a TIME_WAIT socket reports "free" to a connect-poll yet still fails `bind()` for ~2MSL (latency-only, NOT a correctness gate). CORRECTED FIX: a port-keyed PID/meta FILE under /tmp (mirror `doctor.sh:292` aardvark.pid) for cross-process kill; a store_dir-PRESERVING `start_nats_bg_at <dir>` relaunch (the existing `start_nats_bg` mktemps a fresh `--store_dir` each call → silently empties JetStream the A01/A02 continuity asserts need); and bind-RETRY-with-backoff (1→2→4→8s) as the correctness gate. RESIDUAL RISK: ~15s backoff may NOT outlast Linux default 2MSL ≈ 60s. VERIFIED-LOCAL: `topology.sh:21` starts NATS in the PARENT; `process.sh` `_kill_if_alive` 16-24 / `cleanup_all` 120-123; `common.sh:127` `topology_supports`; `pkill -f` precedent `start-hermes-hub.sh:197`. META-LESSON: map the process boundary BEFORE designing PID/state handling, and separate latency-optimization from correctness-gate explicitly. Check parent PR #184 (helpers absent on main) |
 | ProjectTelemachy | Plan R3 for issue #304 (NATS client-cert mTLS, two minor POLAs resolved → A/B-clean) | R3 (PATCH, no CI; design/framing round, nothing newly executed): the R2 plan got a narrow B/NOGO with ONLY two MINOR POLA findings; both are RESOLVED in-plan. (1) Preflight failure handling: `connect_nats()` wraps `nats.connect(...)` and re-raises a typed `NatsConnectionError` (mirroring `AgamemnonError` at `agamemnon_client.py:13`) with an operator-guiding message; the CLI catches it, prints a red `console` line, and exits via `typer.Exit(1)` (`cli.py:68-80` style) — no bare traceback escapes `asyncio.run()`; a unit test monkeypatches `nats.connect`→`ssl.SSLError` and asserts the typed error. (2) The handshake-only preflight is FRAMED as a deliberate, DOCUMENTED, fail-closed verification gate (intent in docstring + CLI comment + CLAUDE.md row + runbook; the single real connect site; hard-fail on rejection, complementing `agamemnon_client.py` `require_tls`) — design intent in code+docs, not a probe or a narrowed AC. LESSON: a minors-only NOGO is closable WITHOUT new external verification by stating decisions in-plan. No new external claims/deps. Stacks on #2717 (v1.6.0), #2720 (v1.7.0), #2739 (v1.7.1) |
