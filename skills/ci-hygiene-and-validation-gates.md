@@ -1,9 +1,9 @@
 ---
 name: ci-hygiene-and-validation-gates
-description: "Use when: (1) adding a CI step that grep-blocks reappearance of deprecated identifiers after a cleanup PR, (2) adding a standalone JSON schema validation step to catch config drift even when pre-commit was skipped, (3) detecting orphaned scripts/*.py files not referenced in CI workflows, justfile, or other scripts, (4) you discover a NAMED required CI check that asserts nothing (a dead gate that computes-and-discards its verdict, or whose only failure path is unreachable) and must make it genuinely enforce in place because its context is pinned in the org ruleset and cannot be deleted, (5) a gitignored scratch directory whose name collides with a packaging-output convention (e.g. `build/`) needs a guard that the directory never has tracked files swept into a distribution."
+description: "Use when: (1) adding a CI step that grep-blocks reappearance of deprecated identifiers after a cleanup PR, (2) adding a standalone JSON schema validation step to catch config drift even when pre-commit was skipped, (3) detecting orphaned scripts/*.py files not referenced in CI workflows, justfile, or other scripts, (4) you discover a NAMED required CI check that asserts nothing (a dead gate that computes-and-discards its verdict, or whose only failure path is unreachable) and must make it genuinely enforce in place because its context is pinned in the org ruleset and cannot be deleted, (5) a gitignored scratch directory whose name collides with a packaging-output convention (e.g. `build/`) needs a guard that the directory never has tracked files swept into a distribution, (6) an issue asks to wire a script into CI but a prior PR already did it — the correct fix is a justfile/Makefile discoverability comment, not re-wiring."
 category: ci-cd
-date: 2026-06-12
-version: "1.2.0"
+date: 2026-06-20
+version: "1.3.0"
 user-invocable: false
 history: ci-hygiene-and-validation-gates.history
 tags:
@@ -28,13 +28,17 @@ tags:
   - untracked-guard
   - packaging-collision
   - git-ls-files
+  - already-wired
+  - discoverability-comment
+  - prior-pr-completed
+  - justfile-cross-reference
 ---
 ## Overview
 
 | Field | Value |
 | ------- | ------- |
 | **Goal** | Add lightweight, build-free CI/pre-commit gates that catch regressions, config drift, and referential-integrity issues without a full test run — and detect/repair gates that look green but assert nothing |
-| **Patterns** | (1) grep deprecation guard, (2) standalone schema validation step, (3) stale-script detector, (4) detect & fix a dead required gate |
+| **Patterns** | (1) grep deprecation guard, (2) standalone schema validation step, (3) stale-script detector, (4) detect & fix a dead required gate, (5) tracked-file-under-gitignored-dir guard, (6) already-wired issue → justfile discoverability comment |
 | **Output** | New `run:` steps in existing CI jobs and/or a stdlib-only pre-commit hook; or a rewritten existing job that asserts its named contract in place |
 | **Language** | Any (Mojo, Python, TypeScript, …) — checks are plain `grep` / `python` |
 | **Build required** | No — pure file scans, run before compilation |
@@ -48,6 +52,7 @@ tags:
 - A follow-up issue explicitly asks for a "regression guard" or "automated drift check" without requiring code review.
 - A required status check shows green on every PR but you suspect it "asserts nothing": it computes a verdict and `echo`s it without ever testing it, or its only `exit 1` is behind a condition that is never true in this repo (dead gate). The context is pinned in the org ruleset, so you must make the existing job enforce its named contract in place rather than delete it (Pattern 4).
 - A gitignored scratch directory whose name collides with a packaging-output convention (e.g. `build/`, `dist/`) needs a guard ensuring it never has tracked files swept into a distribution (tracked-file-under-gitignored-dir guard, Pattern 5).
+- An issue asks to "wire script X into CI" but investigation reveals a prior PR already added that CI job — the correct resolution is NOT to re-wire or duplicate the step, but to add a single cross-reference comment in `justfile` (or `Makefile`) above the local recipe pointing at the existing CI job for discoverability (Pattern 6).
 
 ## Verified Workflow
 
@@ -84,6 +89,11 @@ pixi install --locked; echo "clean exit: $?"                                    
 printf '\n[pypi-dependencies]\nnonexistent-sentinel-pkg = "*"\n' >> pixi.toml          # drift
 pixi install --locked; echo "drift exit: $?"                                           # expect non-zero
 git checkout -- pixi.toml                                                              # restore -> 0 again
+
+# (6) Already-wired check — verify before any action
+grep -rn "check_dep_sync\|<script_name>" .github/workflows/    # confirm CI job already exists
+grep -n "dep-check\|<recipe-name>" justfile                     # locate the local recipe
+just dep-check && just --list && pre-commit run --files justfile  # verify after comment insertion
 ```
 
 ### Detailed Steps
@@ -488,6 +498,74 @@ This rides the already-required lint gate, so **no new workflow** is needed.
 then `git clean -fdX build/` (removes only ignored files under `build/`). The guard does not
 delete anything — it only asserts the tracked-file invariant.
 
+#### Pattern 6 — Already-wired issue: justfile discoverability comment
+
+**The situation.** An issue asks to "wire `scripts/some_check.py` into CI" but
+investigation reveals that a prior PR already added the CI job. The script runs
+unconditionally on every `pull_request` to `main`. Re-adding the step would duplicate
+CI work; closing the issue without action leaves no cross-reference for future
+searchers.
+
+**The correct resolution is NOT to re-wire.** The fix is a single comment line in
+`justfile` (or `Makefile`) above the local recipe, pointing searchers at the existing
+CI job so the two stay discoverable from each other.
+
+**Step 1 — Verify the CI job already exists.** Grep the workflow directory for the
+script filename:
+
+```bash
+grep -rn "check_dep_sync\|<script_name>" .github/workflows/
+# Expected: one or more hits in a job step's `run:` block
+```
+
+Note the workflow file, job name, and the PR/commit that introduced it.
+
+**Step 2 — Confirm the local recipe exists in justfile.** Find the recipe that calls
+the same script locally:
+
+```bash
+grep -n "dep-check\|<recipe-name>" justfile
+```
+
+**Step 3 — Insert a single comment line above the local recipe.** The comment names
+the CI job (using its job-key or `name:`), the workflow file, and the PR/issue numbers
+so both sides are linked:
+
+```justfile
+# Enforced in CI by the `deps/version-sync` job in .github/workflows/_required.yml (see #594, #496).
+dep-check:
+    python3 scripts/check_dep_sync.py
+```
+
+Use the exact CI job key (e.g. `deps/version-sync`, not only the YAML `name:` text) so
+searchers can grep for it and land in both places.
+
+**Step 4 — Verify.** Run the recipe and the justfile parser to confirm nothing is broken:
+
+```bash
+just dep-check                         # exits 0
+just --list                            # recipe still listed, comment not garbled
+just --evaluate 2>&1 | head -5         # no parse errors
+pre-commit run --files justfile        # all hooks pass
+```
+
+**Step 5 — Commit, push, open PR, enable auto-merge:**
+
+```bash
+git add justfile
+git commit -m "docs(justfile): document dep-check CI enforcement
+
+Cross-reference the existing \`deps/version-sync\` CI job in the justfile
+recipe comment so the local check and its CI equivalent are discoverable from
+each other.
+
+Closes #<issue-number>"
+git push -u origin <branch>
+gh pr create --title "docs(justfile): document dep-check CI enforcement" \
+  --body "Closes #<issue-number>"
+gh pr merge --auto --rebase
+```
+
 ---
 
 ## Failed Attempts
@@ -508,6 +586,8 @@ delete anything — it only asserts the tracked-file invariant.
 | Edit `.pre-commit-config.yaml` directly (Pattern 5) | Used the normal `Edit` tool to add the `check-build-dir-untracked` hook | Blocked by a config-file security hook ("don't ask mode" / config-file guard) — same class as the workflow-file block noted in Pattern 2 | Apply the change via a Python `read → str.replace → write` script; assert the anchor appears exactly once and the addition isn't already present before writing |
 | Delete on-disk `build/*.log` to "clean up" (Pattern 5) | `rm build/*.log` / `git clean` to remove scratch junk | A live automation loop regenerates the logs within seconds — deletion is futile and the on-disk presence was never the problem | The problem is *tracking*, not presence: gitignore + an untracked-invariant guard. Never delete runtime-regenerated state |
 | Make the Pattern 5 guard exit 0 like the stale-script detector | Soft-warn instead of hard-fail, mirroring Pattern 3 | A tracked file under a gitignored scratch dir is a *true invariant breach* that would then pass CI silently and could ship logs in a distribution | Hard-fail (exit 1) is correct for a true-invariant guard; the exit-0 rule applies only to heuristic discovery tooling (Pattern 3), not invariant assertions |
+| Re-wire the script into CI (Pattern 6) | Added a new CI step to call `scripts/check_dep_sync.py` again | A prior PR (#594, commit `3ee26ae`) had already added `deps-version-sync` to `.github/workflows/_required.yml`; adding it again would duplicate CI work and create drift between the two definitions | Grep `.github/workflows/` for the script name FIRST; if it already runs in CI, the fix is a justfile comment cross-referencing the existing job, not a new step |
+| Close issue as "already done" without any change (Pattern 6) | Mark the issue resolved with no code change | Future contributors reading the justfile recipe would have no hint that the same script runs unconditionally in CI — the discoverability gap remains | Always close the discoverability gap: even when the CI job already exists, a one-line cross-reference comment in the local recipe pays ongoing dividends |
 
 ## Results & Parameters
 
@@ -660,3 +740,4 @@ the companion worktree-`__file__` skill (why `-m` beats a `scripts/<x>.py` shim)
 | ProjectOdyssey | Issue #3969 (stale-script detector) — follow-up from #3148/#3337; PR #4844 | stdlib-only detector + pre-commit hook + 20 unit tests; 22 stale candidates surfaced |
 | ProjectHephaestus | Issue #1214 / PR #1250 (tracked-file-under-build guard) | stdlib-only `check_build_dir_untracked.py` + `repo: local` pre-commit hook; asserts `git ls-files build/` empty (hard-fail exit 1). verified-precommit (CI pending) |
 | ProjectHephaestus | Issue #1181 (dead required gate) — PR #1266; `deps/version-sync` passed in CI in 13s on the fix branch | `deps-version-sync` job in `.github/workflows/_required.yml` computed-and-discarded a `DYNAMIC` verdict with its only `exit 1` behind a non-existent `VERSION` file; rewired to install WITH deps + `python -m hephaestus.scripts_lib.check_version_single_source` under `set -euo pipefail` + `pixi install --locked` (pinned pixi v0.69.0); context pinned in org ruleset so fixed in place, not deleted; two-sided verified |
+| ProjectHermes | Issue #496 (already-wired CI dep-sync) — branch `496-auto-impl`, commit `d30c9f7` | Issue asked to wire `scripts/check_dep_sync.py` into CI; investigation revealed `deps-version-sync` job already existed in `.github/workflows/_required.yml` at line 402 (added by PR #594 / commit `3ee26ae`), running unconditionally on every `pull_request` to `main`; fix was a single discoverability comment in `justfile` above the `dep-check` recipe: `# Enforced in CI by the \`deps/version-sync\` job in .github/workflows/_required.yml (see #594, #496).`; verified: `just dep-check` exits 0, `just --list` clean, `pixi run pre-commit run --files justfile` passes (verified-precommit) |
