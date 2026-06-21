@@ -1,5 +1,27 @@
 # planning-verify-issue-premise-before-implementing — History
 
+## v2.3.0 (2026-06-20)
+
+**Changed by:** ProjectHermes issue #674 planning (consolidated follow-up from #428 — claimed a helper `wait_for_messages()` was "already implemented and tested" and the fix was "mechanical")
+**Verification:** verified-local — the git/grep checks (`grep -rn wait_for_messages tests/`, `git merge-base --is-ancestor 0f6da0c HEAD`, `git branch -a --contains 0f6da0c`) were run this session and produced the cited results; the resulting test plan itself was NOT yet executed in CI.
+
+### What changed
+
+- **MINOR bump (2.2.0 → 2.3.0): adds the GREP-THE-WORKING-TREE-FIRST instance and a CITED-SITE RE-CLASSIFICATION step.** v2.0.0–v2.2.0 covered: artifact-on-unmerged-branch (scan all branches, make PR self-contained) and prerequisite-not-merged-for-auto-generated-follow-up (merge-gate). v2.3.0 adds the cleanest, smallest case of the same family: a follow-up issue that flatly asserts prior work "already exists / is mechanical" when a single `grep -rn <symbol> <dir>` against the working tree returns nothing.
+- **PRIMARY new lesson (When to Use bullet + Verified-Workflow step + Failed Attempts row):** before labeling a fix "mechanical," grep the WORKING TREE for the named artifact (function/file/symbol). No match ⇒ the premise is false on this branch even if the symbol exists somewhere in history. ProjectHermes #674 claimed `wait_for_messages()` was "already implemented and tested"; `grep -rn wait_for_messages tests/` returned NO matches. The helper was authored in commit `0f6da0c` on the UNMERGED `428-auto-impl` branch (`git merge-base --is-ancestor 0f6da0c HEAD` → not an ancestor; `git branch -a --contains 0f6da0c` → only `428-auto-impl`). Consequence: the plan scope EXPANDED — it must ADD the helper to `tests/helpers.py` AND apply it, not merely apply an existing helper.
+- **SECONDARY new lesson (Failed Attempts row + Results block):** re-open and re-classify EVERY cited line number / test against the real precondition; locate by SYMBOL, not by line. #674 cited 8 test line numbers and claimed all share the race, but one cited site (`test_loop_resets_backoff_when_connection_healthy`) had NO `received` list — its `sleep(0.1)` is a loop-tick timing wait, not a delivery wait, so `wait_for_messages` does not apply. Classifying by "does a `received` list exist and is asserted after the sleep?" caught the miscategorization.
+- Extended the description + tags only minimally (the existing description already covers the unmerged-branch/auto-generated-follow-up surface). Added the ProjectHermes #674 worked example to Results & Parameters and a Verified On row.
+
+### Why
+
+Same search surface as the existing skill — "planning a follow-up issue whose premise names prior-work artifacts that may live on an unmerged branch." #674 is the canonical minimal instance: one grep falsifies the premise. It belongs in this family rather than a new skill; someone searching "the issue says the helper already exists / the fix is mechanical" should land here alongside the #556 (artifact-on-unmerged-branch) and #182 (prerequisite-not-merged) cases.
+
+### Previous version (v2.2.0) snapshot
+
+The full v2.2.0 text is preserved in git history at the commit preceding this amendment (branch `skill/planning-verify-unmerged-helper-branch-claims`). v2.2.0 covered: repo-wide existence scan; self-contained-vs-blocked-on-merge; vendor-fixes-latent-bugs; script-specific CI runtime deps; deterministic-gate-vs-human-ratification; and prerequisite MERGE-STATE verification for auto-generated follow-up issues. v2.3.0 leaves all of that intact and adds the grep-the-working-tree-first instance plus the cited-site re-classification discipline.
+
+---
+
 ## v2.2.0 (2026-06-20)
 
 **Changed by:** ProjectProteus issue #182 planning (follow-up auto-generated "from implementation of #5"; prerequisite PR #173 still OPEN)
