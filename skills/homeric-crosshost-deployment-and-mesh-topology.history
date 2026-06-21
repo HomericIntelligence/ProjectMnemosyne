@@ -5,6 +5,31 @@ This file preserves the full content of every skill absorbed into the canonical
 
 ---
 
+## v1.11.0 (2026-06-20)
+
+**Changed by:** R3 implementation round of Odysseus issue #328 — converts the UNVERIFIED PLAN (R2) for the NATS SIGKILL→restart fix to VERIFIED-LOCAL IMPLEMENTATION (R3). Unit test 15/15 green including 8/8 kill→restart→healthy loop. CI not yet confirmed. This amendment to the skill records the 10 confirmed implementation facts and updates all status labels from "UNVERIFIED PLAN (R2)" to "VERIFIED-LOCAL IMPLEMENTATION (R3)".
+**Verification:** verified-local for the #328 section (unit test 15/15, 8/8 kill→restart→healthy loop). CI has not yet confirmed. All prior sections (#176/#206/#208/#304 planning + deployment content) are unchanged and retain their existing verification status (unverified for planning sections, verified-local for deployment content).
+
+### What changed
+- Bumped version 1.10.0 → 1.11.0 (MINOR — converts #328 from UNVERIFIED PLAN to VERIFIED-LOCAL IMPLEMENTATION with 10 new confirmed facts; additive; nothing unrelated removed)
+- Updated frontmatter `description` item (11): changed from "UNVERIFIED OVERALL — no CI; R2 round" to "VERIFIED-LOCAL IMPLEMENTATION — R3 round: unit test 15/15 green including 8/8 kill→restart→healthy loop; CI not yet confirmed". Added the 10 R3 verified-local implementation facts to the description
+- Added new tags: `nats-restart-impl`, `meta-file`, `nats_kill`, `nats_restart`, `start_nats_bg_at`, `wait_port_free`, `wsl2-devtcp-timeout`, `exit-code-no-exit`, `false-pass-guard`, `loop-variable-clobber`
+- Updated the Overview Verification table: #328 entry changed from "unverified OVERALL" to "VERIFIED-LOCAL (R3 implementation — unit test 15/15, 8/8 kill→restart→healthy loop; CI not yet confirmed)"
+- Updated "When to Use" #328 bullet to reflect implementation status
+- Updated body section header from "Proposed Workflow — NATS e2e SIGKILL→restart port-bind-race fix (UNVERIFIED, Odysseus issue #328)" to "VERIFIED-LOCAL IMPLEMENTATION R3"
+- Replaced "Uncertain Assumptions a Reviewer MUST Verify (#328)" with "Verified-Local Implementation Facts (#328)" table documenting the 10 confirmed implementation facts
+- Updated "Reviewer-risk + Meta-Lessons (#328)" section header from "unverified OVERALL, R2" to "VERIFIED-LOCAL R3"
+- Added new Project-table row for R3 implementation
+
+### Why
+The R2 round measured the kernel mechanism (8/8 immediate SIGKILL→rebind, overturning the TIME_WAIT hypothesis) but left the fix design unverified. R3 implemented and ran the full fix, confirming 10 specific implementation facts via a 15/15 unit test including an 8× kill→restart→healthy loop. The 10 facts cover: the meta-file pattern for cross-process PID tracking; kill-then-wait as the correctness gate (not port-free poll); `wait_port_free` WSL2 timeout guard requirement; skip-block `exit $?` pitfall under `set -euo pipefail`; A02 false-pass guard; `start_nats_bg` → `start_nats_bg_at` split for JetStream continuity; loop variable clobbering in nested bash functions; and `process.sh` sourcing requirement. These are now recorded as confirmed facts rather than planning hypotheses. PR review also caught 3 MINOR findings (all addressed): `wait_port_free` YAGNI risk (wired into `nats_restart` at both call sites), `timeout 1` guard for WSL2 `/dev/tcp` hang, and explicit `exit $?` in skip blocks.
+
+### Previous version (v1.10.0) snapshot
+
+The v1.10.0 skill body is preserved in the v1.10.0 entry below. The v1.11.0 changes update the #328 section of that v1.10.0 baseline in place; see the **What changed** list above for the exact deltas.
+
+---
+
 ## v1.10.0 (2026-06-20)
 
 **Changed by:** R2 round of Odysseus issue #328 after the R1 plan (PR #2748, v1.9.0) got a NOGO (grade C) — Odysseus session. MINOR-level: UPDATES the existing "Proposed Workflow — NATS e2e SIGKILL→restart port-bind-race fix (UNVERIFIED, Odysseus #328)" section IN PLACE with a MEASURED root cause that OVERTURNS the issue's hypothesis. This round the SIGKILL→rebind experiment ACTUALLY RAN (8/8 immediate rebinds), proving TIME_WAIT does not apply to a server's own LISTENING socket; the prior reviewer's "the ~15s bind-retry backoff can't outlast Linux 2MSL ~60s" major was dissolved as resting on a false premise. The "Proposed Workflow" title and unverified warning banner are retained. No unrelated sections were removed or rewritten.
