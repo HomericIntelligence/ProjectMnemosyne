@@ -1,10 +1,10 @@
 ---
 name: nats-server-auth-authz-hardening
-description: "Plan or implement NATS server-side authentication and authorization (authz) hardening for the HomericIntelligence mesh. Use when: (1) adding app-layer auth to NATS after TLS already landed, (2) deciding between token-based auth vs X.509 cert mapping (verify_and_map) vs decentralized operator/NKey/JWT, (3) configuring authorization{} blocks on BOTH client AND leafnode listeners (the dual-listener trap), (4) scoping NATS subjects per agent/consumer/bridge against the ADR-005 hi.* schema, (5) writing an ADR for mesh auth (do NOT edit append-only ADRs), (6) auditing whether verify/verify_and_map/accounts{} or authorization{} are present in configs/nats, (7) writing a brace-depth awk validator for NATS config blocks, (8) wiring NATS auth validation into CI as a dedicated step."
+description: "Plan or implement NATS server-side authentication and authorization (authz) hardening for the HomericIntelligence mesh. Use when: (1) adding app-layer auth to NATS after TLS already landed, (2) deciding between token-based auth vs X.509 cert mapping (verify_and_map) vs decentralized operator/NKey/JWT, (3) configuring authorization{} blocks on BOTH client AND leafnode listeners (the dual-listener trap), (4) hardening the NATS cluster{} route listener on port 6222 against unauthorized peer joins, (5) scoping NATS subjects per agent/consumer/bridge against the ADR-005 hi.* schema, (6) writing an ADR for mesh auth (do NOT edit append-only ADRs), (7) auditing whether verify/verify_and_map/accounts{} or authorization{} are present in configs/nats or in cluster{}, (8) writing a brace-depth awk validator for NATS config blocks with word-boundary keyword anchoring, (9) wiring NATS auth validation tests into BOTH justfile and CI gates."
 category: architecture
-date: 2026-06-19
-version: "1.2.0"
-verification: verified
+date: 2026-06-20
+version: "1.3.0"
+verification: verified-local
 user-invocable: false
 history: nats-server-auth-authz-hardening.history
 tags:
@@ -21,6 +21,9 @@ tags:
   - mesh
   - leafnode
   - cluster
+  - cluster-route
+  - route-listener
+  - port-6222
   - adr
   - subject-scoping
   - hi-schema
@@ -34,8 +37,9 @@ tags:
   - validation
   - awk
   - brace-depth
+  - word-boundary
   - fail-closed
-  - verified
+  - verified-local
 ---
 
 # NATS Server Auth/Authz Hardening (HomericIntelligence Mesh)
@@ -44,10 +48,10 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-19 |
+| **Date** | 2026-06-20 |
 | **Objective** | Plan or implement NATS server-side authentication + authorization hardening for the HomericIntelligence mesh |
-| **Outcome** | v1.0.0–v1.1.0: A plan was written then REVISED after a reviewer NOGO: reuse the X.509 mutual-cert trust chain via `verify_and_map` (client) + `verify` (cluster/leafnode), plus subject-scoped `accounts{}` mapped to the ADR-005 `hi.*` schema. v1.2.0: EXECUTED and CI-verified (issue #176, PR #303). Token-based auth added on BOTH the client listener AND the leafnode listener via two separate `authorization {}` blocks. Key traps documented: auth only on the client listener leaves the leafnode listener open; brace-depth awk required to validate nested configs; NATS exits non-zero (not silently empty string) on unset env vars; port 7422 for leafnode remotes; CI validator must be a dedicated step not just a justfile recipe. |
-| **Verification** | `verified` (v1.2.0 — Odysseus issue #176, PR #303, CI passed) |
+| **Outcome** | v1.0.0–v1.1.0: A plan was written then REVISED after a reviewer NOGO: reuse the X.509 mutual-cert trust chain via `verify_and_map` (client) + `verify` (cluster/leafnode), plus subject-scoped `accounts{}` mapped to the ADR-005 `hi.*` schema. v1.2.0: EXECUTED and CI-verified (issue #176, PR #303). Token-based auth added on BOTH the client listener AND the leafnode listener via two separate `authorization {}` blocks. Key traps documented: auth only on the client listener leaves the leafnode listener open; brace-depth awk required to validate nested configs; NATS exits non-zero (not silently empty string) on unset env vars; port 7422 for leafnode remotes; CI validator must be a dedicated step not just a justfile recipe. v1.3.0: EXECUTED and verified-local (issue #306, PR #341). Cluster route listener (port 6222) hardened with `authorization { token = "$NATS_CLUSTER_TOKEN" }` inside `cluster{}`. Extended validator with a 4th check using the brace-depth `block()` function (word-boundary anchored). Test file wired into BOTH justfile and CI gates. ADR-009 amended in-place (not created new). |
+| **Verification** | `verified-local` (v1.3.0 — Odysseus issue #306, PR #341, CI pending); `verified` (v1.2.0 — Odysseus issue #176, PR #303, CI passed) |
 | **History** | [changelog](./nats-server-auth-authz-hardening.history) |
 
 ## When to Use
@@ -59,6 +63,13 @@ tags:
 - You are writing a shell validator for NATS config files that contain nested blocks (e.g. `tls {}` inside `leafnodes {}`) and need a brace-depth awk extractor instead of a simple range match.
 - You need to write a CI step that asserts NATS auth is fail-closed and need to know the correct assertion (expect `nats-server -t` to exit non-zero when a required env var is unset, do NOT grep output).
 - You are adding a NATS auth CI step and need to know it must be a dedicated step in `ci.yml`, not just a justfile recipe (CI never invokes `just validate-configs` unless the workflow explicitly calls it).
+- You are hardening the NATS `cluster{}` route listener (port 6222) against unauthorized peer joins — the same fail-open class as the client and leafnode listeners.
+- You are adding `authorization { token = "$NATS_CLUSTER_TOKEN" }` inside `cluster{}` and need to know this is the correct pattern (cluster routes use token or user/password auth inside `cluster{}`, NOT per-route NKey/JWT — only leafnodes support NKey/JWT per remote).
+- You have a single-host deployment with no routes configured and need to know the cluster auth block is inert/no-op when no routes are active, so adding it does not break a single-host setup.
+- You are writing a brace-depth awk block extractor and need to anchor the keyword match with `"(^|[[:space:]])" kw "[[:space:]]*\\{"` to prevent a keyword like `cluster` from matching `subcluster {` or `mycluster {`.
+- You added a test file for the NATS validator and need to know test files do NOT self-invoke — you must explicitly call them in BOTH the justfile recipe AND the CI step, or the test coverage never runs.
+- You are about to write a new ADR but the issue body says to create a specific ADR number — always run `ls docs/adr/` first; the number may already exist (issue #306 referenced ADR-009, which already existed from issue #176).
+- You are reading issue body line-number citations — they are frequently stale after prior PRs merge and shift lines; always re-read the actual file to verify coordinates.
 - You are scoping NATS subjects per role (agent / consumer / bridge) against the ADR-005 `hi.*` subject schema.
 - You are about to write an ADR for mesh auth and need to know the next sequential number and the append-only rule.
 - You are auditing whether `verify` / `verify_and_map` / `authorization{}` / `accounts{}` already exist in `configs/nats/`.
@@ -277,6 +288,146 @@ grep -E "\*.creds|\*.pem|\*.key" .gitignore
 grep -n "validate\|nats" .github/workflows/ci.yml
 ```
 
+## Verified Workflow (v1.3.0) — Cluster Route Listener Authorization
+
+> **Verification:** `verified-local` — Odysseus issue #306, PR #341, all 6 test cases pass, `just validate-configs` passes, CI pending (2026-06-20).
+
+### Cluster Route Listener: The Third Listener
+
+NATS has THREE distinct listeners, each requiring its own `authorization {}` block:
+- **Client listener** (port 4222): protected by a top-level `authorization {}` block
+- **Leafnode listener** (port 7422): protected by `authorization {}` inside `leafnodes {}`
+- **Cluster route listener** (port 6222): protected by `authorization {}` inside `cluster {}`
+
+Issue #306 is in the same fail-open class as issue #176 — the cluster listener was left without auth after client and leafnode were hardened.
+
+### Cluster Auth Pattern
+
+Cluster routes authenticate via `authorization {}` (token or user/password) placed INSIDE the `cluster {}` block. This is NOT per-route NKey/JWT — only leafnodes support NKey/JWT per remote. The token must match on every peer in a multi-server cluster.
+
+```hcl
+# server.conf — THREE separate authorization blocks required (one per listener)
+authorization {
+  token = "$NATS_CLIENT_TOKEN"   # protects the client listener (port 4222)
+}
+
+leafnodes {
+  port = 7422
+  tls { ... }
+  authorization {
+    token = "$NATS_LEAF_TOKEN"   # protects the leafnode listener (port 7422)
+  }
+}
+
+cluster {
+  name = "homeric"
+  port = 6222
+  tls { ... }
+  authorization {
+    token = "$NATS_CLUSTER_TOKEN"   # protects the cluster route listener (port 6222)
+  }
+  # routes = [ ... ]  # only needed when routes are configured; block is inert on single-host
+}
+```
+
+**Single-host deployment note:** When no `routes` are configured, the `authorization {}` inside `cluster {}` is inert at runtime — a single-host deployment is unaffected. The block is defensive: it takes effect only when routes are added.
+
+### Extending the Brace-Depth Validator (4th Check)
+
+The existing `tools/validate-nats-auth.sh` already had a `block()` brace-depth parser from issue #176. Extending it for cluster is a one-step addition of check 4:
+
+```bash
+# In validate-nats-auth.sh — Check 4: cluster{} authorization
+CLUSTER_BLOCK=$(block "$SERVER_CONF" cluster)
+if [ -n "$CLUSTER_BLOCK" ]; then
+  # A cluster{} block exists — it MUST have authorization{}
+  if ! echo "$CLUSTER_BLOCK" | grep -q "authorization"; then
+    fail "cluster{} block found but no authorization{} inside it"
+  fi
+fi
+# No cluster{} block → single-host deployment; pass (exit 0)
+```
+
+### Word-Boundary Anchoring in the block() Function
+
+The critical fix: the `block()` awk pattern MUST be word-boundary anchored. Without anchoring, `block configs/nats/server.conf cluster` also matches `subcluster {` or `mycluster {`.
+
+```bash
+block() {
+  local file="$1" kw="$2"
+  sed 's/#.*//' "$file" | awk -v kw="$kw" '
+    inb==0 && $0 ~ "(^|[[:space:]])" kw "[[:space:]]*\\{" { inb=1; d=0 }
+    inb==1 {
+      print
+      o=gsub(/\{/,"{"); c=gsub(/\}/,"}"); d+=o-c
+      if (d<=0) inb=2
+    }'
+}
+```
+
+The anchoring pattern `"(^|[[:space:]])" kw "[[:space:]]*\\{"` requires the keyword to appear at the start of a line or after whitespace — not as a substring of a longer word.
+
+### Test File Wiring (Critical — Both Gates Required)
+
+A test file does NOT self-invoke. After creating `tools/tests/test-validate-nats-auth.sh` with 6 cases, BOTH gates must explicitly call it:
+
+1. **justfile** `validate-configs` recipe:
+   ```
+   bash tools/validate-nats-auth.sh configs/nats/server.conf configs/nats/leaf.conf
+   bash tools/tests/test-validate-nats-auth.sh
+   ```
+
+2. **`.github/workflows/ci.yml`** Validate NATS auth step:
+   ```yaml
+   - name: Validate NATS auth
+     run: |
+       bash tools/validate-nats-auth.sh configs/nats/server.conf configs/nats/leaf.conf
+       bash tools/tests/test-validate-nats-auth.sh
+   ```
+
+If only `tools/validate-nats-auth.sh` is called but not the test file, the brace-depth regression and check-4 coverage never run in CI.
+
+### 6 Test Cases for Cluster Auth
+
+```bash
+# tools/tests/test-validate-nats-auth.sh
+# Case 1: real server.conf passes
+# Case 2: authed cluster fixture passes
+# Case 3: unauthed leaf fixture fails (check 3 regression)
+# Case 4: unauthed cluster fixture fails (check 4 new)
+# Case 5: no cluster{} block passes (single-host is valid)
+# Case 6: brace-depth guard — auth outside cluster{} does NOT satisfy check
+#          (auth { } before cluster { ... } must not falsely pass)
+```
+
+### Quick Reference (v1.3.0)
+
+```bash
+# 1. Verify ALL three listeners have authorization (should appear 3x)
+grep -n "authorization" configs/nats/server.conf
+# Expected: line in top-level scope (client), line inside leafnodes{}, line inside cluster{}
+
+# 2. Word-boundary block extractor (anchored — prevents substring matches)
+block() {
+  sed 's/#.*//' "$1" | awk -v kw="$2" '
+    inb==0 && $0 ~ "(^|[[:space:]])" kw "[[:space:]]*\\{" { inb=1; d=0 }
+    inb==1 { print; o=gsub(/\{/,"{"); c=gsub(/\}/,"}"); d+=o-c; if (d<=0) inb=2 }'
+}
+block configs/nats/server.conf cluster | grep -q "authorization" && echo "OK" || echo "FAIL"
+
+# 3. Check that the test file is wired into both gates
+grep -n "test-validate-nats-auth" justfile .github/workflows/ci.yml
+# Must appear in both files
+
+# 4. Check ADR directory before creating a new ADR (avoid number collision)
+ls docs/adr/ | grep -E '^[0-9]{3}-'
+
+# 5. Re-read the actual file coordinates — never trust issue body line numbers
+# Issue #306 cited server.conf:54-64 — the actual cluster{} block may be at different lines
+# after prior PRs (e.g. #303 from issue #176) shifted the file
+grep -n "^cluster" configs/nats/server.conf
+```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -292,11 +443,15 @@ grep -n "validate\|nats" .github/workflows/ci.yml
 | Simple awk range extraction (v1.2.0) | `awk '/leafnodes/,/}/'` to extract leafnodes block | First `}` inside nested `tls {}` terminates the range; `authorization {}` after tls{} is never captured → false negative | Use brace-depth awk: count `{`/`}` depth; only stop when depth returns to 0 |
 | Assuming .gitignore covers *.creds (v1.2.0) | `grep "creds" .gitignore` expected a match | `*.creds` was not in .gitignore even though `*.pem` was — a silent gap | Always verify gitignore coverage for credential file extensions explicitly; don't assume |
 | Assuming justfile recipe = CI gate (v1.2.0) | Added `validate-nats-auth` recipe to justfile, assumed CI would run it | CI only invokes `just` targets that appear in explicit workflow steps; `ci.yml` never called `just validate-configs` | Wire validators as DEDICATED steps in `ci.yml`; a justfile recipe with no CI caller provides zero enforcement |
+| Unanchored awk keyword in block() (v1.3.0) | Used `kw "[[:space:]]*\\{"` without word-boundary prefix | Pattern matches `subcluster {` or `mycluster {` as false positives for `cluster` | Anchor with `"(^|[[:space:]])" kw "[[:space:]]*\\{"` so keyword must be at line-start or after whitespace |
+| Test file not wired into CI gate (v1.3.0) | Created `tools/tests/test-validate-nats-auth.sh` but only ran `tools/validate-nats-auth.sh` in justfile and ci.yml | Brace-depth regression and check-4 coverage never ran in CI — reviewer flagged the gap | Explicitly call the test file in BOTH justfile recipe AND ci.yml step; test files do NOT self-invoke |
+| Assuming ADR number is free (v1.3.0) | Issue body said "document in ADR-009" — assumed number was available | ADR-009 already existed (created during issue #176); attempting `git add docs/adr/009-*.md` would create a duplicate | Run `ls docs/adr/` before creating any ADR; amend the existing ADR if the decision is an extension |
+| Stale issue line-number coordinates (v1.3.0) | Issue #306 cited `server.conf:54-64` as the cluster{} block location | After issue #176 (PR #303) merged and shifted lines, the actual cluster{} block was at different lines | Issue body line numbers are often stale after prior PRs merge; always re-read the file to verify coordinates |
 
 ## Results & Parameters
 
 ```yaml
-# Repo facts verified by reading on disk (HomericIntelligence/Odysseus, 2026-06-19)
+# Repo facts verified by reading on disk (HomericIntelligence/Odysseus, 2026-06-19 / 2026-06-20)
 on_disk_facts:
   tls_status: "already landed via ADR-008 (PRs #290 / #292)"
   server_conf_tls: "tls{} present on client(4222), leafnode(7422), cluster(6222), monitoring http(127.0.0.1:8222)"
@@ -304,6 +459,13 @@ on_disk_facts:
   authz_gap: "no verify / verify_and_map anywhere; no authorization{} / accounts{}"
   authz_grep: 'grep -riE "verify|authorization|accounts|nkey|jwt|resolver|operator" configs/nats -> only commented monitoring_authorization'
   adr_rule: "ADRs are append-only (CLAUDE.md principle 3, docs/adr/README.md); next number was 009; NEVER edit ADR-008"
+  cluster_auth_gap: "v1.2.0 closed client+leafnode; cluster{} route listener (port 6222) was still open → fixed in v1.3.0 (issue #306, PR #341)"
+  cluster_auth_token_syntax: "authorization { token = \"$NATS_CLUSTER_TOKEN\" } inside cluster{} — NOT per-route NKey/JWT (only leafnodes support that)"
+  cluster_auth_single_host: "no routes configured → cluster authorization{} block is inert at runtime; single-host deployment unaffected"
+  validator_check_count: "v1.3.0: 4 checks — (1) client auth, (2) leafnode listener auth, (3) leaf.conf remote token, (4) cluster{} auth if cluster{} block present"
+  test_file_wiring: "test file must be called in BOTH justfile recipe AND ci.yml step — it does NOT self-invoke"
+  adr_amendment: "ADR-009 already existed (issue #176); amended in-place to add cluster listener decision point; did NOT create new ADR"
+  issue_line_numbers_stale: "issue #306 cited server.conf:54-64 — actual cluster{} location shifted after PR #303 merged; always re-read the file"
 
 # Downstream clients that fail-closed auth would break (v1.1.0 — enumerate from real code)
 plaintext_clients:
@@ -393,3 +555,4 @@ unverified_assumptions:
 | --- | --- | --- |
 | HomericIntelligence/Odysseus | 2026-06-19 planning + review session (v1.1.0) | Plan written from on-disk reads of `configs/nats/{server,leaf}.conf` and submodule client config (Hermes/Telemachy); TLS confirmed present (ADR-008); auth/authz gap confirmed via grep. R0 plan NOGO'd by a reviewer (bare-CN mapping bug) and REVISED → v1.1.0. Still NOT executed — no config applied, no `nats-server -t`, no functional auth test run. Verification: `unverified`. |
 | HomericIntelligence/Odysseus | 2026-06-19 implementation session (v1.2.0) | Issue #176: token-based auth added to `configs/nats/server.conf` (TWO `authorization {}` blocks: one top-level for the client listener, one inside `leafnodes {}` for the leafnode listener) and `configs/nats/leaf.conf` (token in remotes). `tools/validate-nats-auth.sh` created with brace-depth awk block extractor. CI validator wired as a dedicated step in `.github/workflows/ci.yml`. PR #303 committed and pushed; CI passed. Verification: `verified`. |
+| HomericIntelligence/Odysseus | 2026-06-20 implementation session (v1.3.0) | Issue #306: cluster route listener (port 6222) hardened with `authorization { token = "$NATS_CLUSTER_TOKEN" }` inside `cluster{}` in `configs/nats/server.conf`. `tools/validate-nats-auth.sh` extended with a 4th check using existing `block()` function (word-boundary anchored). `tools/tests/test-validate-nats-auth.sh` created with 6 test cases and wired into both justfile and ci.yml gates. ADR-009 amended in-place. All 6 test cases pass; `just validate-configs` passes. PR #341 opened. Verification: `verified-local` (CI pending). |

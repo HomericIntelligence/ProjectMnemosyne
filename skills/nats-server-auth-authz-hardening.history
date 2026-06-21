@@ -1,5 +1,36 @@
 # Changelog — nats-server-auth-authz-hardening
 
+## v1.3.0 — 2026-06-20
+
+**Changed by:** Odysseus session 2026-06-20 — issue #306 implementation (cluster route listener auth, verified-local).
+
+**Verification:** `verified-local` (PR #341 opened; all 6 test cases pass; `just validate-configs` passes; CI pending)
+
+### What changed
+
+- Updated `description` to cover cluster route listener auth, word-boundary awk anchoring, and test-file wiring into both gates.
+- Updated `version` 1.2.0 → 1.3.0 and `date` 2026-06-19 → 2026-06-20 and `verification` `verified` → `verified-local`.
+- Updated `tags` to add `cluster-route`, `route-listener`, `port-6222`, `word-boundary`, `verified-local`.
+- Added 9 new `When to Use` bullets covering: cluster listener hardening; cluster token-auth pattern; single-host inert behavior; word-boundary awk anchoring; test-file wiring into both gates; ADR number collision check; stale issue line numbers.
+- Updated Overview table Outcome and Verification fields to reflect v1.3.0.
+- Added **Verified Workflow (v1.3.0)** section documenting the cluster route listener auth pattern:
+  - The three-listener model (client 4222, leafnode 7422, cluster 6222).
+  - Cluster HCL pattern with `authorization { token = "$NATS_CLUSTER_TOKEN" }` inside `cluster{}`.
+  - Single-host deployment: cluster auth block is inert when no routes are configured.
+  - Word-boundary anchoring fix for the `block()` awk function.
+  - Test file wiring — must call in BOTH justfile recipe AND ci.yml step.
+  - 6 test case descriptions.
+  - Quick Reference (v1.3.0) commands.
+- Added 4 new Failed Attempts rows (v1.3.0): unanchored awk keyword; test file not wired into CI gate; assuming ADR number is free; stale issue line-number coordinates.
+- Added new `on_disk_facts` entries in Results & Parameters for cluster auth gap, token syntax, single-host behavior, validator check count, test file wiring, ADR amendment, and stale issue coordinates.
+- Added v1.3.0 row to Verified On table.
+
+### Why
+
+Issue #306 was in the same fail-open class as issue #176 — the NATS cluster route listener (port 6222) was left unauthenticated after client and leafnode were hardened. This extends the skill to cover the complete three-listener model. Two additional non-obvious traps were hit: the `block()` awk function needed word-boundary anchoring to prevent substring matches (e.g. `cluster` matching `subcluster`), and a test file created for the 4th validator check was not wired into CI or the justfile, meaning the regression coverage never ran until the reviewer flagged it. A third coordination trap: the issue body said to document in ADR-009, but ADR-009 already existed from issue #176 — always check the ADR directory before creating.
+
+---
+
 ## v1.2.0 — 2026-06-19
 
 **Changed by:** Odysseus session 2026-06-19 — issue #176 implementation (token-based NATS auth, CI-verified).
