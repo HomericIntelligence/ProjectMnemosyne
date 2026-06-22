@@ -1,9 +1,9 @@
 ---
 name: parallel-pr-worktree-workflow
-description: "Use when: (1) launching 2+ parallel rebase agents that need isolated git state to avoid branch collision, (2) implementing 5+ independent fixes in parallel PRs using git worktrees, (3) bulk-merging skill PRs with CI fixes and conflict resolution, (4) batching 10+ PRs across parallel sub-agents for maximum throughput, (5) launching >=2 concurrent sub-agents that each commit/push to the same git repo, (6) sub-agents report file bleed-over or unexpected `git checkout` reverts mid-task, (7) RESCUE pattern when parallel dispatch across distinct branches has already produced cross-contaminated commits — consolidate worker PRs into ONE branch via cherry-pick and close individual PRs, (8) doing ANY multi-fix work in a shared checkout that a concurrent foreign session/automation may also touch — use dedicated worktrees from the start so a foreign session cannot move your HEAD/branch, (9) arming auto-merge on a STACKED PR (base is another open/feature branch) — retarget to main BEFORE arming or it squash-merges into the intermediate base and can ORPHAN the change, (10) recovering an orphaned stacked merge (PR state=MERGED but content stranded on a dead intermediate branch) via cherry-pick onto a fresh main branch, (11) triaging GitHub PR CI where current-head checks are stale, absent, or blocked by merge conflicts — inspect job logs plus PR rollup/mergeability before editing and use one worktree per PR branch, (12) diagnosing Inference360 PRs where stale green checks coexist with `mergeStateStatus=DIRTY` and `mergeable=CONFLICTING` — rebase before waiting on validate."
+description: "Use when: (1) launching 2+ parallel rebase agents that need isolated git state to avoid branch collision, (2) implementing 5+ independent fixes in parallel PRs using git worktrees, (3) bulk-merging skill PRs with CI fixes and conflict resolution, (4) batching 10+ PRs across parallel sub-agents for maximum throughput, (5) launching >=2 concurrent sub-agents that each commit/push to the same git repo, (6) sub-agents report file bleed-over or unexpected `git checkout` reverts mid-task, (7) RESCUE pattern when parallel dispatch across distinct branches has already produced cross-contaminated commits — consolidate worker PRs into ONE branch via cherry-pick and close individual PRs, (8) doing ANY multi-fix work in a shared checkout that a concurrent foreign session/automation may also touch — use dedicated worktrees from the start so a foreign session cannot move your HEAD/branch, (9) arming auto-merge on a STACKED PR (base is another open/feature branch) — retarget to main BEFORE arming or it squash-merges into the intermediate base and can ORPHAN the change, (10) recovering an orphaned stacked merge (PR state=MERGED but content stranded on a dead intermediate branch) via cherry-pick onto a fresh main branch, (11) triaging GitHub PR CI where current-head checks are stale, absent, or blocked by merge conflicts — inspect job logs plus PR rollup/mergeability before editing and use one worktree per PR branch, (12) diagnosing Inference360 PRs where stale green checks coexist with `mergeStateStatus=DIRTY` and `mergeable=CONFLICTING` — rebase before waiting on validate, (13) diagnosing Inference360 validate failures after CLI simplification where endpoint-only InferenceX benchmark dry-runs should not auto-detect clusters and validate workflow commands may still reference removed top-level CLIs."
 category: ci-cd
-date: 2026-06-19
-version: "1.6.0"
+date: 2026-06-22
+version: "1.7.0"
 user-invocable: false
 verification: verified-ci
 history: parallel-pr-worktree-workflow.history
@@ -44,6 +44,11 @@ when a worktree is shared or dirty), `git-worktree-parallel-execution-lifecycle`
   `mergeable=CONFLICTING` even though visible checks are stale green. Rebase before waiting for
   `validate`, resolve only real conflict blocks, and treat post-push `mergeable=UNKNOWN` with green
   rollup as GitHub recomputation (see Phase 1b).
+- **(v1.7.0, verified-ci)** Inference360 `validate` fails after CLI simplification on
+  endpoint-only InferenceX benchmark tests or stale workflow commands. Pair PR checks with PR
+  mergeability/head metadata, read the full failing job log, guard endpoint-only dry-runs from
+  cluster auto-detection, and update `.github/workflows/validate.yml` to current console commands
+  (see Phase 1c).
 
 **Do NOT use when:**
 - Issues are interdependent (use sequential PRs from `batch-pr-rebase-conflict-resolution-workflow`)
@@ -184,6 +189,69 @@ Delegation shape:
 Full local suites can fail for environment reasons (`portpicker.NoFreePortFoundError`, broken
 `just`, submodule HEAD mismatch). Record those separately, but use focused tests plus GitHub CI
 as the source of truth for the PR rescue.
+
+### Phase 1c (v1.7.0, verified-ci): Inference360 Endpoint-Only InferenceX and Workflow Drift
+
+Use this when an Inference360 PR has a current-head `validate` failure after CLI simplification,
+especially when tests exercise `inferencex-benchmark --endpoint ... --dry-run` without a manifest.
+Endpoint-only benchmark mode does not need H200 Slurm cluster manifests, so it must not trigger
+cluster auto-detection.
+
+```bash
+REPO=LLM360/Inference360
+PR=255
+
+# 1. Separate current-head validate failures from stale/conflicting merge failures.
+gh pr checks "$PR" --repo "$REPO"
+gh pr view "$PR" --repo "$REPO" \
+  --json mergeStateStatus,mergeable,commits,statusCheckRollup
+
+# 2. Read the full failing job log, then filter around pytest failures.
+gh run view <run-id> --repo "$REPO" --job <job-id> --log
+
+# Useful local filter once the full log is saved.
+rg -C 8 "FAILED|Traceback|ManifestError|_detect_cluster|inferencex-benchmark" <log-file>
+```
+
+Interpretation from PR #255:
+
+- Current head was `6c457ca`; only `validate` was failing and other checks passed.
+- Truncated logs pointed at a stale `--manifest` parser theory, but the full traceback showed
+  `inference360/__init__.py` calling `_detect_cluster()` from `main()` because `args.cluster`
+  was omitted.
+- The failing tests were endpoint-only `inferencex-benchmark --endpoint ... --dry-run` cases:
+  `tests/test_inferencex_integration.py::test_inferencex_benchmark_cli_endpoint_only_dry_run_defaults_to_tmp_perfhc`
+  and
+  `tests/test_inferencex_integration.py::test_inferencex_benchmark_cli_endpoint_discovery_failure_is_actionable`.
+- Hosts with `/mnt/weka` can hide the bug; GitHub runners without `/mnt/weka` or `/lustrefs`
+  fail closed with `ManifestError: could not auto-detect cluster`.
+
+Durable fix pattern:
+
+1. Guard cluster auto-detection so it skips endpoint-only InferenceX benchmark runs:
+   `args.command == "inferencex-benchmark" and not args.manifest`.
+2. Add regression tests that monkeypatch `inference360._detect_cluster` to `pytest.fail(...)`
+   in endpoint-only tests. The assertion is not just the CLI output; it proves endpoint-only mode
+   never touches cluster detection.
+3. Keep `.github/workflows/validate.yml` drift tests so CI keeps using current CLI commands after
+   CLI simplification.
+4. If `validate.yml` still calls removed top-level commands, replace them with current console
+   commands:
+
+   ```bash
+   .venv/bin/inference360 control generate slurm --cluster m1 \
+     --manifest examples/manifests/h200-moe-sglang-production.yaml \
+     > artifacts/generated/h200-moe-sglang-production.slurm.sh
+
+   .venv/bin/inference360 check preview --cluster m1 \
+     --production examples/manifests/h200-moe-sglang-production.yaml \
+     --experimental examples/manifests/h200-moe-vllm-experimental.yaml \
+     > artifacts/generated/control-preview.json
+   ```
+
+5. Rename generated-artifact docs from Slurm/HAProxy previews to Slurm/control-node previews.
+   HAProxy config generation should use live control-server state, not a stale registry or a
+   manifest-only validation workflow.
 
 ### Phase 2: Plan Dependency Groups for Parallel Work
 
@@ -825,6 +893,10 @@ gh issue close <issue-number> --comment "Fixed in PR #<number>"
 | Use `gh pr checks` alone for conflict triage (LLM360/Inference360 PRs #155/#254, 2026-06-19, verified-ci) | Treated the visible checks table as authoritative | `gh pr checks` can show stale green results from the old head while the live PR state remains `DIRTY`/`CONFLICTING` | Pair `gh pr checks <n>` with `gh pr view <n> --json headRefOid,mergeStateStatus,mergeable,statusCheckRollup,url` before deciding what to fix |
 | Treat post-push `mergeable=UNKNOWN` as failure (LLM360/Inference360 PRs #155/#254, 2026-06-19, verified-ci) | Considered launching another fix pass after checks were green but mergeability returned `UNKNOWN` | GitHub was recomputing mergeability after the push/check transition | If `statusCheckRollup` is green and no failure is present, keep polling. Do not invent a CI failure from `UNKNOWN` alone |
 | Change strategy when linked-worktree Git writes are sandbox-blocked | A linked worktree operation needed to update metadata under the main repo `.git/worktrees` | The filesystem block is an execution-environment issue, not a reason to stop using worktrees | Rerun the same Git operation with the appropriate filesystem escalation and keep the isolated `/tmp` worktree workflow |
+| Trust truncated logs for Inference360 PR #255 validate | Read a shortened failure excerpt and chased a stale `--manifest` parser hypothesis | The full pytest traceback showed `inference360/__init__.py` calling `_detect_cluster()` because `args.cluster` was omitted | Pull the full job log with `gh run view --job <job-id> --log`, then filter around `FAILED`, `Traceback`, and the command under test |
+| Let endpoint-only InferenceX benchmark dry-runs auto-detect clusters | Treated all `inferencex-benchmark` invocations as needing cluster-specific manifests | Endpoint-only `--endpoint ... --dry-run` mode does not need cluster manifests; GitHub runners lack `/mnt/weka` and `/lustrefs`, so `_detect_cluster()` fails with `ManifestError` | Skip cluster auto-detection when `args.command == "inferencex-benchmark" and not args.manifest`; prove it with tests that monkeypatch `_detect_cluster` to `pytest.fail(...)` |
+| Keep removed top-level commands in `.github/workflows/validate.yml` | Continued using `.venv/bin/python -m inference360 generate-slurm` and `generate-haproxy` after CLI simplification | CI exercised dead command surfaces rather than the current console script, so workflow validation drifted from the product CLI | Use `.venv/bin/inference360 control generate slurm ...` and `.venv/bin/inference360 check preview ...`; backstop with workflow drift tests |
+| Treat a local `/mnt/weka` host as enough validation for endpoint-only mode | Ran locally on a host where cluster auto-detection succeeds because `/mnt/weka` exists | The bug is environment-sensitive and only appears on runners without known cluster mounts | Add explicit no-autodetect regression tests and verify on GitHub CI, not only on a cluster-like local host |
 | Treat the full local suite as the single source of truth (LLM360/Inference360, 2026-06-17, verified-ci) | Tried to use the entire local suite as the final readiness signal while fixing PR branches | Local environment failures such as `portpicker.NoFreePortFoundError`, broken `just`, or submodule HEAD mismatch were not the PR's CI gate | Run focused tests that cover the edited surface locally, record unrelated environment failures, and use current-head GitHub CI as the PR rescue source of truth |
 
 ## Results & Parameters
@@ -916,6 +988,41 @@ Inference360 branch mapping from the verified session:
 | #156 | `code-cleanup` | CI validate passed at `66db8ac`; PR merged |
 | #157 | `move-inference360-module` | CI passed after TOML coverage config fix; PR merged |
 
+### Inference360 Endpoint-Only InferenceX Validate Parameters (v1.7.0)
+
+```bash
+# Targeted regression for endpoint-only autodetect and workflow drift.
+.venv/bin/pytest \
+  tests/test_inferencex_integration.py::test_inferencex_benchmark_cli_endpoint_only_dry_run_defaults_to_tmp_perfhc \
+  tests/test_inferencex_integration.py::test_inferencex_benchmark_cli_endpoint_discovery_failure_is_actionable \
+  tests/test_ci_workflow.py -q
+# Result: 6 passed in 0.10s
+
+# Smoke: Slurm generation uses the current console command.
+.venv/bin/inference360 control generate slurm --cluster m1 \
+  --manifest examples/manifests/h200-moe-sglang-production.yaml
+# Result: emitted valid Slurm script.
+
+# Smoke: control-node preview replaces stale HAProxy manifest-only generation.
+.venv/bin/inference360 check preview --cluster m1 \
+  --production examples/manifests/h200-moe-sglang-production.yaml \
+  --experimental examples/manifests/h200-moe-vllm-experimental.yaml
+# Result: emitted JSON with "status": "ok" and "target": "preview".
+
+# Full host validation.
+INFERENCE360=.venv/bin/inference360 PYTHON=.venv/bin/python scripts/validate.sh
+# Result: 749 passed, 8 skipped; coverage 81.69%.
+```
+
+Additional PR #255 verification:
+
+| Check | Result |
+| --- | --- |
+| Podman-backed `just validate` | Not runnable on the host because Podman was not installed |
+| Fix commit | `4d87527 fix(ci): align validation workflow with simplified cli` |
+| GitHub checks after push | `gh pr checks 255 --repo LLM360/Inference360` showed all pass, including `validate` |
+| Mergeability after push | `gh pr view 255 --repo LLM360/Inference360 --json mergeStateStatus,mergeable,url` returned `mergeStateStatus: CLEAN`, `mergeable: MERGEABLE`, URL `https://github.com/LLM360/Inference360/pull/255` |
+
 ### Agent Configuration
 
 ```yaml
@@ -978,3 +1085,4 @@ executor: haiku      # Simple rebase, pre-commit fixes
 | ProjectHephaestus | /myrmidon-swarm driving a stack of PRs to merge, 2026-06-14 (verified-local). Two PRs (RC2, RC6) were armed for auto-merge while still based on intermediate branches. They squash-merged into those intermediate bases, NOT main. RC6 folded harmlessly into an open base PR; RC2's base (`chore-ruff-format-drift`) was a CLOSED PR, so RC2's change was ORPHANED from main (`state=MERGED`, content on a dead branch). Recovered RC2 by cherry-picking the orphaned SHA onto a fresh main branch (`git cherry-pick -S`) and opening a NEW PR to main. Confirmed GitHub only auto-retargets stacked PRs when the base MERGES, not when it closes unmerged. | Phase 3d stacked-PR auto-merge hazard + orphan recovery (v1.4.0) |
 | LLM360/Inference360 | GitHub PR CI rescue session, 2026-06-17. Four failing PRs (#149 `feat/endpoint-status`, #155 `claude-config`, #156 `code-cleanup`, #157 `move-inference360-module`) were fixed in isolated PR worktrees using log-first triage, focused local tests, and current-head CI polling. #149/#155 needed rebase after `validate` disappeared because `mergeable: CONFLICTING` prevented the pull-request merge ref; #156/#157 merged after CI passed. | Phase 1b current-head CI triage + per-PR worktree rescue (v1.5.0, verified-ci) |
 | LLM360/Inference360 | PR merge-conflict/mergeability triage follow-up, 2026-06-19. PR #155 (`claude-config`) and PR #254 were failing because GitHub reported merge conflicts against `origin/master`; `gh pr checks` could be stale green while `mergeStateStatus=DIRTY` and `mergeable=CONFLICTING`. Rebased each branch in an isolated `/tmp` worktree, resolved only true conflict blocks, ran focused local validation, pushed with `--force-with-lease`, and verified GitHub checks green at heads `b24c97c` and `4086627`. | Rebase-before-validate mergeability triage (v1.6.0, verified-ci) |
+| LLM360/Inference360 | PR #255 validate failure after CLI simplification, 2026-06-22. Current head `6c457ca` had only `validate` failing; full logs showed endpoint-only `inferencex-benchmark --endpoint ... --dry-run` tests calling `_detect_cluster()` and failing on GitHub runners without `/mnt/weka` or `/lustrefs`. Fixed by skipping cluster auto-detection for endpoint-only runs, adding `_detect_cluster` fail-fast regressions, replacing stale `generate-slurm`/`generate-haproxy` workflow commands with `control generate slurm` and `check preview`, and verifying GitHub checks all passed after commit `4d87527`. | InferenceX endpoint-only autodetect and validate workflow drift (v1.7.0, verified-ci) |
