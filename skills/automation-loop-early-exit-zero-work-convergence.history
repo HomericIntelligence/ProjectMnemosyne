@@ -1,0 +1,120 @@
+# automation-loop-early-exit-zero-work-convergence — History
+
+## v1.1.0 (2026-06-21)
+
+**Changed by:** ProjectHephaestus PR #1564 / issue #1563 — human-facing per-loop
+summary (`_summarize_loop`) diverged from the machine convergence signal
+(`PhaseResult.produced_work` / `work_units`). Surfaced via a real 2026-06-21
+output.log.
+**Verification:** verified-local (CI for PR #1564 still pending at capture time)
+
+### What changed
+
+- Added a new "When to Use" trigger: auditing a per-loop / per-iteration human
+  summary for divergence from the convergence predicate.
+- Added a new finding section: **Human summary must read the SAME signal the
+  early-exit predicate reads** (`_summarize_loop` counted "phase ran" not "work
+  done").
+- Added 3 new Failed Attempts rows (summary `+= 1` per non-skipped phase;
+  trusting `work_units` for non-instrumented `implement` phase; warning on
+  empty auto-discovery passes).
+- Documented the fix: `_summarize_loop` counts plan via
+  `phase.work_units if phase.work_units is not None else 1` (conservative
+  fallback matching `produced_work`); `PlannerStateManager.filter` warns when an
+  EXPLICIT `--issues` set fully filters out, gated by new
+  `PlannerOptions.issues_explicit` set in `planner.main()` before
+  auto-discovery overwrites `args.issues`.
+- Bumped version 1.0.0 → 1.1.0; updated date to 2026-06-21; added `history`
+  frontmatter field.
+
+### Why
+
+v1.0.0 documented the convergence/early-exit machinery (`work_units`,
+`produced_work`, `_CONVERGENCE_PHASES`) but only from the predicate side. A real
+run scoped to `--issues 123,456,789,101` (all CLOSED) logged
+`loop 1: planned=4 implemented=4 skipped=0` directly above
+`Early exit ... produced 0 new plans` — the two lines contradicted each other.
+Nothing failed (the planner correctly filtered all closed issues), but the
+human-facing summary inflated the count and masked a fully no-op'd / mis-scoped
+run. Root cause: `_summarize_loop` incremented `total_planned += 1` for any
+non-skipped plan phase instead of consulting `phase.work_units`. This is the
+same `work_units` machinery as v1.0.0, so it belongs in this skill.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: automation-loop-early-exit-zero-work-convergence
+description: "How to wire and test early-exit in hephaestus-automation-loop when a full pass produces zero new work. Use when: (1) implementing loop convergence detection in run_loop, (2) adding tests for early-exit stub placeholders, (3) diagnosing whether early-exit scaffold already exists before implementing."
+category: tooling
+date: 2026-05-28
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [automation, loop-runner, early-exit, convergence, testing]
+---
+
+# Automation Loop Early-Exit on Zero-Work Pass
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-28 |
+| **Objective** | Break `run_loop` when a full pass across all repos produces 0 new plans and 0 non-skipped reviews so 5-loop runs don't spin 20 min re-processing converged repos |
+| **Outcome** | Successful — 6 tests implemented, all pre-commit hooks pass, PR #669 created |
+| **Verification** | verified-local (pre-commit + pytest; CI pending) |
+| **History** | N/A (initial version) |
+
+## When to Use
+
+- Implementing early-exit / convergence detection in an automation loop driver
+- Filling in `TestRunLoopEarlyExit` stub test placeholders that say "Deferred to implementation phase"
+- Before implementing: check whether the scaffolding (`PhaseResult.work_units`, `RepoResult.produced_work`, `_CONVERGENCE_PHASES`, `break` block) already exists from a prior issue
+- Adding new loop-convergence phases (must add to `_CONVERGENCE_PHASES` AND call `write_work_report`)
+
+## Verified Workflow
+
+### Quick Reference
+
+(see v1.0.0 body — preserved in git history at commit 3fbe3544)
+
+### Detailed Steps
+
+1. Audit existing scaffold — grep for produced_work / work_units / _CONVERGENCE_PHASES / break block.
+2. Understand _CONVERGENCE_PHASES — only phases in this frozenset count toward early-exit ({"plan", "review-plans"}).
+3. The early-exit condition in run_loop (loop_idx < cfg.loops AND not any failure AND not any produced_work).
+4. Implement the six test scenarios.
+5. Run checks (ruff + pytest).
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Redundant loop_results reassignment | re-filtered loop_results from all_results after the pool block | loop_results already contains only current-loop results | Remove the redundant line |
+| Checking review-prs in convergence | Assumed review-prs should be a convergence phase | review-prs is not instrumented with write_work_report | Only phases that call write_work_report belong in _CONVERGENCE_PHASES |
+
+## Results & Parameters
+
+Six required test scenarios for TestRunLoopEarlyExit + helper factories
+(_zero_work_result, _work_result, _failed_result, _unknown_work_result).
+
+Net change: loop_runner.py +14 LOC; test_loop_runner_early_exit.py +137 LOC.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | Issue #614 — early-exit loop on zero-work pass | PR #669; 736 automation tests pass locally |
+```
+
+> Full verbatim v1.0.0 content is preserved in git history at commit 3fbe3544
+> (the abbreviated snapshot above captures the structure and key decisions).
+
+---
+
+## v1.0.0 (2026-05-28)
+
+**Initial version.** Documents wiring + testing early-exit in
+`hephaestus-automation-loop` when a full pass produces zero new work
+(ProjectHephaestus issue #614, PR #669).
