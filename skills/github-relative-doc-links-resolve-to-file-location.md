@@ -3,10 +3,10 @@ name: github-relative-doc-links-resolve-to-file-location
 description: "GitHub resolves a relative markdown link RELATIVE TO THE FILE'S OWN LOCATION, not the repo root. A doc link added to a file in a subdirectory (e.g. `.github/pull_request_template.md`) needs `../docs/X.md`, not `docs/X.md` — and the rule is easy to get wrong from memory. The robust fix is an ABSOLUTE `https://github.com/<owner>/<repo>/blob/<branch>/docs/X.md` URL that resolves identically from any file location. Also: markdownlint does NOT validate that relative link targets resolve, so a grep + lint pass is green even with a broken link — add an explicit `test -f <target>`. And: do not cite `pixi run markdownlint` without confirming the task exists; in some repos markdown is gated only by a `markdownlint-cli2` pre-commit hook. Use when: (1) adding a doc link inside a markdown file that lives in a subdirectory (`.github/`, `docs/`, `.github/ISSUE_TEMPLATE/`); (2) a plan or PR asserts how GitHub resolves a relative link from a non-root file; (3) an acceptance criterion is 'references doc X' and you need to actually verify the link resolves; (4) a reviewer flags an ambiguous `../docs/...` vs `docs/...` relative link; (5) deciding which lint command actually gates markdown in a repo."
 category: documentation
 date: 2026-06-23
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
-verification: verified-local
-tags: [github, markdown, relative-links, pull-request-template, issue-template, markdownlint, pre-commit, doc-links, blob-url, planning, review]
+verification: verified-precommit
+tags: [github, markdown, relative-links, pull-request-template, issue-template, markdownlint, pre-commit, doc-links, blob-url, planning, review, definition-of-done, pr-size]
 ---
 
 # GitHub Relative Doc Links Resolve to the File's Location, Not the Repo Root
@@ -18,8 +18,8 @@ tags: [github, markdown, relative-links, pull-request-template, issue-template, 
 | **Date** | 2026-06-23 |
 | **Objective** | Add a doc link inside `.github/pull_request_template.md` and have it resolve correctly on GitHub. The plan first asserted GitHub resolves relative links relative to the repo root, then contradicted itself; the reviewer returned NOGO. |
 | **Outcome** | Resolved by sidestepping relative resolution entirely with an absolute `https://github.com/<owner>/<repo>/blob/<branch>/docs/...` URL — backed by a verified in-repo sibling pattern that already does exactly this. |
-| **Verification** | verified-local — sibling-pattern evidence and markdownlint link behavior confirmed by grep/inspection in-repo this session; the actual PR's CI not yet observed. |
-| **History** | n/a (initial version) |
+| **Verification** | verified-precommit — markdownlint-cli2 pre-commit hook passed; CI pending. |
+| **History** | v1.0.0 — initial skill (relative-link resolution rule, lint runner discovery). v1.1.0 — added PR size band guidance, DoD checklist pattern, CONTRIBUTING.md pattern (issue #1552). |
 
 ## When to Use
 
@@ -28,6 +28,7 @@ tags: [github, markdown, relative-links, pull-request-template, issue-template, 
 - An acceptance criterion reads "references doc X" and you need to confirm the link actually resolves (not just that lint passes).
 - A reviewer flags an ambiguous `../docs/X.md` vs `docs/X.md` relative link.
 - Deciding which lint command actually gates markdown in a repo before citing it in a plan.
+- Adding a DoD (Definition of Done) checklist entry or PR size guidance to a PR template or CONTRIBUTING.md.
 
 ## Verified Workflow
 
@@ -77,6 +78,51 @@ grep -n markdownlint .pre-commit-config.yaml   # often the real gate (markdownli
    `markdownlint-cli2` pre-commit hook in `.pre-commit-config.yaml`, not a pixi
    task. `grep markdownlint pixi.toml` returns nothing there.
 
+## PR Template Content Patterns (Issue #1552)
+
+### PR Size Bands
+
+When adding PR size guidance to a PR template or CONTRIBUTING.md, use this standard band:
+
+```
+XS <10 lines · S <50 · M <250 · L <500 · XL 500+
+```
+
+PRs over ~500 changed lines should be split unless the change is inherently atomic.
+
+### PR Template Summary Comment Pattern
+
+```markdown
+<!-- Brief description of what this PR accomplishes.
+     Keep PRs small — prefer one issue per PR (see CONTRIBUTING.md → "Planning artifacts").
+     Rough size guidance: XS <10 lines · S <50 · M <250 · L <500 · XL 500+.
+     PRs over ~500 changed lines should be split unless inherently atomic. -->
+```
+
+### PR Template Checklist DoD Entry
+
+Add as an absolute blob URL (file lives under `.github/`, so root-relative would resolve wrong):
+
+```markdown
+- [ ] Change meets the [Definition of Done](https://github.com/mvillmow/ProjectHephaestus/blob/main/docs/DEFINITION_OF_DONE.md)
+```
+
+### CONTRIBUTING.md "Keep PRs Small" Paragraph Pattern
+
+Files at the repo root can use root-relative paths:
+
+```markdown
+Keep PRs small: prefer one issue per PR so each change can be reviewed
+and reverted independently. As a rough guide, aim to keep PRs under
+~500 changed lines (XS <10 · S <50 · M <250 · L <500 · XL 500+); split
+larger PRs unless the change is inherently atomic. Every PR is reviewed
+against the [Definition of Done](docs/DEFINITION_OF_DONE.md).
+```
+
+Note the contrast:
+- `.github/pull_request_template.md` checklist → absolute blob URL (file is one level deep)
+- `CONTRIBUTING.md` paragraph → root-relative `docs/DEFINITION_OF_DONE.md` (file is at repo root)
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -125,3 +171,4 @@ grep -q "blob/<branch>/docs/X.md\|\.\./docs/X.md" <linking-file>   # link form i
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | Adding a doc link to `.github/pull_request_template.md`; plan asserted wrong relative-resolution rule, reviewer NOGO; fixed with absolute blob URL backed by sibling-template evidence | Sibling links: `.github/ISSUE_TEMPLATE/bug_report.yml:76`, `feature_request.yml:58` |
+| ProjectHephaestus | Issue #1552 — PR template DoD + size guidance; added PR size band (XS/S/M/L/XL) to Summary comment and DoD checklist item with absolute blob URL; expanded CONTRIBUTING.md "Keep PRs small" with size band + root-relative DoD link | markdownlint-cli2 pre-commit hook passed locally |
