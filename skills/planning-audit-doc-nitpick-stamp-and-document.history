@@ -1,0 +1,30 @@
+## v1.0.0 — 2026-06-22 (unverified)
+
+Initial creation from ProjectHephaestus issue #1555 implementation planning phase.
+Captured the planning-only methodology:
+- Date-stamp vs version-stamp decision
+- Docstring fallback documentation pattern (document, don't change behavior; KISS/YAGNI)
+- Coordinate re-derivation requirement
+- Upstream version verification requirement
+- Test pinning requirement
+- Linter execution requirement
+
+Status: plan authored, never executed. Verification: unverified.
+
+## v1.1.0 — 2026-06-22 (verified-local)
+
+Amended after ProjectHephaestus issue #1555 implementation was completed and verified locally.
+
+Changes:
+- Upgraded verification from `unverified` to `verified-local`
+- Removed "Proposed Workflow" warning banners
+- Updated Objective/Outcome in Overview to reflect executed implementation
+- Added step 8 to Quick Reference with confirmed implementation details
+- Updated step 7 (verification level guidance) to describe upgrade path to verified-local
+- Added "Verified On" table in Results & Parameters with confirmed evidence
+- Added "Confirmed Exact Changes" section with the actual code/text applied
+- Added `verified-local` and `case-insensitive-comparison` tags
+- Added history file pointer in frontmatter
+
+Verified: all 22 tests pass, ruff lint clean, markdownlint passes.
+Source: ProjectHephaestus issue #1555, 2026-06-22.
