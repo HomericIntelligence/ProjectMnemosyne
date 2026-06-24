@@ -1,13 +1,13 @@
 ---
 name: pre-commit-hooks-and-linting-config
-description: "Canonical guide to pre-commit hook configuration, single-source-of-truth versioning, CI/local parity, and integration of ruff/mypy/clang-format/yamllint/actionlint/golangci-lint/bandit/hadolint/shellcheck/markdownlint. Use when: (1) writing or amending .pre-commit-config.yaml, (2) diagnosing why a hook passes locally but fails in CI (version drift), (3) deciding fix-vs-suppress for lint findings, (4) adding a new linter to an existing pre-commit pipeline, (5) reconciling ruff/mypy/markdownlint config across multiple repos, (6) a pre-commit hook using a pixi console script false-fails locally even though CI passes — system-installed package in ~/.local/bin shadows the local dev version, (7) ruff I001/RUF059 fires on inline imports or unused tuple unpacking inside test functions after adding new tests, (8) mypy pre-commit hook fails because an UNTRACKED test file references methods not yet committed — the hook checks ALL .py files on disk including untracked ones, (9) CI ruff-format hook fails even though local `ruff check` passed — `ruff check` (lint) and `ruff format --check` (formatter) are SEPARATE tools sharing one binary and running only `check` never exercises the formatter, (10) running pre-commit against the full PR diff (every file changed since merge-base) with `--from-ref/--to-ref` not just `--files <current edit>` — a sub-agent's earlier commit can carry stale-formatter content that fails only in CI, (11) adding .editorconfig for cross-editor formatting consistency on non-Python files (YAML, JSON, Markdown, shell, Makefile), (12) an automated PR-reviewer flags lint/formatter/pre-commit-forced incidental churn as scope creep — toolchain-forced churn is exempt from YAGNI/scope review while author-chosen opportunistic work is still flagged, (13) removing a duplicate standalone markdownlint CI job when the lint job already runs pre-commit --all-files — MUST verify the job is NOT a required-check context in branch protection before deleting it, and MUST pre-scan the newly-in-scope files for violations that --fix cannot auto-fix, (14) the pre-commit hook exclude pattern for .claude/ may be LOAD-BEARING (not merely defensive) — confirm with git ls-files .claude/ before removing it; two tracked .md files (.claude/security/guidelines.md and .claude/workflows/development.md) exist in ProjectHephaestus and must remain excluded to match the standalone CI job's intent, (15) after removing a duplicate markdownlint CI job update every doc that names that job by its old CI name (e.g. docs/DEFINITION_OF_DONE.md and .github/README.md) or CI job name references become stale; (16) BOTH the required `lint` check AND the `pre-commit` check are red in a PR — they share the same `ruff format` hook, so a single `ruff format <files>` run clears both; do not debug as two separate problems; (17) adding a commit-msg-stage hook (e.g. conventional-commit validator) — must set `default_install_hook_types: [pre-commit, commit-msg]` in .pre-commit-config.yaml or plain `pre-commit install` silently omits the commit-msg stage and the hook is permanently inert for all contributors; (18) verifying that a commit-msg-stage hook actually fires — `pre-commit run --all-files` does NOT invoke commit-msg-stage hooks; drive them via `pre-commit run --hook-stage commit-msg --commit-msg-filename <file>` instead; (19) adding a Bandit SAST hook that scans a whole directory via --ini config — must use `pass_filenames: false` or pre-commit appends individual changed filenames, bypassing the .bandit INI targets and recursive settings."
+description: "Canonical guide to pre-commit hook configuration, single-source-of-truth versioning, CI/local parity, and integration of ruff/mypy/clang-format/yamllint/actionlint/golangci-lint/bandit/hadolint/shellcheck/markdownlint. Use when: (1) writing or amending .pre-commit-config.yaml, (2) diagnosing why a hook passes locally but fails in CI (version drift), (3) deciding fix-vs-suppress for lint findings, (4) adding a new linter to an existing pre-commit pipeline, (5) reconciling ruff/mypy/markdownlint config across multiple repos, (6) a pre-commit hook using a pixi console script false-fails locally even though CI passes — system-installed package in ~/.local/bin shadows the local dev version, (7) ruff I001/RUF059 fires on inline imports or unused tuple unpacking inside test functions after adding new tests, (8) mypy pre-commit hook fails because an UNTRACKED test file references methods not yet committed — the hook checks ALL .py files on disk including untracked ones, (9) CI ruff-format hook fails even though local `ruff check` passed — `ruff check` (lint) and `ruff format --check` (formatter) are SEPARATE tools sharing one binary and running only `check` never exercises the formatter, (10) running pre-commit against the full PR diff (every file changed since merge-base) with `--from-ref/--to-ref` not just `--files <current edit>` — a sub-agent's earlier commit can carry stale-formatter content that fails only in CI, (11) adding .editorconfig for cross-editor formatting consistency on non-Python files (YAML, JSON, Markdown, shell, Makefile), (12) an automated PR-reviewer flags lint/formatter/pre-commit-forced incidental churn as scope creep — toolchain-forced churn is exempt from YAGNI/scope review while author-chosen opportunistic work is still flagged, (13) removing a duplicate standalone markdownlint CI job when the lint job already runs pre-commit --all-files — MUST verify the job is NOT a required-check context in branch protection before deleting it, and MUST pre-scan the newly-in-scope files for violations that --fix cannot auto-fix, (14) the pre-commit hook exclude pattern for .claude/ may be LOAD-BEARING (not merely defensive) — confirm with git ls-files .claude/ before removing it; two tracked .md files (.claude/security/guidelines.md and .claude/workflows/development.md) exist in ProjectHephaestus and must remain excluded to match the standalone CI job's intent, (15) after removing a duplicate markdownlint CI job update every doc that names that job by its old CI name (e.g. docs/DEFINITION_OF_DONE.md and .github/README.md) or CI job name references become stale; (16) BOTH the required `lint` check AND the `pre-commit` check are red in a PR — they share the same `ruff format` hook, so a single `ruff format <files>` run clears both; do not debug as two separate problems; (17) adding a commit-msg-stage hook (e.g. conventional-commit validator) — must set `default_install_hook_types: [pre-commit, commit-msg]` in .pre-commit-config.yaml or plain `pre-commit install` silently omits the commit-msg stage and the hook is permanently inert for all contributors; (18) verifying that a commit-msg-stage hook actually fires — `pre-commit run --all-files` does NOT invoke commit-msg-stage hooks; drive them via `pre-commit run --hook-stage commit-msg --commit-msg-filename <file>` instead; (19) adding a Bandit SAST hook that scans a whole directory via --ini config — must use `pass_filenames: false` or pre-commit appends individual changed filenames, bypassing the .bandit INI targets and recursive settings; (20) adding a repo: local pre-commit hook for a pixi.toml-scoped stdlib-only checker script — use `files: ^pixi\\.toml$` and `pass_filenames: false` so the checker finds pixi.toml via get_repo_root() rather than receiving it as an argument; (21) a pip-audit task-definition regex also matches dep-version lines in the same pixi.toml because the value group was not anchored to start with `pip-audit` — causing false parser errors; anchor the value group: `r'\"(?P<value>pip-audit[^\"]*)'` to distinguish task definitions from version pins like `pip-audit = \">=2.7,<3\"`; (22) IGNORE_VULN_RE.findall(text) on the whole file hits `--ignore-vuln below` in ledger documentation comments, producing spurious matches — scope the raw scan to non-comment lines only before running findall; (23) a pixi.toml comment claiming a script enforces an invariant fails review if the hook wiring does not exist yet — never document enforcement automation before the hook/CI step is actually wired."
 category: tooling
-date: 2026-06-19
-version: "2.3.1"
+date: 2026-06-23
+version: "2.4.0"
 user-invocable: false
-verification: verified-ci
+verification: verified-precommit
 history: pre-commit-hooks-and-linting-config.history
-tags: [merged, pre-commit, linting, ruff, mypy, clang-format, yamllint, actionlint, hooks, pixi-environment, bandit, markdownlint, sast, ruff-format, editorconfig, pr-diff, ci-parity, pr-review, yagni, commit-msg, default-install-hook-types, check-toml, toml, uv-lock, pass_filenames]
+tags: [merged, pre-commit, linting, ruff, mypy, clang-format, yamllint, actionlint, hooks, pixi-environment, bandit, markdownlint, sast, ruff-format, editorconfig, pr-diff, ci-parity, pr-review, yagni, commit-msg, default-install-hook-types, check-toml, toml, uv-lock, pass_filenames, pip-audit-ledger, pixi-toml-hook, toml-regex, comment-enforcement]
 ---
 
 # Pre-commit Hooks and Linting Configuration
@@ -16,10 +16,10 @@ tags: [merged, pre-commit, linting, ruff, mypy, clang-format, yamllint, actionli
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-19 |
+| **Date** | 2026-06-23 |
 | **Objective** | Canonical single-entry-point for all pre-commit hook and linting advice across the HomericIntelligence ecosystem |
-| **Outcome** | Consolidated from 53 narrow skills; TOML/Ruff parity verified-ci; Bandit `pass_filenames: false` pattern added (verified-local) |
-| **Verification** | verified-ci |
+| **Outcome** | Consolidated from 53 narrow skills; TOML/Ruff parity verified-ci; Bandit `pass_filenames: false` pattern added (verified-local); pip-audit ledger checker patterns added (verified-precommit) |
+| **Verification** | verified-ci; verified-precommit (pip-audit ledger patterns) |
 | **History** | [changelog](./pre-commit-hooks-and-linting-config.history) |
 
 ## When to Use
@@ -64,6 +64,10 @@ tags: [merged, pre-commit, linting, ruff, mypy, clang-format, yamllint, actionli
 - Adding a `commit-msg`-stage hook (e.g. conventional-commit-format validator) and discovering it never fires — check whether `default_install_hook_types` is set; without it, plain `pre-commit install` only wires the `pre-commit` stage, leaving the hook permanently inert for every contributor
 - A commit-msg hook appears in `.pre-commit-config.yaml` with `stages: [commit-msg]` and `pre-commit run --all-files` returns green — but the hook has never actually been invoked; `--all-files` skips commit-msg-stage hooks entirely; use `pre-commit run --hook-stage commit-msg --commit-msg-filename <file>` to exercise it
 - Adding a Bandit SAST pre-commit hook that scans a whole directory tree via `--ini .bandit` — **always** use `pass_filenames: false`; with `pass_filenames: true` pre-commit appends individual changed filenames to the command, causing Bandit to treat those files as its targets and bypassing the `.bandit` INI's `targets`/`recursive` settings entirely; the `files:` regex still controls which file changes trigger the hook
+- Adding a `repo: local` pre-commit hook for a `pixi.toml`-scoped stdlib-only checker script — use `files: ^pixi\.toml$` and `pass_filenames: false` so the checker locates `pixi.toml` via `get_repo_root()` rather than receiving individual filenames from pre-commit; insert in the same `repo: local` block as other security policy hooks
+- A pip-audit task-definition regex also matches dep-version lines in the same `pixi.toml` because the value group was not anchored to start with `pip-audit` — for example `pip-audit = ">=2.7,<3"` (version pin) also matches `r'pip-audit\s*=\s*"[^"]*"'`; anchor the value: `r'pip-audit\s*=\s*"(?P<value>pip-audit[^"]*)"'` to distinguish task definitions from dep-version pins
+- `IGNORE_VULN_RE.findall(text)` on the full file text hits `--ignore-vuln below` in ledger documentation comments, producing a spurious extra match — filter to non-comment lines before calling `findall`: `non_comment_lines = [ln for ln in lines if not ln.lstrip().startswith("#")]`
+- A `pixi.toml` comment claims a script enforces an invariant but the pre-commit hook wiring does not exist yet — a reviewer will flag this as a false invariant claim (POLA violation); never write "enforced by scripts/X.py" in documentation comments until the hook entry in `.pre-commit-config.yaml` actually exists
 
 ## Verified Workflow
 
@@ -447,6 +451,61 @@ pixi run pre-commit run bandit --all-files
 ```
 
 Verified locally on ProjectTelemachy issue #157.
+
+#### Pixi.toml-scoped local hook for stdlib-only checker scripts
+
+When a security policy checker script is stdlib-only (no third-party imports) and scoped to
+`pixi.toml`, wire it as a `repo: local` hook with `files: ^pixi\.toml$` and `pass_filenames: false`.
+The checker finds `pixi.toml` itself via `get_repo_root()` rather than receiving filenames from
+pre-commit, so `pass_filenames: false` is required.
+
+**Canonical hook YAML pattern (verified-precommit, ProjectHephaestus issue #1550):**
+
+```yaml
+- repo: local
+  hooks:
+    - id: check-pip-audit-ledger-reminder
+      name: Check pip-audit ledger suppressions have re-review triggers
+      description: Reject '--ignore-vuln' entries lacking a 'Re-review:' trigger
+      entry: python3 scripts/check_pip_audit_ledger_reminder.py
+      language: system
+      pass_filenames: false
+      files: ^pixi\.toml$
+```
+
+Insert the hook in the existing `repo: local` block alongside other security policy hooks
+(e.g. after `check-security-version-consistency`, before `check-build-dir-untracked`).
+
+**Two regex pitfalls when parsing pixi.toml for `pip-audit` entries:**
+
+1. **Value-group anchoring** — the unanchored pattern `r'pip-audit\s*=\s*"[^"]*"'` matches
+   BOTH the task definition (`pip-audit = "pip-audit --ignore-vuln ..."`) AND the dep-version
+   pin (`pip-audit = ">=2.7,<3"`). The raw-vs-parsed count comparison then raises a false
+   `<parser>` error on every real `pixi.toml` that has a pip-audit dep pin alongside the task.
+   Fix: anchor the value group on `pip-audit`:
+
+   ```python
+   PIP_AUDIT_TASK_RE = re.compile(
+       r'^\s*pip-audit\s*=\s*"(?P<value>pip-audit[^"]*)"\s*$'
+   )
+   ```
+
+2. **Comment-line leakage** — `IGNORE_VULN_RE.findall(text)` on the whole file matches the
+   phrase `--ignore-vuln below` in a ledger documentation comment header (e.g., "Each
+   `--ignore-vuln` below MUST carry a reason"), producing a spurious extra match. Scope the
+   raw scan to non-comment lines:
+
+   ```python
+   non_comment_lines = [ln for ln in lines if not ln.lstrip().startswith("#")]
+   raw_count = len(IGNORE_VULN_RE.findall("\n".join(non_comment_lines)))
+   ```
+
+**POLA note on enforcement claims:** do NOT add a comment like "enforced at commit/CI time by
+`scripts/check_pip_audit_ledger_reminder.py`" to `pixi.toml` until the hook entry in
+`.pre-commit-config.yaml` actually exists. Claiming enforcement before wiring creates a false
+invariant that a reviewer will catch as a POLA violation.
+
+Verified by ProjectHephaestus issue #1550 / PR #1586.
 
 #### mypy pre-commit failure on untracked test file (multi-commit workflow)
 
@@ -1362,6 +1421,10 @@ feasible (e.g., constrained CI environments, conda-forge only providing old Go v
 | Ruff D301 — bare docstring with escaped `\n` in commit-msg validator | Wrote `"""Validate message.\n\nReturns True if valid."""` in the validator script | Ruff D301 fires: "Use `r\"\"\"` if any backslashes in a docstring" — the docstring contains a `\n` escape, which ruff treats as a reason to require a raw string | Use `r"""..."""` for any docstring that contains backslash sequences; raw strings suppress D301 without changing behaviour |
 | "Your pre-commit configuration is unstaged" abort during `--hook-stage` run | Modified `.pre-commit-config.yaml` to add `default_install_hook_types` then ran `pre-commit run --hook-stage commit-msg` before staging the file | pre-commit reads the config from the git index (staged version), not the working tree; an unstaged config change causes an immediate abort with an error message | Run `git add .pre-commit-config.yaml` before any `pre-commit run` invocation after modifying the config |
 | Assumed `core.hooksPath` blocking `pre-commit install` also blocks `--hook-stage` verification | In a repo with a custom `core.hooksPath`, skipped `--hook-stage` testing because `install` had failed | `pre-commit run --hook-stage` bypasses git hook installation entirely and invokes the pre-commit framework directly; it works regardless of `core.hooksPath` configuration | `core.hooksPath` affects `pre-commit install` (which writes `.git/hooks/`) but NOT direct framework invocations via `pre-commit run --hook-stage` |
+| Unanchored `pip-audit` task-definition regex matched dep-version lines in pixi.toml | Wrote `PIP_AUDIT_TASK_RE = re.compile(r'pip-audit\s*=\s*"[^"]*"')` to extract task command; regex matched BOTH `pip-audit = "pip-audit --ignore-vuln ..."` (task) AND `pip-audit = ">=2.7,<3"` (dep version pin) | The raw-vs-parsed count comparison triggered a false `<parser>` error on every pixi.toml that has a pip-audit dep pin alongside the task | Anchor the value group: `r'pip-audit\s*=\s*"(?P<value>pip-audit[^"]*)"'` — the value group must start with `pip-audit` to exclude dep-version pins |
+| `IGNORE_VULN_RE.findall(text)` on the whole pixi.toml file | Called `findall` on the complete raw file text to count `--ignore-vuln` occurrences | Matched `--ignore-vuln below` in a ledger documentation comment header ("Each `--ignore-vuln` below MUST carry a reason"), producing a spurious extra match and a false count mismatch | Filter to non-comment lines before `findall`: `non_comment_lines = [ln for ln in lines if not ln.lstrip().startswith("#")]`; then `findall` on the joined non-comment text |
+| Documented `pip-audit` script enforcement in pixi.toml before wiring the hook | Added comment "enforced at commit/CI time by `scripts/check_pip_audit_ledger_reminder.py`" to `pixi.toml` before inserting the hook entry in `.pre-commit-config.yaml` | Reviewer flagged the invariant claim as false: the script existed but the hook that runs it did not; the comment described a guarantee the repo could not yet make | Never document "enforced by <script>" until the hook entry in `.pre-commit-config.yaml` is committed; enforcement claims are only true once the wiring exists |
+| `pass_filenames: true` for pixi.toml-scoped stdlib checker hook | Omitted `pass_filenames: false` on the `check-pip-audit-ledger-reminder` hook; pre-commit passed `pixi.toml` as `sys.argv[1]` | Checker script used `get_repo_root()` to find pixi.toml and ignored `sys.argv`; the extra argument was harmless but semantically wrong and could mislead future maintainers | Always set `pass_filenames: false` for hooks that locate their target file via `get_repo_root()` rather than from pre-commit-provided filenames |
 
 ## Results & Parameters
 
@@ -1551,6 +1614,7 @@ indent_style = tab                 # Make syntax requires tabs
 | ProjectScylla | PR #1556, audit finding S13 (.editorconfig cross-editor consistency) | [history file](pre-commit-hooks-and-linting-config.history) |
 | ProjectMnemosyne | Closed PR #2353 (commit-msg-stage hooks + `default_install_hook_types` learning) | [history file](pre-commit-hooks-and-linting-config.history) |
 | ProjectTelemachy | Issue #157 (Bandit SAST hook `pass_filenames: false` — directory-scanning tools must never receive per-file args from pre-commit) | verified-local |
+| ProjectHephaestus | Issue #1550 / PR #1586 (pip-audit ledger checker: pixi.toml-scoped local hook pattern, `PIP_AUDIT_TASK_RE` value-group anchoring, non-comment-line scoping for `IGNORE_VULN_RE`, POLA note on enforcement claims) | verified-precommit |
 
 ## References
 

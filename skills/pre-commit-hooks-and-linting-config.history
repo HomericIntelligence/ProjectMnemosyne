@@ -1,6 +1,45 @@
 <!-- markdownlint-disable MD024 -->
 # pre-commit-hooks-and-linting-config -- History
 
+## v2.4.0 (2026-06-23) -- Add pip-audit ledger checker patterns: pixi.toml task-regex anchoring, non-comment-line scoping, local hook wiring, POLA enforcement claim note (ProjectHephaestus issue #1550)
+
+**Changed by:** ProjectHephaestus issue #1550 / PR #1586 pip-audit ledger checker session
+**Verification:** verified-precommit
+
+### What changed
+
+- Added triggers (20)-(23) to frontmatter `description`:
+  - (20) adding a `repo: local` hook for a `pixi.toml`-scoped stdlib-only checker script
+  - (21) pip-audit task-definition regex matches dep-version lines when value group is not anchored
+  - (22) `IGNORE_VULN_RE.findall(text)` on the whole file hits `--ignore-vuln below` in doc comments
+  - (23) documenting script enforcement before hook wiring creates a false invariant claim
+- Added 4 new "When to Use" bullets covering the same triggers.
+- Added new Verified Workflow subsection "Pixi.toml-scoped local hook for stdlib-only checker scripts" with canonical hook YAML, two regex pitfall fixes, and POLA note on enforcement claims.
+- Added 4 Failed Attempts rows:
+  - Unanchored `pip-audit` task-definition regex matched dep-version lines
+  - `IGNORE_VULN_RE.findall(text)` on the whole file matched comment phrase `--ignore-vuln below`
+  - Documented enforcement in pixi.toml before wiring the hook
+  - `pass_filenames: true` for pixi.toml-scoped stdlib checker hook
+- Added "ProjectHephaestus issue #1550 / PR #1586" row to "Verified On" table.
+- Updated tags: added `pip-audit-ledger`, `pixi-toml-hook`, `toml-regex`, `comment-enforcement`.
+- Version bumped 2.3.1 → 2.4.0 (minor: new When-to-Use triggers + new subsection).
+- Date updated 2026-06-19 → 2026-06-23.
+
+### Why
+
+ProjectHephaestus issue #1550 added a stdlib-only pre-commit checker script
+(`scripts/check_pip_audit_ledger_reminder.py`) that validates pip-audit suppression ledger entries
+in `pixi.toml`. Two regex bugs were found: (1) the task-definition pattern matched dep-version pins
+because the value group was not anchored to start with `pip-audit`, triggering false `<parser>`
+errors; (2) `IGNORE_VULN_RE.findall()` on the full file text matched the phrase `--ignore-vuln below`
+in a doc-comment header, producing a spurious extra match. Additionally, a reviewer found that a
+pixi.toml comment claimed script enforcement before the hook was wired, which is a POLA violation.
+These are general principles applicable to any pixi.toml-scoped policy checker.
+
+### Previous version (v2.3.1) snapshot
+
+(see v2.3.1 entry below)
+
 ## v2.3.1 (2026-06-19) -- Add Bandit `pass_filenames: false` pattern for directory-scanning hooks (ProjectTelemachy issue #157)
 
 **Changed by:** ProjectTelemachy issue #157 Bandit SAST pre-commit hook implementation session
