@@ -1,0 +1,16 @@
+# gha-workflow-concurrency-controls — History
+
+## v1.0.0 (2026-06-23)
+
+**Changed by:** Initial creation from the ProjectHephaestus issue #1548 plan to add `concurrency:` blocks to four event-driven workflows (per-issue automation, release/publish, auto-tag, PR-scan) that lacked them.
+**Verification:** unverified (planning learning — the plan was NOT implemented and NOT CI-verified; the author read each target file once, applied no edit, and ran no CI).
+
+### What changed
+- New skill capturing the core decision rule for GitHub Actions concurrency controls: `cancel-in-progress: true` for idempotent / supersede-able runs (tests, scans, idempotent label POSTs) and `cancel-in-progress: false` for non-idempotent publishers (git tag push, PyPI publish, GitHub release creation) that must not be interrupted mid-flight.
+- Group-key selection map: `github.event.issue.number || github.run_id` (per-issue), `github.ref` (per-tag publish), `github.head_ref || github.ref` (PR scan — NOT `github.sha`, which fails to collapse successive pushes).
+- Noted that `${{ github.* }}` inside `concurrency.group:` is a context-expression YAML key, not a `run:` shell sink, so the workflow-injection / env-var-lift rule does not apply.
+- Noted that adding `concurrency:` to a non-required workflow cannot brick the merge queue; only a pinned required status-check context could interact — verify before assuming.
+- Failed Attempts table doubles as a reviewer checklist of UNVERIFIED assumptions (exact insertion line numbers, `auto-tag.yml` trigger shape, label-POST idempotency, required-context status) that must be confirmed against the live files because the plan was never applied or tested.
+
+### Why
+The plan repeatedly risked the reflex of universal `cancel-in-progress: true` (unsafe for publishers) and the `github.sha` PR-scan key (collapses nothing). Capturing the idempotency-gated decision rule and the trigger-driven group-key map prevents both. Captured at `unverified` level because no edit was applied and no CI run confirmed the chosen keys behave as reasoned.
