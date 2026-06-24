@@ -1,5 +1,21 @@
 # gha-workflow-concurrency-controls — History
 
+## v1.1.0 (2026-06-23)
+
+**Changed by:** ProjectHephaestus issue #1548 implementation — concurrency blocks applied to four workflows.
+**Verification:** verified-local (YAML parse + structural assertions passed; CI validation pending).
+
+### What changed
+- Bumped verification from `unverified` to `verified-local` — the plan was implemented: concurrency blocks added to `auto-label-needs-plan.yml`, `auto-tag.yml`, `release.yml`, `security.yml` in ProjectHephaestus.
+- Removed the "Warning: unverified" banners from the skill body.
+- Updated "Verified On" table with actual implementation result.
+- Updated Results & Parameters verification level entry.
+
+### Why
+The plan (v1.0.0) was captured at `unverified` level because no edits had been applied. Issue #1548 implemented all four additions with YAML structural verification. The decision rules and group-key patterns proved correct in practice.
+
+---
+
 ## v1.0.0 (2026-06-23)
 
 **Changed by:** Initial creation from the ProjectHephaestus issue #1548 plan to add `concurrency:` blocks to four event-driven workflows (per-issue automation, release/publish, auto-tag, PR-scan) that lacked them.

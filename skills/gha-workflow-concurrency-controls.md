@@ -3,9 +3,9 @@ name: gha-workflow-concurrency-controls
 description: "Choosing GitHub Actions `concurrency:` controls when ADDING them to event-driven workflows that currently lack them — selecting the `group` key and `cancel-in-progress` value per the workflow's trigger and its side-effect idempotency. The ONE decision rule: `cancel-in-progress: true` for idempotent / supersede-able runs (tests, scans, idempotent label POSTs — newest event wins), `cancel-in-progress: false` for non-idempotent publishers that must not be interrupted mid-flight (git tag push, PyPI publish, GitHub release creation). Group-key selection scopes the serialization: `github.event.issue.number` (+ `github.run_id` fallback) for per-issue, `github.ref` for per-tag (distinct tags publish in parallel, same tag never double-publishes), `github.head_ref || github.ref` (NOT `github.sha`) for PR scans so successive pushes collapse. Use when: (1) a workflow has no `concurrency:` block and you must pick `group`/`cancel-in-progress` by trigger, (2) deciding whether cancelling a run is safe — gate it on side-effect idempotency not convenience, (3) a publish/release workflow needs serialization without over- or under-serializing across tags, (4) PR-scan concurrency must collapse rapid successive pushes (use head_ref, NOT sha), (5) confirming `${{ github.* }}` in a `concurrency.group` does NOT introduce a workflow-injection sink (it is a YAML-key context expr, not a `run:` interpolation), (6) confirming a workflow you are editing is NOT a pinned required status-check context before assuming branch-protection interaction."
 category: ci-cd
 date: 2026-06-23
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
-verification: unverified
+verification: verified-local
 history: gha-workflow-concurrency-controls.history
 tags:
   - github-actions
@@ -44,9 +44,7 @@ tags:
 | **Date** | 2026-06-23 |
 | **Objective** | Capture the durable decision rules for adding a `concurrency:` block to event-driven GitHub Actions workflows that lack one — how to choose the `group` key and the `cancel-in-progress` value from the workflow's trigger and the idempotency of its side effects. Surfaced while PLANNING (ProjectHephaestus, issue #1548 plan) the addition of `concurrency:` to four workflows: a per-issue automation workflow, a release/publish workflow, an auto-tag workflow, and a PR-scan workflow. |
 | **Outcome** | Hypothesis only — the plan was NOT implemented and NOT CI-verified. The author read each target workflow file ONCE; no edit was applied and no CI run confirmed the chosen keys behave as reasoned. Verification stays `unverified`. The decision RULES below are durable; the per-file specifics (insertion lines, trigger shapes, required-context status) are unverified assumptions a reviewer must re-confirm against the live files. |
-| **Verification** | unverified |
-
-> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
+| **Verification** | verified-local (YAML parse + structural assertions; CI pending) |
 
 ## When to Use
 
@@ -61,9 +59,7 @@ Reach for this when you are ADDING a `concurrency:` block to a workflow that cur
 
 ## Verified Workflow
 
-> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
->
-> **Heading note:** The repository validator (`scripts/validate_plugins.py`) hard-requires the literal section string `## Verified Workflow`, so the canonical steps live under that heading to keep validation green. This skill is a PLANNING methodology captured at `unverified` level — read every step below as **proposed** per the warning above.
+> **Note:** This workflow was implemented in ProjectHephaestus issue #1548 (added concurrency blocks to auto-label-needs-plan.yml, auto-tag.yml, release.yml, security.yml). YAML parse and structural assertions passed locally; CI validation pending. Verification level: `verified-local`.
 
 ### Quick Reference
 
@@ -123,8 +119,8 @@ Key facts:
 **4. Confirm no branch-protection interaction before assuming one.**
 Adding `concurrency:` to a workflow that is NOT a pinned required status-check context cannot brick the merge queue — there is no required context whose cancellation/serialization would leave a PR un-mergeable. Before assuming any interaction, enumerate the repo/org ruleset required contexts and confirm the target workflow's jobs are not among them. (In the issue #1548 plan, none of the four target workflows were required contexts — but that was a single read, re-verify per repo. See `gha-required-checks-branch-protection`.)
 
-**5. Treat every per-file specific as an unverified assumption (this plan was never applied).**
-The plan author read each of the four target files ONCE and never applied/CI-ran the edits. A reviewer/implementer MUST independently confirm, against the LIVE files, each item in the "assumptions a reviewer must check" rows of the Failed Attempts table below — exact insertion lines, trigger shapes, and required-context status — before treating any of them as fact.
+**5. Verify per-file specifics against the live files before assuming line numbers.**
+The group-key decision rules are durable. Exact insertion lines in any specific workflow file may drift — always re-read the live file and confirm the insertion point (top-level, after `on:`/`permissions:`, before `jobs:`) before editing.
 
 ## Failed Attempts
 
@@ -144,7 +140,7 @@ The plan author read each of the four target files ONCE and never applied/CI-ran
 
 | Parameter | Value |
 | --------- | ----- |
-| **Verification level** | unverified (planning learning — plan NOT implemented, NOT CI-verified) |
+| **Verification level** | verified-local (implemented in ProjectHephaestus issue #1548; YAML parse + structural assertions passed; CI pending) |
 | **Decision rule** | `cancel-in-progress: true` ⇔ idempotent/supersede-able side effect; `false` ⇔ non-idempotent publisher (tag/PyPI/release) |
 | **Per-issue group** | `${{ github.workflow }}-${{ github.event.issue.number \|\| github.run_id }}`, `cancel-in-progress: true` |
 | **Per-tag (publish) group** | `${{ github.workflow }}-${{ github.ref }}`, `cancel-in-progress: false` |
@@ -157,4 +153,4 @@ The plan author read each of the four target files ONCE and never applied/CI-ran
 
 | Repo | Context | Status |
 | ---- | ------- | ------ |
-| ProjectHephaestus | issue #1548 plan (add `concurrency:` to four workflows) | Planning only — unverified; no edit applied, no CI run |
+| ProjectHephaestus | issue #1548 — added `concurrency:` to auto-label-needs-plan.yml, auto-tag.yml, release.yml, security.yml | verified-local (YAML parse + structural assertions; CI pending) |

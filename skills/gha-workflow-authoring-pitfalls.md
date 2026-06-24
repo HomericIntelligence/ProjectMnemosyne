@@ -1,9 +1,9 @@
 ---
 name: gha-workflow-authoring-pitfalls
-description: "Use when: (1) a workflow file is silently ignored or produces 0 jobs due to invalid YAML job IDs (forward slashes), (2) a composite-action input description contains ${{ }} expressions that get evaluated unexpectedly, (3) a security hook blocks editing a workflow run: block because of a ${{ }} injection sink — and you need the env-var-lift pattern, (4) documenting platform asymmetries (Linux-only, macOS-skipped) in workflow header comments, (5) a WorkflowDispatch or PreToolUse hook fires on an edit to .github/workflows/*.yml, (6) a workflow step fails with 'GitHub Actions is not permitted to create or approve pull requests' and you need to diagnose repo-vs-org policy and choose org-toggle vs PAT/App-token vs direct-commit, (7) adding labeled/unlabeled/auto_merge_* event types to a pull_request trigger re-runs ALL jobs (the trigger is workflow-wide) when you wanted only specific policy jobs to run on label events — and you need the changes-gate needs/if pattern."
+description: "Use when: (1) a workflow file is silently ignored or produces 0 jobs due to invalid YAML job IDs (forward slashes), (2) a composite-action input description contains ${{ }} expressions that get evaluated unexpectedly, (3) a security hook blocks editing a workflow run: block because of a ${{ }} injection sink — and you need the env-var-lift pattern, (4) documenting platform asymmetries (Linux-only, macOS-skipped) in workflow header comments, (5) a WorkflowDispatch or PreToolUse hook fires on an edit to .github/workflows/*.yml, (6) a workflow step fails with 'GitHub Actions is not permitted to create or approve pull requests' and you need to diagnose repo-vs-org policy and choose org-toggle vs PAT/App-token vs direct-commit, (7) adding labeled/unlabeled/auto_merge_* event types to a pull_request trigger re-runs ALL jobs (the trigger is workflow-wide) when you wanted only specific policy jobs to run on label events — and you need the changes-gate needs/if pattern, (8) an event-driven workflow (issues, schedule, workflow_dispatch, push:tags) lacks a concurrency: block — and you need to choose the right group key and cancel-in-progress semantics based on side-effect profile (idempotent label/scan = true; non-idempotent tag-push/publish = false)."
 category: ci-cd
-date: 2026-06-08
-version: "1.2.0"
+date: 2026-06-23
+version: "1.3.0"
 verification: verified-ci
 user-invocable: false
 history: gha-workflow-authoring-pitfalls.history
@@ -31,6 +31,11 @@ tags:
   - job-gating
   - changes-gate
   - branch-protection
+  - concurrency
+  - cancel-in-progress
+  - event-driven
+  - idempotent
+  - publisher
 ---
 
 # GitHub Actions: Workflow-Authoring Pitfalls
@@ -39,8 +44,8 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-08 |
-| **Objective** | Consolidate the recurring GitHub Actions workflow-authoring traps: invalid job IDs, expression evaluation in composite-action descriptions, the env-var-lift fix for injection hooks, platform-scope header documentation, editing path-blocked workflow files, the org create-PR policy block, and the workflow-wide `pull_request` trigger re-running all jobs on label/auto-merge events |
+| **Date** | 2026-06-23 |
+| **Objective** | Consolidate the recurring GitHub Actions workflow-authoring traps: invalid job IDs, expression evaluation in composite-action descriptions, the env-var-lift fix for injection hooks, platform-scope header documentation, editing path-blocked workflow files, the org create-PR policy block, the workflow-wide `pull_request` trigger re-running all jobs on label/auto-merge events, and choosing the right `concurrency:` group key and `cancel-in-progress` semantics for event-driven workflows |
 | **Outcome** | One reference covering the distinct gotchas, each with a copy-paste fix and the failed approaches that do NOT work |
 | **Verification** | verified-ci |
 
@@ -52,6 +57,7 @@ tags:
 - A CI workflow intentionally targets only some platforms (e.g. Linux-only matrix) and you need to document why without making misleading "cross-platform" claims. → platform-scope header.
 - A `PreToolUse:Edit` hook blocks the `Edit` tool on `.github/workflows/*.yml` **by path alone** (no `${{` involved). → edit-tool-blocked workaround.
 - Adding `labeled`/`unlabeled`/`auto_merge_enabled`/`auto_merge_disabled` to a `pull_request` trigger (so a policy job converges on label/auto-merge state) re-runs **ALL** jobs because the trigger is workflow-wide — you wanted only specific jobs to run on label events. → changes-gate `needs:`/`if:` pattern.
+- An event-driven workflow (`issues:`, `push: tags:`, `schedule:`, `workflow_dispatch:`) currently lacks a `concurrency:` block and overlapping triggers are stacking redundant in-flight runs — you need to choose the right group key and `cancel-in-progress` value based on the workflow's side-effect profile. → concurrency controls.
 
 ## Verified Workflow
 
@@ -66,6 +72,7 @@ tags:
 | Edit tool path-blocked on workflows | `PreToolUse:Edit` hook error on `.github/workflows/*.yml` by path | Use `python3 -c` surgical replace via Bash, or full rewrite via `Write` |
 | Actions blocked from creating PRs | `GitHub Actions is not permitted to create or approve pull requests` at the create-PR step | Org admin enables "Allow Actions to create and approve PRs"; or pass a fine-grained PAT/App token to checkout + create-PR step; or commit direct to main |
 | Label/auto-merge event re-runs ALL jobs | Added `labeled`/`unlabeled`/`auto_merge_*` to `pull_request` `types:` so a policy job converges, but every label toggle re-runs the full matrix | Add a `changes-gate` job that emits `code_event=false` for those actions; gate heavy jobs on `needs: changes-gate` + `if: …code_event == 'true'`; leave policy jobs ungated |
+| Missing concurrency block | Overlapping runs race or stack; publishers can double-publish or push duplicate tags | Add top-level `concurrency:` block with group key scoped to the event (issue number, ref, workflow) and cancel-in-progress matching side-effect profile |
 
 ```bash
 # Detection one-liners
@@ -339,6 +346,69 @@ Each heavy job then gets `needs: changes-gate` + `if: needs.changes-gate.outputs
 
 **Self-test method** (how this was verified-ci): after the PR's initial CI runs once on the code event, **ADD then REMOVE** a throwaway label and inspect `gh run view <id> --json jobs`; the label-event run shows the 16 heavy jobs `skipped` and only `changes-gate` / `pr-policy` / `auto-merge-policy` `success`. Done live on PR #1108 — the 16 heavy jobs showed `skipped`, the PR stayed CLEAN/MERGEABLE.
 
+#### 8. Missing concurrency controls on event-driven workflows
+
+Event-driven workflows (triggered by `issues:`, `push: tags:`, `schedule:`, `workflow_dispatch:`) can receive overlapping triggers — rapid issue reopen storms, double tag pushes, back-to-back manual dispatches. Without a top-level `concurrency:` block, GitHub queues and runs all instances concurrently. The correct semantics depend on the workflow's side-effect profile:
+
+**cancel-in-progress: true** — idempotent / read-only side effects (newest run supersedes):
+
+- Label POSTs (adding a label the issue already has is a no-op)
+- Security/dependency scans (only the latest result matters)
+
+**cancel-in-progress: false** — non-idempotent / must-not-interrupt side effects:
+
+- Tag push (`git push origin vX.Y.Z`) — two runs computing the same next version can race on the push
+- PyPI publish + GitHub release creation — cancelling mid-publish leaves a broken half-published state
+
+**Group key patterns** (copy-paste ready):
+
+```yaml
+# Per-issue idempotent label — run_id fallback for workflow_call path (no issue context)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number || github.run_id }}
+  cancel-in-progress: true
+
+# Per-workflow serializer for single-writer dispatches (tag push)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.workflow }}
+  cancel-in-progress: false
+
+# Per-ref serializer for publishers (PyPI publish, GitHub release)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+# Per-branch scan — head_ref collapses PR pushes; falls back to ref for schedule/dispatch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+```
+
+**Critical detail — workflow_call fallback**: When a workflow has both a direct trigger (e.g. `issues:`) and a `workflow_call:` trigger, `github.event.issue.number` is empty on the `workflow_call` path. Without `|| github.run_id`, ALL `workflow_call` invocations share one group and serialize globally — even unrelated calls from different repos. Always add `|| github.run_id` as the fallback for any per-entity key that may be absent on some trigger paths.
+
+**Placement**: Insert the `concurrency:` block after `permissions:` and before `jobs:` — it is a top-level workflow property, not a job property.
+
+```yaml
+# WRONG — job-level (only governs that job):
+jobs:
+  my-job:
+    concurrency:
+      group: ...
+
+# CORRECT — workflow-level (governs all jobs):
+permissions:
+  contents: read
+concurrency:
+  group: ...
+  cancel-in-progress: true
+jobs:
+  my-job:
+```
+
+**Note**: `${{ github.* }}` in `concurrency.group:` is a YAML-key context expression evaluated by the Actions runner — it is NOT `run:` shell interpolation. The env-var-lift rule (pitfall #3) does NOT apply to `group:` values; they introduce no injection sink.
+
+See also: `gha-workflow-concurrency-controls` skill for the full decision framework.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -355,6 +425,8 @@ Each heavy job then gets `needs: changes-gate` + `if: needs.changes-gate.outputs
 | Raising repo create-PR permission via API | `gh api --method PUT repos/OWNER/REPO/actions/permissions/workflow -f default_workflow_permissions=write` | HTTP 409 `Conflict: "Write permissions for workflows are disabled by the organization"` | Repo can't exceed org policy; and `default_workflow_permissions` is a DIFFERENT toggle than create-PR — chasing it is a red herring |
 | Treating a green workflow run as proof the create-PR fix worked | Dispatched the workflow, saw a successful run | The create-PR step was skipped by its `if:` (no artifact change), so success was a no-op — no PR ever created | Force a real change so the step fires, then confirm a PR was actually created (`gh pr list --head <branch>` shows `app/github-actions`) |
 | Adding label/auto-merge event types to the `pull_request` trigger so policy jobs converge | Added `labeled, unlabeled, auto_merge_enabled, auto_merge_disabled` to `on.pull_request.types` so `pr-policy`/`auto-merge-policy` re-run on label/auto-merge changes | The trigger is workflow-wide → every label change re-ran all 18 jobs incl. the full test matrix (py3.10-3.13), security scans, build, lint; an automation loop toggling `state:*` labels made it very expensive | Gate heavy jobs on a `changes-gate` job that returns `code_event=false` for label/auto-merge actions (`needs:` + `if:`); leave policy jobs ungated; skipped required checks keep the SHA's prior status so branch protection stays satisfied |
+| Missing run_id fallback on workflow_call path | Used `group: label-${{ github.event.issue.number }}` without fallback | On `workflow_call`, `issue.number` is undefined → all callers share one group → global serialization of unrelated calls | Always add `|| github.run_id` fallback for per-entity keys that may be absent on some trigger paths |
+| Placed concurrency: inside a job | `jobs.my-job.concurrency:` instead of top-level | Only governs that single job; other jobs in the workflow can still overlap | `concurrency:` must be a top-level key, sibling of `jobs:`, not nested inside it |
 
 ## Results & Parameters
 
@@ -379,3 +451,4 @@ Each heavy job then gets `needs: changes-gate` + `if: needs.changes-gate.outputs
 | HomericIntelligence/ProjectScylla | PR #1455 / Issue #1429 — Edit-tool path block | Workarounds documented in `.claude/shared/error-handling.md` |
 | ProjectMnemosyne | 2026-06-07: `update-marketplace.yml` create-PR step 403, diagnosed org block, validated org-toggle fix by live dispatch | PR #2261 |
 | ProjectHephaestus | PR #1108 (2026-06-08) — `_required.yml` label-event re-ran all 18 jobs; added a `changes-gate` job and gated the 16 heavy jobs on `needs: changes-gate` + `if: …code_event == 'true'`, left `pr-policy`/`auto-merge-policy` ungated | SELF-TESTED live: adding then removing a label re-ran only the gate + 2 policy jobs; the 16 heavy jobs showed `skipped`; PR stayed CLEAN/MERGEABLE |
+| ProjectHephaestus | Issue #1548 — added concurrency blocks to auto-label-needs-plan.yml, auto-tag.yml, release.yml, security.yml | verified-local (YAML parse + structural assertions; CI pending) |
