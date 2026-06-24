@@ -1,0 +1,181 @@
+# tooling-state-skip-label-recovers-skip-capped-prs — History
+
+## v2.0.0 (2026-06-23)
+
+**Changed by:** ProjectHephaestus PR #1584 "stop wrongly applying state:skip in a self-perpetuating cycle" (+ companion fixes #1572, #1575, #1589)
+**Verification:** verified-ci
+
+### What changed
+
+- Reframed the core understanding from "recover manually" to "the script was
+  wrongly ADDING `state:skip` in a self-perpetuating cycle — the root cause is
+  fixed; prevention shipped." This is a MAJOR bump because the recommendation
+  changed: operators no longer need to babysit a cycle, the automation no
+  longer creates the trap.
+- Documented the three stacked defects behind the self-perpetuating cycle
+  (sticky-skip non-recovery, repo-level rc mis-attribution, closed-issue
+  bypass) as new Failed Attempts rows.
+- Documented the FIX (state:skip is operator-only and absolute, read live;
+  the script never adds it spuriously): implementer drops
+  `_should_recover_stale_skip`; ci_driver gains a `pending_review` bucket;
+  loop_runner gains `_filter_open_issues` + `_issue_owns_genuinely_failing_pr`;
+  pr_manager gains the shared `pr_is_genuinely_stuck` classifier.
+- Added a "Verified Workflow" note that the prevention fix shipped and was
+  confirmed by a clean end-to-end run.
+- Upgraded verification from `verified-local` to `verified-ci` (the fix merged
+  and a clean run confirmed it).
+- Added `history` frontmatter field referencing this file.
+
+### Why
+
+v1.0.0 only documented the OPERATOR RECOVERY for an already-stranded
+skip-capped PR. It correctly described `state:skip` as sticky but treated the
+stickiness as inherent ("a SAFETY cap, but it is STICKY"). Investigation found
+the real root cause: the automation loop was itself wrongly ADDING `state:skip`
+every loop in a self-perpetuating cycle on issues [1554 OPEN, 1552 CLOSED],
+accomplishing nothing across all 5 loops. Three stacked defects combined into a
+deadlock: the implementer refused to recover whenever an OPEN PR existed; the
+repo-level drive-green rc was mis-attributed to every issue in the batch (a
+green-but-unarmed-pending-review PR landed in needs_action -> rc=1 -> spurious
+skip); and CLOSED issues pinned via `--issues` bypassed the open-state filter.
+
+The fix (PR #1584) makes `state:skip` OPERATOR-ONLY and ABSOLUTE — the
+automation must NEVER remove it and never auto-recover; it is read LIVE from the
+GitHub issue. The fix stops the script from wrongly ADDING it. After #1584 and
+companions #1572 (review-loop off-by-one), #1575 (no-commit retry), and #1589
+(remaining bugs) merged, a clean run (output.log 2026-06-23 20:52, issues
+1550,1548) merged PR #1590 with 0 errors, 0 skips and excluded closed #1550
+from the phase loop.
+
+The v1.0.0 operator-recovery content remains correct and is kept: removing the
+label by hand (`gh issue edit <N> --remove-label state:skip`) is still the
+right move for an ALREADY-stranded PR, because the script never removes it.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: tooling-state-skip-label-recovers-skip-capped-prs
+description: "The state:skip label silently blocks the hephaestus automation loop from re-attempting a PR; the review-iteration cap (MAX_REVIEW_ITERATIONS) applies it stickily and it persists even after the original blocker is fixed. Remove the label (gh issue edit <N> --remove-label state:skip), rebase the PR if DIRTY, then re-run the loop to recover. Use when: (1) hephaestus-automation-loop --issues <N> logs 'Skipping #<N> (state:skip)' and does nothing (planned=1 implemented=1 skipped=1, ~3s loops), (2) a PR's review comments never get addressed no matter how many times you re-run the loop, (3) a PR was adjudicated during a known-bad period (broken main, since-fixed loop bug) and is now stuck, (4) recovering skip-capped PRs after fixing the original blocking condition."
+category: tooling
+date: 2026-06-11
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - state-skip
+  - hephaestus-automation-loop
+  - skip-capped
+  - max-review-iterations
+  - iteration-cap
+  - re-attempt
+  - sticky-label
+  - remove-label
+  - dirty-pr-rebase
+  - recovery
+---
+
+# Recovering Skip-Capped PRs: Remove the `state:skip` Label
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-11 |
+| **Objective** | Recover PRs the automation loop permanently skips because the review-iteration cap applied a sticky `state:skip` label that persists even after the original blocking condition is fixed. |
+| **Outcome** | Verified locally — removing the label + rebasing let the loop re-attempt issue #719 / PR #1013, which reached GO + CI-pending this session (not yet merged at capture). |
+| **Verification** | verified-local |
+
+## When to Use
+
+- `hephaestus-automation-loop --issues <N>` runs but the implementer logs `Skipping #<N> (state:skip)` and does nothing (`planned=1 implemented=1 skipped=1`, ~3-second loops).
+- A PR never gets its review comments addressed no matter how many times you re-run the loop.
+- A PR was adjudicated during a KNOWN-BAD period (broken main, a contaminated review context, a since-fixed loop bug) and is now stuck.
+- You want to give a skip-capped PR another honest try on a now-fixed baseline.
+
+## Verified Workflow
+
+### Quick Reference
+
+\`\`\`bash
+# 1. Confirm the issue is skip-capped
+gh issue view <N> --json labels | grep state:skip
+
+# 2. Remove the sticky label (ONLY after the original blocker is genuinely fixed)
+gh issue edit <N> --remove-label state:skip
+
+# 3. If the PR is also DIRTY, rebase the branch onto current origin/main
+#    (worktree + rebase + resign with the key email + force-with-lease)
+git fetch origin
+git rebase origin/main          # resolve conflicts (e.g. SKILL.md)
+git push --force-with-lease
+
+# 4. Re-run the loop scoped to the issue
+hephaestus-automation-loop --issues <N>
+\`\`\`
+
+### Detailed Steps
+
+1. **Recognize the symptom.** The loop completes in ~3 seconds with `planned=1 implemented=1 skipped=1` and the log line `Skipping #<N> (state:skip)`. The PR's review comments are never addressed.
+
+2. **Understand the root cause.** The loop applies `state:skip` to an issue when its in-loop review hits `MAX_REVIEW_ITERATIONS` (the 3-iteration cap) without reaching GO. Once labeled, the implementer permanently skips it. This is a SAFETY cap, but it is STICKY — it persists even after the ORIGINAL blocking condition (a broken main, a contaminated review context, a now-fixed bug) is resolved.
+
+3. **Verify the blocker is genuinely fixed FIRST.** Only remove `state:skip` when the original blocker is actually resolved. Removing it means "give it another honest try on a fixed baseline," NOT "force it through." If the blocker still exists, the loop will just re-hit the cap and re-apply the label.
+
+4. **Remove the label.** `gh issue edit <N> --remove-label state:skip`.
+
+5. **Rebase the PR if it is DIRTY.** If the PR branch has drifted from `origin/main` (mergeable state DIRTY), rebase it: worktree + `git rebase origin/main` (resolve conflicts), resign commits with the GPG key email, then `git push --force-with-lease`. The loop will not productively touch a DIRTY PR.
+
+6. **Re-run the loop scoped to the issue.** `hephaestus-automation-loop --issues <N>`. With the skip gone and a fresh/green context, the loop re-attempts and can reach GO.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Re-run the loop repeatedly without removing the label | `hephaestus-automation-loop --issues <N>` over and over | The implementer checks `state:skip` at the top and logs `Skipping #<N> (state:skip)`; every run is a ~3s no-op (`planned=1 implemented=1 skipped=1`). The PR's review comments are never addressed. | The skip is sticky. No number of re-runs clears it — you must explicitly `--remove-label state:skip`. |
+| Remove the label while the PR was still DIRTY | Removed `state:skip`, re-ran the loop, but left the branch behind `origin/main` | The loop will not productively advance a DIRTY PR; it needs a clean rebase first. | Rebase the branch onto current `origin/main` (resolve conflicts, resign, force-with-lease) BEFORE re-running. |
+| Remove the label before fixing the original blocker | (anti-pattern) Strip `state:skip` while the broken baseline still exists | The loop re-runs, the in-loop review re-hits `MAX_REVIEW_ITERATIONS` without GO, and re-applies `state:skip` — back to square one. | Only remove the label once the original blocker is genuinely resolved. Removal is "another honest try," not "force-through." |
+
+## Results & Parameters
+
+### The label and log line
+
+- Label: `state:skip`
+- Loop log line: `Skipping #<N> (state:skip)`
+- No-op loop signature: `planned=1 implemented=1 skipped=1`, ~3-second iterations.
+
+### Detection
+
+\`\`\`bash
+gh issue view <N> --json labels | grep state:skip
+\`\`\`
+
+Several issues can be skip-capped at once. This session: issues #710 (PR #995) and #725 (PR #996) are STILL skip-capped (both verified to carry `state:skip`).
+
+### Verified recovery (this session)
+
+- Issue #719 / PR #1013: skip-capped → removed `state:skip` → rebased a `SKILL.md` conflict → re-ran the loop → reached GO + CI-pending (not yet merged at capture). verified-local.
+
+### Caution
+
+Only remove `state:skip` when the original blocker is genuinely resolved — otherwise the loop will just re-hit the `MAX_REVIEW_ITERATIONS` cap and re-apply it.
+
+### Related
+
+- Pair with the unpushed-fix-oscillation recovery (the loop may carry an unpushed fix commit).
+- Pair with rebasing DIRTY PRs before the loop will touch them.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | Recovering skip-capped PRs (issue #719 / PR #1013) by removing state:skip + rebasing | verified-local; reached GO + CI-pending, not yet merged at capture; issues #710/#725 still skip-capped; 2026-06-11 |
+```
+
+---
+
+## v1.0.0 (2026-06-11)
+
+**Initial version.** Documented the operator recovery for a skip-capped PR:
+remove the sticky `state:skip` label, rebase the PR if DIRTY, then re-run the
+loop. Verification: verified-local.
