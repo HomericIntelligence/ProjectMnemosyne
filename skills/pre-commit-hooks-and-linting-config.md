@@ -1,9 +1,9 @@
 ---
 name: pre-commit-hooks-and-linting-config
-description: "Canonical guide to pre-commit hook configuration, single-source-of-truth versioning, CI/local parity, and integration of ruff/mypy/clang-format/yamllint/actionlint/golangci-lint/bandit/hadolint/shellcheck/markdownlint. Use when: (1) writing or amending .pre-commit-config.yaml, (2) diagnosing why a hook passes locally but fails in CI (version drift), (3) deciding fix-vs-suppress for lint findings, (4) adding a new linter to an existing pre-commit pipeline, (5) reconciling ruff/mypy/markdownlint config across multiple repos, (6) a pre-commit hook using a pixi console script false-fails locally even though CI passes — system-installed package in ~/.local/bin shadows the local dev version, (7) ruff I001/RUF059 fires on inline imports or unused tuple unpacking inside test functions after adding new tests, (8) mypy pre-commit hook fails because an UNTRACKED test file references methods not yet committed — the hook checks ALL .py files on disk including untracked ones, (9) CI ruff-format hook fails even though local `ruff check` passed — `ruff check` (lint) and `ruff format --check` (formatter) are SEPARATE tools sharing one binary and running only `check` never exercises the formatter, (10) running pre-commit against the full PR diff (every file changed since merge-base) with `--from-ref/--to-ref` not just `--files <current edit>` — a sub-agent's earlier commit can carry stale-formatter content that fails only in CI, (11) adding .editorconfig for cross-editor formatting consistency on non-Python files (YAML, JSON, Markdown, shell, Makefile), (12) an automated PR-reviewer flags lint/formatter/pre-commit-forced incidental churn as scope creep — toolchain-forced churn is exempt from YAGNI/scope review while author-chosen opportunistic work is still flagged, (13) removing a duplicate standalone markdownlint CI job when the lint job already runs pre-commit --all-files — MUST verify the job is NOT a required-check context in branch protection before deleting it, and MUST pre-scan the newly-in-scope files for violations that --fix cannot auto-fix, (14) the pre-commit hook exclude pattern for .claude/ may be LOAD-BEARING (not merely defensive) — confirm with git ls-files .claude/ before removing it; two tracked .md files (.claude/security/guidelines.md and .claude/workflows/development.md) exist in ProjectHephaestus and must remain excluded to match the standalone CI job's intent, (15) after removing a duplicate markdownlint CI job update every doc that names that job by its old CI name (e.g. docs/DEFINITION_OF_DONE.md and .github/README.md) or CI job name references become stale; (16) BOTH the required `lint` check AND the `pre-commit` check are red in a PR — they share the same `ruff format` hook, so a single `ruff format <files>` run clears both; do not debug as two separate problems; (17) adding a commit-msg-stage hook (e.g. conventional-commit validator) — must set `default_install_hook_types: [pre-commit, commit-msg]` in .pre-commit-config.yaml or plain `pre-commit install` silently omits the commit-msg stage and the hook is permanently inert for all contributors; (18) verifying that a commit-msg-stage hook actually fires — `pre-commit run --all-files` does NOT invoke commit-msg-stage hooks; drive them via `pre-commit run --hook-stage commit-msg --commit-msg-filename <file>` instead; (19) adding a Bandit SAST hook that scans a whole directory via --ini config — must use `pass_filenames: false` or pre-commit appends individual changed filenames, bypassing the .bandit INI targets and recursive settings; (20) adding a repo: local pre-commit hook for a pixi.toml-scoped stdlib-only checker script — use `files: ^pixi\\.toml$` and `pass_filenames: false` so the checker finds pixi.toml via get_repo_root() rather than receiving it as an argument; (21) a pip-audit task-definition regex also matches dep-version lines in the same pixi.toml because the value group was not anchored to start with `pip-audit` — causing false parser errors; anchor the value group: `r'\"(?P<value>pip-audit[^\"]*)'` to distinguish task definitions from version pins like `pip-audit = \">=2.7,<3\"`; (22) IGNORE_VULN_RE.findall(text) on the whole file hits `--ignore-vuln below` in ledger documentation comments, producing spurious matches — scope the raw scan to non-comment lines only before running findall; (23) a pixi.toml comment claiming a script enforces an invariant fails review if the hook wiring does not exist yet — never document enforcement automation before the hook/CI step is actually wired."
+description: "Canonical guide to pre-commit hook configuration, single-source-of-truth versioning, CI/local parity, and integration of ruff/mypy/clang-format/yamllint/actionlint/golangci-lint/bandit/hadolint/shellcheck/markdownlint. Use when: (1) writing or amending .pre-commit-config.yaml, (2) diagnosing why a hook passes locally but fails in CI (version drift), (3) deciding fix-vs-suppress for lint findings, (4) adding a new linter to an existing pre-commit pipeline, (5) reconciling ruff/mypy/markdownlint config across multiple repos, (6) a pre-commit hook using a pixi console script false-fails locally even though CI passes — system-installed package in ~/.local/bin shadows the local dev version, (7) ruff I001/RUF059 fires on inline imports or unused tuple unpacking inside test functions after adding new tests, (8) mypy pre-commit hook fails because an UNTRACKED test file references methods not yet committed — the hook checks ALL .py files on disk including untracked ones, (9) CI ruff-format hook fails even though local `ruff check` passed — `ruff check` (lint) and `ruff format --check` (formatter) are SEPARATE tools sharing one binary and running only `check` never exercises the formatter, (10) running pre-commit against the full PR diff (every file changed since merge-base) with `--from-ref/--to-ref` not just `--files <current edit>` — a sub-agent's earlier commit can carry stale-formatter content that fails only in CI, (11) adding .editorconfig for cross-editor formatting consistency on non-Python files (YAML, JSON, Markdown, shell, Makefile), (12) an automated PR-reviewer flags lint/formatter/pre-commit-forced incidental churn as scope creep — toolchain-forced churn is exempt from YAGNI/scope review while author-chosen opportunistic work is still flagged, (13) removing a duplicate standalone markdownlint CI job when the lint job already runs pre-commit --all-files — MUST verify the job is NOT a required-check context in branch protection before deleting it, and MUST pre-scan the newly-in-scope files for violations that --fix cannot auto-fix, (14) the pre-commit hook exclude pattern for .claude/ may be LOAD-BEARING (not merely defensive) — confirm with git ls-files .claude/ before removing it; two tracked .md files (.claude/security/guidelines.md and .claude/workflows/development.md) exist in ProjectHephaestus and must remain excluded to match the standalone CI job's intent, (15) after removing a duplicate markdownlint CI job update every doc that names that job by its old CI name (e.g. docs/DEFINITION_OF_DONE.md and .github/README.md) or CI job name references become stale; (16) BOTH the required `lint` check AND the `pre-commit` check are red in a PR — they share the same `ruff format` hook, so a single `ruff format <files>` run clears both; do not debug as two separate problems; (17) adding a commit-msg-stage hook (e.g. conventional-commit validator) — must set `default_install_hook_types: [pre-commit, commit-msg]` in .pre-commit-config.yaml or plain `pre-commit install` silently omits the commit-msg stage and the hook is permanently inert for all contributors; (18) verifying that a commit-msg-stage hook actually fires — `pre-commit run --all-files` does NOT invoke commit-msg-stage hooks; drive them via `pre-commit run --hook-stage commit-msg --commit-msg-filename <file>` instead; (19) adding a Bandit SAST hook that scans a whole directory via --ini config — must use `pass_filenames: false` or pre-commit appends individual changed filenames, bypassing the .bandit INI targets and recursive settings; (20) adding a repo: local pre-commit hook for a pixi.toml-scoped stdlib-only checker script — use `files: ^pixi\\.toml$` and `pass_filenames: false` so the checker finds pixi.toml via get_repo_root() rather than receiving it as an argument; (21) a pip-audit task-definition regex also matches dep-version lines in the same pixi.toml because the value group was not anchored to start with `pip-audit` — causing false parser errors; anchor the value group: `r'\"(?P<value>pip-audit[^\"]*)'` to distinguish task definitions from version pins like `pip-audit = \">=2.7,<3\"`; (22) IGNORE_VULN_RE.findall(text) on the whole file hits `--ignore-vuln below` in ledger documentation comments, producing spurious matches — scope the raw scan to non-comment lines only before running findall; (23) a pixi.toml comment claiming a script enforces an invariant fails review if the hook wiring does not exist yet — never document enforcement automation before the hook/CI step is actually wired; (24) `git commit` appears to fail or the resulting commit shows an unexpected/unknown-key GPG signature (`%G? = E`, 'Can't check signature: No public key') — FIRST check whether a pre-commit hook ABORTED the commit (rc=1) so HEAD never moved; `git log --show-signature -1` is then showing the PARENT/main-tip commit (authored by someone else), NOT yours — verify with `git log -1 --format='%H %G? %s'` (is the hash NEW?) plus `git diff --cached --name-only` (are files still staged?) BEFORE debugging signing/gpg-agent; the pre-commit hooks are STRICTER than `pixi run ruff check`/`pixi run mypy`, so run the REAL hooks (`pre-commit run ruff-check-python ruff-format-python --files <files>` + `pre-commit run mypy-check-python --all-files`), not just the pixi tasks, before committing new test code."
 category: tooling
 date: 2026-06-23
-version: "2.4.0"
+version: "2.5.0"
 user-invocable: false
 verification: verified-precommit
 history: pre-commit-hooks-and-linting-config.history
@@ -17,9 +17,10 @@ tags: [merged, pre-commit, linting, ruff, mypy, clang-format, yamllint, actionli
 | Field | Value |
 | ------- | ------- |
 | **Date** | 2026-06-23 |
+| **Version** | 2.5.0 |
 | **Objective** | Canonical single-entry-point for all pre-commit hook and linting advice across the HomericIntelligence ecosystem |
-| **Outcome** | Consolidated from 53 narrow skills; TOML/Ruff parity verified-ci; Bandit `pass_filenames: false` pattern added (verified-local); pip-audit ledger checker patterns added (verified-precommit) |
-| **Verification** | verified-ci; verified-precommit (pip-audit ledger patterns) |
+| **Outcome** | Consolidated from 53 narrow skills; TOML/Ruff parity verified-ci; Bandit `pass_filenames: false` pattern added (verified-local); pip-audit ledger checker patterns added (verified-precommit); failed-hook commit-abort / phantom-signature trap added (verified-precommit) |
+| **Verification** | verified-ci; verified-precommit (pip-audit ledger patterns; failed-hook commit-abort trap) |
 | **History** | [changelog](./pre-commit-hooks-and-linting-config.history) |
 
 ## When to Use
@@ -68,6 +69,8 @@ tags: [merged, pre-commit, linting, ruff, mypy, clang-format, yamllint, actionli
 - A pip-audit task-definition regex also matches dep-version lines in the same `pixi.toml` because the value group was not anchored to start with `pip-audit` — for example `pip-audit = ">=2.7,<3"` (version pin) also matches `r'pip-audit\s*=\s*"[^"]*"'`; anchor the value: `r'pip-audit\s*=\s*"(?P<value>pip-audit[^"]*)"'` to distinguish task definitions from dep-version pins
 - `IGNORE_VULN_RE.findall(text)` on the full file text hits `--ignore-vuln below` in ledger documentation comments, producing a spurious extra match — filter to non-comment lines before calling `findall`: `non_comment_lines = [ln for ln in lines if not ln.lstrip().startswith("#")]`
 - A `pixi.toml` comment claims a script enforces an invariant but the pre-commit hook wiring does not exist yet — a reviewer will flag this as a false invariant claim (POLA violation); never write "enforced by scripts/X.py" in documentation comments until the hook entry in `.pre-commit-config.yaml` actually exists
+- `git commit -S` appears to fail OR `git log --show-signature -1` shows an unexpected/unknown-key signature (`%G? = E`, `Can't check signature: No public key`, an RSA key you do not own) — do NOT start debugging gpg-agent or re-signing. A failed pre-commit hook aborts `git commit` with rc=1, so HEAD never moves; `git log --show-signature` is then describing the PARENT (often main's tip, authored by someone else), not your phantom commit. Verify with `git log -1 --format='%H %G? %s'` (new hash? not the parent/main tip?) and `git diff --cached --name-only` (files still staged means the commit never landed)
+- Before committing newly written test code: the pre-commit hooks are STRICTER than `pixi run ruff check` / `pixi run mypy` (e.g. D103 missing-docstring on public test functions, E501 long lines, ruff-format reflow, mypy `var-annotated` requiring `remaining: list[dict[str, Any]]` when a dict literal has an empty-list value like `"labels": []`) — run the ACTUAL hooks (`pre-commit run ruff-check-python ruff-format-python --files <files>` and `pre-commit run mypy-check-python --all-files`), not just the pixi tasks, or your commit will silently abort
 
 ## Verified Workflow
 
@@ -578,6 +581,61 @@ reflow as a dedicated `style(ruff):` commit (never `--amend` once pushed). Never
 
 Verified by ProjectHephaestus PRs #707 and #913 (local `ruff check`/pytest/pre-push all
 green, CI `ruff-format` still failed).
+
+#### A failed pre-commit hook aborts `git commit` — HEAD never moves, and the "broken signature" is a phantom
+
+When a pre-commit hook FAILS, `git commit` exits with rc=1 and **no commit is created** —
+HEAD stays exactly where it was. The hook's failure line (e.g. `ruff E501`, `ruff-format`
+"files were modified by this hook", or `mypy var-annotated`) often scrolls past mid-stream in
+the hook output and is easy to miss. The dangerous follow-on: you run
+`git log --show-signature -1` to "check your commit's signature" and see something like:
+
+```text
+gpg: using RSA key B5690EEEBB952194
+gpg: Can't check signature: No public key
+%G? = E
+```
+
+This is NOT your commit's signature. Because the commit never happened, `git log -1` is
+describing the **PARENT** commit — usually main's tip, authored by someone else whose GPG
+key you do not have. Treating this as a signing problem sends you down a phantom rabbit hole:
+re-signing, restarting `gpg-agent`, regenerating keys — all wasted, because there is no commit
+of yours to sign.
+
+**The instant-resolution signal** — after every `git commit`, confirm the commit actually
+landed before trusting any signature output:
+
+```bash
+# 1. Did HEAD advance to a NEW hash (not the parent / origin/main tip)?
+git log -1 --format='%H %G? %s'
+
+# 2. Are the files still staged? If yes, the hook aborted the commit.
+git diff --cached --name-only        # empty == commit landed; non-empty == aborted
+
+# 3. Cross-check against the remote tip:
+git rev-parse HEAD origin/main       # if equal, your commit was NOT created
+git reflog -3                        # HEAD@{0} should be a 'commit' entry, not still at main
+```
+
+If a hook aborted the commit, the staged files are still staged and HEAD is unchanged — fix
+the actual hook error and commit again. NEVER use `--no-verify` to force it through.
+
+**Run the REAL hooks, not just the pixi tasks.** The pre-commit hooks are STRICTER than the
+bare `pixi run` tasks. In a real ProjectHephaestus session, `pixi run ruff check` and
+`pixi run mypy` BOTH passed clean, yet the commit's pre-commit hooks still failed on:
+
+- `D103` — missing docstrings on public test functions
+- `E501` — long lines the pixi ruff task did not flag the same way
+- `ruff-format` — reflow the formatter wanted that `check` never exercises
+- `mypy var-annotated` — needed an explicit `remaining: list[dict[str, Any]]` because a dict
+  literal had an empty-list value (`"labels": []`) that mypy could not infer
+
+Before committing new code (especially new test code), run the actual hooks:
+
+```bash
+pre-commit run ruff-check-python ruff-format-python --files <files>
+pre-commit run mypy-check-python --all-files
+```
 
 #### `check-toml` is required for duplicate TOML tables
 
@@ -1425,6 +1483,7 @@ feasible (e.g., constrained CI environments, conda-forge only providing old Go v
 | `IGNORE_VULN_RE.findall(text)` on the whole pixi.toml file | Called `findall` on the complete raw file text to count `--ignore-vuln` occurrences | Matched `--ignore-vuln below` in a ledger documentation comment header ("Each `--ignore-vuln` below MUST carry a reason"), producing a spurious extra match and a false count mismatch | Filter to non-comment lines before `findall`: `non_comment_lines = [ln for ln in lines if not ln.lstrip().startswith("#")]`; then `findall` on the joined non-comment text |
 | Documented `pip-audit` script enforcement in pixi.toml before wiring the hook | Added comment "enforced at commit/CI time by `scripts/check_pip_audit_ledger_reminder.py`" to `pixi.toml` before inserting the hook entry in `.pre-commit-config.yaml` | Reviewer flagged the invariant claim as false: the script existed but the hook that runs it did not; the comment described a guarantee the repo could not yet make | Never document "enforced by <script>" until the hook entry in `.pre-commit-config.yaml` is committed; enforcement claims are only true once the wiring exists |
 | `pass_filenames: true` for pixi.toml-scoped stdlib checker hook | Omitted `pass_filenames: false` on the `check-pip-audit-ledger-reminder` hook; pre-commit passed `pixi.toml` as `sys.argv[1]` | Checker script used `get_repo_root()` to find pixi.toml and ignored `sys.argv`; the extra argument was harmless but semantically wrong and could mislead future maintainers | Always set `pass_filenames: false` for hooks that locate their target file via `get_repo_root()` rather than from pre-commit-provided filenames |
+| Re-sign / restart gpg-agent to fix a "broken signature" after a failed commit | `git commit -S` returned rc=1 (a pre-commit hook failed, line scrolled past unseen); `git log --show-signature -1` then showed `Can't check signature: No public key` / `%G? = E`; spent several turns re-signing and restarting gpg-agent | No commit was ever created — HEAD never moved, so `git log -1` was describing the PARENT (main's tip, authored by someone else whose key is unknown locally); there was no commit of yours to sign | After `git commit`, ALWAYS verify HEAD advanced before debugging signatures: `git log -1 --format='%H %G? %s'` (new hash, not parent/main tip?) and `git diff --cached --name-only` (empty == committed; non-empty == hook aborted the commit). Fix the hook error and re-commit; never `--no-verify` |
 
 ## Results & Parameters
 
@@ -1615,6 +1674,7 @@ indent_style = tab                 # Make syntax requires tabs
 | ProjectMnemosyne | Closed PR #2353 (commit-msg-stage hooks + `default_install_hook_types` learning) | [history file](pre-commit-hooks-and-linting-config.history) |
 | ProjectTelemachy | Issue #157 (Bandit SAST hook `pass_filenames: false` — directory-scanning tools must never receive per-file args from pre-commit) | verified-local |
 | ProjectHephaestus | Issue #1550 / PR #1586 (pip-audit ledger checker: pixi.toml-scoped local hook pattern, `PIP_AUDIT_TASK_RE` value-group anchoring, non-comment-line scoping for `IGNORE_VULN_RE`, POLA note on enforcement claims) | verified-precommit |
+| ProjectHephaestus | Session where a failed pre-commit hook aborted `git commit` (rc=1) so HEAD never moved; `git log --show-signature -1` showed main's tip (`%G? = E`, `No public key`) and several turns were wasted re-signing / restarting gpg-agent before the reflog revealed no commit existed; pixi ruff/mypy passed but the real hooks failed on D103/E501/ruff-format/var-annotated | verified-precommit |
 
 ## References
 
