@@ -6,7 +6,7 @@ date: 2026-06-23
 version: "1.0.0"
 user-invocable: false
 verification: verified-local
-tags: [traefik, docker, networking, 504, gateway-timeout, network-isolation]
+tags: [traefik, docker, networking, "504", gateway-timeout, network-isolation]
 ---
 
 # Docker Traefik Network Loss on Recreation
