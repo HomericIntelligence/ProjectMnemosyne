@@ -2,6 +2,36 @@
 
 # History: python-import-patterns-and-compatibility-guards
 
+## v1.4.0 (2026-06-24)
+
+**Changed by:** ProjectHephaestus issue #1545 — executed the access-time `DeprecationWarning` implementation for the deprecated `retry_with_jitter` lazy shim. The v1.3.0 plan was followed end-to-end and all tests passed locally.
+**Verification:** `verified-local` for section F (all tests pass locally; CI pending after the ProjectHephaestus PR merges). Pre-existing sections remain verified-ci / verified-local.
+
+### What changed
+
+- Upgraded section F from "Proposed Workflow — planning an access-time DeprecationWarning (UNVERIFIED)" to "Verified Workflow — adding an access-time DeprecationWarning (verified-local)". Removed the "Warning: never executed" banner and replaced it with a "Verification: verified-local" note.
+- Replaced the unverified `__getattr__` snippet (using a `set`-based `_DEPRECATED_LAZY`) with the actual verified implementation: `_DEPRECATED_LAZY: dict[str, str]` with a full deprecation message string, and the exact `__getattr__` body used in the PR.
+- Replaced the minimal unverified test stub with the full verified test `test_retry_with_jitter_access_emits_deprecation_warning` including the `__dict__.pop` cache-bust, `callable(symbol)` assertion, `DeprecationWarning` category check, message content check, and `stacklevel=2` filename assertion (`access_warnings[0].filename == __file__`).
+- Added verified test passage block (3 tests in `test_deprecation_warnings.py`, 7 in `test_retry.py -k jitter`, `test_import_surface.py`, `test_automation_boundary.py`, ruff, mypy).
+- Confirmed and documented `stacklevel=2` as correct for `__getattr__` (call stack: user access line → `__getattr__` → `warnings.warn`; `stacklevel=2` skips `__getattr__` and attributes to user's line).
+- Updated Overview verification row: removed "unverified (section F)" clause; added "verified-local (access-time deprecation-warning implementation — section F executed end-to-end)".
+- Updated Overview objective/outcome to reflect implementation rather than planning.
+- Updated the "When to Use" bullet for access-time deprecation warning from "(PLANNING, unverified)" to "(verified-local)" with concrete confirmed facts.
+- Updated all 5 formerly-`unverified` Failed Attempts rows (trust `__all__` claim; dedup layers; one-shot test without cache reset; treat as additive; skip prose doc) from `unverified` to `verified-local`.
+- Updated the `stacklevel=2` Failed Attempts row from "PLANNING, UNVERIFIED — may be wrong" to confirmed correct with evidence.
+- Replaced "PROPOSED pattern (UNVERIFIED)" Results & Parameters subsection with "verified pattern (verified-local)" containing the actual implementation, actual test, and actual test pass results.
+- Updated Verified On row for issue #1545 from "PLAN ONLY / unverified" to "executed / verified-local" with full detail.
+- Removed `planning` tag; added `stacklevel` and `warnings-warn` tags.
+- Bumped version 1.3.0 → 1.4.0.
+
+### Why
+
+v1.3.0 added a planning checklist (section F) for the access-time `DeprecationWarning` across the PEP 562 lazy-loader seam, but all material was `unverified` — edits and tests were never executed. Issue #1545 in ProjectHephaestus then executed the plan end-to-end: the `_DEPRECATED_LAZY` dict approach with `dict[str, str]` values (full message strings) proved correct; `stacklevel=2` inside `__getattr__` correctly attributes to the caller's file (confirmed by `access_warnings[0].filename == __file__`); `module.__dict__.pop(name, None)` correctly forces `__getattr__` to re-run; the stale-tolerant test (`test_retry_with_jitter_reachable_from_top_level_lazy_loader`) had to be fully replaced; `import warnings` deferred inside the condition is safe for the automation boundary; and `COMPATIBILITY.md` needed updating. All assumptions from the plan were confirmed correct, so this amendment upgrades from plan-only to verified implementation.
+
+### Previous version (v1.3.0) snapshot
+
+The full v1.3.0 skill text is the previous section below. Key difference from v1.4.0: section F was titled "Proposed Workflow (UNVERIFIED)" with a warning banner; `_DEPRECATED_LAZY` was a `set[str]` rather than `dict[str, str]`; the test was a minimal stub without the filename assertion; and all access-time deprecation entries in Failed Attempts were tagged `unverified`.
+
 ## v1.3.0 (2026-06-24)
 
 **Changed by:** ProjectHephaestus issue #1545 — implementation PLAN for an access-time `DeprecationWarning` on the deprecated `retry_with_jitter` lazy shim exposed via the PEP 562 `__getattr__` loader in `hephaestus/__init__.py`.
