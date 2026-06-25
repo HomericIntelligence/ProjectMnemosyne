@@ -1,0 +1,21 @@
+# architecture-executable-convention-guard-pattern — History
+
+## v1.1.0 (2026-06-24)
+
+**Changed by:** ProjectHephaestus issue #1543 (PLANNING learning — tests/unit/ dirs breaking the hephaestus/ mirror invariant).
+**Verification:** unverified (PLAN only — code not executed, CI not run)
+
+### What changed
+- Added a new sub-pattern section, "Sub-Pattern: Bidirectional Mirror / Parity Invariants," documenting that a "X mirrors Y" invariant has TWO directions and an existing guard usually enforces only the forward one (`src - test`); the reverse (`test - src - allowlist`) is the silently-unguarded drift surface.
+- Added a "Proposed Workflow" subsection with an unverified warning (this insight is a plan, not validated end-to-end).
+- Added 3 new Failed Attempts rows: trusted the audit's "5 dirs" count (re-derive empirically with `comm -23`); assumed the existing guard was bidirectional (it only enforced forward); considered deleting flagged dirs (drops real coverage — use a sanctioned allowlist).
+- Added "When to Use" triggers for mirror/parity invariants and reverse-direction gaps.
+- Added Results & Parameters notes: allowlist-with-rationale (`frozenset` + inline comment per entry), reuse the already-wired gate (no new CI job), reuse the shared dir-filtering helper for both directions, coverage risk on the new negative-path branch.
+- Updated tags.
+
+### Why
+Issue #1543 surfaced that ProjectHephaestus's `check_test_structure()` enforced only the forward direction of the `tests/unit/` ↔ `hephaestus/` mirror invariant (`src_packages - test_packages`), so a test dir with no source counterpart drifted in silently. The plan adds the reverse check (`test_packages - src_packages - allowlist`) and an allowlist of sanctioned non-package test targets, fixes the prose in CLAUDE.md to match, and rides the already-wired gate rather than adding a new CI job. The audit's "5 dirs violate" count was imprecise (ground truth = 4; `scripts_lib/` is mirrored). These generalize the v1.0.0 "make a prose invariant executable" pattern to the bidirectional case.
+
+### Previous version (v1.0.0) snapshot
+
+The v1.0.0 rendered `.md` content prior to this amendment is preserved in git history at the parent commit of this amendment (the original single-case coredump `verify_crash_bundle` writeup, `verification: verified-local`, no sub-pattern section).
