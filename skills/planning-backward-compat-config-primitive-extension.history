@@ -1,0 +1,148 @@
+# planning-backward-compat-config-primitive-extension — History
+
+## v1.2.0 (2026-06-20)
+
+**Changed by:** A second, self-correcting verification pass on the ProjectAgamemnon
+issue #275 implementation plan ("Expose input length limits as configurable server
+settings"). The FIRST draft asserted two load-bearing facts WITHOUT verifying them; the
+SECOND pass caught both as wrong/unverified and confirmed the ground truth.
+**Verification:** unverified (planning methodology) — but two specific facts were
+SOURCE-VERIFIED in this pass and are now recorded as ground truth, not hypotheses.
+
+### What changed
+- **Corrected a stale/wrong claim baked into v1.1.0:** the skill (and the first plan
+  draft) pointed readers at `src/CMakeLists.txt`. The second pass verified there is NO
+  `src/CMakeLists.txt`; the `ProjectAgamemnon_core` STATIC library is defined in the
+  ROOT `CMakeLists.txt:84-99`. Quick Reference, detailed step 10, the Failed Attempts
+  build-target row, and the issue #275 Results checklist now reflect the verified root
+  location and call out the invented-file pitfall.
+- **Recorded the VERIFIED caller census** for `register_routes()`: exactly 9 call sites
+  (1 in `src/server_main.cpp` + 8 in test files), with NO integration/benchmark callers.
+  Previously the skill only warned to "do a census"; it now states the verified result
+  and the worktree/build-excluded grep that produced it.
+- **Added the exclude-worktrees grep** (`--exclude-dir=.claude --exclude-dir=build`) to
+  Quick Reference, step 11, and Results — stray copies under `.claude/worktrees/` and
+  `build/.worktrees/` pollute a naive caller grep.
+- **Added the `grep kMax -> 0` post-edit invariant** (proves no hardcoded limit constant
+  remains) to Quick Reference, step 12, and Results.
+- **Recorded the brittle-comment payoff:** two test files carried "If `register_routes()`
+  gains an 8th parameter, ALL THREE files must be updated"; a trailing defaulted parameter
+  sidesteps that maintenance trap. Added to step 11.
+- **Made the knob precedence + unit rule explicit** in Results: `AGAMEMNON_MAX_BODY_BYTES`
+  (BYTES) wins; legacy `SERVER_REQUEST_SIZE_LIMIT_MB` (MEGABYTES) falls back as
+  `mb * 1024 * 1024`; test both knobs and the precedence.
+- Updated two Failed Attempts rows (build-target structure; defaulted-param census) from
+  "asserted but unverified" to "asserted, then VERIFIED/corrected on second pass."
+- Bumped version 1.1.0 -> 1.2.0; updated date to 2026-06-20.
+
+### Why
+The DURABLE planning lesson of this session is the verification discipline itself: the
+plan caught its OWN wrong first-draft assumptions on a second pass. v1.1.0 captured the
+first-draft risks but still propagated one of the wrong assumptions (`src/CMakeLists.txt`)
+into its own guidance. Folding the verified ground truth (root `CMakeLists.txt:84-99`, the
+9-site census, the exclude-worktrees grep, the `kMax` invariant) back into the skill turns
+hypotheses into checked facts and fixes the skill's own stale pointer.
+
+### Previous version (v1.1.0) snapshot
+Full v1.1.0 content (the auth-case + make-constant-configurable merge, 11 Failed Attempts
+rows, both concrete instances) is preserved in git history at this branch's parent tree
+(the v1.1.0 commit on `skills/planning-backward-compat-config-primitive-extension.md`).
+The v1.2.0 diff only corrects the `src/CMakeLists.txt` claim and promotes two assumptions
+to verified facts; no rows were removed.
+
+---
+
+## v1.1.0 (2026-06-19)
+
+**Changed by:** Implementation-plan review for ProjectAgamemnon issue #275 ("Expose
+input length limits as configurable server settings" — add an `AGAMEMNON_*`-driven
+`RouteLimits` struct threaded through `register_routes()`).
+**Verification:** unverified
+
+### What changed
+- Broadened the skill's scope from the auth-specific "multi-value KEYS unioned with
+  single KEY" case to the general **"make a hardcoded constant configurable via env
+  var in a C++ service"** planning class. Both share the same search surface
+  (env-var config planning, line-number drift, build-file verification, scope-creep).
+- Added 5 new Failed Attempts rows capturing the issue #275 planning risks:
+  1. Asserting `src/CMakeLists.txt` `add_library` structure WITHOUT reading the file
+     (inferred only from `test/CMakeLists.txt` references to the target).
+  2. Claiming a trailing defaulted parameter is non-breaking WITHOUT a complete
+     caller census (only test files listed; integration tests / benchmarks / other
+     binaries not grepped).
+  3. Citing absolute line numbers in `routes.cpp` that the plan's own earlier-line
+     edits will shift.
+  4. Scope-creep: an opportunistic body-cap "bug fix" + silent deprecation of
+     `SERVER_REQUEST_SIZE_LIMIT_MB`, with prose back-compat behavior that DIVERGES
+     from the shown `from_env()` code sample.
+  5. Unit-conversion hazard consolidating `SERVER_REQUEST_SIZE_LIMIT_MB` (MEGABYTES)
+     into `AGAMEMNON_MAX_BODY_BYTES` (BYTES).
+- Extended the Proposed/Verified Workflow with the matching reusable checklist items
+  (read the build file that DEFINES a target; full caller census before a
+  defaulted-arg change; anchor find-replace on symbols not line numbers; flag
+  adjacent-bug fixes + deprecations as scope expansion for sign-off; make code
+  samples match prose exactly; call out unit conversions and test both knobs).
+- Added a second concrete instance (issue #275) to Results & Parameters and
+  Verified On.
+- Bumped version 1.0.0 -> 1.1.0; added `history` frontmatter field; updated tags.
+
+### Why
+A second ProjectAgamemnon planning artifact (issue #275) exercised the same
+env-var-configuration planning surface but surfaced new, distinct failure modes that
+the v1.0.0 auth-only framing did not cover: build-target source addition,
+defaulted-parameter backward-compat claims, prose/code-sample divergence on
+deprecations, and unit-conversion consolidation. Folding these into the existing
+skill (rather than creating a near-duplicate) keeps the env-var-config planning
+knowledge in one searchable place.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: planning-backward-compat-config-primitive-extension
+description: "Reusable checklist for writing TRUSTWORTHY implementation plans that extend a config-driven auth/config primitive (e.g. add a comma-separated AGAMEMNON_API_KEYS env var alongside the existing single AGAMEMNON_API_KEY, unioned for backward compatibility) WITHOUT breaking the old behavior or the security posture. Use when: (1) planning to add a new multi-value env var / config knob that must coexist with a legacy single-value one, (2) a plan proposes DELETING a file or symbol it claims is dead code based on a source grep alone, (3) a plan cites exact file:line locations as ground truth, (4) a plan changes a security-critical equality compare (==) into set/collection membership, (5) a plan RELAXES a fail-secure startup invariant (e.g. now allowing startup with only the new var), (6) a plan splits the change into multiple commits where one commit deletes 'dead' code that another part of the build may still reference."
+category: architecture
+date: 2026-06-19
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags:
+  - planning-methodology
+  - backward-compatibility
+  - config-env-var
+  - auth-security
+  - dead-code-removal
+---
+
+# Planning: Backward-Compatible Extension of a Config/Auth Primitive
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-19 |
+| **Objective** | Make implementation plans for "extend a config-driven auth/config primitive while preserving backward compatibility" tasks trustworthy by codifying the assumptions a reviewer MUST re-verify before approving. |
+| **Outcome** | Planning methodology only — captured from a plan for ProjectAgamemnon issue #260 (add comma-separated `AGAMEMNON_API_KEYS` env var, unioned with the existing single `AGAMEMNON_API_KEY` in the C++ `AuthMiddleware`). Plan was NOT executed end-to-end. |
+| **Verification** | unverified |
+| **History** | n/a (initial version) |
+
+## When to Use
+
+- You are planning a change that adds a new **multi-value** config/env var (e.g. comma-separated `*_KEYS`) that must coexist with — and be **unioned** with — an existing **single-value** one (`*_KEY`), so old deployments keep working unchanged.
+- A plan proposes to **DELETE a file or symbol** ("dead code", "zero callers") and the conclusion was drawn from a **source-only grep**.
+- A plan cites **exact `file:line` locations** (e.g. `src/auth.cpp:20`, `docs/api/openapi.yaml:885-895`) as if they are stable ground truth.
+- A plan changes a **security-critical `==` compare into set/collection membership** (e.g. `key == expected` → `valid_keys.count(key)`).
+- A plan **RELAXES a fail-secure startup invariant** (e.g. previously aborted unless `*_KEY` was set; now also accepts only `*_KEYS`).
+- A plan **splits into multiple commits** where a later "dead-code removal" commit could merge independently and break the build if a hidden reference exists.
+
+(Full v1.0.0 Proposed/Verified Workflow, Failed Attempts (7 rows), Results & Parameters,
+and Verified On sections preserved in git history at commit aded4e10's parent tree.)
+```
+
+---
+
+## v1.0.0 (2026-06-19)
+
+**Initial version.** Captured from the implementation-plan review for ProjectAgamemnon
+issue #260 (multi-key `AGAMEMNON_API_KEYS` in the C++ `AuthMiddleware`). Verification:
+unverified (plan only, not executed end-to-end).

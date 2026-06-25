@@ -1,0 +1,58 @@
+# architecture-meta-repo-config-hardening-planning — History
+
+## v1.1.0 (2026-06-20)
+
+**Changed by:** Re-planning session for Odysseus issue #196 (Nomad `configs/nomad/server.hcl` binds `0.0.0.0` with no `acl { enabled = true }`). Plan only — NOT executed against a live Nomad.
+**Verification:** unverified (plan only; no `nomad` agent booted, no CI run)
+
+### What changed
+- Added 4 Failed Attempts rows capturing the DELTA between the first plan (reviewer
+  NOGO, grade D) and the tighter revision:
+  1. **YAGNI over-build** — the first plan added a new `just check-nomad-acl` recipe to
+     guard a visible 4-line config flag; the guard-pattern skill's trigger ("an un-guarded
+     invariant that SILENTLY LOSES A SIGNAL") does not apply to a visible config flag.
+     Lesson: match enforcement weight to issue severity.
+  2. **DRY duplication** — the same grep logic was placed in both the recipe AND a
+     near-identical `_required.yml` step. Lesson: CI should CALL the justfile recipe, never
+     copy the logic into workflow YAML.
+  3. **POLA / enable-by-default trade-off not weighed** — flipping ACLs on by default in a
+     config that `add-new-host.md:101` copies (`cp configs/nomad/client.hcl`) silently
+     breaks the next bootstrap (requires an un-provisioned NOMAD_TOKEN). Lesson: when a
+     security flag lives in a canonical config that hosts COPY, either ship it
+     commented-out with an enable step, or enable it AND co-locate the mandatory
+     runtime-provisioning step at EVERY copy site.
+  4. **Circular verification** — `just check-nomad-acl`/`validate-configs`/grep only prove
+     the STRING is present and fmt-clean, never that a pinned `hashicorp/nomad:1.6` agent
+     BOOTS with ACLs on. Lesson: label each verification by exactly WHAT it proves
+     (syntax/format vs runtime behavior); provide a separate operator-side runtime check.
+- Added the generalized heuristic **"Right-size the fix to issue severity + repo posture"**
+  to the Proposed Workflow / Results section.
+- Carried forward the still-uncertain assumptions for the reviewer: (a) `acl { enabled =
+  true }` is valid + fmt-clean HCL for nomad 1.6 (asserted, not executed); (b) enabling
+  ACLs may break token-less `nomad status`/`nomad node status` recipes the revision did
+  not audit; (c) whether `nomad fmt` is even installed on the CI runner (the HCL step is
+  conditional on `command -v nomad`), so fmt-canonicalization may be skipped in CI.
+- Bumped minor version 1.0.0 -> 1.1.0. Added `history:` frontmatter field. Updated date to
+  2026-06-20. Existing v1.0.0 content kept intact.
+
+### Why
+The first #196 plan was NOGO'd (grade D) for four distinct planning-discipline failures
+(YAGNI, DRY, POLA, circular verification). The durable value is the DELTA — what the
+reviewer rejected and how the revision fixed it — for the class of "harden a fail-open
+infra default in a read-mostly meta-repo." This complements (does not duplicate) the
+v1.0.0 lessons about detecting the verification surface and runtime-secret provisioning.
+
+---
+
+## v1.0.0 (2026-06-20)
+
+**Changed by:** Planning session for Odysseus issue #196.
+**Verification:** unverified (plan only)
+
+### What changed
+- Initial skill: planning pattern for config-security-hardening fixes in a read-mostly
+  docs/config meta-repo (Odysseus) with no test framework. Covered detecting the
+  verification surface (`just validate-configs` + `_required.yml`), placing security
+  stanzas in canonical configs with runtime secret provisioning, anchoring grep guards
+  against canonicalized output, the enabled-by-default-vs-commented-out scope decision,
+  and flagging unverified config-syntax / regression assumptions.

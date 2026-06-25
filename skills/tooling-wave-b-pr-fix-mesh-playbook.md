@@ -225,7 +225,7 @@ AchaeanFleet workflows run 15-30 minutes wall-clock. Bound polls to once-per-90s
 
 #### Step 7 — Aeolus noreply email is mandatory
 
-The account has GitHub's email-privacy "Block command line pushes that expose my email" enabled. Pushes that author with `villmow.products@gmail.com` are rejected with:
+The account has GitHub's email-privacy "Block command line pushes that expose my email" enabled. Pushes that author with `<private-email>` are rejected with:
 
 ```text
 remote: error: GH007: Your push would publish a private email address.

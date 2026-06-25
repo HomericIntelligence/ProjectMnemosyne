@@ -3,6 +3,72 @@
 
 This file preserves the full original content of the skills merged into this canonical.
 
+## v1.2.0 (2026-06-20)
+
+Release-notes extraction footer-bleed fix (verified-local). MINOR bump because it corrects
+shipped example code, not just prose.
+
+- **Bug**: the release-notes extraction regex used the end-anchor `(?=\n## \[|$)`. For the
+  **top/most-recent** dated section (the common case — `[Unreleased]` just promoted to vX.Y.Z),
+  there is no next `## [` header below it, only the keepachangelog link-reference footer. So
+  `.*?` under `re.DOTALL` ran to EOF and absorbed `[Unreleased]: …/compare/…` and
+  `[X.Y.Z]: …/releases/tag/…` into the published GitHub Release body. Demonstrated locally with a
+  synthetic top-section CHANGELOG fixture: old anchor → body includes the two footer lines; fixed
+  anchor → body stops at the last bullet.
+- **Fix**: extend the end-anchor to also stop at the first link-reference line:
+  `(?=\n## \[|\n\[[^\]]+\]: |$)`. Updated in the Detailed Steps §A step-3 extraction block and the
+  Quick-Reference/Results discussion, with an inline comment explaining the footer-bleed rationale.
+- Added a Failed Attempts row ("Release notes absorbed the CHANGELOG link-footer"), a Quick
+  Reference note, and a Results & Parameters pytest fixture that asserts `compare/` and
+  `releases/tag/` are absent from the extracted body (synthetic top-section CHANGELOG).
+- The surrounding release workflow remains CI-verified (skill stays `verified-ci`); the regex fix
+  itself is **verified-local** via the synthetic fixture — noted as a qualifier in the Overview
+  Verification row and the Failed-Attempts lesson.
+
+### Full prior content (v1.1.0)
+
+```markdown
+---
+name: gha-release-package-workflow-patterns
+description: "Use when: (1) creating a tag-triggered release workflow with keepachangelog CHANGELOG format and semver version consistency checks across manifests, (2) implementing automated package building via GitHub Actions with artifact publication and GitHub Release creation, (3) adding pre-commit script validation of Python version drift between pyproject.toml classifiers and Dockerfile FROM line, (4) adding CI steps that replace fragile shell printf emoji byte-escape encoding with dedicated Python scripts for better portability."
+category: ci-cd
+date: 2026-06-07
+version: "1.1.0"
+user-invocable: false
+history: gha-release-package-workflow-patterns.history
+tags:
+  - github-actions
+  - releases
+  - keepachangelog
+  - semver
+  - git-tags
+  - version-consistency
+  - version-drift
+  - pre-commit
+  - ci-portability
+  - release-automation
+  - package-publishing
+---
+
+# GitHub Actions Release and Package Workflow Patterns
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-06-07 |
+| **Objective** | Capture reusable GitHub Actions patterns for release and packaging automation: tag-triggered release workflows with keepachangelog CHANGELOG and cross-manifest semver consistency, package building with artifact publication and GitHub Release creation, pre-commit checks that catch Python version drift between `pyproject.toml` classifiers and the Dockerfile `FROM` line, and CI portability fixes that replace fragile shell `printf` emoji byte-escapes with dedicated Python scripts. |
+| **Outcome** | Operational across multiple repos — release.yml validates tag/CHANGELOG/manifest consistency before publishing; version-drift checks block silent mismatches; printf-emoji removal makes report-building locale-independent. |
+| **Verification** | verified-ci |
+
+The full v1.1.0 release-notes extraction regex was
+`## \[{re.escape(version)}\] - \d{4}-\d{2}-\d{2}\n(.*?)(?=\n## \[|$)` with `re.DOTALL` (the
+vulnerable end-anchor corrected in v1.2.0). The remainder of the v1.1.0 body — When to Use,
+Verified Workflow (Quick Reference + Detailed Steps A/B/C), Failed Attempts, Results &
+Parameters, and Verified On — is unchanged in v1.2.0 except for the footer-bleed edits described
+above.
+```
+
 ## v1.1.0 (2026-06-07)
 
 Restore release-notes extraction + signed-tag verify (nuance audit pass 2):

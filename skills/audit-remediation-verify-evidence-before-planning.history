@@ -1,5 +1,59 @@
 # Changelog: audit-remediation-verify-evidence-before-planning
 
+## v1.1.0 -> v1.2.0 (2026-06-21)
+
+- **Version:** 1.1.0 -> 1.2.0 (MINOR — adds new findings/failed-attempts, not a rewrite)
+- **Date:** 2026-06-21
+- **Changed by:** ProjectHephaestus issue #1553 ("Skills missing `argument-hint` frontmatter field") planning
+- **Verification level:** verified-local (the evidence re-reads + parse-checks were RUN this session; the PR/CI for #1553 had NOT landed at capture time)
+- **What changed:**
+  - Generalized the description from cross-repo-only to ANY audit, with explicit emphasis on multi-target audits where a SUBSET is already fixed, the scope-creep discipline (fix only named targets), and the "no test for an unenforced doc/UX field" rule. Added trigger (4) for multi-target partial-staleness.
+  - Added a `v1.2.0 note` to the Overview documenting the single-repo, multi-target frontmatter case: `skills/brainstorm/SKILL.md:4` already had `argument-hint` (stale audit), only `python-repo-modernization` was genuinely missing; the field is unenforced so verification is a YAML parse, not a unit test.
+  - Added two "When to Use" triggers (multi-target audits; unenforced config/frontmatter fields) and a "Related" cross-reference to `agent-config-validation-and-integrity`.
+  - Added Verified Workflow steps 8-11: verify each named target separately; survey the whole population for convention + true scope but fix only named targets; don't invent a test where no contract exists; derive the field value from behavior and place it per convention.
+  - Added a multi-target-frontmatter block to Quick Reference (per-target `sed`, population survey `awk`, no-test-contract grep, frontmatter-parse `python3 -c`).
+  - Added four Failed Attempts rows (trusting a multi-target audit verbatim -> no-op edit on already-fixed `brainstorm`; expanding the fix to all skills -> scope creep; inventing a unit test for an unenforced field; copying a generic placeholder for the field value).
+  - Added a ProjectHephaestus #1553 block to Results & Parameters (named targets + their states, convention, enforcement = none, out-of-scope siblings, provenance taken at face value).
+- **Why:**
+  - Planning #1553, the issue named TWO skills as missing `argument-hint`, but `skills/brainstorm/SKILL.md:1-6` already had it at line 4 (audit snapshot 2026-06-16 was stale). Trusting the issue verbatim would have planned a no-op edit a reviewer NOGOs. A repo-wide `awk` survey both confirmed `brainstorm` was already compliant and surfaced ~10 other non-compliant skills — deliberately excluded to respect one-issue-per-PR. The field has no test contract (`grep -rl "argument-hint" tests/` empty), so verification is a frontmatter parse, not a unit test. These sharpen the existing skill's core lesson (re-read cited evidence before planning) for the multi-target, single-repo, unenforced-field shape.
+
+---
+
+## Snapshot: v1.1.0 (previous version)
+
+```markdown
+---
+name: audit-remediation-verify-evidence-before-planning
+description: "Before planning a fix for a cross-repo audit/remediation issue, verify the audit's cited evidence (file:line) against the live tree — audit findings go stale once the target repo is independently remediated. Use when: (1) planning a fix for an audit-filed issue with file:line evidence, (2) the issue spans multiple repos or submodules, (3) the issue recommends doc/field-name changes that may already be done."
+category: architecture
+date: 2026-06-19
+version: "1.1.0"
+user-invocable: false
+verification: verified-local
+history: audit-remediation-verify-evidence-before-planning.history
+tags: []
+---
+
+# Audit Remediation: Verify Evidence Before Planning
+
+**History:** [changelog](./audit-remediation-verify-evidence-before-planning.history)
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-06-19 |
+| **Objective** | Plan a fix for a cross-repo audit-remediation GitHub issue without trusting stale audit evidence |
+| **Outcome** | Discovered the audit was stale — target submodule already remediated; scoped the plan to only the genuinely-actionable owned-repo work + a drift guard |
+| **Verification** | verified-local |
+
+> **Verification note:** The evidence-verification steps below (grep against the live tree, confirming canonical names in the Pydantic source of truth) were genuinely RUN this session and confirmed the target docs were already remediated — that is what `verified-local` attests to. The downstream implementation (the architecture.md section + the drift-guard script wired into `just ci`) was **planned only**, not executed or CI-validated. Do not read this as `verified-ci`.
+>
+> **v1.1.0 note:** The canonical mapping (`subject`/`assign_to`/`blocked_by` model fields serialized as `subject`/`assigneeAgentId`/`blockedBy`) was verified this session by reading BOTH `models.py` AND `agamemnon_client.py` against the live tree. The corresponding architecture.md table edit itself was **planned only**, not executed or CI-validated.
+
+(Full v1.1.0 body preserved in git history at commit fab878e6; this snapshot records the frontmatter and Overview. The v1.1.0 Verified Workflow had 7 steps; Failed Attempts had 6 rows; Results & Parameters listed the two-layer canonical mapping and submodule exclusion dirs.)
+```
+
 ## v1.0.0 -> v1.1.0 (2026-06-19)
 
 - **Version:** 1.0.0 -> 1.1.0 (MINOR — adds new findings/failed-attempts, not a rewrite)

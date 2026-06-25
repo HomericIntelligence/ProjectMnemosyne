@@ -1,10 +1,12 @@
 ---
 name: audit-doc-consistency-fix-verify-coordinates-on-disk
-description: "Use when planning a fix for an audit-FILED documentation-consistency issue (drifted line numbers/paths, a command that disagrees across docs). Trigger: (1) an issue cites file:line coordinates produced by a repo audit that may have drifted since filing, (2) N docs disagree on the same command/snippet and one must be brought into line with a canonical copy, (3) a repo-wide grep surfaces matches inside throwaway worktree/build copies that must be scoped out, (4) a prior-learnings suggestion proposes drift-guard CI tooling that is disproportionate for a one-line docs fix."
+description: "Use when planning a fix for a documentation-consistency issue (drifted line numbers/paths, a command that disagrees across docs), OR when authoring the verification commands that prove such a fix. Trigger: (1) an issue, a PRIOR PLAN, or a repo audit cites file:line coordinates that may have drifted since they were captured — re-derive them on disk before quoting, (2) N docs disagree on the same command/snippet and one must be brought into line with a canonical copy, (3) a repo-wide grep surfaces matches inside throwaway worktree/build copies that must be scoped out, (4) a prior-learnings suggestion proposes drift-guard CI tooling that is disproportionate for a one-line docs fix, (5) you are writing a plan's verification-command grep assertions and they must be PORTABLE and actually able-to-fail (no cross-line / GNU-only regex; pair a positive with a negative assertion)."
 category: documentation
-date: 2026-06-12
-version: "1.0.0"
+date: 2026-06-20
+version: "1.1.0"
 user-invocable: false
+verification: verified-local
+history: audit-doc-consistency-fix-verify-coordinates-on-disk.history
 tags:
   - audit-coordinate-drift
   - doc-consistency
@@ -15,6 +17,9 @@ tags:
   - pre-commit-verification
   - planning-methodology
   - cross-doc
+  - inherited-coordinate-rederive
+  - verification-command-portability
+  - grep-positive-negative-assertion
 ---
 
 # Audit Doc-Consistency Fix: Verify Coordinates On Disk
@@ -23,16 +28,17 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-12 |
-| **Objective** | Plan a fix for an audit-filed documentation-consistency issue (drifted coordinates, a command that disagrees across docs) without trusting stale audit coordinates, without over-scoping into throwaway worktree copies, and without bolting on disproportionate CI tooling |
-| **Outcome** | A repeatable planning methodology: grep the repo to re-anchor every cited coordinate, source the replacement verbatim from an already-correct canonical doc, scope out worktree/build copies, decline drift-guard CI tooling (YAGNI), and verify docs-only via markdownlint + grep agreement |
-| **Verification** | verified-precommit |
-| **History** | n/a — new skill |
+| **Date** | 2026-06-20 |
+| **Objective** | Plan a fix for a documentation-consistency issue (drifted coordinates, a command that disagrees across docs) without trusting stale coordinates inherited from an audit, an issue body, or a prior plan; without over-scoping into throwaway worktree copies; without bolting on disproportionate CI tooling; and while authoring portable, able-to-fail verification-command grep assertions |
+| **Outcome** | A repeatable planning methodology: re-derive every inherited file:line on disk with `grep -n <stable-substring>`, source the replacement verbatim from an already-correct canonical doc, scope out worktree/build copies, decline drift-guard CI tooling (YAGNI), author portable positive+negative grep assertions (no cross-line / GNU-only regex), and verify docs-only via markdownlint + grep agreement |
+| **Verification** | verified-local |
+| **History** | See `audit-doc-consistency-fix-verify-coordinates-on-disk.history` (v1.0.0 → v1.1.0, 2026-06-20) |
 
 ## When to Use
 
-- An issue was **filed by a repository audit** and cites `file:line` coordinates that may have drifted between filing and execution (e.g. `README.md:58-61` that is really at `README.md:60`).
+- An issue, a **prior plan**, or a **repository audit** cites `file:line` coordinates that may have drifted between when they were captured and execution (e.g. `README.md:58-61` that is really at `README.md:60`; or a prior plan saying "lines 91-93" when the entry is really at 93-95). **Re-derive every inherited file:line on disk with `grep -n <stable-substring> <file>` before you quote it** — the source does not matter (audit output, issue body, or your own previous plan); any coordinate captured earlier should be assumed drifted.
 - The cited path itself may be wrong (e.g. an audit said `scripts/install_hooks.sh:41` but the file lives at `scripts/shell/install_hooks.sh:9`).
+- You are **authoring a plan's verification block** and need its `grep` assertions to be PORTABLE and actually able-to-fail: no cross-line / multi-line regex for line-oriented `grep`, no GNU-only `\s`/`\d` classes when portability matters, and a positive assertion paired with a negative `! grep` so the command can both pass on the good state and fail on the bad state.
 - Two or more documents disagree on the same command/snippet and you must bring the offender into line with the others.
 - A repo-wide `grep` surfaces matches inside `.claude/worktrees/...`, `build/.worktrees/...`, or other throwaway/untracked copies that must be explicitly scoped out.
 - A prior-learnings or reviewer suggestion proposes a grep-based CI drift-guard for a change that is only a one-line docs edit.
@@ -51,8 +57,14 @@ tags:
 ### Quick Reference
 
 ```bash
-# 1. Re-anchor EVERY audit-cited coordinate on disk before planning any edit.
-#    Do not trust file:line from an audit-filed issue.
+# 0. Re-derive an INHERITED file:line (from an issue body, a prior plan, or an audit)
+#    on disk before quoting it. Anchor on a STABLE SUBSTRING, not the stale number.
+#    Example: a prior plan said "lines 91-93"; re-derive ->
+grep -n 'CI unit/integration' CLAUDE.md   # prints the real start line (e.g. 93)
+#    Where possible, quote the verbatim block too so the target survives line drift.
+
+# 1. Re-anchor EVERY cited coordinate on disk before planning any edit.
+#    Do not trust file:line from an audit-filed issue OR a prior plan.
 grep -rn "pre-commit install" --include='*.md' --include='*.sh' . \
   | grep -v -e '\.claude/worktrees/' -e 'build/\.worktrees/' -e '/build/'
 
@@ -71,6 +83,14 @@ pixi run pre-commit run --files README.md
 # then assert all tracked copies now agree:
 git grep -n "pre-commit install" -- $(git ls-files) \
   | grep -v "pixi run pre-commit install"   # expect: ZERO lines
+
+# 6. PORTABLE, able-to-fail verification assertions for a PLAN.
+#    Match a SINGLE stable substring on ONE line. Do NOT use cross-line regex
+#    (`\s*\n*` is dead — line-oriented grep never sees `\n`) or GNU-only `\s`/`\d`.
+#    Pair a positive assertion (proves the addition) with a negative one (proves the
+#    removal), so the command can both pass on the good state AND fail on the bad state:
+grep -q 'CI badge is now load-bearing' FILE && ! grep -q 'do not rely on the green CI badge' FILE
+#    Prefer fixed strings (grep -F) over regex when no metacharacters are needed.
 ```
 
 ### Detailed Steps
@@ -116,6 +136,8 @@ git grep -n "pre-commit install" -- $(git ls-files) \
 | Repo-wide grep matched `.claude/worktrees/` and `build/.worktrees/` copies | Scoped the fix from a raw `grep -rn` hit list | Those are throwaway, untracked worktree copies, not tracked source — risks editing the wrong file or over-scoping | Exclude worktree/build dirs explicitly, or filter to `git ls-files` / `git grep` |
 | Composing a new corrected command from scratch for README | Inventing the fixed command form rather than copying an existing one | Risks introducing a THIRD divergent form instead of converging on the canonical one | Copy the exact form verbatim from an already-correct canonical doc |
 | Considered adding a grep-based CI drift-guard | Proposed a consistency-check CI step to prevent recurrence | Disproportionate scope for a one-line docs fix (YAGNI violation) | Apply YAGNI; state the decline + reason explicitly in the plan |
+| Cited inherited line numbers verbatim | Trusted "lines 91-93" from the issue/prior plan without re-deriving | Actual entry was at lines 93-95 (2-line drift); reviewer flagged the stale offset | Re-derive every inherited file:line with `grep -n <substring> <file>` at planning time; anchor on a stable substring, quote the verbatim block so the target survives drift |
+| Cross-line / GNU-only regex in a plan's grep assertion | `grep -q 'green\s*\n*.*load-bearing\|...'` as a verification check | Line-oriented grep never sees `\n`, so `\s*\n*` is dead; `\s` is a non-portable GNU extension; the branch could never match and only the fallback passed | Match a single stable substring on one line; avoid `\s`/`\d`/cross-line patterns; pair a positive assertion with a negative `! grep` so the command can both pass on good state and fail on bad state |
 
 ## Results & Parameters
 
@@ -140,6 +162,19 @@ README fix: prefix `pre-commit install` so it reads `pixi run pre-commit install
 - **Verification gate (docs-only):** `pixi run pre-commit run --files <file>`
   (markdownlint). No unit tests apply. Plus a grep assertion that every tracked
   copy now reads `pixi run pre-commit install`.
+
+### Verified On
+
+| Project / Issue | What was observed (locally, this session) |
+| --------------- | ----------------------------------------- |
+| ProjectProteus, issue #182 re-plan (R1 NOGO → addressed) | CLAUDE.md "Known Critical Defects" entry cited in a prior plan as **lines 91-93**; re-derived to **lines 93-95** via `grep -n 'CI unit/integration' CLAUDE.md` (entry begins at line 93). The 2-line drift was cosmetic only because the plan also quoted the verbatim block. Separately, a dead `grep -q 'green\s*\n*.*load-bearing\|...'` BRE branch in the Criterion-2 verification was removed — line-oriented grep never sees `\n` (so `\s*\n*` could never match) and `\s` is a non-portable GNU extension; only the `|| grep -q 'resolved by PR #173'` fallback had been passing. |
+
+> **Honesty note (planning-phase learnings).** The verification COMMANDS named above
+> (`grep -n 'CI unit/integration' CLAUDE.md` returning line 93; the dead-branch
+> analysis) WERE actually run / observed this session, which is what `verified-local`
+> attests to. The downstream ProjectProteus #182 plan ITSELF was **not implemented or
+> CI-validated** — these are coordinate-rederivation and grep-portability rigor lessons
+> from the planning phase, not an executed fix.
 
 ### Risks for the plan reviewer
 

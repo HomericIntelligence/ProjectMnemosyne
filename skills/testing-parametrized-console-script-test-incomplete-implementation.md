@@ -2,8 +2,9 @@
 name: testing-parametrized-console-script-test-incomplete-implementation
 description: "Use when: (1) a PR adds a parametrized test that auto-discovers an entire set (e.g. every [project.scripts] entry, every module) and applies one assertion to each member; (2) an integration test like test_cli_entry_points.py::TestCLIVersionFlag::test_version_flag[<script>] fails post-merge with 'unrecognized arguments: --version' / exit 2 for a subset of scripts; (3) a REQUIRED check breaks on main because a new parametrized test expanded coverage faster than the implementation; (4) adding a new console script and needing to wire add_json_arg + add_version_arg so the existing sweep test still passes."
 category: testing
-date: 2026-06-11
-version: "1.0.0"
+date: 2026-06-22
+version: "1.1.0"
+history: testing-parametrized-console-script-test-incomplete-implementation.history
 user-invocable: false
 verification: verified-ci
 tags: [testing, parametrize, console-scripts, project-scripts, cli-entry-points, version-flag, json-arg, auto-discovery, required-check, hephaestus]
@@ -118,6 +119,7 @@ wired on every `[project.scripts]` entry.
 |---------|----------------|---------------|----------------|
 | Partial implementation | PR #1035 added the parametrized `--version` test (auto-discovers all `[project.scripts]`) but only added the flag to a subset of scripts | The test auto-expands to ALL scripts; 3 un-patched scripts (`hephaestus-audit-prs`, `hephaestus-check-cli-tier-docs`, `hephaestus-check-repo-analyze-skills`) failed `--version` with exit 2, breaking a REQUIRED check on main | A parametrized test over an auto-discovered set is only as complete as the implementation; patch EVERY member or the test fails |
 | Skipping the full local run | Relying on pre-commit / spot checks rather than running the whole parametrized suite | The failing params only surface when running the full `test_cli_entry_points.py` over every discovered script | Always run `pixi run pytest tests/integration/test_cli_entry_points.py` (full param sweep) before merge |
+| New script forgot add_version_arg | `hephaestus-scaffold-subpackage` (PR #1570, issue #1554) wired `add_json_arg(parser)` but omitted the companion `add_version_arg(parser)` call | `TestCLIVersionFlag::test_version_flag[hephaestus-scaffold-subpackage]` would have failed with `error: unrecognized arguments: --version` exit 2 — caught by a code reviewer before merge | Both `add_json_arg` AND `add_version_arg` must be wired together; a reviewer or the full integration sweep is the last safety net when the author forgets one |
 
 ## Results & Parameters
 
@@ -149,3 +151,4 @@ pixi run pytest tests/integration/test_cli_entry_points.py   # 237 passed
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | PR #1035 introduced; PR #1174 fixed (green on main) | Parametrized `--version` sweep auto-discovered all `[project.scripts]`; 3 un-patched scripts broke a REQUIRED check; fixed by wiring `add_version_arg` on each |
+| ProjectHephaestus | PR #1570, issue #1554 — new scaffold-subpackage script forgot add_version_arg; reviewer caught it pre-merge; fixed before landing | `hephaestus-scaffold-subpackage` had `add_json_arg` but no `add_version_arg`; inline PR review thread caught the omission; fix applied before merge |

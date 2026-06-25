@@ -1,0 +1,106 @@
+# testing-verification-gate-zero-test-false-pass — History
+
+## v1.1.0 (2026-06-20)
+
+**Changed by:** ProjectAgamemnon issue #279 R1 re-planning (plan NOGO'd, revised). A second, C++/CMake manifestation of the same "name-filtered gate selects zero tests → false pass" lesson.
+**Verification:** unverified (plan-only) — the revised plan was never executed (no build, no `ctest`, no Docker run); all facts from static source reading + the plan reviewer's own verification.
+
+### What changed
+- Generalized the skill from a pytest-only finding to the broader class of NAME-FILTERED acceptance gates (`pytest -k`, `ctest -R`, `go test -run`).
+- Added the C++/CMake-specific manifestation: an ORPHANED test source (`test/src/test_healthcheck.cpp` listed in NO `test/CMakeLists.txt` target) makes `ctest -R Healthcheck` match zero tests and exit 0 — a silent false-positive acceptance gate.
+- Added the planning-review angle: when a PLAN cites a name-filtered runner as an acceptance gate, first prove the gate is non-empty (filter matches ≥1 test AND the source is wired into a build target).
+- Added the fix mechanics: wire the orphaned test into its own executable; inject the binary-under-test path via CMake `$<TARGET_FILE:...>` generator expression (+ `add_dependencies`) rather than a hard-coded literal/relative path.
+- Added an empty-match guard pattern: `ctest -R X --show-only | grep -qE 'Test #' || exit 1`.
+- Added a `### Detailed Steps` generalizable workflow (classify gate → prove wiring → guard empty match → inject target-file path).
+- Added 3 Failed Attempts rows (#4–#6, all marked plan-only).
+- Updated frontmatter: description (now mentions ctest/orphaned-target + 5th trigger), tags (+ctest, cmake, gtest, show-only, orphaned-test, target-file, plan-review), version 1.0.0 → 1.1.0, added `history` field.
+- Added the ProjectAgamemnon #279 row to "Verified On"; reframed the table around pytest case (#143) vs ctest case (#279).
+- Added documented open reviewer risks for the ctest case (unbuilt target / gtest discovery, unconfirmed suite name, shell-quoting of `$<TARGET_FILE>` into `system()`, sanitizer/port-binding flakiness) and externally-cited-but-unverified sources.
+
+### Why
+v1.0.0 captured the pytest variant (`pytest -k config` matched 0 tests, exited 0) from ProjectAgamemnon #143. A second R1 re-plan (ProjectAgamemnon #279) hit the IDENTICAL failure class in C++: a plan cited `ctest -R Healthcheck` as an acceptance gate, but the test source was compiled into no CMake target, so the regex matched zero tests and the gate proved nothing. Same search surface (someone debugging a name-filtered test false-positive), same category (testing), same verification level (unverified/plan-only) — so the learning belongs in this skill rather than a new file. The genuinely new content is the orphaned-build-target detection and the planning rule that a cited gate must be proven non-empty before it can be trusted.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: testing-verification-gate-zero-test-false-pass
+description: "A verification gate that selects ZERO tests still exits 0 (green) and silently gates nothing — a FALSE PASS. Happens when a plan says 'wrap existing test X in pytest.warns' but X never existed, or uses `pytest -k <expr>` that matches no tests. Net-new code (e.g. a deprecation shim) then ships untested. Use when: (1) a plan modifies/wraps an 'existing' test, (2) a verification step relies on `pytest -k`/selection, (3) you add net-new code and want a real gate, (4) you must enforce a DeprecationWarning rather than just allow it."
+category: testing
+date: 2026-06-20
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags: [testing, pytest, verification-gate, false-pass, deprecation-warning, test-count, collect-only, planning]
+---
+
+# Verification Gate: Zero-Test False Pass
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| Date | 2026-06-20 |
+| Objective | Validate the test gate in the R1 plan that "verifies" a new deprecation shim added while moving code ProjectKeystone → ProjectAgamemnon |
+| Outcome | Planning-only (R1 re-plan after NOGO). Found the planned gate was a false pass: it wrapped phantom tests and used `pytest -k config` which matched 0 tests yet exited 0. Replaced with grep-confirmed test existence, a net-new test for net-new code, an asserted pass COUNT, and `-W error::DeprecationWarning` enforcement |
+| Verification | unverified — gate not executed; no CI ran |
+
+## When to Use
+
+- A plan or issue says "wrap the existing `LegacyClass(...)` test in `pytest.warns`" or "modify test X" — before trusting it, confirm X actually exists.
+- A verification step relies on `pytest -k <expr>` or any test SELECTION to gate a change.
+- You are adding **net-new** code (a deprecation shim, a new module) and want a gate that actually exercises it.
+- You need a DeprecationWarning to be **enforced** (failing the build if it regresses), not merely permitted.
+
+## Proposed Workflow
+
+> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
+
+The trap: `pytest -k config` (or `pytest.warns` wrapped around a non-existent call) returns exit code 0 when it collects **zero** matching tests. Green build, nothing tested. The fix is to (a) prove the tests you intend to modify exist, (b) give net-new code a net-new test, (c) assert an explicit pass COUNT and collection parity so a missing test can't hide, and (d) promote the warning to an error so it's enforced.
+
+1. **Before writing "wrap/modify existing test X":** grep-confirm X exists. If the grep returns nothing, the assertions you planned to wrap are phantom.
+2. **Net-new code gets a NET-NEW test** — not a wrapper around a phantom assertion. A deprecation shim that ships without its own test is untested code.
+3. **Never let a selection gate pass on zero tests.** Assert the expected pass count (e.g. `... | grep -q "4 passed"`), so a zero-match run (which prints `no tests ran` / `0 selected`) fails the gate.
+4. **Enforce the warning** with `-W error::DeprecationWarning` so the deprecation path is actually triggered and a regression fails the build.
+5. **Check collection parity:** `pytest --collect-only -q | tail -1` must equal `baseline + N-new`, so a net-new test cannot be silently absent.
+
+### Quick Reference
+
+(See v1.1.0 file for the pytest commands — unchanged in substance: phantom-detection grep, `pytest -k config` false pass, real gate with `-W error::DeprecationWarning` + `grep -q "4 passed"`, collection parity.)
+
+## Verified Workflow
+
+_Not applicable_ — unverified; no workflow was executed. Captured during an R1 re-planning session; the gate above is a hypothesis to be confirmed by CI/execution.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| 1 | Plan: "wrap each legacy-var assertion in `pytest.warns`" to verify the new deprecation shim | grep returned nothing and no `test_config.py` existed — the assertions to wrap were phantom | Before writing "wrap/modify existing test X", grep-confirm X exists; net-new code needs a NET-NEW test, not a wrapped phantom |
+| 2 | `pytest -k config` as the verification gate for the change | It matched 0 tests, exited 0 (green), and gated nothing — a FALSE PASS; net-new shim shipped untested | A `pytest -k` gate matching zero tests is a false pass; assert the expected pass COUNT so a zero-match run fails |
+| 3 | Allowed the DeprecationWarning to merely fire (default filter) | A merely-allowed warning never fails the build, so a regression on the deprecation path would pass silently | Run with `-W error::DeprecationWarning` to enforce the warning, and use `--collect-only` count parity so a missing test can't hide |
+
+## Results & Parameters
+
+- **False-pass command:** `pytest -k config` → "no tests ran", exit 0.
+- **Phantom-detection grep:** `grep -rnE 'setenv|os\.environ|KEYSTONE_|monkeypatch' tests/*.py` (empty result ⇒ no test to wrap).
+- **Real gate:** `pytest <net-new-test> -W error::DeprecationWarning -q` AND `grep -q "<N> passed"` on the output.
+- **Collection parity:** `pytest --collect-only -q | tail -1` == baseline + N-new.
+- **Rules:** (1) grep-confirm a test exists before "wrapping" it; (2) net-new code → net-new test; (3) assert pass count, not just exit code; (4) enforce warnings as errors.
+- **Status:** unverified (planning-only); gate not executed, no CI run.
+
+## Verified On
+
+| Item | Value |
+|------|-------|
+| Migration | ProjectKeystone → ProjectAgamemnon |
+| Meta-repo | Odysseus |
+| Issue | #143 (R1 planning) |
+| Verification | unverified — not executed |
+```
+
+---
+
+## v1.0.0 (2026-06-20)
+
+**Initial version.** Captured the pytest-only manifestation from ProjectAgamemnon #143 (R1 plan after NOGO): `pytest -k config` selected zero tests, exited 0, and gated a net-new deprecation shim that shipped untested.

@@ -1,6 +1,87 @@
 <!-- markdownlint-disable MD024 -->
 # pre-commit-hooks-and-linting-config -- History
 
+## v2.5.0 (2026-06-23) -- Add the failed-hook commit-abort / phantom-signature trap: a failed pre-commit hook aborts `git commit` (rc=1) so HEAD never moves, and `git log --show-signature` then shows the PARENT/main-tip commit's signature, looking like a broken-key problem on a commit that does not exist (ProjectHephaestus)
+
+**Changed by:** ProjectHephaestus session debugging a phantom GPG-signature failure that was really a silently-aborted commit
+**Verification:** verified-precommit
+
+### What changed
+
+- Added trigger (24) to frontmatter `description`: `git commit` failing / unexpected-key signature (`%G? = E`, `No public key`) — FIRST check whether a pre-commit hook aborted the commit so HEAD never moved; verify with `git log -1 --format='%H %G? %s'` + `git diff --cached --name-only` before debugging signing; plus the reminder that pre-commit hooks are stricter than the bare pixi tasks.
+- Added 2 new "When to Use" bullets covering (a) the phantom-signature/aborted-commit trap and (b) running the REAL hooks (`pre-commit run ruff-check-python ruff-format-python --files <files>` + `pre-commit run mypy-check-python --all-files`) for new test code, not just `pixi run ruff check`/`pixi run mypy`.
+- Added new Verified Workflow subsection "A failed pre-commit hook aborts `git commit` — HEAD never moves, and the 'broken signature' is a phantom" with the instant-resolution verification commands (HEAD-advanced check, staged-files check, reflog/origin-tip cross-check) and the "run the real hooks, not just pixi tasks" guidance (D103/E501/ruff-format/var-annotated examples).
+- Added Failed Attempts row: re-signing / restarting gpg-agent to fix a "broken signature" that was really an aborted commit — lesson: verify HEAD advanced before debugging signatures.
+- Added "ProjectHephaestus (failed-hook commit-abort / phantom-signature)" row to the "Verified On" table.
+- Added a "Version" row to the Overview table (2.5.0); updated Outcome + Verification lines.
+- Version bumped 2.4.0 → 2.5.0 (minor: new When-to-Use trigger + new subsection + new Failed Attempts row).
+- Date remains 2026-06-23.
+
+### Why
+
+In a real ProjectHephaestus session, `git commit -S` returned rc=1 because a pre-commit hook
+(ruff E501 / ruff-format / mypy) failed; the failure line scrolled past mid-stream and was
+missed. `git log --show-signature -1` then showed `Can't check signature: No public key` and
+`%G? = E` for an RSA key the author did not own — because that was main's tip commit (authored
+by someone else), NOT the intended commit, which never happened. Several turns were wasted
+re-signing and restarting gpg-agent before the reflog revealed HEAD had not advanced past
+origin/main. The root signal that resolves it instantly is verifying the commit actually landed
+(`git log -1 --format='%H %G? %s'` shows a NEW hash; `git diff --cached --name-only` is empty)
+before touching anything signing-related. The session also confirmed the pre-commit hooks are
+stricter than `pixi run ruff check` / `pixi run mypy` (which both passed clean) — the commit
+still failed on D103, E501, ruff-format, and mypy var-annotated — so the actual hooks must be
+run before committing new test code. This is distinct from existing trigger #9 (ruff check vs
+ruff format are separate tools), which it deliberately does not duplicate.
+
+### Previous version (v2.4.0) snapshot
+
+The v2.4.0 Overview block had no explicit "Version" row; Outcome ended at
+"pip-audit ledger checker patterns added (verified-precommit)" and Verification read
+"verified-ci; verified-precommit (pip-audit ledger patterns)". The "When to Use" section
+ended at the pip-audit POLA bullet, the Verified Workflow's `ruff check` vs `ruff format`
+trap subsection was immediately followed by "#### `check-toml` is required for duplicate TOML
+tables", and the Failed Attempts table ended at the `pass_filenames: true` pixi.toml-scoped
+checker row. (Full v2.4.0 content is reconstructible from the v2.4.0 entry below.)
+
+## v2.4.0 (2026-06-23) -- Add pip-audit ledger checker patterns: pixi.toml task-regex anchoring, non-comment-line scoping, local hook wiring, POLA enforcement claim note (ProjectHephaestus issue #1550)
+
+**Changed by:** ProjectHephaestus issue #1550 / PR #1586 pip-audit ledger checker session
+**Verification:** verified-precommit
+
+### What changed
+
+- Added triggers (20)-(23) to frontmatter `description`:
+  - (20) adding a `repo: local` hook for a `pixi.toml`-scoped stdlib-only checker script
+  - (21) pip-audit task-definition regex matches dep-version lines when value group is not anchored
+  - (22) `IGNORE_VULN_RE.findall(text)` on the whole file hits `--ignore-vuln below` in doc comments
+  - (23) documenting script enforcement before hook wiring creates a false invariant claim
+- Added 4 new "When to Use" bullets covering the same triggers.
+- Added new Verified Workflow subsection "Pixi.toml-scoped local hook for stdlib-only checker scripts" with canonical hook YAML, two regex pitfall fixes, and POLA note on enforcement claims.
+- Added 4 Failed Attempts rows:
+  - Unanchored `pip-audit` task-definition regex matched dep-version lines
+  - `IGNORE_VULN_RE.findall(text)` on the whole file matched comment phrase `--ignore-vuln below`
+  - Documented enforcement in pixi.toml before wiring the hook
+  - `pass_filenames: true` for pixi.toml-scoped stdlib checker hook
+- Added "ProjectHephaestus issue #1550 / PR #1586" row to "Verified On" table.
+- Updated tags: added `pip-audit-ledger`, `pixi-toml-hook`, `toml-regex`, `comment-enforcement`.
+- Version bumped 2.3.1 → 2.4.0 (minor: new When-to-Use triggers + new subsection).
+- Date updated 2026-06-19 → 2026-06-23.
+
+### Why
+
+ProjectHephaestus issue #1550 added a stdlib-only pre-commit checker script
+(`scripts/check_pip_audit_ledger_reminder.py`) that validates pip-audit suppression ledger entries
+in `pixi.toml`. Two regex bugs were found: (1) the task-definition pattern matched dep-version pins
+because the value group was not anchored to start with `pip-audit`, triggering false `<parser>`
+errors; (2) `IGNORE_VULN_RE.findall()` on the full file text matched the phrase `--ignore-vuln below`
+in a doc-comment header, producing a spurious extra match. Additionally, a reviewer found that a
+pixi.toml comment claimed script enforcement before the hook was wired, which is a POLA violation.
+These are general principles applicable to any pixi.toml-scoped policy checker.
+
+### Previous version (v2.3.1) snapshot
+
+(see v2.3.1 entry below)
+
 ## v2.3.1 (2026-06-19) -- Add Bandit `pass_filenames: false` pattern for directory-scanning hooks (ProjectTelemachy issue #157)
 
 **Changed by:** ProjectTelemachy issue #157 Bandit SAST pre-commit hook implementation session
@@ -14022,7 +14103,6 @@ with open(p, 'w') as f: f.write(c.rstrip() + '\n')
 | --------- | --------- | --------- |
 | AchaeanFleet | CI repair — conflict resolution left trailing blank line in .github/workflows/ci.yml | 2026-04-23; yamllint passed after fix |
 
-
 ## Superseded from tooling-ruff-format-precommit-check-trap
 
 **Original date:** 2026-06-04 &nbsp;&nbsp; **Original version:** 1.1.0
@@ -14050,7 +14130,6 @@ tags:
   - projecthephaestus
   - ci-lint
 ```
-
 
 # Ruff Format vs Ruff Check: The Pre-Commit Trap
 
@@ -14237,7 +14316,6 @@ pre-commit run --from-ref origin/main --to-ref HEAD
 
 ---
 
-
 ## Superseded from precommit-scope-full-pr-diff-not-current-edit
 
 **Original date:** 2026-05-25 &nbsp;&nbsp; **Original version:** 1.0.0
@@ -14259,7 +14337,6 @@ tags:
   - formatter
   - pre-push
 ```
-
 
 # Pre-commit Scope: Full PR Diff, Not Current Edit
 
@@ -14397,7 +14474,6 @@ exec pixi run pre-commit run --from-ref "${remote_ref}" --to-ref HEAD
 
 ---
 
-
 ## Superseded from tooling-editorconfig-cross-editor-consistency
 
 **Original date:** 2026-03-25 &nbsp;&nbsp; **Original version:** 1.0.0
@@ -14418,7 +14494,6 @@ tags:
   - formatting
   - cross-editor
 ```
-
 
 # Skill: EditorConfig Cross-Editor Consistency
 
@@ -14566,7 +14641,6 @@ feat(dx): add .editorconfig for cross-editor consistency
 
 ---
 
-
 ## Superseded from review-rubric-exempt-toolchain-forced-churn
 
 **Original date:** 2026-06-05 &nbsp;&nbsp; **Original version:** 1.0.0
@@ -14581,7 +14655,6 @@ user-invocable: false
 verification: verified-ci
 tags: [pr-review, rubric, yagni, scope-creep, pre-commit, lint, automation, review-agent]
 ```
-
 
 # Exempting Toolchain-Forced Churn from PR-Review Scope/YAGNI Rubrics
 

@@ -26,10 +26,18 @@ description: "Use when: (1) creating isolated git worktrees for parallel agent e
   real uncommitted work — prove redundancy with `git cat-file -e main:<file>` before discarding,
   (18) a bulk `git reset --hard` / `git clean -fd` / `git worktree remove --force` across many
   worktrees got safety-net-BLOCKED as 'Irreversible Local Destruction' — hand the exact per-worktree
-  commands to the user to run themselves rather than auto-executing."
+  commands to the user to run themselves rather than auto-executing, (19) two parallel SUBPROCESSES
+  (not threads — separate `subprocess.run` children) race to create the SAME
+  `build/.worktrees/issue-<N>` path and one dies with `fatal: '.../issue-<N>' already exists` (git
+  exit 128) because each child has its own in-process `threading.Lock` that gives ZERO cross-process
+  protection, (20) needing a reusable cross-process file lock and finding only INLINE `fcntl.flock`
+  copies (e.g. `github/rate_limit.py`, `automation/advise_runner.py`) and no generic helper — extract
+  one `file_lock` contextmanager, don't add a third copy, (21) an in-process `threading.Lock` appears
+  'not working' / fails to serialize because the contention is actually ACROSS PROCESSES, so the
+  guard must be an advisory `fcntl.flock(LOCK_EX)` on a sentinel file."
 category: tooling
-date: 2026-06-15
-version: "1.3.0"
+date: 2026-06-22
+version: "1.4.0"
 verification: verified-local
 user-invocable: false
 history: git-worktree-parallel-execution-lifecycle.history
@@ -81,6 +89,14 @@ mass cleanup. Includes the critical "no-worktree-at-all" anti-pattern warning.
   clone-within-a-repo (e.g. `build/.worktrees/...`, `build/<OtherProject>`)
 - Distinguishing stale-checkout drift (redundant-with-main dirty diff) from real uncommitted work
 - A bulk `git reset --hard` / `git clean -fd` / `git worktree remove --force` got safety-net-blocked
+
+**Cross-process subprocess contention:**
+
+- Two parallel SUBPROCESSES (separate `subprocess.run` children, not threads) race on the same
+  `build/.worktrees/issue-<N>` path and one dies with `fatal: '.../issue-<N>' already exists`
+- Needing a reusable cross-process file lock and discovering only inline `fcntl.flock` copies exist
+- An in-process `threading.Lock` "not working" / failing to serialize because the contention is
+  across processes, not threads
 
 **Not suitable for:**
 
@@ -558,6 +574,78 @@ git rebase --abort 2>/dev/null
 # Conflicts on closed-PR branch = superseded — keep closed; do NOT rebase
 ```
 
+### Phase 8: Cross-PROCESS Worktree-Creation Race (Subprocess Workers)
+
+**Distinct from Phases 0a/4.** Those cover cross-THREAD `.git/HEAD`/index contention among
+agents sharing one interpreter. This phase covers cross-PROCESS contention: when a tool's
+parallel workers are separate `subprocess.run` CHILDREN (each its own Python interpreter) that
+share an on-disk worktree path.
+
+**Foundation**: ProjectHephaestus issue-major automation loop (real 2026-06-21 output.log,
+issues 1553/1547; fix PR #1568 / issue #1567). The loop runs each issue's phases as separate
+`subprocess.run` children. With 2+ issues in parallel, two `hephaestus-ci-driver` subprocesses
+start near-simultaneously and EACH runs `_sweep_orphaned_arming_records` (`ci_driver.py`), which
+globs ALL `drive-green-armed-*.json` records in the SHARED `build/.issue_implementer` dir. Both
+independently find the same merged orphan PR and both call `create_worktree(same_issue)` on the
+same path `build/.worktrees/issue-1547` → `fatal: '.../build/.worktrees/issue-1547' already
+exists` (git exit 128). It self-recovered via a repo-root fallback, but that cascaded into
+spurious `/compact` "No conversation found with session ID" warnings (the fallback /learn ran in
+a fresh session whose deterministic session_uuid never existed).
+
+**Root cause**: `WorktreeManager.create_worktree` (`worktree_manager.py:185`) guards only with an
+in-process `threading.Lock` + an in-memory `self.worktrees` dict. Those coordinate THREADS of one
+interpreter only. Two separate processes each have their own `WorktreeManager`/lock/dict but share
+the same filesystem path — so the in-process lock provides ZERO cross-process protection. The
+`worktree_path.exists()` check is a TOCTOU race against another process's `git worktree add`.
+
+**Decision — pick the lock by your parallel UNIT:**
+
+| Parallel unit | Shared resource | Correct lock |
+| ------------- | --------------- | ------------ |
+| THREADS of one interpreter | `.git/HEAD`, in-memory dict | `threading.Lock` (and serialize — Phases 0a/4) |
+| Separate `subprocess.run` children / processes | on-disk worktree dir, state file | cross-process advisory `fcntl.flock(LOCK_EX)` on a sentinel file |
+
+**Fix — reusable cross-process `file_lock` primitive** (`hephaestus/utils/file_lock.py`):
+
+```python
+from hephaestus.utils.file_lock import file_lock, LockUnavailableError
+
+# Serialize the WHOLE create/sweep across processes (blocking — waits for the holder):
+with file_lock(state_dir / "orphan-sweep.lock"):
+    # re-glob + re-load records here; the second sweeper finds them already terminal → no-op
+    _sweep_orphaned_arming_records(...)
+
+# Non-blocking variant (skip if another process holds it):
+try:
+    with file_lock(path, blocking=False):
+        ...
+except LockUnavailableError:
+    ...  # someone else owns it — back off
+```
+
+Primitive contract: `@contextmanager file_lock(path, *, blocking=True)` wraps
+`fcntl.flock(LOCK_EX)` (`LOCK_NB` → raises `LockUnavailableError` when `blocking=False`); opens the
+sentinel securely with `os.open(... O_RDWR|O_CREAT|O_NOFOLLOW, 0o600)` (refuses symlinks); does NOT
+unlink the sentinel while held (inode-reuse hazard); Windows no-op fallback when `import fcntl`
+fails. It was extracted from TWO pre-existing INLINE flock copies
+(`github/rate_limit.py:359-435` `_open_secure_state_file` + `gh_global_throttle_acquire`, and
+`automation/advise_runner.py:150-195`) — there was no generic helper and no `filelock` dependency.
+
+**Why wrapping the WHOLE sweep (not just the create) is the fix:** holding the lock across the
+entire sweep serializes the subprocesses; the second sweeper, on acquiring, re-globs + re-loads
+records and finds them already terminal (the first sweeper called
+`_mark_drive_green_learn_result`), so it no-ops. This closes BOTH the double-`/learn` and the
+`create_worktree` collision at the source. Do NOT just `path.exists()`-then-create under no
+lock — that guard is the TOCTOU race.
+
+**Cascading-symptom lesson:** the race was masked by the self-recovery fallback (repo-root fresh
+session), which then produced a DIFFERENT downstream symptom (`/compact` "No conversation found").
+Trace cascading warnings back to the original masked failure rather than fixing the visible symptom.
+
+Related: [[concurrency-and-process-reliability-patterns]] (Pattern 4 — cross-process semaphore) and
+[[automation-loop-phase-major-to-issue-major]] (the architecture that made workers separate
+subprocesses).
+
 ### Branch Deletion Policy
 
 **CRITICAL: Never delete branches autonomously. Always defer to the user.**
@@ -618,6 +706,10 @@ gh api --method DELETE "repos/$REPO/git/refs/heads/<branch-name>"
 | Treat a dir under `build/.worktrees/` as one of THIS repo's worktrees | About to clean `build/.worktrees/mnemo-skill-911`, which sat under the host repo's build dir | It was a worktree of a DIFFERENT repo (ProjectMnemosyne), spawned from a stray clone-within-a-repo at `build/ProjectMnemosyne`; it never appeared in the host repo's `git worktree list` (different `.git`); a blind cleanup would have force-deleted genuine uncommitted work from another project | Before touching any worktree-looking dir, run `git -C <dir> remote get-url origin` and confirm it matches THIS repo's remote; a dir in a `git status` loop but ABSENT from `git worktree list` belongs to another clone — OUT OF SCOPE, never remove |
 | Assume a big `D`/`M` dirty diff in a merged worktree is real work to preserve | Worktrees on already-MERGED PRs showed huge diffs full of `D hephaestus/automation/_implement_phase.py`-style deletions | The deletions were stale-checkout drift — the tree was edited toward a state main long since passed; the "deleted" files still exist on main, so the diff is redundant, not new work | Prove redundancy with `git cat-file -e main:<file>` for each "deleted" path (success = drift) + `gh pr list --head <branch> --state all` (MERGED = safe) + confirm untracked files are only `.claude-address-review-*.md`/`.claude-followup-*.json`/`followup-*.json` artifacts BEFORE discarding |
 | Auto-loop `git reset --hard HEAD` + `git clean -fd` across 14 unilaterally-judged-redundant worktrees | Tried to bulk-discard dirty-but-redundant trees in auto mode | Claude Code safety classifier BLOCKED it as "Irreversible Local Destruction not cleared by the general cleanup request"; `git worktree remove` also refuses dirty trees without `--force`, and `--force` is blocked too | Auto-remove only CLEAN worktrees (incl. locked-by-dead-PID: `git worktree unlock <p> && git worktree remove <p>`, no `--force`); for force-discard of dirty-but-redundant trees, STOP and print the exact per-worktree reset/clean/remove block for the USER to run via the `!` prefix |
+| In-process `threading.Lock` to guard worktree creation across `subprocess.run` workers | `WorktreeManager.create_worktree` guarded only with a `threading.Lock` + in-memory `self.worktrees` dict; two `hephaestus-ci-driver` SUBPROCESSES ran `_sweep_orphaned_arming_records` near-simultaneously | A `threading.Lock` coordinates only THREADS of one interpreter; each subprocess has its OWN lock/dict but shares the filesystem path, so both called `create_worktree(issue-1547)` → `fatal: '.../build/.worktrees/issue-1547' already exists` (git exit 128) | Check whether your parallel unit is THREADS or PROCESSES before choosing a lock; for subprocess workers sharing an on-disk path use a cross-process advisory `fcntl.flock(LOCK_EX)` on a sentinel file, NOT a `threading.Lock` |
+| `worktree_path.exists()`-then-`git worktree add` guard | Checked path existence, then created the worktree if absent | Across processes this is a TOCTOU race — the second process passes the `.exists()` check before the first's `git worktree add` completes, then collides | Serialize the WHOLE create (and its enclosing sweep) under a cross-process `file_lock`; the second holder re-globs/re-loads and finds the records already terminal → no-ops |
+| Add a third inline `fcntl.flock` copy for the new lock site | Was about to inline another flock block in `ci_driver.py` like the two existing ones | Two inline flock copies already existed (`github/rate_limit.py`, `automation/advise_runner.py`) with no generic helper — a third copy is a DRY violation | Extract ONE reusable `hephaestus/utils/file_lock.py` `@contextmanager file_lock(path, *, blocking=True)` (secure `O_NOFOLLOW` open, `LockUnavailableError` on `LOCK_NB`, Windows no-op) and route all sites through it |
+| Fix the visible `/compact` "No conversation found with session ID" warning | Investigated the `/compact` session-id warning as the primary bug | It was a CASCADED downstream symptom: the worktree-creation race self-recovered via a repo-root fallback whose fresh /learn session had a deterministic session_uuid that never existed | Trace cascading warnings back to the ORIGINAL masked failure; fixing the cross-process race at the source eliminated both the collision and the `/compact` warning |
 
 ## Results & Parameters
 
@@ -702,3 +794,4 @@ WORKTREE_PATH=$(git worktree list --porcelain 2>/dev/null | \
 | AchaeanFleet | Phase 0.5 gitignore hygiene (commit dcf3d43); `git status --short` clean after cleanup | 2026-04-25 |
 | ProjectOdyssey | `scripts/rebase-all-branches.sh` inline cleanup refactor (PR #5408) | 2026-05-14 |
 | ProjectHephaestus | Worktree-cleanup safety session: cross-repo hiding under `build/.worktrees/mnemo-skill-911` (belonged to ProjectMnemosyne via stray `build/ProjectMnemosyne` clone); stale-checkout drift on merged worktrees proven redundant via `git cat-file -e main:<file>`; bulk `reset --hard`/`clean -fd`/`remove --force` across 14 trees safety-net-blocked → handed per-worktree commands to user (verified-local, read-only audit + recommendation) | worktree-cleanup safety 2026-06-15 |
+| ProjectHephaestus | Cross-PROCESS worktree-creation race in the issue-major automation loop (issues 1553/1547): two `hephaestus-ci-driver` subprocesses ran `_sweep_orphaned_arming_records` simultaneously → `create_worktree(issue-1547)` collision (`fatal: ... already exists`); fixed with new reusable `hephaestus/utils/file_lock.py` (`fcntl.flock`) wrapping the sweep, extracted from two pre-existing inline flock copies. PR #1568 / issue #1567. Verified-local: 2017 unit tests pass, mypy clean (411 files), ruff clean, TDD RED→GREEN for both `file_lock` and the sweep regression; PR CI still PENDING (unit-test matrix) at capture time | cross-process-orphan-sweep-race 2026-06-21 |

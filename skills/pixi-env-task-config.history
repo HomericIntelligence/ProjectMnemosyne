@@ -4,6 +4,19 @@
 
 Changelog and superseded-skill archive for the merged canonical skill.
 
+## v1.2.0 (2026-06-22)
+
+MINOR — add the nested/recursive `pixi run` task smell (a `[tasks]` entry whose
+body is itself `pixi run`), its root cause (TASKS-first resolution order), the
+`depends-on` relocation fix, and the consumer-grep discipline ("the task exists"
+≠ "anyone invokes it"). Captured as a PLANNING learning from ProjectHephaestus
+issue #1554; observed facts are verified-local, the relocation fix is proposed
+(not yet executed/CI-confirmed). Adds two planning assumption-trap rows
+(issue-body file paths are approximate; a documented-gap can be present in one
+sibling config and absent in another). New tags: `depends-on`,
+`recursive-invocation`. New When-to-Use triggers and an Observed/Proposed
+workflow subsection.
+
 ## v1.1.0 (2026-06-07)
 
 restore core.hooksPath bootstrap failed-attempt (nuance audit pass 2)

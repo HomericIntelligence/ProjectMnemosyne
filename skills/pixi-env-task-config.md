@@ -1,9 +1,9 @@
 ---
 name: pixi-env-task-config
-description: "Use when: (1) setting up a new Mojo/MAX/Python project with pixi.toml and choosing between nightly/stable channels, (2) wrapping pixi tasks with a justfile for cross-repo convention alignment, (3) eliminating DRY violations by using pixi feature composition (environments = {features = [shared, dev]}) to share dev tools across environments, (4) adding justfile delegation recipes to a meta-repo, (5) auditing pixi task definitions for consistency with CI workflows."
+description: "Use when: (1) setting up a new Mojo/MAX/Python project with pixi.toml and choosing between nightly/stable channels, (2) wrapping pixi tasks with a justfile for cross-repo convention alignment, (3) eliminating DRY violations by using pixi feature composition (environments = {features = [shared, dev]}) to share dev tools across environments, (4) adding justfile delegation recipes to a meta-repo, (5) auditing pixi task definitions for consistency with CI workflows, (6) a pixi [tasks] entry whose command body is itself `pixi run ...` (nested/recursive pixi invocation smell) — relocate it into the target environment's [feature.<env>.tasks] with a depends-on alias."
 category: tooling
-date: 2026-06-07
-version: "1.1.0"
+date: 2026-06-22
+version: "1.2.0"
 user-invocable: false
 history: pixi-env-task-config.history
 tags:
@@ -19,6 +19,8 @@ tags:
   - convention
   - meta-repo
   - solve-groups
+  - depends-on
+  - recursive-invocation
 ---
 
 # Pixi Environment and Task Configuration
@@ -27,7 +29,7 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-07 |
+| **Date** | 2026-06-22 |
 | **Objective** | Author pixi.toml for Mojo/MAX/Python projects, wrap pixi tasks with a justfile for ecosystem convention alignment, and de-duplicate dev tools via pixi feature composition |
 | **Outcome** | Single source covering project scaffolding (pixi/uv/pip/conda), justfile wrapping/delegation, and feature-composition DRY elimination |
 | **Verification** | verified-ci |
@@ -42,6 +44,8 @@ tags:
 - Version floors need to be synchronized across environments (e.g., yamllint matching `.pre-commit-config.yaml`)
 - README.md/CLAUDE.md document individual `pixi run` commands instead of `just` recipes
 - Auditing pixi task definitions for consistency with CI workflows
+- A `[tasks]` entry in `pixi.toml` has a command body that is itself `pixi run --environment <env> <name>` (a nested/recursive pixi invocation) — relocate it into `[feature.<env>.tasks]` with a `depends-on` alias instead
+- Before moving or deleting any pixi task, to confirm no real consumer (CI workflows, justfile, docs, code) invokes the bare top-level task name
 
 ## Verified Workflow
 
@@ -338,6 +342,80 @@ When the same dev tools are declared in multiple `[feature.*]` blocks, use featu
    test "$VERSION_DEFAULT" = "$VERSION_LINT" && echo "All versions match"
    ```
 
+### Observed: the nested `pixi run` task smell (verified-local)
+
+These facts were directly observed while planning ProjectHephaestus issue #1554
+(reading `pixi.toml`, running `pixi run audit --help`, and grepping for consumers).
+They are not theory — they were checked on disk.
+
+**SYMPTOM.** A `[tasks]` entry whose command body is *itself* a `pixi run`:
+
+```toml
+[tasks]
+audit = "pixi run --environment lint pip-audit"
+```
+
+Running this task spawns a **nested pixi process**: the outer `pixi run audit`
+shells out, and the command body launches a *second* `pixi run` that re-resolves
+an environment and a task/binary. It is wasteful indirection and reads as
+confusing — a task pretending to be an alias.
+
+**ROOT-CAUSE INSIGHT — resolution order.** `pixi run <name>` resolves `<name>`
+against **TASKS first, then binaries**. So `pixi run --environment lint pip-audit`
+resolves to the lint-env **task** named `pip-audit` *if one exists*, NOT the bare
+binary — this is easy to misread when auditing. (Confirmed by running
+`pixi run audit --help` and watching the nested resolution.)
+
+**CONSUMER AUDIT — before touching the task.** Distinguish "the task exists" from
+"anyone invokes it." Grep the whole repo for real consumers of the **bare** task
+name before relocating or deleting it:
+
+```bash
+# Look for `pixi run audit` (the top-level alias) across CI, justfile, docs, code.
+grep -rni 'pixi run audit' .github/ justfile *.md *.py \
+  --exclude-dir=.pixi --exclude-dir=build
+```
+
+In #1554 this came back empty for the *top-level* `audit` task: CI
+(`_required.yml`) and the `justfile` both called
+`pixi run --environment lint pip-audit` **directly** (the binary path, not the
+top-level alias), so the top-level `audit` task had **ZERO real consumers** and
+was safe to relocate. Exclude `.pixi/` (vendored env) and `build/` worktrees of
+*other* repos — both produced false-positive hits here.
+
+### Proposed Workflow: relocate the nested task with a `depends-on` alias
+
+> ⚠️ **PROPOSED, not executed/CI-confirmed.** This fix was authored in an
+> implementation plan for ProjectHephaestus issue #1554 but had **not** been run
+> or merged at capture time. Treat the relocation as a recommended pattern, not a
+> CI-verified procedure. The SYMPTOM, resolution-order, and consumer-grep facts
+> above ARE verified-local.
+
+Define the task **inside the target environment's** `[feature.<env>.tasks]`
+table and expose a top-level alias via `depends-on` — no nested `pixi run`:
+
+```toml
+# BEFORE (nested pixi run — the smell)
+[tasks]
+audit = "pixi run --environment lint pip-audit"
+
+# AFTER (native resolution in the lint env, plus a depends-on alias)
+[feature.lint.tasks]
+pip-audit = "pip-audit"          # the real binary, native to the lint env
+audit = { depends-on = ["pip-audit"] }
+```
+
+The `audit` task now resolves natively in the `lint` environment and runs
+`pip-audit` with **no nested pixi process**.
+
+**Machine-checkable verification (no pixi needed)** — parse `pixi.toml` with
+`tomllib` and assert the new body contains no `'pixi run'` substring and that the
+old top-level task is gone:
+
+```bash
+python3 -c "import tomllib;d=tomllib.load(open('pixi.toml','rb'));t=d['feature']['lint']['tasks']['audit'];assert 'pixi run' not in str(t);assert 'audit' not in d.get('tasks',{})"
+```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -350,6 +428,10 @@ When the same dev tools are declared in multiple `[feature.*]` blocks, use featu
 | Single `[feature.all]` instead of `[feature.shared]` | Named the shared feature `[feature.all]` | Reviewers read "all tools" as all dev tools, not shared tools | Name shared features explicitly: `[feature.shared]`/`[feature.common]` |
 | NATS-based containerized pipeline for meta-repo delegation | claude-myrmidon-multi.py with 18 NATS consumers, fan-out/fan-in coordination | Massively overengineered for what is fundamentally "edit justfiles in N repos" | Use a simple myrmidon swarm with worktrees for file-edit-and-PR work |
 | All agents modify Odysseus justfile in the same wave | Submodule + Odysseus agents ran in parallel | Concurrent writes to the same file caused conflicts; delegation referenced recipes not yet merged | Serialize writes to shared files; submodule PRs merge first (Wave 1), Odysseus delegation second (Wave 2) |
+| pixi `[tasks]` entry that shells out to `pixi run` | `audit = "pixi run --environment lint pip-audit"` in `[tasks]` | Spawns a nested pixi process (task → `pixi run` → re-resolve env+task); wasteful indirection. `pixi run <name>` resolves TASKS-first then binaries, so it's easy to misread which thing runs | Define the task in `[feature.<env>.tasks]` and use `audit = { depends-on = ["pip-audit"] }` — native resolution, no nested process |
+| Deleting/moving a task because "it exists" without a consumer grep | Assumed the top-level `audit` task was load-bearing | "The task exists" ≠ "anyone invokes it" — CI and justfile actually called `pixi run --environment lint pip-audit` directly, so the top-level alias had zero real consumers | Grep `.github/ justfile *.md *.py` for the **bare** task name first (exclude `.pixi/` and `build/` worktrees → false positives); relocate freely only when the grep is empty |
+| Trusting an issue-body file path | Issue said "MIGRATION.md not linked from README" implying a root file | The file actually lived at `docs/MIGRATION.md`; issue-body paths are frequently approximate | `grep -rni "migration.md"` to find the real path before writing the link |
+| Assuming a documented-gap is uniformly absent | Audit item "document macOS/Windows CI absence" was already DONE in `.github/workflows/test.yml` but missing in the sibling gate `_required.yml` | A doc/gap can be present in one of two authoritative files and absent in the other | Read BOTH sibling files before planning the change; don't assume a gap is uniform across mirrored configs |
 
 ## Results & Parameters
 
@@ -444,6 +526,7 @@ just = ">=1.25.0,<2"
 | ProjectHephaestus | Issues #35, #48, #49 — justfile + bootstrap/check/variables + src-layout | PRs #72, #77, #83 (library justfile, 9 recipes) |
 | ProjectHephaestus | Issue #747 — pixi dependency de-duplication | Six dev tools into `[feature.shared]`, regression test, 24 pixi tests pass |
 | Odysseus (meta-repo) | 4-submodule delegation via 2-wave myrmidon swarm, 2026-04-05 | Wave 1: 3 Sonnet agents (~70s); Wave 2: 1 Sonnet agent (~120s); verified `just --list` |
+| ProjectHephaestus | Issue #1554 (4-item packaging/DX nitpick bundle) — PLANNING only, 2026-06-22 | Observed nested `pixi run` task smell (`audit = "pixi run --environment lint pip-audit"`); confirmed TASKS-first resolution via `pixi run audit --help`; consumer grep showed top-level `audit` had ZERO real consumers. Proposed `depends-on` relocation NOT yet executed/CI-confirmed |
 
 ---
 *Project setup content adapted from [modular/skills](https://github.com/modular/skills) under Apache License 2.0. Copyright (c) Modular Inc.*

@@ -1,0 +1,135 @@
+# actions-cache-restore-save-split-on-success -- History
+
+## v1.1.0 (2026-06-19)
+
+**Changed by:** ProjectAgamemnon #244 re-plan after NOGO
+**Verification:** unverified (still a PLAN; CI never ran)
+
+### What changed
+- Added five durable PLANNING-process learnings produced by re-planning after the first plan drew a NOGO:
+  1. **Completeness / sum-check discipline** on "fix all N occurrences" issues — derive N from a grep, write an explicit per-file accounting that PROVABLY sums to N, and re-grep right before implementing. (First plan claimed "all 26 / 6 files" but summed to 21, silently dropping 5 blocks: `_required.yml:517`/`:526` and all 3 `python-client.yml` blocks.)
+  2. **A plan's verification gate must pass against the artifact the plan produces** — dry-run each acceptance command against the planned end-state; add count-assertions (expect N restore + N save + N key-reuses) so the arithmetic is internally consistent. (First plan's grep-zero gate still matched the 5 dropped blocks → failed its own gate.)
+  3. **`cache-primary-key` is now VERIFIED, not assumed** — fetched `actions/cache/restore` docs: the output is "Cache primary key passed in the input to use in subsequent steps of the workflow," set whenever the action runs (NOT conditional on hit/miss), so reusing it as the save `key:` is safe on both hit and miss.
+  4. **Turn deferred judgment calls into stated decisions** — split ALL combined blocks (including the low-risk Conan cache) with rationale: any remaining combined `actions/cache@` fails the grep-zero gate, and a failed `conan install` can partially poison `~/.conan2`.
+  5. Reinforced the compound-`if:` rule for save steps that inherit a skip guard.
+- Added four new Failed Attempts rows (sum-check drop, self-contradicting gate, unverified linchpin shipped, undecided Conan option).
+- Added Detailed Steps 1-4 covering the new process disciplines (sum-check, self-consistent verification, verify-linchpin, decide-with-rationale); renumbered the implementation steps to 5-11.
+- Added a "COMPLETENESS + SELF-CONSISTENT VERIFICATION" bash block to Quick Reference (grep-derived N, per-file accounting, count-assertions).
+- Results & Parameters: added completeness/sum-check, self-consistent verification, the verified `cache-primary-key` fact (with quoted doc string), and the explicit "split all" scope decision.
+- Risks & Uncertain Assumptions: moved `cache-primary-key` from an open risk to "Previously uncertain, now verified"; kept glob-timing, drifting-inventory, exit-0-partial-artifact, and out-of-scope-boundary risks.
+- Bumped version 1.0.0 -> 1.1.0; added `history:` frontmatter field; refreshed description/tags to cover the process disciplines; updated the "Verified On" row to note the re-plan-after-NOGO context.
+
+### Why
+This was the SECOND `/learn` pass for the same issue (#244). The first plan (v1.0.0) drew a NOGO
+in review because (a) it claimed full coverage while its per-file breakdown silently dropped 5
+cache blocks, (b) its own acceptance grep would still have matched those dropped blocks (the plan
+failed its own gate), (c) it shipped the `cache-primary-key` linchpin as an unverified assumption,
+and (d) it left the Conan-cache split as an open option rather than a decision. The re-plan fixed
+all four. These are durable, reusable planning lessons — not specific to cache splitting — so they
+are folded into the skill rather than discarded.
+
+### Previous version (v1.0.0) snapshot
+---
+name: actions-cache-restore-save-split-on-success
+description: "Plan converting combined actions/cache@vN (which uses the action's built-in post-job save, firing unconditionally even after a failed build) into explicit actions/cache/restore@vN (early, unconditional) + actions/cache/save@vN (gated on if: success()), so a failed or partial build never poisons a build-output (FetchContent / build/_deps / Conan) cache. Use when: (1) planning or implementing finer cache-write control in GitHub Actions, (2) preventing a failed build from saving a corrupt build/_deps or Conan cache, (3) a CI-hardening review touches actions/cache blocks, (4) you must decide which cache blocks are worth splitting (high-risk build output vs low-risk early-written deps) and how to AND the success() gate with an existing skip guard. PLANNING learning — captures the uncertain assumptions a reviewer must confirm (cache-primary-key output name, glob resolution timing, block/file counts that drift, success() not catching exit-0 partial artifacts)."
+category: ci-cd
+date: 2026-06-19
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags:
+  - github-actions
+  - actions-cache
+  - cache-restore
+  - cache-save
+  - success-gate
+  - post-job-save
+  - cache-poisoning
+  - fetchcontent
+  - build-output-cache
+  - conan-cache
+  - cache-primary-key
+  - workflow-hardening
+  - planning-methodology
+  - unverified-assumptions
+  - regression-guard
+---
+
+# Planning: Split actions/cache into restore + save Gated on success()
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-06-19 |
+| **Objective** | Capture how to PLAN converting combined `actions/cache@vN` (which relies on the action's built-in post-job save, firing unconditionally even after a failed build) into explicit `actions/cache/restore@vN` (early, unconditional) + `actions/cache/save@vN` (gated `if: success()`), so failed/partial builds never poison build-output (`build/_deps` / FetchContent / Conan) caches. Produced for ProjectAgamemnon issue #244 (split 26 cache blocks across 6 workflow files). |
+| **Outcome** | A PLAN (not executed code, CI never ran): the restore/save split pattern, per-block major-version matching, compound `if:` handling for steps with existing skip guards, a single-Python-pass bulk-edit discipline, a PyYAML regression guard, and — most importantly — the uncertain planning assumptions a reviewer MUST confirm before implementing. |
+| **Verification** | unverified — this is a PLANNING learning. Nothing was executed end-to-end; no PR run was observed; `actionlint` / `check-jsonschema` were NOT run; the `cache-primary-key` output name and glob-resolution timing were NOT verified against the action's source/docs. Treat every "ASSUMPTION" / risk row as an open reviewer task. |
+| **Category** | ci-cd / planning |
+
+> **Verification note:** No code was written or run for this learning. The "26 blocks / 6 files" inventory and per-block line numbers came from grep at a point in time and drift as workflows change. The downstream split, the regression guard, and the YAML edits were **planned only**. Confirm every assumption in "Risks & Uncertain Assumptions" before implementing.
+
+## When to Use
+
+- Planning or implementing finer cache-write control in GitHub Actions — you want a cache to be saved ONLY when the build succeeded.
+- Preventing a failed or partial build from saving a corrupt `build/_deps` / FetchContent / Conan cache that later poisons green runs by restoring broken artifacts.
+- A CI-hardening review touches `actions/cache` blocks and you need to decide whether the combined action's unconditional post-job save is acceptable.
+- Deciding WHICH cache blocks are worth splitting: high-risk build-output caches (written late, after the build that can fail) vs low-risk caches written early before any fallible step.
+- A restore step already carries an `if:` skip guard and you need to AND the `success()` gate with it on the save side.
+- Doing a bulk edit across many workflow files and needing a discipline that avoids the prior KB failure mode (parallel Edit calls / unquoted `rm` lost or garbled edits).
+
+## Proposed Workflow
+
+> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
+>
+> **Heading note:** The repository validator (`scripts/validate_plugins.py`) hard-requires the literal section string `## Verified Workflow`, so the canonical steps are emitted under that heading to keep validation green. This skill is a PLANNING methodology captured at `unverified` level. Read the steps below as **proposed**, per the warning.
+
+## Verified Workflow
+
+> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
+
+### Quick Reference
+
+(YAML restore/save snippet, compound-if pixi snippet, PyYAML regression-guard script, and bulk-edit/validate bash block — preserved verbatim in v1.1.0 Quick Reference; omitted here for brevity.)
+
+### Detailed Steps
+
+1. **Convert the restore side first, preserving the original block verbatim.** Keep the step's `name:` and entire `with:` (path + key + any restore-keys) unchanged. Add a unique `id:`. Switch only `uses: actions/cache@vN` → `uses: actions/cache/restore@vN`. The restore stays early and unconditional (or keeps its existing skip guard).
+2. **Append the save step at the END of the job, after build/test, gated on `if: success()`.** `uses: actions/cache/save@vN` with the SAME major version as the restore. `path:` MUST exactly match the restore's path. `key: ${{ steps.<id>.outputs.cache-primary-key }}` so the save reuses the restore's resolved key.
+3. **Match the `actions/cache` major version per-block to what the repo already pins.** Do NOT bulk-bump.
+4. **Handle compound conditions.** `if: success() && steps.detect.outputs.skip == 'false'` when the restore already had a skip guard.
+5. **Do all YAML edits in a SINGLE Python pass.** Never parallel Edit calls or unquoted `rm`.
+6. **Validate before commit.** `actionlint` + `check-jsonschema` over every edited workflow, plus the regression guard.
+7. **Add a regression guard script (PyYAML).** `scripts/check_cache_save_gating.py` fails CI if any `cache/save@` lacks `success()` in `if:`, or a combined `actions/cache@` reappears.
+8. **Decide scope deliberately.** High-risk caches (build output written LATE) benefit most; low-risk early-written caches (e.g. a Conan download cache) may not be worth the churn — a judgment call for the reviewer, NOT an automatic "split all".
+
+## Failed Attempts (v1.0.0)
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| ------- | -------------- | ------------- | -------------- |
+| Relying on the combined action's built-in post-job save | Left `actions/cache@vN` as a single block | Built-in save fires UNCONDITIONALLY in post-job, even after a failed build — caches corrupt/partial build state that poisons later green runs | Split into `restore@vN` (early, unconditional) + `save@vN` gated on `if: success()` |
+| Bumping every cache block to one major version | Bulk-rewrote all blocks to a single major | Diverges from the repo's mixed pinning convention; an unrelated, unreviewed change | Match the major version PER-BLOCK to what the repo already pins |
+| Hardcoding the save `key:` independently of the restore | Re-typed the `hashFiles(...)` expression on the save step | Key drift: editing only one side's `hashFiles()` makes restore/save compute different keys; cache silently never hits | Reuse the restore's resolved key via `key: ${{ steps.<id>.outputs.cache-primary-key }}` |
+| Bare `if: success()` on saves whose restore had a skip guard | Save used `if: success()` while restore used `if: ...skip == 'false'` | Save runs on jobs the restore deliberately skipped | AND the gate: `if: success() && steps.detect.outputs.skip == 'false'` |
+| Bulk-editing YAML via parallel Edit calls / unquoted rm | Many concurrent Edits (and an unquoted `rm`) across the 6 files | Prior KB lesson: parallel edits and unquoted `rm` lost or garbled edits | Do the entire conversion in a SINGLE Python pass, then validate |
+
+## Results & Parameters (v1.0.0)
+
+- Pattern (restore + save), per-block version matching, compound condition, single-Python-pass bulk edit, `scripts/check_cache_save_gating.py` regression guard, scope judgment (high-risk build-output vs low-risk Conan), and the point-in-time "26 blocks / 6 files" inventory that DRIFTS.
+
+### Risks & Uncertain Assumptions (v1.0.0)
+
+1. **`cache-primary-key` output name — UNVERIFIED.** Believed to be the documented output of `actions/cache/restore`; NOT verified. Confirm the exact output name AND that it is populated on a cache MISS.
+2. **Glob path resolution timing — UNVERIFIED.** Restore-vs-save glob-resolution timing ASSUMED equivalent.
+3. **"26 blocks / 6 files" + line numbers DRIFT.** Re-grep immediately before implementing.
+4. **`if: success()` does not catch exit-0 partial artifacts — NARROW.** Gate reduces, not eliminates, poisoning risk.
+5. **Conan-cache split is a judgment call.** Whether splitting the low-risk Conan cache is worth the churn.
+6. **Scope boundary (out of scope) — confirm with reviewer.** `setup-pixi cache: true` and composite-action extraction left OUT of scope.
+
+## Verified On (v1.0.0)
+
+| Project | Context | Details |
+| ------- | ------- | ------- |
+| HomericIntelligence/ProjectAgamemnon | Issue #244 — split 26 combined `actions/cache@v4` blocks across 6 workflow files into restore + save gated on `if: success()` | unverified — PLAN only; CI never ran; `cache-primary-key` output name and glob timing not verified against action source. |
+
+---

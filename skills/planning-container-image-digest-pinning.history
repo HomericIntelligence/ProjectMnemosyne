@@ -1,0 +1,105 @@
+# planning-container-image-digest-pinning — History
+
+## v1.1.0 (2026-06-20)
+
+**Changed by:** R1 plan-review round on the Odysseus #188 image-pinning plan (amends the skill created in PR #2694).
+**Verification:** unverified (still a plan — never executed end-to-end; the repo `grep`/file inspections were real)
+
+### What changed
+- Added 5 new Failed Attempts rows from the R1 plan-review round:
+  - Guard script added but not wired into CI (decorative — MAJOR finding).
+  - Listed `podman manifest inspect | sha256sum` as the PRIMARY digest command (broken-as-written — MAJOR).
+  - Whole-file guard flags an out-of-scope in-file image (`nats:alpine`).
+  - Relied on `podman compose config` as the acceptance gate (fragile on unset env vars).
+  - Submitted a plan with a centerpiece that does not run + a wrong command (verdict-floor mechanics: one MAJOR forces NOGO).
+- Extended the Proposed/Verified Workflow detailed steps (now steps 5–9) to weave in:
+  - Wiring the guard into the `validate` job of `.github/workflows/ci.yml` in the SAME change and proving it with `grep -n 'check_e2e_image_pins.sh' .github/workflows/ci.yml`.
+  - Leading with the CORRECT digest command and marking the broken one as wrong.
+  - Resolving the whole-file-guard vs scoped-issue tension (prefer whole-file + pin the extra in-file image; cross-file stays out of scope).
+  - Naming the `@sha256:[0-9a-f]{64}` grep as the authoritative gate; `compose config` is best-effort only.
+  - Self-auditing for the two cheapest MAJORs before submitting.
+- Updated Quick Reference: PRIMARY/correct digest command first, explicit WRONG label on the sha256sum approach, added the CI-wiring proof grep.
+- Updated Results & Parameters: whole-file scope decision (pin `nats:alpine`), authoritative-gate vs best-effort `compose config`, REQUIRED CI-wiring block.
+- Bumped `version` 1.0.0 → 1.1.0 (additive new findings, not a core-recommendation rewrite).
+- Added `history` frontmatter field and a `**History:**` reference line; added `ci-wiring` and `plan-review` tags.
+
+### Why
+The v1.0.0 plan added `scripts/check_e2e_image_pins.sh` but only ran it locally and "noted CI wiring as out-of-scope," and listed a factually broken digest command (`podman manifest inspect | sha256sum`) as the primary path. The R1 reviewer flagged both as MAJOR findings; a single MAJOR forces NOGO, and two majors dropped an otherwise A-strong plan to grade C. These are durable planning-discipline lessons: a guard must be wired into CI in the same change, the first-listed command must be the correct one, the guard's blast radius forces an explicit in-file scope decision, and the env-independent grep — not `compose config` — is the authoritative gate.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: planning-container-image-digest-pinning
+description: "Planning-discipline for pinning floating container image tags (:latest, :alpine) in a Compose/e2e stack to immutable name:vX.Y.Z@sha256:<digest> references for reproducibility — WHAT a planner can and cannot verify offline. Use when: (1) planning a fix for an issue like ':latest image tags break reproducibility' in a docker-compose/e2e file, (2) you are about to write specific upstream version tags and sha256 digests into a plan without registry access, (3) you need to choose between pinning a multi-arch manifest-list digest vs a single-arch image digest, (4) you are tempted to cite an existing Actions SHA-pin convention as proof that container images should be digest-pinned, or to rely on `compose config` as the acceptance check."
+category: ci-cd
+date: 2026-06-20
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags:
+  - planning
+  - container-images
+  - digest-pinning
+  - reproducibility
+  - docker-compose
+  - skopeo
+  - multi-arch-manifest
+  - offline-verification
+  - latest-tag
+  - guard-script
+---
+
+# Planning a Container-Image Digest-Pinning Fix: What a Planner Can (and Cannot) Verify Offline
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-20 |
+| **Objective** | Produce a PLAN (not an implementation) for Odysseus issue #188 "[MAJOR] E2E compose stack uses :latest image tags": pin `prom/prometheus:latest`, `grafana/loki:latest`, `grafana/grafana:latest` in `docker-compose.e2e.yml` to immutable `name:vX.Y.Z@sha256:<digest>` references and add a guard script. |
+| **Outcome** | PLAN ONLY — never executed. The durable learning is planning discipline: a planner with no registry access must defer every digest/version choice to implementation time with explicit resolution commands, and must distinguish what was verified from what was extrapolated. |
+| **Verification** | unverified (plan only — no registry was queried, no `compose up`/CI ran; the local `grep`/file inspections of the repo WERE run and are real) |
+
+> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
+
+## When to Use
+
+- You are planning a fix for an issue whose evidence is floating image tags (`:latest`, `:alpine`, bare `:tag`) in a `docker-compose*.yml` / e2e stack, and the ask is to pin them to immutable `name:vX.Y.Z@sha256:<digest>` references.
+- You are about to type specific upstream version numbers (e.g. Prometheus v2.55.1, Loki 3.3.2, Grafana 11.4.0) and their `sha256` digests into the plan — but you have NO registry access to confirm them.
+- You must decide whether to pin the multi-arch **manifest-list** digest or a single-platform image digest, and contributors may run arm64 vs amd64.
+- You are tempted to justify image digest-pinning by citing the repo's existing GitHub **Actions** SHA-pin convention (e.g. commit `2c8039c`, `ci.yml:16`) — a related but NOT identical convention.
+- You plan to add a guard script and/or use `compose config` as the acceptance check, and need to know whether either actually protects against regressions offline.
+
+## Verified Workflow
+
+> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms. It is a planning-discipline workflow derived from a plan that was not executed end-to-end — the repo `grep`/file inspections below WERE run and are real, but no registry query or `compose up` was performed.
+
+### Quick Reference
+
+(omitted in snapshot — see git history; primary command was correct skopeo, but sha256sum hashing was noted only in Failed Attempts)
+
+### Detailed Steps
+
+1. Mark every version + digest as "verify against registry at implementation time."
+2. Treat the chosen version tag as unconfirmed too.
+3. Pin the multi-arch manifest-LIST digest, not a single-arch image digest.
+4. State verified-vs-extrapolated precisely when citing precedent.
+5. Check whether the guard is actually wired into CI — a guard that nothing runs is decorative.
+6. Enumerate adjacent unpinned images and mark them in/out of scope.
+7. Make a digest-presence `grep` the acceptance check; treat `compose config` as nice-to-have.
+
+## Failed Attempts
+
+(7 rows: invent the digest; trust the chosen version tag exists; podman manifest inspect | sha256sum; pin a single-arch image digest; cite the Actions SHA-pin convention as proof; rely on compose config as the acceptance check; add a guard script and assume it protects regressions)
+
+## Results & Parameters
+
+Issue: Odysseus #188 — PLAN ONLY. Target images prom/prometheus:latest, grafana/loki:latest, grafana/grafana:latest. Out of scope: nats:alpine, nats:latest (cluster file). Resolution via skopeo/buildx. Acceptance via @sha256 grep. Verified-vs-extrapolated ledger included.
+```
+
+---
+
+## v1.0.0 (2026-06-20)
+
+**Initial version** (PR #2694). Planning-discipline skill for the Odysseus #188 container-image digest-pinning plan: what a planner can and cannot verify offline, defer digests to implementation time, pin manifest-list digests, distinguish verified vs extrapolated.

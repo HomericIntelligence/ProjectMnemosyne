@@ -1,0 +1,198 @@
+# History: planning-defer-tracking-via-append-only-adr
+
+Append-only change log, newest first. Each entry archives the full snapshot of
+the `.md` that was in effect BEFORE the change described.
+
+---
+
+## Version 1.0.0 — 2026-06-20
+
+- Changed by: Odysseus #209 plan revision after reviewer NOGO on ADR Status
+- Verification: verified-local
+- What changed (superseded by v1.1.0):
+  - This was the initial version created by PR #2711. It instructed setting a
+    brand-new ADR's Status to `Accepted` when the decision describes an
+    already-true state (Detailed Steps step 3), and only listed `Accepted`-vs-
+    `Proposed` as an uncertain judgment call in Results & Parameters.
+  - It hedged the markdown line-length check behind an optional `just lint`
+    recipe and used a redundant grep alternation for tracker verification.
+- Why superseded: A reviewer NOGO'd the revised Odysseus #209 plan as a
+  P7/POLA + requirements-alignment MAJOR finding because a brand-new ADR set to
+  `Accepted` on first commit violates the repo's own ADR README
+  ("Set Status to Proposed until the ADR is merged and accepted"), CLAUDE.md,
+  and precedent (the two most recent ADRs were both `Proposed`). v1.1.0 makes
+  `Proposed`-on-first-commit the firm rule and hardens the verification commands
+  (explicit awk line-length assertion; precise tracker-link count grep).
+
+### Full snapshot of v1.0.0 `.md`
+
+```markdown
+---
+name: planning-defer-tracking-via-append-only-adr
+description: "Prefer an append-only ADR over a closeable GitHub issue as the canonical tracker when documentation marks work 'planned/future' and a reviewer flags it as untracked — because issues get auto-closed and go stale. Use when: (1) a reviewer/audit flags documented 'planned'/'future phase'/'not yet implemented' work as having no tracking issue or ADR; (2) you're tempted to open a GitHub issue to track a deferral but issues get auto-closed and go stale; (3) you need a durable canonical tracker for an architectural-state decision in a repo that already uses append-only ADRs; (4) an existing inline doc reference points at a CLOSED or wrong-scope issue and must be replaced; (5) you're planning a docs-only change to a read-mostly meta-repo and must respect ADR append-only conventions."
+category: documentation
+date: 2026-06-20
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - adr
+  - planning
+  - deferral-tracking
+  - stale-plan
+  - append-only
+  - architecture-decision-record
+  - docs-only
+  - closed-issue-trap
+  - audit-finding
+  - nitpick
+  - tracker-selection
+---
+
+# Planning: Defer-Tracking via an Append-Only ADR (Not a Closeable Issue)
+
+When documentation marks work as "planned" / "future phase" / "not yet
+implemented" and a reviewer flags it as having no tracker, the instinct is to
+open a GitHub issue. Don't. In a repo that already treats ADRs as append-only
+and canonical, a new ADR is the durable tracker; a GitHub issue is a fragile
+artifact that gets auto-closed and goes stale — which is the exact failure the
+finding warns against.
+
+> **Honest scope:** This skill is validated by static doc checks (grep/ls) only.
+> The plan that produced it was **not yet implemented or merged** when this skill
+> was written. Treat the implementation/CI step as unverified-in-CI.
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-20 |
+| **Objective** | Turn an untracked "planned" architecture-doc state into a durably tracked one when a reviewer flags it (Odysseus issue #209, a NITPICK audit finding under epic #174). |
+| **Outcome** | Plan written that creates a new append-only ADR (ADR-009) as the canonical tracker and repoints all three `architecture.md` mentions at it. **NOT yet implemented/merged** at time of writing. |
+| **Verification** | verified-local — only static `grep`/`ls` verification commands; no CI run, no merge yet. |
+
+## When to Use
+
+- A reviewer or audit flags documented "planned" / "future phase" / "not yet
+  implemented" work as having **no tracking issue or ADR**.
+- You're tempted to open a GitHub issue to track a deferral, but issues get
+  **auto-closed and go stale** — the exact failure mode the finding warns about.
+- You need a **durable, canonical tracker** for an architectural-state decision
+  in a repo that already uses **append-only ADRs**.
+- An existing **inline doc reference points at a CLOSED or wrong-scope issue**
+  and must be replaced with a live tracker.
+- You're planning a **docs-only change to a read-mostly meta-repo** and must
+  respect ADR append-only conventions (new ADR, never edit an accepted one).
+
+## Verified Workflow
+
+> Validated by static doc checks (grep/ls) only. The plan was not yet implemented
+> or merged when this skill was written — treat the implementation step as
+> unverified-in-CI.
+
+### Quick Reference
+
+```bash
+# Is the inline tracker reference actually live? (the trap: it may be CLOSED/wrong-scope)
+gh issue view <N> --repo <owner>/<repo> --json state,title
+
+# Find every "planned/future phase" mention that needs a tracker
+grep -n -iE "planned|future phase|not yet implemented" docs/architecture.md
+
+# Next sequential ADR number
+ls docs/adr/
+
+# After edits: confirm no mention still points at the stale closed issue
+grep -n "<OldIssueRef>" docs/architecture.md   # expect zero
+```
+
+### Detailed Steps
+
+1. **Verify the cited tracker's live state before trusting it.** Run
+   `gh issue view <N> --json state,title`. Do not assume an inline reference is
+   live just because a prior commit added it — it may be CLOSED or scoped to the
+   wrong thing (docs vs implementation). An inline link is documentation, not
+   proof of tracking.
+
+2. **Choose ADR over issue when the state is long-lived and the repo treats ADRs
+   as append-only/canonical.** A GitHub issue is closeable and goes stale; an
+   append-only ADR is the durable home for an architectural-state decision. The
+   finding typically accepts *either* an issue or an ADR — pick the one that
+   survives.
+
+3. **Write the ADR from `docs/adr/template.md` with the next sequential number.**
+   Use `ls docs/adr/` to find the next number. Set `Status: Accepted` for a state
+   that is *already true* (not a new proposal) — but see the Results section: this
+   is a judgment call a reviewer may push back on.
+
+4. **Repoint ALL mentions, not just the one a prior fix touched.** A prior partial
+   fix often updates only the prose line that had a link and leaves the
+   component-table rows still saying "planned" with no tracker. `grep` every
+   occurrence (tables AND prose) and repoint each at the new ADR.
+
+5. **Update the ADR README decision-log/index table** with the new ADR row so the
+   index reflects on-disk reality.
+
+6. **Verify with `grep`/`ls` per acceptance criterion.** Confirm zero remaining
+   references to the stale closed issue and that every "planned" mention now
+   points at the ADR.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Track the deferral with a new GitHub issue | Open an issue to satisfy "no tracking issue" | Issues get auto-closed and go stale — the EXACT failure mode the finding warns about; prior trackers Myrmidons#5 and Odysseus#115 were already CLOSED | Use an append-only ADR for long-lived architectural-state deferrals in repos that have ADRs |
+| Trust the existing inline reference at `architecture.md:193` as "already tracked" | A prior commit (d1a3df5/#115) added a `Myrmidons#5` link, looked done | `gh issue view 5` showed state=CLOSED and title was "Document Nomad integration STRATEGY" (docs, not impl) — wrong scope AND closed | Always verify a cited tracker's live state and scope with `gh` before assuming the doc is current |
+| Fix only the prose mention that had the link | Repoint just line 193 | The two component-table rows (lines 36, 39) still said "planned" with NO tracker — the finding's gap persisted | `grep` ALL occurrences; a partial prior fix often leaves sibling mentions untracked |
+| Amend the `architecture-github-labels-as-state-vocabulary` skill | Same "durable state primitive beats fragile artifact" insight | Different mechanism (labels vs ADR) and different search surface — a searcher for "track a deferred architecture item" wouldn't find it under a labels skill | One skill per independent learning when search keywords diverge |
+
+## Results & Parameters
+
+The heart of this skill is honesty about what was and was not verified. The plan
+that produced this skill carries the following uncertain assumptions and
+unverified sources — surface these to any reviewer:
+
+- **UNCERTAIN ASSUMPTION:** ADR-009 is the correct next number — assumes no
+  concurrent ADR PR claims 009; verified only at plan time via `ls docs/adr/`.
+- **UNCERTAIN ASSUMPTION:** Status "Accepted" (not "Proposed") is appropriate —
+  the README says set Proposed until merged/accepted by the team; a reviewer may
+  require "Proposed". Note ADR-007 and ADR-008 are currently "Proposed", so
+  "Accepted" on a brand-new ADR is a judgment call the reviewer may reject.
+- **UNVERIFIED EXTERNAL:** `just lint` recipe may not exist (the plan hedges with
+  `2>/dev/null || echo`); the repo's actual markdown-lint mechanism (markdownlint
+  config per commit 2059078) and its 80-char reflow rule were not directly run —
+  ADR prose wrapping is unverified.
+- **UNVERIFIED:** exact current line numbers (36, 39, 191–193) are from a
+  plan-time `grep` snapshot and may drift before implementation.
+- **UNVERIFIED:** that linking `architecture.md` to an ADR (rather than reopening a
+  tracking issue) actually satisfies the reviewer's intent in #209 ("No GitHub
+  issue or ADR tracks this work" — the finding accepts EITHER, so an ADR should
+  suffice, but this is an interpretation).
+- **RISK FOR REVIEWER:** the ADR claims specific technical preconditions for
+  multi-host work (multi-node cluster beyond `bootstrap_expect=1`, Myrmidons→Nomad
+  job-submission path, host-fleet placement) that were inferred from
+  `configs/nomad` and ADR-003, not confirmed with the Myrmidons maintainers —
+  could be inaccurate.
+
+### Acceptance-criterion verification commands
+
+```bash
+# 1. Cited tracker is genuinely live (not the trap)
+gh issue view 5 --repo HomericIntelligence/Myrmidons --json state,title
+
+# 2. Every deferral mention now points at the ADR, none left "planned" untracked
+grep -n -iE "planned|future phase|not yet implemented" docs/architecture.md
+
+# 3. The stale closed-issue reference is fully gone
+grep -n "Myrmidons#5" docs/architecture.md   # expect zero
+
+# 4. The new ADR exists and is indexed
+ls docs/adr/ && grep -n "ADR-009" docs/adr/README.md
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| Odysseus | Issue #209 (NITPICK §3, part of audit epic #174) | Plan to add ADR-009 + repoint `architecture.md`; verification via `grep`/`ls`. |
+```

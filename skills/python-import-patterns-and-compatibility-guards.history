@@ -2,6 +2,131 @@
 
 # History: python-import-patterns-and-compatibility-guards
 
+## v1.7.0 (2026-06-24)
+
+**Changed by:** ProjectHephaestus issue #1511 — executed the `hephaestus/cli/__init__.py` `__all__` alignment fix. Section G was previously `unverified` planning-guidance derived from a plan for issue #1513. Issue #1511 executed the same `__all__`-alignment pattern end-to-end (for the `cli` package rather than `logging`), confirming the core workflow locally.
+**Verification:** `verified-local` for the new §G material (section G `__all__` alignment, eager re-export, subset-assertion pin, import-surface/boundary checks — all confirmed locally with 79 tests passing, mypy/ruff clean; CI pending after PR merges). COMPATIBILITY.md version-stamping guidance within section G remains `unverified` (derived from a plan for ProjectHephaestus issue #1513, not yet executed in CI). All pre-existing sections retain their prior verification levels.
+
+### What changed
+
+- Updated frontmatter `description` field: the `(8)` use-case trigger changed from "PLANNING an audit-finding fix" (`unverified`) to "EXECUTING an audit-finding fix" (`verified-local`) with concrete details from issue #1511: expand scope from named symbols to all missing symbols; eager re-export for stdlib-only modules; no COMPATIBILITY.md change when no per-symbol table; subset-assertion pin. Verification status updated from `unverified planning-guidance` to `verified-local` (with a note that COMPATIBILITY.md version-stamping from issue #1513 remains unverified).
+- Bumped `version` frontmatter field: `1.6.0` → `1.7.0`.
+- Updated Overview `Verification` row: changed `unverified planning-guidance (section G)` to `verified-local (section G — __all__ alignment / eager re-export / subset-assertion pin executed end-to-end for ProjectHephaestus issue #1511)`; narrowed the remaining `unverified` clause to COMPATIBILITY.md version-stamping only.
+- Updated "When to Use" §G bullet from "unverified planning-guidance" to "verified-local for __all__ alignment; unverified for COMPATIBILITY.md version-stamping"; rewrote the bullet with verified concrete patterns from issue #1511 plus preserved unverified planning traps from issue #1513.
+- Updated §G section heading from "UNVERIFIED planning-guidance" to "verified-local for __all__ alignment; unverified for COMPATIBILITY.md version-stamping".
+- Replaced §G opening `> **Verification: unverified**` banner with a `> **Verification: verified-local / unverified**` banner that distinguishes the two scopes.
+- Added a verified concrete code example block before the numbered planning steps: shows the `hephaestus/cli/__init__.py` before/after diff and the two new test functions (`test_cli_all_covers_module_all` subset assertion + `test_dry_run_symbols_reexport_identity` identity check).
+- Added a "Key verified decisions from issue #1511" bullet list before the numbered planning steps: (1) scope expansion intentional — fix all 4 symbols not just the 2 named; (2) eager re-export beats lazy for stdlib-only modules; (3) no COMPATIBILITY.md change when no per-symbol table; (4) subset assertion not strict equality; (5) verify import-surface/boundary tests.
+- Added a label "Additional planning steps (from a plan for ProjectHephaestus issue #1513 — unverified for COMPATIBILITY.md version-stamping):" before the five numbered planning-guidance steps to distinguish the unverified from the verified.
+- Added 3 new Failed Attempts rows (all `verified-local`, ProjectHephaestus #1511): fixed only the 2 named symbols (scope was too narrow); used `_LAZY_EXPORTS` for a stdlib-only module (overkill — eager re-export is correct); used a strict-equality pin for the surface test (breaks on parallel additions).
+- Added a Verified On row for issue #1511 marked **verified-local** with full detail (4 symbols added, 79 tests passed, mypy/ruff/boundary tests clean, CI pending).
+
+### Why
+
+Section G was added in v1.5.0 as entirely `unverified` planning-guidance: the steps were derived from a plan for issue #1513 (correlation-ID functions in `hephaestus.logging`) that was never executed. Issue #1511 then executed the same core pattern — aligning `cli/__init__.py.__all__` with `cli/utils.py.__all__` — and confirmed the following verified facts: the scope should always expand to cover the full defect class (not just named symbols); eager re-export is correct and sufficient when the source module is stdlib-only; COMPATIBILITY.md does not always need updating (only when a per-symbol table exists); the subset assertion (`set(utils.__all__) - set(cli.__all__)`) is the right pin shape; and `test_import_surface.py`/`test_automation_boundary.py` must be included in the verification set. The COMPATIBILITY.md version-stamping guidance from issue #1513 remains unverified — that guidance was not exercised by issue #1511 (which had no per-symbol table to update).
+
+### Previous version (v1.6.0) snapshot
+
+The v1.6.0 entry is directly below. Key differences from v1.7.0: v1.6.0 had section G entirely `unverified` with no concrete cli/__init__.py example, no "Key verified decisions" bullet list, no "scope expansion / eager re-export / no-COMPATIBILITY.md-change / subset-assertion" verified patterns, and no Verified On row for issue #1511.
+
+## v1.6.0 (2026-06-24)
+
+**Changed by:** ProjectHephaestus issue #1512 — implementation PLAN for an `[S14 API Design]` audit finding that `hephaestus/__init__.py` implements the PEP 562 `__getattr__` lazy loader but omits the companion module-level `__dir__()`, so `dir(hephaestus)` shows only ~4 eagerly-bound names and the entire lazily-loaded public API is invisible to introspection tools (IPython tab-completion, IDEs, doc generators).
+**Verification:** **unverified** for ALL new material (section H + the new "Use when"/"When to Use" trigger + 3 new Failed Attempts rows + the new Verified On row). The plan's `__dir__()` edit and `TestDirDiscoverability` tests were never executed in CI. All pre-existing sections retain their prior verification levels (verified-ci for function-local / version-guard / Windows-guard / lazy-exports; verified-local for the surface-pin-stale fix and the access-time deprecation-warning implementation; unverified planning-guidance for section G).
+
+### What changed
+
+- Added a 9th "Use when" trigger to the frontmatter description and a 9th "When to Use" bullet: PLANNING the companion module-level `__dir__()` for a PEP 562 lazy-loader package whose `dir(pkg)` shows only eagerly-bound names.
+- Added detailed-steps subsection **H. Adding the companion `__dir__()` to a PEP 562 lazy-loader package — UNVERIFIED planning-guidance**, with an `unverified` banner and five points: (1) a custom `__dir__` REPLACES (does not merge with) the default listing, so `set(globals())` MUST be folded into the return or `dir()` silently SHRINKS (drops `__version__`/`__author__`/dunders/already-cached lazy names); (2) `__dir__` returns names only and performs NO attribute access, so a deprecated lazy shim can be listed without firing its `DeprecationWarning` (cross-referenced to section F); (3) pin by SUBSET invariant (`set(_LAZY_IMPORTS) <= set(dir(pkg))`), never a hardcoded count; (4) regression-test that `dir()` does not SHRINK the visible set; (5) audit-snapshot counts drift (the audit's "35 symbols" was already stale at 40 on disk) — verify the live surface before quoting any count.
+- Added 3 Failed Attempts rows (all `unverified`): returned only `sorted(set(_LAZY_IMPORTS) | set(__all__))` from `__dir__` (dropped `globals()` → `dir()` shrank); trusted the audit's "35 symbols" count (live = 40, a hardcoded-count test would be born stale); worried that listing a deprecated shim in `__dir__` would fire its `DeprecationWarning` (it doesn't — names only, no access).
+- Added a Verified On row for issue #1512 marked **PLAN ONLY / unverified**.
+- Updated the Overview verification row to append the section H `unverified` planning-guidance clause (without downgrading any existing verified section).
+- Added tags: `dir`, `__dir__`, `discoverability`, `introspection`.
+- Bumped version 1.5.0 → 1.6.0; date stays 2026-06-24.
+
+### Why
+
+The skill already taught the PEP 562 `__getattr__` lazy-loader seam (section B for widening the surface, section F for the access-time `DeprecationWarning`). Section F covers `__getattr__` (the resolve/access half of PEP 562); issue #1512's planning surfaced the natural sibling — the `__dir__` (discoverability/listing) half — which the prior sections did not cover and which shares this skill's exact search surface (`__getattr__`, lazy loader, PEP 562). Five durable, transferable lessons emerged: a custom module `__dir__` REPLACES the default listing rather than merging, so `set(globals())` must be folded in or the visible surface silently shrinks (the single most easily-missed point); `__dir__` returns names only and triggers no attribute access, so a deprecated lazy shim is listed without firing its access-time warning (directly connecting to section F); the contract must be pinned by a subset invariant, not a hardcoded count (the audit's "35 symbols" was already stale at 40 — the same staleness failure mode as the strict-equality `__all__` pins in sections B/B′); the primary failure mode is shrinkage, so a dedicated "does not shrink" regression test is warranted; and audit-snapshot counts drift between finding-time and fix-time. The plan was not executed, so all new material is `unverified` and section H carries an explicit unverified banner.
+
+### Previous version (v1.5.0) snapshot
+
+The v1.5.0 entry below is the prior recorded snapshot (this history file follows a delta-journal convention — each version records what changed plus a pointer to the prior entry rather than re-pasting the full `.md` body). Key difference from v1.6.0: v1.5.0 had no section H, no `__dir__`-companion "Use when" trigger, no `__dir__`/`globals()`-merge / subset-invariant / no-warning-on-listing Failed Attempts rows, no `dir`/`__dir__`/`discoverability`/`introspection` tags, and the Overview verification row had no section H `unverified` clause.
+
+## v1.5.0 (2026-06-24)
+
+**Changed by:** ProjectHephaestus issue #1513 — implementation PLAN for an `[S14 API Design]` audit finding that promotes three existing public-looking correlation-ID functions (`set_correlation_id`, `get_current_correlation_id`, `correlation_id_scope` in `hephaestus/logging/utils.py`) into `hephaestus.logging.__all__` + the `COMPATIBILITY.md` stable-symbol table.
+**Verification:** **unverified** for ALL new material (section G + 5 new Failed Attempts rows + the new "Use when" trigger). The plan's edits and surface-pin test were never executed in CI. All pre-existing sections retain their prior verification levels (verified-ci for function-local / version-guard / Windows-guard / lazy-exports; verified-local for surface-pin-stale fix and access-time deprecation-warning implementation).
+
+### What changed
+
+- Added an 8th "Use when" trigger to the frontmatter description and an 8th "When to Use" bullet: PLANNING an audit-finding fix that promotes an existing public-looking symbol into a package's declared `__all__` + stability docs.
+- Added detailed-steps subsection **G. Promoting an undeclared public-looking symbol to the stable surface (audit-finding fix) — UNVERIFIED planning-guidance**, with an `unverified` banner and five grep-backed checks: (1) verify the COMPATIBILITY.md "Added" version against the actual next release (RELEASING.md / milestones / roadmap), never guess from the latest git tag; (2) grep the WHOLE test tree for a non-local strict-equality `__all__` surface pin before widening; (3) verify the audit's stability-tier premise on disk (audit findings can be factually wrong); (4) assert re-export identity (`pkg.X is submodule.X`) and grep for existing `patch("pkg.submodule...")` usages; (5) include `test_import_surface.py`/`test_automation_boundary.py` in the verification set for any `__init__.py` widening.
+- Added 5 Failed Attempts rows (all `unverified`): guessed the COMPATIBILITY.md "Added" version from the latest tag; grepped only the obvious test file for `__all__` pins; took the audit's "Stable subpackage" premise as given; assumed any re-export binding satisfies submodule patch paths; treated an `__init__.py` re-export widening as boundary-risk-free.
+- Added a Verified On row for issue #1513 marked **PLAN ONLY / unverified**.
+- Updated Overview verification row to add the `unverified` planning-guidance clause for section G (without downgrading existing verified sections).
+- Added tags: `audit-finding`, `surface-promotion`, `version-stamping`, `stability-docs`, `re-export-identity`, `import-surface-boundary`.
+- Bumped version 1.4.0 → 1.5.0; date stays 2026-06-24.
+
+### Why
+
+The skill already taught `__all__` widening, lazy vs eager exports, surface-pinning tests (subset vs strict-equality), COMPATIBILITY.md doc drift, and stale surface-pins from parallel PRs (sections B / B′ / F). Issue #1513's planning surfaced five durable, transferable lessons specific to PROMOTING an existing-but-undeclared symbol to the stable surface that the prior sections did not cover: the COMPATIBILITY.md "Added" version must be VERIFIED against the actual next release, not guessed from the latest tag (the plan stamped `0.9.8` purely because the latest tag was `v0.9.7` — an unverified assumption); a strict-equality surface pin can live in a DIFFERENT test file and break non-locally when `__all__` widens, so the whole test tree must be grepped, not just the obvious file; the audit finding's stability-tier premise ("`hephaestus.logging` is Stable") is itself a claim to verify on disk (team KB has prior cases of 3/29 strict-audit findings being factually wrong); re-export IDENTITY matters because existing tests `patch("hephaestus.logging.utils...")` and a divergent package-root binding breaks one patch path; and widening an `__init__.py` (even a "pure re-export") can regress enforced import-surface/boundary tests. The plan was not executed, so all new material is `unverified` and section G carries an explicit unverified banner.
+
+### Previous version (v1.4.0) snapshot
+
+The v1.4.0 entry below is the prior recorded snapshot. Key difference from v1.5.0: v1.4.0 had no section G, no audit-surface-promotion "Use when" trigger, no version-stamp / non-local-pin / stability-premise / re-export-identity / boundary-test planning rows, and the Overview verification row had no `unverified` planning-guidance clause.
+
+## v1.4.0 (2026-06-24)
+
+**Changed by:** ProjectHephaestus issue #1545 — executed the access-time `DeprecationWarning` implementation for the deprecated `retry_with_jitter` lazy shim. The v1.3.0 plan was followed end-to-end and all tests passed locally.
+**Verification:** `verified-local` for section F (all tests pass locally; CI pending after the ProjectHephaestus PR merges). Pre-existing sections remain verified-ci / verified-local.
+
+### What changed
+
+- Upgraded section F from "Proposed Workflow — planning an access-time DeprecationWarning (UNVERIFIED)" to "Verified Workflow — adding an access-time DeprecationWarning (verified-local)". Removed the "Warning: never executed" banner and replaced it with a "Verification: verified-local" note.
+- Replaced the unverified `__getattr__` snippet (using a `set`-based `_DEPRECATED_LAZY`) with the actual verified implementation: `_DEPRECATED_LAZY: dict[str, str]` with a full deprecation message string, and the exact `__getattr__` body used in the PR.
+- Replaced the minimal unverified test stub with the full verified test `test_retry_with_jitter_access_emits_deprecation_warning` including the `__dict__.pop` cache-bust, `callable(symbol)` assertion, `DeprecationWarning` category check, message content check, and `stacklevel=2` filename assertion (`access_warnings[0].filename == __file__`).
+- Added verified test passage block (3 tests in `test_deprecation_warnings.py`, 7 in `test_retry.py -k jitter`, `test_import_surface.py`, `test_automation_boundary.py`, ruff, mypy).
+- Confirmed and documented `stacklevel=2` as correct for `__getattr__` (call stack: user access line → `__getattr__` → `warnings.warn`; `stacklevel=2` skips `__getattr__` and attributes to user's line).
+- Updated Overview verification row: removed "unverified (section F)" clause; added "verified-local (access-time deprecation-warning implementation — section F executed end-to-end)".
+- Updated Overview objective/outcome to reflect implementation rather than planning.
+- Updated the "When to Use" bullet for access-time deprecation warning from "(PLANNING, unverified)" to "(verified-local)" with concrete confirmed facts.
+- Updated all 5 formerly-`unverified` Failed Attempts rows (trust `__all__` claim; dedup layers; one-shot test without cache reset; treat as additive; skip prose doc) from `unverified` to `verified-local`.
+- Updated the `stacklevel=2` Failed Attempts row from "PLANNING, UNVERIFIED — may be wrong" to confirmed correct with evidence.
+- Replaced "PROPOSED pattern (UNVERIFIED)" Results & Parameters subsection with "verified pattern (verified-local)" containing the actual implementation, actual test, and actual test pass results.
+- Updated Verified On row for issue #1545 from "PLAN ONLY / unverified" to "executed / verified-local" with full detail.
+- Removed `planning` tag; added `stacklevel` and `warnings-warn` tags.
+- Bumped version 1.3.0 → 1.4.0.
+
+### Why
+
+v1.3.0 added a planning checklist (section F) for the access-time `DeprecationWarning` across the PEP 562 lazy-loader seam, but all material was `unverified` — edits and tests were never executed. Issue #1545 in ProjectHephaestus then executed the plan end-to-end: the `_DEPRECATED_LAZY` dict approach with `dict[str, str]` values (full message strings) proved correct; `stacklevel=2` inside `__getattr__` correctly attributes to the caller's file (confirmed by `access_warnings[0].filename == __file__`); `module.__dict__.pop(name, None)` correctly forces `__getattr__` to re-run; the stale-tolerant test (`test_retry_with_jitter_reachable_from_top_level_lazy_loader`) had to be fully replaced; `import warnings` deferred inside the condition is safe for the automation boundary; and `COMPATIBILITY.md` needed updating. All assumptions from the plan were confirmed correct, so this amendment upgrades from plan-only to verified implementation.
+
+### Previous version (v1.3.0) snapshot
+
+The full v1.3.0 skill text is the previous section below. Key difference from v1.4.0: section F was titled "Proposed Workflow (UNVERIFIED)" with a warning banner; `_DEPRECATED_LAZY` was a `set[str]` rather than `dict[str, str]`; the test was a minimal stub without the filename assertion; and all access-time deprecation entries in Failed Attempts were tagged `unverified`.
+
+## v1.3.0 (2026-06-24)
+
+**Changed by:** ProjectHephaestus issue #1545 — implementation PLAN for an access-time `DeprecationWarning` on the deprecated `retry_with_jitter` lazy shim exposed via the PEP 562 `__getattr__` loader in `hephaestus/__init__.py`.
+**Verification:** **unverified** for ALL new material — the plan's edits and regression test were never executed (line numbers read, not run). The pre-existing function-local / version-guard / Windows-guard / lazy-exports sections remain verified-ci; the surface-pin-stale material remains verified-local.
+
+### What changed
+
+- Added a 7th "Use when" trigger to the frontmatter description and a 7th "When to Use" bullet: planning a DeprecationWarning at ACCESS time (not just call time) for a deprecated lazy shim behind a PEP 562 `__getattr__` loader.
+- Added a new detailed-steps subsection **F. Proposed Workflow — planning an access-time DeprecationWarning across the PEP 562 lazy-loader seam (UNVERIFIED)** with a warning banner and 7 steps: grep the symbol before trusting the issue's structural claim (issue said `__all__`, reality is `_LAZY_IMPORTS`); keep access-time and call-time warnings as complementary layers; `module.__dict__.pop(name)` to defeat PEP 562 globals caching in the regression test; grep + rewrite stale-tolerant tests that document the silent resolve; update `COMPATIBILITY.md` prose in the same PR; re-confirm the import-surface boundary tests; validate `stacklevel` for an attribute-lookup indirection.
+- Added 6 Failed Attempts rows (all tagged `unverified` / PLANNING): trusting the issue's `__all__` claim, deduping the two warning layers, one-shot test without cache reset, treating the change as additive, skipping the prose doc, and reusing `stacklevel=2` blindly.
+- Added Results & Parameters subsection "Access-time DeprecationWarning across the lazy-loader seam — PROPOSED pattern (UNVERIFIED)" with the `__getattr__` warning snippet and the `__dict__.pop` regression test.
+- Added a Verified On row for issue #1545 marked PLAN ONLY / unverified.
+- Updated Overview (date → 2026-06-24, objective, outcome, three-level verification note including the new unverified material), added tags (deprecation-warning, access-time-warning, pep-562, getattr, stale-tolerant-test, doc-drift, planning), bumped version 1.2.0 → 1.3.0.
+
+### Why
+
+The lazy-exports section already taught the `__getattr__` / `_LAZY_IMPORTS` seam, but covered widening a surface, not retrofitting a deprecation warning onto a shim resolved by that seam. Issue #1545's planning surfaced five durable, non-obvious traps that share this skill's exact search surface (`__getattr__`, lazy loader, deprecation): the issue can misname *where* the symbol lives (`_LAZY_IMPORTS` vs `__all__`); access-time and call-time warnings are complementary layers that must both be kept; PEP 562 caches the resolved name into module globals so the access warning fires once per process unless the test pops it; an existing regression test may document and tolerate the current silent resolve and must be rewritten (a change is not additive if a green test encodes the old contract); and a prose doc (`COMPATIBILITY.md`) describing the warning as firing "when called" drifts unless updated in the same PR. The plan was never executed, so all material is `unverified` and the new workflow is titled "Proposed Workflow" with a warning banner.
+
+### Previous version (v1.2.0) snapshot
+
+See the v1.1.0 / v1.0.0 entries below for the prior recorded snapshots. (The v1.2.0 bump was not separately journaled in this history file; the v1.3.0 amendment is applied on top of the v1.2.0 `.md` content.)
+
 ## v1.1.0 (2026-06-11)
 
 **Changed by:** ProjectHephaestus PR #968 / issue #775 CI fix — stale surface-pin test repair (`AuditReviewer` landed on main via independent PR #1067)

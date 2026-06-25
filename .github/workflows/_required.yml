@@ -92,6 +92,8 @@ jobs:
           else
             echo "::notice::No scripts/ or tests/ directory — skipping mypy"
           fi
+      - name: Run direct PII pattern check
+        run: python3 scripts/check_pii.py
 
   markdownlint:
     name: markdownlint

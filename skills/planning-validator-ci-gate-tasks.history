@@ -1,0 +1,122 @@
+# planning-validator-ci-gate-tasks — History
+
+## v1.1.0 (2026-06-20)
+
+**Changed by:** Re-plan of Odysseus issue #198 ("No unit or integration tests for justfile recipes or configs"). The FIRST plan (which produced v1.0.0, PR #2701) was NOGO'd; this revision fixed every finding AND, critically, RAN the candidate validators locally during planning, converting the v1.0.0 "uncertain assumptions" into empirically verified facts.
+**Verification:** verified-local (the empirical claims below were verified by local execution; the full plan/CI was NOT yet run end-to-end)
+
+### What changed
+
+The core upgrade is epistemic: v1.0.0 flagged a set of UNVERIFIED tool-flag/coverage
+assumptions and told the implementer to confirm them in step 1. This round actually ran
+them, so they graduate from "open assumption" to "confirmed fact," and the recommended
+design changed as a result.
+
+1. **CONFIRMED: an authoritative validator CLI fails on VALID input.** v1.0.0 only
+   SUSPECTED `nats-server -t` semantics were unreliable. Running it confirmed:
+   `nats-server -c configs/nats/server.conf -t` exits **1 on a perfectly valid config**
+   because it eagerly opens TLS cert files (`/etc/nats/certs/server-cert.pem`) absent in
+   CI/dev. The "authoritative" syntax checker conflates syntax errors with runtime
+   resource errors and is USELESS as a CI gate. New rule: two-sided check at PLAN time
+   (good->0 AND bad->nonzero), not just bad->nonzero.
+
+2. **NEW recommended design: binary-free pure-Python validators are the robust default.**
+   Because nats-server/podman/nomad are not installed on the GitHub runners (and `-t` is
+   unreliable even when present), the winning design is stdlib + PyYAML validators: a
+   HOCON brace/string-balance checker for NATS `.conf`, and `yaml.safe_load` + structural
+   assertions for docker-compose. Runs on any runner with python3 — the required gate is
+   never vacuous. Directly defeats the dead-gate/vacuous-pass failure mode
+   (cross-link ci-hygiene-and-validation-gates Pattern 4).
+
+3. **NEW lesson: naive brace-balance is wrong without comment+string handling, and the
+   validator itself needs a negative test.** First brace counter gave a false PASS on
+   broken input because `#` comments containing apostrophes ("server's") flipped the
+   string state machine and `{{` was miscounted. Fix: line-by-line, break at first
+   UNQUOTED `#`, track quote state with escape handling — and run it against an
+   injected-broken fixture, confirming non-zero, or it ships broken.
+
+4. **CONFIRMED symbol name:** v1.0.0's invented `exit_with_status` does not exist; the real
+   helper is `exit_code()` at `e2e/lib/common.sh:41` (verified by reading the file).
+
+5. **NEW lesson: CI tooling presence is part of the gate's correctness.** The revision had
+   to add `setup-just` and `pip install pyyaml` to the `integration-tests` job (which had
+   neither). The `build` job already had yamllint (PyYAML) so `validate-configs` gains
+   coverage free. For every new CI step, enumerate its binaries/modules and confirm the
+   target job installs them.
+
+6. **NEW lesson: commit negative tests as permanent TDD assets, not inline cp/restore.**
+   Reviewer dinged the first plan's inline `cp server.conf /tmp; printf broken; restore`
+   snippet. Fix: a committed `tests/test-config-validators.sh` with positive + negative
+   cases importing the validators' `check()` functions.
+
+- Added 4 new Failed Attempts rows (trusted `nats-server -t` as a syntax gate; naive brace
+  counter false PASS; invented `exit_with_status`; added validator steps to a job lacking
+  the tool).
+- Re-titled the canonical steps as a genuine "Verified Workflow" for the VALIDATOR BEHAVIOR
+  (locally verified), while keeping the broader PLAN steps marked proposed — the Overview
+  states this distinction explicitly.
+- Bumped frontmatter `verification: unverified -> verified-local`; version 1.0.0 -> 1.1.0;
+  added `history:` field; date 2026-06-20.
+
+### Why
+
+The first #198 plan was NOGO'd. The durable, reusable value of the revision is that the
+previously-uncertain "trust the vendor CLI's check flag" assumption was empirically
+DISPROVEN (it fails on valid input due to cert loading), which flips the recommended design
+to binary-free Python structural validators. Recording the confirmed behavior (with the
+exact exit code, the cert path, and the comment-apostrophe brace-counter bug) prevents the
+whole class of "I'll just wire `<tool> --check` into a required gate" mistakes.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: planning-validator-ci-gate-tasks
+description: "Planning-phase risk assessment for 'add a build-free validator' tasks in a submodule meta-repo, where the validator shells out to an external CLI (nats-server, podman/docker compose, nomad) and gets wired into a pinned required CI gate. Captures the recurring uncertain assumptions a reviewer must check: (1) TOOL-FLAG SEMANTICS are the #1 risk — you cannot trust that `nats-server -c <f> -t` means 'test config and exit' or that `podman compose config -q` parses without a running daemon/images; either verify the exact flag at plan time (`<tool> --help | grep`) or label it an explicit unverified assumption the implementer confirms in step 1; (2) GRACEFUL-SKIP-WHEN-TOOL-ABSENT is mandatory to mirror existing conventions (the `nomad`-absent skip) BUT it creates a VACUOUS/DEAD-GATE hazard — a validator that skips when the binary is missing gives ZERO coverage if the enforcing CI runner lacks that binary, so for EACH skip branch the planner must answer 'does the required CI environment actually have this tool installed?'; (3) a repo-wide FORBID-SUPPRESSIONS gate (pre-commit `forbid-or-true` + `_required.yml` forbid-suppressions) rejects `|| true`, `continue-on-error: true`, and `::warning::` — draft every validator error branch with explicit `if`-guards from the start, never silence failures; (4) PINNED required-check contexts (`_required.yml` job `name:` values referenced in the org/repo ruleset JSON) must be STRENGTHENED IN PLACE, never renamed or split into a new job — grep the ruleset for pinned contexts and reuse an existing job; (5) editing `.github/workflows/*` may be blocked by a security hook — plan a Python read->replace->write fallback; (6) UNVERIFIED SYMBOLS in a sourced shared lib (e.g. an `exit_with_status`/`exit_with_failure_count` function in `e2e/lib/common.sh` whose tail was never read) must be confirmed on disk in step 1. Use when: planning to add a config-syntax or compose-validity validator, a justfile-recipe integrity test, strengthening `just validate-configs`, or wiring any new build-free check into a canonical `_required.yml` gate in a meta-repo. Cross-link: ci-hygiene-and-validation-gates (implementation: dead-gate detection + build-free check mechanics, esp. Pattern 4), justfile-and-local-build-verification (implementation: recipe authoring + local verify loop), planning-verify-issue-claims-and-required-check-gating (runs-vs-gates + grep-the-claim), planning-verify-assumptions-before-enforcement-gate (verify infra assumptions + git-ls-files scan scope)."
+category: ci-cd
+date: 2026-06-20
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags: [planning, planning-methodology, validator, ci-gate, config-validation, meta-repo, tool-availability, flag-semantics, graceful-skip, vacuous-pass, dead-gate, forbid-suppressions, no-op-suppression, pinned-context, required-status-check, strengthen-in-place, workflow-edit-hook, unverified-symbol, nats-server, compose-config, build-free, unverified-assumptions]
+---
+
+# Planning: Risk Assessment for "Add a Build-Free Validator + CI Gate" Tasks
+
+Verification level: unverified — planning learning only. The plan was NOT executed, the
+validators were NOT run, CI did NOT run. Every "ASSUMPTION" was an open reviewer/implementer
+task to confirm in step 1, not a verified fact. Key unverified items at v1.0.0:
+- `nats-server -c <f> -t` ASSUMED to mean "test config and exit" (NOT run).
+- `podman/docker compose config -q` ASSUMED parse-only without daemon/images (NOT run).
+- Whether `nats-server` is installed in the `_required.yml` integration-tests runner (NOT confirmed).
+- The failure-count->exit-code helper in `e2e/lib/common.sh` plan-named `exit_with_status`
+  (only lines 13-40 read; tail UNread; name/signature UNVERIFIED).
+
+Seven proposed-workflow disciplines: (1) verify tool-flag semantics or mark unverified;
+(2) for every graceful-skip branch confirm the enforcing CI runner has the tool, else
+dead/vacuous gate; (3) draft error branches with explicit if-guards, never `|| true`/
+`continue-on-error`/`::warning::` (forbid-suppressions gate); (4) strengthen pinned
+required-check contexts IN PLACE, never rename/split (grep `gh api .../rulesets`); (5) plan
+a Python pathlib read->replace->write fallback for hook-blocked `.github/workflows/*` edits;
+(6) confirm every symbol sourced from a shared lib exists on disk; (7) honesty gate — a
+planning-only learning is `unverified`, "## Verified Workflow" heading kept only to satisfy
+the validator.
+
+Six v1.0.0 Failed Attempts: drafted `nats-server -t` from memory; drafted `|| true` error
+branch; assumed graceful-skip == coverage; considered a new dedicated CI job (would not be a
+pinned context); planned a direct workflow edit with no fallback; referenced
+`exit_with_status` sight-unread.
+
+Verified On: HomericIntelligence/Odysseus issue #198 planning — unverified, planning session
+only; validators not run, CI not run.
+```
+
+---
+
+## v1.0.0 (2026-06-20)
+
+**Initial version.** Planning-phase risk assessment for "add a build-free validator + CI
+gate" tasks in the Odysseus submodule meta-repo (issue #198), captured at `unverified`
+level: tool-flag semantics, vacuous/dead-gate hazard, forbid-suppressions gate, pinned
+required-check contexts, workflow-edit hook fallback, and unverified sourced-lib symbols —
+all as open implementer assumptions. Created via PR #2701.

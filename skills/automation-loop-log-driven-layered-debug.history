@@ -1,0 +1,265 @@
+# automation-loop-log-driven-layered-debug -- History
+
+## v1.1.0 (2026-06-20)
+
+**Changed by:** ProjectHephaestus single-issue end-to-end verify session (issue #1517 → PR #1538)
+**Verification:** verified-ci AND verified live end-to-end on a real loop run
+
+### What changed
+- Added a NEW verification technique — "single-issue end-to-end drive" — that strengthens the
+  existing step-5 "validate with a scoped re-run" into driving ONE real issue all the way to a
+  MERGED PR + CLOSED issue. Key principle reinforced: "no errors in the log" is NOT a pass; a real
+  ARTIFACT CHAIN is.
+- Added a new Verified Workflow subsection (#6) "Verifying a fix: single-issue end-to-end drive"
+  with:
+  - The scoped plan/implement commands (`--issues <N> --phases plan` then `--phases implement
+    --allow-unsafe-phase-order`, with `--loops 1 --max-workers 1 -v` and `tee build/verify-<N>.log`),
+    and a note on what `--allow-unsafe-phase-order` silences.
+  - Scope notes: the loop runs only the current repo by default (no `--org`), operates on the
+    `--projects-dir` clone (default `/home/mvillmow/Projects/<repo>`) NOT necessarily CWD, and
+    reports `trunk=<sha>` to confirm against your merged fixes.
+  - The artifact-chain success signals: `Created PR #N` → `Analysis complete ... found 0 inline
+    comment(s)` → `Verdict=GO` → `Enabled auto-merge` → `Follow-up complete` → `Removed worktree`
+    → `phase implement done (rc=0)`, then auto-MERGE + auto-CLOSE via `Closes #N`.
+  - The whole-log zero-error health-check grep (`429|session limit|usage cap|waiting for
+    reset|Traceback|[ERROR]|- ERROR -|Failed to remove worktree|No JSON object found` → expect 0).
+  - The live GitHub cross-check (`gh pr view --json state,mergedAt`, `gh issue view --json state`).
+  - The "what is NORMAL and must NOT be mistaken for failure" notes (internal `/learn` step,
+    10-15 min implementer self-validation, once-per-phase marketplace-path WARNING).
+- Extended the Quick Reference step-2 grep alternation with the new verify-run signals:
+  `Created PR #[0-9]+|Analysis complete for PR|Verdict=GO|Enabled auto-merge|Follow-up
+  complete|Removed worktree|Failed to remove worktree|phase (plan|implement) done|implemented=|No
+  JSON object found`.
+- Added 4 new Failed Attempts rows: (1) `pgrep` poll races on completion detection, (2) mistaking
+  the loop's internal `/learn` step for one's own or a hang, (3) assuming a long implementer step
+  is stuck when it is running the worktree pytest suite, (4) flagging the benign marketplace-path
+  WARNING as a failure.
+- Results & Parameters: added the new grep tokens (Created PR, Analysis complete, Verdict=GO,
+  Enabled auto-merge, Follow-up complete, Removed worktree, phase done, No JSON object found), the
+  verify-run zero-error health-check grep, the single-issue verify command block (plan/implement +
+  gh cross-checks), a "Single-issue verify scope" parameter, and an "End-to-end verify result" row
+  recording issue #1517 → PR #1538 (commit 6c8fbed) with the verified fixes #1530/#1531/#1533/
+  #1535/#1537.
+- Extended the "Verified On" row to record the single-issue end-to-end verify drive (issue #1517 →
+  merged PR #1538 + closed issue).
+- Frontmatter: bumped version 1.0.0 -> 1.1.0; set date to 2026-06-20; added `history:` field;
+  extended `description` with trigger (6) for verifying fixes via single-issue end-to-end drive;
+  added 4 new tags (single-issue-end-to-end-verify, artifact-chain-signals, merged-pr-closed-issue,
+  zero-error-health-check).
+- When to Use: added trigger (6) for the single-issue end-to-end verify drive.
+
+### Why
+After fixing 5 root-cause bugs found in an automation-loop `output.log` (429 session-limit
+handling, worktree cleanup, follow-up JSON parse, central is_error envelope guard, plus a prereq
+mypy-gate fix), the fixes were VERIFIED end-to-end by re-running the loop on a SINGLE live GitHub
+issue and driving it all the way to a merged PR + closed issue. This produced durable, reusable
+verification material — how to scope the loop to one issue, the exact artifact chain a clean PASS
+must produce (not just "no errors"), the zero-error health check that the original broken log would
+fail, and the gotchas that look like failures but are not (internal `/learn` step, long implementer
+self-validation, `pgrep` races, marketplace-path WARNING). These extend the same META/methodology
+skill rather than forming a new one, so they are folded in as a MINOR amendment.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: automation-loop-log-driven-layered-debug
+description: "Use when: (1) debugging hephaestus-automation-loop / a multi-stage plan→implement→drive-green pipeline from its output.log, (2) a single symptom ('PR not reviewed/implemented') turns out to be a stack of layered bugs revealed one at a time as each prior blocker is removed, (3) a fix 'didn't work' because the loop runs editable working-tree code and the fix wasn't dev-installed, (4) --issues was given PR numbers instead of issue numbers, (5) validating an automation-loop fix with a scoped re-run."
+category: debugging
+date: 2026-06-09
+version: "1.0.0"
+verification: verified-ci
+user-invocable: false
+tags:
+  - hephaestus-automation-loop
+  - output-log
+  - log-driven-debugging
+  - layered-bugs
+  - editable-install
+  - dev-install
+  - pixi-run
+  - scoped-re-run
+  - issue-vs-pr
+  - plan-implement-drive-green
+  - pr-review-loop
+  - methodology
+---
+
+# Automation-Loop Log-Driven Layered Debugging
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-09 |
+| **Objective** | Debug `hephaestus-automation-loop` (and similar multi-stage `plan → implement → drive-green` pipelines) iteratively from its `output.log`, when a single symptom ("PR not reviewed/implemented") is actually a STACK of layered bugs that only reveal themselves one at a time as each prior blocker is removed. |
+| **Outcome** | Six layered bugs in the loop were peeled off one at a time, each surfacing only after the prior fix landed and was dev-installed. Every fix shipped to ProjectHephaestus `main` with green CI. |
+| **Verification** | verified-ci — PRs #1104, #1106, #1108, #1110, #1112, #1114 all merged to ProjectHephaestus main with green CI. |
+
+This is a META / methodology skill — it captures HOW to debug the loop, not the
+individual per-bug fixes. The specific fixes live in the per-bug skills referenced
+under [Related Skills](#related-skills); jump there for a particular blocker.
+
+## When to Use
+
+Trigger phrases / situations that should route to this skill:
+
+1. Debugging `hephaestus-automation-loop` or a multi-stage `plan → implement → drive-green` pipeline from its `output.log`.
+2. A single symptom ("PR not reviewed", "issue not implemented", "loop did nothing") turns out to be a STACK of layered bugs revealed one at a time as each prior blocker is removed.
+3. A fix "didn't work" — but the loop runs the EDITABLE working-tree code and the fix was never dev-installed.
+4. `--issues` was given PR numbers instead of ISSUE numbers (planner "Could not resolve to an Issue").
+5. Validating an automation-loop fix with a scoped re-run before declaring victory.
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Capture the run as a per-phase timeline (the log IS the diagnostic instrument)
+pixi run hephaestus-automation-loop --issues 725,711 2>&1 | tee output.log
+
+# 2. Grep the decisive per-issue lines from the log
+grep -nE 'Issue #[0-9]+: .*(implementation-review (GO|NO-GO))|re-running implement|head branch is|already checked out .* reusing|Verdict=.*Grade=.*threads=|Successful:|Skipped:|Failed:|Repo not done|Could not resolve to an Issue' output.log
+
+# 3. CRITICAL: verify the fix is actually LIVE before re-running (loop runs editable code)
+git checkout main && git pull && pixi run dev-install
+pixi run python -c "import inspect, hephaestus.automation.<module> as m; print('<old-token>' in inspect.getsource(m))"
+#   -> expect False for removed code, True for added code
+
+# 4. Validate with a SCOPED re-run on a few REAL issue numbers (comma-delimited, NOT PR numbers)
+pixi run hephaestus-automation-loop --issues <a,few,real,issues> 2>&1 | tee output.log
+#   then cross-check live GitHub state (PR labels/comments) — the log is an observation report, not ground truth
+```
+
+### Detailed Steps
+
+#### 1. The run log IS the diagnostic instrument
+
+Always run the loop as `... 2>&1 | tee output.log` and read it as a per-phase
+timeline. Grep the decisive per-issue lines:
+
+- `Issue #N: ... implementation-review (GO|NO-GO)`
+- `re-running implement`
+- `head branch is`
+- `already checked out ... reusing`
+- `Verdict=... Grade=... threads=...`
+- `Successful:` / `Skipped:` / `Failed:`
+- `Repo not done`
+
+The per-loop implementer summary (`Successful: 0 / Skipped: N`) is the fastest
+signal of "did real work happen, or did the loop silently no-op?"
+
+#### 2. Layered bugs surface one at a time
+
+Fixing the top blocker exposes the next. Don't assume one fix is "the" fix —
+re-run after each and read the NEW log; expect the symptom to MOVE, not vanish.
+This session's actual stack, in the order each became visible only after the
+previous fix landed:
+
+| # | Blocker (became visible only after prior fix) | Fix | PR |
+|---|------------------------------------------------|-----|-----|
+| a | NO-GO PRs short-circuited as "settled" (`has_go or has_no_go` skip) → never re-reviewed | GO-only short-circuit | #1104 |
+| b | Worktree sync did `git fetch origin {issue}-auto-impl` (an ASSUMED branch) → exit 128; the PR head branch was actually different | Read the PR's real `headRefName` | #1106 |
+| c | `git worktree add` hit `fatal: branch already used by worktree` (branch checked out in another issue's worktree) | REUSE that worktree, don't force | #1110 |
+| d | drive-green ignored `--issues` scope (pulled in unrelated bot PRs, scanned all open PRs, rc=1) | Scope drive-green to `--issues` | #1110 |
+| e | In-loop reviewer posted a FALSE `POLICY VIOLATION` (fed empty/stale policy data that failed open) → no `Verdict:` line → AMBIGUOUS | Remove redundant in-loop policy checks; CI gates own policy | #1112 |
+| f | Review loop converged on "0 threads" regardless of verdict → terminated at R0 on AMBIGUOUS and applied `state:skip` | Re-review on zero-thread non-GO; `state:skip` only on TRUE exhaustion | #1114 |
+
+LESSON: each removed blocker uncovers the next. The symptom ("PR not reviewed")
+stayed constant while the ROOT CAUSE moved six times.
+
+#### 3. CRITICAL environment gotcha — the loop runs the EDITABLE working-tree code
+
+`pixi run` imports `hephaestus` from the working tree (editable install). A fix
+on a feature branch — or even a merged PR — does NOT take effect for the loop
+until you `git checkout main && git pull && pixi run dev-install`, AND the working
+tree is on a branch/commit that contains the fix.
+
+Verify the fix is actually LIVE before re-running:
+
+```bash
+pixi run python -c "import inspect, hephaestus.automation.<module> as m; print('<old-token>' in inspect.getsource(m))"
+# expect False for removed code / True for added code
+```
+
+MANY apparent "the fix didn't work" reports are really "the fix isn't installed
+yet." Always confirm liveness before trusting a re-run. (Cross-ref
+`pixi-runtime-env-gotchas`.)
+
+#### 4. Input gotcha that masquerades as a code bug — `--issues` takes ISSUE numbers
+
+`--issues` takes ISSUE numbers, comma-delimited (`--issues 725,711`) — NOT PR
+numbers and NOT space-delimited. Passing PR numbers makes the planner's
+`gh api graphql ... issue(number:N)` fail (`Could not resolve to an Issue with
+the number of N`) AND then fail open and post planner comments onto the PR. When
+the log shows that error, check whether N is actually a PR before chasing a code
+bug. (Cross-ref `cli-flag-validation-prevent-silent-noop`.)
+
+#### 5. Validation discipline
+
+After a fix lands AND is installed, re-run a SCOPED loop
+(`--issues <a few real issue numbers>`) and confirm the decisive log lines show
+the NEW behavior — e.g. NO-GO → `re-running implement + review loop`, reviewer
+emits a real `Verdict:` line (not AMBIGUOUS). Then cross-check live GitHub state
+(PR labels, comments): the log is an observation report, not ground truth.
+(Cross-ref `multi-repo-pr-automation-loop-orchestration`'s report-vs-live-state
+rule.)
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Assumed one fix resolved the symptom | Landed the top-blocker fix and declared the loop fixed | The symptom ("PR not reviewed/implemented") MOVED to the next layered bug — it did not go away | Re-run + read the NEW log after EVERY fix; expect the root cause to shift, not vanish |
+| Re-ran the loop expecting a branch/merged-PR fix to apply | Re-ran `pixi run hephaestus-automation-loop` after the fix merged | The loop runs the editable working-tree code; the fix was never installed, so behavior was unchanged | `git checkout main && git pull && pixi run dev-install`, then verify with `inspect.getsource` before re-running |
+| Passed PR numbers to `--issues` | Invoked the loop with PR numbers in `--issues` | The planner could not resolve them as issues, failed open, and posted planner comments onto the PR | `--issues` takes comma-delimited ISSUE numbers, not PR numbers, not space-delimited |
+| Trusted a clean log as proof the fix worked | Read `output.log`, saw expected lines, declared done | The log is an observation report, not ground truth — live GitHub state can differ | Cross-check PR labels/comments on GitHub after a scoped validation re-run |
+
+## Results & Parameters
+
+**Decisive log grep tokens** (per-issue timeline signals):
+
+| Token | Meaning |
+|-------|---------|
+| `Issue #N: ... implementation-review (GO\|NO-GO)` | Implementation verdict for an issue |
+| `re-running implement` | Implementer re-entered (expected after a NO-GO once fixed) |
+| `head branch is` / `already checked out ... reusing` | Worktree sync used the real branch / reused an existing worktree |
+| `Verdict=... Grade=... threads=...` | Reviewer emitted a real verdict (not AMBIGUOUS) |
+| `Successful:` / `Skipped:` / `Failed:` | Per-loop implementer summary — fastest "did real work happen?" signal |
+| `Repo not done` | Loop has more work to do |
+| `Could not resolve to an Issue with the number of N` | `--issues` was likely given a PR number |
+
+**Commands:**
+
+```bash
+# Capture
+pixi run hephaestus-automation-loop --issues 725,711 2>&1 | tee output.log
+
+# Is-fix-live check
+pixi run python -c "import inspect, hephaestus.automation.<module> as m; print('<old-token>' in inspect.getsource(m))"
+
+# Scoped validation re-run
+pixi run hephaestus-automation-loop --issues <a,few,real,issues> 2>&1 | tee output.log
+```
+
+| Parameter | Value |
+|-----------|-------|
+| Pipeline | `hephaestus-automation-loop` (`plan → implement → drive-green`) |
+| Diagnostic instrument | `output.log` via `2>&1 \| tee output.log` |
+| Layered bugs peeled in one session | 6 (#1104, #1106, #1108, #1110, #1112, #1114) |
+| Re-run scope | `--issues <comma-delimited ISSUE numbers>` |
+| **Verified On** | ProjectHephaestus PRs #1104 / #1106 / #1108 / #1110 / #1112 / #1114 (all merged to main, green CI) |
+
+## Related Skills
+
+Jump to these per-bug skills for the specific fix behind each layered blocker:
+
+- `pr-review-loop-orchestration-agent-patterns` — GO-only short-circuit, zero-thread non-GO re-review, `state:skip` on true exhaustion (#1104, #1112, #1114).
+- `multi-repo-pr-automation-loop-orchestration` — drive-green scoping, report-vs-live-state discipline (#1110).
+- `automation-reuse-repo-clone-with-worktree-per-pr` — real `headRefName` sync, worktree reuse on branch collision (#1106, #1110).
+- `cli-flag-validation-prevent-silent-noop` — issue-vs-PR `--issues` validation.
+- `pixi-runtime-env-gotchas` — editable working-tree code / dev-install gotcha.
+```
+
+## v1.0.0 (2026-06-09)
+
+Initial version.

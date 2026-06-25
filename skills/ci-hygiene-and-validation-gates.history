@@ -4,6 +4,67 @@
 This file preserves the full original content of the skills merged into
 `ci-hygiene-and-validation-gates`.
 
+## v1.3.0 (2026-06-20)
+
+**What changed:** Added **Pattern 6 — already-wired issue: justfile discoverability comment** to
+`## When to Use`, `## Verified Workflow` (new subsection with 5-step workflow), `## Failed Attempts`
+(two new rows for Pattern 6), and `## Verified On` (ProjectHermes issue #496 / branch
+`496-auto-impl`). Bumped `version` 1.2.0 → 1.3.0 (MINOR — additive pattern), `date` →
+2026-06-20, added tags `already-wired`, `discoverability-comment`, `prior-pr-completed`,
+`justfile-cross-reference`. Also corrected the Overview Patterns field to enumerate all 5+6
+patterns explicitly.
+
+**Why:** Issue #496 in ProjectHermes asked to wire `scripts/check_dep_sync.py` into a CI lint job.
+Investigation revealed the `deps-version-sync` CI job already existed in
+`.github/workflows/_required.yml` (added by PR #594 / commit `3ee26ae`), running unconditionally
+on every `pull_request` to `main`. The correct resolution was NOT to re-wire or duplicate the
+CI step but to insert a single cross-reference comment in `justfile` above the `dep-check`
+recipe. This "already-wired issue → discoverability comment" pattern recurs whenever a prior PR
+quietly closed the CI gap and the issue was not updated. Searchers for "wire X into CI" / "already
+exists in CI" / "justfile cross-reference" should land on this skill.
+
+### Snapshot of v1.2.0 (superseded 2026-06-20)
+
+**Frontmatter at v1.2.0:**
+
+```yaml
+---
+name: ci-hygiene-and-validation-gates
+description: "Use when: (1) adding a CI step that grep-blocks reappearance of deprecated identifiers after a cleanup PR, (2) adding a standalone JSON schema validation step to catch config drift even when pre-commit was skipped, (3) detecting orphaned scripts/*.py files not referenced in CI workflows, justfile, or other scripts, (4) you discover a NAMED required CI check that asserts nothing (a dead gate that computes-and-discards its verdict, or whose only failure path is unreachable) and must make it genuinely enforce in place because its context is pinned in the org ruleset and cannot be deleted, (5) a gitignored scratch directory whose name collides with a packaging-output convention (e.g. `build/`) needs a guard that the directory never has tracked files swept into a distribution."
+category: ci-cd
+date: 2026-06-12
+version: "1.2.0"
+user-invocable: false
+history: ci-hygiene-and-validation-gates.history
+tags:
+  - ci-cd
+  - grep
+  - validation
+  - deprecation
+  - schema
+  - pre-commit
+  - stale-detection
+  - regression-guard
+  - required-status-check
+  - dead-gate
+  - no-op-assertion
+  - version-sync
+  - set-e
+  - pinned-context
+  - defense-in-depth
+  - pip-install-deps
+  - pixi-locked
+  - build-dir
+  - untracked-guard
+  - packaging-collision
+  - git-ls-files
+---
+```
+
+The full v1.2.0 body (Patterns 1–5, Failed Attempts rows 1–11, Results & Parameters for all
+patterns, and the Verified On table) is preserved in git history at the commit immediately
+preceding this v1.3.0 amendment.
+
 ## v1.1.0 (2026-06-12)
 
 **What changed:** Added **Pattern 4 — detect & fix a dead required gate** to

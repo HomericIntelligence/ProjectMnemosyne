@@ -1,0 +1,55 @@
+# verify-issue-premise-against-code-before-planning — History
+
+## v1.1.0 (2026-06-19)
+
+**Changed by:** ProjectAgamemnon issue #248 planning session (revision after a NOGO). The FIRST
+plan fixed only ONE job (`pixi-check` in `.github/workflows/_required.yml`) and was NOGO'd: the
+issue's premise (`setup-pixi` with `cache: false` skips built-in save → `.pixi` re-downloaded on
+cold cache) ALSO applied to a SECOND job (`lint`, same file) that the plan had silently dropped.
+The dropped site was a direct consequence of narrowing the grep to an INCIDENTAL token
+(`pixi install --locked`) that the issue never named, instead of the issue's OWN premise token
+(`cache: false`).
+**Verification:** unverified — PLANNING session only. The revised plan (fix both `lint` +
+`pixi-check`, explicitly ratify deferral of the look-alike `security-dependency-scan`) was never
+implemented or run through CI.
+
+### What changed
+
+- Added the core ENUMERATE-AND-RATIFY lesson, complementary to v1.0.0's disambiguate-which-file
+  lesson: when an issue's premise describes a code PATTERN, enumerate EVERY site matching that
+  premise BEFORE scoping, and grep the issue's OWN premise token (`cache: false`), not an
+  incidental token from your first-found site (`pixi install --locked`). The incidental token is a
+  self-fulfilling filter that matches only the one job and silently drops siblings.
+- Added the unratified-scope-decision lesson: when multiple sites match, WHICH to fix is a DECISION
+  the reviewer must ratify. State each in-scope site AND each look-alike-but-excluded site with
+  explicit reasoning ("excluded because it has defect Y, not the issue's defect X"). A silent
+  omission of a matching site reads as an oversight and earns a NOGO.
+- Added the per-site-divergence caveat: matching sites can differ (the two jobs used DIFFERENT
+  cache keys `pixi-lint-*` vs `pixi-*` and different paths); a uniform/templated fix that ignores
+  divergence introduces a save-under-wrong-key bug.
+- Added a When-to-Use trigger for multi-site enumeration (recurring pattern across CI jobs / lint
+  rule / config key; especially after a single-site plan; especially when a sibling/look-alike
+  exists).
+- Added a Verified-Workflow "enumerate all matching sites + ratify exclusions" step and a Quick
+  Reference block grepping the premise token.
+- Added 2 Failed Attempts rows (incidental-token narrowing; silent single-site scoping) plus a
+  per-site-divergence row.
+- Recorded the revised plan's residual assumptions/risks in Results & Parameters for the reviewer.
+- Frontmatter: bumped `version` 1.0.0 → 1.1.0, added `history` field, broadened tags
+  (enumerate-all-sites, ratify-scope, under-scoping, self-fulfilling-narrowing, multi-site).
+
+## v1.0.0 (2026-06-19)
+
+**Changed by:** ProjectAgamemnon issue #248 planning session (initial). The issue's premise
+(`setup-pixi` + `cache: false` skipping built-in save, "fully re-downloads .pixi on cold cache")
+implied `python-client.yml`, but those jobs use the full `actions/cache@v4` (auto-saves) — NOT the
+issue's scenario. Grepping the INTERSECTION of `cache: false` + `pixi install --locked` resolved
+the described scenario to `_required.yml` job `pixi-check`, disambiguating the real target.
+**Verification:** unverified — planning session only; the plan was never implemented or CI-run.
+
+### What changed
+
+- Initial version. Core lesson: an issue's narration of "what the current code does" is a CLAIM to
+  verify, not ground truth — grep the distinctive premise tokens and confirm WHICH file/job
+  actually matches before writing a plan. Especially dangerous for follow-up issues (state may
+  have drifted) and CI/workflow issues (same step pattern across multiple workflow files).

@@ -49,7 +49,7 @@ tags:
 - `--resume <session_id>` returns empty output or "No conversation found" in ephemeral containers
 - IMPLEMENT stage fails with "permission denied" writing files in the bind-mounted workspace
 - Pipeline loops repeatedly on NOGO because REVIEW stage gets empty Claude output
-- `git push` blocked by GitHub email privacy (`villmow.products@gmail.com`)
+- `git push` blocked by GitHub email privacy (`<private-email>`)
 - PR stuck in CONFLICTING state; GitHub CI won't run and auto-merge stalls
 - `.markdownlint.yaml` on main causes lint failures for new PRs
 - Auto-merge dropped silently after a force-push or new commit
@@ -198,7 +198,7 @@ gh pr merge --auto --rebase <PR_NUMBER> --repo <OWNER/REPO>
 
 ### Git Push Email Privacy Fix
 
-GitHub blocks pushes from `villmow.products@gmail.com`. Use the noreply address:
+GitHub blocks pushes from `<private-email>`. Use the noreply address:
 
 ```bash
 git config user.email "mvillmow@users.noreply.github.com"
@@ -230,7 +230,7 @@ cherry-pick only the needed diff (see PR Conflict Resolution Pattern above).
 | 5 | IMPLEMENT stage writing files without `--userns=keep-id` | Workspace bind-mount owned by host user appears as root without uid mapping; permission denied | Add `--userns=keep-id` to every `podman run` invocation |
 | 6 | Pipeline REVIEW stage with failed session resume | Empty output defaults to NOGO, pipeline loops up to MAX_ITERATIONS | Disable session resumption; empty output then fails fast instead of looping |
 | 7 | SHIPPER committed to existing branch instead of task-specific one | Incorrect branch targeting logic in shipper stage | Workaround: update PR body with `Closes #N`; fix branch logic in shipper |
-| 8 | `git push` with `villmow.products@gmail.com` | GitHub email privacy blocks push from this address | Use `mvillmow@users.noreply.github.com` for all git operations |
+| 8 | `git push` with `<private-email>` | GitHub email privacy blocks push from this address | Use `mvillmow@users.noreply.github.com` for all git operations |
 | 9 | Waiting for stalled GitHub Actions runners | Runs queued 2+ hours, never picked up | Push empty retrigger commit; if still stuck, create fresh branch from main tip |
 | 10 | Long-lived PR branch diverged from main | PR enters CONFLICTING state; CI won't run, auto-merge stalls | Create fresh branch from main tip, cherry-pick only the needed diff |
 | 11 | `.markdownlint.yaml` with 200-char line limit on main | New PRs fail lint because docs exceed 80-char limit | Replace with `.markdownlint.json` using 80-char limit with table/code/heading exemptions |

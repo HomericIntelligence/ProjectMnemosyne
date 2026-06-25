@@ -1,0 +1,246 @@
+<!-- markdownlint-disable MD024 MD025 MD040 -->
+# release-tag-drift-recut-on-fixed-commit — History
+
+## v1.1.0 (2026-06-20)
+
+**Changed by:** ProjectHephaestus v0.9.7 release (re-application of the v1.0.0 procedure)
+**Verification:** verified-ci
+
+**What changed:**
+
+- Added the **blast-radius finding**: a stale/premature `vX.Y.Z` tag fails the
+  version-currency drift guard on the CI of **every open PR** whose checkout resolves
+  tags, not just the tag-triggered Release run. The fast global unblock is to delete the
+  stale remote tag (`git push origin :refs/tags/vX.Y.Z`) immediately, then re-run CI on
+  any PR that already failed (`@dependabot rebase` for Dependabot PRs).
+- Documented the drift test's **skip-vs-fail logic**: `_version_from_git_tag()` returning
+  None (tagless/shallow checkout) makes the test `pytest.skip`; it only runs and can fail
+  where tags resolve (Release/required workflows fetch tags with `fetch-depth: 0`).
+- Added the **`--no-cov` single-file caveat**: running one drift-test file trips the
+  coverage-threshold gate (a coverage FAIL, not a real test failure); use `--no-cov` and
+  read the `N passed` line.
+- Refined the **auto-merge pre-arm nuance** to be conditional on the `auto-merge-policy`
+  check conclusion on the actual PR (pre-arm only if SUCCESS; squash-only repos use
+  `--squash`).
+- Added **3 new Failed Attempts** (left stale tag in place → all open PRs failed; mistook
+  single-file coverage FAIL for a real failure; assumed the guard is Release-only).
+- Added a **second verified data point** (ProjectHephaestus v0.9.7, doc-bump PR #1542,
+  merged commit `6512a62`, re-cut signed tag `v0.9.7` on `6512a62`, Release run
+  `27882075453`).
+
+**Why:** A stale tag from a premature cut blocked an unrelated Dependabot PR (#1540) in
+this session, revealing the guard's repo-wide reach that v1.0.0 framed as Release-only.
+
+## v1.0.0 (2026-06-16)
+
+Initial version.
+
+### Previous version (v1.0.0) snapshot
+
+The full v1.0.0 skill `.md` content as it stood before this amendment:
+
+````markdown
+---
+name: release-tag-drift-recut-on-fixed-commit
+description: "Diagnose and fix a tag-time version-currency drift guard that silently skips PyPI publish, then re-cut the release tag on a fixed commit. Use when: (1) a vX.Y.Z git tag exists but the package was never published to PyPI even though main's push-CI is green; (2) a Release GitHub Actions run shows the `test` job failing and `build-and-publish` SKIPPED (not failed); (3) a drift-guard unit test (e.g. test_migration_md_version_does_not_trail_latest_git_tag) fails inside the tag-triggered Release workflow because a doc's 'latest released version' line trails the new tag; (4) you need to delete and re-create a release tag on a corrected commit without reproducing the same failure (land-on-main-then-recut, never recut-in-place); (5) a failing CI run's headBranch is a vX.Y.Z tag and you must tell a tag-triggered Release run apart from a push-to-main run."
+category: ci-cd
+date: 2026-06-16
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - release
+  - git-tags
+  - pypi-publish
+  - github-actions
+  - version-drift
+  - drift-guard
+  - re-cut-tag
+  - chicken-and-egg
+  - migration-md
+  - signed-tags
+---
+
+# Release Tag Drift: Re-cut the Tag on a Fixed Commit
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-16 |
+| **Objective** | Diagnose why a `vX.Y.Z` tag existed but the package never reached PyPI, then re-cut the tag correctly so the Release workflow publishes. |
+| **Outcome** | Successful — root cause was a tag-time version-currency drift guard failing the Release `test` job, which SKIPPED `build-and-publish`. Fixed `docs/MIGRATION.md` on main, then re-cut the tag on the fixed commit; the new Release run published to PyPI with attestations. |
+| **Verification** | verified-ci — executed end-to-end; the re-triggered Release workflow passed all jobs incl. `build-and-publish`, and PyPI publish succeeded. |
+
+## When to Use
+
+- A `vX.Y.Z` tag exists, but PyPI has no matching release — yet main's regular push-CI is green.
+- A linked failing CI run is the **Release** workflow with `headBranch` equal to a `vX.Y.Z` tag (a tag-triggered run), not a push to main.
+- The Release `test` job failed and `build-and-publish` shows conclusion **skipped** — so the package is silently unpublished despite the tag existing.
+- A "version-currency drift guard" test asserts a doc's "latest released version is **X.Y.Z**" line is not older than the newest `vX.Y.Z` tag, and the tag's own commit fails it (chicken-and-egg).
+- You were told to "delete the tag and launch a new tag" and need to decide: re-create the same version on a fixed commit, or bump to the next patch.
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Identify it's the Release workflow on the TAG, not main CI
+gh run view <run-id> --json name,workflowName,headBranch,headSha,conclusion
+#   -> name=Release, headBranch=v0.9.6  (a tag, not a branch)
+
+# 2. Confirm only the drift test failed AND publish was SKIPPED (not failed)
+gh run view <run-id> --json jobs -q '.jobs[] | "\(.conclusion // .status)  \(.name)"'
+#   -> failure  test          (drift guard)
+#   -> skipped  build-and-publish   <-- package silently unpublished
+
+# 3. Fix the doc on a NORMAL PR branch off main, verify locally
+git checkout -b <issue>-fix-migration-version main
+# edit docs/MIGRATION.md: bump "latest released version is X.Y.Z" to match the tag;
+# also refresh any stale "as of YYYY-MM-DD" date
+pytest tests/unit/docs/test_version_currency.py   # must pass
+
+# 4. PR per repo policy, signed commit, merge to MAIN first
+git commit -S -m "docs(migration): bump version line to vX.Y.Z to clear release drift guard"
+gh pr create --body "$(printf 'Fix release drift guard.\n\nCloses #<issue>\n')"
+#   Do NOT pre-arm auto-merge; apply the GO label / let the review flow arm it.
+
+# 5. After merge, sync main and note the FIXED commit SHA
+git checkout main && git pull --ff-only origin main
+git rev-parse --short HEAD            # e.g. d3cef75  <- fixed commit
+
+# 6. Delete the old tag (remote + local) and re-create on the FIXED commit
+git push origin :refs/tags/vX.Y.Z    # delete remote (outward-facing; confirm w/ user)
+git tag -d vX.Y.Z                    # delete local -- BLOCKED by CC Safety Net; USER runs this
+git tag -s vX.Y.Z <fixed-sha> -m "$(printf 'Release vX.Y.Z\n\nRe-cut on fixed commit <sha>: clears the version-currency drift guard that previously skipped the PyPI publish.')"
+git push origin vX.Y.Z               # re-triggers Release on the FIXED commit
+
+# 7. Watch the new Release run; verify build-and-publish is NO LONGER skipped
+gh run watch <new-run-id> --exit-status
+
+# 8. Verify PyPI is live (JSON index lags a few minutes; publish-step success is authoritative)
+curl -s https://pypi.org/pypi/<DistName>/<version>/json | head
+```
+
+### Detailed Steps
+
+1. **Identify the run is the Release workflow on the tag, not main CI.**
+   `gh run view <id> --json name,workflowName,headBranch,headSha,conclusion`. A
+   `headBranch` of `vX.Y.Z` means a tag-triggered Release run. Main's push-CI being
+   green is a red herring — the drift guard only fails on the tag-triggered run
+   because that run is the only context where the tag exists and the assertion
+   `(doc_version) >= (latest_tag)` is evaluated against the new tag.
+
+2. **Confirm the failure shape: drift test failed → publish SKIPPED.**
+   `gh run view <id> --json jobs -q '.jobs[] | "\(.conclusion // .status)  \(.name)"'`.
+   A failed `test` job causes the downstream `build-and-publish` job (which `needs: test`)
+   to be **skipped**, not failed. So the package is silently unpublished even though the
+   run's top-level conclusion looks like a plain test failure. Always check the
+   `build-and-publish` job conclusion explicitly, not just the run conclusion.
+
+3. **Fix the doc on a normal PR branch off main and verify locally.**
+   Bump `docs/MIGRATION.md`'s "latest released version is **X.Y.Z**" line to match the
+   tag, and refresh any stale "as of YYYY-MM-DD" date the same guard or a sibling test
+   checks. Run `pytest tests/unit/docs/test_version_currency.py` and confirm it passes
+   before opening the PR.
+
+4. **Open a PR per repo policy (`Closes #N`), signed commit, and merge to main FIRST.**
+   The fix MUST land on main before re-tagging. Re-tagging on the still-buggy main would
+   reproduce the identical drift-guard failure. Do NOT pre-arm `gh pr merge --auto` — in
+   repos that gate auto-merge behind a `state:implementation-go` (or equivalent) label,
+   pre-arming trips the auto-merge-policy gate. Apply the GO label first or let the review
+   flow arm it.
+
+5. **Sync local main and capture the fixed commit SHA.**
+   `git checkout main && git pull --ff-only origin main`, then
+   `git rev-parse --short HEAD` to record the merge commit (e.g. `d3cef75`). This is the
+   commit the new tag must point at.
+
+6. **Delete the old tag and re-create it on the fixed commit.**
+   - `git push origin :refs/tags/vX.Y.Z` deletes the remote tag (outward-facing — confirm
+     with the user before deleting a published tag).
+   - `git tag -d vX.Y.Z` deletes the local tag — **CC Safety Net blocks `git tag -d`**;
+     hand this to the user to run manually. You cannot override the hook even with
+     in-conversation approval.
+   - `git tag -s vX.Y.Z <fixed-sha> -m "<descriptive message>"` creates a signed annotated
+     tag on the fixed commit, matching the repo's tag convention. Use a descriptive message
+     that explains the re-cut, not a bare `Release vX.Y.Z`.
+   - `git push origin vX.Y.Z` re-triggers the Release workflow on the fixed commit.
+
+7. **Watch the new Release run and confirm publish actually ran.**
+   `gh run watch <new-id> --exit-status`. Verify all jobs pass, especially that
+   `build-and-publish` is no longer skipped. Confirm the version-check step prints the
+   right version and the publish step uploaded (look for the sigstore attestation /
+   "Publish to PyPI" step output).
+
+8. **Verify PyPI is live.**
+   `curl -s https://pypi.org/pypi/<DistName>/<version>/json`. The PyPI JSON index lags a
+   few minutes; the workflow's publish step succeeding with attestations is the
+   authoritative "published" signal, not the JSON index appearing instantly.
+
+### Gotchas
+
+- **Tag-time drift guards are inherently chicken-and-egg.** The tag itself triggers the
+  check that the tag's content fails. The only fix is land-on-main-then-recut — never
+  recut-in-place on the buggy commit.
+- **A failed Release `test` job SKIPS, not fails, `build-and-publish`.** The package is
+  silently unpublished even though the tag exists and the run looks like an ordinary test
+  failure. Check the `build-and-publish` job conclusion, not just the run conclusion.
+- **Annotated/signed tags have a tag-object SHA distinct from the commit they point to.**
+  `git rev-parse vX.Y.Z` returns the *tag object*. To get the underlying commit, use
+  `git for-each-ref refs/tags/vX.Y.Z --format='%(*objectname:short)'`.
+- **"Delete the tag and launch a new tag" is ambiguous.** Clarify with the user whether to
+  RE-CREATE the same version (premature/bad tag redo) or BUMP to the next patch. This
+  changes which version you write into `MIGRATION.md`.
+- **CC Safety Net blocks `git tag -d`, `git worktree remove --force`, and `git checkout --`.**
+  Hand these to the user to run manually; the hook cannot be overridden even with
+  in-conversation approval.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| 1 | Assumed the linked failing CI run was main's push-CI | Main push-CI was actually green; the failure was the tag-triggered Release workflow | Check `workflowName` + `headBranch` on the run — a `vX.Y.Z` headBranch means a tag-triggered release, not a branch |
+| 2 | Considered re-cutting the tag immediately on current main | Current main still had the buggy `MIGRATION.md`; re-tag would fail the drift guard identically | The doc fix must merge to main BEFORE re-tagging; the re-tag must point at the fixed commit |
+| 3 | `gh pr merge --auto --squash` armed immediately on the fix PR | Tripped the repo's auto-merge-policy gate (auto-merge only allowed after the `state:implementation-go` label) | Don't pre-arm auto-merge; apply the GO label first or let the review flow arm it |
+| 4 | `git tag -d v0.9.6` run by the assistant | Blocked by CC Safety Net (destructive tag deletion) | Hand `git tag -d` / `git worktree remove --force` / `git checkout --` to the user to run manually |
+
+## Results & Parameters
+
+**Diagnostic commands (copy-paste):**
+
+```bash
+# Was it the Release workflow on a tag?
+gh run view <run-id> --json name,workflowName,headBranch,headSha,conclusion
+# Expected on failure: name=Release, headBranch=v0.9.6
+
+# Did the drift test fail and publish skip?
+gh run view <run-id> --json jobs -q '.jobs[] | "\(.conclusion // .status)  \(.name)"'
+# Expected: "failure  test"  and  "skipped  build-and-publish"
+
+# Underlying commit of an annotated/signed tag (NOT the tag-object SHA):
+git for-each-ref refs/tags/v0.9.6 --format='%(*objectname:short)'
+```
+
+**The drift-guard assertion that fails (illustrative):**
+
+```text
+tests/unit/docs/test_version_currency.py::test_migration_md_version_does_not_trail_latest_git_tag
+assert (0, 9, 5) >= (0, 9, 6)   # MIGRATION.md says 0.9.5, newest tag is v0.9.6  -> False -> FAIL
+```
+
+**Re-cut sequence (verified, with real SHAs from the session):**
+
+```bash
+git push origin :refs/tags/v0.9.6                 # delete remote tag
+git tag -d v0.9.6                                 # local delete — USER runs (CC Safety Net blocks)
+git tag -s v0.9.6 d3cef75 -m "$(printf 'Release v0.9.6\n\nRe-cut on fixed commit d3cef75: clears the version-currency drift guard that skipped the PyPI publish on the original tag at f32f1ed.')"
+git push origin v0.9.6                            # re-trigger Release on the fixed commit
+gh run watch <new-run-id> --exit-status
+curl -s https://pypi.org/pypi/<DistName>/0.9.6/json
+```
+
+**Expected outcome:** the re-triggered Release run passes all jobs including
+`build-and-publish` (no longer skipped), the publish step uploads to PyPI with sigstore
+attestations, and the package version becomes installable once the PyPI index catches up.
+````
