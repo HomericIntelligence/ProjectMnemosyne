@@ -1,0 +1,120 @@
+# History — cpp-httplib-prerouting-audit-event-planning
+
+Newest entries first.
+
+---
+
+## v1.1.0 — 2026-06-19
+
+- Version: 1.1.0 (minor)
+- Date: 2026-06-19
+- Changed by: re-plan of ProjectAgamemnon #263 after reviewer NOGO
+- Verification: unverified (still a planning artifact — no code built or tested)
+
+### What changed
+
+Added five new durable learnings and three new Failed Attempts rows that surfaced
+during the NOGO-remediation re-plan of ProjectAgamemnon issue #263:
+
+1. Caller fan-out has a glob blind spot — enumerate every `grep` hit by file:line,
+   never describe the fan-out by a narrowing filename glob; finish with a confirming
+   re-grep for zero remaining old-arity sites.
+2. Test fixtures have heterogeneous ownership patterns (stack member vs. heap
+   inline-static pointer) — each needs a bespoke edit matching its existing lifetime
+   style, not a copy-paste.
+3. A test that asserts only the message SUBJECT does not verify field-level
+   acceptance criteria — extend the test double to capture the full payload and
+   assert each literal field (plus a negative assertion that timestamp is absent
+   from metadata).
+4. Extending a shared test double is a mini fan-out of its own — grep every reader
+   of the changed member and migrate them.
+5. Reviewer-trust signal — honestly self-disclosing unverified assumptions in the
+   plan downgraded two would-be majors to recoverable minors.
+
+Also added a Risks subsection capturing the uncertain/unverified reliances of the
+re-plan (line drift, uncompiled fake-struct change, assumed httplib Request field
+names, unverified validator section names).
+
+### Why
+
+The first plan (v1.0.0) received a reviewer NOGO. The specific gaps — a glob that
+would have missed callers, a subject-only test that did not verify required field
+contents, and an assumption that all fixtures share one DI lifetime style — are
+reusable planning lessons that must not be lost. v1.1.0 records them so the next
+planner avoids the same NOGO.
+
+### Full snapshot of v1.0.0 content (superseded by the current .md)
+
+```markdown
+---
+name: cpp-httplib-prerouting-audit-event-planning
+description: "Use when planning (not yet implementing) a feature that emits an audit/log event to NATS from a cpp-httplib pre-routing handler in a C++ service: (1) injecting a long-lived dependency (rate limiter, publisher) into set_pre_routing_handler, (2) rate-limiting events per client IP, (3) reusing a high-level publish_log/NATS envelope wrapper, (4) adding client IP (remote_addr) to a payload that triggers PII-audit-doc maintenance, (5) deciding test doubles for a fire-and-forget publisher."
+category: architecture
+date: 2026-06-19
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags: [cpp, cpp-httplib, pre-routing, nats, audit, rate-limiter, pii, planning, lambda-capture, agamemnon]
+---
+
+# C++ cpp-httplib Pre-Routing Audit-Event Emission: Planning Skill
+
+## Overview
+
+| Field | Value |
+| --- | --- |
+| Date | 2026-06-19 |
+| Objective | Capture durable, reusable planning lessons for emitting an audit/log event to a NATS subject from a cpp-httplib pre-routing handler, rate-limited per client IP |
+| Outcome | Implementation plan produced (planning artifact only — no code written, built, or tested) |
+| Verification | unverified |
+| Context | ProjectAgamemnon issue #263 — emit auth-failure events to `hi.logs.agamemnon.auth_failure` from the cpp-httplib pre-routing handler, rate-limited per IP |
+
+> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
+
+## When to Use
+
+Apply this skill when **planning** (before writing code) a change in a C++ cpp-httplib + NATS service where you must:
+
+- Inject a long-lived dependency (rate limiter, NATS publisher) into a `set_pre_routing_handler` lambda.
+- Emit a structured audit/log event from the request hot path on some condition (auth failure, suspicious request).
+- Rate-limit those emitted events per client IP ("≤ N events / IP / second").
+- Reuse an existing high-level publish wrapper that builds a structured log envelope, rather than the raw NATS publish API.
+- Add the client IP (`remote_addr`) to a serialized payload — which changes the PII posture and may falsify an existing security/PII audit doc.
+- Choose a test double for a fire-and-forget publisher whose failures are swallowed.
+
+**Key triggers:**
+
+- You are about to plan an edit to a `register_routes(...)`-style registrar that captures dependencies into a handler lambda.
+- The handler lambda outlives the function that registers it (httplib copies the lambda).
+- A flood of events must be collapsed to a bounded rate per source IP.
+- An existing audit/PII doc asserts "no IP addresses are serialized."
+
+## Verified Workflow
+
+> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms. The section is titled "Verified Workflow" only because the repository validator (`scripts/validate_plugins.py`) requires that literal heading; the `verification: unverified` frontmatter is authoritative.
+
+### Quick Reference
+
+(see current .md — quick reference code blocks for pointer-capture vs reference-capture anti-pattern)
+
+### Step 1 — Lambda capture: pointer-capture long-lived deps, never reference-capture
+### Step 2 — Reuse a tested token-bucket RateLimiter; construct a SEPARATE instance
+### Step 3 — Ownership/lifetime: pass the new dep by reference through the registrar; audit ALL callers
+### Step 4 — Prefer the high-level `publish_log` wrapper over the raw NATS publish API
+### Step 5 — Adding client IP changes the PII posture: update the audit doc as a deliverable
+### Step 6 — Test-double asymmetry drives the test design
+### Step 7 — Risks / unverified reliances (carry into implementation)
+
+## Failed Attempts (v1.0.0 rows)
+
+- Reference-capture a dependency into the pre-routing lambda → httplib copies the lambda; reference dangles (UB) → pointer-capture long-lived deps.
+- Reuse the request-path rate limiter for the audit gate → conflates concerns / consumes request tokens → separate RateLimiter(1.0,1.0).
+- Construct the limiter as a stack local inside the registrar → lambda outlives registrar; local destroyed → own in main(), pass by reference.
+- Assert the emit via the down-broker integration fixture → fire-and-forget swallows failures → use recording FakeNatsPublisher.
+- Add remote_addr to the payload without touching the PII audit doc → PII doc becomes silently false → update audit doc as a required deliverable.
+
+## Results & Parameters
+
+RateLimiter(1.0, 1.0); pointer capture; separate audit limiter; publish_log wrapper;
+omit timestamp from metadata; FakeNatsPublisher test double.
+```

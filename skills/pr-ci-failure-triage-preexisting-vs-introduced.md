@@ -1,11 +1,12 @@
 ---
 name: pr-ci-failure-triage-preexisting-vs-introduced
-description: "Use when: (1) a PR has unexpected CI failures and you need to determine if they are PR-introduced or pre-existing main-branch rot before bisecting, reverting, or retriggering, (2) CI fails after a force-push and cancelled runs from the old SHA appear as failures in the PR status rollup, (3) a required CI check fails on a PR whose diff is unrelated to the failing job, (4) CI failures look like flakes (Mojo JIT crash, SIGABRT) and need to be classified before a rerun, (5) stale CI warnings need to be surfaced in PR comments rather than stderr only, (6) CI coverage gate fails because it measures the merge-preview tree rather than the branch alone, (7) a stacked rebased PR has stale CI runs and needs fresh triggering without code changes, (8) sanitizer or compilation jobs fail identically on a PR because stale duplicate commits from another branch are present on the PR branch, (9) deciding whether to fix in-scope, admin-merge, or file a follow-up issue for a blocking failure"
+description: "Use when: (1) a PR has unexpected CI failures and you need to determine if they are PR-introduced or pre-existing main-branch rot before bisecting, reverting, or retriggering, (2) CI fails after a force-push and cancelled runs from the old SHA appear as failures in the PR status rollup, (3) a required CI check fails on a PR whose diff is unrelated to the failing job, (4) CI failures look like flakes (Mojo JIT crash, SIGABRT) and need to be classified before a rerun, (5) stale CI warnings need to be surfaced in PR comments rather than stderr only, (6) CI coverage gate fails because it measures the merge-preview tree rather than the branch alone, (7) a stacked rebased PR has stale CI runs and needs fresh triggering without code changes, (8) sanitizer or compilation jobs fail identically on a PR because stale duplicate commits from another branch are present on the PR branch, (9) deciding whether to fix in-scope, admin-merge, or file a follow-up issue for a blocking failure, (10) a rebased PR has independent CodeQL and validate failures, (11) validate fails only in CI because tests depend on host-specific filesystem auto-detection."
 category: ci-cd
-date: 2026-06-07
-version: "1.0.0"
+date: 2026-06-19
+version: "1.1.0"
 user-invocable: false
 history: pr-ci-failure-triage-preexisting-vs-introduced.history
+verification: verified-ci
 tags:
   - ci-failure
   - triage
@@ -21,6 +22,10 @@ tags:
   - admin-merge
   - tracking-issue
   - stale-duplicate-commit
+  - post-rebase
+  - validate
+  - ci-env-drift
+  - codeql
 ---
 
 # PR CI Failure Triage: Pre-Existing vs. PR-Introduced
@@ -33,9 +38,9 @@ bisecting, reverting, retriggering, or expanding scope.
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-07 |
+| **Date** | 2026-06-19 |
 | **Objective** | Determine, per failing check, whether a red PR is the PR's fault or a systemic/flaky/artifact failure, then pick the right resolution (fix-in-scope, admin-merge, tracking issue, retrigger, or no-op) |
-| **Outcome** | Consolidated from 11 triage skills; authoritative classification via `gh api .../check-runs` on main HEAD; rollup-artifact detection for force-push/concurrency cancellations; flaky-vs-real signatures; stale duplicate-commit detection |
+| **Outcome** | Consolidated from 11 triage skills; authoritative classification via `gh api .../check-runs` on main HEAD; rollup-artifact detection for force-push/concurrency cancellations; flaky-vs-real signatures; stale duplicate-commit detection; post-rebase CodeQL plus validate recovery |
 | **Verification** | verified-ci |
 | **History** | [changelog](./pr-ci-failure-triage-preexisting-vs-introduced.history) |
 
@@ -51,6 +56,9 @@ bisecting, reverting, retriggering, or expanding scope.
 - All sanitizers fail identically on a PR; the branch carries extra/stale commits
 - A stacked PR series is behind main with failures from missing files / stale digests / renamed APIs
 - Stale CI pattern warnings exist but only print to stderr, never to the PR comment
+- A branch was rebased and now has both security/code-scanning failures and validate-job failures
+- Local tests pass but CI validate fails because a test depends on host-specific filesystem
+  auto-detection or ambient cluster/container state
 
 ## Verified Workflow
 
@@ -84,6 +92,12 @@ gh run list --branch main --workflow "<Workflow>" --limit 10 \
 
 # --- gh pr checks valid --json fields (narrow schema!) ---
 gh pr checks "$PR" --json name,workflow,state,bucket   # NO status/conclusion/required
+
+# --- Post-rebase recovery / final state confirmation ---
+git -c core.editor=true rebase --continue
+gh pr checks "<pr>" --repo "<owner>/<repo>"
+gh pr view "<pr>" --repo "<owner>/<repo>" \
+  --json mergeStateStatus,mergeable,headRefOid,url
 
 # --- Retrigger ONLY failed jobs (after classifying as flake) ---
 gh run rerun <run-id> --failed
@@ -262,7 +276,40 @@ warnings, add `stale_patterns: Optional[List[str]] = None` to `generate_report()
 measure the merge-preview tree rather than the branch alone, producing a discrepancy that is
 not a PR regression — diagnose with main history before "fixing".
 
-#### 8. Resolve
+#### 8. Post-rebase recovery when CodeQL and validate fail independently
+
+After a feature branch is rebased onto the default branch, treat each red gate as an independent
+failure until proven otherwise. A CodeQL fix does not imply validate is fixed, and a local pytest
+pass does not prove CI validate will pass if tests depend on CI-only filesystem state.
+
+1. Resolve rebase conflicts, then continue noninteractively in automation if Git opens an editor:
+
+   ```bash
+   git -c core.editor=true rebase --continue
+   ```
+
+2. Push the rebased branch and collect the current PR state:
+
+   ```bash
+   gh pr checks "<pr>" --repo "<owner>/<repo>"
+   gh pr view "<pr>" --repo "<owner>/<repo>" \
+     --json mergeStateStatus,mergeable,headRefOid,url
+   ```
+
+3. For CodeQL/GitHub Advanced Security failures, remember that the identifier from `gh pr checks`
+   may be a check-run id, not a workflow run id. Use the check-runs and code-scanning APIs to read
+   the rule id, path, line, and alert state.
+
+4. For validate failures where local tests pass, inspect whether tests are touching host-specific
+   filesystem probes, auto-discovered cluster/container paths, or other ambient CI state. Make tests
+   deterministic by patching the probe or passing explicit CLI configuration in the test. Do not add
+   environment-variable runtime config solely to make tests pass when the product direction forbids
+   env-based configuration.
+
+5. After each fix, push and poll `gh pr checks`. The final gate is: CodeQL green, validate green,
+   security/SCA green, branch clean, and `gh pr view` reports mergeable/current `headRefOid`.
+
+#### 9. Resolve
 
 - **PR-INTRODUCED** → fix in this PR (your responsibility).
 - **PRE-EXISTING** → ladder, in order: (A) quick fix only if ≤10 min and no scope creep;
@@ -293,6 +340,10 @@ not a PR regression — diagnose with main history before "fixing".
 | Creating an empty/trivial commit | `git commit --allow-empty` to satisfy "implement all fixes" | Pollutes history; the plan said no action needed | Never manufacture work; if confirmed pre-existing, enable auto-merge and stop |
 | Combined guard `if post_pr and uncovered or stale_patterns:` | Relied on default precedence | `and` binds tighter than `or`, so the stale arm ran unconditionally | Parenthesize mixed `and`/`or`: `if post_pr and (uncovered or stale_patterns):` |
 | `gh pr checks --json name,status,conclusion,...` | Requested fields that don't exist on that subcommand | gh rejected the whole call (`Unknown JSON field: "status"`) non-zero; retried as transient, tripped a circuit breaker | Valid fields are `bucket,...,state,workflow`; classify deterministic CLI-arg errors fail-fast, never retry |
+| Letting rebase continue open an editor in automation | Ran plain `git rebase --continue` after resolving conflicts | Git tried to launch an editor for the commit message and blocked the automated session | Use `git -c core.editor=true rebase --continue` |
+| Treating local pytest pass as enough for validate | Fixed tests locally and assumed CI validate would match | CI had different filesystem auto-detection inputs, so the validate job still failed | Patch probes or pass explicit CLI config in tests so CI and local runs exercise deterministic inputs |
+| Using environment variables to hide auto-detection drift | Proposed env-based runtime configuration just for tests | The product contract forbade env-based runtime config, and envs would mask the real deterministic-test gap | Keep runtime config explicit; tests should patch filesystem probes or pass CLI options |
+| Treating CodeQL green as PR-ready | Fixed security alerts and stopped polling | Validate was an independent gate and still red | Poll all required gates after each push and confirm mergeability/head SHA before declaring ready |
 
 ## Results & Parameters
 
@@ -341,6 +392,18 @@ gh pr diff <pr> --name-only          # confirm failing files are NOT in the diff
 gh run rerun <run-id> --failed       # --failed: only failed jobs, not the whole workflow
 ```
 
+### Post-rebase gate checklist
+
+```bash
+gh pr checks "<pr>" --repo "<owner>/<repo>"
+gh pr view "<pr>" --repo "<owner>/<repo>" \
+  --json mergeStateStatus,mergeable,headRefOid,url
+git status --short
+```
+
+Expected final state: CodeQL passes, validate passes, dependency/security analysis passes, branch
+has no local changes, `mergeable` is clean, and `headRefOid` matches the pushed fix commit.
+
 ## Verified On
 
 | Project | Context | Details |
@@ -353,3 +416,4 @@ gh run rerun <run-id> --failed       # --failed: only failed jobs, not the whole
 | ProjectHermes | PR #614 urllib3 CVE mislabeled `PREEXISTING_CI_NOISE` | check-runs API showed PR-introduced — upgraded urllib3 (verified-ci) |
 | ProjectKeystone | PR #552 `coverage` truly pre-existing (`BackpressureConcurrentTrigger` aborts on main) | Admin-merged + tracking issue #553 (verified-ci) |
 | ProjectKeystone | PR #436 all 4 sanitizers failing `AsyncAgentsConcurrentProcessing` identically | Stale duplicate commit `984fef0` (fix already on main via #435); rebuilt with real payload only (verified-local) |
+| Sanitized PR session | Post-rebase CodeQL and validate remediation | CodeQL, validate, security/SCA, and analysis gates green; branch clean and mergeable (verified-ci, 2026-06-19) |

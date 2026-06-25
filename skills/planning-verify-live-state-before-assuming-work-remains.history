@@ -1,0 +1,159 @@
+<!-- markdownlint-disable MD024 -->
+# planning-verify-live-state-before-assuming-work-remains — History
+
+## v1.3.0 (2026-06-19)
+
+**Changed by:** SECOND /learn pass for GitHub issue #177 (Odysseus meta-repo, "GitHub rulesets in 'evaluate' mode not enforcing"). The first plan (v1.2.0) got a NOGO for being static-only; this re-plan resolved every NOGO finding by querying LIVE state with `gh api` instead of inferring from static config files.
+**Verification:** verified-local for the core branch-migration workflow; the issue #177 ruleset FINDINGS are now verified-against-live (`gh api .../rulesets` was run this session). The #177 implementation PLAN itself remains proposed (not executed/merged).
+
+### What changed
+
+- **Promoted the #177 worked-example subsection from UNVERIFIED → live-verified.** Replaced the
+  "static-only, never queried" warning with the confirmed live findings: live ruleset id 15556483 is
+  already `active` (the OPPOSITE of the issue's "evaluate" claim); exactly 8 bare-name contexts +
+  `integration_id: 15368`; `forbid-suppressions` is the deliberately non-required 9th job; the org
+  endpoint 404s on the FREE plan. Documented the re-planned minimal additive scope (deletes nothing).
+- **Added 4 new Detailed Steps (11–14):** deployed state may be the OPPOSITE of the issue's claim
+  (idempotent re-apply can DOWNGRADE enforcement); one live query collapses several unverified
+  assumptions; reconcile doc-vs-doc number disputes against the deployed system; prefer additive
+  changes and never remove an operational rollback/safety path as a side effect.
+- **Added 3 new Failed Attempts rows:** (a) trusting the issue's stated state without querying live →
+  would have downgraded enforcement; (b) static-only first plan → NOGO on 5 MAJOR findings;
+  (c) bundling deletions/refactor into a one-line fix → rollback regression. Annotated the prior
+  `integration_id` row as confirmed by the live ruleset.
+- **Updated the description, When-to-Use, and Overview Verification row** to cover drift-opposite,
+  one-query-resolves-many, and doc-vs-doc-against-deployed-state; bumped version 1.2.0 → 1.3.0;
+  date stays 2026-06-19.
+
+### Why
+
+v1.2.0 captured the #177 first-pass plan as a set of UNVERIFIED static-only assumptions and got a
+NOGO. The re-plan ran the one `gh api .../rulesets` query the reviewer flagged as missing, which
+collapsed five separate NOGO findings at once and revealed the live ruleset was already `active` —
+so the real fix is drift-closure (and a naive idempotent re-apply of the stale on-disk `evaluate`
+file would have DOWNGRADED live enforcement). The durable learning is a planning-discipline one:
+verify live external state before planning a config fix, especially when the deployed state can be
+the inverse of the issue's claim. These findings extend the same search surface this skill already
+owns, so they are amended in rather than split out.
+
+### Previous version (v1.2.0) snapshot
+
+```yaml
+name: planning-verify-live-state-before-assuming-work-remains
+category: tooling
+date: 2026-06-19
+version: "1.2.0"
+verification: verified-local
+```
+
+v1.2.0 framing (now superseded): the #177 ruleset subsection was titled "UNVERIFIED, static-only
+plan" with a warning that the live org/repo ruleset state was NEVER queried; it listed the bare-vs-
+prefixed context format, the 9-vs-8 count, the org-endpoint availability, and `integration_id: 15368`
+as assumptions taken on faith. v1.3.0 confirms each against the live ruleset (id 15556483). The
+v1.2.0 Failed-Attempts rows tagged `(#177, UNVERIFIED)` are retained for the historical record; the
+re-plan rows tagged `(#177, re-plan)` carry the resolutions.
+
+---
+
+## v1.2.0 (2026-06-19)
+
+**Changed by:** Planning of GitHub issue #177 (Odysseus meta-repo) — flip GitHub rulesets from `enforcement: evaluate` to `active` + required-status-check context normalization. The plan was authored by STATIC file inspection only and never executed.
+**Verification:** verified-local for the existing core; the newly added issue #177 ruleset subsection is UNVERIFIED (static-only plan).
+
+### What changed
+
+- Added 6 new Failed Attempts rows, each framing an unverified assumption from the #177 plan as a
+  planning risk/lesson:
+  - Inferring "canonical files never enforce" from `apply-repo-rulesets.sh` / `justfile` defaults
+    instead of reading the live applied ruleset.
+  - Assuming required-status-check contexts are BARE job names (not workflow-prefixed) without
+    querying live state — the highest-risk assumption (wrong ⇒ bootstrap deadlock).
+  - Dropping the org's `typecheck` context as "safe" with no check that a workflow emits it.
+  - Silently reconciling the issue's 9-context claim to the files' 8.
+  - Deleting `-active.json` + the `--active` flag (irreversible; rollback/shadow-test path lost;
+    consumers only grepped within one repo) — scope creep on a "one-line" issue.
+  - Trusting `integration_id: 15368` = GitHub Actions app without independent confirmation.
+- Added a "Worked example: issue #177" subsection under Results & Parameters with an UNVERIFIED
+  warning, listing the most-uncertain assumptions, unverified external sources, reviewer-focus
+  risks (enforcement-by-runbook, irreversible deletes, scope creep), and the corrective `gh api`
+  workflow the plan should have used.
+- Extended the description with triggers (5) ruleset enforcement flip / required-check change from
+  static inspection, and (6) a "one-line" fix that also deletes files / removes flags / refactors.
+- Added two "When to Use" bullets and noted the unverified subsection in the Overview verification cell.
+- Bumped version 1.1.0 → 1.2.0 (minor: new findings + failed attempts + extended triggers); date 2026-06-19.
+
+### Why
+
+The #177 plan generalizes the v1.1.0 lesson "config is intent, not state" to a broader and
+higher-stakes surface: flipping a ruleset to `active` from static file reading alone, without
+`gh api` confirmation of the applied enforcement, the exact required-check context format, or
+consumers of soon-to-be-deleted files. Getting the context format wrong causes a bootstrap
+deadlock (PRs blocked with 0 failing checks). Same search surface as the existing skill (planning,
+ruleset, unverified, static, live state, gh api), so amended rather than split into a new file.
+
+### Previous version (v1.1.0) snapshot
+
+See git history (commit prior to skill/planning-verify-live-state-ruleset-enforcement) and the
+v1.1.0 entry below for the full prior content; the v1.2.0 change is purely additive (no rows or
+sections were removed or rewritten).
+
+---
+
+## v1.1.0 (2026-06-19)
+
+**Changed by:** Re-planning of GitHub issue #24 ("Standardize default branch across ecosystem") after a NOGO review (same session, after PR #2583).
+**Verification:** verified-local
+
+### What changed
+
+- Added 2 new Failed Attempts rows:
+  - The 5-repo-scan false negative: verifying only the named repos missed `ProjectKeystone`'s
+    orphan `refs/heads/master` (Keystone was NOT one of the named 5; it already defaulted to `main`).
+  - The unverified expected-value annotation: asserted a grep would return count `4`; running it
+    returned `3` (the 4th `master` literal was a trailing `# master` comment the regex cannot match).
+- Strengthened verification guidance: write fail-loud checks (`--jq 'any()'` boolean) rather than
+  `grep 'Not Found' || echo 'Not Found'`; verify "already-applied" claims by direct live read
+  (`gh api .../rulesets`) rather than inference from config files.
+- Updated Results & Parameters with the directly-read live ruleset value
+  (`homeric-main-baseline`, active, id 15556483) and the ProjectKeystone orphan-master facts.
+- Added a cross-link to the new sibling skill
+  `planning-verify-full-population-not-just-named-entities`.
+- Added `history:` frontmatter field; bumped version 1.0.0 → 1.1.0; date stays 2026-06-19.
+
+### Why
+
+v1.0.0 verified live state per *named* entity and declared issue #24 complete. The reviewer
+flagged uneven coverage because the issue was ecosystem-wide. Extending the loop to all 15 repos
+found `ProjectKeystone`'s stale unprotected orphan `master` — the one real residue. The companion
+corrections (run-the-command-for-expected-values, fail-loud checks, direct-read over inference)
+directly strengthen this skill's verification discipline. The population-scoping headline is
+captured in the new sibling skill; the corrections live here.
+
+### Previous version (v1.0.0) snapshot
+
+```yaml
+name: planning-verify-live-state-before-assuming-work-remains
+description: "When an issue describes work to be done (a migration, rename, or config change), verify the LIVE external state FIRST with gh/grep before planning any edits — the work may already be complete, making the correct plan a verify-and-close plan with ZERO source edits. An issue body is a snapshot from when it was filed and drifts: the default branch, CI config, open-PR bases, and linked-issue states all change underneath it. Includes the gh-API gotcha that `gh api repos/ORG/REPO/branches/master` RETURNS the default branch via HTTP redirect for a MISSING branch (false positive that master exists) — use the `git/refs/heads` listing instead. Use when: (1) an issue/ticket describes a migration or change that may already be done, (2) planning work whose premise depends on live external state (default branch, CI config, issue status), (3) before recommending edits driven by an issue's stated assumptions, (4) before writing any 'Files to Modify' that exist only because the issue said so."
+category: tooling
+date: 2026-06-19
+version: "1.0.0"
+```
+
+Failed Attempts (v1.0.0, 3 rows):
+
+1. Trust the issue's repo table → stale snapshot; all repos already on `main`.
+2. Probe `branches/master` to test existence → redirects to default branch, false positive.
+3. Blind find/replace master→main → corrupts `--branch master` guards and `action@master` pins.
+
+Results & Parameters (v1.0.0) listed: all 15 repos default `main`; no `refs/heads/master` in the
+5 named repos; workflows target `main`; 0 non-main open PRs; 4 tracking issues CLOSED; FREE-plan
+org-rulesets 404 constraint; and three "uncertain assumptions" — notably (b) only the 5 named repos
+had refs exhaustively listed, the gap this amendment + sibling skill close.
+
+---
+
+## v1.0.0 (2026-06-19)
+
+**Initial version.** Created in PR #2583 from the issue #24 first-pass planning session: verify
+live external state (default branch, refs, CI triggers, open-PR bases, linked-issue states) with
+gh/grep before assuming an issue's described work remains undone.

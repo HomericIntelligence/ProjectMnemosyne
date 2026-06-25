@@ -5,6 +5,149 @@
 This file preserves the full original content of every skill merged into the
 `pr-enumeration-discovery-idempotency` canonical.
 
+## v1.3.0 (2026-06-15)
+
+**Changed by:** ProjectHephaestus session triaging #1367/#1199/#1193 — 2 of 3 were zombie issues
+**Verification:** verified-ci
+
+### What changed
+
+- Extended the `## When to Use` triggers with two new bullets:
+  - You are handed "open issues to solve" (human/agent) — verify each on
+    `origin/main` FIRST; an issue can be a ZOMBIE whose closing PR already
+    merged (GitHub didn't auto-close or it was a duplicate). Re-implementing
+    a zombie is the duplicate-PR anti-pattern. `gh issue list` is a
+    point-in-time snapshot — re-check `gh issue view N` before acting.
+  - A local `<issue>-auto-impl` branch looks like it holds the right commits
+    but has a SHA mismatch vs `origin/<branch>` and a revert-shaped multi-file
+    diff — it's on a stale pre-merge base. An `add/add` cherry-pick conflict
+    proves the file already exists on main.
+- Added 3 new `## Failed Attempts` rows:
+  - Started implementing an "open" issue without checking if it was already
+    merged (nearly re-implemented zombies #1367 and #1193).
+  - Trusted the initial `gh issue list` snapshot for the whole session
+    (#1193 closed mid-session by #1376 but the stale snapshot showed it open).
+  - Tried to reuse a local `1193-auto-impl` branch that appeared to hold the
+    right 2 commits but reverted the merged #1358/#1361 decomposition.
+- Added new `## Verified On` row: operator-side zombie-issue triage of
+  #1367/#1199/#1193 (only #1199 was real work → PR #1377, merged green).
+- Updated the Overview `Outcome` line to mention the v1.3.0
+  operator/agent-side complement.
+- Frontmatter: `version: "1.2.0"` → `"1.3.0"`, `date` stays `2026-06-15`,
+  new tags `zombie-issue`, `verify-on-main-first`,
+  `gh-issue-list-snapshot-stale`, `stale-branch-base`,
+  `add-add-cherry-pick-conflict`.
+- Description: added items (12) zombie-issue / verify-on-main-first triggers
+  and (13) the stale `<issue>-auto-impl` branch / `add/add` conflict trigger.
+
+### Why
+
+A user asked "there are three open issues left, lets solve them" (#1367,
+#1199, #1193 in ProjectHephaestus). Investigation found TWO of the three were
+ZOMBIES — already implemented and merged, the issue just never auto-closed:
+
+- #1367 was a duplicate of #1368; #1368's fix (PR #1372) was already merged to
+  `main`. Every acceptance criterion was verified satisfied on `origin/main`
+  (grepped the `log_on_error` param in `github/client.py` + the two regression
+  tests). Action: closed #1367 as duplicate — NO code, NO PR.
+- #1193 had been implemented and merged via TWO PRs (#1282 on 2026-06-15,
+  #1376 on 2026-06-16), both carrying a valid `Closes #1193`. The
+  ReviewerProtocol + abstract `BaseReviewer.run` were live on `main`. #1376
+  auto-closed the issue mid-session — but the initial `gh issue list` snapshot
+  (taken minutes earlier) still showed it OPEN. Action: confirmed
+  live-on-main, no work.
+- Only #1199 (markdownlint duplicate-job consolidation) was genuine remaining
+  work → one signed PR #1377, merged.
+
+A local branch `1193-auto-impl` LOOKED like it held the 2 relevant commits
+(feat: ReviewerProtocol, fix: ABC contract), but its full diff vs main was a
+28-file MONSTER that REVERTED the merged decomposition work (#1358/#1361) — it
+was built on a stale pre-decomposition base. The cherry-pick hit an `add/add`
+conflict on `test_interfaces.py`, which was itself PROOF the file already
+existed on main. A SHA mismatch between local `1193-auto-impl` and
+`origin/1193-auto-impl` was the first red flag.
+
+This is the SAME duplicate-PR-churn root cause as the automation-side triggers
+(10)-(11), but seen from the human/agent operator side. Lesson: before
+implementing any "open issue", verify ground truth on `origin/main` first — the
+issue may be a zombie. Re-implementing a zombie is the exact duplicate-PR
+anti-pattern the automation-side triggers exist to prevent.
+
+### Previous version (v1.2.0) snapshot
+
+The full v1.2.0 content of `pr-enumeration-discovery-idempotency.md` is
+captured at the git commit immediately prior to the commit that introduced
+v1.3.0. The v1.2.0 frontmatter was `version: "1.2.0"`, `date: 2026-06-15`,
+with the `## When to Use` list ending at the merged-closing-PR and
+assumed-`{issue}-auto-impl` bullets, the description ending at trigger (11)
+"a MERGED closing-PR is not detected because discovery only searches open
+PRs — use find_merged_closing_pr ... and close the issue if it is still
+open", and the Failed Attempts table ending at the
+"Match a PR to an issue by the assumed `{issue}-auto-impl` branch name" row.
+The inline-diff of what changed between v1.2.0 and v1.3.0 is described in the
+"What changed" section above. The complete v1.2.0 text can be recovered via:
+
+```bash
+git log --oneline skills/pr-enumeration-discovery-idempotency.md | head -5
+git show <prior-sha>:skills/pr-enumeration-discovery-idempotency.md
+```
+
+---
+
+## v1.2.0 (2026-06-15)
+
+**Changed by:** ProjectHephaestus planner idempotency fix (PR #1373, issue #1370)
+**Verification:** verified-ci
+
+### What changed
+
+- Extended the `## When to Use` triggers: added planner-phase open-PR skip-gate
+  and merged-closing-PR detection + issue-close triggers.
+- Added 3 new `## Failed Attempts` rows:
+  - Re-plan issue without checking for an existing open/merged closing PR → duplicate PRs + 5.5h churn
+  - Search only open PRs for closing link → merged-closed issue re-implemented, never closes
+  - Match PR to issue by assumed `{issue}-auto-impl` branch → fetch fails / wrong worktree
+- Added `#### Planner skip-gate: call find_pr_for_issue before planning` subsection
+  under Verified Workflow describing the unified planner/implementer skip semantics.
+- Added `#### Merged closing-PR detection: find_merged_closing_pr` subsection
+  covering `find_merged_closing_pr(issue)` and `gh issue close` flow.
+- Added `#### Real head-branch resolution: always use get_pr_head_branch` subsection
+  replacing assumed `{issue}-auto-impl` with `gh pr view headRefName`.
+- Added new `## Verified On` row: ProjectHephaestus PR #1373 / issue #1370.
+- Frontmatter: `version: "1.1.0"` → `"1.2.0"`, `date: 2026-06-10` → `2026-06-15`,
+  new tags `planner-skip-gate`, `merged-closing-pr`, `find-merged-closing-pr`,
+  `real-head-branch`, `assumed-branch-name`.
+- Description: extended items with (10) planner open-PR skip-gate and
+  (11) merged-closing-PR closes-open-issue triggers.
+
+### Why
+
+The automation-loop output.log (2026-06-15) burned ~5.5 hours opening duplicate
+and zombie PRs for issue #1357 (and #1289/#1179) while a parallel PR #1358 had
+already closed it. Three compounding root causes: (1) the PLANNER phase had no
+open-PR skip-gate (the IMPLEMENTER phase already skipped issues with an existing
+open PR but the PLANNER ran first and re-planned the same issue — wasting an
+agent call and repeatedly failing on 529); (2) a MERGED closing-PR was not
+recognized because discovery only searched `--state open`, so the issue stayed
+open and got re-implemented; (3) the assumed branch name `{issue}-auto-impl` was
+used to fetch a PR's head branch, which fails when the PR was filed from a
+differently-named branch (e.g. `1179-auto-impl`). Fixes merged in PR #1373.
+
+### Previous version (v1.1.0) snapshot
+
+The full v1.1.0 content of `pr-enumeration-discovery-idempotency.md` is
+captured at the git commit immediately prior to the commit that introduced
+v1.2.0. The inline-diff of what changed between v1.1.0 and v1.2.0 is
+described in the "What changed" section above. The complete v1.1.0 text
+can be recovered via:
+
+```bash
+git log --oneline skills/pr-enumeration-discovery-idempotency.md | head -5
+git show <prior-sha>:skills/pr-enumeration-discovery-idempotency.md
+```
+
+---
+
 ## v1.1.0 (2026-06-10)
 
 **What changed:** Widened the `_discover_failing_prs` except tuple from the

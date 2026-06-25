@@ -1,12 +1,22 @@
 ---
 name: git-branch-state-triage-and-recovery
-description: "Diagnose and recover branches that have entered an invalid or obsolete state. Use when: (1) a branch is many commits behind main and its remote tracking ref is gone — determine whether any net-new contribution remains before creating a PR, (2) a branch has no common ancestor with main ('fatal: refusing to merge unrelated histories') and needs content extraction and recreation, (3) a stacked PR was retargeted and lint/CI fix commits made after retarget are orphaned from the prerequisite PR and must be cherry-picked, (4) fix commits exist locally but cannot fast-forward push to a remote PR branch because histories diverged after a rebase — cherry-pick onto the remote tip instead, (5) a branch has hundreds or thousands of HEAD-only files vs main and main underwent corpus consolidation — run a three-way file-count diff (branch vs main vs merge-base) to distinguish 'pre-consolidation originals already absorbed' from 'genuinely unmerged new work' before any destructive reset"
+description: >-
+  Diagnose and recover branches that have entered an invalid or obsolete state. Use when:
+  (1) a branch is many commits behind main and its remote tracking ref is gone,
+  (2) a branch has no common ancestor with main and needs content extraction,
+  (3) stacked or diverged PR fixes must be cherry-picked onto the correct tip,
+  (4) a branch has many HEAD-only files after main-side consolidation,
+  (5) a squash-merged branch looks unmerged because git cherry/ahead counts lie,
+  (6) an auto-merge PR already merged, its remote head ref is gone or stale, and a
+  validated local amended commit must be converted into a clean follow-up branch from
+  current trunk using git diff --binary plus git apply --index, or (7) the current branch has an already-merged PR but contains uncommitted follow-up work, so stash it, create a fresh branch from current trunk, pop the stash, re-verify, sign, push, and open a new linked PR.
 category: tooling
-date: 2026-06-13
-version: "1.1.0"
+date: 2026-06-18
+version: "1.4.0"
 user-invocable: false
+verification: verified-local
 history: git-branch-state-triage-and-recovery.history
-tags: [git, branch, triage, recovery, stale, superseded, orphan, diverged, merge-base, cherry-pick, fork-point, diff-filter, unrelated-histories, non-fast-forward, consolidation, three-way-diff, count-diff, hard-reset, stash]
+tags: [git, branch, triage, recovery, stale, superseded, orphan, diverged, merge-base, cherry-pick, fork-point, diff-filter, unrelated-histories, non-fast-forward, consolidation, three-way-diff, count-diff, hard-reset, stash, auto-merge, follow-up-branch, force-with-lease, git-apply, current-branch, merged-pr, uncommitted-follow-up, signed-commit]
 ---
 
 # Git Branch State Triage and Recovery
@@ -15,15 +25,15 @@ tags: [git, branch, triage, recovery, stale, superseded, orphan, diverged, merge
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-07 |
+| **Date** | 2026-06-18 |
 | **Objective** | Diagnose what state a branch is in (stale/superseded, orphaned/unrelated history, or diverged from remote) and recover it cleanly |
-| **Outcome** | Success — unified triage tree: confirm-and-discard superseded branches, extract+recreate orphan branches, reset+cherry-pick diverged branches |
-| **Verification** | verified-ci |
+| **Outcome** | Success — unified triage tree: confirm-and-discard superseded branches, extract+recreate orphan branches, reset+cherry-pick diverged branches, convert validated local amended commits from already-merged PRs into clean follow-up branches, and move uncommitted follow-up work off a branch whose prior PR is already merged |
+| **Verification** | verified-local |
 
 ## When to Use
 
 Use this skill whenever a branch is in an unexpected or unmergeable state. The root question
-is always: **what state is this branch in, and how do I recover it?** Three distinct states:
+is always: **what state is this branch in, and how do I recover it?** Five distinct states:
 
 **State A — Stale / superseded by main:**
 - A branch is many commits behind main **and** its remote tracking ref is gone (`[gone]` in `git branch -vv`)
@@ -31,6 +41,7 @@ is always: **what state is this branch in, and how do I recover it?** Three dist
 - A `git diff origin/main...HEAD` shows a large file count difference but you suspect most of it is merge noise
 - Staged files with AD status in `git status --short` (added in index, deleted from working dir)
 - Hundreds or thousands of HEAD-only files exist vs main, and main has commit messages like "consolidate N skills into X" or "absorb C086" — this is a **corpus consolidation** divergence, not unique unmerged work
+- A branch **looks unmerged but is actually subsumed by a squash-merge**: `git cherry origin/main <branch>` shows every commit with a `+` prefix, `git rev-list --count origin/main..<branch>` reports commits "ahead", and an auto-rebase onto main **conflicts** — yet the branch's PR was already squash-merged. Squash gives the merged work a brand-new patch-id, so `git cherry` never matches and these signals are **false positives**. Disambiguate with message-search on main, **not** git cherry / ahead-counts (see "Squash-merge false positive" below). A worktree showing "uncommitted modified files" can be the same false alarm — verify with a 0-unique-lines diff against main
 
 **State B — Orphan / unrelated history:**
 - `git merge-base` returns nothing between branch and main
@@ -43,6 +54,19 @@ is always: **what state is this branch in, and how do I recover it?** Three dist
 - `git status` shows "Your branch and 'origin/<branch>' have diverged"
 - A fix commit exists locally but the remote has accumulated additional commits (e.g. after a rebase or stacked-PR retarget)
 - A fix plan assumed the remote was behind, but it actually has more commits than local
+
+**State D — Already-merged PR; old head ref stale/gone; local amended commit has follow-up work:**
+- `git push --force-with-lease origin <branch>` rejects as stale after auto-merge had been enabled
+- `git fetch origin <branch>` fails with "couldn't find remote ref" because the PR head branch was deleted after merge
+- `gh pr view <pr>` shows `state: MERGED` and an old `headRefOid`, while current trunk contains the merged work under a new squash/rebase commit SHA
+- You have a local amended commit that was already validated, but the old PR branch is no longer the correct target
+- The right recovery is to diff current trunk to the validated local commit, apply that binary patch on a fresh branch from trunk, prove the new tree matches the validated commit, then open a follow-up PR
+
+**State E — Current branch's old PR is already merged, but the worktree has uncommitted follow-up work:**
+- `gh pr view` for the current branch reports `state: MERGED`.
+- The branch may still exist on origin, but its PR identity is spent; pushing more commits to it will not update an open PR.
+- `git status --short` shows real uncommitted follow-up work that should become a new PR.
+- The correct recovery is: stash including untracked files, fetch current trunk, create a fresh branch from `origin/<trunk>`, pop the stash, re-run verification, sign a new commit, push, and create a new issue-linked PR.
 
 ## Verified Workflow
 
@@ -65,6 +89,22 @@ git log --diff-filter=D --oneline origin/main -- <path> | head -1  # how main di
 git ls-files --stage | awk '{print $1, $4}' | sort > /tmp/staged.txt
 git ls-tree -r origin/main | awk '{print $3, $4}' | sort > /tmp/mainh.txt
 comm -23 /tmp/staged.txt /tmp/mainh.txt           # staged files NOT on main = true new work
+
+# === State A: squash-merge FALSE POSITIVE — do NOT trust git cherry / ahead-counts ===
+# These LIE on squash repos (squash = new patch-id, cherry never matches):
+git cherry origin/main <branch>                   # every commit shows '+' even when subsumed
+git rev-list --count origin/main..<branch>        # >0 "ahead" even when subsumed
+# Reliable disambiguator — message-search on main for the squash commit (PR number / subject):
+git log origin/main --oneline | grep -iE '<distinctive phrase or (#PRnum)>'
+# found on main  => branch is SUBSUMED: safe to discard, no rebase/PR. Cross-check PR state:
+gh pr list --head <branch> --state all --json number,state   # MERGED/CLOSED corroborates
+# rebase conflicts on a subsumed branch are EXPECTED (squash content on main collides with the
+# original un-squashed commits). Report "subsumed" and STOP — do not resolve, do not auto-delete.
+
+# === State A: worktree "uncommitted modified files" 0-unique-lines redundancy check ===
+# A modified working-tree file can be byte-for-byte already on main (it shipped via a merged PR):
+diff <(git show origin/main:<path>) <(cat <worktree>/<path>) | grep -c '^>'  # 0 = no unique lines
+# 0 unique lines on ALL modified files => the "uncommitted work" already merged; safe to discard.
 
 # === State A (large-scale): three-way count diff for consolidation divergence ===
 MERGE_BASE=$(git merge-base HEAD origin/main)
@@ -95,6 +135,38 @@ git log --oneline HEAD..origin/<branch>           # remote-only commits (often f
 git merge-base HEAD origin/<branch>               # common ancestor
 git reset --hard origin/<branch>                  # absorb remote, AFTER confirming fix applies
 git cherry-pick <fix-sha>                         # apply only the targeted fix
+
+# === State D: old PR merged; remote branch deleted; preserve validated local delta ===
+# Use the repository's real trunk: origin/main for most repos, origin/master for Inference360.
+TRUNK=origin/master
+VALIDATED_SHA=<validated-local-amended-sha>
+PATCH=/tmp/<topic>-followup.patch
+git fetch origin master
+gh pr view <old-pr> --json state,headRefName,headRefOid,autoMergeRequest,mergeCommit
+git fetch origin <old-branch>                     # expected failure if the branch was deleted
+git diff --stat "$TRUNK" "$VALIDATED_SHA"         # inspect the intended incremental delta
+git diff --binary "$TRUNK" "$VALIDATED_SHA" --output="$PATCH"
+git switch -c <followup-branch> "$TRUNK"
+git apply --index "$PATCH"
+git diff --quiet "$VALIDATED_SHA" -- .            # proves worktree matches validated commit
+git commit -m "<follow-up message>"
+git push -u origin <followup-branch>
+
+# === State E: current branch PR is MERGED but uncommitted follow-up work exists ===
+gh pr view --json number,state,title,url,headRefName,baseRefName
+# If state == MERGED, do not commit/push more work to that branch for a new PR.
+git stash push -u -m <topic>-before-fresh-pr
+git fetch origin <trunk>
+git checkout -b <fresh-branch> origin/<trunk>
+git stash pop
+./.venv/bin/python -m ruff check radiance scripts tests --no-cache
+./.venv/bin/pytest -q
+git add -A
+git commit -S -m "<message>"
+git log --show-signature -1 --oneline
+git push -u origin <fresh-branch>
+gh issue create --title "<tracking issue>" --body "<kickoff/scope>"
+gh pr create --base <trunk> --head <fresh-branch> --title "<title>" --body "Closes #<issue>"
 ```
 
 ### Detailed Steps
@@ -123,6 +195,72 @@ git cherry-pick <fix-sha>                         # apply only the targeted fix
    - Its "new" files are already present on main.
 
    When all three hold the branch has zero net contribution and can be discarded.
+
+#### State A (squash-merge) — `git cherry` false positive, message-search disambiguator
+
+On repos where PRs are **squash-merged** (the default on many repos), the commit-level
+"is this on main?" tools cannot be trusted:
+
+- `git cherry origin/main <branch>` shows **every** branch commit with a `+` prefix (its
+  meaning is "this patch is not on main"), so a fully-merged branch looks entirely unmerged.
+- `git rev-list --count origin/main..<branch>` reports the branch is N commits **ahead**.
+
+Both are **false positives**. The reason: squash-merge collapses the branch's commits into a
+single brand-new commit on main with a **different patch-id**. `git cherry`'s patch-id
+matching never matches the branch's original commits, and the original commits are genuinely
+not reachable from main, so the ahead-count is non-zero. **Neither signal means the work is
+unmerged.**
+
+The reliable disambiguator is **message-search on main**. Take a distinctive phrase from the
+branch's commit subject (or the PR title), and grep main's history:
+
+```bash
+git log origin/main --oneline | grep -iE '<distinctive phrase or (#PRnum)>'
+```
+
+If the squash commit is found on main, the branch is **subsumed** — safe to discard, no
+rebase and no PR required. Cross-check the PR state to corroborate:
+
+```bash
+gh pr list --head <branch> --state all --json number,state   # MERGED / CLOSED corroborates
+```
+
+Important consequence: when you try to auto-rebase a subsumed branch onto main it will
+**conflict**, *precisely because* the same changes already exist on main as a squash commit
+and the branch's original un-squashed commits collide with them. **A rebase conflict on a
+subsumed branch is expected and is NOT evidence of unmerged work.** Correct action:
+
+- Report "subsumed" and **stop**. Do **not** spawn a conflict-resolution swarm — every
+  resolution would be "take main's side" on every file, producing an empty branch with zero
+  net benefit.
+- Do **not** auto-delete the branch. Branch deletion is left to the user / gh-tidy's own
+  y/N prompts (and is Safety-Net-blocked anyway — see below).
+
+**Worktree-redundancy variant.** A worktree reporting "uncommitted modified files" can be the
+same false alarm. Diff each working-tree file against `origin/main` and count unique lines:
+
+```bash
+diff <(git show origin/main:<path>) <(cat <worktree>/<path>) | grep -c '^>'
+```
+
+`0` unique lines on **all** modified files means the "uncommitted work" is byte-for-byte
+already on main (it shipped via a merged PR); the worktree is safe to discard. Real example:
+worktree `agent-a7fe2df2b7f6e658b` had 3 modified files all showing 0 unique lines vs main —
+the `log_on_error` changes had already merged via PR #1372.
+
+**Destructive ops are Safety-Net-blocked — hand them to the user.** Once safety is proven
+(subsumed / 0-unique-lines), the *recovery* commands are blocked by the CC Safety Net hook
+even with in-conversation user approval; the assistant cannot override the hook and must print
+the exact command for the **user** to run manually:
+
+- `git checkout -- <file>` (discards tracked changes) — "use `git stash` first", then hand to user
+- `git worktree remove --force <path>` (can discard uncommitted work) — hand to user
+- `git tag -d <tag>` (deletes tags) — hand to user
+- `git branch -D <branch>` — branch deletion is gh-tidy's job anyway
+- `git stash drop` and `rm -rf .worktrees/` are likewise blocked
+
+Workflow shape: **prove** safety (subsumed / 0-unique-lines), **then print** the precise
+`--force` / `-d` / `checkout --` command for the user to execute.
 
 #### State A (large-scale) — Three-way count diff for corpus-consolidation divergence
 
@@ -210,6 +348,106 @@ branch and main may have diverged in *opposite* directions simultaneously.
    lint/CI fix commits made after the retarget become orphaned from the prerequisite, reset to
    the correct remote tip and cherry-pick the orphaned fix commits onto it.
 
+#### State D — Already-merged PR with deleted head ref; recover follow-up delta
+
+Use this when the PR merged before you could update it, the remote PR branch is gone or stale,
+and you have a local amended commit that contains exactly the validated follow-up work. Do not
+try to keep force-pushing the old branch; after merge, the correct target is current trunk.
+
+1. **Confirm the old PR is no longer writable as a PR update target.** A stale lease rejection
+   plus a missing remote ref means this is not a normal rebase push:
+   ```bash
+   git push --force-with-lease origin <old-branch>  # rejected as stale
+   git fetch origin <old-branch>                    # fatal: couldn't find remote ref
+   gh pr view <old-pr> --json state,headRefName,headRefOid,autoMergeRequest,mergeCommit
+   ```
+   If `state` is `MERGED`, stop targeting `<old-branch>`. The PR content is already on trunk,
+   usually as a new squash/rebase commit SHA that does not equal the old PR head SHA.
+2. **Refresh trunk and compare the validated local tree to trunk.** Use the repo's real trunk
+   branch (`origin/master` for Inference360, `origin/main` for most HomericIntelligence repos):
+   ```bash
+   git fetch origin master
+   TRUNK=origin/master
+   VALIDATED_SHA=<validated-local-amended-sha>
+   git diff --stat "$TRUNK" "$VALIDATED_SHA"
+   ```
+   The diff must show only the intended follow-up changes. If it includes the already-merged PR
+   body again, your trunk ref is stale or you picked the wrong validated SHA.
+3. **Save a binary patch from trunk to the validated local commit.** Binary mode preserves
+   renames, mode bits, and binary files:
+   ```bash
+   PATCH=/tmp/<repo>-<topic>-followup.patch
+   git diff --binary "$TRUNK" "$VALIDATED_SHA" --output="$PATCH"
+   ```
+4. **Create the follow-up branch from current trunk and apply the patch into the index.**
+   ```bash
+   git switch -c <followup-branch> "$TRUNK"
+   git apply --index "$PATCH"
+   ```
+5. **Prove the new branch tree matches the already-validated local commit.**
+   ```bash
+   git diff --quiet "$VALIDATED_SHA" -- .
+   ```
+   This is the key guardrail: it proves the patch-applied branch has the same tree as the
+   local commit you already validated. If this diff is non-empty, fix the mismatch before
+   committing.
+6. **Commit, push, and open a normal follow-up PR.** Enable auto-merge on the new PR; the old
+   merged PR should remain untouched.
+   ```bash
+   git commit -m "<follow-up message>"
+   git push -u origin <followup-branch>
+   gh pr create --base <trunk-branch> --head <followup-branch> --title "<title>" --body "<body>"
+   gh pr merge <new-pr> --auto --squash --repo <owner/repo>
+   ```
+
+#### State E — Current branch's previous PR is merged; move uncommitted follow-up work to a fresh PR branch
+
+Use this when `gh pr view` on the current branch points to a merged PR, but `git status` shows
+new uncommitted work that should become its own review. This is different from State D: the
+follow-up exists as a worktree/staged diff, not as a validated local commit that needs a binary
+patch.
+
+1. **Confirm the current branch's PR is already merged.**
+   ```bash
+   git status --short --branch
+   gh pr view --json number,state,title,url,headRefName,baseRefName
+   ```
+   If `state` is `MERGED`, treat the current branch name as historical. Do not create a new PR
+   from that same branch, because GitHub will associate it with the closed/merged PR context.
+2. **Stash the follow-up diff, including untracked files.**
+   ```bash
+   git stash push -u -m <topic>-before-fresh-pr
+   ```
+3. **Refresh the real trunk and create a fresh branch from it.** Use the repo's actual default
+   branch (`master` for Radiance in June 2026; `main` for most repos).
+   ```bash
+   git fetch origin <trunk>
+   git checkout -b <fresh-branch> origin/<trunk>
+   ```
+4. **Restore the diff and resolve any base drift immediately.**
+   ```bash
+   git stash pop
+   git status --short
+   ```
+   If conflicts appear, resolve them against current trunk before committing. If it applies
+   cleanly, still re-run the relevant focused tests because the base changed.
+5. **Re-run local verification on the fresh branch, then sign the commit.**
+   ```bash
+   ./.venv/bin/python -m ruff check radiance scripts tests --no-cache
+   ./.venv/bin/pytest -q
+   git add -A
+   git commit -S -m "refactor: reduce duplicate code"
+   git log --show-signature -1 --oneline
+   ```
+6. **Push the fresh branch and create a new linked PR.** If the repository requires one issue per
+   PR, create the tracking issue before the PR and include `Closes #<issue>` in the body.
+   ```bash
+   git push -u origin <fresh-branch>
+   gh issue create --title "<issue title>" --body "<scope and validation>"
+   gh pr create --base <trunk> --head <fresh-branch> --title "<title>" --body "Closes #<issue>"
+   gh pr checks <new-pr>
+   ```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -224,8 +462,47 @@ branch and main may have diverged in *opposite* directions simultaneously.
 | Treating a fix plan at face value | Plan said "2 commits ahead, just push" | Plan was written before the remote accumulated additional commits | Re-diagnose actual remote state with `git log --oneline HEAD..origin/<branch>` before acting |
 | Keeping local commits and merging (diverged) | Would merge the local cleanup commit with the remote's equivalent | Remote already had an equivalent cleanup commit; merge would create a duplicate | Cherry-pick the minimal fix only, not the full local commit stack |
 | Deleting an orphan branch before extraction | Tempted to just `git push --delete` the broken branch | Risked losing valid skill content that lived only on the branch tip | Extract content (and check whether it is already on main) before deleting |
+| Relied on `git cherry origin/main <branch>` to detect unmerged work | All commits showed `+` so branches looked unmerged | Squash-merge gives every original commit a new patch-id; cherry never matches | Use message-search (`git log origin/main --oneline \| grep '(#PR)'`) + `gh pr list --state all`, not git cherry, for squash repos |
+| Considered spawning a rebase-conflict-resolution swarm for 7 conflicting branches | Conflicts existed only because the squash content already on main collides with original commits | Resolution would be "take main's side" everywhere → empty branch | Confirm subsumed first; report subsumed and stop — don't resolve, don't delete |
+| Assistant tried `git worktree remove --force` / `git tag -d` / `git checkout --` | Blocked by CC Safety Net hook | Cannot override the hook even with user approval in-chat | Prove safety, then print the exact destructive command for the user to run manually |
+| Force-pushed a follow-up amendment to an auto-merged PR's old branch | `git push --force-with-lease origin feat/simplify-control-interface` after PR #160 had auto-merge enabled | The PR had already merged and the lease was stale; the old branch was no longer the live PR update target | Check `gh pr view <pr> --json state,headRefOid,autoMergeRequest` before pushing follow-up amendments to an auto-merge PR |
+| Fetched the old PR branch after merge | `git fetch origin feat/simplify-control-interface` | GitHub had deleted the merged PR head branch, so fetch failed with "couldn't find remote ref" | Treat missing remote ref plus `state: MERGED` as a signal to create a new follow-up branch from current trunk |
+| Treated the local amended commit as a branch update after merge | Local commit `530bd3114d4ae62c01d4ac11729ff4a86fab6706` was validated, so the instinct was to force-push it to PR #160 | `origin/master` already contained the original simplification under new commit `61304b9`; the old PR head SHA was `858e302`, so the branch identity was obsolete | Diff current trunk to the validated commit, apply that patch on a fresh branch, and prove the resulting tree matches the validated commit before opening a follow-up PR |
+| Reused the current branch after discovering its PR was already merged | `gh pr view` on `codex/test-architecture-layout` showed PR #906 as `MERGED`, but the worktree contained new cleanup changes | A merged PR branch is historical; pushing more commits there would not create the intended fresh review and would confuse branch/PR state | Stash the uncommitted work, fetch current trunk, create a fresh branch from `origin/<trunk>`, pop the stash, re-verify, sign, push, and create a new linked PR |
 
 ## Results & Parameters
+
+### State E — Fresh PR branch from merged current branch with uncommitted work
+
+| Parameter | Value |
+| --------- | ----- |
+| Current branch | Branch whose `gh pr view` reports `state: MERGED` |
+| Follow-up work state | Uncommitted/staged/untracked diff in the worktree |
+| Preservation command | `git stash push -u -m <topic>-before-fresh-pr` |
+| Fresh base | `origin/<trunk>` after `git fetch origin <trunk>` |
+| Fresh branch | New branch name that has not already been tied to a merged PR |
+| Required verification | Re-run focused/full local tests after `git stash pop`; prior tests on old base do not count |
+| Commit requirement | Signed commit (`git commit -S`) and signature verification with `git log --show-signature -1` |
+| PR requirement | New issue-linked PR; include `Closes #<issue>` when repo policy requires it |
+| Verification level | `verified-local` until GitHub checks pass |
+
+Radiance example commands used:
+
+```bash
+gh pr view --json number,url,state,title,headRefName,baseRefName
+git stash push -u -m codex-duplicate-cleanup-before-pr
+git fetch origin master
+git checkout -b codex/reduce-duplicate-code origin/master
+git stash pop
+./.venv/bin/python -m ruff check radiance scripts tests --no-cache
+./.venv/bin/pytest -q
+git add -A
+git commit -S -m "refactor: reduce duplicate code"
+git log --show-signature -1 --oneline
+git push -u origin codex/reduce-duplicate-code
+gh issue create --title "Reduce duplicate code in Radiance helpers" --body "..."
+gh pr create --base master --head codex/reduce-duplicate-code --title "refactor: reduce duplicate helper code" --body "Closes #907"
+```
 
 ### State A — Superseded decision matrix
 
@@ -310,6 +587,40 @@ git status                                    # "ahead by 1 commit"
 Cherry-picks of small, focused single-file fixes rarely conflict, even on heavily diverged
 branches, because they touch a narrow region the remote version differs in only slightly.
 
+### State D — Follow-up branch from validated local amendment
+
+Generic verified parameter map from the follow-up branch recovery:
+
+| Parameter | Value |
+| --------- | ----- |
+| Old PR | `<repo> PR <old-pr-number>` |
+| Old branch | `<old-branch>` |
+| Local validated amended commit | `<validated-commit-sha>` |
+| Old PR head SHA reported by GitHub | `<old-pr-head-sha>` |
+| Trunk commit containing the merged work | `<trunk-commit-sha>` on `origin/<trunk>` |
+| Patch file | `/tmp/<followup-topic>.patch` |
+| Follow-up branch | `<followup-branch>` |
+| Follow-up PR | `<repo> PR <followup-pr-number>` |
+| Verification | `verified-ci` after follow-up PR checks passed |
+
+Copy-paste sequence used:
+
+```bash
+TRUNK="master"
+VALIDATED_COMMIT="<validated-commit-sha>"
+FOLLOWUP_BRANCH="<followup-branch>"
+PATCH_FILE="/tmp/<followup-topic>.patch"
+
+git fetch origin "$TRUNK"
+git diff --stat "origin/$TRUNK" "$VALIDATED_COMMIT"
+git diff --binary "origin/$TRUNK" "$VALIDATED_COMMIT" --output="$PATCH_FILE"
+git switch -c "$FOLLOWUP_BRANCH" "origin/$TRUNK"
+git apply --index "$PATCH_FILE"
+git diff --quiet "$VALIDATED_COMMIT" -- .
+git commit -m "refactor: apply follow-up change"
+git push -u origin "$FOLLOWUP_BRANCH"
+```
+
 ## Verified On
 
 | Project | Context | Details |
@@ -318,6 +629,10 @@ branches, because they touch a narrow region the remote version differs in only 
 | ProjectMnemosyne | Branch `feature/myrmidon-merge-triage` (32 ahead, 525 behind, remote gone) — confirmed fully superseded; no PRs opened | State A |
 | ProjectMnemosyne | Branch `skill/debugging/fixme-todo-cleanup-v2` pushed from ProjectOdyssey's history — no merge-base; content already on main; deleted | State B |
 | ProjectOdyssey | PR #3197, issue #3088 — BF16 test skip; reset to remote (13 remote-only commits) + cherry-pick fix | State C |
+| ProjectHephaestus | 7 local branches all failed auto-rebase with conflicts; `git cherry` showed every commit `+`. Message-search proved all subsumed: `999-fix-pr-thread-reply-mutation`→`187720a … (#1041)`, `fix-1282-work`→`22fc435 … (#1282)`, `rc2-conflict-gate`→`d3701b8 … (#1335)`. Reported subsumed; no swarm, no delete | State A — squash-merge false positive |
+| ProjectHephaestus | Worktree `agent-a7fe2df2b7f6e658b` — 3 "uncommitted modified" files all 0 unique lines vs main (`log_on_error` changes already merged via PR #1372); safe to discard | State A — worktree 0-unique-lines |
+| LLM360/Inference360 | An auto-merged PR merged before follow-up changes could be force-pushed; the old remote branch was gone, and a validated local amended commit was converted into a clean follow-up branch from current trunk; the follow-up PR auto-merged after CI passed | State D — already-merged PR follow-up branch |
+| LLM360/Radiance | Current branch `codex/test-architecture-layout` had merged PR #906 but contained uncommitted duplicate-code cleanup work. Stashed, fetched `origin/master`, created `codex/reduce-duplicate-code`, popped, re-verified locally, signed commit `e772d982`, pushed, created issue #907 and PR #908. GitHub checks were pending at capture time. | State E — merged current branch with uncommitted follow-up work, verified-local |
 
 ## References
 

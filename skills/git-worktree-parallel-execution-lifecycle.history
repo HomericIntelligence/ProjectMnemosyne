@@ -1,6 +1,133 @@
 <!-- markdownlint-disable MD024 -->
 # git-worktree-parallel-execution-lifecycle — History
 
+## v1.4.0 (2026-06-22)
+
+**Changed by:** ProjectHephaestus issue-major automation-loop cross-process worktree race (real 2026-06-21 output.log, issues 1553/1547) → fix PR #1568 / issue #1567 (new `hephaestus/utils/file_lock.py`)
+**Verification:** verified-local
+
+### What changed
+
+- Added a Verified Workflow subsection "Phase 8: Cross-PROCESS Worktree-Creation Race
+  (Subprocess Workers)" capturing a NEW class of contention distinct from the existing
+  cross-THREAD contamination (Phases 0a/4):
+  - When a tool's parallel workers are separate `subprocess.run` CHILDREN (not threads of one
+    interpreter) that share an on-disk worktree path (e.g. `build/.worktrees/issue-<N>`), an
+    in-process `threading.Lock` + in-memory dict provides ZERO cross-process protection. Two
+    processes each have their own lock/dict but share the filesystem path, so the
+    `path.exists()`-then-`git worktree add` guard is a TOCTOU race across processes →
+    `fatal: '.../build/.worktrees/issue-1547' already exists` (git exit 128).
+  - The fix is a cross-process advisory lock: `fcntl.flock(LOCK_EX)` on a sentinel file
+    serializing the whole create/sweep, NOT a `threading.Lock`. Captured the new reusable
+    `hephaestus/utils/file_lock.py` `@contextmanager file_lock(path, *, blocking=True)`
+    primitive (secure `os.open(... O_RDWR|O_CREAT|O_NOFOLLOW, 0o600)` that refuses symlinks,
+    `LOCK_NB` → `LockUnavailableError` when non-blocking, Windows no-op fallback, does NOT
+    unlink the sentinel while held to avoid inode-reuse).
+  - DRY note: the primitive was extracted from TWO pre-existing inline flock copies
+    (`github/rate_limit.py`, `automation/advise_runner.py`) — consolidate, don't add a third.
+  - Cascading-symptom lesson: the race self-recovered via a repo-root fallback whose fresh
+    /learn session produced a DIFFERENT downstream symptom (`/compact` "No conversation found
+    with session ID"); trace cascading warnings back to the original masked failure.
+- Added 4 Failed Attempts rows (threading.Lock across subprocesses; path.exists()-then-create
+  TOCTOU; adding a third inline flock copy; chasing the cascaded /compact warning).
+- Added 3 frontmatter `description` triggers: (19) two parallel SUBPROCESSES racing on the same
+  `build/.worktrees/issue-<N>` path with `fatal: ... already exists`; (20) needing a reusable
+  cross-process file lock and finding only inline flock copies; (21) an in-process
+  `threading.Lock` "not working" because contention is across processes.
+- Added 3 "When to Use" bullets mirroring the new triggers (new "Cross-process subprocess
+  contention" group).
+- Added a Verified On row for ProjectHephaestus PR #1568 (2026-06-21).
+- Cross-links to [[concurrency-and-process-reliability-patterns]] (Pattern 4 cross-process
+  semaphore) and [[automation-loop-phase-major-to-issue-major]] (the architecture that made
+  workers separate subprocesses).
+- Bumped version 1.3.0 → 1.4.0 (minor — new finding + new failed attempts + new triggers; no
+  breaking changes). Skill `date` → 2026-06-22; skill-level `verification` stays `verified-local`.
+
+### Why
+
+A real 2026-06-21 ProjectHephaestus output.log (issues 1553/1547) showed the issue-major
+automation loop running each issue's phases as SEPARATE `subprocess.run` children. With 2+ issues
+in parallel, two `hephaestus-ci-driver` subprocesses started near-simultaneously and each ran
+`_sweep_orphaned_arming_records`, globbing the SAME `drive-green-armed-*.json` records in the
+shared `build/.issue_implementer` dir; both independently found the same merged orphan PR and both
+called `create_worktree(same_issue)` on `build/.worktrees/issue-1547` →
+`fatal: ... already exists` (git exit 128). Root cause: `WorktreeManager.create_worktree` guards
+only with an in-process `threading.Lock` + in-memory `self.worktrees` dict — those coordinate
+THREADS of one interpreter, not separate processes that share the filesystem path. The prior skill
+covered cross-THREAD `.git/HEAD` contention (Phases 0a/4) but NOT cross-PROCESS path contention.
+Fix PR #1568 added a reusable `file_lock` primitive (extracted from two existing inline flock
+copies) and wrapped the sweep in `file_lock(state_dir / "orphan-sweep.lock")`, serializing the
+subprocesses so the second sweeper finds the records already terminal and no-ops — closing both the
+double-`/learn` and the create_worktree collision at the source.
+
+### Previous version (v1.3.0) snapshot
+
+See `git show HEAD:skills/git-worktree-parallel-execution-lifecycle.md` at the commit prior to
+this amendment for the complete pre-amendment snapshot (the rest of the file is unchanged; this
+amendment only ADDS the Phase 8 subsection, 4 Failed Attempts rows, 3 triggers, 3 When-to-Use
+bullets, and 1 Verified On row).
+
+---
+
+## v1.3.0 (2026-06-15)
+
+**Changed by:** ProjectHephaestus `/worktree-cleanup` safety session (real audit, read-only + hand-to-user)
+**Verification:** verified-local
+
+### What changed
+
+- Added a Verified Workflow subsection "Cross-Repo & Stale-Drift Safety Checks" inside Phase 6
+  capturing three real cleanup traps and their resolutions:
+  - **(a) Cross-repo check** — before touching any worktree-looking directory (especially under
+    `build/.worktrees/` or a stray clone-within-a-repo at `build/<OtherProject>`), confirm
+    `git -C <dir> remote get-url origin` matches THIS repo's remote; a dir present in a
+    `git status` loop but ABSENT from `git worktree list` belongs to another clone and is OUT OF
+    SCOPE — never remove.
+  - **(b) Redundancy proof** — a big `D`/`M` dirty diff in a MERGED worktree is usually
+    stale-checkout drift; prove it with `git cat-file -e main:<file>` (file still on main ⇒ the
+    local deletion is drift, not real work) plus `gh pr list --head <branch> --state all` (MERGED)
+    and confirming untracked files are only `.claude-address-review-*.md` / `.claude-followup-*.json`
+    / `followup-*.json` artifacts, BEFORE discarding.
+  - **(c) Safety-net-blocked bulk discard** — `git reset --hard` / `git clean -fd` /
+    `git worktree remove --force` looped across many unilaterally-judged-redundant worktrees is
+    blocked by the auto-mode safety classifier as "Irreversible Local Destruction"; auto-remove
+    only CLEAN trees (incl. locked-by-dead-PID via `git worktree unlock && git worktree remove`,
+    no `--force`), and HAND the exact per-worktree reset/clean/remove commands to the user (`!`
+    prefix) for the dirty-but-redundant force-discards.
+- Added 3 Failed Attempts rows (cross-repo dir misclassification; assuming merged-worktree drift
+  is real work; auto-looping bulk reset/clean across 14 trees → safety-net block).
+- Added 3 frontmatter `description` triggers: (16) cross-repo / clone-within-a-repo worktree audit,
+  (17) stale-drift vs real uncommitted work, (18) safety-net-blocked bulk discard → hand to user.
+- Added 3 "When to Use" Cleanup bullets mirroring the new triggers.
+- Added a Verified On row for the ProjectHephaestus worktree-cleanup safety session (2026-06-15).
+- Bumped version 1.2.0 → 1.3.0 (minor — new findings + new triggers; no breaking changes). Skill
+  `date` → 2026-06-15; skill-level `verification` → `verified-local` (the new findings come from a
+  read-only audit + recommendation-to-user session, not a CI-validated change).
+
+### Why
+
+A real ProjectHephaestus `/worktree-cleanup` session surfaced three pitfalls the prior skill did
+not cover. (1) A directory under the host repo's `build/.worktrees/` was actually a worktree of a
+DIFFERENT repository (ProjectMnemosyne, via a stray `build/ProjectMnemosyne` clone-within-a-repo);
+it never appeared in the host repo's `git worktree list`, so a blind cleanup would have
+force-deleted genuine uncommitted work from another project. (2) Worktrees on already-merged PRs
+showed huge dirty diffs full of `D`/`M` lines that LOOKED like real work but were stale-checkout
+drift redundant with main — provable via `git cat-file -e main:<file>`. (3) Looping
+`git reset --hard` + `git clean -fd` across 14 judged-redundant worktrees was safety-net-blocked
+as irreversible local destruction, and `git worktree remove --force` is likewise blocked; the
+working resolution was to remove only clean trees automatically and hand the force-discard
+commands to the user. These are captured as a new safety-checks subsection, three Failed Attempts
+rows, and three new triggers.
+
+### Previous version (v1.2.0) snapshot
+
+See `git show HEAD:skills/git-worktree-parallel-execution-lifecycle.md` at the commit prior to
+this amendment for the complete pre-amendment snapshot (the rest of the file is unchanged; this
+amendment only ADDS the Phase 6 safety-checks subsection, 3 Failed Attempts rows, 3 triggers,
+1 Verified On row, and the When-to-Use bullets).
+
+---
+
 ## v1.2.0 (2026-05-28)
 
 **Changed by:** ProjectHephaestus worktree-cleanup + tidy leftover-branch audit

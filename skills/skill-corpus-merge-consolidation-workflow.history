@@ -1,6 +1,56 @@
 <!-- markdownlint-disable MD024 -->
 # skill-corpus-merge-consolidation-workflow — History
 
+## v2.2.0 (2026-06-15)
+
+**Changed by:** 2026-06-15 stranded-skill salvage + accidental de-consolidation reconcile session
+**Verification:** verified-ci
+**Previous version:** v2.1.0
+
+### What changed
+
+- **Added Part G — Salvaging a Stranded Skill + Avoiding Accidental De-Consolidation**: a new
+  Verified Workflow subsection with three parts:
+  - **G1** — safe salvage of skill work stranded in a stray/misplaced clone-within-a-repo:
+    back up the uncommitted delta FIRST, recreate as a fresh branch off canonical `origin/main`
+    (do not transplant git objects between clones), and leave the stray clone for the human.
+    Key insight: when a branch tip is already on `origin/main`, the only real delta is the
+    uncommitted working tree.
+  - **G2** — before recreating/relocating any skill file, check whether it was previously
+    consolidated/removed (`git log origin/main --oneline -- skills/<name>.md` for a
+    "consolidate"/"superseded" deletion; grep bundle `.history` for "Superseded from <name>").
+    Do NOT arm auto-merge on a salvage PR until a human confirms the shape — instant CI can
+    merge before `gh pr merge --disable-auto` runs.
+  - **G3** — fix-forward an accidental de-consolidation (never `git revert`): one follow-up PR
+    that ports only genuinely-new content INTO the bundle (verify absence first; bump bundle
+    MINOR) and `git rm`s the reintroduced standalone, restoring the consolidation.
+- **Added 3 triggers (10)-(12) to description** and matching "When to Use" bullets: salvaging
+  stranded skill work, checking for prior consolidation before recreating a file, and
+  reconciling an accidental de-consolidation.
+- **Added 2 Failed Attempts rows**: (a) transplanting a stranded commit between clones +
+  arming auto-merge on a salvage PR (fired before catchable); (b) recreating a consolidated
+  skill standalone silently de-consolidated it.
+- **Added tags**: `stranded-clone`, `de-consolidation`, `fix-forward`, `salvage`.
+- **Added a Verified On row** for the 2026-06-15 session.
+
+### Why
+
+A real 2026-06-15 session recovered uncommitted v1.3.0 skill work from a worktree stranded
+inside another repo's tree, backed by a misplaced second clone. Recreating the standalone
+`squash-only-repo-merge-method-docs` (PR #2546) silently de-consolidated it from bundle
+`github-auto-merge-ci-gating-merge-method` (consolidated earlier by PR #2200), and armed
+auto-merge fired before it could be caught. Reconciled in PR #2553: bundle bumped to v1.4.0
+with the genuinely-new content ported in, standalone re-deleted via `git rm`,
+`validate_plugins.py` 396/396. This is a MINOR bump — no existing workflow is changed, only a
+new Part G workflow and triggers added.
+
+### Snapshot reference
+
+See `skills/skill-corpus-merge-consolidation-workflow.md` Part G (Salvaging a Stranded Skill +
+Avoiding Accidental De-Consolidation) and the two new Failed Attempts rows.
+
+---
+
 ## v2.1.0 (2026-06-14)
 
 **Changed by:** Post-drain closure audit workflow (2026-06-14 myrmidon-merge-triage session)

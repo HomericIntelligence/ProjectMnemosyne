@@ -1,12 +1,12 @@
 ---
 name: pytest-configuration-discovery-and-ci-pitfalls
-description: "Use when: (1) CI Python test job hangs until timeout with no explicit failure — hang signature from asyncio daemon tasks blocking epoll; (2) pytest warns 'ignoring pytest config in pyproject.toml!' or pytest.ini coexists with pyproject.toml causing dual-config conflicts; (3) test collection count is suspiciously low or ImportError on a scripts/ module — conftest.py missing sys.path guard; (4) slim 'pip install pytest' CI jobs silently inherit addopts from pyproject.toml and fail because pytest-cov or other plugins in addopts are not installed; (5) developers run bare pytest and only unit tests are discovered because tests/integration/ is not in testpaths; (6) CI test counts differ from local collection counts — marker-based selection (-m unit, -m integration) inconsistency; (7) a CI matrix has patterns referencing renamed or deleted test files — stale pattern detection; (8) pytest-watch dependency must be replaced with an alternative watcher dependency; (9) test is flaky only in the full suite due to class-level patch.object or hardcoded calendar dates/Unix timestamps; (10) coverage gate fires for a partial test run (e.g. pytest -m integration) but full-suite coverage is fine; (11) a ModuleNotFoundError fires when patching a scripts/ module not on sys.path during single-file pytest runs — add sys.path guard to conftest.py."
+description: "Use when: (1) CI Python test job hangs until timeout with no explicit failure — hang signature from asyncio daemon tasks blocking epoll; (2) pytest warns 'ignoring pytest config in pyproject.toml!' or pytest.ini coexists with pyproject.toml causing dual-config conflicts; (3) test collection count is suspiciously low or ImportError on a scripts/ module — conftest.py missing sys.path guard; (4) slim 'pip install pytest' CI jobs silently inherit addopts from pyproject.toml and fail because pytest-cov or other plugins in addopts are not installed; (5) developers run bare pytest and only unit tests are discovered because tests/integration/ is not in testpaths; (6) CI test counts differ from local collection counts — marker-based selection (-m unit, -m integration) inconsistency; (7) a CI matrix has patterns referencing renamed or deleted test files — stale pattern detection; (8) pytest-watch dependency must be replaced with an alternative watcher dependency; (9) test is flaky only in the full suite due to class-level patch.object or hardcoded calendar dates/Unix timestamps; (10) coverage gate fires for a partial test run (e.g. pytest -m integration) but full-suite coverage is fine; (11) a ModuleNotFoundError fires when patching a scripts/ module not on sys.path during single-file pytest runs — add sys.path guard to conftest.py; (12) a test file PASSES when run via explicit path but contributes ZERO coverage in CI because it lives OUTSIDE testpaths and is never collected by the default run — verify COLLECTION with --collect-only, not just that the file passes; (13) deciding whether a sys.path.insert hack in a test is redundant given pythonpath already makes the dir importable as a namespace package."
 category: testing
-date: 2026-06-07
-version: "1.1.0"
+date: 2026-06-21
+version: "1.3.0"
 user-invocable: false
 history: pytest-configuration-discovery-and-ci-pitfalls.history
-tags: [pytest, configuration, test-discovery, testpaths, markers, pytest-ini, pyproject-toml, addopts, pythonpath, conftest, sys-path, ci-matrix, stale-patterns, pytest-watcher, coverage, isolation, mock]
+tags: [pytest, configuration, test-discovery, testpaths, markers, pytest-ini, pyproject-toml, addopts, pythonpath, conftest, sys-path, ci-matrix, stale-patterns, pytest-watcher, coverage, isolation, mock, collect-only, uncollected-tests, namespace-package]
 ---
 
 # pytest Configuration, Discovery, and CI Pitfalls
@@ -15,10 +15,10 @@ tags: [pytest, configuration, test-discovery, testpaths, markers, pytest-ini, py
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-07 |
-| **Objective** | Canonical reference for pytest configuration, test-discovery, and CI pitfalls — dual-config conflicts, testpaths/marker discovery gaps, addopts inheritance in slim CI jobs, stale matrix patterns, watcher dependency replacement, and sys.path conftest fixes |
-| **Outcome** | Synthesised from 6 absorbed skills; one general workflow for diagnosing config-shadowing, low collection counts, partial-run coverage misfires, mock leakage, date bombs, and CI matrix hygiene |
-| **Verification** | verified-ci (multiple projects) |
+| **Date** | 2026-06-21 |
+| **Objective** | Canonical reference for pytest configuration, test-discovery, and CI pitfalls — dual-config conflicts, testpaths/marker discovery gaps, uncollected stray test files outside testpaths, addopts inheritance in slim CI jobs, stale matrix patterns, watcher dependency replacement, sys.path conftest fixes, and redundant sys.path.insert under pythonpath namespace packages |
+| **Outcome** | Synthesised from 6 absorbed skills + uncollected-test-file detection; one general workflow for diagnosing config-shadowing, low collection counts, files silently never collected, partial-run coverage misfires, mock leakage, date bombs, and CI matrix hygiene |
+| **Verification** | verified-ci (multiple projects); Step 11 (uncollected stray file) is **verified-ci** — ProjectHephaestus #1547 PR passed full CI (4532 tests passed) |
 
 ## When to Use
 
@@ -33,6 +33,9 @@ tags: [pytest, configuration, test-discovery, testpaths, markers, pytest-ini, py
 - A test is flaky only in the full suite due to class-level `patch.object(...__class__...)` or hardcoded calendar dates/Unix timestamps
 - Coverage gate fires for a partial run (e.g. `pytest -m integration`) but full-suite coverage is fine
 - `ModuleNotFoundError` fires when a `conftest.py` autouse fixture patches a `scripts/` module not on `sys.path` during single-file pytest runs
+- A touched/moved/new test file PASSES via an explicit-path run (`pytest path/to/test_x.py`) but you have NOT confirmed the default CI run actually COLLECTS it — the file may live OUTSIDE `testpaths` and contribute zero coverage. Always verify with `--collect-only`, never trust "the tests pass"
+- An audit flags a cosmetic `sys.path.insert(0, repo_root)` hack in a test, but the REAL latent defect is that the file is uncollected (outside `testpaths`); relocating the file into a configured testpath matters more than deleting the hack
+- Deciding whether a `sys.path.insert` hack is redundant: it IS redundant when (a) the test already imports via the package-prefix form (e.g. `from scripts.show_prompt import ...`) AND (b) `pythonpath` already contains the repo root, since `pythonpath` makes the dir importable as a namespace package with no `__init__.py`
 
 ## Verified Workflow
 
@@ -77,6 +80,21 @@ grep -rn "== 300" tests/unit/        # over-inflated fixtures / stale hardcoded 
 # 9 — Class-level mock leakage / date-bomb detection
 grep -rn "patch.object.*__class__" tests/
 grep -rn "17[6-9][0-9]\{7\}\|18[0-2][0-9]\{7\}" tests/
+
+# 10 — Stray test file outside testpaths is NEVER collected (passes on explicit run, 0 in CI)
+#   PROVE collection — compare EXPECTED test count vs ACTUAL collected:
+pixi run pytest --collect-only -q 2>/dev/null | grep -c "test_show_prompt.py::"   # 0 => NOT collected
+pixi run pytest tests/test_show_prompt.py                                          # explicit path => 43 pass (masks the gap)
+grep -A2 '\[tool.pytest.ini_options\]' pyproject.toml | grep testpaths            # is the file's dir listed?
+#   Fix: RELOCATE into a configured testpath, not just delete a cosmetic sys.path hack:
+git mv tests/test_show_prompt.py tests/unit/scripts/test_show_prompt.py
+pixi run pytest --collect-only -q 2>/dev/null | grep -c "test_show_prompt.py::"   # now 43
+
+# 11 — Is a sys.path.insert hack redundant? (pythonpath namespace-package check)
+grep -n "sys.path.insert" tests/<file>.py            # the hack
+grep -n "^from scripts\.\|^import scripts\." tests/<file>.py   # package-prefix import already?
+grep -A2 '\[tool.pytest.ini_options\]' pyproject.toml | grep pythonpath          # contains "." (repo root)?
+# If BOTH package-prefix import AND pythonpath=["."] => the sys.path.insert is redundant; remove safely.
 ```
 
 ### Detailed Steps
@@ -331,6 +349,75 @@ def test_parses_date():
     assert abs(parsed - future.timestamp()) < 86400
 ```
 
+#### Step 11 — Stray Test File OUTSIDE testpaths Is Silently Never Collected (verified-ci)
+
+> **Verification:** This step is **verified-ci**. The `--collect-only` count (0) and the
+> explicit-path run (43 passed) were both observed in ProjectHephaestus issue #1547; the
+> relocation fix (`git mv tests/test_show_prompt.py tests/unit/scripts/test_show_prompt.py`)
+> passed full CI with 4532 tests passing.
+
+**Root cause**: `pyproject.toml` sets `testpaths = ["tests/unit", "tests/integration"]`. A
+test file that sits at the top-level `tests/` dir (e.g. `tests/test_show_prompt.py`, 43
+tests) is OUTSIDE both testpaths, so the **default** invocation (`pixi run pytest`, which
+honors `testpaths`) never collects it — it contributes ZERO coverage in CI. The trap: an
+explicit-path run (`pixi run pytest tests/test_show_prompt.py`) passes all 43 because an
+explicit CLI path overrides `testpaths`, masking the gap. "The tests pass" is a lie about
+coverage when collection was never verified.
+
+**The discipline**: verify COLLECTION, not just that the file passes. Prove it by comparing
+the EXPECTED test count against what the default run ACTUALLY collects:
+
+```bash
+# Default run honors testpaths — count collected occurrences of the file's node ids:
+pixi run pytest --collect-only -q 2>/dev/null | grep -c "test_show_prompt.py::"
+#   -> 0   PROVES the file is not collected by the default invocation
+pixi run pytest tests/test_show_prompt.py          # explicit path: 43 passed (overrides testpaths — masks the gap)
+grep -A2 '\[tool.pytest.ini_options\]' pyproject.toml | grep testpaths   # is the dir listed?
+```
+
+A `0` (or any EXPECTED-vs-ACTUAL mismatch) is the smoking gun. Zero collected + green
+explicit run = a file outside `testpaths`.
+
+**The fix that matters is RELOCATION, not deleting a cosmetic hack.** If an audit only
+flags a cosmetic `sys.path.insert(0, repo_root)` line in the file, that is the symptom, not
+the defect. Move the file into a configured testpath so the default run collects it:
+
+```bash
+git mv tests/test_show_prompt.py tests/unit/scripts/test_show_prompt.py   # into a configured testpath
+# Edit any in-file import that referenced the old location, in the SAME change.
+pixi run pytest --collect-only -q 2>/dev/null | grep -c "test_show_prompt.py::"   # now 43 — collected
+```
+
+**Risks (verify before relocating)**:
+
+- Confirm no other test/tool imports the file by its OLD path: `grep -rn "tests.test_show_prompt\|tests/test_show_prompt" .` (this is a grep-only check, not exhaustive).
+- `git mv` AND the in-file import edit must BOTH land in the change, or history/imports break.
+- The destination dir's existing `__init__.py`/`conftest.py` must not collide with the moved module name — unique names are low risk.
+
+#### Step 11b — `sys.path.insert` Hack Is Redundant Under `pythonpath` Namespace Packages
+
+`pythonpath = ["."]` in pytest config makes a directory like `scripts/show_prompt`
+importable as a **namespace package** (no `__init__.py` required). So a
+`sys.path.insert(0, repo_root)` hack in a test that imports via the package-prefix form
+(`from scripts.show_prompt import ...`) is REDUNDANT — pytest has already put the repo root
+on the path. Removing such a hack is SAFE when BOTH hold:
+
+1. the import already uses the package-prefix form (`from scripts.<pkg> import ...`), AND
+2. `pythonpath` already contains the repo root (`"."`).
+
+```bash
+grep -n "sys.path.insert" tests/<file>.py
+grep -n "^from scripts\.\|^import scripts\." tests/<file>.py
+grep -A2 '\[tool.pytest.ini_options\]' pyproject.toml | grep pythonpath
+# Both present => delete the sys.path.insert block; the package-prefix import still resolves.
+```
+
+This is the inverse of Step 8: Step 8 ADDS a `sys.path` guard for a `scripts/` module not on
+the path during single-file runs; here the hack is REMOVABLE because `pythonpath` + the
+package-prefix import already cover it. Note: removing the redundant hack is the COSMETIC
+win; if the file is also uncollected (Step 11), relocation is the defect that actually
+matters — do not stop at the hack.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -349,6 +436,9 @@ def test_parses_date():
 | Widen date tolerance 24h→7d | Stretched the window on a hardcoded epoch | Defers the failure ~5 days; doesn't eliminate it | Make the test temporally reflexive, not the tolerance bigger |
 | Verify `ptw` CLI before `pixi install` | Checked the entry point before re-solving the lock | Premature — the new package's entry point isn't installed yet | `pixi install` first, then verify `ptw`; pytest-watcher ships `ptw` |
 | Confirm file deletion via background `find` / pre-deletion glob | Assumed the issue description was current | Output unavailable when needed; file was already gone | Verify existence synchronously with `ls`/glob before editing patterns |
+| Trusted explicit-path run | Ran `pytest tests/test_show_prompt.py` → 43 passed → assumed the file was covered in CI | The file lived OUTSIDE `testpaths`, so the default run collected 0; an explicit CLI path overrides `testpaths` and masks the gap | Verify COLLECTION with `--collect-only` (compare EXPECTED vs ACTUAL count), never trust "the tests pass" |
+| Deleted only the cosmetic `sys.path.insert` the audit flagged | Removed the hack the audit pointed at and called it done | The real latent defect was that the file was uncollected (outside testpaths); removing the hack left 43 tests still contributing zero coverage | RELOCATE the file into a configured testpath (`git mv`); the cosmetic hack is the symptom, not the defect |
+| Added a new `__init__.py`-bearing dir and moved the file without checking import refs | `git mv` only, no in-file import edit / no old-path grep | An import referencing the old path (or a name collision in the destination) breaks history/imports | `git mv` + the in-file import edit must BOTH land; `grep` for old-path references first |
 
 ## Results & Parameters
 
@@ -382,6 +472,43 @@ exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:"]
 | `pytest -m unit --collect-only -q` | 3188 | unit only |
 | `pytest -m integration --collect-only -q` | 218 | integration only (3188 + 218 = 3406) |
 | direct `pytest` vs hook/CI count | 3257 vs 1691 | divergence ⇒ pythonpath/config gap |
+
+### Uncollected Stray Test File — Diagnostic (copy-paste)
+
+```bash
+# PROVE a touched/moved test file is collected by the DEFAULT run (honors testpaths):
+pixi run pytest --collect-only -q 2>/dev/null | grep -c "<testfile>.py::"
+# Expected: the file's real test count (e.g. 43).  ACTUAL 0 => file NOT collected (outside testpaths).
+
+# Contrast — explicit path overrides testpaths and HIDES the gap:
+pixi run pytest tests/<testfile>.py        # passes (e.g. 43 passed) even when default run collects 0
+
+# Confirm the directory is/ isn't in testpaths:
+grep -A2 '\[tool.pytest.ini_options\]' pyproject.toml | grep testpaths
+
+# Fix — relocate into a configured testpath, then re-prove collection:
+git mv tests/<testfile>.py tests/unit/scripts/<testfile>.py
+pixi run pytest --collect-only -q 2>/dev/null | grep -c "<testfile>.py::"   # now 43
+```
+
+| Command | Expected (collected) | Meaning |
+|---------|----------------------|---------|
+| `pytest --collect-only -q \| grep -c "test_show_prompt.py::"` (file outside testpaths) | `0` | NOT collected by default CI run |
+| `pytest tests/test_show_prompt.py` (explicit path) | `43 passed` | Explicit path overrides testpaths — masks the gap |
+| `pytest --collect-only -q \| grep -c "test_show_prompt.py::"` (after `git mv` into `tests/unit/scripts/`) | `43` | Now collected by the default run |
+
+### Redundant `sys.path.insert` Under `pythonpath` (namespace package)
+
+```bash
+grep -n "sys.path.insert" tests/<file>.py                       # the hack
+grep -n "^from scripts\.\|^import scripts\." tests/<file>.py      # package-prefix import?
+grep -A2 '\[tool.pytest.ini_options\]' pyproject.toml | grep pythonpath   # contains "."?
+```
+
+| Condition | sys.path.insert verdict |
+|-----------|-------------------------|
+| package-prefix import (`from scripts.pkg import ...`) AND `pythonpath = ["."]` | REDUNDANT — safe to remove (`pythonpath` makes `scripts/pkg` importable as a namespace package, no `__init__.py` needed) |
+| bare-name import (`import export_data`) AND dir not on path during single-file runs | NEEDED — use the conftest `sys.path` guard (Step 8) instead |
 
 ### Coverage Gate Placement
 
@@ -433,3 +560,4 @@ Formula: `timeout_seconds = max(180, ceil(actual_duration * 3 / 60) * 60)`
 | ProjectArgus | CI "Test exporter" matrix — PRs #273, #289 | slim `pip install pytest pytest-cov` missing `pyyaml`; addopts `--cov` inherited |
 | ProjectHermes | PR #475 — `fail_under = 80` in pyproject.toml | integration-only CI job failed at 78.52%; gate moved to full-suite step |
 | ProjectOdyssey | Issue #3357, PR #4001 — stale CI pattern detection/removal | `check_stale_patterns()` added (13 tests pass); dangling matrix tokens removed |
+| ProjectHephaestus | Issue #1547 — `tests/test_show_prompt.py` outside testpaths | **verified-ci**: `--collect-only` count `0`; explicit-path run `43 passed`; fix = `git mv` into `tests/unit/scripts/`; redundant `sys.path.insert` removed (import was package-prefix + `pythonpath=["."]`); PR passed full CI with 4532 tests |

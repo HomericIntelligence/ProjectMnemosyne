@@ -1,0 +1,152 @@
+<!-- markdownlint-disable MD024 -->
+# History: cpp-httplib-inflight-cap-planning-assumptions
+
+This file preserves the full content of superseded versions of the
+`cpp-httplib-inflight-cap-planning-assumptions` skill. Newest entry at top.
+
+## v1.1.0 (2026-06-20)
+
+- Version: 1.1.0
+- Date: 2026-06-20
+- Changed by: ProjectAgamemnon #273 re-plan after NOGO
+- Verification level: unverified (still a planning artifact — never built or run)
+
+### What changed
+
+The v1.0.0 skill flagged "post-routing-fires-on-every-exit-path is the
+unverified linchpin" as its #1 open risk. In the re-plan (R1, after R0
+received a NOGO for exactly that risk), the design **abandoned the
+pre/post-routing split entirely** in favor of a per-handler RAII wrapper.
+This amendment folds that resolution and two new lessons into the skill:
+
+1. PRIMARY — the handler-wrapper RAII pivot. Decorate each throttled route
+   handler with a closure that constructs an RAII guard at handler entry and
+   lets it destruct at handler exit. This binds the per-request resource to
+   the handler's own lexical scope, so the destructor runs on normal return,
+   early return, and exception — with zero assumptions about the framework's
+   routing lifecycle. The guard becomes the PRODUCTION mechanism, not a
+   test-only helper. Exempt routes are simply never wrapped (no
+   hand-maintained `!exempt && !rejected` exclusion list).
+2. SECONDARY — verify call-site COUNTS by fresh grep before asserting them in
+   a plan. The prior plan claimed `register_routes` had 3 call sites; a fresh
+   grep found 9 invocations across 8 files. Undercounting a mechanical-edit
+   surface earns a MAJOR NOGO. Stale in-code comments ("ALL THREE files") are
+   themselves drift to fix.
+3. TERTIARY — boundary translation + observability framing: translate the
+   low-level "no slot" condition into a domain HTTP response (503 +
+   Retry-After) at the boundary; make the rejection explicit/observable, not
+   a silent drop.
+
+### Why
+
+The previous version was a *checklist of unverified assumptions*; this version
+records the *resolution* of the #1 assumption (post-routing lifecycle) via a
+design that removes the assumption rather than verifying it, plus the
+call-site-count lesson that NOGO'd R0.
+
+### Full snapshot of v1.0.0
+
+```markdown
+---
+name: cpp-httplib-inflight-cap-planning-assumptions
+description: "Use when planning (not yet implementing) a global in-flight request cap / backpressure / concurrency throttle for a cpp-httplib (or similar embedded HTTP) server, or when reviewing such a plan, or for any design that acquires a resource slot in one callback and releases it in another (split acquire/release). Captures the load-bearing, unverified assumptions a planner must confirm before the design is safe: post-routing-fires-on-every-exit-path, RAII-vs-split-callback fragility, remote_addr behind proxy, std::counting_semaphore availability, and the default-cap heuristic."
+category: architecture
+date: 2026-06-19
+version: "1.0.0"
+verification: unverified
+user-invocable: false
+tags: []
+---
+
+# C++ cpp-httplib Global In-Flight Request Cap: Planning Assumptions Skill
+
+## Overview
+
+| Field | Value |
+| --- | --- |
+| Date | 2026-06-19 |
+| Objective | Capture the durable, load-bearing assumptions a planner must verify before a global in-flight request cap (acquire in pre-routing / release in post-routing, backed by `std::counting_semaphore`, rejecting with 503) for a cpp-httplib server is safe to build |
+| Outcome | Implementation plan produced (planning artifact only — no code written, built, or run) |
+| Verification | unverified |
+| Context | ProjectAgamemnon issue #273 — add a global in-flight request cap to the cpp-httplib HTTP server, rejecting over-cap requests with 503 |
+
+> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms. The plan was never built or run; every assumption below was asserted from convention/memory and NOT verified against source or docs during planning.
+
+## When to Use
+
+1. Planning request throttling, backpressure, or a global in-flight concurrency cap for a cpp-httplib or other embedded HTTP server.
+2. Reviewing such a plan — use the assumptions below as the reviewer checklist (assumption #1, post-routing semantics, is the #1 focus).
+3. Any design that acquires a resource slot in one callback and releases it in another (split acquire/release across unrelated scopes), especially where a hand-maintained "logical complement" guard decides whether to release.
+
+## Verified Workflow
+
+> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms. The section is titled "Verified Workflow" only because the repository validator (`scripts/validate_plugins.py`) requires that literal heading; the `verification: unverified` frontmatter is authoritative — this is a planning artifact and the plan was never built or run.
+
+The core design under review: acquire a semaphore slot in the cpp-httplib pre-routing handler (after auth + rate-limit), release it in the post-routing handler; reject over-cap requests with `503 + Retry-After: 1`; cap is env-configurable (`MAX_INFLIGHT_REQUESTS`, default 64, `0` = disabled). Before treating this design as safe, a planner MUST verify the following load-bearing assumptions — none were verified during planning.
+
+### Quick Reference
+
+Verification commands / actions a planner MUST run before implementation:
+
+` ` `bash
+# 1. LINCHPIN: confirm post-routing fires EXACTLY ONCE for every request whose
+#    pre-routing returned Unhandled — including read-timeout, client disconnect,
+#    write-timeout, and set_payload_max_length (413) rejection. If it does NOT,
+#    the semaphore leaks a slot permanently => capacity erodes to zero => self-DoS.
+#    Read the PINNED cpp-httplib version's source, not docs/memory:
+grep -nE 'routing\(|process_request|post_routing_handler_|set_payload_max_length|content_length' \
+  third_party/cpp-httplib/httplib.h   # adjust path to the pinned vendored copy
+#    Trace where the post handler is invoked RELATIVE to payload-length checks and
+#    timeout/disconnect early-returns. Confirm 413 path (which may fire BEFORE
+#    pre-routing at the transport layer) still releases or never acquired.
+
+# 2. Confirm std::counting_semaphore is actually available in the toolchain
+#    (C++20 <semaphore> — libstdc++ >= 11 / libc++ >= 13). "Project says C++20"
+#    is NOT sufficient evidence the header/feature is present.
+echo '#include <semaphore>
+int main(){ std::counting_semaphore<1<<20> s{64}; return s.try_acquire()?0:1; }' \
+  | ${CXX:-c++} -std=c++20 -x c++ - -o /tmp/sem_check && /tmp/sem_check; echo "exit=$?"
+
+# 3. Load-test the DEFAULT cap before trusting it. 64 and the memory/1MB heuristic
+#    are cross-domain guesses; a 1 MB body can parse to several MB of nlohmann::json,
+#    so worst-case residency >> 1 MB/req. Measure real per-request peak RSS.
+#    (no canned command — drive the load test against a built binary)
+
+# 4. Re-grep cited line numbers instead of trusting the plan. They were read once
+#    and may have drifted.
+grep -nE 'set_pre_routing_handler|set_post_routing_handler|register_routes' src/routes.cpp
+grep -nE 'MAX_INFLIGHT|getenv|server\.' src/server_main.cpp
+` ` `
+
+What was SOUND in the plan (kept for balance — do not relitigate these):
+
+- Reuse the existing raw-pointer-by-value capture convention (limiter owned by `main()`, captured by pointer) rather than inventing a new lifetime model.
+- Reject (503) instead of blocking on the fixed-size HTTP thread pool — blocking would deadlock the very threads being protected.
+- Make the cap optional (`0` = disabled) so existing tests and the shared fixture are unaffected.
+- Acquire the slot LAST (after auth + rate-limit) so cheap rejections do not consume capacity.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --- | --- | --- | --- |
+| Blocking acquire on the HTTP thread pool | Considered `acquire()` (blocking) so over-cap requests wait for a slot instead of being rejected | cpp-httplib serves requests on a fixed-size thread pool; a blocked thread is one of the threads being protected. Enough blocked waiters deadlock the pool — no thread can ever release. | Use non-blocking `try_acquire()` and reject (503) over-cap; never block on the pool you are protecting. |
+| Split acquire/release across pre/post callbacks without verifying post-routing fires on every exit path | Plan acquires in pre-routing, releases in post-routing, guarded by a hand-written `release iff (!exempt && !rejected)` "logical complement" | Asserted (NOT verified) that `set_post_routing_handler` fires exactly once for every Unhandled request including read-timeout, client disconnect, write-timeout, and 413 (`set_payload_max_length`, possibly fired pre-routing at transport layer). If it skips any path, the slot leaks permanently — capacity erodes to zero, a self-inflicted DoS worse than the original bug. | Post-routing-fires-on-every-exit-path is the linchpin; verify against the pinned cpp-httplib source before building. Prefer a single-scope RAII alternative (wrapper around each handler, or a per-request "slot held" flag the post handler reads) over a hand-maintained split invariant that silently breaks when a new exempt path or early-return status is added. |
+| Trusting cited line numbers without re-grep | Plan cited exact locations (`src/routes.cpp:216-239`, `src/server_main.cpp:104-111`, etc.) | Lines were read once during planning and drift as the file changes; a reviewer trusting them edits the wrong place. | Re-grep for the symbol/anchor (`set_pre_routing_handler`, `register_routes`) at implementation time; treat cited line numbers as stale hints. |
+| Copying the cap heuristic from a different domain | Picked default `64` via `max_inflight ≈ memory_budget / 1MB`, a heuristic lifted from a Python/Scylla context | Real worst-case residency depends on body buffering + JSON parse expansion (1 MB body → several MB of `nlohmann::json`), so 64 may be optimistic and OOM under load. | The default is UNVALIDATED — load-test it. Making it env-configurable was correct, but call out that the default number itself is a guess until measured. |
+
+## Results & Parameters
+
+| Parameter | Value | Notes |
+| --- | --- | --- |
+| Env var | `MAX_INFLIGHT_REQUESTS` | Default `64`; `0` = disabled (cap off, tests/fixtures unaffected). Default is an UNVALIDATED cross-domain guess — load-test before trusting. |
+| Semaphore type | `std::counting_semaphore<1<<20>` | `kMaxSlots = 1<<20` is the compile-time `LeastMaxValue` (an assumption about acceptable internal sizing). `try_acquire()` is non-blocking by spec (good). Confirm `<semaphore>` is available in the actual toolchain (libstdc++/libc++ version), not merely that the project targets C++20. |
+| Over-cap response | `503 Service Unavailable` + `Retry-After: 1` | Reject, do not block — blocking on the fixed HTTP thread pool would deadlock it. |
+| Acquire point | Last, after auth + rate-limit | Cheap rejections must not consume a slot. |
+| Throttling key (inherited) | `req.remote_addr` (existing per-IP RateLimiter) | UNVERIFIED behind Tailscale / proxy / NAT: if traffic is proxied, all clients collapse to one key. Not changed by this plan, but an inherited risk worth a verification note. |
+
+## Verified On
+
+| Project | Context | Details |
+| --- | --- | --- |
+| ProjectAgamemnon | issue #273 planning | Plan-stage only — no code was written, built, or run. All assumptions above were asserted from convention/memory and remain unverified against source or docs. |
+```

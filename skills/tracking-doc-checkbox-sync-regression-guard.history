@@ -1,0 +1,172 @@
+# tracking-doc-checkbox-sync-regression-guard — History
+
+## v2.1.0 (2026-06-20)
+
+**Changed by:** ProjectProteus issue #186, a RE-PLANNING session. The first plan
+got a NOGO; this entry captures the durable regression-guard learnings of the
+re-plan. This is a planning session — the offline-fixture test was NOT implemented
+or CI-run.
+**Verification:** unverified for the v2.1.0 additions (a design from a re-planning
+session; the offline-fixture test shape is unverified until the PR lands and CI runs).
+The v2.0.0 core workflow remains `verified-local`; the skill frontmatter `verification`
+field is intentionally NOT raised, and the new content is labelled unverified inline.
+
+### What changed (MINOR — additive sub-pattern, no core-workflow change)
+
+- **Policy reconciliation as the REASON to go offline.** Added the explicit anti-pattern:
+  a live-`gh`-in-CI test that SKIPs (exit 0) when `gh` is unauthenticated is a FALSE-GREEN
+  no-op AND a violation of the repo's anti-silent-failure policy — the `forbid-suppressions`
+  job at `.github/workflows/_required.yml:53-105` plus `docs/runbooks/no-silent-failures.md`.
+  The reviewer NOGO'd it on P1/KISS + P7/POLA.
+- **Mirror-the-PROPERTY rule.** Added the precedent of the repo's existing HERMETIC test
+  `tests/dispatch-apply.test.sh` (shims `curl`, fake token, no network) as the model to
+  mirror — mirror the hermetic/deterministic PROPERTY, not just the `tests/` file location.
+- **Ground-truth at AUTHORING time.** Reaffirmed building the `EXPECTED` map via
+  `gh issue view` while planning (not at test time); for #186 this enumerated 38 issues and
+  surfaced TWO stale entries (#92, #100) the issue body never mentioned.
+- **`# RE-VERIFY:` comment + same-PR rule** to bound snapshot staleness (e.g. a reopened issue):
+  fixture and doc change land in the SAME PR.
+- **PR-group-scoped ticking rule:** tick a Wave-3 / group box only when EVERY issue on the
+  line is CLOSED (groups with open children #98/#101/#103 stay unticked).
+- **Runnable "guard-is-not-a-no-op" temp-tree proof:** copy the test into `$work/tests/` so its
+  `$0`-relative `REPO_ROOT` retargets the temp tree, introduce drift, run it, assert nonzero exit.
+- **Six new Failed Attempts rows** (all tagged #186): live-`gh` skip-on-unauth required test;
+  claimed-to-mirror-but-inverted-the-property; 41 network calls for a static fact; trusted the
+  issue body's stale-entry list (omitted #92/#100); treated PR-group lines as per-issue;
+  verification step that says "point the test at `$tmp`" without doing it.
+- Bumped version 2.0.0 -> 2.1.0; date 2026-06-20.
+
+### Why
+
+The v2.0.0 entry established the offline committed-fixture design as the answer to the
+live-`gh` NOGO. The #186 re-plan independently rediscovered the SAME core lesson and added
+the missing connective tissue: WHY offline is mandatory (the repo's `forbid-suppressions` /
+`no-silent-failures` policy, not just determinism), WHAT to mirror (the hermetic property of
+`dispatch-apply.test.sh`), and HOW to PROVE the guard is not a no-op (an actually-executed
+temp-tree drift proof, after a reviewer flagged an unexecuted hand-wave). These are additive,
+so MINOR — the core EXPECT-table workflow is unchanged.
+
+### Previous version (v2.0.0) snapshot
+
+<!-- The full v2.0.0 skill content is preserved below for auditability. -->
+
+```markdown
+---
+name: tracking-doc-checkbox-sync-regression-guard
+category: documentation
+date: 2026-06-20
+version: "2.0.0"
+verification: verified-local
+---
+
+# Tracking-Doc Checkbox Sync + Regression Guard
+
+(See git history at commit 444c6f94 for the full verbatim v2.0.0 body. Summary:
+verified-local committed-fixture invariant-table guard for #183 R1: embed
+`declare -A EXPECT`, key each line by its stable primary token, diff actual vs
+expected checkbox char, add SEEN-set bidirectional coverage with a `__MISSING__`
+sentinel, constrain the checkbox regex, wire into the justfile `check` recipe by
+name. Failed Attempts covered: live-`gh` skip-to-no-op guard (demoted),
+scan-every-#NNN bundle mis-fire, positional snapshot, trusting the issue body's
+grouping, treating the table as live freshness, assuming unique keys, and citing
+the justfile by line number.)
+```
+
+---
+
+## v2.0.0 (2026-06-20)
+
+**Changed by:** ProjectProteus issue #183, R1 (re-plan) iteration. The R0 plan
+(captured as v1.0.0 in PR #2673) received a NOGO because its committed regression
+guard had two fatal flaws it flagged but left UNSOLVED. R1 solved them by changing
+the guard's design.
+**Verification:** verified-local — the embedded EXPECT-table test logic was executed
+this session against a passing fixture (PASS, exit 0) and three negative fixtures
+(checkbox drift, new-untracked-line, deleted-line) which each FAILed as designed. No
+network/`gh`/auth involved, so the run is deterministic. CI on the consuming repo
+(ProjectProteus) was NOT run, hence `verified-local` not `verified-ci`.
+
+### What changed
+
+- **CORE REDESIGN (major):** Replaced the recommended workflow. The live-API guard
+  (query `gh issue view <n>` at test time, SKIP when `gh` is unauthenticated) is
+  DEMOTED to a Failed Attempt. The new primary workflow is a **committed-fixture
+  invariant table**: embed an explicit `declare -A EXPECT=([key]=state ...)` inside
+  the test, parse the tracked file, and diff each line's actual checkbox char against
+  the expected char. No network, no auth, no SKIP path — deterministic in every
+  environment (including the required-CI runner that has no issue-read token, exactly
+  where the live-`gh` guard provided ZERO protection).
+- **Key by the line's STABLE PRIMARY TOKEN, not by scanning every `#NNN` on the line.**
+  The R0 design's "any CLOSED `#NNN` on an unchecked line" false-FAILed on bundle lines
+  (a PR row legitimately stays `[ ]` while some of its child issues are already CLOSED).
+  The fix derives ONE key per line (leading `#NNN`, or `PR-X`, or a phrase) and looks it
+  up in the table. A closed child inside an open bundle can never trip the guard because
+  the bundle is keyed once, as `[ ]`-expected.
+- **Added bidirectional coverage cross-checks** via a `SEEN` set: (a) fail with a
+  `__MISSING__` sentinel if a tracked-looking line's key is absent from `EXPECT` (new
+  lines can't silently escape coverage); (b) after parsing, fail if any `EXPECT` key was
+  never `SEEN` (catches a deleted/renamed line).
+- **New Failed Attempts rows:** scan-every-issue-on-the-line bundle mis-fire (now solved
+  by single-key derivation); and the honest caveat that the hand-maintained EXPECT table
+  enforces internal (file-vs-table) consistency, NOT freshness against live GitHub state.
+- Verification level raised from `unverified` (v1.0.0) to `verified-local` because the
+  test logic was actually run this session.
+- Retained the cross-links to `code-quality-enforcement-gates` §5 ("assert the property
+  via static analysis, NOT a live runtime check") and §10 (verify findings vs ground
+  truth), and to `planning-roadmap-tracking-issue-reconciliation`.
+
+### Why
+
+The R0 (v1.0.0) plan got a NOGO because the committed artifact failed the test it
+shipped, and because the live-`gh` guard's offline-SKIP meant it provided zero protection
+in the exact CI environment it was meant to guard (a required runner with no issue-read
+token). The invariant-table design is a direct application of
+`code-quality-enforcement-gates` §5: assert the property via static analysis (a committed
+table diffed offline), not a live runtime check. Because the table is authored to match
+the committed checkbox state, the self-contained file PASSES its own test deterministically
+— removing the R0 disqualifier. The trade-off, recorded honestly: the table is
+hand-maintained and detects file-vs-table divergence, NOT divergence from live issue
+state; freshness against GitHub is sacrificed for determinism. A future, non-required,
+tokened nightly drift job is the belt-and-suspenders complement.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: tracking-doc-checkbox-sync-regression-guard
+description: "When a tracking DOCUMENT (remediation plan, roadmap, status table, audit-checklist markdown FILE) encodes issue/PR state as `- [ ]` / `- [x]` checkboxes, that state silently rots out of sync with live GitHub OPEN/CLOSED state. Fix in two parts: (1) verify EVERY referenced `#NNN` against `gh issue view <n> --json state` ground truth BEFORE editing — do NOT trust the triggering issue body's own wave/group/CLOSED claims (they drift and mis-bucket children); (2) add a REGRESSION GUARD that asserts the INVARIANT as a property ('no CLOSED issue sits on an unchecked `- [ ]` line'), not a snapshot of which boxes are ticked, and that SKIPS gracefully (exit 0 + notice) when `gh` is unavailable/unauthenticated so it never breaks offline/sandboxed CI; wire it into the repo's aggregate task (e.g. justfile `check`). Use when: (1) editing a markdown tracking/remediation/roadmap doc whose checkboxes claim issue state, (2) an issue body groups children under waves/sections you are tempted to trust, (3) a single doc line bundles multiple `#NNN`, (4) adding a guard against checkbox drift. This is doc-FILE sync; for reconciling a GitHub ISSUE BODY checklist see planning-roadmap-tracking-issue-reconciliation; for the general 'verify audit findings vs ground truth' principle see code-quality-enforcement-gates §10."
+category: documentation
+date: 2026-06-20
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags: [tracking-doc, remediation-plan, roadmap, checkbox, doc-sync, regression-guard, verify-ground-truth, gh-issue-state, offline-skip, false-confidence, audit, property-not-snapshot, planning, unverified]
+---
+
+# Tracking-Doc Checkbox Sync + Regression Guard
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-20 |
+| **Objective** | Correct stale `- [ ]` / `- [x]` checkbox state in a tracking markdown FILE (`docs/audit-2026-04-28/remediation-plan.md`) so it matches live GitHub issue OPEN/CLOSED state, and add a regression guard that survives future legitimate edits |
+| **Outcome** | PLAN produced for ProjectProteus issue #183. Per-issue `gh issue view` verification was done and caught a mis-grouping (the #183 body bucketed #112 under the wrong wave; #112 is in fact CLOSED). The doc edit and the guard were NOT executed end-to-end and no CI ran |
+| **Verification** | unverified — this is a plan, not executed code. See warning in Proposed Workflow |
+
+(The full v1.0.0 body recommended a live-`gh issue view` guard with an offline SKIP and a
+single-issue-line restriction. v2.0.0 replaces that primary workflow with a committed
+invariant table and demotes the live-`gh` approach to a Failed Attempt. See the v2.0.0
+"What changed" / "Why" above and the current skill file for the superseding design.)
+```
+
+---
+
+## v1.0.0 (2026-06-20)
+
+**Initial version** (PR #2673, MERGED). Captured the R0 plan for ProjectProteus issue
+#183: ground-truth every `#NNN` via `gh issue view` before editing, then add a
+live-API regression guard that asserts the property "no CLOSED issue on an unchecked
+line" and SKIPs when `gh` is unavailable. Verification: `unverified` (plan only). The
+plan received a NOGO; the offline-SKIP and bundle-line flaws were flagged but left
+unsolved — solved in v2.0.0.

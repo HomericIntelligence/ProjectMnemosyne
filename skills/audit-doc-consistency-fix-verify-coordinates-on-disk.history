@@ -1,0 +1,208 @@
+# Changelog: audit-doc-consistency-fix-verify-coordinates-on-disk
+
+## v1.0.0 -> v1.1.0 (2026-06-20)
+
+- **Version:** 1.0.0 -> 1.1.0 (MINOR — adds new triggers / When-to-Use bullets / Failed-Attempts rows; not a rewrite)
+- **Date:** 2026-06-20
+- **Changed by:** ProjectProteus issue #182 re-plan after reviewer R1 NOGO (two MINOR findings: stale inherited line-coordinate + dead/non-portable grep assertion)
+- **Verification level:** verified-local
+- **What changed:**
+  - Generalized the description trigger beyond repo-AUDIT output: now also covers
+    file:line coordinates inherited from an ISSUE BODY or a PRIOR PLAN, and
+    authoring PORTABLE, non-dead verification-command grep assertions inside a plan.
+  - Added two "When to Use" bullets: (a) re-deriving a cited file:line with
+    `grep -n <stable-substring> <file>` before quoting it; (b) writing a plan
+    verification block whose grep assertions must be portable and able-to-fail.
+  - Extended the Verified Workflow / Quick Reference with `grep -n '<stable-substring>'
+    <file>` to re-derive a line number, and the positive+negative paired-assertion
+    idiom (`grep -q 'NEW' FILE && ! grep -q 'OLD' FILE`).
+  - Added two Failed Attempts rows: (1) citing inherited "lines 91-93" verbatim
+    without re-deriving (actual 93-95, 2-line drift, reviewer-flagged); (2) a
+    cross-line / GNU-only regex (`grep -q 'green\s*\n*.*load-bearing\|...'`) that was
+    a dead branch line-oriented grep could never match.
+  - Added a "Verified On" row for ProjectProteus issue #182.
+  - Added `history:` frontmatter field and a History reference line in the body.
+- **Why:**
+  - A FIRST plan for ProjectProteus issue #182 cited the CLAUDE.md "Known Critical
+    Defects" entry as "lines 91-93"; the reviewer flagged it was actually 93-95.
+    Re-derived via `grep -n 'CI unit/integration' CLAUDE.md` -> entry begins at line 93.
+    The 2-line drift was cosmetic only because the plan also quoted the verbatim block,
+    but the stale offset is a textbook reviewer ding. Generalizes the existing
+    "verify audit coordinates on disk" lesson to ANY inherited coordinate (issue body,
+    prior plan, stale audit).
+  - The same first plan's Criterion-2 check used
+    `grep -q 'green\s*\n*.*CI badge is now load-bearing\|badge is now load-bearing'`.
+    Line-oriented BRE grep never sees `\n` (one line per buffer), so `\s*\n*` is dead;
+    `\s` is a non-portable GNU extension. The branch could never match and only the
+    `|| grep -q 'resolved by PR #173'` fallback passed. Adds the rule: match a single
+    stable substring on one line, avoid `\s`/`\d`/cross-line patterns, and pair a
+    positive assertion with a negative `! grep` so the command can both pass on the
+    good state and fail on the bad state.
+- **Verification honesty:** These are PLANNING-PHASE rigor learnings. The verification
+  COMMANDS named (`grep -n 'CI unit/integration' CLAUDE.md` returning line 93; the
+  dead-branch analysis) WERE actually run/observed this session. The downstream plan
+  itself was NOT implemented or CI-validated. `verification: verified-local` is retained.
+
+---
+
+## Snapshot: v1.0.0 (previous version)
+
+```markdown
+---
+name: audit-doc-consistency-fix-verify-coordinates-on-disk
+description: "Use when planning a fix for an audit-FILED documentation-consistency issue (drifted line numbers/paths, a command that disagrees across docs). Trigger: (1) an issue cites file:line coordinates produced by a repo audit that may have drifted since filing, (2) N docs disagree on the same command/snippet and one must be brought into line with a canonical copy, (3) a repo-wide grep surfaces matches inside throwaway worktree/build copies that must be scoped out, (4) a prior-learnings suggestion proposes drift-guard CI tooling that is disproportionate for a one-line docs fix."
+category: documentation
+date: 2026-06-12
+version: "1.0.0"
+user-invocable: false
+tags:
+  - audit-coordinate-drift
+  - doc-consistency
+  - verify-on-disk
+  - canonical-source
+  - line-number-drift
+  - yagni
+  - pre-commit-verification
+  - planning-methodology
+  - cross-doc
+---
+
+# Audit Doc-Consistency Fix: Verify Coordinates On Disk
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-06-12 |
+| **Objective** | Plan a fix for an audit-filed documentation-consistency issue (drifted coordinates, a command that disagrees across docs) without trusting stale audit coordinates, without over-scoping into throwaway worktree copies, and without bolting on disproportionate CI tooling |
+| **Outcome** | A repeatable planning methodology: grep the repo to re-anchor every cited coordinate, source the replacement verbatim from an already-correct canonical doc, scope out worktree/build copies, decline drift-guard CI tooling (YAGNI), and verify docs-only via markdownlint + grep agreement |
+| **Verification** | verified-precommit |
+| **History** | n/a — new skill |
+
+## When to Use
+
+- An issue was **filed by a repository audit** and cites `file:line` coordinates that may have drifted between filing and execution (e.g. `README.md:58-61` that is really at `README.md:60`).
+- The cited path itself may be wrong (e.g. an audit said `scripts/install_hooks.sh:41` but the file lives at `scripts/shell/install_hooks.sh:9`).
+- Two or more documents disagree on the same command/snippet and you must bring the offender into line with the others.
+- A repo-wide `grep` surfaces matches inside `.claude/worktrees/...`, `build/.worktrees/...`, or other throwaway/untracked copies that must be explicitly scoped out.
+- A prior-learnings or reviewer suggestion proposes a grep-based CI drift-guard for a change that is only a one-line docs edit.
+- The change is documentation-only and you need to decide what the actual verification gate is (spoiler: markdownlint via pre-commit, not unit tests).
+
+## Proposed Workflow
+
+> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
+>
+> **Heading note:** The repository validator (`scripts/validate_plugins.py`) hard-requires the literal section string `## Verified Workflow`, so the canonical workflow steps below are emitted under that heading to keep validation green. This skill is a **planning methodology** captured at `verified-precommit` level — the planning steps and on-disk grep facts were directly verified this session, but the end-to-end fix was NOT executed or CI-confirmed. Read the steps below as **proposed**, per the warning above.
+
+## Verified Workflow
+
+> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
+
+### Quick Reference
+
+```bash
+# 1. Re-anchor EVERY audit-cited coordinate on disk before planning any edit.
+#    Do not trust file:line from an audit-filed issue.
+grep -rn "pre-commit install" --include='*.md' --include='*.sh' . \
+  | grep -v -e '\.claude/worktrees/' -e 'build/\.worktrees/' -e '/build/'
+
+# 2. List ONLY tracked copies (excludes throwaway worktree/build copies by construction).
+git ls-files | grep -E '(README|CONTRIBUTING)\.md|install_hooks\.sh'
+git grep -n "pre-commit install" -- $(git ls-files)
+
+# 3. Identify which copies are already canonical/correct, then copy their EXACT form
+#    into the offender. Never compose a new command from scratch.
+git grep -n "pixi run pre-commit install"   # the canonical form already present elsewhere
+
+# 4. Apply the one-line edit in the offending doc only (verbatim from canonical copy).
+
+# 5. Verify (docs-only => markdownlint via pre-commit is the ONLY gate; no unit tests).
+pixi run pre-commit run --files README.md
+# then assert all tracked copies now agree:
+git grep -n "pre-commit install" -- $(git ls-files) \
+  | grep -v "pixi run pre-commit install"   # expect: ZERO lines
+```
+
+### Detailed Steps
+
+1. **Re-anchor every audit coordinate on disk.** For each `file:line` the issue
+   cites, `grep -n` the actual repo. Treat the cited line numbers AND paths as
+   hints only. In issue #1215 the audit cited `README.md:58-61`,
+   `CONTRIBUTING.md:43`, and `install_hooks.sh:41`; on disk the real locations
+   were `README.md:60`, `CONTRIBUTING.md:61`, and
+   `scripts/shell/install_hooks.sh:9` (wrong subdir too). The finding HELD, but
+   every cited coordinate was stale. Plan against disk reality, not the issue body.
+
+2. **Identify the canonical copy; source the fix verbatim.** When N docs disagree
+   on a command, find which copies are already correct and copy their EXACT form
+   into the offender. In #1215, `CONTRIBUTING.md` and
+   `scripts/shell/install_hooks.sh` already used `pixi run pre-commit install`;
+   the fix was to make `README.md` match them — not to invent a new command form
+   that could become a third divergent variant.
+
+3. **Grep ALL copies; scope out throwaway worktree/build dirs.** Run a repo-wide
+   grep so you do not miss a divergent copy, but a raw `grep -rn` will surface hits
+   under `.claude/worktrees/...` and `build/.worktrees/...`. Those are
+   untracked/throwaway worktree copies. Exclude them via `grep --exclude-dir`, or
+   (cleaner) filter to `git ls-files` / use `git grep -- $(git ls-files)` so only
+   tracked source is in scope. State the out-of-scope dirs explicitly in the plan.
+
+4. **Apply YAGNI to drift-guard tooling.** If a prior-learnings or reviewer
+   suggestion proposes a grep-based CI consistency guard to prevent future drift,
+   recognize it as disproportionate scope for a one-line docs fix. DECLINE it, and
+   write the decline + the reason into the plan rather than silently dropping it.
+
+5. **Verify as docs-only.** No unit tests apply. The only gate is markdownlint via
+   pre-commit: `pixi run pre-commit run --files <file>`, plus grep assertions that
+   all tracked copies now agree on the command. Project-specific ship gates
+   (ProjectHephaestus: `state:implementation-go` label + `pr-policy`) come from
+   project memory and should be re-verified, not assumed.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| ------- | -------------- | ------------- | -------------- |
+| Trusted audit line numbers `README.md:58-61` / `install_hooks.sh:41` blindly | Planned edits directly at the cited coordinates | Every cited coordinate was stale — real locations were `README.md:60`, `CONTRIBUTING.md:61`, and `scripts/shell/install_hooks.sh:9` (wrong subdir too) | Grep the repo to re-anchor before trusting any audit-filed coordinate |
+| Repo-wide grep matched `.claude/worktrees/` and `build/.worktrees/` copies | Scoped the fix from a raw `grep -rn` hit list | Those are throwaway, untracked worktree copies, not tracked source — risks editing the wrong file or over-scoping | Exclude worktree/build dirs explicitly, or filter to `git ls-files` / `git grep` |
+| Composing a new corrected command from scratch for README | Inventing the fixed command form rather than copying an existing one | Risks introducing a THIRD divergent form instead of converging on the canonical one | Copy the exact form verbatim from an already-correct canonical doc |
+| Considered adding a grep-based CI drift-guard | Proposed a consistency-check CI step to prevent recurrence | Disproportionate scope for a one-line docs fix (YAGNI violation) | Apply YAGNI; state the decline + reason explicitly in the plan |
+
+## Results & Parameters
+
+Concrete facts from the ProjectHephaestus issue #1215 planning session (a one-line
+README fix: prefix `pre-commit install` so it reads `pixi run pre-commit install`):
+
+- **Audit-cited vs on-disk coordinates (all cited coordinates were stale):**
+
+  | Audit cited | Real on-disk location |
+  | ----------- | --------------------- |
+  | `README.md:58-61` | `README.md:60` |
+  | `CONTRIBUTING.md:43` | `CONTRIBUTING.md:61` |
+  | `scripts/install_hooks.sh:41` | `scripts/shell/install_hooks.sh:9` |
+
+- **Canonical form to copy verbatim:** `pixi run pre-commit install` — already used
+  by TWO independent canonical sources (`CONTRIBUTING.md`,
+  `scripts/shell/install_hooks.sh`). The offender was `README.md`.
+
+- **Scope-out dirs (throwaway, untracked):** `.claude/worktrees/...`,
+  `build/.worktrees/...`. Exclude via `grep --exclude-dir` or `git ls-files`.
+
+- **Verification gate (docs-only):** `pixi run pre-commit run --files <file>`
+  (markdownlint). No unit tests apply. Plus a grep assertion that every tracked
+  copy now reads `pixi run pre-commit install`.
+
+### Risks for the plan reviewer
+
+- **Source-consistency, not failure-reproduction.** The plan relies on
+  `pixi run pre-commit install` being the genuinely-correct form. It was verified
+  that TWO independent canonical sources already use it, but the command was NOT
+  actually executed on a clean machine — verification is by source-consistency, NOT
+  by reproducing the original "command not found" failure.
+- **Project-specific ship gates not re-verified.** The `state:implementation-go`
+  label requirement and `pr-policy` gating are ProjectHephaestus-specific and were
+  taken from project memory, not re-verified this session. Re-confirm before relying
+  on them.
+- **Coordinate drift is the default, not the exception.** Any audit-filed issue
+  whose coordinates were captured at filing time should be assumed drifted; the
+  finding can hold while every coordinate is wrong.
+```

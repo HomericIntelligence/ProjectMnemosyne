@@ -1,12 +1,13 @@
 ---
 name: github-issue-workflow-and-preflight-gates
-description: "Use when: (1) starting work on any GitHub issue — run preflight checks to avoid duplicate implementation, (2) building or maintaining automated preflight safety gates in issue-implementation workflows, (3) filing 10–40 audit findings as a tracked GitHub issue queue with a parent tracker, (4) filing issues that cite repo-internal markdown docs — push docs to origin/main first so URLs resolve on first render, (5) posting structured progress updates or completion summaries to GitHub issues, (6) filing a feature request against a third-party OSS repo with a proposed patch and duplicate check, (7) verifying an already-resolved issue and closing it with grep evidence, (8) the duplicate-search before filing often reshapes scope — finding an existing issue may convert 'file N issues' into 'comment on K existing + file (N-K) new'"
+description: "Use when: (1) starting work on any GitHub issue — run preflight checks to avoid duplicate implementation, (2) building or maintaining automated preflight safety gates in issue-implementation workflows, (3) filing 10–40 audit findings as a tracked GitHub issue queue with a parent tracker, (4) filing issues that cite repo-internal markdown docs — push docs to origin/main first so URLs resolve on first render, (5) posting structured progress updates or completion summaries to GitHub issues, (6) filing a feature request against a third-party OSS repo with a proposed patch and duplicate check, (7) verifying an already-resolved issue and closing it with grep evidence, (8) the duplicate-search before filing often reshapes scope — finding an existing issue may convert 'file N issues' into 'comment on K existing + file (N-K) new', (9) a transient validation transcript captures a real unresolved bug and should become a durable GitHub bug issue instead of a checked-in artifact"
 category: tooling
-date: 2026-06-08
-version: "1.2.0"
+date: 2026-06-17
+version: "1.3.0"
 user-invocable: false
+verification: verified-ci
 history: github-issue-workflow-and-preflight-gates.history
-tags: [github, issues, preflight, duplicate-prevention, workflow, bulk-filing, tracker, audit, progress-update, upstream, feature-request, safety-gates, automation]
+tags: [github, issues, preflight, duplicate-prevention, workflow, bulk-filing, tracker, audit, progress-update, upstream, feature-request, safety-gates, automation, validation-artifacts, bug-template]
 ---
 
 # GitHub Issue Workflow and Preflight Gates
@@ -15,10 +16,12 @@ tags: [github, issues, preflight, duplicate-prevention, workflow, bulk-filing, t
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-05-19 |
+| **Date** | 2026-06-17 |
 | **Objective** | Consolidate GitHub issue lifecycle disciplines: preflight duplicate-prevention checks, automated safety gates, bulk audit-to-issue filing, doc-push-before-filing ordering, structured progress updates, and upstream OSS feature requests |
-| **Outcome** | Covers the full operational workflow around GitHub issues — from "verify before starting" to "post structured completion update" |
-| **Key Learning** | Always run preflight checks (~6 s) before any implementation; stage issue bodies as local files before bulk filing; push repo-internal docs to `origin/main` before filing issues that cite them |
+| **Outcome** | Covers the full operational workflow around GitHub issues — from "verify before starting" to "post structured completion update"; now includes converting transient validation transcripts into durable bug issues without committing the transcript |
+| **Verification** | verified-ci |
+| **History** | [changelog](./github-issue-workflow-and-preflight-gates.history) |
+| **Key Learning** | Always run preflight checks (~6 s) before any implementation; stage issue bodies as local files before bulk filing; push repo-internal docs to `origin/main` before filing issues that cite them; unresolved bugs from validation artifacts belong in GitHub issues using the repo template |
 
 Consolidates: `preflight-verify-before-implementing`, `preflight-script-integration-patterns`,
 `documentation-bulk-audit-issue-filing`, `push-docs-before-filing-issues`,
@@ -33,6 +36,7 @@ Consolidates: `preflight-verify-before-implementing`, `preflight-script-integrat
 - **Progress updates**: Reporting implementation progress, design decisions, blockers, or completion summaries to a GitHub issue
 - **Upstream feature requests**: Filing a feature/bug against a third-party OSS repo with a proposed patch gist and duplicate check; even when the task says "file N issues" — the duplicate-search pass can collapse scope (e.g., turn "file 2 issues" into "comment on 1 existing + file 1 new")
 - **Verify-and-close**: An issue is suspected to be already resolved — verify absence of the removed content with grep, confirm replacement content exists at path:line, comment the evidence on the issue, then close it
+- **Validation artifact cleanup**: A PR or branch contains ad hoc validation transcripts (`artifacts/*validation*.md`) that should not be checked in, but one transcript records a real unresolved bug; file the bug with the repo's issue template, then delete the transient artifact and update docs/tests to reference the durable issue number
 
 **Don't use when:**
 - Filing 1–3 standalone issues with no cross-references — manual filing is fine
@@ -163,6 +167,26 @@ gh issue comment <number> --body "$(printf 'Verified already resolved.\n\nEviden
 
 # 4. Close the issue
 gh issue close <number> --reason completed
+
+# -- VALIDATION TRANSCRIPT -> DURABLE BUG ISSUE --
+
+# 1. Read the repo's bug template and draft a concise body outside the repo.
+sed -n '1,220p' .github/ISSUE_TEMPLATE/bug_report.md
+ISSUE_BODY=/tmp/<repo>-<bug-slug>.md
+$EDITOR "$ISSUE_BODY"
+
+# 2. File the durable bug issue using the template structure.
+gh issue create --repo <owner>/<repo> \
+  --title "Bug: <concise observed failure>" \
+  --label bug \
+  --body-file "$ISSUE_BODY"
+
+# 3. Delete the transient validation transcript(s) from the branch.
+git rm artifacts/<transient-validation-transcript>.md
+
+# 4. Update docs/tests to reference the GitHub issue, then prove stale names are gone.
+rg -n "<old-artifact-stem-1>|<old-artifact-stem-2>|validation-transcript" .
+# Expected for complete cleanup: exit code 1 with no output.
 ```
 
 ### Preflight Decision Matrix
@@ -280,6 +304,27 @@ Apply: `curl -sL <raw gist URL> | git apply`
 Syntax-checked with `bash -n`; smoke-tested with `<DEV_MODE>=1` in throwaway repo.
 ```
 
+### Validation Transcript to Durable Bug Issue
+
+Use this when an ad hoc validation transcript proves a real bug but the transcript itself
+is not durable source material. The issue tracker is the durable bug record; the artifact
+is temporary evidence.
+
+1. Read `.github/ISSUE_TEMPLATE/bug_report.md` in the target repo and mirror its headings,
+   checklist, and status fields rather than writing a free-form issue.
+2. Convert the transcript into a concise issue body that preserves dated evidence,
+   endpoint/model details, observed behavior, expected behavior, reproduction steps, and
+   current checklist/status.
+3. Keep the draft body outside the repo, for example `/tmp/<repo>-<bug-slug>.md`, so the
+   PR branch does not accumulate another disposable artifact.
+4. File the issue with `gh issue create --repo <owner>/<repo> --title "Bug: ..." --label bug
+   --body-file /tmp/<repo>-<bug-slug>.md`.
+5. Remove the transient validation artifact files from the PR branch.
+6. Update docs/tests to reference the durable GitHub issue number/URL instead of the
+   deleted artifact names.
+7. Run a stale-reference scan with every old filename stem. `rg` exit code 1 with no
+   output is the expected success state.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -309,6 +354,7 @@ Syntax-checked with `bash -n`; smoke-tested with `<DEV_MODE>=1` in throwaway rep
 | Skipped the duplicate-check because the task said "file 2 issues" | Treated issue-filing requirement as literal, started drafting both bodies | One was already filed (by the same author) months earlier; the other was based on a stale audit (the cited code already existed). Drafting both consumed time before discovery | Always run duplicate-search FIRST — even when the upstream relationship is yours. Authors forget what they've filed. The duplicate-collapse can re-scope the entire task, not merely confirm absence. |
 | Pipe to preserve exit code in bash preflight tests | `bash -c "..." \| cat; echo $?` | Pipe runs in subshell; `$?` is lost | Write output to temp file, capture `LAST_EXIT=$?` after |
 | Concluding "already resolved" from keyword presence without grep | Assumed absence of macos/windows CI refs from memory | Keyword presence elsewhere in context does not prove absence in files | Always run `grep -rn <removed-content> <dir>` and confirm exit code 1 before closing |
+| Checking in transient validation transcripts | Kept ad hoc `artifacts/<date>-<pr>-validation*.md` files on a PR branch | The transcript created repo churn and stale evidence. One transcript represented a real unresolved bug, so deleting it without a durable bug record would lose the follow-up path | Do not check in one-off validation transcripts. File the real bug with the repo's bug template, reference the GitHub issue from docs/tests, delete the transient files, and scan for stale artifact names before committing |
 
 ## Results & Parameters
 
@@ -391,3 +437,4 @@ Use secret gists for proposed patches on third-party repos.
 | mvillmow/Random | Predictive-Coding-in-Mojo Pass 4 | Filed epic #4 + 25 child issues #5–#29; all 25 cross-links resolved on first render |
 | HaywardMorihara/gh-tidy | `--auto-delete` feature request | Issue #62 filed; gist created; throwaway clone cleaned up |
 | ProjectHephaestus | Issue #539 verify-and-close | `grep -rn "macos-latest\|windows-latest" .github/` → exit 1; `.github/workflows/test.yml:58: os: [ubuntu-latest]` confirmed; issue closed via `gh issue close 539 --reason completed` |
+| H200 Slurm inference stack | PR #155 validation-artifact cleanup | Durable bug issue #158 created from the unresolved validation finding; PR #155 checks passed after transient artifacts were removed and stale artifact names were replaced with issue references |

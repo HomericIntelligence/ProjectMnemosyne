@@ -1,11 +1,12 @@
 ---
 name: lockfile-and-release-pipeline-management
-description: "Recover drifted lockfiles, resync dependency lockfiles after manifest edits, fix silent release recipe failures, enforce version single-source-of-truth, and configure Renovate for multi-ecosystem repos. Use when: (1) CI rejects a generated lockfile (pixi.lock, Cargo.lock, package-lock.json) and the source manifest is unchanged vs main, (2) editing package.json without regenerating package-lock.json causes npm ci EUSAGE failures, (3) `just release X.Y.Z` exits non-zero with 'nothing to commit' because pyprojects already have the target version, (4) project version is declared in multiple files that can drift and you need a single-source-of-truth strategy with pre-commit guards, (5) adding automated dependency updates (Renovate) to a C++20 repo with Conan, FetchContent, pixi, GHA, and Dockerfiles, (6) `pixi install` fails with `No candidates were found for <pkg> ==<version>` because a pinned nightly/dev-build artifact was garbage-collected from the channel."
+description: "Recover drifted lockfiles, resync dependency lockfiles after manifest edits, fix silent release recipe failures, enforce version single-source-of-truth, configure Renovate for multi-ecosystem repos, and stabilize lockfile-backed Dependabot CI gates without deleting tests. Use when: (1) CI rejects a generated lockfile (pixi.lock, Cargo.lock, package-lock.json) and the source manifest is unchanged vs main, (2) editing package.json without regenerating package-lock.json causes npm ci EUSAGE failures, (3) `just release X.Y.Z` exits non-zero with 'nothing to commit' because pyprojects already have the target version, (4) project version is declared in multiple files that can drift and you need a single-source-of-truth strategy with pre-commit guards, (5) adding automated dependency updates (Renovate) to a C++20 repo with Conan, FetchContent, pixi, GHA, and Dockerfiles, (6) `pixi install` fails with `No candidates were found for <pkg> ==<version>` because a pinned nightly/dev-build artifact was garbage-collected from the channel, (7) multiple Dependabot PRs fail because CI contract tests hardcode exact dependency versions or split exact-peer dependency families across separate PRs."
 category: ci-cd
-date: 2026-05-19
-version: "1.1.0"
+date: 2026-06-17
+version: "1.2.0"
 user-invocable: false
 history: lockfile-and-release-pipeline-management.history
+verification: verified-ci
 tags:
   - lockfile
   - pixi-lock
@@ -30,6 +31,12 @@ tags:
   - unsolvable-pin
   - mojo
   - pixi-install
+  - dependabot
+  - angular
+  - peer-dependencies
+  - pip-audit
+  - contract-tests
+  - vulnerability-allowlist
 ---
 
 # Lockfile and Release Pipeline Management
@@ -38,10 +45,11 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-05-19 |
-| **Objective** | Canonical skill covering the full gap between "dependency declared" and "lockfile/version consistent in CI": verbatim lockfile restoration from main, npm lockfile resync, release recipe no-op diagnosis, version single-source-of-truth enforcement, Renovate setup for heterogeneous C++ repos, and recovery from a pinned nightly/dev-build artifact garbage-collected from its channel |
-| **Outcome** | Merged from 5 verified skills; patterns confirmed across ProjectAgamemnon, ProjectProteus, ProjectScylla; v1.1.0 adds the GC'd-nightly failure mode (predictive-coding research project) |
-| **Verification** | verified-ci (lockfile restore, npm resync); verified-local (release recipe, versioning, GC'd-nightly recovery); unverified (Renovate — app install in progress) |
+| **Date** | 2026-06-17 |
+| **Objective** | Canonical skill covering the full gap between "dependency declared" and "lockfile/version consistent in CI": verbatim lockfile restoration from main, npm lockfile resync, release recipe no-op diagnosis, version single-source-of-truth enforcement, Renovate setup for heterogeneous C++ repos, recovery from pinned nightly/dev-build artifact GC, and lockfile-backed Dependabot CI contract stabilization |
+| **Outcome** | Merged from 5 verified skills; patterns confirmed across ProjectAgamemnon, ProjectProteus, ProjectScylla; v1.1.0 added the GC'd-nightly failure mode; v1.2.0 adds the Radiance Dependabot contract case |
+| **Verification** | verified-ci (lockfile restore, npm resync, Radiance Dependabot contract stabilization); verified-local (release recipe, versioning, GC'd-nightly recovery); unverified (Renovate - app install in progress) |
+| **History** | Previous v1.1.0 snapshot archived in `lockfile-and-release-pipeline-management.history` |
 
 ## When to Use
 
@@ -53,6 +61,9 @@ tags:
 - CHANGELOG references phantom future versions that don't exist yet as tags
 - Adding Renovate bot to a C++20 repo using Conan, CMake FetchContent, pixi, GitHub Actions, and Dockerfiles
 - A pinned nightly or dev-build dependency (`==X.Y.Zb2.devYYYYMMDD`-style) can no longer be resolved because the artifact was GC'd from the package channel; you need to repin and lock
+- Multiple Dependabot PRs fail because a contract test hardcodes exact dependency versions instead of checking that manifest and lockfile entries remain pinned and internally consistent
+- Single-package frontend PRs fail `npm ci` because the ecosystem has exact peer dependencies (for example Angular packages) and the bot opened each peer-package bump separately
+- A dependency-audit gate blocks on a vulnerability with no fixed version and the correct action is a narrow, expiring allowlist with tests, not disabling the audit or deleting tests
 
 ## Verified Workflow
 
@@ -127,6 +138,25 @@ pixi search <pkg> -c <channel>          # e.g. -c https://conda.modular.com/max
 pixi install                            # generates pixi.lock against the new pin
 git add pixi.toml pixi.lock
 git commit -S -m "fix(deps): repin <pkg> to <build> after nightly GC; commit pixi.lock"
+
+# ── G. Lockfile-backed Dependabot CI contract stabilization ─────────────────
+# Enumerate failing bot PRs and group by failure signature.
+gh pr list --state open --author app/dependabot --json number,title,statusCheckRollup
+gh pr checks <PR> --repo <owner/repo>
+
+# Prefer structural contract checks over current-version literals:
+# - manifest requires an exact pin where policy demands one
+# - lockfile root/package entries match the manifest
+# - related package entries remain internally consistent
+
+# Exact-peer families must usually move together, then the lockfile is regenerated.
+cd vendor/model_explorer/src/ui
+npm install --package-lock-only
+npm ci
+
+# After the stabilization PR lands, update still-open Dependabot PR branches.
+gh api -X PUT repos/<owner>/<repo>/pulls/<PR>/update-branch \
+  -f expected_head_sha=<current-head-sha>
 ```
 
 ### Detailed Steps
@@ -295,6 +325,40 @@ artifact by content hash + URL); with no lockfile, the pin is unrecoverable. The
 window to lock is "while the artifact still exists" — "lock it later" is not a plan.
 Prefer pinning a release build over a dated nightly when reproducibility matters.
 
+#### G - Lockfile-backed Dependabot CI Contract Stabilization
+
+1. **Enumerate failing bot PRs and group by failure signature.** Use the PR check
+   rollups and logs to separate deterministic contract failures from runner flakes.
+   Multiple PRs failing the same test usually means the contract is too literal, not
+   that every PR is independently broken.
+
+2. **Replace hardcoded current versions with structural checks.** If a test asserts
+   "dev extra X must equal version Y" or "lockfile package Z must equal version Y",
+   check the invariant instead: exact pins where policy requires them, manifest and
+   lockfile agreement, and internal consistency across related lockfile entries.
+   Do not delete the test; make it express the dependency contract that survives a
+   legitimate Dependabot bump.
+
+3. **Group exact-peer dependency families.** For ecosystems with exact peer ranges
+   (Angular is the common case), a one-package Dependabot PR can be impossible to
+   install. Move the exact-peer family together in one stabilization PR, regenerate
+   the lockfile from the package directory, and let superseded bot PRs close.
+
+4. **Use narrow allowlists for no-fixed-version advisories.** If an audit gate fails
+   on an advisory with no fixed versions, allow exactly the affected package,
+   version, and advisory, with an expiry and a condition that fixed versions remain
+   empty. Add tests that fail when the advisory becomes fixable or the allowlist
+   expires.
+
+5. **Verify the same gates that failed.** Run focused contract tests, `npm ci`,
+   package/build validation, and the security policy script locally where feasible,
+   then require a fresh CI pass on the stabilization PR.
+
+6. **Update original bot PR branches after the stabilization lands.** For still-open
+   Dependabot PRs, call the update-branch API with the current head SHA so the bot
+   branch picks up the generalized tests. Let branches that are now no-ops close
+   naturally rather than hand-editing every bot branch.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -314,6 +378,9 @@ Prefer pinning a release build over a dated nightly when reproducibility matters
 | Dependabot for Conan \| pixi \| FetchContent | Considered GitHub Dependabot as Renovate alternative | Dependabot has no native Conan, pixi, or FetchContent support | Renovate is the correct choice for C++ ecosystems |
 | Single Renovate config at meta-repo root covering all submodules | One `renovate.json` at Odysseus root | Submodules are separate git repos — Renovate needs a config per repo to open PRs | Use `ignorePaths` in the meta-repo config; put individual configs in each submodule |
 | Pinned a Mojo nightly (`==1.0.0b2.dev2026050805`) and deferred generating the lockfile | Left `pixi.lock` ungenerated for weeks after pinning the nightly toolchain build | The nightly was garbage-collected from `conda.modular.com/max`; `pixi install` then failed with `No candidates were found`. With no committed lockfile, the pin was unrecoverable — had to repin to a different build | Nightly/dev-build artifacts are GC'd from channels. Generate and commit the lockfile the moment the dependency is pinned, while the artifact still exists. Prefer pinning a release build over a dated nightly when reproducibility matters |
+| Delete or relax flaky-looking dependency contract tests | Removed hardcoded version assertions from the failing path | The failures were deterministic contract drift, not flaky tests; deleting them would hide future manifest/lockfile mismatches | Keep the tests and generalize them to structural invariants: exact pins, manifest/lockfile agreement, and internal consistency |
+| Let single Angular package PRs update independently | Trusted Dependabot's one-package bumps for an exact-peer Angular family | `npm ci` could not resolve the split exact-peer set because related Angular packages must move together | Group exact-peer packages in one PR and regenerate the lockfile from the owning package directory |
+| Add an empty or broad `pip-audit` allowlist | Suppressed the audit failure without package/version/advisory scope or expiry | A broad allowlist would hide unrelated vulnerabilities or remain after a fixed version became available | Scope allowlists to package, version, advisory, expiry, and "no fixed versions"; test stale and now-fixable behavior |
 
 ## Results & Parameters
 
@@ -455,6 +522,16 @@ of the resolved artifact; once the nightly is GC'd, "lock it later" is no longer
 possible. Prefer pinning a release build over a dated nightly when reproducibility
 matters.
 
+### G. Radiance Dependabot Contract Stabilization - Verified Facts
+
+| Fact | Detail |
+|------|--------|
+| Original scope | 10 failing Dependabot PRs (#886-#895) across Python and frontend dependency updates |
+| Contract fix | Replaced a concrete dev-extra version expectation with exact-pin checks; later generalized the frontend Playwright lock contract so expected versions are derived from `package.json` and validated across `package-lock.json` root, `node_modules/playwright`, `playwright` -> `playwright-core`, and `node_modules/playwright-core` |
+| Security fix | Added a narrow, expiring allowlist for `torch==2.11.0` / `CVE-2025-3000`, limited to the advisory's no-fixed-version state, with tests for expiry and fixable-advisory behavior |
+| Frontend fix | Grouped exact-peer Angular package updates, regenerated `vendor/model_explorer/src/ui/package-lock.json`, and left unsupported semver-major `@angular-devkit/*` updates out of scope |
+| Verification | Stabilization PR #897 reached green CI and merged; follow-up PR #904 reached green CI and merged; original Python Dependabot PRs #886-#890 passed after branch updates; #902 passed after #904; superseded Angular PRs #891-#895 closed automatically |
+
 ## Verified On
 
 | Project | Context | Details |
@@ -467,3 +544,4 @@ matters.
 | ProjectScylla | Issue #1535 (PR #1562) — reconcile CHANGELOG aspirational versions; 4808 total tests passing | Phantom version refs replaced with `[Unreleased]` convention |
 | Odysseus / ProjectAgamemnon / ProjectNestor / ProjectCharybdis | Renovate multi-ecosystem C++20 config — Conan + FetchContent regex + pixi + GHA + Dockerfile | Unverified: app installation in progress |
 | predictive-coding research project | Mojo nightly `1.0.0b2.dev2026050805` GC'd from `conda.modular.com/max`; repinned to `1.0.0b1` and locked, 2026-05-19 | First `pixi install` failed with `No candidates were found`; no `pixi.lock` had ever been committed. Upstream dep (pinned git SHA) also pinned the GC'd nightly — repin was a documented deliberate divergence |
+| Radiance | Issues #896/#903, PRs #897/#904, 2026-06-17 | Generalized lockfile-backed Dependabot contract tests, grouped exact-peer Angular updates, added a narrow no-fixed-version `pip-audit` allowlist, and updated original bot PRs until CI passed |

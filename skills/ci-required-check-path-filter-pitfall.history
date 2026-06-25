@@ -1,0 +1,148 @@
+<!-- markdownlint-disable MD024 -->
+
+# ci-required-check-path-filter-pitfall — History
+
+## v1.1.0 (2026-06-19)
+
+**Changed by:** ProjectHermes #562 R1 re-plan (NOGO→re-plan)
+**Verification:** unverified (the Hermes plan remained a plan — never merged/executed) — BUT the
+central risk of this skill was empirically confirmed on a real repo via `gh api`.
+
+### What changed
+
+- Added a prominent **CENTRAL RISK CONFIRMED** note: this skill's #1 flagged risk —
+  "is the workflow ACTUALLY a required check?" — materialized. In R1 of the ProjectHermes #562
+  plan, the assumption was checked with
+  `gh api repos/HomericIntelligence/ProjectHermes/branches/main/protection --jq
+  '.required_status_checks.contexts'` and came back
+  `["Secret Scanning (gitleaks)","justfile-check"]` ONLY. The target workflow was NOT among
+  the required contexts → the R0 keystone premise (the docker-build job is required, so a path
+  filter would brick PRs) was FALSE. This flipped the correct design from always-run to a
+  dedicated path-filtered workflow, and the unverified premise had earned a reviewer NOGO
+  (grade D) in R0.
+- Added the verification command as the FIRST thing to run before reasoning about required-check
+  behavior, plus an explicit decision rule (in-list → don't path-filter / use always-run or a
+  separate non-required workflow; not-in-list → path-filtering is the correct, KISS,
+  requirement-matching design).
+- Added two new Failed Attempts rows: (1) inferring required-ness from a filename
+  (`_required.yml`) instead of querying branch protection; (2) choosing always-run-on-every-PR to
+  dodge a nonexistent blocking-skip problem (wasted CI, non-KISS, silently reinterpreted the
+  issue's path-scoped requirement).
+- Added the copy-paste `gh api` verification command, example output, and decision table to
+  Results & Parameters.
+- Added a Verified On row for ProjectHermes #562 R1 (the empirical confirmation of the central
+  risk).
+- Bumped version 1.0.0 → 1.1.0, date → 2026-06-19, added `history:` frontmatter field.
+- Reinforced (did NOT remove) the secondary lessons: forbid-suppressions guard → make build
+  blocking; MCR-mirror only for UNPINNED bases; single-arch matching pixi `linux-64`; anchor
+  edits on job/section names, not line numbers.
+
+### Why
+
+The R0 skill (v1.0.0) flagged "UNVERIFIED that the workflow is actually a required check" as its
+#1 risk and noted the entire always-run argument rested on it. In R1 the assumption was finally
+verified — and proved FALSE. This is a high-value confirmation: the skill's own top-flagged risk
+materialized on a real repo, turning a hypothetical caution into a concrete, verified
+counter-example. The lesson is now: always query branch protection BEFORE reasoning about
+required-check / path-filter interactions; never infer required-ness from a filename. When the
+check is NOT required, path-filtering is the correct design that matches the literal requirement
+and avoids wasted CI.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: ci-required-check-path-filter-pitfall
+description: "Use when: (1) an issue asks you to run a build/job ONLY on PRs that touch certain paths (e.g. a Dockerfile, a subdirectory) and the target workflow is a REQUIRED status check — adding a workflow-level on.pull_request.paths: filter is a trap that makes path-irrelevant PRs un-mergeable, (2) planning a smoke/build gate that you are tempted to soft-fail with continue-on-error: true (a repo may have a forbid-suppressions guard that fails CI on it), (3) tempted to rewrite a digest-pinned Dockerfile FROM to an mcr.microsoft.com mirror to dodge Docker Hub rate limits (this changes the shipped image digest), (4) deciding base-image arch for a pixi/conda smoke build (linux-64 workspace cannot build linux/arm64), (5) writing a CI implementation plan and you need an uncertain-assumptions checklist a reviewer can verify (is the workflow actually a required check? are cited line numbers fresh? is the action SHA verified upstream?)."
+category: ci-cd
+date: 2026-06-19
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags:
+  - github-actions
+  - branch-protection
+  - required-checks
+  - planning
+  - paths-filter
+  - dockerfile
+  - continue-on-error
+  - mcr-mirror
+  - digest-pinning
+  - uncertain-assumptions
+---
+
+# CI Required Check + Path Filter Pitfall
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-06-19 |
+| **Objective** | Capture the durable planning rule that adding a workflow-level `on.pull_request.paths:` filter to a workflow that is wired as a REQUIRED status check is a trap: on PRs that don't touch the filtered paths the whole workflow is SKIPPED, the required context never reports, and the PR becomes un-mergeable. Plus the planning-hygiene corollaries for CI build/smoke-gate work. |
+| **Outcome** | A transferable "don't path-filter a required workflow" rule, a resolution menu (unconditional job / separate non-required workflow / per-job `if:` on a changed-files step that still reports), and an uncertain-assumptions checklist for CI plans. |
+| **Verification** | **unverified** — this is a PLAN that was written but never executed or merged. The required-check claim was inferred from a filename, not confirmed via the branch-protection API. Treat every assertion as a hypothesis. |
+
+## When to Use
+
+- An issue literally says "run a build/test only on PRs that touch `<path>`" (e.g. the Dockerfile) and the workflow you'd add it to is a **required** status check. The naive `paths:` filter CANNOT satisfy this without bricking unrelated PRs.
+- You are about to add a `paths:`/`paths-ignore:` block to a consolidated `_required.yml`-style workflow and want to know why that is wrong.
+- You are planning a smoke/build gate and considering `continue-on-error: true` to make it advisory.
+- You want to swap a Docker base image to an MCR mirror to dodge Docker Hub rate limits in CI.
+- You are choosing a base-image architecture for a pixi/conda (`linux-64`) workspace.
+- You are writing a CI implementation plan and need the high-value reviewer-facing content: the list of assumptions the plan did NOT verify.
+
+## Verified Workflow
+
+> **Warning (Proposed Workflow):** This workflow has NOT been validated end-to-end. It is an
+> implementation PLAN that was written but never executed or merged. Verification level:
+> `unverified`. The central claim — that the target workflow is a *required* status check —
+> was **inferred from the filename `_required.yml` and a `pull_request: branches:[main]`
+> trigger, NOT confirmed** via `gh api repos/:owner/:repo/branches/main/protection`. Treat
+> the whole thing as a hypothesis until CI confirms.
+
+### Quick Reference
+
+(see v1.0.0 file in git history for the full YAML quick-reference blocks: THE TRAP,
+RESOLUTION A unconditional job, RESOLUTION B per-job changed-files gate, RESOLUTION C separate
+non-required workflow)
+
+### Detailed Steps and Durable Insights
+
+1. HEADLINE — never put a workflow-level `paths:` filter on a required workflow. On a PR that
+   doesn't touch the filtered paths the whole workflow is skipped, the required context never
+   reports, and the PR is stuck at "Expected — Waiting for status to be reported" → un-mergeable.
+   Resolution menu: (A) unconditional cheap job, (B) per-job `if:` on a changed-files step that
+   still reports, (C) separate non-required workflow.
+2. Grep for an anti-suppression guard BEFORE proposing any soft-fail step
+   (`continue-on-error: true`). A forbid-suppressions guard fails CI on it; make the build
+   blocking.
+3. MCR-mirror trick applies to UNPINNED bases only — never to a digest-pinned FROM (changes the
+   shipped image digest).
+4. Match base-image arch to the package toolchain — a pixi `linux-64` workspace cannot build
+   `linux/arm64`; keep smoke builds single-arch host `linux/amd64`.
+5. The high-value reviewer content: the uncertain-assumptions checklist (is the workflow ACTUALLY
+   a required check? are cited line numbers fresh? is the action SHA verified upstream? is buildx
+   present? will the build hit Docker Hub rate limits?).
+
+## Failed Attempts
+
+(full table in the v1.0.0 file: workflow-level paths on required check; continue-on-error;
+MCR mirror on digest-pinned FROM; cite insertion point by line number; assume required from name;
+copy action SHA from sibling; assume buildx preinstalled; ignore Docker Hub rate limits.)
+
+## Results & Parameters
+
+- Repo / issue: HomericIntelligence/ProjectHermes, issue #562 (implementation plan).
+- Central rule: a workflow-level `paths:` filter on a REQUIRED workflow makes path-irrelevant PRs
+  un-mergeable.
+- Chosen design (R0): always-run cheap smoke job (Resolution A), single-arch `linux/amd64`,
+  blocking, digest-pinned base kept as-is.
+- Verification status: unverified — plan only; required-check status never queried.
+
+## Verified On
+
+| Project | Context | Details |
+| ------- | ------- | ------- |
+| ProjectHermes | Issue #562 — implementation plan | Add Dockerfile smoke build to `_required.yml`, path-scoped to Dockerfile PRs; **unverified** — plan written, never executed or merged; required-check status never confirmed via API |
+```

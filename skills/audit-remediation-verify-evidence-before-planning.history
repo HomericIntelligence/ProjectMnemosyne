@@ -1,0 +1,167 @@
+# Changelog: audit-remediation-verify-evidence-before-planning
+
+## v1.1.0 -> v1.2.0 (2026-06-21)
+
+- **Version:** 1.1.0 -> 1.2.0 (MINOR — adds new findings/failed-attempts, not a rewrite)
+- **Date:** 2026-06-21
+- **Changed by:** ProjectHephaestus issue #1553 ("Skills missing `argument-hint` frontmatter field") planning
+- **Verification level:** verified-local (the evidence re-reads + parse-checks were RUN this session; the PR/CI for #1553 had NOT landed at capture time)
+- **What changed:**
+  - Generalized the description from cross-repo-only to ANY audit, with explicit emphasis on multi-target audits where a SUBSET is already fixed, the scope-creep discipline (fix only named targets), and the "no test for an unenforced doc/UX field" rule. Added trigger (4) for multi-target partial-staleness.
+  - Added a `v1.2.0 note` to the Overview documenting the single-repo, multi-target frontmatter case: `skills/brainstorm/SKILL.md:4` already had `argument-hint` (stale audit), only `python-repo-modernization` was genuinely missing; the field is unenforced so verification is a YAML parse, not a unit test.
+  - Added two "When to Use" triggers (multi-target audits; unenforced config/frontmatter fields) and a "Related" cross-reference to `agent-config-validation-and-integrity`.
+  - Added Verified Workflow steps 8-11: verify each named target separately; survey the whole population for convention + true scope but fix only named targets; don't invent a test where no contract exists; derive the field value from behavior and place it per convention.
+  - Added a multi-target-frontmatter block to Quick Reference (per-target `sed`, population survey `awk`, no-test-contract grep, frontmatter-parse `python3 -c`).
+  - Added four Failed Attempts rows (trusting a multi-target audit verbatim -> no-op edit on already-fixed `brainstorm`; expanding the fix to all skills -> scope creep; inventing a unit test for an unenforced field; copying a generic placeholder for the field value).
+  - Added a ProjectHephaestus #1553 block to Results & Parameters (named targets + their states, convention, enforcement = none, out-of-scope siblings, provenance taken at face value).
+- **Why:**
+  - Planning #1553, the issue named TWO skills as missing `argument-hint`, but `skills/brainstorm/SKILL.md:1-6` already had it at line 4 (audit snapshot 2026-06-16 was stale). Trusting the issue verbatim would have planned a no-op edit a reviewer NOGOs. A repo-wide `awk` survey both confirmed `brainstorm` was already compliant and surfaced ~10 other non-compliant skills — deliberately excluded to respect one-issue-per-PR. The field has no test contract (`grep -rl "argument-hint" tests/` empty), so verification is a frontmatter parse, not a unit test. These sharpen the existing skill's core lesson (re-read cited evidence before planning) for the multi-target, single-repo, unenforced-field shape.
+
+---
+
+## Snapshot: v1.1.0 (previous version)
+
+```markdown
+---
+name: audit-remediation-verify-evidence-before-planning
+description: "Before planning a fix for a cross-repo audit/remediation issue, verify the audit's cited evidence (file:line) against the live tree — audit findings go stale once the target repo is independently remediated. Use when: (1) planning a fix for an audit-filed issue with file:line evidence, (2) the issue spans multiple repos or submodules, (3) the issue recommends doc/field-name changes that may already be done."
+category: architecture
+date: 2026-06-19
+version: "1.1.0"
+user-invocable: false
+verification: verified-local
+history: audit-remediation-verify-evidence-before-planning.history
+tags: []
+---
+
+# Audit Remediation: Verify Evidence Before Planning
+
+**History:** [changelog](./audit-remediation-verify-evidence-before-planning.history)
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-06-19 |
+| **Objective** | Plan a fix for a cross-repo audit-remediation GitHub issue without trusting stale audit evidence |
+| **Outcome** | Discovered the audit was stale — target submodule already remediated; scoped the plan to only the genuinely-actionable owned-repo work + a drift guard |
+| **Verification** | verified-local |
+
+> **Verification note:** The evidence-verification steps below (grep against the live tree, confirming canonical names in the Pydantic source of truth) were genuinely RUN this session and confirmed the target docs were already remediated — that is what `verified-local` attests to. The downstream implementation (the architecture.md section + the drift-guard script wired into `just ci`) was **planned only**, not executed or CI-validated. Do not read this as `verified-ci`.
+>
+> **v1.1.0 note:** The canonical mapping (`subject`/`assign_to`/`blocked_by` model fields serialized as `subject`/`assigneeAgentId`/`blockedBy`) was verified this session by reading BOTH `models.py` AND `agamemnon_client.py` against the live tree. The corresponding architecture.md table edit itself was **planned only**, not executed or CI-validated.
+
+(Full v1.1.0 body preserved in git history at commit fab878e6; this snapshot records the frontmatter and Overview. The v1.1.0 Verified Workflow had 7 steps; Failed Attempts had 6 rows; Results & Parameters listed the two-layer canonical mapping and submodule exclusion dirs.)
+```
+
+## v1.0.0 -> v1.1.0 (2026-06-19)
+
+- **Version:** 1.0.0 -> 1.1.0 (MINOR — adds new findings/failed-attempts, not a rewrite)
+- **Date:** 2026-06-19
+- **Changed by:** Odysseus issue #25 re-plan after reviewer NOGO (fabricated canonical-names row)
+- **Verification level:** verified-local
+- **What changed:**
+  - Added a "When to Use" trigger for authoring docs/tables that CLAIM canonical
+    names or values — every cell must be code-traceable.
+  - Extended the Verified Workflow with a step requiring each canonical-table cell
+    to be read from the source of truth, distinguishing the model/field layer
+    (Pydantic `assign_to`) from the serialization/wire layer (JSON `assigneeAgentId`),
+    and adding a positive (cell == code) AND negative (guessed-wrong name absent)
+    check rather than relying on the deprecated-token drift guard.
+  - Added Quick Reference greps for both layers plus a negative grep.
+  - Added three Failed Attempts rows (fabricated canonical row; conflating model
+    field with wire key; trusting the drift guard to catch a wrong canonical name).
+  - Corrected Results & Parameters: the real mapping is model `subject`/`assign_to`/
+    `blocked_by` (models.py:38,40,41) -> wire `subject`/`assigneeAgentId`/`blockedBy`
+    (agamemnon_client.py:207,211,214,216); deprecated forms are `title`/`depends_on`
+    only. The prior v1.0.0 wrongly listed `assignee_agent_id`/`assigneeAgentId` as a
+    canonical field — there is no `assignee_agent_id` field.
+  - Added `history` frontmatter field and a History reference line in the body.
+- **Why:**
+  - A FIRST re-plan for Odysseus issue #25 added a "Canonical Workflow Field Names"
+    table to docs/architecture.md but fabricated a row: canonical `assignee_agent_id`
+    / wire `assigneeAgentId` / deprecated `assigned_to (legacy)`. A reviewer caught
+    this as a MAJOR P7/POLA finding. The real Pydantic field is `assign_to`
+    (models.py:40), serialized over the wire as `assigneeAgentId`
+    (agamemnon_client.py:211,214). There is NO `assignee_agent_id` field and NO
+    `assigned_to (legacy)` deprecated form — both were unverified guesses.
+  - The existing drift guard only greps for the OLD tokens (`title`/`depends_on`),
+    so it could never catch a wrong NEW canonical name introduced in the doc. The
+    sharper lesson: a canonical table you author must be code-traceable cell-by-cell,
+    with both a positive and a negative check.
+
+---
+
+## Snapshot: v1.0.0 (previous version)
+
+```markdown
+---
+name: audit-remediation-verify-evidence-before-planning
+description: "Before planning a fix for a cross-repo audit/remediation issue, verify the audit's cited evidence (file:line) against the live tree — audit findings go stale once the target repo is independently remediated. Use when: (1) planning a fix for an audit-filed issue with file:line evidence, (2) the issue spans multiple repos or submodules, (3) the issue recommends doc/field-name changes that may already be done."
+category: architecture
+date: 2026-06-19
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: []
+---
+
+# Audit Remediation: Verify Evidence Before Planning
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-06-19 |
+| **Objective** | Plan a fix for a cross-repo audit-remediation GitHub issue without trusting stale audit evidence |
+| **Outcome** | Discovered the audit was stale — target submodule already remediated; scoped the plan to only the genuinely-actionable owned-repo work + a drift guard |
+| **Verification** | verified-local |
+
+> **Verification note:** The evidence-verification steps below (grep against the live tree, confirming canonical names in the Pydantic source of truth) were genuinely RUN this session and confirmed the target docs were already remediated — that is what `verified-local` attests to. The downstream implementation (the architecture.md section + the drift-guard script wired into `just ci`) was **planned only**, not executed or CI-validated. Do not read this as `verified-ci`.
+
+## When to Use
+
+- Planning a fix for an issue filed by an automated/ecosystem audit that cites specific `file:line` evidence.
+- The issue spans multiple repos, especially when some are git submodules owned by other repos.
+- The recommendation is a doc/field-name/role-description change that another team may have already fixed.
+- Any "documentation drift" or "X docs show deprecated Y" issue.
+
+## Verified Workflow
+
+The evidence-verification phase (steps 1-3) was actually executed against the live tree and is the basis for the `verified-local` claim. Steps 4-6 (scoping and the drift guard) were the resulting plan, which was not itself executed in CI.
+
+1. **Read the issue's cited evidence FIRST and diff it against the live tree.** For every `file:line` the issue names, open the live file at those coordinates and confirm the claimed text is actually there. Do not assume the evidence is current — an audit captures a snapshot at filing time, and the target may have moved on.
+2. **Identify the source of truth and confirm canonical values there.** For a field-name/schema issue, the source of truth is the code (Pydantic models / enums / REST contract), not the prose. Confirm the canonical values in code, and treat docs as the thing aligned TO code, never the reverse.
+3. **Distinguish real hits from false positives — grep, then eyeball each in context.** A token like `title:` inside a generated JSON-Schema is a display label, and a method name like `test_unknown_depends_on_raises` is describing behavior — neither is a documented schema field. A raw grep count is not a violation count; inspect every hit.
+4. **Scope by ownership.** Do NOT edit files inside git submodules from the meta-repo — they are owned by their own repo and must be PR'd there (or a referencing issue filed). One PR per owned repo.
+5. **If the cited target is already remediated, say so explicitly.** State it in the plan and in the PR body, then pivot the plan to (a) the still-actionable owned-repo recommendation and (b) a drift-prevention guard so the deprecated form cannot silently return.
+6. **Match the repo's EXISTING check pattern for the guard.** Here that meant a bash script under `scripts/` plus a `just` recipe wired into `just ci` — not a new framework. A meta-repo with "no application code" should not get a pytest harness just for a doc check.
+
+### Quick Reference
+
+```bash
+# 1. Re-verify audit evidence against live tree (expect: stale audit => no hits)
+grep -nE '^[[:space:]]*-?[[:space:]]*(title|depends_on):' <cited-docs>
+# 2. Confirm canonical names in the source of truth (Pydantic model)
+grep -nE 'subject:|blocked_by:' src/<pkg>/models.py
+# 3. Check ownership before editing — submodules are off-limits from the meta-repo
+git submodule status
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| ------- | -------------- | ------------- | -------------- |
+| Trusting the audit's file:line evidence as current | Issue cited `CLAUDE.md:55-58` / `README.md:62-69` as showing `title`/`depends_on` | The submodule had already been remediated independently; those lines now use `subject`/`blocked_by` | Always re-read cited evidence against the live tree before planning |
+| Grepping for `title`/`depends_on` and treating every hit as a violation | Raw grep flagged JSON-Schema `"title":` labels and a `test_unknown_depends_on_raises` method name | These are not documented workflow fields — false positives | Anchor the pattern to field-key syntax and eyeball each hit in context |
+| Assuming the meta-repo can fix the submodule's docs in this PR | Planned to edit `provisioning/ProjectTelemachy` docs from Odysseus | Submodules are owned by their own repos; editing their working tree from the meta-repo is wrong scope | Scope edits by ownership; PR the owning repo or file a referencing issue |
+
+## Results & Parameters
+
+- **Canonical field names** (Agamemnon REST contract / Telemachy `TaskSpec`): `subject` (not `title`), `blocked_by`/`blockedBy` (not `depends_on`), `assignee_agent_id`/`assigneeAgentId`.
+- **Drift-guard pattern:** first-party-only file list via
+  `git ls-files -- '*.md' | awk '!/^(infrastructure|control|provisioning|ci-cd|research|shared|testing)\//'`;
+  field-key regex `^[[:space:]]*-?[[:space:]]*(title|depends_on):`;
+  exit `0` clean / `1` drift / `2` usage; wire into `just ci`.
+- **Submodule dirs in this ecosystem to exclude from first-party scans:** `infrastructure/` `control/` `provisioning/` `ci-cd/` `research/` `shared/` `testing/`.
+```

@@ -1,13 +1,13 @@
 ---
 name: skill-corpus-merge-consolidation-workflow
-description: "Workflows for maintaining a skills corpus: deduplicating overlapping skills, merging clusters into canonicals, preserving history snapshots, enumerating cluster members from examples, migrating formats (hierarchical→flat, dual-dir→single), and generalizing skills for cross-repo compatibility. Use when: (1) multiple skills share a common prefix and cover redundant content, (2) a merge epic lists only example members and a full member list is needed, (3) a merge PR deletes originals and their content must remain searchable, (4) legacy skills/<category>/<name>/SKILL.md files need migration to flat skills/<name>.md format, (5) skills have hardcoded repo paths that must be generalized, (6) a dual plugins/+skills/ directory must be consolidated, (7) bulk-migrating skills from one project to another, (8) a skill topic is now OBSOLETE and needs a prominent notice, (9) a mass PR drain or consolidation has closed PRs as superseded and you need to audit for silently-dropped unique content."
+description: "Workflows for maintaining a skills corpus: deduplicating overlapping skills, merging clusters into canonicals, preserving history snapshots, enumerating cluster members from examples, migrating formats (hierarchical→flat, dual-dir→single), and generalizing skills for cross-repo compatibility. Use when: (1) multiple skills share a common prefix and cover redundant content, (2) a merge epic lists only example members and a full member list is needed, (3) a merge PR deletes originals and their content must remain searchable, (4) legacy skills/<category>/<name>/SKILL.md files need migration to flat skills/<name>.md format, (5) skills have hardcoded repo paths that must be generalized, (6) a dual plugins/+skills/ directory must be consolidated, (7) bulk-migrating skills from one project to another, (8) a skill topic is now OBSOLETE and needs a prominent notice, (9) a mass PR drain or consolidation has closed PRs as superseded and you need to audit for silently-dropped unique content, (10) salvaging skill work stranded in a stray or misplaced clone-within-a-repo, (11) before recreating or relocating a skill file, checking whether it was previously consolidated/removed, (12) reconciling an accidental de-consolidation that reintroduced a deliberately-merged standalone skill."
 category: tooling
-date: 2026-06-14
-version: "2.1.0"
+date: 2026-06-15
+version: "2.2.0"
 user-invocable: false
 verification: verified-ci
 history: skill-corpus-merge-consolidation-workflow.history
-tags: [skill-merge, deduplication, semver, consolidation, history, manifest, enumeration, flat-format, migration, plugin-generalization, corpus-maintenance, salvage-audit, closed-pr, post-drain]
+tags: [skill-merge, deduplication, semver, consolidation, history, manifest, enumeration, flat-format, migration, plugin-generalization, corpus-maintenance, salvage-audit, closed-pr, post-drain, stranded-clone, de-consolidation, fix-forward, salvage]
 ---
 
 # Skill Corpus Merge Consolidation Workflow
@@ -33,6 +33,12 @@ tags: [skill-merge, deduplication, semver, consolidation, history, manifest, enu
 - A dual `plugins/` + `skills/` directory structure is causing contributor confusion
 - Porting skills from a source repo to ProjectMnemosyne for the first time (bulk migration)
 - A skill topic is OBSOLETE (underlying bug/workaround fixed) and needs a prominent notice
+- You found skill work stranded in a stray or misplaced clone-within-a-repo (e.g. a worktree
+  living inside ANOTHER repo's tree) and need to salvage it safely
+- Before recreating or relocating a skill file — check whether it was previously
+  consolidated/removed (so you do not silently reintroduce a merged-away standalone)
+- Reconciling an accidental de-consolidation: a deliberately-merged standalone skill was
+  reintroduced on main and now duplicates guidance held in a bundle
 
 ## Verified Workflow
 
@@ -427,6 +433,83 @@ Example: carrier PR #2346 jumped a skill v1.0.0→v1.9.0 while silently dropping
 14 sibling learnings it claimed to absorb. Always enumerate and check every sibling a
 carrier claims to cover.
 
+### Part G — Salvaging a Stranded Skill + Avoiding Accidental De-Consolidation
+
+Two related hazards arise when skill work gets stranded outside the canonical clone and you
+go to recover it: (1) trying to transplant git objects between clones, and (2) silently
+REVERSING a prior consolidation by recreating a standalone skill that was deliberately merged
+into a bundle.
+
+#### G1 — Salvage skill work stranded in a stray/misplaced clone
+
+A worktree on branch `skill/<name>` was found stranded INSIDE another repo's tree (e.g.
+`ProjectHephaestus/build/.worktrees/`), backed by a misplaced second clone. It held
+UNCOMMITTED skill work (a v1.3.0 amendment, 2 files) but ZERO unique commits — its branch tip
+was already on `origin/main`. KEY INSIGHT: when a branch tip is already on `origin/main`, "the
+commit to move" is really just the UNCOMMITTED working-tree delta. Recreate it as a fresh,
+properly-based branch — do NOT try to transplant git objects between clones.
+
+Safe salvage workflow:
+
+```bash
+# 1. Back up the uncommitted work FIRST, before touching anything.
+git -C <stray-worktree> diff > /tmp/salvage-backup.patch
+cp -r <stray-worktree>/skills/<changed-files> /tmp/salvage-files/   # full files too
+
+# 2. Do NOT git-checkout branches in the shared canonical clone.
+#    Create a fresh worktree off canonical origin/main.
+git -C <canonical-clone> fetch origin
+git -C <canonical-clone> worktree add /tmp/salvage-wt -b skill/<name>-salvage origin/main
+
+# 3. Re-apply the salvaged files there, validate, commit signed in the CORRECT clone, push, PR.
+cp /tmp/salvage-files/* /tmp/salvage-wt/skills/
+python3 scripts/validate_plugins.py
+git -C /tmp/salvage-wt commit -S -m "..."
+
+# 4. Leave the stray clone UNTOUCHED for the human to remove separately.
+#    The backup patch + files are the source of truth.
+```
+
+#### G2 — Check for prior consolidation BEFORE recreating any skill file
+
+Reintroducing a deliberately-consolidated standalone skill silently DE-CONSOLIDATES it: it
+duplicates the guidance in two places and partially reverses the merge. Worse, if auto-merge
+is armed (`--squash`) and CI is instant, the PR can LAND before `gh pr merge --disable-auto`
+can run — the de-consolidation is then live on main before you can catch it.
+
+Before recreating/relocating ANY skill file, check whether it was previously consolidated or
+removed:
+
+```bash
+# A deletion commit referencing "consolidate"/"superseded" is the signal it was merged away.
+git log origin/main --oneline -- skills/<name>.md
+
+# Confirm the content now lives in a bundle's history snapshot.
+grep -rl "Superseded from <name>" skills/*.history
+```
+
+If it WAS consolidated: port the genuinely-new content INTO the bundle instead of recreating
+the standalone. Do NOT arm `gh pr merge --auto --squash` on a salvage PR until a human
+confirms the shape — instant CI can merge before you can disable auto-merge.
+
+#### G3 — Fix-forward an accidental de-consolidation (never `git revert`)
+
+If a standalone skill was already reintroduced on main (reversing a consolidation), do NOT
+`git revert` the skill change. Open ONE follow-up PR that:
+
+1. **Ports only the genuinely-new content into the consolidated bundle.** Verify each item is
+   actually ABSENT from the bundle first (`grep` the bundle `.md` + `.history`); bump the
+   bundle version MINOR.
+2. **`git rm` the reintroduced standalone file(s)** — restoring the consolidation.
+3. Validates with `python3 scripts/validate_plugins.py` before pushing.
+
+Real incident: a salvaged v1.3.0 amendment was based on standalone
+`squash-only-repo-merge-method-docs`, which an earlier PR (#2200) had DELIBERATELY consolidated
+into bundle `github-auto-merge-ci-gating-merge-method`. Recreating the standalone (PR #2546)
+reintroduced it on main and duplicated the guidance. It was reconciled in PR #2553: bundle
+bumped to v1.4.0 with the genuinely-new content ported in, standalone re-deleted via `git rm`,
+`validate_plugins.py` 396/396.
+
 ### Semver Rules for Skill Amendments
 
 | Change Type | Bump | When |
@@ -472,6 +555,8 @@ carrier claims to cover.
 | One-agent-per-closed-PR audit | Dispatched one agent per closed PR to compare it against main | Each agent re-read the same canonical skill file independently — N agents for N PRs targeting one skill all re-fetched the same file, wasting context and producing inconsistent verdicts | Partition the audit by skill-family; one agent per cluster reads the canonical ONCE then checks all N sibling PRs against it |
 | Judging COVERED by matching version numbers | Checked if the PR's version number was lower than the current canonical version | A v1.4.0 PR's content can be fully present in a v1.13.0 canonical under renumbered phases and sections — version number comparison produces false "COVERED" verdicts | Judge COVERED by content presence, not by version number comparison |
 | Assuming a closed ADD-new-skill PR is safe because a related merged PR exists | Saw that a related PR had merged and concluded the new-skill content was absorbed | The specific target file may not exist on main if the carrier PR used a different filename or dropped the skill creation entirely | Always `git show origin/main:skills/<file>.md` to verify the exact target file exists before concluding an ADD-new-skill closure is covered |
+| Transplanting a stranded commit between clones + arming auto-merge on a salvage PR | Tried to move a "stranded" skill commit from a misplaced clone into canonical; armed `gh pr merge --auto --squash` on the salvage PR | The stranded branch tip was already on `origin/main` — the only real delta was the UNCOMMITTED working tree, so there was no git object to transplant; and instant CI fired auto-merge before `gh pr merge --disable-auto` could run, landing the PR before its shape could be reviewed | Back up the uncommitted delta FIRST, recreate as a fresh branch off canonical `origin/main`, and do NOT arm auto-merge on a salvage PR until a human confirms the shape |
+| Recreating a consolidated skill as a standalone | Salvaged a v1.3.0 amendment by recreating standalone `squash-only-repo-merge-method-docs` | That skill had been DELIBERATELY consolidated into bundle `github-auto-merge-ci-gating-merge-method` (PR #2200); recreating it silently DE-CONSOLIDATED it, duplicating the guidance in two places and partially reversing the merge (PR #2546) | Before recreating/relocating any skill, check `git log origin/main --oneline -- skills/<name>.md` for a "consolidate"/"superseded" deletion and grep bundle `.history` for "Superseded from <name>"; if consolidated, port new content INTO the bundle and `git rm` the standalone — fix-forward, never `git revert` (reconciled in PR #2553) |
 
 ## Results & Parameters
 
@@ -559,3 +644,4 @@ Do this as a final reconcile step of every consolidation pass — do not rely on
 | ProjectMnemosyne | 17-cluster 1100-skill consolidation with manifest-first enumeration | 2026-05-19 |
 | ProjectMnemosyne | 2026-06-07 full-corpus pass: 50 clusters, 273 skills -> 50 canonicals, 10 waves of <=5 worktree swarm agents | corpus 518 -> 291 (-227, -44%) |
 | ProjectMnemosyne | 2026-06-14 post-drain closure audit: 38 closed PRs audited via 4-agent swarm partitioned by skill-family; 10 had dropped content (26%); salvaged via 5 amendment PRs (#2514-#2518, all merged) | verified-ci |
+| ProjectMnemosyne | 2026-06-15 stranded-skill salvage + accidental de-consolidation reconcile: recovered uncommitted v1.3.0 work from a misplaced clone, but recreating standalone `squash-only-repo-merge-method-docs` (PR #2546) de-consolidated it from bundle `github-auto-merge-ci-gating-merge-method`; fixed forward in PR #2553 (bundle → v1.4.0, standalone re-deleted, validate_plugins.py 396/396) | verified-ci |

@@ -1,0 +1,24 @@
+<!-- markdownlint-disable MD024 -->
+# History: testing-parametrized-console-script-test-incomplete-implementation
+
+## v1.1.0 (2026-06-22)
+
+Added Failed Attempts row and Verified On row for PR #1570 / issue #1554:
+`hephaestus-scaffold-subpackage` forgot `add_version_arg` — caught by reviewer before merge.
+
+## v1.0.0 (2026-06-11)
+
+Initial skill capture from ProjectHephaestus issue #1035 / PR #1174 fix.
+Documents the pattern where a parametrized test auto-discovers all `[project.scripts]` entries
+and fails when a new script forgets to wire `add_version_arg(parser)` alongside `add_json_arg(parser)`.
+
+```yaml
+name: testing-parametrized-console-script-test-incomplete-implementation
+description: "Use when: (1) a PR adds a parametrized test that auto-discovers an entire set (e.g. every [project.scripts] entry, every module) and applies one assertion to each member; (2) an integration test like test_cli_entry_points.py::TestCLIVersionFlag::test_version_flag[<script>] fails post-merge with 'unrecognized arguments: --version' / exit 2 for a subset of scripts; (3) a REQUIRED check breaks on main because a new parametrized test expanded coverage faster than the implementation; (4) adding a new console script and needing to wire add_json_arg + add_version_arg so the existing sweep test still passes."
+category: testing
+date: 2026-06-11
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [testing, parametrize, console-scripts, project-scripts, cli-entry-points, version-flag, json-arg, auto-discovery, required-check, hephaestus]
+```

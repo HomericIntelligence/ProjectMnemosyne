@@ -5,6 +5,42 @@
 This file preserves the full verbatim content of the skills consolidated into
 `gha-workflow-authoring-pitfalls`, kept for provenance and reference.
 
+## v1.3.0 (2026-06-23)
+
+**Changed by:** Issue #1548 (ProjectHephaestus) — concurrency controls on event-driven workflows
+**Verification:** verified-local (YAML parse + structural assertions; CI validation pending)
+
+### What changed
+- Added pitfall #8: concurrency controls for event-driven workflows
+- Added `cancel-in-progress` semantics split (idempotent=true, publisher=false)
+- Added group key patterns for 4 common event-driver profiles
+- Added `workflow_call` fallback (`|| github.run_id`) critical detail
+- Added top-level vs job-level placement distinction
+- Added injection-safe note: `${{ github.* }}` in `concurrency.group:` is not a `run:` sink
+- Added 2 new Failed Attempts rows (missing run_id fallback, job-level placement)
+- Updated description trigger list with trigger #8
+- Updated tags: added concurrency, cancel-in-progress, event-driven, idempotent, publisher
+- Added ProjectHephaestus Issue #1548 row to Verified On table
+- Bumped version 1.2.0 → 1.3.0; updated date to 2026-06-23
+
+### Why
+Four event-driven workflows in ProjectHephaestus (auto-label-needs-plan, auto-tag, release, security) lacked concurrency blocks. The implementation required reasoning about side-effect profiles to pick the right semantics, which is a reusable pattern not previously captured in the pitfalls skill. The companion `gha-workflow-concurrency-controls` skill covers the full decision framework; this pitfall entry provides a quick-reference entry point.
+
+### Pre-amendment body snapshot (v1.2.0)
+
+The v1.2.0 `.md` covered seven pitfalls under "GitHub Actions: Workflow-Authoring Pitfalls":
+(1) forward slash in a job ID — silent whole-file parse failure; (2) `${{ … }}` in a
+composite-action input/output description gets evaluated at action-load time; (3) env-var lift for
+the workflow-injection hook on `run:` blocks; (4) document platform scope in a workflow header
+comment; (5) Edit-tool path-blocked on `.github/workflows/*.yml`; (6) GitHub Actions blocked from
+creating PRs by org policy (the `can_approve_pull_request_reviews` toggle vs the
+`default_workflow_permissions` red herring, three fixes, and the "green run is not proof"
+validation); (7) A `pull_request` trigger is workflow-wide — adding label/auto-merge event types
+to converge ONE job re-runs EVERY job (changes-gate `needs:`/`if:` pattern).
+version "1.2.0", date 2026-06-08, verification: verified-ci.
+
+---
+
 ## v1.2.0 (2026-06-08)
 
 **Changed by**: ProjectHephaestus PR #1108 (label-event job gating)

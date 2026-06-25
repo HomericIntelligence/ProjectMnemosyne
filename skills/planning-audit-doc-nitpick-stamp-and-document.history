@@ -1,0 +1,66 @@
+<!-- markdownlint-disable MD024 -->
+
+# planning-audit-doc-nitpick-stamp-and-document history
+
+Changelog and superseded-version archive for the skill.
+
+## v1.1.0 (2026-06-22)
+
+MINOR — capture the NOGO-resolution learning from the reviewer's [major]
+P7/POLA verdict on the FIRST plan. The v1 plan stamped `CODE_OF_CONDUCT.md`
+with `_Based on Contributor Covenant v2.1 · Last reviewed: 2026-06-22_`. The
+reviewer NOGO'd it: a hardcoded "Last reviewed: <today>" in a GOVERNANCE
+document asserts a human review that never happened AND goes stale the moment
+the PR sits in the merge queue. The issue asked for "a version stamp OR a
+last-reviewed date", so the converged-to-GO fix satisfies it with a VERSION
+STAMP ALONE (`_Adapted from the Contributor Covenant v2.1._`), dropping the
+date entirely; the stamp is phrased to MIRROR the version already asserted in
+the file's Attribution footer (CoC:89) so the two cannot drift.
+
+Generalizable rules added to the body:
+
+- For "missing date/version stamp" findings on governance/policy docs where the
+  requirement is "version stamp OR date", prefer the VERSION STAMP ALONE. Never
+  write a mechanical "Last reviewed: <today>" — it is a false provenance/POLA
+  violation a reviewer will NOGO.
+- A "last reviewed" / "reviewed on" date may only be added when a HUMAN review
+  actually occurred. A mechanical edit is not a review.
+- When adding a version/provenance stamp, MIRROR an existing in-file source of
+  truth (e.g. the Attribution footer) rather than asserting an independently
+  re-sourced value, so the stamp cannot diverge.
+- If your /learn captured a RISK in the first plan, ACT on it in the plan — do
+  not merely document it. The reviewer will hold you to your own flagged
+  concern. (The v1 plan flagged the stale-date risk but did not resolve it,
+  which is exactly what got NOGO'd — a recurrence of the planner's own
+  pre-flagged risk.)
+
+New Failed Attempts row: stamping CoC with a mechanical "Last reviewed:
+<today>" date. Still `verification: unverified` — the plan was authored,
+never executed.
+
+## v1.0.0 (2026-06-22)
+
+Initial capture. Extracted from an implementation PLAN authored for
+ProjectHephaestus issue #1555 — an audit-nitpick bundle pairing a docstring
+gap (finding S14, the non-`"json"` -> text fallback in `info.py`) with a
+missing `CODE_OF_CONDUCT.md` version stamp. Planning methodology:
+document-actual-behavior + pin-with-test + version-stamp-not-date-stamp, and
+flag every unverified source/coordinate/lint assumption for the reviewer. Plan
+authored but never executed, hence `verification: unverified`.
+
+### Superseded frontmatter from v1.0.0
+
+```yaml
+name: planning-audit-doc-nitpick-stamp-and-document
+category: documentation
+date: 2026-06-22
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+```
+
+The v1.0.0 `description` did not yet encode the version-stamp-ALONE-when-the-
+requirement-is-"version OR date" rule, the no-fabricated-review-date rule, the
+mirror-an-existing-in-file-source rule, or the act-on-your-own-flagged-risk
+rule. Those were added in v1.1.0 after the reviewer's [major] P7/POLA NOGO on
+the first plan's `Last reviewed: <today>` stamp.

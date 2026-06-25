@@ -1,0 +1,50 @@
+# git-unmerged-branch-file-access — History
+
+## v2.0.0 (2026-06-20)
+
+**Changed by:** ProjectTelemachy issue #283 planning session. A "follow-up bug"
+issue cited a defect at `mcp_server.py:82`, but that file did not exist on `main`.
+Glob/Grep over `src/` found nothing and the planner nearly concluded the issue
+referenced phantom / non-actionable code. Recovery: `git log --all --oneline --
+"**/mcp_server.py"` surfaced commit `07ea99a`, which lives only on the unmerged
+feature branch `173-auto-impl`; the whole plan was re-scoped to target that branch.
+
+**Verification:** Upgraded `unverified` → `verified-local`. The git-history
+investigation steps (`git log --all`, `git branch --contains`, `git show <sha>:<path>`)
+were ACTUALLY executed this session and produced the cited results. The downstream
+code FIX was not executed (plan only) — those fix-stage assumptions remain explicit
+`unverified` caveats in Results & Parameters.
+
+### What changed (major)
+
+- **Verification level raised to `verified-local`** for the investigation workflow,
+  with the fix-stage assumptions called out as unverified caveats. Rewrote Overview
+  and Verified Workflow to state this split honestly.
+- **New core failure mode documented: "phantom code" misdiagnosis.** Added a Failed
+  Attempts row for concluding an issue is non-actionable after Glob+Grep over `src/`
+  found nothing — the root cause is searching only the working tree / default branch.
+  Lesson: always `git log --all -- <file>` before declaring referenced code nonexistent.
+- **New step: search by parent-issue grep as well as path.** Added
+  `git log --all --oneline --grep="#<parent-issue>"` alongside the path search, because
+  follow-up issues are frequently filed against code from a parent PR not yet merged.
+- **Line-number drift caveat (cite by symbol, not raw line).** Added a Failed Attempts
+  row and workflow note: the issue cited line 82 but the symbol was actually at line 81
+  on the branch tip. Cite findings by SYMBOL (e.g. `Dispatcher.call_tool`) since line
+  numbers drift between the issue-filing snapshot and the carrier branch tip.
+- **Scope-to-carrier-branch made explicit.** Emphasised that the plan's branch-from /
+  PR-target MUST be the carrier branch — a branch off `main` would have no file to edit.
+- **Recorded the Telemachy #283 unverified fix-stage assumptions** (MCP SDK
+  `@server.call_tool()` exception→`isError` behavior; reliance on `pixi run pytest` /
+  `just test` / `just lint` and the feature-branch test layout read via `git show`,
+  not executed) as caveats a reviewer must weigh.
+
+### Prior versions
+
+## v1.0.0 (2026-06-13)
+
+Initial skill. Captured from ProjectHephaestus issue #1300 planning
+(`severity_label.py` GITHUB_REPOSITORY KeyError): file existed only on the
+`1210-auto-impl` branch, discovered via `git log --all`. Verification: `unverified`
+(documented from planning artifacts only). Workflow: detect not-found, `git log --all
+--grep`, `git branch --all --contains`, `git show <sha>:<path>`, target the feature
+branch as the PR base.

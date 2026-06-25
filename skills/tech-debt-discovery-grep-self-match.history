@@ -1,0 +1,57 @@
+# History: tech-debt-discovery-grep-self-match
+
+Newest-first changelog for the `tech-debt-discovery-grep-self-match` skill.
+
+---
+
+## v1.1.0 — 2026-06-19 (RE-PLAN after NOGO review)
+
+Corrects v1.0.0, whose plan was NOGO'd by a reviewer. The v1.0.0 thesis claimed the
+fix for "the weekly job posts a noisy false-positive comment to the Epic forever" was
+(a) rewording the workflow's prose comment to drop literal FIXME/TODO tokens and
+(b) adding `--exclude-dir=build/.claude` to the grep. The reviewer NOGO'd it because
+NEITHER touches the actual posting logic: the workflow's "Post summary comment" step had
+no `if:` gate and no `continue-on-error` — it piped scan stdout to `gh issue comment 544`
+on EVERY run. The v1.0.0 plan fixed cosmetic symptoms while leaving the headline bug intact.
+
+Changes captured in v1.1.0:
+- Headline lesson: when a plan's thesis is "automation posts/acts unconditionally," the fix
+  MUST modify the conditional/gating logic of the side-effecting step itself — trace the
+  trigger path, not just the data the action consumes.
+- Correct fix: script signals clean/dirty via EXIT CODE (markers -> print + `exit 1`;
+  clean -> token-free sentinel + `exit 0`); workflow scan step captures rc and exports
+  `found=true|false` to `$GITHUB_OUTPUT`; comment step gated with
+  `if: steps.scan.outputs.found == 'true'`.
+- `grep ... || echo` forces exit 0 always — that is precisely WHY the workflow could not
+  gate. Replaced with `rc=0; grep ... || rc=$?` under `set -e`.
+- CI-view correction: in a real `actions/checkout`, only git-TRACKED files exist; the
+  `build/.worktrees/` and `.claude/worktrees/` copies are UNTRACKED, so CI sees ONE hit,
+  not 38. `--exclude-dir` has no CI effect; it is local-developer ergonomics only.
+- Sentinel self-perpetuation: the v1.0.0 clean sentinel spelled all five marker tokens and
+  was piped into the #544 comment. New sentinel is token-free.
+- Test coupling (POLA): v1.0.0 asserted the LIVE repo is marker-free, flipping red the
+  moment a legitimate TODO is added. Corrected to tmp_path fixture trees; live-repo run is
+  informational smoke only.
+- Verification rigor: replaced brittle `git grep -- 'src/**' 'tests/**'` (`**` does not
+  glob) with `git grep -- '*.py' '*.toml' '*.yml'` matching the script's scanned extensions.
+
+---
+
+## v1.0.0 — 2026-06-19 (PR #2629, NOGO'd plan — superseded)
+
+Initial version. Captured during a PLANNING session for ProjectHermes Issue #544
+(Technical-Debt Epic). Thesis: harden the discovery tool (it self-matched) instead of
+filing fictitious child issues; pre-validate labels against the real repo.
+
+INCORRECT claims later corrected in v1.1.0:
+- Claimed the load-bearing fix was rewording the workflow prose comment + `--exclude-dir`.
+  (NOGO: neither touches the unconditional `gh issue comment` posting step.)
+- Claimed a clean scan produces "38+ lines every Monday." (Wrong: CI sees 1 tracked hit.)
+- Clean sentinel literally spelled "No FIXME/TODO/DEPRECATED/HACK/XXX markers found" — all
+  five marker tokens — which re-pollutes the #544 comment.
+- Recommended `grep ... || { echo ...; exit 0; }`, which destroys the clean/dirty signal
+  the workflow needs to gate.
+- Unit test asserted the LIVE repo is marker-free (POLA violation for a discovery tool).
+
+Full v1.0.0 text not snapshotted inline (it shipped in PR #2629 / commit on `main`); see
+git history of `skills/tech-debt-discovery-grep-self-match.md` for the verbatim v1.0.0 body.

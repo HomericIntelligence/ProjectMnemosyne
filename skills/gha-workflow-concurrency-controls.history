@@ -1,0 +1,57 @@
+# gha-workflow-concurrency-controls — History
+
+## v2.0.0 (2026-06-24)
+
+**Changed by:** ProjectHephaestus issue #1548 / PR #1590 — CI-verified after all required checks passed.
+**Verification:** verified-ci (PR #1590 passed test, integration, pr-policy, lint on 2026-06-24).
+
+### What changed
+- Bumped verification from `verified-local` to `verified-ci` — PR #1590 merged with all required CI checks green.
+- Updated `date` to `2026-06-24` and `version` to `2.0.0`.
+- Removed the `> **Note:** … CI validation pending` notice from the Verified Workflow section header.
+- Updated Overview table: Outcome row now reflects CI-verified result; Verification row updated to `verified-ci`; added "Files Amended" row.
+- Added "Actual Group Keys Used (CI-Verified)" table showing the exact concurrency blocks from the four amended files, including the simpler bare-key forms (without `${{ github.workflow }}-` prefix) actually used.
+- Updated Detailed Steps Step 2 code block with the actual confirmed group key forms.
+- Added bare-key vs. workflow-prefixed key guidance to Step 2 key facts.
+- Removed the four `(Reviewer-check)` rows from Failed Attempts (they were UNVERIFIED assumptions; all four are now confirmed).
+- Added new Failed Attempts row: "Using `github.workflow-` prefix in group key" — not wrong but unnecessary; actual implementation used simpler bare keys.
+- Updated Results & Parameters: verification level, per-file group key entries (now confirmed with exact values), added bare-vs-prefixed note, confirmed auto-tag.yml trigger and label POST idempotency.
+- Updated Verified On table: status now `verified-ci` with CI checks listed.
+- Removed `planning` and `unverified-assumptions` and `verify-dont-assert` tags; added `verified-ci` tag.
+- Updated description frontmatter to mention bare-key guidance.
+
+### Why
+v1.1.0 was `verified-local` because YAML structural assertions passed but no CI run had confirmed the chosen keys. PR #1590 applied all four concurrency blocks and CI ran green on all required checks. The v1.1.0 → v2.0.0 major bump reflects: (1) the core section graduates from "pending" to confirmed, (2) the actual group keys used differ in form (bare vs. prefixed) from the planned snippets — a meaningful new fact for future practitioners, and (3) four UNVERIFIED reviewer-check rows in the Failed Attempts table are removed now that they are resolved.
+
+---
+
+## v1.1.0 (2026-06-23)
+
+**Changed by:** ProjectHephaestus issue #1548 implementation — concurrency blocks applied to four workflows.
+**Verification:** verified-local (YAML parse + structural assertions passed; CI validation pending).
+
+### What changed
+- Bumped verification from `unverified` to `verified-local` — the plan was implemented: concurrency blocks added to `auto-label-needs-plan.yml`, `auto-tag.yml`, `release.yml`, `security.yml` in ProjectHephaestus.
+- Removed the "Warning: unverified" banners from the skill body.
+- Updated "Verified On" table with actual implementation result.
+- Updated Results & Parameters verification level entry.
+
+### Why
+The plan (v1.0.0) was captured at `unverified` level because no edits had been applied. Issue #1548 implemented all four additions with YAML structural verification. The decision rules and group-key patterns proved correct in practice.
+
+---
+
+## v1.0.0 (2026-06-23)
+
+**Changed by:** Initial creation from the ProjectHephaestus issue #1548 plan to add `concurrency:` blocks to four event-driven workflows (per-issue automation, release/publish, auto-tag, PR-scan) that lacked them.
+**Verification:** unverified (planning learning — the plan was NOT implemented and NOT CI-verified; the author read each target file once, applied no edit, and ran no CI).
+
+### What changed
+- New skill capturing the core decision rule for GitHub Actions concurrency controls: `cancel-in-progress: true` for idempotent / supersede-able runs (tests, scans, idempotent label POSTs) and `cancel-in-progress: false` for non-idempotent publishers (git tag push, PyPI publish, GitHub release creation) that must not be interrupted mid-flight.
+- Group-key selection map: `github.event.issue.number || github.run_id` (per-issue), `github.ref` (per-tag publish), `github.head_ref || github.ref` (PR scan — NOT `github.sha`, which fails to collapse successive pushes).
+- Noted that `${{ github.* }}` inside `concurrency.group:` is a context-expression YAML key, not a `run:` shell sink, so the workflow-injection / env-var-lift rule does not apply.
+- Noted that adding `concurrency:` to a non-required workflow cannot brick the merge queue; only a pinned required status-check context could interact — verify before assuming.
+- Failed Attempts table doubles as a reviewer checklist of UNVERIFIED assumptions (exact insertion line numbers, `auto-tag.yml` trigger shape, label-POST idempotency, required-context status) that must be confirmed against the live files because the plan was never applied or tested.
+
+### Why
+The plan repeatedly risked the reflex of universal `cancel-in-progress: true` (unsafe for publishers) and the `github.sha` PR-scan key (collapses nothing). Capturing the idempotency-gated decision rule and the trigger-driven group-key map prevents both. Captured at `unverified` level because no edit was applied and no CI run confirmed the chosen keys behave as reasoned.

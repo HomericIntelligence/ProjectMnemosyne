@@ -12,6 +12,10 @@ default: true
 # routinely exceed 120 chars in ways that are intentional and unambiguous.
 MD013: false
 
+# Unordered list marker style: disabled — imported/generated skill lessons use
+# dash, plus, and asterisk lists interchangeably in durable examples.
+MD004: false
+
 # Blanks around headings: disabled — skill files use compact heading/content
 # blocks that are standard for knowledge-base documentation.
 MD022: false
@@ -24,15 +28,39 @@ MD031: false
 # mandatory surrounding blank lines.
 MD032: false
 
+# Trailing punctuation in headings: disabled — skill docs often use question
+# and colon headings copied from operational review prompts.
+MD026: false
+
 # No bare URLs: disabled — skill docs frequently cite URLs inline as references.
 MD034: false
+
+# Blank lines inside blockquotes: disabled — copied review/comment examples
+# sometimes preserve source blockquote spacing.
+MD028: false
+
+# Spaces inside code spans: disabled — examples intentionally show tokens with
+# leading/trailing spaces and regex fragments that include spaces.
+MD038: false
 
 # Ordered list prefix style: disabled — skill docs use 1./1. incremental or
 # 1./2./3. styles interchangeably.
 MD029: false
 
+# Emphasis marker style: disabled — skill files merge content from multiple
+# tools and histories where * and _ emphasis are both intentional.
+MD049: false
+
 # Strong/bold style: disabled — skill files mix ** and __ bold styles.
 MD050: false
+
+# Reference definitions: disabled — skill content often uses bracketed domain
+# notation such as [atlas][M1] that is not a Markdown reference link.
+MD052: false
+
+# Table column count: disabled — many skill tables document shell/code snippets
+# containing literal pipe characters that markdownlint cannot reliably classify.
+MD056: false
 
 # Blanks around tables: disabled — skill files use tables in compact blocks.
 MD058: false
@@ -75,13 +103,20 @@ MD033:
     - owner
     - pid
     - prefix
+    - platform
     - project
     - recipe
     - repo
     - script
     - skill-name
     - files
+    - filename
+    - Dockerfile
+    - dir
+    - module
+    - sibling
     - subject
+    - today
     - url
 
 # Duplicate headings: allow same heading text at different nesting levels.

@@ -1,9 +1,9 @@
 ---
 name: tdd-workflow-and-test-coverage-expansion
-description: "Use when: (1) creating tests before implementation or during a TDD phase — generate test files, coordinate red-green-refactor loops, close CLI command-handler test gaps; (2) a Python script in scripts/ has zero test coverage and needs tests added — audit existing tests before writing new ones to avoid duplication; (3) a unit test exposes a latent parsing bug where single-line vs multi-line input shapes behave differently — test-driven bug discovery; (4) a hephaestus/ module has no tests or low coverage and uses subprocess.run or shutil.which — add mock-based unit tests to reach >85% coverage without real command execution; (5) tests fail after a config refactor — fixtures and mocks need updating to match the new config surface; (6) enforcing import layer boundaries using AST-level CI tests to prevent circular import regressions — catch both direct and lazy/function-local imports that violate architecture; (7) annotating hundreds of unannotated test functions in tests/unit/ to satisfy mypy disallow_untyped_defs; (8) running a coverage swarm with one PR per source file or test shard; (9) new tests must be documented and added to CI workflows that enumerate files manually; (10) writing tests that expose latent bugs in text-processing or subprocess-output parsing functions."
+description: "Use when: (1) creating tests before implementation or during a TDD phase — generate test files, coordinate red-green-refactor loops, close CLI command-handler test gaps; (2) a Python script in scripts/ has zero test coverage and needs tests added — audit existing tests before writing new ones to avoid duplication; (3) a unit test exposes a latent parsing bug where single-line vs multi-line input shapes behave differently — test-driven bug discovery; (4) a hephaestus/ module has no tests or low coverage and uses subprocess.run or shutil.which — add mock-based unit tests to reach >85% coverage without real command execution; (5) tests fail after a config refactor — fixtures and mocks need updating to match the new config surface; (6) enforcing import layer boundaries using AST-level CI tests to prevent circular import regressions — catch both direct and lazy/function-local imports that violate architecture; (7) annotating hundreds of unannotated test functions in tests/unit/ to satisfy mypy disallow_untyped_defs; (8) running a coverage swarm with one PR per source file or test shard; (9) new tests must be documented and added to CI workflows that enumerate files manually; (10) writing tests that expose latent bugs in text-processing or subprocess-output parsing functions; (11) adding tests for extracted SRP collaborator methods that drive subprocess sessions — mock at consumer namespace, assert cwd via kwargs, match exact return-value shape."
 category: testing
-date: 2026-06-07
-version: "1.1.0"
+date: 2026-06-15
+version: "1.2.0"
 user-invocable: false
 history: tdd-workflow-and-test-coverage-expansion.history
 tags:
@@ -43,6 +43,7 @@ tags:
 8. Running a coverage swarm with one PR per source file or test shard
 9. New tests must be documented (What/Executes/Why) and added to CI workflows that enumerate files manually
 10. Writing tests that expose latent bugs in text-processing or subprocess-output parsing functions
+11. Adding tests for SRP-extracted collaborator methods that drive subprocess sessions (e.g., `run_drive_green_learnings`, `run_drive_green_compact`) — append to the existing `test_*_helpers.py` file, mock at the consumer module namespace, assert `cwd=` via `call_args.kwargs`, and match the exact return-value shape of the underlying session call
 
 **Trigger phrases**: "write the test first", "X% of scripts lack unit tests", "add tests for untested scripts", "coverage swarm", "one PR per file", "tests fail after refactor", "prevent the circular import from coming back", "tests only cover argument parsing, not behavior".
 
@@ -349,6 +350,13 @@ Iterate with `python3 -m pytest <file> -v` (fast), validate the full suite with 
 | Trusting the issue title on a coverage audit | Assumed "add tests" meant tests were missing and started writing | All required cases already existed; new tests would duplicate them | "Add any missing cases" implies audit first — when all-covered, write zero tests and add a `# Coverage (issue #NNNN)` requirement->test comment block, then close the issue |
 | Flat agent-script tests without a package dir | Dropped `test_agent_*.py` straight in `tests/unit/scripts/` for `scripts/agents/*.py` | pytest did not discover the nested package; agent scripts stayed uncovered | Mirror `scripts/agents/` with `tests/unit/scripts/agents/` and add the required `__init__.py` for discovery |
 | Testing every untested script in arbitrary order | Worked scripts top-to-bottom with no prioritization | Burned time on subprocess-heavy, rarely-used utilities while high-value pure functions stayed uncovered | Rank by Testability × Impact (High=3/Med=2/Low=1) and clear at least half the scripts as the minimum viable target |
+| Trusting issue's sketch filename without checking | Issue #1362 named `test_post_merge_processor_helpers.py` as the target | `test_post_merge_helpers.py` already existed and covered the same class — creating the new file would duplicate tests and violate DRY | Always grep for existing test files touching the same class before creating a new file |
+| Mutating `_options()` return to set `agent="codex"` | Called `_options().agent = "codex"` before passing to the processor | The assignment modified the ephemeral MagicMock returned by the call, not the object the processor later sees; `is_codex(options.agent)` saw the wrong value | Build a dedicated factory `_make_codex_processor(tmp_path)` with `options = MagicMock(dry_run=False, agent="codex")` wired directly at construction |
+| Generator-throw lambda for exception injection | Sketched `get_worktree_path=lambda i, p: (_ for _ in ()).throw(RuntimeError("gone"))` | Obscure, violates POLA, and confuses readers unfamiliar with the generator-throw trick | Replace with a named module-level helper: `def _raise_no_worktree(issue, pr): raise RuntimeError("worktree gone")` |
+| Asserting positional arg index for `cwd` | Used `call_args.args[N]` to assert the working directory | `cwd=` is always keyword-passed in `run_drive_green_*`; positional indexing always returns `None` | Assert via `call_args.kwargs["cwd"]` for any keyword-passed argument |
+| Mocking `invoke_claude_with_session` with a bare string | Used `return_value="stdout"` | Source does `stdout, _ = invoke_claude_with_session(...)` — unpacking a string raises `ValueError: too many values` | Mock as a 2-tuple: `return_value=("stdout", None)` |
+| Mocking `compact_session` with a 2-tuple | Used `return_value=(True, None)` by analogy | `compact_session` returns its value directly; method returns `compact_session(...)` without wrapping | Mock with `return_value=True`; the unwrapped value IS the return value |
+| Local `MagicMock` import inside factory function | Existing `_make_processor` imported `MagicMock` inside its body | New helpers at module scope (`_make_codex_processor`, test classes) need `MagicMock` and can't see a function-local import | Promote `from unittest.mock import MagicMock` to module-top-level when any module-scope helper uses it |
 
 ## Results & Parameters
 
@@ -385,6 +393,51 @@ def test_valid(self, mock_run):
 def test_timeout(self, mock_run):
     mock_run.side_effect = subprocess.TimeoutExpired(cmd="bash", timeout=5)  # py3.14: positional kwargs
     assert "timed out" in (Validator().validate_syntax("echo hang").error_message or "").lower()
+```
+
+### Mock templates (SRP collaborator session drivers)
+
+For methods that drive Claude/Codex sessions (e.g., `run_drive_green_learnings`, `run_drive_green_compact`) extracted into an SRP collaborator via `from .X import Y` re-imports:
+
+```python
+# 1. Always patch at the CONSUMER module namespace (not definition site)
+#    because `from .X import Y` rebinds the name inside the consuming module.
+MODULE = "hephaestus.automation.post_merge_processor"
+
+# 2. invoke_claude_with_session returns a 2-tuple — mock must match
+#    the `stdout, _ = invoke_claude_with_session(...)` destructuring.
+with patch(f"{MODULE}.invoke_claude_with_session", return_value=("stdout", None)):
+    result = processor.run_drive_green_learnings(issue=1, pr=2)
+
+# 3. run_codex_session returns an object with .stdout attribute.
+with patch(f"{MODULE}.run_codex_session", return_value=MagicMock(stdout="codex-out")):
+    result = processor.run_drive_green_learnings(issue=1, pr=2)
+
+# 4. compact_session returns its value directly (no wrapping).
+with patch(f"{MODULE}.compact_session", return_value=True):
+    result = processor.run_drive_green_compact(issue=1, pr=2)
+
+# 5. cwd= is keyword-passed — assert via call_args.kwargs, not args[N].
+mock_invoke.assert_called_once()
+assert mock_invoke.call_args.kwargs["cwd"] == expected_worktree_path
+
+# 6. Exception-swallow boundary: side_effect proves the broad except swallows it.
+with patch(f"{MODULE}.invoke_claude_with_session", side_effect=RuntimeError("gone")):
+    assert processor.run_drive_green_learnings(issue=1, pr=2) is False
+
+# 7. Short-circuit guard: assert downstream call was NOT made.
+with patch(f"{MODULE}.compact_session") as mock_compact:
+    processor_codex.run_drive_green_compact(issue=1, pr=2)
+    mock_compact.assert_not_called()
+
+# 8. Dedicated factory for variant processors (don't mutate _options() return value).
+def _make_codex_processor(tmp_path: Path) -> PostMergeProcessor:
+    options = MagicMock(dry_run=False, agent="codex")
+    return PostMergeProcessor(options=options, get_worktree_path=lambda i, p: tmp_path)
+
+# 9. Named helper over generator-throw lambda for exception injection.
+def _raise_no_worktree(issue: int, pr: int) -> Path:
+    raise RuntimeError("worktree gone post-merge")
 ```
 
 ### Parametrize for mapping tables
@@ -425,6 +478,7 @@ def _run(code: str) -> subprocess.CompletedProcess[str]:
 | ProjectScylla | PRs #186/#187 — tier_manager tests after config unification | fix-tests-after-config-refactor |
 | ProjectHephaestus | Issue #51, PR #94 — readme_commands.py 99% coverage | testing-package-module-mock-coverage |
 | ProjectHephaestus | PR #308 — `hephaestus.github` → `hephaestus.automation` circular import | testing-ast-import-layer-enforcement |
+| ProjectHephaestus | Issue #1362, PR #1363 — `PostMergeProcessor.run_drive_green_learnings` + `run_drive_green_compact` (11 tests, verified-ci) | srp-collaborator-session-driver-coverage |
 | ProjectMnemosyne | Issue #3309, PR #3927 — migrate_odyssey_skills.py | add-unit-tests-for-existing-script |
 | ProjectOdyssey | Issue #4051, PR #4859 — hash coverage audit | test-coverage-audit |
 | Eval360-V2 | PRs #290-#296 — coverage swarm (518+ tests) | coverage-swarm |

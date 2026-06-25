@@ -1,0 +1,250 @@
+---
+name: tooling-precommit-check-convention-to-invariant
+description: "Convert a comment-only documentation convention into a machine-checked invariant by mirroring an EXISTING repo-local pre-commit check script. Use when: (1) an audit flags that a prose/comment convention has no automated enforcement (e.g. a pip-audit `--ignore-vuln` suppression ledger says 'Re-review quarterly' but nothing verifies each suppression carries a `Re-review:` trigger line); (2) you are planning a stdlib-only `scripts/check_*.py` and want to copy the structure of a sibling check in the same repo (`get_repo_root()` walking up to pyproject.toml + a pure findings-returning helper + `main()` returning an exit code) wired as a `repo: local` pre-commit hook (`language: system`, `pass_filenames: false`, `files: ^<target>$`) plus a unit test importing the helper via `sys.path.insert(0, scripts_dir)`; (3) the metadata you must check lives in `#` comments that a TOML/JSON parser would DISCARD — parse the file as TEXT and regex/walk the comment block, do not load it semantically; (4) you are tempted to add a new CI cron when a weekly `schedule:` already exists — reuse it; (5) you are expanding a doc (SECURITY.md) and an existing doc-content pre-commit check (e.g. an `As of YYYY-MM-DD` hard-coded-date regex) will reject absolute date stamps in your OWN edit. ProjectHephaestus precedents: scripts/check_security_policy_no_hardcoded_date.py, scripts/check_security_version_consistency.py."
+category: tooling
+date: 2026-06-23
+version: "1.1.0"
+user-invocable: false
+verification: unverified
+history: tooling-precommit-check-convention-to-invariant.history
+tags:
+  - planning
+  - pre-commit
+  - check-script
+  - convention-to-invariant
+  - suppression-ledger
+  - pip-audit
+  - ignore-vuln
+  - re-review-trigger
+  - parse-as-text-not-toml
+  - parse-whole-comment-region
+  - fail-closed-on-unparseable
+  - mirror-existing-script
+  - get-repo-root
+  - language-system
+  - pass-filenames-false
+  - sys-path-insert-test
+  - reuse-existing-cron
+  - doc-content-self-constraint
+  - hard-coded-date-regex
+  - security-md
+  - stdlib-only
+  - hephaestus
+  - audit-nitpick
+  - kiss-beats-cleverness
+  - adversarial-tests
+---
+
+# Planning: Convert a Documentation Convention into a Machine-Checked Invariant
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-06-23 |
+| **Objective** | Plan an audit-nitpick bundle for ProjectHephaestus issue #1550: (a) expand `SECURITY.md` with a threat model, and (b) add a pre-commit check enforcing that every `pip-audit --ignore-vuln` suppression in `pixi.toml` carries a `Re-review:` trigger line — converting a comment-only "Re-review quarterly" convention into a machine-checked invariant. |
+| **Outcome** | A PLAN (not executed code). The reusable pattern: when an audit flags "a comment-only convention has no automated enforcement," write a stdlib-only `scripts/check_*.py` that MIRRORS the structure of an EXISTING check script in the same repo (`get_repo_root()` + pure findings helper + `main()` exit code), wired as a `repo: local` pre-commit hook with `language: system`, `pass_filenames: false`, `files: ^<target>$`, plus a unit test that imports the helper via `sys.path.insert(0, scripts_dir)`. Key sub-learnings: parse the ledger as TEXT (the metadata lives in `#` comments a TOML parser discards), reuse the repo's EXISTING weekly cron instead of adding a redundant one, and avoid absolute date stamps in SECURITY.md edits because an existing doc-content check rejects them. |
+| **Verification** | unverified — this is a PLANNING learning (R1 re-plan after a B/NOGO). Nothing was executed. The precedent-script facts and the existing `pixi.toml` ledger entry were verified by READING the tree this session; the proposed check script, its hook wiring, and its unit test were NOT written or run. The "real PYSEC-2025-183 passes" claim remains read-not-run (step 4 of the workflow now MANDATES executing the check, but execution has not happened). |
+| **Category** | tooling / planning |
+
+> **Verification note:** Treat every "ASSUMPTION" / risk row in Failed Attempts as an open reviewer task. The precedent scripts (`check_security_policy_no_hardcoded_date.py`, `check_security_version_consistency.py`) and the real `pixi.toml` PYSEC-2025-183 suppression entry were read this session; the downstream check script, pre-commit hook, unit test, and the assertion that the existing entry passes were **planned only** (asserted from a file read, not from running the script).
+
+> **R1 redesign (v1.1.0):** A plan reviewer NOGO'd v1.0.0's per-ID contiguous-comment-block walk (`_ledger_block_for`, graded B) because that walk stops at any bare `#` (blank-comment) line, so a legal ledger layout where a bare `#` separates the header from a vuln's paragraph would FALSE-POSITIVE on a valid ledger. The R1 fix (below) **parses the whole contiguous comment REGION above the task line** (including bare `#` separator lines) and per suppressed ID requires (a) the ID appears in the region AND (b) a `Re-review:` line appears at-or-after the ID's first mention. It also **fails CLOSED on an unparseable (multi-line / triple-quoted) task value** by scanning the RAW file text for `--ignore-vuln`. Planning meta-lesson: when a reviewer NOGOs on parser brittleness, the converging fix usually REMOVES the clever per-item logic and validates a coarser whole-region invariant — simpler and more robust at once (KISS beat cleverness).
+
+## When to Use
+
+- An audit / strict review flags that a CONVENTION expressed only in prose or `#` comments has no automated enforcement — e.g. a suppression ledger annotation that says "Re-review quarterly" with nothing checking that each suppression actually carries the trigger metadata.
+- You are about to write a `scripts/check_*.py` enforcement gate and the repo ALREADY has sibling check scripts — copy their exact structure (`get_repo_root()` walking up to `pyproject.toml`, a pure findings-returning helper, a thin `main()` returning an exit code) rather than inventing a new shape.
+- The metadata you must validate lives in `#` comments (a TOML/JSON/YAML comment) — a semantic parser would discard it, so you must parse the file as TEXT and regex/walk the comment block.
+- You are tempted to add a new CI cron for the re-review reminder — first check whether a weekly `schedule:` already exists and reference it instead of duplicating.
+- You are expanding a documentation file (e.g. `SECURITY.md`) that is itself scanned by an existing doc-content pre-commit check — confirm what that check forbids (e.g. hard-coded `As of YYYY-MM-DD` date stamps) before writing your edit, so your own change does not trip the gate.
+- You want the new check to be unit-testable without packaging the script — plan a test that does `sys.path.insert(0, str(scripts_dir))` and imports the pure helper directly.
+- A plan reviewer NOGO'd a per-entry "walk the contiguous comment block around each ID" parser as brittle — switch to parsing the WHOLE contiguous comment region above the task line (bare `#` separator lines included), then per ID require the ID's presence AND a `Re-review:` line at-or-after it.
+- The single-line task regex could silently read zero suppressions from a multi-line / triple-quoted TOML task value — add a fail-CLOSED guard that scans the RAW file text for `--ignore-vuln` and emits a `<parser>` finding when the raw count exceeds the parsed count, so a security ledger can never silently pass undocumented.
+
+## Proposed Workflow
+
+> **Warning:** This workflow has not been validated end-to-end. It is a PLANNING hypothesis captured at `unverified` level — nothing here was executed. Treat every step as proposed until CI confirms.
+>
+> **Heading note:** The repository validator (`scripts/validate_plugins.py`) hard-requires the literal section string `## Verified Workflow`, so the canonical steps are also emitted under that heading below to keep validation green. Read them as **proposed**, per this warning.
+
+## Verified Workflow
+
+> **Warning:** This workflow has not been validated end-to-end. It is a PLANNING hypothesis captured at `unverified` level — nothing here was executed. Treat every step as proposed until CI confirms.
+
+### Quick Reference
+
+```bash
+# 1. Find an EXISTING check script in the SAME repo and mirror its skeleton — do not invent a new shape.
+ls scripts/check_*.py
+#   ProjectHephaestus precedents: check_security_policy_no_hardcoded_date.py, check_security_version_consistency.py
+#   Copy: get_repo_root() (walk up to pyproject.toml) + pure findings() helper + main() -> exit code.
+
+def get_repo_root() -> Path:
+    p = Path(__file__).resolve()
+    for parent in (p, *p.parents):
+        if (parent / "pyproject.toml").exists():
+            return parent
+    raise RuntimeError("repo root not found")
+
+# 2. Parse the ledger as TEXT, NOT TOML semantics — the Re-review metadata lives in `#` comments
+#    that a TOML parser DISCARDS. Read lines, regex the task value, parse the WHOLE comment REGION.
+PIP_AUDIT_TASK_RE = re.compile(r'^\s*pip-audit\s*=\s*"([^"]*)"\s*$')        # single-line; raw guard backs it up
+IGNORE_VULN_RE   = re.compile(r"--ignore-vuln(?:=|\s+)([A-Z]+-\d{4}-\d+)")
+REREVIEW_RE      = re.compile(r"Re-review:")
+
+# R1 (v1.1.0): parse the WHOLE contiguous comment REGION above the task line — INCLUDING bare `#`
+# separator lines — NOT a per-ID block walk. A bare `#` must NOT terminate the region.
+def _comment_region_above(lines, task_idx):
+    region = []                                 # collected newest-first then reversed
+    i = task_idx - 1
+    while i >= 0 and lines[i].lstrip().startswith("#"):   # bare `#` lstrips to "#" -> still in region
+        region.append(lines[i]); i -= 1
+    return list(reversed(region))
+
+# per suppressed ID: (a) ID appears in the region AND (b) a `Re-review:` line is at-or-after its 1st mention
+def find_unguarded_suppressions(region, vuln_ids):
+    findings = []
+    for vid in vuln_ids:
+        first = next((n for n, ln in enumerate(region) if vid in ln), None)
+        if first is None or not any(REREVIEW_RE.search(ln) for ln in region[first:]):
+            findings.append(vid)
+    return findings
+
+# FAIL CLOSED on an unparseable task value: the single-line regex can't read a triple-quoted multi-line
+# TOML string. Cross-check the RAW file text; if raw `--ignore-vuln` count > parsed count (or no single-line
+# task matched but raw has `--ignore-vuln`), emit a `<parser>` finding so the check FAILS LOUDLY, never
+# silently passing zero suppressions on a security ledger. (cf. gha-security-scanning "no silent caps".)
+raw_ids = IGNORE_VULN_RE.findall(raw_text)
+if len(raw_ids) > len(parsed_ids):
+    findings.append("<parser>: task value unparseable (multi-line?) — raw --ignore-vuln count exceeds parsed")
+
+# 3. REUSE the repo's existing weekly cron — do not add a redundant schedule.
+grep -nE 'schedule:|cron:' .github/workflows/security.yml
+#   security.yml already had:  cron: "0 8 * * 1"  (Mondays 08:00)  -> reference it in the strengthened comment.
+
+# 4. A repo-wide doc-content check constrains your OWN SECURITY.md edit — avoid absolute date stamps.
+grep -nE 'As of \\\d\{4\}-\\\d\{2\}-\\\d\{2\}' scripts/check_security_policy_no_hardcoded_date.py
+#   The existing check rejects `As of 2026-06-23`-style stamps; write the threat-model section without them.
+
+# 5. Wire the hook as repo: local (the script lives in THIS repo, no remote rev).
+#   - id: check-pip-audit-rereview
+#     language: system
+#     entry: python3 scripts/check_pip_audit_rereview.py
+#     pass_filenames: false      # the script scans pixi.toml itself, not the staged file list
+#     files: ^pixi\.toml$        # only re-run when the ledger file changes
+
+# 6. Unit-test the pure helper WITHOUT packaging the script — test the REAL shape AND adversarial shapes.
+import sys; sys.path.insert(0, str(scripts_dir))   # scripts_dir = repo_root / "scripts"
+from check_pip_audit_rereview import find_unguarded_suppressions
+#   Required test cases (R1):
+#     - bare-`#`-separator-in-region        -> must PASS (the v1.0.0 false-positive that NOGO'd it)
+#     - multi-line / triple-quoted task     -> must FAIL closed (raw > parsed -> <parser> finding)
+#     - two IDs, only one documented        -> flags EXACTLY the undocumented ID
+#     - the real pixi.toml ledger           -> EXECUTE the check, assert exit == 0 (do not assert from a read)
+```
+
+### Detailed Steps
+
+1. **Mirror an existing repo-local check script — do not invent a new shape.** When the
+   audit asks for a `scripts/check_*.py` and the repo already has sibling scripts
+   (`check_security_policy_no_hardcoded_date.py`, `check_security_version_consistency.py`),
+   copy their exact skeleton: a `get_repo_root()` that walks `Path(__file__).resolve()`
+   up its parents until it finds `pyproject.toml`; a PURE helper that returns a list of
+   findings (no printing, no `sys.exit` — testable); and a thin `main()` that prints the
+   findings and `return`s/`sys.exit`s an exit code. This keeps the new gate consistent
+   with the repo's enforcement idiom and makes it trivially unit-testable.
+
+2. **Parse the ledger as TEXT, not via a TOML parser.** The `Re-review:` trigger and the
+   reason for each `--ignore-vuln` suppression live in `#` comments in `pixi.toml`. A
+   TOML parser (`tomllib`) discards all comments, so loading the file semantically throws
+   away the very metadata the check must verify. Read the file line-by-line, regex the
+   `pip-audit = "..."` task value to extract the `--ignore-vuln <ID>` suppressions.
+
+2a. **Parse the WHOLE contiguous comment REGION above the task line — not a per-ID block
+   walk (R1).** v1.0.0's `_ledger_block_for` walked the comment paragraph around each vuln
+   ID and stopped at any bare `#` (blank-comment) line; a plan reviewer NOGO'd it because a
+   legal ledger that uses a bare `#` to separate the header from a vuln's paragraph would
+   truncate the walk and FALSE-POSITIVE on a valid ledger. Instead collect the MAXIMAL run
+   of comment lines ending directly above the `pip-audit = "..."` line — INCLUDING bare `#`
+   separator lines (a bare `#` must NOT terminate the region) — then per suppressed ID
+   require: (a) the ID appears somewhere in the region, AND (b) a `Re-review:` line appears
+   at-or-after the ID's first mention. This whole-region invariant is strictly more robust
+   than walking each ID's paragraph and survives blank-comment separators. When a reviewer
+   NOGOs on parser brittleness, the converging fix is usually to REMOVE the clever per-item
+   logic and validate a coarser whole-region invariant — simpler AND more robust at once.
+
+2b. **Fail CLOSED on an unparseable task value (R1).** The single-line regex
+   `^\s*pip-audit\s*=\s*"([^"]*)"\s*$` cannot read a triple-quoted multi-line TOML string,
+   so it would silently extract ZERO suppressions and the check would PASS an undocumented
+   ledger — the worst possible outcome for a security gate. Guard it: also scan the RAW file
+   text for `--ignore-vuln`; if the raw count exceeds the parsed count (or no single-line
+   task matched yet the raw text contains `--ignore-vuln`), emit a `<parser>` finding so the
+   check FAILS LOUDLY rather than silently passing. Convert a silent false-negative on a
+   security ledger into a fail-closed loud failure (cf. the
+   `gha-security-scanning-supply-chain` "no silent caps" principle).
+
+3. **Reuse the repo's existing weekly cron instead of adding a redundant one.** The
+   re-review reminder does not need a NEW schedule — `security.yml` already runs on
+   `cron: "0 8 * * 1"` (Mondays 08:00). Reference that existing cadence in the
+   strengthened ledger comment ("Re-review: weekly security.yml run") rather than
+   introducing a second `schedule:` that maintainers must reconcile.
+
+4. **A repo-wide doc-content check constrains your OWN documentation edit.** When
+   expanding `SECURITY.md` with the threat model, an existing pre-commit check
+   (`check_security_policy_no_hardcoded_date.py`) rejects absolute date stamps matching
+   `As of \d{4}-\d{2}-\d{2}`. Write the new section WITHOUT such stamps (use relative or
+   convention-based phrasing) so your own edit does not fail the gate it sits beside.
+
+5. **Wire the hook as `repo: local`.** The script lives in this repo, so the hook is a
+   `repo: local` entry with `language: system`, `entry: python3 scripts/check_*.py`,
+   `pass_filenames: false` (the script scans `pixi.toml` directly, it does not consume
+   the staged-file list), and `files: ^pixi\.toml$` (re-run only when the ledger file
+   changes). `pass_filenames: false` is essential here — without it pre-commit appends
+   the staged filenames as argv, which a no-argument check script would misinterpret.
+
+6. **Unit-test the pure helper via `sys.path.insert` — the real shape AND the adversarial
+   shapes (R1).** Since `scripts/` is not an installed package, the test does
+   `sys.path.insert(0, str(repo_root / "scripts"))` (mirror the sibling test's bootstrap)
+   then imports the pure findings helper directly. Required cases: (a) a **bare-`#`
+   separator inside the region** must PASS (this is the exact v1.0.0 false-positive that
+   earned the NOGO); (b) a **multi-line / triple-quoted task** must FAIL closed (raw count
+   exceeds parsed → `<parser>` finding); (c) **two IDs where only one is documented** flags
+   exactly the undocumented one; and (d) actually EXECUTE the check against the real
+   `pixi.toml` and assert `exit == 0` — do not claim the real ledger passes from a file
+   read, because reading is not running and the parser could still mishandle the real layout.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| ------- | -------------- | ------------- | -------------- |
+| Loading `pixi.toml` with a TOML parser to read the ledger | Planned to `tomllib.load(pixi.toml)` and inspect the `pip-audit` task plus its annotations | A TOML parser DISCARDS all `#` comments; the reason + `Re-review:` trigger metadata lives ONLY in comments, so the parsed object contains none of it | Parse the ledger as TEXT (read lines, regex the task value, walk the contiguous `#` block) — never load it semantically when the data you need is comment-only |
+| Adding a new weekly CI cron for the re-review reminder | Planned a fresh `schedule: cron:` for the quarterly/weekly re-review nudge | `security.yml` ALREADY has `cron: "0 8 * * 1"` (Mondays 08:00); a second schedule is redundant and drifts | Check for an existing `schedule:` before adding one; reference the existing cadence in the strengthened comment instead of duplicating it |
+| Date-stamping the new SECURITY.md threat-model section | Considered an `As of 2026-06-23` header on the expanded section | An existing pre-commit check (`check_security_policy_no_hardcoded_date.py`) rejects `As of \d{4}-\d{2}-\d{2}` stamps — the doc-content check would fail on my OWN edit | When editing a doc that is itself scanned by a doc-content gate, learn what the gate forbids first; write the edit to satisfy the gate it sits beside |
+| Inventing a bespoke check-script structure | Considered a one-off script shape for the new gate | The repo already has sibling check scripts with a proven `get_repo_root()` + pure-helper + `main()`-exit-code shape; a divergent shape is harder to test and inconsistent | Mirror an EXISTING `scripts/check_*.py` skeleton in the same repo; copy `get_repo_root()`, the pure findings helper, and the thin `main()` |
+| Per-ID contiguous-block walk (`_ledger_block_for`) — v1.0.0, NOGO'd | Walked the comment paragraph UP from each vuln ID, stopping at bare `#` (blank-comment) lines, expecting `Re-review:` in the same unbroken `#` block | A legal bare-`#` separator between the ledger header and a vuln's paragraph truncates the region early → FALSE-POSITIVE on a VALID ledger; a plan reviewer graded it B and NOGO'd | Parse the WHOLE contiguous comment region above the task line INCLUDING bare `#` lines; per ID require the ID's presence AND a `Re-review:` line at-or-after its first mention. KISS whole-region invariant beat the clever per-item walk |
+| Single-line task regex with NO fail-closed guard — v1.0.0 | `^\s*pip-audit\s*=\s*"..."\s*$` matched only a single-line task value, with nothing to catch a parse miss | A triple-quoted multi-line TOML task yields zero parsed suppressions → the check SILENTLY PASSES an undocumented ledger (the worst outcome for a security gate) | Fail CLOSED: scan the RAW file text for `--ignore-vuln`; if raw count > parsed count (or no single-line task matched but raw has `--ignore-vuln`), emit a `<parser>` finding so the check fails LOUDLY (cf. "no silent caps") |
+| Asserting "the real PYSEC-2025-183 ledger passes" from a file READ | Claimed exit == 0 by reading `pixi.toml`, never running the script | Reading is not running — the region parser could still mishandle the real layout; the claim was unverified | Mandate ACTUALLY executing the check and asserting `exit == 0` against the real `pixi.toml` in the impl/verification steps; never assert a pass from a read |
+
+## Results & Parameters
+
+- **Issue / scope:** ProjectHephaestus issue #1550 — audit-nitpick bundle: (a) expand `SECURITY.md` with a threat model, (b) add a pre-commit check enforcing a `Re-review:` trigger line on every `pip-audit --ignore-vuln` suppression in `pixi.toml`.
+- **Precedent scripts to mirror (read this session):** `scripts/check_security_policy_no_hardcoded_date.py`, `scripts/check_security_version_consistency.py`. Shared skeleton: `get_repo_root()` (walk `Path(__file__).resolve().parents` up to the dir containing `pyproject.toml`) + a pure findings-returning helper (no I/O / no `sys.exit`) + a thin `main()` returning an exit code.
+- **Parse strategy (R1):** TEXT, not TOML — the reason + `Re-review:` metadata is comment-only and a TOML parser discards it. Read lines, regex the `pip-audit = "..."` task value to pull `--ignore-vuln <ID>` IDs, then parse the WHOLE contiguous comment REGION above the task line (bare `#` separators included) and per ID require the ID + a `Re-review:` line at-or-after it. Replaces v1.0.0's brittle per-ID `_ledger_block_for` walk.
+- **Fail-closed guard (R1):** the single-line task regex can't read a triple-quoted multi-line task; cross-check the RAW text for `--ignore-vuln` and emit a `<parser>` finding when raw count > parsed count, so the check never silently passes an undocumented security ledger.
+- **Existing cron reused (verified):** `security.yml` has `cron: "0 8 * * 1"` (Mondays 08:00). No new schedule added; the strengthened ledger comment references the existing cadence.
+- **Doc-content self-constraint (verified):** `check_security_policy_no_hardcoded_date.py` rejects `As of \d{4}-\d{2}-\d{2}`. The new SECURITY.md threat-model section avoids absolute date stamps so it passes that gate.
+- **Hook wiring (planned):** `repo: local`, `language: system`, `entry: python3 scripts/check_pip_audit_rereview.py`, `pass_filenames: false`, `files: ^pixi\.toml$`.
+- **Unit test (planned):** `sys.path.insert(0, str(repo_root / "scripts"))` then import the pure findings helper directly; assert zero findings on a well-formed ledger and one finding on a malformed one.
+- **R1 design fixes (resolving v1.0.0's open risks, still UNVERIFIED end-to-end):**
+  - The brittle per-ID `_ledger_block_for` walk is REPLACED by a whole-contiguous-comment-region parse (bare `#` separators included) + per-ID "ID present AND `Re-review:` at-or-after it" check → no more bare-`#` false-positive on a valid ledger.
+  - The single-line task regex now has a fail-CLOSED backstop: a raw-text `--ignore-vuln` cross-check emits a `<parser>` finding when raw > parsed → a multi-line/triple-quoted task can no longer silently pass.
+  - The "real PYSEC-2025-183 passes" claim is STILL read-not-run; step 6 / the verification block now MANDATE executing the check and asserting `exit == 0`, but execution has not happened.
+- **Verification level:** unverified (plan-only; verified-local at best from reads). Nothing executed end-to-end. R1 re-plan after a B/NOGO.
+
+## Verified On
+
+| Project | Context | Details |
+| ------- | ------- | ------- |
+| HomericIntelligence/ProjectHephaestus | Issue #1550 — audit-nitpick bundle (SECURITY.md threat model + pip-audit `--ignore-vuln` `Re-review:` enforcement check) | unverified / plan-only. Precedent scripts (`check_security_policy_no_hardcoded_date.py`, `check_security_version_consistency.py`), the `security.yml` weekly cron, and the existing `pixi.toml` PYSEC-2025-183 suppression were READ this session; the proposed check script, its `repo: local` hook, and its unit test were NOT written or executed. |
+| HomericIntelligence/ProjectHephaestus | Issue #1550 — R1 re-plan after a B/NOGO on v1.0.0's per-ID block walk | unverified / plan-only (v1.1.0). The R1 redesign — whole-comment-region parse incl. bare `#` separators, fail-closed raw-text `--ignore-vuln` guard, and adversarial tests (bare-`#`-separator PASS, multi-line task FAIL-closed, two-ID one-undocumented) — was DESIGNED this session but NOT written or executed; the "real ledger passes" assertion now requires actually running the check. |

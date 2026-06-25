@@ -1,11 +1,12 @@
 ---
 name: planning-follow-up-issue-line-number-drift
-description: "Use when planning implementation for a follow-up or refinement issue whose cited line numbers may have drifted due to intervening PRs. Verify current file state against the issue's cited lines, grep module-level AND function-level docstrings separately, and check git log to confirm which PR last touched the file."
+description: "Use when planning a fix for an externally-filed issue (follow-up, refinement, audit, doc-audit) that cites specific line numbers or per-line claims. Re-verify the issue's cited lines AND each claim against the CURRENT file state before planning — the file may have been partially fixed since filing, so one of two 'broken' lines may already be correct. Grep module-level AND function-level docstrings separately; for command/recipe-reference fixes, source every documented command from the justfile (which may mix multiple live naming conventions) before editing; check git log to confirm which PR last touched the file."
 category: documentation
-date: 2026-06-13
-version: "1.0.0"
+date: 2026-06-19
+version: "1.1.0"
 user-invocable: false
 verification: verified-local
+history: planning-follow-up-issue-line-number-drift.history
 tags:
   - follow-up-issue
   - line-number-drift
@@ -14,9 +15,15 @@ tags:
   - stale-line-numbers
   - git-log
   - module-docstring
+  - doc-audit
+  - partial-fix
+  - justfile
+  - command-reference
 ---
 
 # Planning: Follow-Up Issue Line Number Drift
+
+**History:** [changelog](./planning-follow-up-issue-line-number-drift.history)
 
 ## Overview
 
@@ -32,6 +39,12 @@ state often lags behind `main`. The function-level fix the issue targets may hav
 while a subtler module-level gap remains unfixed. This skill documents how to detect that situation
 and find the actual remaining gap.
 
+> **v1.1.0 (2026-06-19) — unverified additions.** The original docstring line-number-drift workflow
+> is `verified-local`. The v1.1.0 generalization below (the **partial-fix per-claim re-verification**
+> step and the **justfile command-sourcing** step, drawn from Odysseus issue #182) is **planning-stage
+> and `unverified`** — no CI/code was executed to validate the fix end-to-end. Treat those additions as
+> a hypothesis until CI confirms. They are marked inline where they appear.
+
 ## When to Use
 
 - Planning any issue whose body cites specific line numbers (follow-up issues, refinement issues, audit findings)
@@ -39,6 +52,8 @@ and find the actual remaining gap.
 - Issue text says "After PR #N this is false" but you haven't confirmed whether #N has merged
 - Docstring fix issues targeting a specific function — the function may be fixed but the module docstring may still be stale
 - Any issue filed from within another PR's review thread (high likelihood of pre-merge line number references)
+- **(v1.1.0, unverified)** Any doc-audit issue that claims "lines X–Y use the wrong/phantom command" — the file may have been **partially fixed** since filing, so one of the cited lines may already be correct
+- **(v1.1.0, unverified)** Issues about phantom/stale `just` recipes or command references in onboarding/getting-started docs — source each command from the live justfile before editing
 
 ## Verified Workflow
 
@@ -61,6 +76,20 @@ grep -n "def scan" scripts/check_license_compatibility.py
 
 # 5. Check module-level docstring separately (lines 1-30 typically)
 head -30 scripts/check_license_compatibility.py
+
+# --- v1.1.0 (UNVERIFIED) — doc-audit / command-reference re-verification ---
+# 6. Re-verify EACH per-line claim, not just the line numbers. A doc-audit issue may say
+#    "lines 232-234 use phantom recipes X and Y" — but the file may have been PARTIALLY fixed.
+#    Grep the exact cited lines and check each one independently:
+sed -n '232,234p' docs/onboarding.md          # ground-truth the cited range
+grep -n 'agamemnon-start\|nestor-start\|start-agamemnon\|start-nestor' docs/onboarding.md
+
+# 7. For command/recipe references, SOURCE every documented command from the live justfile
+#    BEFORE planning the edit. The justfile may mix MULTIPLE live naming conventions
+#    (e.g. verb-first `start-nestor` AND prefix-first `hermes-start`) — you cannot infer the
+#    correct name from one convention; grep each candidate.
+grep -nE '^[a-z]' justfile                      # list every real recipe name
+grep -nE '^(start-|[a-z-]+-start)' justfile     # both naming conventions
 ```
 
 ### Detailed Steps
@@ -128,6 +157,47 @@ and which PR already fixed the adjacent content (so the reviewer can understand 
 sed -n '10,20p' scripts/check_license_compatibility.py
 ```
 
+#### Step 6 (v1.1.0 — Proposed, UNVERIFIED): Re-verify each per-line claim and source commands from the live tree
+
+> **Warning:** This step has not been validated end-to-end. Treat as a hypothesis until CI confirms.
+
+This step generalizes the skill from "docstring line drift" to any externally-filed doc-audit
+issue that asserts per-line claims (e.g. "lines 232–234 reference nonexistent `just` recipes").
+The core failure mode it guards against: the file may have been **partially fixed** since the
+issue was filed, so a blind edit that follows the issue text re-breaks an already-correct line.
+
+1. **Ground-truth the cited range, then check EACH line's claim independently.** Do not treat
+   "lines X–Y are broken" as atomic. `sed -n 'X,Yp' <file>` and read each line. In Odysseus #182
+   the issue claimed BOTH `agamemnon-start` and `nestor-start` were broken at lines 232–234, but
+   line 232 already read the correct `start-agamemnon` — only line 233's `nestor-start` was stale.
+   A blind edit would have re-changed the already-correct line.
+
+2. **For command/recipe references, source every documented command from the justfile FIRST.**
+   Never trust the command names in the issue body. List the real recipes:
+
+   ```bash
+   grep -nE '^[a-z]' justfile                    # every recipe name
+   grep -nE '^(start-|[a-z-]+-start)' justfile   # both naming conventions
+   ```
+
+3. **Expect MULTIPLE live naming conventions in one justfile.** Odysseus mixes verb-first
+   (`start-agamemnon`, `start-nestor`) AND prefix-first (`hermes-start`, `argus-start`,
+   `keystone-start`) — both are real. You cannot infer the "correct" name from a single
+   convention; grep each candidate. The onboarding doc itself had a MIX of both, and only
+   `nestor-start` was actually wrong.
+
+4. **Scope discipline.** The mixed-convention justfile is the root cause, but normalizing it is
+   out of scope for a doc-fix issue — flag it in the plan/PR, do not fix it.
+
+**Unverified reliances to record (carry these forward as risks, not facts):**
+
+- Relied on `pixi run npx markdownlint-cli2` as the repo's lint runner **without** verifying that
+  recipe/tooling actually exists.
+- Did not verify issue #182's acceptance criteria are limited to the doc edit — it is part of
+  umbrella issue #174, which could imply broader scope.
+- Assumed no OTHER docs (`architecture.md`, `deployment.md`, `runbooks/`) reference the same
+  phantom recipe; a repo-wide grep beyond `docs/` was not run. **Do run it.**
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -137,6 +207,10 @@ sed -n '10,20p' scripts/check_license_compatibility.py
 | Read only the function-level docstring | Grepped only `def scan` and read 20 lines below it | Missed the module-level `FAILS LOUDLY` block (lines 12–17) which still omitted the marker-excluded case | Grep module-level AND function-level docstrings separately; they are independently maintained |
 | Trust "After PR #N this is false" in issue body | Assumed PR #1304 was the relevant merge since issue cited it | The issue was filed from within PR #1304's review process, citing a state PR #1303 had already fixed on `main` | Check whether the referenced PR is actually merged; issues filed mid-PR-process use pre-merge state |
 | Skip git log for docstring-only issues | Assumed low-risk docstring fixes don't need git archaeology | The git log revealed the exact SHA that fixed the function docstring, which was necessary to identify the remaining module-level gap | `git log --oneline -10 -- <file>` is a 2-second check that prevents the rest of the plan from being wrong |
+| (v1.1.0, unverified) Treat "lines X–Y are broken" as atomic | Would have edited both cited lines 232–234 per Odysseus #182's claim that `agamemnon-start` AND `nestor-start` were phantom | Ground-truth grep showed line 232 already read the correct `start-agamemnon`; only line 233's `nestor-start` was stale — a blind edit re-breaks the already-correct line | Re-verify EACH per-line claim independently; the file may be partially fixed since the issue was filed |
+| (v1.1.0, unverified) Trust the command names in the issue body | Planned the edit using the recipe names the issue quoted | Issue command names were stale/wrong; the real recipes live only in the justfile | Source every documented command from the live justfile (`grep -nE '^[a-z]' justfile`) BEFORE planning the edit |
+| (v1.1.0, unverified) Infer the "correct" recipe name from one naming convention | Assumed Odysseus used a single convention, so guessed the canonical form | The justfile mixes verb-first (`start-nestor`) AND prefix-first (`hermes-start`) — both are live; the doc had a mix and only `nestor-start` was wrong | You cannot infer the correct name from one convention; grep each candidate against the justfile |
+| (v1.1.0, unverified) Fix the root-cause mixed convention inside a doc-fix PR | Considered normalizing the justfile's two naming conventions | That is a refactor, out of scope for a doc-fix issue, and would balloon the change | Flag the root cause in the plan/PR, do not fix it; keep the doc-fix scoped |
 
 ## Results & Parameters
 
@@ -194,9 +268,32 @@ Received a follow-up / refinement issue with cited line numbers:
 | Grep module-level block separately | `grep -n "<keyword>" <file> \| head -20` (then check which lines are in 1–30 range) |
 | Show first 30 lines of a file | `head -30 <file>` or `sed -n '1,30p' <file>` |
 | Confirm whether a referenced PR merged | `gh pr view <N> --json state,mergedAt --jq '.state, .mergedAt'` |
+| (v1.1.0) Ground-truth a cited line range | `sed -n 'X,Yp' <file>` |
+| (v1.1.0) List every real `just` recipe | `grep -nE '^[a-z]' justfile` |
+| (v1.1.0) Catch both recipe naming conventions | `grep -nE '^(start-\|[a-z-]+-start)' justfile` |
+
+### Concrete example (Odysseus issue #182 — v1.1.0, UNVERIFIED, planning-stage)
+
+> **Warning:** This example was the planning-stage analysis that motivated the v1.1.0 additions.
+> No CI/code was executed to validate the fix end-to-end. Treat as a hypothesis until CI confirms.
+
+Issue body said: `docs/onboarding.md` documents `just nestor-start` and `just agamemnon-start`,
+which don't exist — the real recipes are verb-first `start-nestor` / `start-agamemnon`. The issue
+cited **lines 232–234** and claimed **both** were broken.
+
+Ground-truth grep showed line 232 **already** read `start-agamemnon` (already correct — the file
+had been partially fixed since the issue was filed). Only line 233's `nestor-start` was still
+stale. A blind edit following the issue text would have re-changed the already-correct line 232.
+
+The Odysseus justfile mixes TWO live naming conventions: verb-first (`start-agamemnon`,
+`start-nestor`) AND prefix-first (`hermes-start`, `argus-start`, `keystone-start`). Both are real;
+the doc had a mix of both. The correct command name therefore could NOT be inferred from a single
+convention — each had to be grepped against the justfile. Normalizing the mixed convention is the
+root cause but out of scope for the doc fix; flag it, don't fix it.
 
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | Issue #1306 — stale docstring in `scripts/check_license_compatibility.py` | Function docstring already fixed by PR #1303; module-level `FAILS LOUDLY` block was the real remaining gap |
+| Odysseus (v1.1.0, **unverified** — planning-stage only) | Issue #182 — phantom `just` recipes in `docs/onboarding.md` | Issue claimed both `agamemnon-start` and `nestor-start` broken at lines 232–234; ground-truth showed line 232 already correct (`start-agamemnon`), only `nestor-start` stale — partial-fix near-miss avoided by re-verifying each per-line claim |

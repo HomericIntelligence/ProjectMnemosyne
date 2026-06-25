@@ -1,13 +1,13 @@
 ---
 name: code-quality-enforcement-gates
-description: "Canonical guide to code-quality enforcement THRESHOLDS, remediation workflow, and post-audit verification: when to fail builds on complexity, when to enable mypy strict modes, when to promote warnings to errors, how to scope override subsets, deprecation removal policy, how to fix production asserts/hardcoded paths, how to run a post-remediation audit, and how to verify audit/PR-reviewer findings against ground truth before acting. Use when: (1) deciding fix-vs-suppress for a new lint rule, (2) enabling mypy check-untyped-defs or new ruff rules, (3) promoting CI warnings to exit-1, (4) tuning markdownlint MD024 / ruff C901 thresholds, (5) narrowing mypy module override globs to specific paths, (6) replacing production assert input-validation or hardcoded /tmp paths with safe equivalents, (7) executing a post-remediation audit to close remaining CI/classifier/release/docs gaps after an initial cleanup, (8) strict-mode repo audits or PR-reviewer sub-agents produce hallucinated findings (nonexistent files, phantom CI checks, red-on-main checks cited as PR blockers) — verify against live state before acting."
+description: "Canonical guide to code-quality enforcement THRESHOLDS, remediation workflow, and post-audit verification: when to fail builds on complexity, when to enable mypy strict modes, when to promote warnings to errors, how to scope override subsets, deprecation removal policy, how to fix production asserts/hardcoded paths, how to run a post-remediation audit, how to verify audit/PR-reviewer findings against ground truth before acting, and how to verify a TRACKING/REMEDIATION DOC's checkbox state against live `gh issue view` before editing it. Use when: (1) deciding fix-vs-suppress for a new lint rule, (2) enabling mypy check-untyped-defs or new ruff rules, (3) promoting CI warnings to exit-1, (4) tuning markdownlint MD024 / ruff C901 thresholds, (5) narrowing mypy module override globs to specific paths, (6) replacing production assert input-validation or hardcoded /tmp paths with safe equivalents, (7) executing a post-remediation audit to close remaining CI/classifier/release/docs gaps after an initial cleanup, (8) strict-mode repo audits or PR-reviewer sub-agents produce hallucinated findings (nonexistent files, phantom CI checks, red-on-main checks cited as PR blockers) — verify against live state before acting, (9) the task is 'fix stale checkboxes in a tracking/remediation markdown doc' — verify EVERY box against live `gh issue view` (the doc AND the bug report's own stale-list are not authoritative) before editing, and guard re-drift with a PROPERTY-based regression test."
 category: ci-cd
-date: 2026-06-07
-version: "1.1.0"
+date: 2026-06-20
+version: "1.2.0"
 user-invocable: false
 verification: verified-local
 history: code-quality-enforcement-gates.history
-tags: [merged, code-quality, quality-gate, mypy, ruff, complexity-budget, deprecation, post-remediation-audit, audit-verification, fact-checking, production-code-fixes]
+tags: [merged, code-quality, quality-gate, mypy, ruff, complexity-budget, deprecation, post-remediation-audit, audit-verification, fact-checking, production-code-fixes, tracking-doc, remediation-plan, checkbox-drift]
 ---
 
 # Code-Quality Enforcement Gates
@@ -34,6 +34,7 @@ tags: [merged, code-quality, quality-gate, mypy, ruff, complexity-budget, deprec
 9. Replacing **production `assert` input validation** (stripped by `python -O`) with explicit `ValueError`, or **hardcoded `/tmp` paths** with `tempfile`
 10. Running a **post-remediation audit** to close residual CI/classifier/release-gate/docs gaps before ecosystem integration
 11. **Verifying audit or PR-reviewer findings against ground truth** before writing a remediation plan, filing issues, or posting a REQUEST_CHANGES verdict (strict-mode audits and reviewer sub-agents hallucinate ~10–30% of findings)
+12. **Planning a tracking/remediation-doc checkbox correction** — the task is "fix stale `- [ ]` / `- [x]` state in a remediation-plan / roadmap / status markdown doc": verify EVERY checkbox against live `gh issue view <n> --json state` before editing, then guard re-drift with a property-based regression test (see §11)
 
 ---
 
@@ -54,6 +55,7 @@ tags: [merged, code-quality, quality-gate, mypy, ruff, complexity-budget, deprec
 | Production assert / `/tmp` | Replace with `raise ValueError` / `tempfile.gettempdir()` | `python -O` strips asserts; grep `tests/` for `AssertionError` after |
 | Post-remediation audit | Read state in parallel → fix classifier/release/docs gaps | Classifiers reflect what CI tests; release needs `needs: test` gate |
 | Verify audit/reviewer findings | `ls` / `grep` / `git ls-files` / `gh run list --branch main` | 10–30% of strict-audit & reviewer findings are hallucinated; verify before acting |
+| Verify tracking-doc checkboxes (PLANNING) | `gh issue view <n> --json state` per box; property regression test | Doc + bug-report list are NOT authoritative; box ticked ⟺ ALL issues on line CLOSED. Planning-stage; test shape unverified until PR lands |
 
 ---
 
@@ -594,6 +596,56 @@ the stale-finding rate exceeds 20%, question the audit methodology, not the code
 
 ---
 
+### 11. Verify a Tracking/Remediation Doc's Checkboxes Before Editing (planning-stage sub-pattern of §10)
+
+> **Planning-stage pattern — the NEW additions in this section are `unverified`.** They come from a
+> PLANNING session for a ProjectProteus tracking-doc correction; the regression-test *shape* below was
+> NOT implemented or CI-run. Treat the test as a hypothesis until the PR lands. The §10 ground-truth
+> principle it extends is `verified-local`; this concrete sub-pattern is not.
+
+When the task is "fix stale state in a tracking/remediation doc" (a `docs/.../remediation-plan.md`
+with `- [ ]` / `- [x]` checkboxes that claim issue/PR state), the **doc's own claims are NOT
+authoritative — and neither is the bug report that asked you to fix it.** In the originating session,
+the triggering issue body listed which entries were stale; verifying every box against live `gh`
+surfaced **two additional stale entries (#92, #100) the issue body never mentioned.** Apply §10's
+ground-truth rule per checkbox:
+
+```bash
+# For EVERY checkbox in the doc — not just the ones the bug report names — verify live state.
+gh issue view <n> --repo OWNER/REPO --json state --jq .state   # OPEN | CLOSED
+```
+
+**Checkbox semantics (the load-bearing nuance):** Wave-3 lines in this doc are **PR-GROUP scoped, not
+per-issue.** A group box may be ticked ONLY when **EVERY** issue on the line is CLOSED. Ticking a group
+(e.g. PR-C / PR-E) that still has an open child (#98 / #101 / #103) falsely marks work done. The rule:
+`box ticked ⟺ ALL issue numbers on the line are CLOSED`.
+
+**Then guard re-drift with a PROPERTY-based regression test, not a literal-text assertion** (this is
+§5 applied to a doc): assert the invariant `all referenced issues CLOSED ⇒ box ticked`, wired into the
+repo's existing CI test job, skipping gracefully when `gh` is unauthenticated. The property only fires
+when ALL issues on a line are closed, so it correctly does NOT trip on partial PR groups.
+
+**Risks to record in the plan (do not gloss over these):**
+
+- **Silent false-green from skip-on-unauth.** A `gh`-dependent CI test that skips when unauthenticated
+  becomes a **no-op** if the CI `GITHUB_TOKEN` lacks issue-read scope — the guard passes while
+  protecting nothing. Either ensure CI provides an authenticated token, or **fail loudly when
+  unauthenticated in a CI context** rather than skipping. (A self-contained committed-fixture invariant
+  table avoids the network/auth dependency entirely — see the dedicated
+  `tracking-doc-checkbox-sync-regression-guard` skill, which supersedes the live-`gh` design.)
+- **Network / rate-limit dependency.** The test calls `gh` on every CI run.
+- **Point-in-time snapshot.** Issue state read at planning time can change (an issue may reopen) before
+  implementation; a live re-checking test self-heals, but the static edits do not.
+- **Stale line/coordinate refs.** Line numbers in `remediation-plan.md` (e.g. line 21/25) and
+  `_required.yml:158-159` job name `dispatch-contract-test` were relied on WITHOUT re-verification at
+  implement time — re-grep at edit time; line refs go stale even when the finding is true (§10).
+
+**For the full, executed (verified-local) regression-guard design** — committed-fixture invariant table,
+stable per-line keys, bidirectional SEEN-set coverage, and why a live-`gh` guard is the wrong design —
+see the dedicated `tracking-doc-checkbox-sync-regression-guard` skill.
+
+---
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -624,6 +676,10 @@ the stale-finding rate exceeds 20%, question the audit methodology, not the code
 | Skip the inverse-hypothesis check | Treated the audit's hypothesis space as complete | Missed a `doc_policy.py` linter REJECTING `--squash` — the actual root cause | For every "X is missing", also ask "is X present but wrong?" |
 | Omit the AUDIT CORRECTIONS section | Handed the plan to reviewers without explaining the count gap | Reviewers confused; downstream agents re-introduced refuted findings | Every audit-driven plan needs an AUDIT CORRECTIONS section with refutation evidence |
 | Post REQUEST_CHANGES citing a red CI check | Reviewer agent said CI was red, so drafted REQUEST_CHANGES | The same check was ALSO red on `main` — failure was pre-existing, not PR-introduced | `gh run list --branch main --limit 5` before treating a red check as PR-introduced |
+| Trusted the issue body's list of stale entries | Took the triggering issue's "these boxes are stale" list as complete | It omitted #92 and #100 — both actually stale | Enumerate EVERY checkbox and verify each against `gh issue view`; the bug report's own list is a self-report, not ground truth |
+| Treated Wave-3 PR-group lines as per-issue checkboxes | Would tick a group box because one child issue closed | PR-C / PR-E still had open issues (#98/#101/#103) — group would falsely read "done" | Tick a group line only when ALL its issue numbers are CLOSED; the property test fires only on all-closed |
+| Regression test asserting literal line text | `assert "- [x] #84 ..." in doc` style positional/wording check | Breaks on any legitimate wording change → false regression noise | Assert the PROPERTY (`all referenced issues CLOSED ⇒ box ticked`), not the literal line |
+| `gh`-dependent CI test with silent skip-on-unauth | Test SKIPs (exit 0) when `gh` is unauthenticated | A missing/under-scoped CI token turns the guard into a no-op false-green — zero protection in exactly the env CI runs in | Provide an authenticated token, or fail loudly when unauth in CI; prefer an offline committed-fixture invariant table (see tracking-doc-checkbox-sync-regression-guard) |
 
 ---
 
@@ -687,3 +743,4 @@ false-positive PR; post-remediation audit moved a repo 82% → 86% across 15 dim
 | ProjectHephaestus | post-remediation-audit (82% → 86%, 358 tests); verify-audit-findings-before-acting (strict-full audits 2026-05-26/27/31, 10–30% findings refuted) |
 | AchaeanFleet | verify-audit-findings-before-acting (Dependabot review session — 2 reviewer agents cited pre-existing main-branch CI failures as PR blockers; PR #688 flipped to APPROVE) |
 | HomericIntelligence (ecosystem) | ci-deprecation-enforcement (PR #834); testing-regression-guard sweep (PR #5385, #5387) |
+| ProjectProteus | verify-tracking-doc-checkboxes (§11, PLANNING-stage, unverified): remediation-plan checkbox correction — per-box `gh issue view` surfaced 2 extra stale entries (#92, #100) the issue body omitted; PR-group line semantics + property-regression-test plan. Test shape not yet implemented/CI-run |

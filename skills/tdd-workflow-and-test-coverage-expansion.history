@@ -1,6 +1,15 @@
 <!-- markdownlint-disable MD024 -->
 # tdd-workflow-and-test-coverage-expansion — History
 
+## v1.2.0 (2026-06-15)
+
+SRP collaborator session-driver mocking patterns (ProjectHephaestus #1362)
+
+- New "When to Use" item 11: appending to existing `test_*_helpers.py` for SRP-extracted collaborator methods that drive subprocess sessions.
+- New "Mock templates (SRP collaborator session drivers)" section with 9 concrete patterns for: consumer-namespace patching, 2-tuple return for `invoke_claude_with_session`, `.stdout`-bearing MagicMock for `run_codex_session`, direct return for `compact_session`, `call_args.kwargs["cwd"]` assertion, exception-swallow boundary test, short-circuit guard (assert NOT called), dedicated codex-variant factory, and named helper over generator-throw lambda.
+- 8 new Failed Attempts rows: sketch filename without audit, mutating `_options()` return, generator-throw lambda, positional arg index for cwd, bare-string mock for 2-tuple return, 2-tuple mock for direct return, local `MagicMock` import inside factory.
+- New Verified On row: ProjectHephaestus issue #1362, PR #1363 (verified-ci).
+
 ## v1.1.0 (2026-06-07)
 
 restore testability-matrix/agent-subdir/curses-timing/coverage-comment nuance (nuance audit pass 2)

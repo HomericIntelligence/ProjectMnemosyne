@@ -1,0 +1,28 @@
+<!-- markdownlint-disable MD024 -->
+# planning-epic-verify-live-child-state — History
+
+## v1.0.0 (2026-06-19)
+
+Initial skill created in ProjectMnemosyne PR #2573 from the ProjectOdyssey epic #5191
+planning session (R0): re-verify the LIVE state of every child issue with `gh`
+(`state`, `stateReason`, merged PRs, `state:plan-go` labels) before planning an
+epic/tracking/umbrella issue, because the epic body is a snapshot that drifts.
+
+**Original date:** 2026-06-19
+**Original version:** 1.0.0
+
+```yaml
+name: planning-epic-verify-live-child-state
+description: "Before planning an epic/tracking/umbrella issue, query the LIVE state of every child issue with gh (state, stateReason, merged PRs, labels) instead of trusting the epic body's status table — the body is a snapshot and drifts. Most children may already be CLOSED+COMPLETED via merged PRs, reframing the epic from 'plan N fixes' to 'dispatch the few remaining state:plan-go children + close-out'. Use when: (1) planning an epic/tracking/umbrella issue, (2) re-planning after a NOGO on a tracking issue, (3) any issue whose body is a checklist of child issues, (4) deciding implementation order across linked issues."
+category: tooling
+date: 2026-06-19
+version: "1.0.0"
+```
+
+### v1.0.0 snapshot — Failed Attempts (5 rows)
+
+1. Trust the epic body's status table → 9 of 12 children already CLOSED+COMPLETED.
+2. Treat `state == CLOSED` as "done" → ignored `stateReason`; closed-as-`not planned` ≠ done.
+3. Re-plan `state:plan-go` children → discards reviewer-approved per-issue plans.
+4. Use the audit's original dependency graph verbatim → stale edges produced wrong ordering.
+5. Cite the audit's "approx" LOC → `any_tensor.mojo` had grown 4,241 → 4,373 lines.

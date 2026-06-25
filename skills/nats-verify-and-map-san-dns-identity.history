@@ -1,0 +1,28 @@
+# Changelog — nats-verify-and-map-san-dns-identity
+
+## v1.0.0 — 2026-06-19
+
+**What changed:** Initial creation.
+
+**Why:** Captured a `verified-local` learning from ADR-009 implementation (HomericIntelligence/Odysseus
+issue #175) on the exact cert→user identity matching mechanics of NATS `verify_and_map`. Two
+critical defects in the original plan were caught via PR #305 review thread PRRT_kwDORoAqe86K6YL4
+and corrected before merge:
+
+1. **Bare CN as match key** — The original plan set `user = "hermes.homeric"` assuming
+   `verify_and_map` would match the cert's `CN=hermes.homeric` field. NATS never matches a bare CN.
+   Match order is SAN-email → SAN-DNS → full RFC-2253 Subject DN. Fix: issue every role cert with
+   `--san <role>.homeric` and set `user=` to the SAN-DNS string.
+
+2. **No-op deny clause** — A `deny = ["hi.research.>"]` in the AGENTS subscribe block was a no-op
+   because `hi.research.>` was already absent from the allow-list. Deny only overrides an existing
+   allow entry. Fix: removed the deny clause; documented that deny is only meaningful when narrowing
+   an overly broad allow wildcard.
+
+3. **Broken runbook verification test** — The acceptance test was checking allow-list rejection on a
+   subject that was actually in the deny clause, not the allow-list. Fix: test `hi.tasks.>`
+   subscription as `agent.homeric` — that subject is absent from the AGENTS subscribe allow-list,
+   guaranteeing a permissions violation.
+
+`nats-server -t` parse check passed on both `server.conf` and `leaf.conf` after fixes. Verification:
+`verified-local`.

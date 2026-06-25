@@ -1,0 +1,55 @@
+# architecture-executable-convention-guard-pattern — History
+
+## v1.3.0 (2026-06-24)
+
+**Changed by:** ProjectHephaestus issue #1516 (PLANNING learning — making the documented DCO `Signed-off-by` trailer mechanically enforced).
+**Verification:** unverified (PLAN only — code not executed, CI not run). Frontmatter `verification` lowered from `verified-local` to `unverified` to reflect that the most recently added sub-patterns (v1.1.0–v1.3.0) are plan-only.
+
+### What changed
+- Added a new sub-pattern section, "Sub-Pattern: Commit-Trailer Convention Guards (DCO / Co-Authored-By)," documenting that a prose-only commit-message-TRAILER convention is the same executable-convention-guard pattern: ship a stdlib predicate + a dual gate (a step in an already-wired required CI job + a `commit-msg` pre-commit hook), mirroring the repo's existing sibling checker verbatim.
+- Added a "Proposed Workflow" subsection (7 steps) with an unverified warning, capturing the DCO-specific lessons: mirror `scripts/check_conventional_commit.py` verbatim; consume the FULL `.commit.message` (trailers live in the body, reuse the already-fetched `commits.json`, NUL-join multi-line records); anchor on `^Signed-off-by: .+ <…@…>$` (prefix + structure, never a substring scan); strip `#`-comment lines in `commit-msg` file-path mode; exempt `dependabot[bot]` identically to the sibling checks; ride the existing pr-policy job as Check 4 (no new workflow); mind the self-application bootstrap (`git commit -s -S`).
+- Added 4 Failed Attempts rows phrased as "assumed X without executing → must verify Y": the `jq` NUL round-trip, the cited line numbers (`_required.yml`/`.pre-commit-config.yaml`/`CONTRIBUTING.md`), the pr-policy `steps.fetch` id + `commits.json` filename, and the `commit-msg` hook self-application bootstrap.
+- Added a "Commit-trailer generalization (v1.3.0, unverified)" note to Results & Parameters and a row to the Verified On table (issue #1516, PLAN — unverified).
+- Added tags: `commit-trailer`, `dco-signoff`, `precommit-hook`, `sibling-checker-mirror`. Bumped frontmatter version 1.2.0 → 1.3.0.
+
+### Why
+ProjectHephaestus issue #1516 produced a PLAN (never executed, no CI) to turn the documented DCO `Signed-off-by` convention from prose into a mechanically enforced guard. It is another concrete instance of this skill's core pattern, with trailer-specific generalizations (full-message consumption, body-vs-subject distinction, NUL-joining for multi-line bodies, prefix+structure anchoring of the trailer line, comment-line stripping, bot exemption) that belong in the same skill. All of it is unverified — the jq round-trip, the line numbers, and the pr-policy step wiring were each assumed and must be empirically confirmed before merge — so the additions are framed as a Proposed Workflow plus "assumed X without executing → must verify Y" cautions.
+
+### Previous version (v1.2.0) snapshot
+
+The v1.2.0 rendered `.md` content prior to this amendment is preserved in git history at the parent commit of this amendment. It carried `verification: verified-local`, the coredump `verify_crash_bundle` v1.0.0 material, the v1.1.0 bidirectional mirror/parity sub-pattern, and the v1.2.0 coverage-altitude step 8 + supporting Failed-Attempts rows — but did NOT yet contain the commit-trailer (DCO) sub-pattern.
+
+## v1.2.0 (2026-06-24)
+
+**Changed by:** ProjectHephaestus issue #1543 re-plan (after a reviewer NOGO on the bidirectional mirror-guard plan — a TEST-COVERAGE lesson from the review iteration).
+**Verification:** unverified (PLAN only — code not executed, CI not run)
+
+### What changed
+- Added step 8 to the bidirectional sub-pattern's "Proposed Workflow": **test the orchestrator branch, not just the helper.** A pure low-level predicate (`check_no_unsanctioned_test_dirs()`) is easy to unit-test directly, but wiring it into a higher-level orchestrator (`check_test_structure()`) leaves the orchestrator's failure branch — its `for name in sorted(unsanctioned): print(..., file=sys.stderr)` loop + remediation hint — UNEXECUTED under helper-only tests, which can drop coverage below the 83% line-coverage gate. Fix: a SEPARATE orchestrator-altitude test using `capsys` asserting both the offending dir name AND the remediation hint, mirroring sibling failure tests (`test_missing_src_root` / `test_missing_test_root`) at the same altitude.
+- Added two supporting sub-points under step 8: (a) tree-mutating manual negative tests (`mkdir tests/unit/rogue ... rmdir`) are a hygiene risk — demote below the unit test and wrap in a `trap '... rmdir' EXIT` subshell; (b) a new allowlist/skip set sharing names with an existing one on a DIFFERENT axis (`docs`/`scripts` in both `_detect_src_package`'s `skip` set and `SANCTIONED_EXTRA_TEST_DIRS`) needs an inline comment naming the distinct axis (POLA).
+- Added 2 Failed Attempts rows: "tested only the new low-level helper" (orchestrator stderr loop uncovered → can fail the 83% gate; add a `capsys` orchestrator-altitude test); "manual negative test mutated the real tree" (stray dir on mid-run abort → `trap ... EXIT` subshell + make secondary to a unit test).
+- Added a "Coverage-altitude generalization (v1.2.0, unverified)" note to Results & Parameters and a row to the Verified On table.
+- Updated the sub-pattern warning to read "added in v1.1.0, extended in v1.2.0". Bumped frontmatter version 1.1.0 → 1.2.0.
+
+### Why
+The bidirectional mirror-guard plan (v1.1.0) got a reviewer NOGO whose durable lesson is a coverage-altitude gap: unit-testing the new pure helper in isolation does not execute the orchestrator's failure-reporting branch that consumes it, so under a line-coverage gate the uncovered `sys.stderr` print loop can fail CI even though the logic is "tested." The general rule — when you add Check N, add a Check-N-failure test at the SAME altitude as the existing Check-1/Check-2 tests, not just at the helper altitude — plus the tree-mutation hygiene and cross-axis allowlist POLA points, belong in the same skill as the v1.1.0 bidirectional sub-pattern. Still unverified (plan-only).
+
+## v1.1.0 (2026-06-24)
+
+**Changed by:** ProjectHephaestus issue #1543 (PLANNING learning — tests/unit/ dirs breaking the hephaestus/ mirror invariant).
+**Verification:** unverified (PLAN only — code not executed, CI not run)
+
+### What changed
+- Added a new sub-pattern section, "Sub-Pattern: Bidirectional Mirror / Parity Invariants," documenting that a "X mirrors Y" invariant has TWO directions and an existing guard usually enforces only the forward one (`src - test`); the reverse (`test - src - allowlist`) is the silently-unguarded drift surface.
+- Added a "Proposed Workflow" subsection with an unverified warning (this insight is a plan, not validated end-to-end).
+- Added 3 new Failed Attempts rows: trusted the audit's "5 dirs" count (re-derive empirically with `comm -23`); assumed the existing guard was bidirectional (it only enforced forward); considered deleting flagged dirs (drops real coverage — use a sanctioned allowlist).
+- Added "When to Use" triggers for mirror/parity invariants and reverse-direction gaps.
+- Added Results & Parameters notes: allowlist-with-rationale (`frozenset` + inline comment per entry), reuse the already-wired gate (no new CI job), reuse the shared dir-filtering helper for both directions, coverage risk on the new negative-path branch.
+- Updated tags.
+
+### Why
+Issue #1543 surfaced that ProjectHephaestus's `check_test_structure()` enforced only the forward direction of the `tests/unit/` ↔ `hephaestus/` mirror invariant (`src_packages - test_packages`), so a test dir with no source counterpart drifted in silently. The plan adds the reverse check (`test_packages - src_packages - allowlist`) and an allowlist of sanctioned non-package test targets, fixes the prose in CLAUDE.md to match, and rides the already-wired gate rather than adding a new CI job. The audit's "5 dirs violate" count was imprecise (ground truth = 4; `scripts_lib/` is mirrored). These generalize the v1.0.0 "make a prose invariant executable" pattern to the bidirectional case.
+
+### Previous version (v1.0.0) snapshot
+
+The v1.0.0 rendered `.md` content prior to this amendment is preserved in git history at the parent commit of this amendment (the original single-case coredump `verify_crash_bundle` writeup, `verification: verified-local`, no sub-pattern section).

@@ -1,0 +1,235 @@
+# Changelog — nats-server-auth-authz-hardening
+
+## v1.3.0 — 2026-06-20
+
+**Changed by:** Odysseus session 2026-06-20 — issue #306 implementation (cluster route listener auth, verified-local).
+
+**Verification:** `verified-local` (PR #341 opened; all 6 test cases pass; `just validate-configs` passes; CI pending)
+
+### What changed
+
+- Updated `description` to cover cluster route listener auth, word-boundary awk anchoring, and test-file wiring into both gates.
+- Updated `version` 1.2.0 → 1.3.0 and `date` 2026-06-19 → 2026-06-20 and `verification` `verified` → `verified-local`.
+- Updated `tags` to add `cluster-route`, `route-listener`, `port-6222`, `word-boundary`, `verified-local`.
+- Added 9 new `When to Use` bullets covering: cluster listener hardening; cluster token-auth pattern; single-host inert behavior; word-boundary awk anchoring; test-file wiring into both gates; ADR number collision check; stale issue line numbers.
+- Updated Overview table Outcome and Verification fields to reflect v1.3.0.
+- Added **Verified Workflow (v1.3.0)** section documenting the cluster route listener auth pattern:
+  - The three-listener model (client 4222, leafnode 7422, cluster 6222).
+  - Cluster HCL pattern with `authorization { token = "$NATS_CLUSTER_TOKEN" }` inside `cluster{}`.
+  - Single-host deployment: cluster auth block is inert when no routes are configured.
+  - Word-boundary anchoring fix for the `block()` awk function.
+  - Test file wiring — must call in BOTH justfile recipe AND ci.yml step.
+  - 6 test case descriptions.
+  - Quick Reference (v1.3.0) commands.
+- Added 4 new Failed Attempts rows (v1.3.0): unanchored awk keyword; test file not wired into CI gate; assuming ADR number is free; stale issue line-number coordinates.
+- Added new `on_disk_facts` entries in Results & Parameters for cluster auth gap, token syntax, single-host behavior, validator check count, test file wiring, ADR amendment, and stale issue coordinates.
+- Added v1.3.0 row to Verified On table.
+
+### Why
+
+Issue #306 was in the same fail-open class as issue #176 — the NATS cluster route listener (port 6222) was left unauthenticated after client and leafnode were hardened. This extends the skill to cover the complete three-listener model. Two additional non-obvious traps were hit: the `block()` awk function needed word-boundary anchoring to prevent substring matches (e.g. `cluster` matching `subcluster`), and a test file created for the 4th validator check was not wired into CI or the justfile, meaning the regression coverage never ran until the reviewer flagged it. A third coordination trap: the issue body said to document in ADR-009, but ADR-009 already existed from issue #176 — always check the ADR directory before creating.
+
+---
+
+## v1.2.0 — 2026-06-19
+
+**Changed by:** Odysseus session 2026-06-19 — issue #176 implementation (token-based NATS auth, CI-verified).
+
+**Verification:** `verified` (PR #303, CI passed)
+
+### What changed
+
+- Updated `description` to cover token-based auth, dual-listener trap, brace-depth awk validator, and CI gating use cases.
+- Updated `version` 1.1.0 → 1.2.0 and `verification` `unverified` → `verified`.
+- Added new `When to Use` bullets for: dual authorization{} listener trap, leaf.conf remote port 7422, brace-depth awk validator, fail-closed CI assertion, and CI-step-vs-justfile distinction.
+- Added **Verified Workflow (v1.2.0)** section documenting the token-based auth pattern end-to-end:
+  - The dual-listener trap with concrete HCL for both `server.conf` and `leaf.conf`.
+  - Brace-depth awk block extractor (replaces broken range-match pattern).
+  - Correct fail-closed CI assertion (`! nats-server -c leaf.conf -t`, not grep on output).
+  - CI must have a dedicated step — a justfile recipe with no CI caller provides zero enforcement.
+- Added 4 new Failed Attempts rows (v1.2.0): grep-based fail-closed assertion; simple awk range extraction; assuming .gitignore covers *.creds; assuming justfile recipe = CI gate.
+- Added second `Verified On` row for the v1.2.0 implementation session (issue #176, PR #303, CI passed).
+
+### Why
+
+The v1.1.0 skill was a planning + review artifact marked `unverified`. Issue #176 was an actual execution: token-based auth was implemented, `tools/validate-nats-auth.sh` was written, and a CI step was wired. Several non-obvious traps were hit during execution that are not captured in the planning skill: the dual-listener requirement (auth on the client listener does NOT cover the leafnode listener), the brace-depth awk requirement for nested-block validation, NATS's fail-closed (exit non-zero) vs silent-empty-string behavior on unset env vars, port 7422 for leafnode remotes vs 4222, and the CI-step vs justfile-recipe distinction.
+
+---
+
+## v1.1.0 — 2026-06-19
+
+**Changed by:** Odysseus session 2026-06-19 — SECOND `/learn` for the same topic. The
+R0 plan (v1.0.0, PR #2590) was NOGO'd by a reviewer and REVISED; this entry captures
+the revision's learnings.
+
+**Verification:** `unverified` (plan was reviewed, not run end-to-end; no
+`nats-server -t` parse check and no functional auth test were executed this session)
+
+### What changed
+
+- Added 6 new durable findings to Results & Parameters / Proposed Workflow:
+  1. `verify_and_map` does NOT match a bare CN. Mapping order is SAN-email → SAN-DNS →
+     full RFC-2253 Subject DN. The v1.0.0 `# CN=hermes.homeric` mapping would have
+     matched NOTHING and rejected every client — the #1 reviewer NOGO. FIX: carry a
+     DNS SAN per role (`<role>.homeric`) and set `accounts.users[].user` to that exact
+     SAN-DNS string; document full-DN only as a discouraged fallback; pin the
+     convention in the ADR so cert issuance and config stay in lockstep.
+  2. Fail-closed auth breaks every plaintext client — enumerate them from real service
+     code, not just `e2e/`. On-disk: Hermes `config.py:34`, Telemachy `config.py:21`,
+     `docker-compose.crosshost.yml:45` all default to `nats://`.
+  3. Distinguish mTLS-capable-but-unconfigured vs needs-code per client. Hermes already
+     has `build_ssl_context()` + cert fields (config, not code). Telemachy has a
+     `require_tls` gate but NO client-cert wiring (a genuine code gap → follow-up issue).
+  4. The stream-creator account (Hermes, ADR-005) is highest blast-radius — its cert is
+     a hard runbook prerequisite before enabling `verify_and_map`, else no streams.
+  5. Grep-for-token verification is insufficient for a security change — add functional
+     tests: no-cert connect refused, stream-creator can create a stream, low-priv cert
+     denied a subtree.
+  6. JetStream per-account grants are easy to under-scope (`$JS.API.CONSUMER.>` +
+     `$JS.API.STREAM.INFO.>` + `$JS.ACK.>`); validate functionally, don't assert blindly.
+- Added 4 new Failed Attempts rows (bare-CN mapping; grep-only-e2e; assume-all-need-code;
+  token-grep verification).
+- Updated the uncertain-assumptions list to record SAN-DNS mapping as the top
+  still-unverified risk plus the `--san` / step-ca flag uncertainty.
+- Bumped version 1.0.0 → 1.1.0 (MINOR: new findings + new failed-attempts rows, same
+  topic, same unverified level). Updated date.
+
+### Why
+
+The R0 plan's cert→user mapping was wrong: `verify_and_map` never matches a bare CN, so
+the proposed `accounts{}` would have rejected 100% of clients. The reviewer also flagged
+that the downstream-breakage check only grepped `e2e/tools/justfile`, missing the real
+service clients that default to plaintext `nats://` and would fail closed. Finally,
+token-presence greps cannot prove auth is actually enforced. These revisions make the
+plan implementable: SAN-DNS mapping convention, full client enumeration, capable-vs-code
+triage, and functional acceptance tests.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: nats-server-auth-authz-hardening
+description: "Plan NATS server-side authentication and authorization (authz) hardening for the HomericIntelligence mesh on top of the existing ADR-008 TLS PKI. Use when: (1) adding app-layer auth to NATS after TLS already landed, (2) deciding between X.509 cert mapping (verify_and_map) vs decentralized operator/NKey/JWT, (3) scoping NATS subjects per agent/consumer/bridge against the ADR-005 hi.* schema, (4) writing an ADR for mesh auth (do NOT edit the append-only ADR-008), (5) auditing whether verify/verify_and_map/accounts{} are present in configs/nats, (6) avoiding the trap of treating Tailscale isolation as app-layer security."
+category: architecture
+date: 2026-06-19
+version: "1.0.0"
+verification: unverified
+user-invocable: false
+history: nats-server-auth-authz-hardening.history
+tags:
+  - nats
+  - auth
+  - authz
+  - authorization
+  - tls
+  - pki
+  - x509
+  - verify_and_map
+  - accounts
+  - jetstream
+  - mesh
+  - leafnode
+  - cluster
+  - adr
+  - subject-scoping
+  - hi-schema
+  - aid
+  - jwt
+  - nkey
+  - homeric-intelligence
+  - planning
+  - unverified
+---
+
+# NATS Server Auth/Authz Hardening (HomericIntelligence Mesh)
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-06-19 |
+| **Objective** | Plan NATS server-side authentication + authorization hardening for the HomericIntelligence mesh, reusing the existing ADR-008 TLS PKI rather than standing up decentralized operator/NKey/JWT auth |
+| **Outcome** | A plan was written: reuse the X.509 mutual-cert trust chain via `verify_and_map` (client) + `verify` (cluster/leafnode), plus subject-scoped `accounts{}` mapped to the ADR-005 `hi.*` schema. AID v0.2.0 Ed25519 + scoped JWT recorded as the documented FUTURE path. NOT executed — no config applied, no `nats-server -t` parse check run. |
+| **Verification** | `unverified` (PLANNING ONLY — Odysseus session 2026-06-19; plan written but not executed) |
+| **History** | [changelog](./nats-server-auth-authz-hardening.history) |
+
+## When to Use
+
+- You need to add application-layer authentication/authorization to NATS in a mesh where TLS has *already* landed (ADR-008) and you must not double-implement transport security.
+- You are deciding between X.509 certificate mapping (`verify_and_map`) versus a decentralized operator/NKey/JWT scheme and need the trade-off rationale.
+- You are scoping NATS subjects per role (agent / consumer / bridge) against the ADR-005 `hi.*` subject schema.
+- You are about to write an ADR for mesh auth and need to know the next sequential number and the append-only rule (never edit ADR-008).
+- You are auditing whether `verify` / `verify_and_map` / `authorization{}` / `accounts{}` already exist in `configs/nats/`.
+- You are tempted to rely on Tailscale/Tailnet isolation as the security boundary and need the counter-argument.
+
+## Verified Workflow
+
+> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms. Verification level: `unverified` — this is a PLANNING learning. The plan was written but NOT executed: no NATS config was applied and no `nats-server -t` parse check was actually run. The highest-risk assumptions (cert→user mapping semantics, JetStream API subject scoping, `accounts{}` syntax, `accounts{}`-in-leaf.conf validity) are listed unverified in Results & Parameters.
+
+### Proposed Workflow
+
+1. **Verify the on-disk config FIRST — do not trust an issue's cited line numbers.** The triggering issue (#175) cited `server.conf:12-21` as having "no tls block". That was STALE: TLS already landed via ADR-008 (PRs #290/#292). Confirm with a fresh read of `configs/nats/server.conf` and `configs/nats/leaf.conf`.
+
+2. **Confirm TLS is present on every listener** (already true after ADR-008): `tls{}` on client (4222), leafnode (7422), cluster (6222), and monitoring HTTP (`127.0.0.1:8222`).
+
+3. **Audit the auth/authz gap.** Run the grep in Quick Reference. The gap is: no `verify` / `verify_and_map` anywhere, and no `authorization{}` / `accounts{}` (only a commented `monitoring_authorization`).
+
+4. **Reuse the ADR-008 X.509 mutual-cert PKI for identity — do NOT build decentralized JWT.** Add `verify_and_map` to the client `tls{}` (maps the client cert identity to a NATS user), and `verify` to the cluster and leafnode `tls{}` blocks (mutual cert required, no user mapping needed there). This avoids the operator keypair, JWT resolver, and out-of-band issuance pipeline that decentralized auth would require and that do not exist on disk.
+
+5. **Define subject-scoped `accounts{}` mirroring ADR-005.** Map cert identities to accounts with publish/subscribe permissions scoped to the `hi.*` schema (see Quick Reference). Agents, the Keystone consumer, and the Hermes bridge each get distinct scopes.
+
+6. **Write a NEW ADR — never edit ADR-008.** ADRs are append-only (CLAUDE.md principle 3; `docs/adr/README.md`). The next sequential number was 009. Reference ADR-008 (TLS) and ADR-005 (subject schema); do not modify them.
+
+7. **Record AID v0.2.0 Ed25519 + scoped JWT as the documented FUTURE path,** not the now path. It needs an operator keypair, a JWT resolver, and an issuance pipeline that do not yet exist.
+
+8. **Validate before claiming done** (these were NOT run in this planning session — they are the gate): `nats-server -t -c <conf>` parse check (or docker `nats:latest` fallback), plus grep assertions that `verify_and_map`, `verify`, `accounts {`, and `system_account` are present.
+
+### Quick Reference
+
+(Quick Reference commands and the UNVERIFIED HCL example shape preserved in the v1.0.0
+file; see git history of nats-server-auth-authz-hardening.md at the v1.0.0 commit for the
+verbatim bash/hcl blocks.)
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --- | --- | --- | --- |
+| Trust issue line-number evidence | #175 cited server.conf:12-21 as having no tls block | TLS already landed in ADR-008; cited lines were stale | Read the actual on-disk config; never plan against an issue's cited line numbers |
+| Treat Tailscale as the security boundary | Rely on Tailnet isolation for mesh auth | Host-level isolation != app-layer auth; one compromised host exposes the full mesh | Enforce app-layer auth on EVERY listener (client+cluster+leafnode), not just network isolation |
+| Decentralized operator/NKey/JWT | Considered full NATS JWT auth (operator+resolver+accounts) | Needs operator keypair, JWT resolver, out-of-band issuance pipeline — none exist on disk | Reuse the existing ADR-008 X.509 mutual-cert PKI via verify_and_map; defer JWT to AID v0.2.0 |
+
+## Results & Parameters
+
+(on_disk_facts, subject_scoping, decision now/future, validation_gate, and
+unverified_assumptions YAML preserved in the v1.0.0 file.)
+
+## Verified On
+
+| Project | Context | Details |
+| --- | --- | --- |
+| HomericIntelligence/Odysseus | 2026-06-19 planning session | Plan written from on-disk reads of configs/nats/{server,leaf}.conf; TLS confirmed present (ADR-008); auth/authz gap confirmed via grep. Plan NOT executed. Verification: unverified. |
+```
+
+---
+
+## v1.0.0 — 2026-06-19
+
+**What changed:** Initial creation.
+
+**Why:** Captured a PLANNING learning (verification: `unverified`) from an Odysseus
+session on how to plan NATS server-side auth/authz hardening for the
+HomericIntelligence mesh on top of the existing ADR-008 TLS PKI. The durable,
+generalizable lesson is to reuse the existing X.509 mutual-cert trust chain via
+`verify_and_map` (client) + `verify` (cluster/leafnode) and subject-scoped
+`accounts{}` mapped to the ADR-005 `hi.*` schema, rather than standing up
+decentralized operator/NKey/JWT (which needs an operator keypair, JWT resolver,
+and out-of-band issuance pipeline that do not exist on disk). AID v0.2.0 Ed25519
++ scoped JWT recorded as the documented FUTURE path.
+
+Key recorded findings: TLS already landed via ADR-008 (PRs #290/#292) on every
+listener; issue #175's cited line numbers (server.conf:12-21 "no tls block")
+were STALE; no `verify`/`accounts{}` present yet; ADRs are append-only (next was
+009, never edit ADR-008). The plan was NOT executed and no `nats-server -t`
+parse check was run, so the cert→user mapping semantics, JetStream API subject
+scoping, `accounts{}` syntax, and `accounts{}`-in-leaf.conf validity remain
+unverified risks.

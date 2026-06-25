@@ -1,0 +1,156 @@
+# planning-env-var-to-typed-cli-option-migration -- History
+
+## v1.2.0 (2026-06-24)
+
+**Changed by:** ProjectHephaestus Issue #1526, R2 planning pass (third pass) -- fixed the last two R1-review minors
+**Verification:** unverified (still a PLAN; never executed, no CI)
+
+### What changed
+- **VERIFY a typed-options object's TYPE at its construction site / `__init__`
+  docstring -- do NOT infer it from the call's semantics (the dominant R2 lesson).**
+  R1 reasoned "this is the implementer's learn step, so the options object must be
+  `ImplementerOptions`" and was WRONG. Ground truth:
+  `PostMergeProcessor.__init__(self, options_provider: Callable[[], Any])` is
+  documented "Returns the current `CIDriverOptions`" -- the drive-green learn holds
+  `CIDriverOptions`, not `ImplementerOptions`. Semantic intuition about which
+  subsystem "owns" a call is an unreliable proxy for the concrete type threaded into
+  it; read the holder's `__init__` signature/docstring or trace the constructor call.
+- **Consequence: add the field to the type ACTUALLY held, not the family-typical
+  one.** `CIDriverOptions` (not `ImplementerOptions`) gets the `learn_timeout` field,
+  because that is the object `post_merge_processor` actually reads. The same knob name
+  (`learn_timeout`) legitimately appears on TWO different options classes
+  (`ImplementerOptions` for the implementer's own learn, `CIDriverOptions` for the
+  drive-green learn) -- correct per-call-site granularity, NOT duplication to dedupe.
+  This RESOLVES the R1 residual "post_merge_processor provider type" risk row.
+- **Blast-radius counts drift across passes -- re-derive each pass, excluding
+  build/ AND __pycache__.** The count went 36 (R0, worktree dupes) -> 18 (R1, wrong)
+  -> 23 (R2, correct via
+  `grep -rl <module> hephaestus/ tests/ | grep -v __pycache__ | grep -v build/ | wc -l`).
+  A wrong-but-conservative number still misleads the sweep; enumerate the file LIST.
+- **A non-default mock SENTINEL is the easy-to-miss test in a blast-radius sweep.**
+  A test mocking `git_message_agent_timeout()` to return 120 (not even the real 300
+  default) is missed by grepping default literals; grep the helper NAME across the
+  whole test dir FIRST, then the literal sentinels.
+- Converted the Failed-Attempts "post_merge_processor provider type" row from
+  STILL-A-RISK to RESOLVED, and added a new row: "infer a call site's typed-options
+  TYPE from the call's semantics -> WRONG TYPE."
+- Added tags: provider-type-verification, options-type-inference. Kept all existing tags.
+- Bumped version 1.1.0 -> 1.2.0. Verification remains `unverified` (still a plan).
+- Two residual-risk items remain genuinely open: the surviving library-layer
+  `HEPH_GH_CLI_TIMEOUT` (reviewer-bless, not author-resolvable) and drifting line
+  numbers (no code executed).
+
+### Why
+R1 (PR #2819) left two open minors. R2 closed them: (a) the dominant fix was pinning
+the `post_merge_processor` options-provider TYPE -- R1 had INFERRED it from the call's
+"learn" semantics and guessed `ImplementerOptions`; reading the `__init__` docstring
+showed it is `CIDriverOptions`, so the durable lesson is "verify the type at the
+construction site, never infer it from what the call is about"; and (b) the
+blast-radius count was re-derived (23, excluding build/). The existing skill was
+amended (not duplicated) to fold both in.
+
+### Previous version (v1.1.0) snapshot
+
+```markdown
+---
+name: planning-env-var-to-typed-cli-option-migration
+category: architecture
+date: 2026-06-24
+version: "1.1.0"
+user-invocable: false
+verification: unverified
+history: planning-env-var-to-typed-cli-option-migration.history
+tags: [planning, env-var-migration, typed-options, cli-design, argparse, fan-out-refactor, call-site-mapping, pola, per-knob-granularity, free-function-threading, blast-radius-verification, constants-module, hephaestus]
+---
+
+# Planning an Env-Var to Typed CLI-Option Migration Across a Fan-Out of Call Sites
+
+(v1.1.0 body: converted six R0 "assumptions to flag" into VERIFIED planning patterns
+after a NOGO on R0's impl plan -- per-knob granularity (one flag + one field PER knob,
+shared sub-agent knob gets its own field on each command), free-function leaves thread
+`timeout=` beside the `model=`/`agent=` param they already thread, a shared
+free-function entry (`run_address_fix_session`) takes the UNION of params, blast radius
+verified at 18 (not R0's 36 worktree-dupe count), keep the helper module as the single
+source of DEFAULT CONSTANTS, None-sentinel CLI flag + pydantic default (POLA),
+centralized `add_*_arg(parser)`, env-removal as a TESTED invariant, test BOTH an easy
+method path and a hard free-function path, sweep test blast radius by literal sentinel
+value too. Three rows kept as STILL-A-RISK: line-number drift, surviving library-layer
+HEPH_GH_CLI_TIMEOUT, and the post_merge_processor provider type. Full v1.1.0 text
+retained in git history at PR #2819.)
+```
+
+## v1.1.0 (2026-06-24)
+
+**Changed by:** ProjectHephaestus Issue #1526, R1 planning pass (second pass) -- assumptions verified against actual code
+**Verification:** unverified (still a PLAN; never executed, no CI)
+
+### What changed
+- Converted six R0 "assumptions to flag" into VERIFIED planning patterns after the
+  plan author got a NOGO on R0's implementation plan and then READ the actual code:
+  - **Per-knob granularity is the faithful mapping.** R0 collapsed 9 distinct
+    agent-timeout env vars onto one `agent_timeout` per command and got a NOGO for
+    dropping per-knob operator tunability. Faithful mapping = one flag + one typed
+    field PER knob; a shared sub-agent knob (`advise`) invoked from 3 commands gets
+    its OWN `advise_timeout` field on EACH command's options class.
+  - **The "every leaf holds self.options" assumption was VERIFIED FALSE for free
+    functions.** Four call sites are module-level free functions
+    (`learn.run_learn`, `follow_up.run_follow_up_issues`,
+    `comment_difficulty.classify_comments`, `pr_manager._invoke_git_message_agent`
+    via the `commit_changes`/`create_pr` chain). The fix mirrors an EXISTING threaded
+    param: these free functions already accept `model=`/`agent=` threaded down from an
+    option-holding method; the timeout threads the identical way.
+  - **A shared free-function entry invoked from multiple option-holders takes the
+    union of params.** `run_address_fix_session` (called from 3 option-holders) gains
+    `address_review_timeout` + `advise_timeout` + `git_message_timeout` and forwards
+    each; each caller passes its own `self.options.*`.
+  - **Blast radius verified empirically:** R0 claimed 36 importers; ground truth was
+    18 (the 36 counted git-worktree duplicates). Over-counting wrongly motivates
+    delete-and-rewrite over keeping a constants module.
+  - **Keep the env-reading module as a CONSTANTS module** (already in R0, now
+    reinforced as the correct call vs deleting it).
+  - **Pick BOTH an easy (method, already holds options) and a hard (free-function)
+    representative threading test;** the free-function path is where migration breaks.
+  - **Test blast radius includes mocks to NON-default sentinels** (e.g. a test
+    mocking `git_message_agent_timeout()` to 120); grep literal sentinel values too.
+- Added tags: per-knob-granularity, free-function-threading, blast-radius-verification,
+  constants-module.
+- Added a `history:` frontmatter field.
+- Bumped version 1.0.0 -> 1.1.0. Verification remains `unverified` (still a plan).
+- Kept three genuinely-uncertain items as risk rows: `post_merge_processor`'s
+  `learn_claude_timeout()` provider type (residual hand-wave), the surviving library
+  -layer `HEPH_GH_CLI_TIMEOUT`, and drifting line numbers.
+
+### Why
+R0 (PR #2815) captured planning ASSUMPTIONS as RISKS. In R1 the author got a NOGO on
+R0's implementation plan, then VERIFIED those assumptions by reading the real code in
+`hephaestus/automation/`. The durable learning is now the CONFIRMED resolution of
+those risks, so the existing skill was amended (not duplicated) to convert each
+flagged assumption into a verified pattern while keeping the still-uncertain residuals
+as risk rows.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: planning-env-var-to-typed-cli-option-migration
+description: "Plan a migration that REMOVES operator-facing env-var knobs (e.g. HEPH_*_TIMEOUT) and replaces them with explicit CLI flags threaded through typed options objects, across a large fan-out of call sites. Method: map each env-reading helper 1:1 to the typed options object that ALREADY reaches its call site via self.options; keep the helper module as the single source of DEFAULT CONSTANTS (don't delete it); use a None-sentinel CLI flag + pydantic field default (POLA); centralize new flags in a shared add_*_arg(parser); make the env-removal a TESTED invariant (helper IGNORES env + inspect.getsource has no os.environ). Use when: (1) planning an env-var -> typed CLI option migration, (2) a config knob is read by a helper called from many sites, (3) some leaf callers are FREE FUNCTIONS that do NOT hold the options object and need a threaded timeout parameter, (4) collapsing multiple per-phase env knobs onto one options field risks removing operator tunability, (5) a different default (e.g. git_message_timeout=300s vs agent_timeout=7200s) must stay a SEPARATE field."
+category: architecture
+date: 2026-06-24
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags: [planning, env-var-migration, typed-options, cli-design, argparse, fan-out-refactor, call-site-mapping, pola, hephaestus]
+---
+
+# Planning an Env-Var to Typed CLI-Option Migration Across a Fan-Out of Call Sites
+
+(v1.0.0 body: mapped each env-reading helper 1:1 to the reaching options object;
+kept the helper module as the single source of DEFAULT CONSTANTS; None-sentinel CLI
+flag deferring to the pydantic field default; centralized flags in a shared
+add_*_arg(parser); made env-removal a TESTED invariant. Failed-Attempts table framed
+six RISKS as "assumptions a plan author makes that are easy to get wrong" --
+free-function options reach, per-phase knob consolidation, different-default fold,
+line-number drift, surviving library-layer HEPH_GH_CLI_TIMEOUT, under-enumerated
+timeout-assertion test blast radius. Full v1.0.0 text retained in git history at
+PR #2815.)
+```

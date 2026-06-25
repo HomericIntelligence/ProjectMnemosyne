@@ -1,0 +1,229 @@
+# History: planning-follow-up-issue-line-number-drift
+
+## v1.1.0 — 2026-06-19
+
+**What changed:** Generalized the skill beyond docstring line-number drift to the broader
+PLANNING-stage lesson: re-verify an externally-filed issue's cited line numbers AND its
+per-line claims against the CURRENT file state before planning the edit — because the file may
+have been PARTIALLY fixed since the issue was filed. Added a justfile-command-sourcing example
+(Odysseus issue #182) where one of two cited-broken lines was already correct, and a note that
+a justfile can mix multiple live naming conventions so the "correct" command name cannot be
+inferred — each must be grepped. Added four Failed Attempts rows and a Quick Reference / workflow
+subsection for the new planning-stage check. These additions are `unverified` (planning-stage,
+not CI-validated); the original docstring-drift content remains `verified-local`.
+
+**Why:** A near-miss on Odysseus #182 showed that blindly following an issue's "both X and Y
+are broken" claim would have re-broken an already-correct line. The existing skill covered
+line-number drift but not the partial-fix / per-claim-reverification angle, nor command-name
+sourcing from a mixed-convention justfile.
+
+**Version:** 1.0.0 -> 1.1.0 (minor: additive findings, no breaking changes).
+
+---
+
+## Previous version snapshot (v1.0.0, 2026-06-13)
+
+````````markdown
+---
+name: planning-follow-up-issue-line-number-drift
+description: "Use when planning implementation for a follow-up or refinement issue whose cited line numbers may have drifted due to intervening PRs. Verify current file state against the issue's cited lines, grep module-level AND function-level docstrings separately, and check git log to confirm which PR last touched the file."
+category: documentation
+date: 2026-06-13
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - follow-up-issue
+  - line-number-drift
+  - docstring
+  - planning
+  - stale-line-numbers
+  - git-log
+  - module-docstring
+---
+
+# Planning: Follow-Up Issue Line Number Drift
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-13 |
+| **Objective** | Correctly locate the real documentation gap when a follow-up issue's cited line numbers have shifted due to intervening PR merges |
+| **Outcome** | Successful — plan correctly identified that the function docstring was already fixed by PR #1303, but the module-level `FAILS LOUDLY` block still omitted the marker-excluded fallback case |
+| **Verification** | verified-local |
+
+When a follow-up issue is filed during or after a sibling PR's review process, the cited file
+state often lags behind `main`. The function-level fix the issue targets may have already landed,
+while a subtler module-level gap remains unfixed. This skill documents how to detect that situation
+and find the actual remaining gap.
+
+## When to Use
+
+- Planning any issue whose body cites specific line numbers (follow-up issues, refinement issues, audit findings)
+- Issue body references a PR as "pending" but that PR is now merged on `main`
+- Issue text says "After PR #N this is false" but you haven't confirmed whether #N has merged
+- Docstring fix issues targeting a specific function — the function may be fixed but the module docstring may still be stale
+- Any issue filed from within another PR's review thread (high likelihood of pre-merge line number references)
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Check git log for the most recent commit(s) touching the cited file
+git log --oneline -10 -- scripts/check_license_compatibility.py
+
+# 2. See exactly what the most recent relevant commit changed
+git show <sha> -- scripts/check_license_compatibility.py | grep -A 20 "def scan"
+
+# 3. Grep BOTH the module docstring AND function docstrings separately
+#    (the issue may only mention one; the other may still be stale)
+grep -n "FAILS LOUDLY\|marker.*exclud\|FALLBACK" scripts/check_license_compatibility.py | head -30
+
+# 4. Verify current line numbers for issue-cited line ranges
+#    (the issue may cite e.g. lines 248-251, but those may now be 257-262)
+grep -n "def scan" scripts/check_license_compatibility.py
+
+# 5. Check module-level docstring separately (lines 1-30 typically)
+head -30 scripts/check_license_compatibility.py
+```
+
+### Detailed Steps
+
+#### Step 1: Identify the most recent commit touching the file
+
+Before reading the issue's cited line numbers, run `git log --oneline -10 -- <file>` to
+find the SHA of the most recent commit. This tells you which PR last touched the file
+and whether the issue's claimed "current state" is actually `main`'s current state.
+
+```bash
+git log --oneline -10 -- scripts/check_license_compatibility.py
+# → dd15c35 fix(scripts_lib): ...
+# → ee35ed87 fix(license-scan): classify marker-excluded deps via FALLBACK_LICENSES
+```
+
+The commit `ee35ed87` (PR #1303) is the most recent. If the issue was filed
+referencing lines from before that commit, all line numbers in the issue body are stale.
+
+#### Step 2: See what the most recent commit actually fixed
+
+```bash
+git show ee35ed87 -- scripts/check_license_compatibility.py | grep -A 20 "def scan"
+```
+
+This confirms whether the issue's stated fix target (e.g., the `scan()` function docstring)
+is already addressed in `ee35ed87`. If yes, move to step 3 to find the remaining gap.
+
+#### Step 3: Grep module-level and function-level docstrings separately
+
+Issues about docstring staleness almost always cite a function-level docstring. But module-level
+docstrings (the `"""..."""` block at the top of the file, or a `FAILS LOUDLY` block) can also
+be stale and are rarely covered by the same fix.
+
+```bash
+# Check if any keyword from the fix appears in the module-level block (lines 1-30)
+grep -n "FAILS LOUDLY\|marker.*exclud\|FALLBACK\|fallback" scripts/check_license_compatibility.py | head -20
+```
+
+If the result shows zero matches for lines 1–27 (the module docstring range) but matches in
+lines 257+ (the function), the module-level block is the gap the fix missed.
+
+#### Step 4: Verify issue-cited line numbers against current HEAD
+
+Cross-reference the issue's cited lines (e.g., "lines 248–251") against where those lines
+actually live now:
+
+```bash
+# Find the current line of the construct the issue cited
+grep -n "def scan\|are skipped with a note" scripts/check_license_compatibility.py
+```
+
+If the issue cited line 248 but the content is now at line 262, you know the file
+has grown by ~14 lines due to the intervening PR. The fix content is the same; only the
+address has shifted.
+
+#### Step 5: Confirm the real remaining gap
+
+After verifying both module-level and function-level docstrings, document the specific
+gap: what text is missing, what lines it should be added at (current HEAD line numbers),
+and which PR already fixed the adjacent content (so the reviewer can understand scope).
+
+```bash
+# Show lines 10-20 of the module docstring to see the FAILS LOUDLY block
+sed -n '10,20p' scripts/check_license_compatibility.py
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Trust issue-cited line numbers verbatim | Used lines 248–251 from the issue body as the edit target | Those lines had shifted to 257–262 after PR #1303 landed; the content was wrong before even reading | Always run `grep -n "def <function>"` to find the actual current line number |
+| Assume the function docstring is still stale | Planned to fix the `scan()` docstring as the issue described | PR #1303 had already fixed `scan()`'s docstring; the fix was already on `main` | Run `git show <latest-sha>` to see what the most recent commit actually changed |
+| Read only the function-level docstring | Grepped only `def scan` and read 20 lines below it | Missed the module-level `FAILS LOUDLY` block (lines 12–17) which still omitted the marker-excluded case | Grep module-level AND function-level docstrings separately; they are independently maintained |
+| Trust "After PR #N this is false" in issue body | Assumed PR #1304 was the relevant merge since issue cited it | The issue was filed from within PR #1304's review process, citing a state PR #1303 had already fixed on `main` | Check whether the referenced PR is actually merged; issues filed mid-PR-process use pre-merge state |
+| Skip git log for docstring-only issues | Assumed low-risk docstring fixes don't need git archaeology | The git log revealed the exact SHA that fixed the function docstring, which was necessary to identify the remaining module-level gap | `git log --oneline -10 -- <file>` is a 2-second check that prevents the rest of the plan from being wrong |
+
+## Results & Parameters
+
+### Concrete example (ProjectHephaestus issue #1306)
+
+Issue body said: "`scan()` docstring still has stale text 'are skipped with a note, not treated as a hole'."
+Issue cited lines 248–251.
+
+Step 1 revealed: the most recent commit touching the file was `ee35ed87` (PR #1303,
+"fix(license-scan): classify marker-excluded deps via FALLBACK_LICENSES").
+
+Step 2 confirmed: PR #1303 already fixed the `scan()` function docstring — the stale
+text cited by the issue was removed in that PR.
+
+Step 3 discovered the real gap: the **module-level** `FAILS LOUDLY` block (lines 12–17)
+enumerated three behaviors but omitted the fourth: "marker-excluded dependencies get
+a FALLBACK_LICENSES entry rather than a HOLE". Zero grep hits for `FALLBACK` in lines 1–27.
+
+Step 4 confirmed line drift: the issue cited lines 248–251, which are now at 257–262
+after intervening commits added ~11 lines.
+
+Actual fix target: module docstring lines 12–17, not the function at 257–262.
+
+### Decision tree for follow-up issue planning
+
+```
+Received a follow-up / refinement issue with cited line numbers:
+│
+├─ 1. git log --oneline -10 -- <file>
+│   └─ Find the most recent commit touching the file
+│
+├─ 2. git show <sha> -- <file> | grep -A 20 "<cited function>"
+│   ├─ Fix already in latest commit → function docstring gap is CLOSED
+│   │   └─ Proceed to step 3 to find remaining gap
+│   └─ Fix NOT in latest commit → function docstring still stale
+│       └─ Plan the function docstring fix
+│
+├─ 3. Grep module-level AND function-level docstrings SEPARATELY
+│   grep -n "<keyword>" <file> | head -20
+│   ├─ Keyword absent in module doc (lines 1-30) but present in function → MODULE GAP found
+│   └─ Keyword absent everywhere → broader audit needed
+│
+└─ 4. Verify issue-cited line numbers vs current grep output
+    ├─ Lines match → no drift; issue is up to date
+    └─ Lines differ → drift detected; use grep-found line numbers in the plan
+```
+
+### Key commands for follow-up issue planning
+
+| Goal | Command |
+|------|---------|
+| Find most recent commit touching a file | `git log --oneline -10 -- <file>` |
+| See what a specific commit changed in a file | `git show <sha> -- <file> \| grep -A 20 "def <fn>"` |
+| Find current line of a function | `grep -n "def <fn>" <file>` |
+| Grep module-level block separately | `grep -n "<keyword>" <file> \| head -20` (then check which lines are in 1–30 range) |
+| Show first 30 lines of a file | `head -30 <file>` or `sed -n '1,30p' <file>` |
+| Confirm whether a referenced PR merged | `gh pr view <N> --json state,mergedAt --jq '.state, .mergedAt'` |
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | Issue #1306 — stale docstring in `scripts/check_license_compatibility.py` | Function docstring already fixed by PR #1303; module-level `FAILS LOUDLY` block was the real remaining gap |
+````````

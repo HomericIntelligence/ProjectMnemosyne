@@ -2,6 +2,85 @@
 
 # History: github-auto-merge-ci-gating-merge-method
 
+## v1.4.0 (2026-06-15)
+
+Folded v1.3.0 improvements from the briefly-reintroduced
+`squash-only-repo-merge-method-docs` standalone (PR #2546) back into this consolidated
+skill, then re-removed the standalone duplicate files — restoring the #2200 consolidation.
+
+- **What changed:**
+  - Added a new Overview row documenting the 2026-06-15 fold + re-removal.
+  - Added three Failed Attempts rows ported from the standalone v1.3.0:
+    (a) a regression test asserting `mod._AGENT_PROMPT_TEMPLATE` for an f-string template
+    raises `AttributeError` — assert on `inspect.getsource(_make_agent_prompt)` instead;
+    (b) a brittle 10-line look-back lint heuristic for instructional `choose_merge_flag`
+    example blocks — replaced by an explicit per-block marker; (c) the `gh api --jq '...' -`
+    stdin-pipe antipattern that silently fails on some `gh` versions — use plain `jq -r`.
+  - Added three new `Results & Parameters` subsections ported from the standalone v1.3.0:
+    `### Tiered helper sourcing for cross-repo callers` (three-candidate lookup for
+    `scripts/choose_merge_flag.sh` with `--squash` fallback), `### Marker-based lint
+    exemption for instructional code blocks` (the `<!-- merge-method-allowed: example -->`
+    marker), and `### Regression-test pattern for f-string templates`
+    (`inspect.getsource(tidy._make_agent_prompt)`).
+  - Bumped `version` 1.3.0 → 1.4.0 and `date` 2026-06-14 → 2026-06-15.
+  - DELETED the standalone duplicate files
+    `skills/squash-only-repo-merge-method-docs.md` and `.history` that PR #2546 had
+    accidentally reintroduced.
+- **Why:** PR #2200 (2026-06-07) deliberately consolidated 9 overlapping merge-method
+  skills — including `squash-only-repo-merge-method-docs` — into this single skill, with the
+  old content preserved verbatim in this `.history`. PR #2546 accidentally REINTRODUCED the
+  standalone `squash-only-repo-merge-method-docs.md` at v1.3.0, partially reversing that
+  consolidation. The reintroduced standalone, however, carried genuinely-new knowledge that
+  did not exist when #2200 ran (the four items above). This fold ports that new content into
+  the canonical consolidated skill and re-removes the duplicate, so the consolidation is
+  respected and no knowledge is lost.
+- **Verification:** verified-ci — the ported content was originally shipped in
+  ProjectHephaestus PR #1069 (`scripts/choose_merge_flag.sh` + marker-aware lint
+  `hephaestus/validation/skill_merge_method.py` + `inspect.getsource` f-string regression
+  test); `scripts/validate_plugins.py` passes after the edit + deletion.
+- Bump version 1.3.0 → 1.4.0.
+
+## v1.3.0 (2026-06-14)
+
+Expanded unresolved review thread diagnostic to **verified-ci** status and added full
+GraphQL copy-paste workflow (PR #1282 ProjectHephaestus, merged 2026-06-15T03:05:38Z):
+
+- **What changed:**
+  - Updated `description` field to add item (12): `mergeStateStatus=BLOCKED` with all CI
+    green and auto-merge armed — unresolved review threads are the PRIMARY blocker to check
+    FIRST before assuming CI failure.
+  - Updated `version` 1.2.0 → 1.3.0.
+  - Added tags: `review-threads`, `resolveReviewThread`.
+  - Added a new Overview row documenting the verified-ci PR #1282 finding.
+  - Added a new "When to Use" bullet: PR BLOCKED with all CI green and auto-merge armed →
+    unresolved review threads first.
+  - Added new `#### Unresolved review threads as primary BLOCKED diagnostic (verified-ci)`
+    detailed step with: stale-UI-trap warning, full diagnostic order (3 steps), copy-paste
+    GraphQL for thread query + `addPullRequestReviewThreadReply` + `resolveReviewThread`,
+    rules for resolving (only when concern genuinely addressed, cite commit SHA, CodeQL
+    classify first), and the `BLOCKED → UNKNOWN → MERGED` transition description.
+  - Updated the decision tree "all required checks green but BLOCKED" branch to call out
+    CHECK REVIEW THREADS FIRST with step numbers.
+  - Added two Failed Attempts rows: (a) assumed CI failure from stale UI; (b) waited for
+    auto-merge to self-trigger when BLOCKED with CI green.
+  - Added a new Verified On row: ProjectHephaestus PR #1282 merged at
+    2026-06-15T03:05:38Z by app/github-actions (verified-ci).
+- **Why:** The v1.2.0 skill mentioned review threads briefly (1 line in quick reference,
+  1 line in decision tree) but had no verified-ci case, no copy-paste GraphQL mutations
+  for the reply+resolve workflow, and no explicit call to check threads FIRST before
+  reinvestigating CI. PR #1282 was BLOCKED for an extended period because the stated
+  "lint failure" was stale; two unresolved threads were the actual blockers. Promoting
+  this from advisory to a primary diagnostic step with verified-ci evidence is the key
+  update.
+- **Verification:** verified-ci — PR #1282 ProjectHephaestus (`1315-harden-ci-required-gate`)
+  merged at 2026-06-15T03:05:38Z by `app/github-actions` auto-merge within seconds of
+  resolving 2 unresolved review threads via `resolveReviewThread` GraphQL mutation.
+- Bump version 1.2.0 → 1.3.0.
+
+### Snapshot of v1.2.0 (archived before the v1.3.0 edit)
+
+---
+
 ## v1.2.0 (2026-06-14)
 
 Add three new merge-blocking failure modes observed live while driving 13 open

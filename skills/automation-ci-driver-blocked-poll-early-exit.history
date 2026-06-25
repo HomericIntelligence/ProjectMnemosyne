@@ -1,0 +1,110 @@
+<!-- markdownlint-disable MD024 -->
+# History: automation-ci-driver-blocked-poll-early-exit
+
+This file preserves previous versions of the skill before amendments.
+
+## v1.1.0 (2026-06-15)
+
+**Changed by:** ProjectHephaestus thread-blocked PR diagnosis session
+**Verification:** verified-ci
+**What changed:** Extended the skill with operator/agent diagnostic and resolution guidance
+for green+armed PRs that are BLOCKED purely by unresolved review threads (not a human
+approval gate). Added: branch-protection API diagnosis technique, GraphQL thread enumeration,
+per-thread triage (genuine fix vs. false-positive bot reply+resolve), and two new Failed
+Attempts rows for mis-diagnosing threads as a human gate and for incorrectly inlining a DIP
+lambda. "Use when" extended to include the green+armed-BLOCKED-by-threads trigger. Verified On
+row added citing PRs #1283/#1358 (ProjectHephaestus) which merged once threads were cleared.
+**Why:** The v1.0.0 skill covered only the ci_driver polling fix. Two separate mis-diagnoses
+in a real PR queue confirmed the need for an agent-facing resolution playbook:
+(1) a green+armed BLOCKED PR was twice assumed to need human approval — incorrect, the
+protection had `required_review_thread_resolution: true` but no approving-review count; (2) a
+`github-code-quality` bot false-positive thread about an "unnecessary lambda" was nearly
+"fixed" by inlining the lambda, which would have broken `patch.object` tests.
+
+---
+
+## v1.0.0 (2026-06-07)
+
+Initial version. Covered `_wait_for_pr_terminal` early-exit for BLOCKED PRs caused by
+branch-protection gates (unresolved conversations, required review) vs. in-flight CI checks.
+Documented the two-condition guard (`not failing AND not pending`), `_pending_required_check_names`
+helper, caller updates, and three test patterns. Verified locally (PR #1090 filed).
+
+### v1.0.0 full content
+
+```markdown
+---
+name: automation-ci-driver-blocked-poll-early-exit
+description: "Use when: (1) _wait_for_pr_terminal spins for the full 30-minute timeout on a BLOCKED PR that has unresolved human review threads or pending required review, (2) diagnosing why the ci_driver polls indefinitely instead of exiting early on mergeStateStatus=BLOCKED, (3) implementing or testing an early-exit guard for BLOCKED PRs, (4) adding _pending_required_check_names helper to ci_driver."
+category: debugging
+date: 2026-06-07
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [automation, ci-driver, blocked, mergeStateStatus, poll, early-exit, branch-protection, wait-for-pr-terminal]
+---
+
+# Automation CI Driver: BLOCKED PR Poll Early-Exit
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-07 |
+| **Objective** | Make `_wait_for_pr_terminal` exit early when `mergeStateStatus=BLOCKED` is caused by a branch-protection gate (unresolved conversations, required review) rather than spinning for the full 1800s |
+| **Outcome** | Successful — early-exit fires only when BOTH failing and pending required checks are empty; returns `"BLOCKED"` which callers treat as armed success |
+| **Verification** | verified-local (all unit tests pass locally; PR #1090 filed, CI pending) |
+| **History** | N/A (initial version) |
+
+## When to Use
+
+- `_wait_for_pr_terminal` is polling for 30 minutes on a PR with unresolved human review threads
+- Implementing the two-condition BLOCKED guard in `hephaestus/automation/ci_driver.py`
+- Adding or reviewing the `_pending_required_check_names` helper method
+- Writing tests for the early-exit path (three scenarios: immediate exit, no exit on failing checks, no exit on pending checks)
+- Understanding why GitHub reports `BLOCKED` during in-flight CI (not just branch-protection gates)
+
+## Root Cause
+
+`_wait_for_pr_terminal` only exited early for `DIRTY`/`CONFLICTING`. `BLOCKED` was treated as "still pending" and polled for the full `max_wait` (default 1800s). GitHub reports `mergeStateStatus=BLOCKED` for **two distinct situations**:
+
+1. **Branch-protection gate** — unresolved conversations, required review not approved, signed-commit policy, etc. The bot can never satisfy these; polling is futile.
+2. **In-flight CI** — required checks are still running. Once they complete the status changes to `CLEAN` or `FAILING`.
+
+The fix requires distinguishing these: only fire the early-exit when ALL required checks have completed (none failing, none pending).
+
+## Verified Workflow
+
+### Quick Reference
+
+def _pending_required_check_names(self, pr_number: int) -> list[str]:
+    ...
+
+if merge_status == "BLOCKED" and not failing:
+    pending = self._pending_required_check_names(pr_number)
+    if not pending:
+        return "BLOCKED"
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Single-condition guard | Only checked `not failing` before BLOCKED early-exit | GitHub reports `BLOCKED` while CI checks are still in-flight; would fire early-exit before CI completes, causing premature abandonment of valid PRs | Must check BOTH `not failing` AND `not pending` — two-condition guard required |
+
+## Results & Parameters
+
+### Key Behavioral Invariants
+
+| Condition | `mergeStateStatus` | `_failing_*` | `_pending_*` | Early-exit fires? |
+|-----------|-------------------|--------------|--------------|-------------------|
+| CI in-flight | `BLOCKED` | `[]` | `["ci/build"]` | No — keeps polling |
+| CI failed | `BLOCKED` | `["ci/build"]` | `[]` | No — returns `"FAILING"` |
+| Branch-protection gate | `BLOCKED` | `[]` | `[]` | Yes — returns `"BLOCKED"` |
+| Conflict | `CONFLICTING` | any | any | Yes — returns `"CONFLICTING"` (pre-existing) |
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | Issue — `_wait_for_pr_terminal` polls indefinitely on BLOCKED PRs with unresolved review threads | PR #1090; all unit tests pass locally; all pre-commit hooks pass |
+```

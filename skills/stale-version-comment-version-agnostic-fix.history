@@ -1,0 +1,27 @@
+# Changelog: stale-version-comment-version-agnostic-fix
+
+## v1.0.0 — 2026-06-21
+
+**Initial skill publication.**
+
+- **Topic**: Fixing stale version snapshots in code comments (e.g., "CI tests only 1.x" when spec admits 2.x+)
+- **When to use**: Updating dependency documentation that references specific major/minor versions; preventing re-staleness on dependency bumps
+- **Verified on**: ProjectHephaestus issue #1549 (mypy comment stale-fix pattern)
+- **Outcome**: Version-agnostic comment pattern replaces hardcoded snapshots; 7 verification criteria passed; all 11 dependency-consistency tests pass
+- **Verification level**: verified-local (all tests pass locally; CI integration pending when PR merges)
+
+### Key learnings
+
+1. **Version claims belong in the spec, not the comment** — Never embed a version number in explanatory text; reference the spec/lock as authorities
+2. **Three-layer pattern** — Address the spec/lock/CI invocation as sources of truth; readers understand the "why" and "where"
+3. **Negative grep as gate** — Confirm old claim gone + new text has no version patterns; simple guard against re-staleness
+4. **Style consistency matters** — Match neighboring comments' tone, indentation, and cross-reference pattern for readability
+5. **Cross-manifest coordination** — If the project has multiple manifests (pyproject.toml, pixi.toml), update both together; dependency-consistency tests will catch skew
+
+### Failed attempts in the fix process
+
+- Embedding specific version numbers (e.g., "2.1.0") → immediately re-stales on bump
+- Only removing the false claim without explanation → leaves confusion about why the constraint exists
+- Inconsistent comment style → reduces maintainability
+- Accidentally narrowing the spec while updating the comment → over-constrains dependency
+- Updating only one manifest when multiple exist → fails cross-consistency tests

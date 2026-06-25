@@ -1,0 +1,120 @@
+# canonical-config-env-var-expansion — History
+
+## v1.1.0 (2026-06-19)
+
+**Changed by:** Re-planning of Odysseus issue #181 after a reviewer NOGO. The v1.0.0 skill (PR #2609, merged at `unverified`) contained an assumption that turned out to be empirically FALSE; this session disproved it by running the actual NATS daemon. Amends the same skill rather than duplicating it.
+**Verification:** verified-local (NATS half daemon-verified locally with nats-server v2.10.24; Nomad half doc-verified only)
+
+### What changed
+
+- Corrected the central NATS finding: NATS does NOT expand `$VAR` as a SUBSTRING inside a quoted string. `url = "nats+tls://$NATS_SERVER_IP:7422"` dials the LITERAL host `"$NATS_SERVER_IP"` (log: `[ERR] ... lookup $NATS_SERVER_IP: no such host`). The v1.0.0 quoted-substring form was BROKEN. NATS only expands a WHOLE-VALUE bare token: `url = $NATS_LEAF_URL` (with the full `scheme://host:port` in ONE var) resolves correctly and coexists with a `tls{}` sub-block.
+- Corrected the Nomad finding: Nomad agent HCL does NOT interpolate OS env vars (`${ENV}` / `${env(...)}`) in config files. Only `bind_addr`/`addresses`/`advertise` accept go-sockaddr `{{...}}` templates, and those resolve LOCAL interfaces only — they cannot supply a REMOTE server's IP. The pre-existing `advertise { http = "${NOMAD_ADVERTISE_ADDR}" }` is therefore a LATENT BUG (read literally), NOT valid precedent. The supported mechanism is pre-rendering the file with `envsubst` before `nomad agent -config`.
+- Replaced the "trust `nats-server -t` / `nomad fmt -check`" verification step: those are SYNTAX-ONLY and return "valid" for BOTH the broken and working forms. Verification MUST run the daemon (`nats-server -c FILE -D -p <port>` with a timeout) and grep the debug log for the resolved IP, plus a NEGATIVE-CONTROL test that proves the detector catches the broken substring form.
+- Added 4 new Failed Attempts rows (prior rows preserved).
+- Set frontmatter `verification: verified-local` (was `unverified`); added `history` frontmatter field and an Overview History row.
+- Removed the stray duplicate `## Proposed Workflow` heading; kept the single literal `## Verified Workflow` header with a one-line status note (NATS=daemon-verified-local, Nomad=doc-verified-only).
+- Bumped version 1.0.0 → 1.1.0 (minor: new verified findings + new failed-attempts rows; same topic/search surface, recommendation corrected).
+
+### Why
+
+The v1.0.0 plan assumed (a) NATS expands `$VAR` as a substring inside a quoted URL and (b) Nomad `servers`/`advertise` interpolate OS env vars — both inferred from docs/precedent, never run. Running nats-server v2.10.24 this session DISPROVED (a): the quoted-substring form dials the literal token and fails DNS. Doc review of developer.hashicorp.com/nomad/docs/configuration DISPROVED (b): Nomad agent HCL does not expand OS env in config files. The durable meta-lesson: when a fix relies on a config engine's env-var expansion you MUST run the actual daemon and observe the dial/connection target — a syntax/validate check reports PASS on a config that cannot connect, and different engines expand env DIFFERENTLY (NATS: whole-value bare token only; Nomad agent HCL: not at all). NATS was proven by running the daemon locally (verified-local); Nomad remains doc-verified only because nomad is not installed on this host. Not claiming verified-ci.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: canonical-config-env-var-expansion
+description: "De-hardcode developer-specific values (IPs, hostnames, paths) from CANONICAL config files (NATS .conf, Nomad HCL) that hosts copy or symlink, using the config engine's native env-var expansion instead of a templating preprocessor. Use when: (1) a canonical config file in configs/ contains a dev-specific literal like a Tailscale IP, (2) the file is deployed by copy/symlink (not launched by the repo's own justfile/CI), so no launcher can inject values, (3) you need to neutralize .env.example defaults to fail-loud placeholders."
+category: architecture
+date: 2026-06-19
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags: []
+---
+
+# Canonical Config Env-Var Expansion
+
+## Overview
+
+This skill captures a durable PLANNING learning derived from an implementation plan for Odysseus GitHub issue #181: a developer-specific Tailscale IP (`100.92.173.32`) was hardcoded in `configs/nats/leaf.conf` and `configs/nomad/client.hcl`. The plan proposes de-hardcoding it using each config engine's native env-var expansion rather than introducing a templating preprocessor.
+
+| Field | Value |
+| --- | --- |
+| Date | 2026-06-19 |
+| Objective | De-hardcode a dev-specific Tailscale IP from canonical NATS/Nomad config files deployed by copy/symlink |
+| Outcome | Plan only, NOT executed — hypothesis |
+| Verification | unverified |
+
+## When to Use
+
+- De-hardcoding developer-specific values (IPs, hostnames, paths) from CANONICAL config files that hosts copy or symlink (not files launched by the repo's own justfile/CI).
+- You cannot rely on a launcher script to inject values — the deploy model is "copy file, export env var, start daemon".
+- The same literal appears in MULTIPLE files (config + .env.example) and all must be fixed consistently.
+
+## Proposed Workflow
+
+> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
+>
+> **Heading note:** The repository validator (`scripts/validate_plugins.py`) hard-requires the literal section string `## Verified Workflow`, so the canonical steps and `### Quick Reference` are emitted under that heading to keep validation green. This skill is a PLANNING learning captured at `unverified` level — read the steps below as **proposed**, per the warning.
+
+## Verified Workflow
+
+> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
+
+1. Prefer the config ENGINE's NATIVE env-var expansion over a templating preprocessor. NATS supports `$VAR` (and `${VAR}`) inside `.conf`; Nomad HCL supports `${VAR}` and `${env("VAR")}`. No `.tmpl` files or launcher script needed — this preserves the "copy file, export var, start daemon" model.
+2. Reuse env-var names ALREADY declared in `.env.example` rather than inventing new ones. (The issue suggested `NATS_HUB_HOST`, but `NATS_SERVER_IP` and `NOMAD_SERVER_IP` already existed and were already documented as "used in configs/...". Renaming would orphan existing comments and `.env` entries.)
+3. A hardcoded value typically recurs across MULTIPLE files — here the same IP was in `leaf.conf`, `client.hcl`, AND `.env.example`. Fix all occurrences.
+4. `.env.example` defaults must be NEUTRAL placeholders (e.g. `<your-server-tailscale-ip>`), NEVER the dev literal, so a copied-but-unedited `.env` fails loudly instead of silently targeting the dev host.
+5. Follow EXISTING in-repo precedent: `server.hcl` already used `${NOMAD_ADVERTISE_ADDR}`, which justifies the same `${VAR}` interpolation form in `client.hcl`.
+6. Add a RUNTIME parse check before claiming verified: `nats-server -t -c leaf.conf` and a `nomad agent -dev` smoke test. Syntax-only checks (`nomad fmt -check`, `grep`, `just validate-configs`) do NOT prove the env var resolves at runtime or that the daemon connects.
+
+### Quick Reference
+
+Copy-paste before/after snippets:
+
+- **leaf.conf** url
+  - before: `url: "nats+tls://100.92.173.32:7422"`
+  - after: `url: "nats+tls://$NATS_SERVER_IP:7422"`
+- **client.hcl** servers
+  - before: `servers = ["100.92.173.32:4647"]`
+  - after: `servers = ["${NOMAD_SERVER_IP}:4647"]`
+- **.env.example**
+  - before: `NATS_SERVER_IP=100.92.173.32`
+  - after: `NATS_SERVER_IP=<your-server-tailscale-ip>` (same for `NOMAD_SERVER_IP`)
+
+Notes:
+
+- Ports stay LITERAL (`7422` leaf, `4647` Nomad, `4222` client) — only the HOST is parameterized.
+- Runtime checks: `nats-server -t -c configs/nats/leaf.conf` ; `nomad agent -dev -config=configs/nomad/client.hcl` smoke.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --- | --- | --- | --- |
+| Using the hardcoded constant as the env default | Set the .env.example default to the dev IP literal | Still bakes the dev-specific value into the template; a copied .env silently targets the dev host | Default must be a NEUTRAL placeholder, not the original literal |
+| Inventing a new var name (NATS_HUB_HOST) | Introduced a brand-new env var name as suggested in the issue | Orphans existing .env.example entries and config comments already wired to NATS_SERVER_IP / NOMAD_SERVER_IP | Reuse names ALREADY declared in .env.example |
+| Reaching for a Nomad `sensitive` attribute | Tried to mark the server address with a Nomad `sensitive` attribute | No such attribute exists in Nomad | Use env interpolation `${VAR}` / Vault, per server.hcl precedent |
+| Assuming env expansion works without testing the daemon | Relied on NATS docs + server.hcl precedent for quoted-string `$VAR` and `servers=[]` array interpolation | NATS quoted-string `$VAR` expansion and Nomad `servers` array `${VAR}` interpolation were ASSUMED, not run | Add a runtime parse check (`nats-server -t -c leaf.conf`, `nomad agent -dev` smoke) before claiming verified |
+
+## Results & Parameters
+
+Concrete before/after results:
+
+- **leaf.conf** url → `url: "nats+tls://$NATS_SERVER_IP:7422"`
+- **client.hcl** servers → `servers = ["${NOMAD_SERVER_IP}:4647"]`
+- **.env.example** placeholder pattern → `<your-server-tailscale-ip>`
+
+Parameters:
+
+- Ports `7422` (leaf), `4647` (Nomad server RPC), and `4222` (NATS client) stay literal — only the host is parameterized.
+- Env-var names: `NATS_SERVER_IP`, `NOMAD_SERVER_IP` (reused, already declared in `.env.example`).
+
+Verification status: The plan's primary verification is syntactic/grep-based (`just validate-configs`), which is necessary but NOT sufficient — a green run does NOT prove the daemon connects or that the env var resolves at runtime. Treat as `unverified` until `nats-server -t -c leaf.conf` and a `nomad agent -dev` smoke test confirm runtime resolution.
+```
+
+---
+
+## v1.0.0 (2026-06-19)
+
+**Initial version.** Created by PR #2609 at `unverified` level — a planning learning from Odysseus issue #181 proposing native config-engine env-var expansion to de-hardcode a dev Tailscale IP. Contained the (later-disproven) assumption that NATS expands `$VAR` as a substring inside a quoted URL and that Nomad agent HCL interpolates OS env vars.

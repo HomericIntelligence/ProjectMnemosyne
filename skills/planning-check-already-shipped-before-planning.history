@@ -1,0 +1,437 @@
+# planning-check-already-shipped-before-planning — History
+
+## v1.5.0 (2026-06-19)
+
+**Changed by:** ProjectAgamemnon extraction-epic #1 RE-PLAN session — after the v1.4.0
+verification-and-closeout reframe, the re-plan was NOGO'd by the plan-loop reviewer NOT for its
+conclusion but for a FALSE evidentiary premise underneath it. The re-plan claimed 3 failing `ctest`
+cases came from "an untracked file from a different branch's WIP"; the reviewer disproved the
+premise by checking git provenance precisely. The correction is the durable learning.
+**Verification:** verified-local — the corrected git-provenance commands (`git cat-file -e HEAD:`,
+`git status --short`, `git show HEAD:… | grep`) and the ctest label runs were executed this session
+and confirmed the findings; the downstream plan was NOT executed end-to-end in CI. Keystone CI
+remains unobserved (the local sibling `../ProjectKeystone` is on main HEAD e28b649); the pagination
+bug root cause is asserted from test behavior, not yet confirmed by reading the brief→store path.
+
+### What changed
+
+- Added the PRIMARY new lesson (Verified-Workflow step 14): when dismissing a failing test as "out
+  of scope," verify the test artifact's git PROVENANCE precisely before writing it off. The test
+  `.cpp` was `??` (untracked) BUT its wiring into `test/CMakeLists.txt` was an uncommitted `M` edit
+  in the CURRENT tree — so the failures were real-and-local, not foreign. The out-of-scope
+  conclusion was right, but reached via a false premise = verification defect = NOGO. Correct
+  technique: `git cat-file -e HEAD:<path>` (in HEAD?), `git status --short <path>` (?? vs M),
+  `git show HEAD:<wiring> | grep <entry>` (build wiring committed?). Untracked file + uncommitted
+  wiring = THIS tree's local WIP, not in HEAD, not on any branch.
+- Added the RED-CI-DISPOSITION lesson (step 15): a closeout/docs PR must ship green — explicitly do
+  NOT stage failing WIP, cut from `main`, run only the deliverable's labels (`ctest --preset debug
+  -L agents`), and route the underlying bug to its own issue ("Never merge with red CI").
+- Added the CROSS-REPO-EDIT lesson (step 16): a fix touching a sibling repo (`../OtherRepo/...`)
+  needs its OWN PR there; "OtherRepo CI passes" is `gh pr checks` in THAT repo, never a local
+  `cmake` build (smoke test, not the criterion).
+- Added the INTERNAL-CONSISTENCY lesson (step 17): reconcile every count across every section —
+  run the count once, reuse one number; reconcile the issue's LOC estimate against landed LOC.
+- Added 4 When-to-Use triggers; sharpened the existing "dismiss failing tests" Failed Attempts row
+  (the real defect was the false provenance premise, not the scope conclusion) and added 3 new
+  Failed Attempts rows (bundle-WIP-into-green-PR; bundle-sibling-repo-edit; inconsistent-counts).
+- Added a Results & Parameters worked example (Agamemnon epic #1 RE-PLAN NOGO) with the exact
+  provenance commands and corrected disposition; corrected the third honest caveat in the prior
+  Agamemnon example to reflect the false-premise diagnosis.
+- Extended the planner decision tree: the SOME-FAIL branch now runs provenance checks before
+  dismissing failures, and a new "cross-cutting plan-hygiene gates" block covers sibling-repo split
+  and count reconciliation. Added a Verified On row for the RE-PLAN NOGO.
+- Frontmatter: bumped `version` 1.4.0 → 1.5.0 (MINOR, additive), kept `date` 2026-06-19, broadened
+  `description` (provenance/red-CI/cross-repo/consistency clauses + trigger 7), added tags
+  (`git-provenance`, `false-premise-nogo`, `red-ci-disposition`, `cross-repo-pr-split`,
+  `internal-consistency`, `replan`), kept `verification: verified-local`.
+
+### Why
+
+v1.4.0 taught the verification-and-closeout reframe for already-delivered extraction epics. The
+RE-PLAN of that same epic then failed for a DIFFERENT reason: a confident-but-false evidentiary
+claim about where a failing test came from. The lesson is that provenance ("whose tree is this
+artifact from?") is a distinct question from scope ("is it part of my issue?") — `??` does not mean
+"foreign branch," because an uncommitted `M` wiring edit makes an untracked file fail the LOCAL
+build. A right conclusion via a false premise is still a NOGO. The amendment also captures the
+correct dispositions that resolve such a NOGO: don't stage failing WIP, split sibling-repo edits
+into their own PRs, and reconcile counts across the plan.
+
+### Previous version (v1.4.0) snapshot
+
+```markdown
+---
+name: planning-check-already-shipped-before-planning
+description: "Before writing an implementation plan, verify the ACTUAL on-disk state — grep/wc/test the real source — instead of trusting the issue body's stated starting condition (LOC counts, method counts, \"needs to be done\"). The fix may already be merged, OR already landed uncommitted in a sibling worktree that git log will NOT show. This applies HARDEST to a large extraction/migration/\"do X\" EPIC filed months earlier: the work is often ALREADY DELIVERED under a different ADR/PR, so the correct plan is verification-and-closeout, NOT re-implementation — run cheap existence checks first (find target/src, ls source/src/<moved-dir> expecting ABSENT, grep -rl MovedSymbol source-repo), map every acceptance criterion to a runnable command, and build+run the actual suite to prove \"CI passes with the new code\" is ALREADY true. And even when the work IS already on disk, the plan-loop still demands a FORWARD-LOOKING plan — a retrospective status note gets NOGO'd, gates you defer to the reviewer are stage-handoff failures, and an EMPTY/placeholder artifact (output withheld while a background job runs) is an automatic Grade F. Use when: (1) planning a follow-up, consolidation, or EXTRACTION/MIGRATION epic, (2) issue body cites specific file paths or LOC/method counts, (3) git status shows an untracked sibling worktree directory, (4) the plan-loop reviewer NOGO'd your plan as a 'status note' / retrospective, (5) you're tempted to wait on a background job / Monitor / long test run before producing a due plan or review artifact, (6) an epic's premise asserts work must move from repo A to repo B and you have not confirmed it didn't already happen."
+category: architecture
+date: 2026-06-19
+version: "1.4.0"
+user-invocable: false
+verification: verified-local
+history: planning-check-already-shipped-before-planning.history
+tags: [planning, already-shipped, stale-issue-premise, extraction-epic, migration, verification-and-closeout, reframe, cross-repo, adr-attribution, acceptance-criteria-mapping, ifdef-guarded-untested, residuals, ctest, cpp]
+---
+```
+
+(The v1.5.0 edits are purely additive — 4 triggers, Verified-Workflow steps 14–17, 3 new Failed
+Attempts rows plus a sharpened existing row, a Results subsection, two decision-tree additions, and
+a Verified On row; the full v1.4.0 body is reconstructable from this changelog plus the v1.4.0
+entry below.)
+
+---
+
+## v1.4.0 (2026-06-19)
+
+**Changed by:** ProjectAgamemnon extraction-epic #1 planning session — a months-old epic asked to
+EXTRACT the agent layer into Agamemnon, but cheap existence checks plus a real build/test run proved
+the move was ALREADY delivered under a different ADR/PR, so the correct plan was
+verification-and-closeout, not re-implementation.
+**Verification:** verified-local — the investigation procedure (find/ls/grep + `cmake --build
+--preset debug` + `ctest --preset debug -L agents -L integration`) was actually run this session and
+confirmed the extraction complete (586/589 tests pass, agents+integration labels 100% green). The
+downstream PLAN was NOT executed end-to-end in CI, so this is NOT verified-ci.
+
+### What changed
+
+- Added the core NEW lesson: a large EXTRACTION/MIGRATION/"move X from repo A to repo B" epic filed
+  weeks/months ago is the highest-risk class for already-being-done, because big moves land under a
+  NEW ADR/PR that never back-references the old epic. Verify the premise before planning the move:
+  run the cheapest disconfirming checks FIRST (`find <target>/src -name '*.cpp'`,
+  `ls <source>/src/<moved-dir>` expecting absent, `grep -rl <MovedSymbol> <source>/src`), map every
+  acceptance criterion to a runnable command, and build+run the actual suite
+  (`cmake --build --preset debug`; `ctest --preset debug -L <label>`) to confirm "CI passes with the
+  new code" is ALREADY true. The plan reframes to verification-and-closeout.
+- Added the residual-triage lesson: distinguish residuals that MATTER (a moved type still referenced
+  from actively-compiled code) from harmless ones (a `#ifdef`-guarded include, a Doxygen `@code`
+  comment); a `#ifdef ENABLE_GRPC`-guarded path that the default preset never compiles is UNTESTED
+  and must be flagged as an open risk, not claimed done.
+- Added two When-to-Use triggers (extraction/migration epic; acceptance-criteria-as-future-work).
+- Added Verified-Workflow steps 12 (verify-the-extraction-premise + cheap-checks-first) and 13
+  (residual triage / `#ifdef` build-config caveat), plus a `# 6.` block in the Quick Reference.
+- Added 7 Failed Attempts rows surfacing the reviewer-focus risks: assume-epic-unstarted;
+  trust-sibling-tree-for-cross-repo-CI claim; attribute-provenance-from-CMake-comment (ADR-015);
+  dismiss-failing-tests-as-out-of-scope-from-untracked-status; claim-complete-while-`#ifdef`-guarded;
+  treat-move-byte-for-byte-complete-from-LOC-estimate.
+- Added a Results & Parameters worked example (ProjectAgamemnon epic #1) with all five honest
+  caveats (cross-repo Keystone inference, ADR-015-from-comment, 3 dismissed tests, `#ifdef
+  ENABLE_GRPC` untested surface, 3,393-line figure not reconciling to 1,732 src + 4,349 hdr).
+- Extended the planner decision tree with an extraction-epic branch; added a Verified On row;
+  updated the Overview table (Date/Objective/Outcome/Verification).
+- Frontmatter: bumped `version` 1.3.0 → 1.4.0, updated `date` 2026-06-15 → 2026-06-19, broadened
+  `description` (added the extraction-epic clause + trigger 6), populated `tags`, kept
+  `verification: verified-local`.
+
+### Why
+
+v1.3.0 covered already-merged fixes, uncommitted-worktree work, and the plan-artifact-shape lessons
+(status note → Grade D; empty placeholder → Grade F). It did not cover the EXTRACTION/MIGRATION
+epic variant, where a months-old "move X" epic is often already delivered under a different ADR/PR.
+The Agamemnon session learned to disconfirm the premise cheaply (find/ls/grep) and confirm "CI
+passes with the new code" by actually building and running the suite, then reframe to
+verification-and-closeout — and to triage residuals so a harmless `#ifdef`/comment hit does not
+inflate the closeout scope while a real compiled-code hit does.
+
+### Previous version (v1.3.0) snapshot
+
+```markdown
+---
+name: planning-check-already-shipped-before-planning
+description: "Before writing an implementation plan, verify the ACTUAL on-disk state — grep/wc/test the real source — instead of trusting the issue body's stated starting condition (LOC counts, method counts, \"needs to be done\"). The fix may already be merged, OR already landed uncommitted in a sibling worktree that git log will NOT show. And even when the work IS already on disk, the plan-loop still demands a FORWARD-LOOKING plan — a retrospective status note gets NOGO'd, gates you defer to the reviewer are stage-handoff failures, and an EMPTY/placeholder artifact (output withheld while a background job runs) is an automatic Grade F. Use when: (1) planning a follow-up or consolidation issue, (2) issue body cites specific file paths or LOC/method counts, (3) git status shows an untracked sibling worktree directory, (4) the plan-loop reviewer NOGO'd your plan as a 'status note' / retrospective, (5) you're tempted to wait on a background job / Monitor / long test run before producing a due plan or review artifact."
+category: architecture
+date: 2026-06-15
+version: "1.3.0"
+user-invocable: false
+verification: verified-local
+history: planning-check-already-shipped-before-planning.history
+tags: []
+---
+```
+
+(The v1.4.0 edits are purely additive — two triggers, Verified-Workflow steps 12–13, a Quick
+Reference block, 7 Failed Attempts rows, a Results subsection, a decision-tree branch, and a
+Verified On row; the full v1.3.0 body is reconstructable from this changelog plus the snapshots
+below.)
+
+---
+
+## v1.3.0 (2026-06-15)
+
+**Changed by:** ProjectHephaestus issue #1357 planning session (continued) — after the status-note
+reshape (v1.2.0), the plan-loop reviewer returned a SECOND NOGO, this time Grade F, because the
+submitted plan artifact was an empty placeholder: the planner had paused its turn on a background
+`pytest`/Monitor full-suite count and the artifact contained zero plan content.
+**Verification:** verified-local (the fix was confirmed when the very next iteration produced a
+complete, gradeable plan; the background-suite count itself remained unconfirmed at the boundary,
+which is exactly the open-risk-flagging the lesson prescribes)
+
+### What changed
+
+- Added the core NEW lesson (Verified-Workflow step 11): never gate the emission of a due artifact
+  on an in-flight background job. Emit the COMPLETE forward-looking plan from evidence in hand; a
+  still-running gate becomes a flagged open-risk line inside Verification, never a reason to output
+  a placeholder. An empty/placeholder artifact fails EVERY rubric dimension and is an automatic
+  Grade F — strictly worse than the v1.2.0 status-note NOGO.
+- Added the generalizable rule distinguishing "no deadline → may keep working/waiting" from
+  "artifact due THIS turn (your output IS the posted artifact) → must emit now from evidence in
+  hand + flag open risk."
+- Added a When-to-Use trigger: "you're tempted to wait on a background job / Monitor / long test run
+  before producing a due plan or review artifact."
+- Added a Failed Attempts row: paused the turn on a background `pytest`/Monitor for a full-suite
+  count → submitted the placeholder "Output not yet flushed…" → plan-loop Grade F.
+- Added a Results & Parameters subsection documenting the Grade F NOGO, the placeholder text, the
+  root cause, the verified fix, and the generalizable rule.
+- Extended the planner decision tree with the "artifact DUE this turn + background job running"
+  branch; added a Verified On row for the Grade F NOGO and its fix.
+- Frontmatter: bumped `version` 1.2.0 → 1.3.0, kept `date` 2026-06-15, broadened `description`
+  (added clause 5 about background-job placeholders → Grade F), kept `verification: verified-local`.
+
+### Why
+
+v1.2.0 covered the FIRST NOGO (a retrospective status note is a category error → Grade D). It did
+not cover what happens when a planner, trying to get a fuller verification, blocks the emission of a
+due artifact on a pending background task. The #1357 session learned that doing so produces an empty
+placeholder artifact, which is STRICTLY WORSE — an automatic Grade F that fails every rubric
+dimension and addresses none of the prior findings. The fix is to treat already-collected evidence
+as sufficient to emit a complete draft and to demote a still-running gate to a flagged open-risk
+line item, never withholding the whole artifact. This was verified when the very next iteration
+produced a complete, gradeable plan.
+
+### Previous version (v1.2.0) snapshot
+
+```markdown
+---
+name: planning-check-already-shipped-before-planning
+description: "Before writing an implementation plan, verify the ACTUAL on-disk state — grep/wc/test the real source — instead of trusting the issue body's stated starting condition (LOC counts, method counts, \"needs to be done\"). The fix may already be merged, OR already landed uncommitted in a sibling worktree that git log will NOT show. And even when the work IS already on disk, the plan-loop still demands a FORWARD-LOOKING plan — a retrospective status note gets NOGO'd, and gates you defer to the reviewer are stage-handoff failures. Use when: (1) planning a follow-up or consolidation issue, (2) issue body cites specific file paths or LOC/method counts, (3) git status shows an untracked sibling worktree directory, (4) the plan-loop reviewer NOGO'd your plan as a 'status note' / retrospective."
+category: architecture
+date: 2026-06-15
+version: "1.2.0"
+user-invocable: false
+verification: verified-local
+history: planning-check-already-shipped-before-planning.history
+tags: []
+---
+```
+
+(The v1.3.0 edits are purely additive — a new trigger, Verified-Workflow step 11, one Failed
+Attempts row, a Results subsection, a decision-tree branch, and a Verified On row; the full v1.2.0
+body is reconstructable from this changelog plus the v1.1.0 and v1.0.0 snapshots below.)
+
+---
+
+## v1.2.0 (2026-06-15)
+
+**Changed by:** ProjectHephaestus issue #1357 planning session (continued) — after confirming the
+work was already on disk, the plan-loop reviewer returned NOGO (Grade D) on a plan that was
+actually a retrospective status note, exposing a lesson v1.1.0 did not cover.
+**Verification:** verified-local (the boundary/mypy/ruff gates ran GREEN this session, resolving
+v1.1.0's "not run" caveats for those gates; the full `tests/unit/automation` suite still had no
+reported pass/fail count, so the suite-wide claim stays conservative)
+
+### What changed
+
+- Added the core NEW lesson: even when the work is already on disk, the plan-loop demands a
+  FORWARD-LOOKING plan. A "status note" (bullets describing what shipped + caveats) is a category
+  error and gets NOGO'd (Grade D) on Completeness/Concreteness/Verification-Plan/Stage-Handoff —
+  "on disk being correct does not rehabilitate the plan artifact itself."
+- Added the stage-handoff lesson: never DEFER a checkable gate (boundary tests, mypy) to the
+  reviewer as "follow-up"; run it during planning and cite it as completed.
+- Added a When-to-Use trigger: "the plan-loop reviewer NOGO'd your plan as a 'status note' /
+  retrospective."
+- Added Verified-Workflow steps 9 (emit a forward-looking plan even for landed work) and 10 (run
+  every gate yourself; mypy-duplicate-module and pytest `--no-cov` gotchas; subset-coverage is an
+  artifact).
+- Added 4 Failed Attempts rows: status-note-as-plan → NOGO; defer-gate-to-reviewer → stage-handoff
+  failure; `pixi run mypy <paths>` → Duplicate module error; subset `pixi run pytest` without
+  `--no-cov` → unrecognized `--cov`.
+- Added a Results & Parameters subsection with the GREEN gate outputs (2 passed boundary; mypy
+  clean on 402 files; ruff clean; 2449 lines; 25 stubs; preservation methods at :781/:880/:943/
+  :1019) and the explicit note that mypy proves type-level DIP but NOT behavioral SRP.
+- Extended the planner decision tree with the forward-plan-even-when-done branch and the
+  subset/`--no-cov`/`mypy`-bare notes; added a second Verified On row for the NOGO→fix.
+- Frontmatter: bumped `version` 1.1.0 → 1.2.0, kept `date` 2026-06-15, broadened `description`,
+  kept `verification: verified-local`.
+
+### Why
+
+v1.1.0 captured "the work may already be done (merged OR uncommitted) — verify before planning."
+It did not cover what to do with the PLAN ARTIFACT once you confirm the work is done. The #1357
+session learned that the plan-loop still grades the artifact, not the disk: a descriptive status
+note is NOGO'd as a category error, and deferring a runnable gate to the reviewer is a
+stage-handoff failure. The fix is to emit a genuine forward-looking plan (design + files +
+build order + per-criterion verification) and to run every gate yourself. The session ran the
+previously-deferred boundary/mypy/ruff gates GREEN, which also upgrades v1.1.0's call-site DIP
+inference to type-level proof.
+
+### Previous version (v1.1.0) snapshot
+
+```markdown
+---
+name: planning-check-already-shipped-before-planning
+description: "Before writing an implementation plan, verify the ACTUAL on-disk state — grep/wc/test the real source — instead of trusting the issue body's stated starting condition (LOC counts, method counts, \"needs to be done\"). The fix may already be merged, OR already landed uncommitted in a sibling worktree that git log will NOT show. Use when: (1) planning a follow-up or consolidation issue, (2) issue body cites specific file paths or LOC/method counts, (3) git status shows an untracked sibling worktree directory."
+category: architecture
+date: 2026-06-15
+version: "1.1.0"
+user-invocable: false
+verification: verified-local
+history: planning-check-already-shipped-before-planning.history
+tags: []
+---
+```
+
+(Full v1.1.0 body is reconstructable from this changelog + the v1.0.0 snapshot below; the v1.2.0
+edits are purely additive — a new trigger, steps 9–10, 4 Failed Attempts rows, a Results
+subsection, decision-tree branches, and a Verified On row.)
+
+---
+
+## v1.1.0 (2026-06-15)
+
+**Changed by:** ProjectHephaestus issue #1357 planning session — wrote a decomposition plan against a repo state where the implementation had already landed uncommitted in an untracked `1-fix` worktree.
+**Verification:** verified-local (subset of tests passed locally; full CI gate — coverage, mypy, ruff, import-surface — NOT run this session)
+
+### What changed
+
+- Broadened the core lesson from "the fix may already be MERGED (git log)" to "the work may already be DONE — merged OR landed uncommitted in a sibling worktree that `git log` will NOT show."
+- Added Step 0 to the workflow: run `git status --porcelain` + `git worktree list` BEFORE trusting "git log shows nothing → not done yet" (an untracked `?? 1-fix/` dir is the tell).
+- Added Step 1: MEASURE the file (`wc -l`, `grep -cE "^\s+def "`) instead of trusting the issue body's stated LOC/method counts ("3,570 lines, ~60 methods needing decomposition").
+- Added Step 4: confirm a consolidation issue's named preservation methods/PRs still exist on the facade via grep before claiming preservation.
+- Added Step 7: verify DIP/constructor claims against actual collaborator constructor signatures (or via mypy), not just the `__init__` call site.
+- Clarified the test-subset semantics: a green subset is `verified-local`; a failing coverage gate on a subset is a gate artifact, not a code failure.
+- Added 4 new Failed Attempts rows (rely on git log alone; trust stated counts; infer DIP from call site; treat subset green as done).
+- Added a second concrete example (issue #1357, uncommitted-worktree case) with honest caveats.
+- Updated the planner decision tree with the worktree/measure branches and subset-vs-full test distinction.
+- Added a Verified On row for issue #1357.
+- Frontmatter: bumped `version` 1.0.0 → 1.1.0, updated `date` to 2026-06-15, added `history` field, broadened `description`, and lowered skill-wide `verification` to `verified-local` (the new finding is the lowest-confidence claim; the original merged-fix example remains verified-ci and is labeled as such inline).
+
+### Why
+
+v1.0.0 only covered the case where the fix is already in `main` via a merged PR, detectable
+with `git log`. The #1357 session exposed a strictly harder variant: the entire decomposition
+(facade + 4 collaborators + lambda-wrapped DIP wiring + 211 green tests) had already landed but
+was sitting UNCOMMITTED in an untracked `1-fix` worktree. `git log` on `main` showed nothing, so
+a v1.0.0-style check would have falsely concluded "not done yet" and produced a plan to RE-DO the
+work — risking a conflicting duplicate implementation. The fix is to check the working tree and
+sibling worktrees, and to measure the file directly, before trusting either the issue narrative
+or `git log`.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: planning-check-already-shipped-before-planning
+description: "Before writing an implementation plan, grep the real source for the function and check recent git log — the fix may already be merged. Use when: (1) planning a follow-up issue, (2) issue body cites specific file paths."
+category: architecture
+date: 2026-06-13
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: []
+---
+
+# Planning: Check If Already Shipped Before Writing a Plan
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-13 |
+| **Objective** | Detect whether a GitHub issue's fix is already in `main` before writing an implementation plan |
+| **Outcome** | Successful — planner correctly identified a shipped fix (PR #1308) and reported it instead of re-implementing |
+| **Verification** | verified-ci |
+
+## When to Use
+
+- Planning a follow-up or consolidation issue (issue body may lag behind actual implementation)
+- Issue body cites specific file paths or line numbers (these go stale after merges)
+- Picking up an issue from a batch/backlog queue — the fix may have been merged hours or days ago
+- Before any implementation plan step — running this check costs seconds and avoids wasted work
+
+## Verified Workflow
+
+### Quick Reference
+
+\`\`\`bash
+# 1. Grep for the function/symbol cited in the issue — find the real file
+grep -r "function_name_from_issue" hephaestus/ --include="*.py" -l
+
+# 2. Check if the fix is already in place
+grep -n "the_new_behavior_or_regex" path/to/real/file.py
+
+# 3. Check recent commits for matching descriptions
+git log --oneline -10
+
+# 4. Confirm what changed in the likely commit
+git show --stat <sha>
+
+# 5. Run the relevant tests — a passing suite means it's already fixed
+pixi run pytest tests/unit/path/to/relevant_tests.py -v
+\`\`\`
+
+### Detailed Steps
+
+1. **Find the real file** — Issue bodies frequently cite stale file paths or wrong line numbers. Never trust them directly. Grep the codebase for the function name, class name, or constant names mentioned in the issue.
+
+2. **Check for the fix already present** — Once you have the real file path, grep for the new behavior (new constant, new code path, new branch). If it matches what the issue requested, the fix is in.
+
+3. **Confirm via git log** — Run `git log --oneline -10` to see recent commits. Look for a message matching the issue description. Run `git show --stat <sha>` to confirm the modified files match.
+
+4. **Run tests before writing the plan** — Run `pixi run pytest <relevant test module> -v`. If all tests pass and the tests cover the new behavior, the fix is confirmed shipped.
+
+5. **Document for auditability** — Even when already shipped, record what was found: the commit SHA, PR number, the file and line range of the implementation, and which tests cover it. This satisfies reviewer auditability requirements.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Trust issue body file paths | Used `python_version.py:290-293` as the implementation target (as cited in the issue) | Actual code lived in `scripts_lib/check_python_version_consistency.py` — a completely different file | Issue bodies cite stale paths; always grep to locate the real code |
+| Skip pre-plan grep | Started outlining implementation steps before checking whether the code was already there | Would have produced a plan to re-implement something already merged in PR #1308 | A 10-second grep check prevents hours of wasted planning |
+| Assume consolidation issue = unshipped | Treated the issue as describing future work because its body said "not yet done" | The issue was a consolidation tracker that lagged behind the actual PR by hours | Consolidation/follow-up issues are high-risk for describing already-shipped work |
+
+## Results & Parameters
+
+### Concrete example (ProjectHephaestus issue #1291 / PR #1308)
+
+Issue body said: "add YAML sequence format support to `extract_ci_matrix_python_versions`" and cited `python_version.py:290-293` as the bug location.
+
+Grep revealed the real file:
+\`\`\`
+hephaestus/scripts_lib/check_python_version_consistency.py
+\`\`\`
+
+Fix confirmed present at lines 17–21 (regex constants) and 173–183 (two-phase dispatch):
+\`\`\`python
+_CI_MATRIX_BRACKET_RE = re.compile(r"\[([^\]]+)\]")
+_CI_MATRIX_SEQUENCE_RE = re.compile(r"^\s*-\s+(.+)$", re.MULTILINE)
+\`\`\`
+
+Commit: `dd15c35f` — merged via PR #1308 on 2026-06-13 with CI green.
+All 11 tests in `tests/unit/scripts_lib/test_check_python_version_consistency.py::TestExtractCiMatrixPythonVersions` pass.
+
+### Decision tree for planners
+
+\`\`\`
+Before writing any implementation plan:
+│
+├─ 1. Grep for the function/symbol name → find the real file path
+│
+├─ 2. Grep for the new behavior in that file
+│   ├─ FOUND → check git log for the matching commit
+│   │   └─ commit found + tests pass → REPORT AS ALREADY SHIPPED (do not re-plan)
+│   └─ NOT FOUND → proceed with implementation planning
+│
+└─ 3. Run tests for the relevant module
+    ├─ ALL PASS → strong signal the fix is already in
+    └─ SOME FAIL → issue is genuinely open; proceed with planning
+\`\`\`
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | Issue #1291 — YAML sequence support in CI matrix extractor | PR #1308 merged 2026-06-13, commit dd15c35f |
+```
+
+---
+
+## v1.0.0 (2026-06-13)
+
+**Initial version.** Detect whether a GitHub issue's fix is already in `main` (via grep + git log + tests) before writing an implementation plan. Verified on ProjectHephaestus issue #1291 / PR #1308.
