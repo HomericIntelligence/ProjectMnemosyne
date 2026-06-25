@@ -2,6 +2,29 @@
 
 # History: python-import-patterns-and-compatibility-guards
 
+## v1.5.0 (2026-06-24)
+
+**Changed by:** ProjectHephaestus issue #1513 — implementation PLAN for an `[S14 API Design]` audit finding that promotes three existing public-looking correlation-ID functions (`set_correlation_id`, `get_current_correlation_id`, `correlation_id_scope` in `hephaestus/logging/utils.py`) into `hephaestus.logging.__all__` + the `COMPATIBILITY.md` stable-symbol table.
+**Verification:** **unverified** for ALL new material (section G + 5 new Failed Attempts rows + the new "Use when" trigger). The plan's edits and surface-pin test were never executed in CI. All pre-existing sections retain their prior verification levels (verified-ci for function-local / version-guard / Windows-guard / lazy-exports; verified-local for surface-pin-stale fix and access-time deprecation-warning implementation).
+
+### What changed
+
+- Added an 8th "Use when" trigger to the frontmatter description and an 8th "When to Use" bullet: PLANNING an audit-finding fix that promotes an existing public-looking symbol into a package's declared `__all__` + stability docs.
+- Added detailed-steps subsection **G. Promoting an undeclared public-looking symbol to the stable surface (audit-finding fix) — UNVERIFIED planning-guidance**, with an `unverified` banner and five grep-backed checks: (1) verify the COMPATIBILITY.md "Added" version against the actual next release (RELEASING.md / milestones / roadmap), never guess from the latest git tag; (2) grep the WHOLE test tree for a non-local strict-equality `__all__` surface pin before widening; (3) verify the audit's stability-tier premise on disk (audit findings can be factually wrong); (4) assert re-export identity (`pkg.X is submodule.X`) and grep for existing `patch("pkg.submodule...")` usages; (5) include `test_import_surface.py`/`test_automation_boundary.py` in the verification set for any `__init__.py` widening.
+- Added 5 Failed Attempts rows (all `unverified`): guessed the COMPATIBILITY.md "Added" version from the latest tag; grepped only the obvious test file for `__all__` pins; took the audit's "Stable subpackage" premise as given; assumed any re-export binding satisfies submodule patch paths; treated an `__init__.py` re-export widening as boundary-risk-free.
+- Added a Verified On row for issue #1513 marked **PLAN ONLY / unverified**.
+- Updated Overview verification row to add the `unverified` planning-guidance clause for section G (without downgrading existing verified sections).
+- Added tags: `audit-finding`, `surface-promotion`, `version-stamping`, `stability-docs`, `re-export-identity`, `import-surface-boundary`.
+- Bumped version 1.4.0 → 1.5.0; date stays 2026-06-24.
+
+### Why
+
+The skill already taught `__all__` widening, lazy vs eager exports, surface-pinning tests (subset vs strict-equality), COMPATIBILITY.md doc drift, and stale surface-pins from parallel PRs (sections B / B′ / F). Issue #1513's planning surfaced five durable, transferable lessons specific to PROMOTING an existing-but-undeclared symbol to the stable surface that the prior sections did not cover: the COMPATIBILITY.md "Added" version must be VERIFIED against the actual next release, not guessed from the latest tag (the plan stamped `0.9.8` purely because the latest tag was `v0.9.7` — an unverified assumption); a strict-equality surface pin can live in a DIFFERENT test file and break non-locally when `__all__` widens, so the whole test tree must be grepped, not just the obvious file; the audit finding's stability-tier premise ("`hephaestus.logging` is Stable") is itself a claim to verify on disk (team KB has prior cases of 3/29 strict-audit findings being factually wrong); re-export IDENTITY matters because existing tests `patch("hephaestus.logging.utils...")` and a divergent package-root binding breaks one patch path; and widening an `__init__.py` (even a "pure re-export") can regress enforced import-surface/boundary tests. The plan was not executed, so all new material is `unverified` and section G carries an explicit unverified banner.
+
+### Previous version (v1.4.0) snapshot
+
+The v1.4.0 entry below is the prior recorded snapshot. Key difference from v1.5.0: v1.4.0 had no section G, no audit-surface-promotion "Use when" trigger, no version-stamp / non-local-pin / stability-premise / re-export-identity / boundary-test planning rows, and the Overview verification row had no `unverified` planning-guidance clause.
+
 ## v1.4.0 (2026-06-24)
 
 **Changed by:** ProjectHephaestus issue #1545 — executed the access-time `DeprecationWarning` implementation for the deprecated `retry_with_jitter` lazy shim. The v1.3.0 plan was followed end-to-end and all tests passed locally.
