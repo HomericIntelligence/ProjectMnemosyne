@@ -2,6 +2,33 @@
 
 # History: python-import-patterns-and-compatibility-guards
 
+## v1.7.0 (2026-06-24)
+
+**Changed by:** ProjectHephaestus issue #1511 — executed the `hephaestus/cli/__init__.py` `__all__` alignment fix. Section G was previously `unverified` planning-guidance derived from a plan for issue #1513. Issue #1511 executed the same `__all__`-alignment pattern end-to-end (for the `cli` package rather than `logging`), confirming the core workflow locally.
+**Verification:** `verified-local` for the new §G material (section G `__all__` alignment, eager re-export, subset-assertion pin, import-surface/boundary checks — all confirmed locally with 79 tests passing, mypy/ruff clean; CI pending after PR merges). COMPATIBILITY.md version-stamping guidance within section G remains `unverified` (derived from a plan for ProjectHephaestus issue #1513, not yet executed in CI). All pre-existing sections retain their prior verification levels.
+
+### What changed
+
+- Updated frontmatter `description` field: the `(8)` use-case trigger changed from "PLANNING an audit-finding fix" (`unverified`) to "EXECUTING an audit-finding fix" (`verified-local`) with concrete details from issue #1511: expand scope from named symbols to all missing symbols; eager re-export for stdlib-only modules; no COMPATIBILITY.md change when no per-symbol table; subset-assertion pin. Verification status updated from `unverified planning-guidance` to `verified-local` (with a note that COMPATIBILITY.md version-stamping from issue #1513 remains unverified).
+- Bumped `version` frontmatter field: `1.6.0` → `1.7.0`.
+- Updated Overview `Verification` row: changed `unverified planning-guidance (section G)` to `verified-local (section G — __all__ alignment / eager re-export / subset-assertion pin executed end-to-end for ProjectHephaestus issue #1511)`; narrowed the remaining `unverified` clause to COMPATIBILITY.md version-stamping only.
+- Updated "When to Use" §G bullet from "unverified planning-guidance" to "verified-local for __all__ alignment; unverified for COMPATIBILITY.md version-stamping"; rewrote the bullet with verified concrete patterns from issue #1511 plus preserved unverified planning traps from issue #1513.
+- Updated §G section heading from "UNVERIFIED planning-guidance" to "verified-local for __all__ alignment; unverified for COMPATIBILITY.md version-stamping".
+- Replaced §G opening `> **Verification: unverified**` banner with a `> **Verification: verified-local / unverified**` banner that distinguishes the two scopes.
+- Added a verified concrete code example block before the numbered planning steps: shows the `hephaestus/cli/__init__.py` before/after diff and the two new test functions (`test_cli_all_covers_module_all` subset assertion + `test_dry_run_symbols_reexport_identity` identity check).
+- Added a "Key verified decisions from issue #1511" bullet list before the numbered planning steps: (1) scope expansion intentional — fix all 4 symbols not just the 2 named; (2) eager re-export beats lazy for stdlib-only modules; (3) no COMPATIBILITY.md change when no per-symbol table; (4) subset assertion not strict equality; (5) verify import-surface/boundary tests.
+- Added a label "Additional planning steps (from a plan for ProjectHephaestus issue #1513 — unverified for COMPATIBILITY.md version-stamping):" before the five numbered planning-guidance steps to distinguish the unverified from the verified.
+- Added 3 new Failed Attempts rows (all `verified-local`, ProjectHephaestus #1511): fixed only the 2 named symbols (scope was too narrow); used `_LAZY_EXPORTS` for a stdlib-only module (overkill — eager re-export is correct); used a strict-equality pin for the surface test (breaks on parallel additions).
+- Added a Verified On row for issue #1511 marked **verified-local** with full detail (4 symbols added, 79 tests passed, mypy/ruff/boundary tests clean, CI pending).
+
+### Why
+
+Section G was added in v1.5.0 as entirely `unverified` planning-guidance: the steps were derived from a plan for issue #1513 (correlation-ID functions in `hephaestus.logging`) that was never executed. Issue #1511 then executed the same core pattern — aligning `cli/__init__.py.__all__` with `cli/utils.py.__all__` — and confirmed the following verified facts: the scope should always expand to cover the full defect class (not just named symbols); eager re-export is correct and sufficient when the source module is stdlib-only; COMPATIBILITY.md does not always need updating (only when a per-symbol table exists); the subset assertion (`set(utils.__all__) - set(cli.__all__)`) is the right pin shape; and `test_import_surface.py`/`test_automation_boundary.py` must be included in the verification set. The COMPATIBILITY.md version-stamping guidance from issue #1513 remains unverified — that guidance was not exercised by issue #1511 (which had no per-symbol table to update).
+
+### Previous version (v1.6.0) snapshot
+
+The v1.6.0 entry is directly below. Key differences from v1.7.0: v1.6.0 had section G entirely `unverified` with no concrete cli/__init__.py example, no "Key verified decisions" bullet list, no "scope expansion / eager re-export / no-COMPATIBILITY.md-change / subset-assertion" verified patterns, and no Verified On row for issue #1511.
+
 ## v1.6.0 (2026-06-24)
 
 **Changed by:** ProjectHephaestus issue #1512 — implementation PLAN for an `[S14 API Design]` audit finding that `hephaestus/__init__.py` implements the PEP 562 `__getattr__` lazy loader but omits the companion module-level `__dir__()`, so `dir(hephaestus)` shows only ~4 eagerly-bound names and the entire lazily-loaded public API is invisible to introspection tools (IPython tab-completion, IDEs, doc generators).
