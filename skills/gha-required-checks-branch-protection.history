@@ -2,6 +2,46 @@
 
 # gha-required-checks-branch-protection — History
 
+## v1.9.0 (2026-06-24)
+
+**Changed by:** ProjectHephaestus issue #1514 — `license-scan` was NOT a merge-blocking check
+despite `NOTICE` claiming CI enforcement on every PR. Root cause: the job lived only in
+`.github/workflows/security.yml` (advisory/scheduled) and was NOT in `required-checks-gate.needs`
+in `.github/workflows/_required.yml`. Fix verified-local: all 7 gate tests pass, yamllint clean.
+
+**Stacking note:** builds on v1.8.0 (PR #2771 — J2 dual-ruleset context-form verification) which
+is already on `main`. No conflicts: this adds Section M (a new subject) plus trigger (14), a new
+Failed Attempts row, a new Verified On row, and updated Overview / description / version fields.
+
+### What changed
+
+- Added **When to Use trigger (14):** when an advisory/scheduled workflow contains a
+  compliance/security check that project docs claim is "CI-enforced on every PR," verify the job
+  is in `required-checks-gate.needs`, not just present in any workflow file. Point to Section M.
+- Added **Section M: Promoting a job from an advisory workflow to a merge-blocking gate** — the
+  5-step job-promotion pattern (verified-local, issue #1514, ProjectHephaestus):
+  1. Add job to `_required.yml` with `changes-gate` guard and `env:` for context vars.
+  2. Add `- <job-key>` to `required-checks-gate.needs`.
+  3. Add `if: github.event_name != 'pull_request'` to the advisory workflow's copy.
+  4. Add a named test asserting job is in `_required.yml` AND in gate's `needs:`.
+  5. Validate locally (`yamllint` + `pytest`). No branch-protection PUT needed.
+  Includes code snippets for each step and a generalizable rule.
+- Added `description` trigger (14) matching the When to Use entry.
+- Added tags: `advisory-to-gate-promotion`, `job-promotion-pattern`,
+  `documentation-vs-enforcement-gap`.
+- Added **Failed Attempts** row: "Trusted documentation ('CI-enforced on every PR') without
+  verifying gate wiring" — job existed in `security.yml` only; `required-checks-gate.needs` not
+  checked; Section M is the fix.
+- Added **Verified On** row: ProjectHephaestus issue #1514 (2026-06-24) — Section M,
+  verified-local (7/7 gate tests pass, yamllint clean).
+- Updated **Overview** table: date bumped to 2026-06-24, objective and outcome updated,
+  Verification cell extended with Section M honesty note.
+- Bumped version to **1.9.0**, date to **2026-06-24**.
+
+**Snapshot pointer:** the immediately-prior accepted version is **v1.8.0 (2026-06-20)** — sub-finding
+J2 (dual-ruleset context-form verification), PR #2771. v1.9.0 adds Section M with no change to
+Sections A–L or J2 themselves.
+
 ## v1.8.0 (2026-06-20)
 
 **Changed by:** ProjectMnemosyne issue #309 R2 re-planning — capturing ONE incremental learning not
