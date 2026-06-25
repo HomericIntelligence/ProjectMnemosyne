@@ -1,9 +1,9 @@
 ---
 name: gha-required-checks-branch-protection
-description: "Use when: (1) PRs are permanently BLOCKED because a required status-check context is a job gated by if: github.event_name != 'pull_request' (skipped != satisfied), (2) consolidating duplicate CI jobs into a reusable workflow so _required.yml is a thin aggregator, (3) validating GitHub branch protection API responses and writing synthetic tests for bash enforcement scripts, (4) a summary aggregator job pattern is needed to replace N individual required contexts with one that handles skip semantics correctly, (5) adding a RESULTS-loop aggregator gate to _required.yml with a guard test asserting all non-excluded jobs are wired into needs, (6) guard test needs a provable negative path to catch silently-inverted conditions [verified-local: _unwired_jobs helper pattern, PR #1343], (7) job key vs context name disambiguation for branch protection contexts, (8) GET-before-PUT mitigation for destructive branch protection API, (9) requirements deviation must be disclosed explicitly in implementation plans, (10) you are placing a merge-blocking CI guard and must confirm its job is a pinned required status-check context, not an advisory job — enumerate the ruleset's required contexts and check your target job name is in that set, else the guard is green-but-non-blocking and a regression merges clean, (11) an issue claims a prerequisite PR already 'added'/'landed'/'introduced' a CI job that a new required-context depends on — verify that PR is actually merged to the default branch (gh pr view <n> --json state,mergedAt + grep the file on main) BEFORE adding the context, else the never-posted context bricks the merge queue, (12) you are writing a runbook for a destructive full-replacement API write (branch-protection/ruleset PUT) and must include an explicit ROLLBACK (re-PUT the snapshot on read-back failure), not just a read-back; and derive sibling foreign keys (integration_id) dynamically from the live object rather than hardcoding a literal, (13) verifying a job is a pinned required status-check context in a fleet that uses BOTH org-level and repo-level rulesets — enumerate both and normalize the org `Required Checks / <job>` prefix vs the bare repo form, because checking one ruleset or matching only the bare name yields a false negative/positive on the other."
+description: "Use when: (1) PRs are permanently BLOCKED because a required status-check context is a job gated by if: github.event_name != 'pull_request' (skipped != satisfied), (2) consolidating duplicate CI jobs into a reusable workflow so _required.yml is a thin aggregator, (3) validating GitHub branch protection API responses and writing synthetic tests for bash enforcement scripts, (4) a summary aggregator job pattern is needed to replace N individual required contexts with one that handles skip semantics correctly, (5) adding a RESULTS-loop aggregator gate to _required.yml with a guard test asserting all non-excluded jobs are wired into needs, (6) guard test needs a provable negative path to catch silently-inverted conditions [verified-local: _unwired_jobs helper pattern, PR #1343], (7) job key vs context name disambiguation for branch protection contexts, (8) GET-before-PUT mitigation for destructive branch protection API, (9) requirements deviation must be disclosed explicitly in implementation plans, (10) you are placing a merge-blocking CI guard and must confirm its job is a pinned required status-check context, not an advisory job — enumerate the ruleset's required contexts and check your target job name is in that set, else the guard is green-but-non-blocking and a regression merges clean, (11) an issue claims a prerequisite PR already 'added'/'landed'/'introduced' a CI job that a new required-context depends on — verify that PR is actually merged to the default branch (gh pr view <n> --json state,mergedAt + grep the file on main) BEFORE adding the context, else the never-posted context bricks the merge queue, (12) you are writing a runbook for a destructive full-replacement API write (branch-protection/ruleset PUT) and must include an explicit ROLLBACK (re-PUT the snapshot on read-back failure), not just a read-back; and derive sibling foreign keys (integration_id) dynamically from the live object rather than hardcoding a literal, (13) verifying a job is a pinned required status-check context in a fleet that uses BOTH org-level and repo-level rulesets — enumerate both and normalize the org `Required Checks / <job>` prefix vs the bare repo form, because checking one ruleset or matching only the bare name yields a false negative/positive on the other, (14) an advisory or scheduled workflow contains a compliance or security check that project documentation claims is 'CI-enforced on every PR' — verify the job is actually wired into the branch-protection required context (e.g. required-checks-gate.needs), not just present in any workflow file; if not, promote it using the 5-step job-promotion pattern (Section M)."
 category: ci-cd
-date: 2026-06-20
-version: "1.8.0"
+date: 2026-06-24
+version: "1.9.0"
 user-invocable: false
 history: gha-required-checks-branch-protection.history
 tags:
@@ -33,6 +33,9 @@ tags:
   - context-form
   - false-negative
   - dual-ruleset
+  - advisory-to-gate-promotion
+  - job-promotion-pattern
+  - documentation-vs-enforcement-gap
 ---
 
 # GitHub Actions Required Checks and Branch Protection
@@ -41,10 +44,10 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-20 (v1.5.0) · 2026-06-14 (v1.4.0) |
-| **Objective** | Make required status checks satisfiable and maintainable: handle skip-vs-success semantics with a `summary` aggregator, consolidate duplicate jobs into a reusable `workflow_call` workflow, validate branch-protection API writes with read-back, smoke-test workflow structure, add a RESULTS-loop gate with guard test, and document guard-test negative-path, job-key vs context-name disambiguation, destructive PUT mitigation, requirements-deviation disclosure, and (v1.5.0) required-status-check PLACEMENT — before placing a merge-blocking guard, enumerate the ruleset's required contexts and confirm the target job is one of them |
-| **Outcome** | Consolidated guidance covering ten interacting concerns; specific cases preserved as examples |
-| **Verification** | verified-ci (core patterns); verified-local (section F: _unwired_jobs helper + 3-test pattern, PR #1343; section J: required-context enumeration `jq` query WAS run, returned the listed contexts — but the proposed guard placement itself is **unverified** / planning-only; section K: the prerequisite-PR premise-check technique WAS run — `gh pr view 264` returned OPEN/`mergedAt:null` and the `main` grep returned empty — but the proposed ruleset-edit runbook is **unverified** / planning-only; section L: the reviewer NOGO on issue #284 R0 that motivated the rollback/dynamic-integration_id learning is real and **verified-local**, but the proposed rollback runbook + dynamic-`integration_id` jq merge are **unverified** / planning-only — the ruleset PUT/rollback was NOT executed; section J2 (v1.8.0): the repo-ruleset enumeration leg is **verified-local** (8 bare contexts incl. `schema-validation` returned this session) but the org-ruleset `Required Checks / <job>` prefix parity is **unverified** — documentation-derived from `canonical-checks.md:58-62`, `org-ruleset.json` not opened/grepped this iteration) |
+| **Date** | 2026-06-24 (v1.9.0) · 2026-06-20 (v1.5.0) · 2026-06-14 (v1.4.0) |
+| **Objective** | Make required status checks satisfiable and maintainable: handle skip-vs-success semantics with a `summary` aggregator, consolidate duplicate jobs into a reusable `workflow_call` workflow, validate branch-protection API writes with read-back, smoke-test workflow structure, add a RESULTS-loop gate with guard test, and document guard-test negative-path, job-key vs context-name disambiguation, destructive PUT mitigation, requirements-deviation disclosure, (v1.5.0) required-status-check PLACEMENT, and (v1.9.0) promoting a job from an advisory/scheduled workflow to a merge-blocking required check |
+| **Outcome** | Consolidated guidance covering eleven interacting concerns; specific cases preserved as examples |
+| **Verification** | verified-ci (core patterns); verified-local (section F: _unwired_jobs helper + 3-test pattern, PR #1343; section J: required-context enumeration `jq` query WAS run, returned the listed contexts — but the proposed guard placement itself is **unverified** / planning-only; section K: the prerequisite-PR premise-check technique WAS run — `gh pr view 264` returned OPEN/`mergedAt:null` and the `main` grep returned empty — but the proposed ruleset-edit runbook is **unverified** / planning-only; section L: the reviewer NOGO on issue #284 R0 that motivated the rollback/dynamic-integration_id learning is real and **verified-local**, but the proposed rollback runbook + dynamic-`integration_id` jq merge are **unverified** / planning-only — the ruleset PUT/rollback was NOT executed; section J2 (v1.8.0): the repo-ruleset enumeration leg is **verified-local** (8 bare contexts incl. `schema-validation` returned this session) but the org-ruleset `Required Checks / <job>` prefix parity is **unverified** — documentation-derived from `canonical-checks.md:58-62`, `org-ruleset.json` not opened/grepped this iteration; section M (v1.9.0): all 7 gate tests pass locally + yamllint clean — **verified-local** (issue #1514, ProjectHephaestus)) |
 
 ## When to Use
 
@@ -59,6 +62,7 @@ tags:
 - **(v1.6.0)** An issue's body asserts a prerequisite PR already "added"/"landed"/"introduced" the CI job that POSTS the context you are about to make required (e.g. "PR #264 added the SAST job"). Before writing any runbook ordering that depends on it, VERIFY the PR is actually merged to the default branch (`gh pr view <n> --json state,mergedAt` AND grep the file on `main`). The issue body is a claim, not ground truth — if the posting job is not yet on `main`, adding the required context permanently bricks the merge queue (Section A hazard). Gate the change on the merge.
 - **(v1.7.0)** You are writing a runbook for a **destructive full-replacement API write** (a branch-protection or ruleset PUT that overwrites the whole object). A read-back that DETECTS corruption is only half a safeguard — the runbook must also state the explicit ROLLBACK (re-PUT the pre-edit snapshot when the read-back assert fails), and prove BEFORE any PUT that the snapshot itself is a valid restore target (parses + carries the expected pre-edit context count). Separately, when the new array entry must carry a foreign key matching its siblings (e.g. `integration_id`), DERIVE that key from a sibling in the live object via `jq` rather than pasting a literal copied from an issue body or an unmerged diff — the literal is a drift hazard, the derivation is self-consistent by construction.
 - **(v1.8.0)** You are verifying that a job is a pinned required status-check context in a fleet that pins checks through BOTH an org-level ruleset AND a repo-level ruleset — and the two use DIFFERENT context-string conventions (the repo ruleset pins the BARE job name `schema-validation` with `integration_id: 15368`; the org ruleset pins the PREFIXED form `Required Checks / schema-validation`). Enumerating only `repo-ruleset.json`, or matching only the bare name (`grep -qx schema-validation`), gives a false negative/positive on the org file. Enumerate BOTH rulesets and normalize the org-vs-repo FORM (`grep -qxE 'schema-validation|Required Checks / schema-validation'`) before asserting membership. This is the inverse detail of Section J: Section J says "place the guard where the context is pinned"; this says "and when you verify that, check both rulesets and both context-string forms, or your verification itself is wrong."
+- **(v1.9.0)** An advisory or scheduled workflow contains a compliance or security check that project documentation claims is "CI-enforced on every PR" — verify the job is actually wired into the branch-protection required context (here: `required-checks-gate.needs` in `_required.yml`), not just present in some workflow file. A job that lives only in `security.yml` or any non-gate workflow is advisory regardless of what NOTICE, README, or in-file comments say. When verification reveals the gap, use the 5-step job-promotion pattern (Section M) to promote the job from advisory to merge-blocking. NOTE: the aggregator pattern (this repo's `required-checks-gate` in `_required.yml`) means NO branch-protection PUT is ever needed — just add the job to `_required.yml` and wire it into `required-checks-gate.needs`.
 
 ## Verified Workflow
 
@@ -694,6 +698,131 @@ rollback), Section G (job-key vs context-name, the basis for the check-run-SHA s
 same issue #284, the gate that must precede this PUT), and Section A (the never-posts → BLOCKED
 hazard the check-run-SHA confirmation guards against).
 
+#### M. Promoting a job from an advisory workflow to a merge-blocking gate (verified-local — issue #1514, ProjectHephaestus)
+
+> **Verification:** **verified-local** — all 7 gate tests pass locally, yamllint clean (2026-06-24,
+> ProjectHephaestus issue #1514). The full CI run is pending merge, but the local verification
+> suite completed without failures.
+
+**The failure that triggered this learning (issue #1514):** `NOTICE` in ProjectHephaestus claimed
+`license-scan` was CI-enforced on every PR. The job existed in `.github/workflows/security.yml`
+(an advisory/scheduled workflow), but was NOT wired into `required-checks-gate.needs` in
+`.github/workflows/_required.yml`. Because `required-checks-gate` is the SINGLE required context
+in branch protection, any job not in its `needs:` list is advisory regardless of documentation.
+A PR adding a GPL runtime dependency could merge even if `check_license_compatibility.py` exits 1.
+
+**The documentation-vs-enforcement gap diagnostic:** when project docs, NOTICE files, or PR
+descriptions claim a compliance/security check is "CI-enforced on every PR," verify BOTH:
+1. The job exists in some workflow file — necessary but NOT sufficient.
+2. The job key appears in `required-checks-gate.needs` (or the equivalent aggregator) in
+   `_required.yml` — this is what actually blocks a merge.
+
+A job in `security.yml` only (or any non-gate workflow) is advisory, regardless of documentation.
+
+**The 5-step job-promotion pattern (no branch-protection PUT needed):**
+
+> This pattern applies to repos that use the aggregator pattern where a single `required-checks-gate`
+> (or `summary`) job fans in all blocking jobs and is itself the only pinned required context.
+> No branch-protection PUT is ever needed because the pinned context (`required-checks-gate`)
+> is unchanged — only its `needs:` list grows.
+
+**Step 1 — Add the job to `_required.yml`**, placed appropriately in the job dependency order
+(e.g., after prerequisite jobs, before the aggregator). Copy the step block from the advisory
+workflow exactly, with two adjustments:
+- Gate it on `changes-gate.outputs.code_event == 'true'` (like every other heavy job, so it
+  skips on label/auto-merge events that don't change code).
+- Use `env:` vars for any values from GitHub context that would otherwise require inline
+  `${{ }}` interpolation inside shell commands — the safe pattern prevents shell injection:
+
+```yaml
+  license-scan:
+    needs: [changes-gate, deps-version-sync]
+    if: needs.changes-gate.outputs.code_event == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install package
+        run: pip install -e ".[all]"
+      - name: Check license compatibility
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+        run: python scripts/check_license_compatibility.py
+      - name: Summarize result
+        if: always()
+        run: echo "License scan complete (event=${{ github.event_name }})" >> "$GITHUB_STEP_SUMMARY"
+```
+
+**Step 2 — Add `- <job-key>` to `required-checks-gate.needs`:**
+
+```yaml
+  required-checks-gate:
+    if: always()
+    needs:
+      - lint
+      - unit-tests
+      # ... existing entries ...
+      - license-scan   # <-- add this line
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check all required jobs passed
+        # ... RESULTS bash-loop unchanged ...
+```
+
+**Step 3 — Add `if: github.event_name != 'pull_request'` to the advisory workflow's copy** of
+the same job. This matches the existing pattern for `pip-audit`, `sast`, and other jobs that
+appear in both `_required.yml` (PR-time gating) and `security.yml` (weekly schedule + manual
+dispatch). Without this guard, every PR triggers a duplicate run: one from `_required.yml` and
+one from `security.yml`:
+
+```yaml
+# In security.yml (advisory / scheduled workflow):
+  license-scan:
+    if: github.event_name != 'pull_request'   # <-- add this guard
+    runs-on: ubuntu-latest
+    steps:
+      # ... steps unchanged ...
+```
+
+**Step 4 — Add a named test asserting the job is in `_required.yml` AND in the gate's `needs:`.**
+The guard test (Section F / E) should already cover new jobs automatically via `_unwired_jobs`,
+but adding an explicit named assertion creates a permanent acceptance criterion that cannot be
+silently removed:
+
+```python
+def test_license_scan_is_gated():
+    """Explicit acceptance criterion: license-scan must be a gating job (issue #1514)."""
+    workflow = yaml.safe_load(Path(".github/workflows/_required.yml").read_text())
+    jobs = workflow["jobs"]
+    assert "license-scan" in jobs, "license-scan must be a job in _required.yml"
+    gate_needs = set(jobs["required-checks-gate"]["needs"])
+    assert "license-scan" in gate_needs, "license-scan must be in required-checks-gate.needs"
+```
+
+**Step 5 — Validate locally before pushing:**
+
+```bash
+yamllint .github/workflows/_required.yml .github/workflows/security.yml
+pixi run pytest tests/unit/ci/test_required_checks_gate.py -v
+```
+
+**Generalizable rule:** *a compliance or security check in an advisory/scheduled workflow is
+advisory regardless of what the documentation says. "The job exists" is necessary but not
+sufficient — "the job key is in `required-checks-gate.needs`" is what actually blocks merges.
+Promote via the 5-step pattern: (1) add job to `_required.yml` with `changes-gate` guard and
+`env:` for context vars, (2) add to gate's `needs:`, (3) add `if: github.event_name !=
+'pull_request'` to the advisory copy, (4) add a named test locking the acceptance criterion,
+(5) validate locally. No branch-protection PUT needed when the repo uses an aggregator gate.*
+
+**Cross-references:** Section A (job skip → BLOCKED hazard — the inverse of this: adding a job
+to the gate when its `if:` skips on PRs); Section E/F (RESULTS-loop aggregator + guard test
+patterns that catch promotion gaps automatically); Section J (required-context PLACEMENT — the
+same principle from the opposite direction: don't place a guard in a non-required job).
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -716,6 +845,7 @@ hazard the check-run-SHA confirmation guards against).
 | Destructive ruleset PUT runbook with read-back but no rollback | Planned GET-snapshot + PUT + read-back assert for a full-replacement ruleset write, but left the restore action unstated when the read-back fails | Reviewer NOGO (issue #284 R0, Grade B): a read-back that DETECTS corruption with no restore step is only half a safeguard — the snapshot was taken but never re-PUT | A destructive full-replacement write needs THREE steps: GET snapshot, read-back assert, AND explicit rollback (re-PUT the snapshot on assert-failure); add a pre-PUT check that the snapshot is a valid restore target |
 | Hardcoded integration_id literal from the issue body | Copied `integration_id: 15368` from the issue text into the new required-status-check entry | A literal copied from prose/an unmerged diff can drift from what GitHub actually stores | Derive the integration_id from a sibling entry in the live ruleset via jq (`map(select(.context=="<sibling>")) | .[0].integration_id`) — self-consistent by construction |
 | Verify required-context membership against repo-ruleset.json with a bare-name exact match | `jq … required_status_checks[].context configs/github/repo-ruleset.json \| grep -qx schema-validation` and stopped there | The ORG ruleset pins the SAME check under a different string form (`Required Checks / schema-validation`) and was not queried at all; a bare `grep -qx` would also have falsely reported "not required" against the org file | Enumerate BOTH org and repo rulesets and match form-tolerantly (`grep -qxE 'name\|Required Checks / name'`); org-vs-repo context strings differ by a `Required Checks / ` prefix (see canonical-checks.md:58-62) |
+| Trusted documentation ("CI-enforced on every PR") without verifying gate wiring | `NOTICE` file and in-file comments stated a compliance/security check was CI-enforced on every PR; assumed the job in `security.yml` was merge-blocking | The job existed only in `security.yml` (advisory/scheduled); it was NOT in `required-checks-gate.needs` in `_required.yml` — so it was advisory regardless of documentation; a PR introducing a GPL dependency could merge with exit 1 | "The job exists in a workflow file" is necessary but NOT sufficient; check that the job key appears in `required-checks-gate.needs` (Section M); promote using the 5-step pattern when it does not |
 
 ## Results & Parameters
 
@@ -873,6 +1003,7 @@ planning-only.
 | ProjectMnemosyne | Issue #284 planning (2026-06-20) | Section K — prerequisite-PR premise check: `gh pr view 264` returned OPEN/`mergedAt:null` and the `main` grep for `sast` was empty (verified-local); the proposed ruleset PUT adding `security/sast-scan` to ruleset 15556487 is **unverified** (planning only — must be gated on PR #264 merging) |
 | ProjectMnemosyne | Issue #284 R1 re-planning (2026-06-20) | Section L — destructive full-replacement write needs explicit ROLLBACK (re-PUT the snapshot on read-back failure), not just a read-back; derive `integration_id` from a live sibling via `jq` instead of hardcoding `15368`. The R0 NOGO (Grade B) that motivated it is real and **verified-local**; the proposed rollback runbook + dynamic-`integration_id` merge are **unverified** (planning only — the ruleset PUT/rollback was NOT executed) |
 | ProjectMnemosyne | Issue #309 R2 re-planning (2026-06-20) | Sub-finding J2 — a required-context check must span BOTH org and repo rulesets AND normalize the org `Required Checks / <job>` prefix vs the bare repo form. Repo-ruleset enumeration WAS run (8 bare contexts incl. `schema-validation`) → **verified-local**; the org-ruleset `Required Checks / <job>` prefix parity is **unverified** (documentation-derived from `canonical-checks.md:58-62`; `org-ruleset.json` not opened/grepped this iteration); guard implementation planning-only |
+| ProjectHephaestus | Issue #1514 (2026-06-24) | Section M — 5-step job-promotion pattern: `license-scan` promoted from advisory `security.yml`-only to merge-blocking via `_required.yml` + `required-checks-gate.needs`. All 7 gate tests pass locally, yamllint clean. Pattern: (1) add job to `_required.yml` with `changes-gate` guard + `env:` for context vars, (2) add to gate `needs:`, (3) add `if: github.event_name != 'pull_request'` to advisory copy, (4) add named test, (5) validate locally. No branch-protection PUT needed. **verified-local** |
 
 ## References
 
