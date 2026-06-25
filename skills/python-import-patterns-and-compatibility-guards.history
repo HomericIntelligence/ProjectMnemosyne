@@ -2,6 +2,28 @@
 
 # History: python-import-patterns-and-compatibility-guards
 
+## v1.8.0 (2026-06-25)
+
+**Changed by:** ProjectHephaestus PR #1605 / issue #1511 — post-merge learn capture for the `hephaestus.cli` package-barrel export fix.
+**Verification:** `verified-ci` for the issue #1511 / PR #1605 section G material. CI green is based on the completed PR context provided by the user plus local ProjectHephaestus merge-commit evidence (`38838663f2cbdb8f63ca2e283c1964516da472e9` on `origin/main`, titled `feat(cli): export add_dry_run_arg and DRY_RUN_HELP_CAVEAT (#1605)`). Live GitHub API polling was not available in this learn environment. Pre-existing unrelated sections retain their prior verification levels.
+
+### What changed
+
+- Added frontmatter `verification: verified-ci` and bumped `version` from `1.7.0` to `1.8.0`.
+- Updated the section G `__all__` alignment material from `verified-local` / CI pending to `verified-ci` for ProjectHephaestus PR #1605.
+- Recorded the final lesson from the CI-green fix: a package barrel update should re-export every symbol already declared public by the source module's `__all__`, not just the two named dry-run symbols.
+- Updated the test guidance to include package-attribute checks for every `utils.__all__` symbol, plus identity assertions for the dry-run symbols.
+- Added a Results & Parameters subsection with the exact two changed files, the four re-exported symbols, the two regression tests, and the local merge commit evidence.
+- Updated the Verified On row for issue #1511 / PR #1605 from `verified-local` / CI pending to `verified-ci`.
+
+### Why
+
+The v1.7.0 entry captured the correct local fix shape for issue #1511, but the final PR #1605 outcome clarified the durable CI lesson: treating the package barrel as a one-off export of `add_dry_run_arg` and `DRY_RUN_HELP_CAVEAT` was too narrow. `hephaestus.cli.utils.__all__` was already the stable public-surface contract, so `hephaestus/cli/__init__.py` needed to re-export all symbols in that surface, including `add_github_throttle_args` and `configure_github_throttle_from_args`. The regression test must derive missing symbols from `utils.__all__` and assert both `cli.__all__` coverage and package attributes; the identity test prevents package-root and submodule patch paths from drifting.
+
+### Previous version (v1.7.0) snapshot
+
+The v1.7.0 entry is directly below. Key difference from v1.8.0: v1.7.0 marked issue #1511 section G as `verified-local` with CI pending, did not include PR #1605 merge commit evidence, and did not state the live GitHub API limitation for the verified-ci upgrade.
+
 ## v1.7.0 (2026-06-24)
 
 **Changed by:** ProjectHephaestus issue #1511 — executed the `hephaestus/cli/__init__.py` `__all__` alignment fix. Section G was previously `unverified` planning-guidance derived from a plan for issue #1513. Issue #1511 executed the same `__all__`-alignment pattern end-to-end (for the `cli` package rather than `logging`), confirming the core workflow locally.
