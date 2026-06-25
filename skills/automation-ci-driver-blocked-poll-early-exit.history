@@ -21,6 +21,44 @@ protection had `required_review_thread_resolution: true` but no approving-review
 `github-code-quality` bot false-positive thread about an "unnecessary lambda" was nearly
 "fixed" by inlining the lambda, which would have broken `patch.object` tests.
 
+### Supplemental v1.1.0 amendment (ProjectHephaestus PR #1356 / issue #1348)
+
+**Verification:** verified-local (all 177 tests in `tests/unit/automation/test_ci_driver.py`
+passed; ruff + mypy across 391 files passed; pre-commit passed; CI validation was pending on
+the source PR at capture time).
+
+### What changed
+
+- Added the drive-green half of the BLOCKED story: v1.0.0 made `_wait_for_pr_terminal` exit
+  early and return `"BLOCKED"` (treated as "armed success"), but with branch protection
+  `required_review_thread_resolution: true`, a green PR BLOCKED *solely* by unresolved
+  review threads was armed yet UNMERGEABLE FOREVER — "Found N unresolved thread(s)"
+  recurred every loop (observed on PR #1283).
+- Documented the fix: route the `_arm_and_wait_for_merge` BLOCKED branch to a new
+  `_resolve_blocked_pr` handler that REUSES the existing `address_review.py` engine
+  (`run_address_fix_session` -> `_push_ci_fix` -> `resolve_addressed_threads`), then
+  re-enters check->arm->wait via `_recheck_and_arm_after_fix`. DRY: do not reimplement.
+- Documented the worktree-acquisition insight: drive-green has no local worktree the way
+  a fresh-impl PR does, but `_get_worktree_path(issue_number, pr_number)` already falls
+  back to `worktree_manager.create_worktree` — no new worktree logic needed.
+- Documented the PROGRESS GUARD + attempt cap that prevents infinite loops on
+  unsatisfiable threads (`_BLOCKED_ADDRESS_MAX_ATTEMPTS = 2`, shrink-or-stop on the
+  unresolved-id set), and the TRUST BOUNDARY (gate progress on a real pushed commit via
+  `_push_ci_fix`, not the agent's self-reported `addressed` list).
+- Added 2 Failed Attempts rows (armed-but-unmergeable forever; merged+deleted base branch).
+- Added the "merged+deleted base branch" rebase-and-retarget gotcha.
+- Bumped version 1.0.0 -> 1.1.0; updated date; added `history` frontmatter field.
+
+### Why
+
+v1.0.0's early-exit correctly stopped the 30-minute poll, but its caller behavior —
+"leave armed and exit" — was a dead end when the BLOCKED cause was unresolved review
+threads under `required_review_thread_resolution: true`. The PR was armed but could never
+merge, and the drive-green loop re-observed the same unresolved threads every pass without
+ever acting on them. The amendment closes the loop by actually addressing and resolving the
+threads, reusing the address-and-resolve engine already wired into the fresh-implementation
+loop (`_review_phase.py`).
+
 ---
 
 ## v1.0.0 (2026-06-07)
