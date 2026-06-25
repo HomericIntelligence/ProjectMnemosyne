@@ -1,5 +1,24 @@
 # architecture-executable-convention-guard-pattern — History
 
+## v1.3.0 (2026-06-24)
+
+**Changed by:** ProjectHephaestus issue #1516 (PLANNING learning — making the documented DCO `Signed-off-by` trailer mechanically enforced).
+**Verification:** unverified (PLAN only — code not executed, CI not run). Frontmatter `verification` lowered from `verified-local` to `unverified` to reflect that the most recently added sub-patterns (v1.1.0–v1.3.0) are plan-only.
+
+### What changed
+- Added a new sub-pattern section, "Sub-Pattern: Commit-Trailer Convention Guards (DCO / Co-Authored-By)," documenting that a prose-only commit-message-TRAILER convention is the same executable-convention-guard pattern: ship a stdlib predicate + a dual gate (a step in an already-wired required CI job + a `commit-msg` pre-commit hook), mirroring the repo's existing sibling checker verbatim.
+- Added a "Proposed Workflow" subsection (7 steps) with an unverified warning, capturing the DCO-specific lessons: mirror `scripts/check_conventional_commit.py` verbatim; consume the FULL `.commit.message` (trailers live in the body, reuse the already-fetched `commits.json`, NUL-join multi-line records); anchor on `^Signed-off-by: .+ <…@…>$` (prefix + structure, never a substring scan); strip `#`-comment lines in `commit-msg` file-path mode; exempt `dependabot[bot]` identically to the sibling checks; ride the existing pr-policy job as Check 4 (no new workflow); mind the self-application bootstrap (`git commit -s -S`).
+- Added 4 Failed Attempts rows phrased as "assumed X without executing → must verify Y": the `jq` NUL round-trip, the cited line numbers (`_required.yml`/`.pre-commit-config.yaml`/`CONTRIBUTING.md`), the pr-policy `steps.fetch` id + `commits.json` filename, and the `commit-msg` hook self-application bootstrap.
+- Added a "Commit-trailer generalization (v1.3.0, unverified)" note to Results & Parameters and a row to the Verified On table (issue #1516, PLAN — unverified).
+- Added tags: `commit-trailer`, `dco-signoff`, `precommit-hook`, `sibling-checker-mirror`. Bumped frontmatter version 1.2.0 → 1.3.0.
+
+### Why
+ProjectHephaestus issue #1516 produced a PLAN (never executed, no CI) to turn the documented DCO `Signed-off-by` convention from prose into a mechanically enforced guard. It is another concrete instance of this skill's core pattern, with trailer-specific generalizations (full-message consumption, body-vs-subject distinction, NUL-joining for multi-line bodies, prefix+structure anchoring of the trailer line, comment-line stripping, bot exemption) that belong in the same skill. All of it is unverified — the jq round-trip, the line numbers, and the pr-policy step wiring were each assumed and must be empirically confirmed before merge — so the additions are framed as a Proposed Workflow plus "assumed X without executing → must verify Y" cautions.
+
+### Previous version (v1.2.0) snapshot
+
+The v1.2.0 rendered `.md` content prior to this amendment is preserved in git history at the parent commit of this amendment. It carried `verification: verified-local`, the coredump `verify_crash_bundle` v1.0.0 material, the v1.1.0 bidirectional mirror/parity sub-pattern, and the v1.2.0 coverage-altitude step 8 + supporting Failed-Attempts rows — but did NOT yet contain the commit-trailer (DCO) sub-pattern.
+
 ## v1.2.0 (2026-06-24)
 
 **Changed by:** ProjectHephaestus issue #1543 re-plan (after a reviewer NOGO on the bidirectional mirror-guard plan — a TEST-COVERAGE lesson from the review iteration).
