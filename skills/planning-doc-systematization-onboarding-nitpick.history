@@ -1,0 +1,81 @@
+# History — planning-doc-systematization-onboarding-nitpick
+
+Newest entries at the top.
+
+## 2026-06-24 — v1.0.0 → v1.1.0 (MINOR)
+
+**What changed**
+
+- Promoted the **anchor-slug-mismatch** concern from the unresolved "Risks
+  (carried from the source plan)" list into a **SOLVED** workflow step. The
+  resolution: stop hand-rolling a heading-text grep and instead run the
+  slug-aware validator the repo already ships —
+  `hephaestus/markdown/anchors.py`, exposed as the console script
+  `hephaestus-validate-anchors` (registered at `pyproject.toml:130`). Its
+  `heading_to_anchor()` reproduces GitHub's exact GFM slug algorithm and
+  `validate_anchors()` checks every `[text](#fragment)` link against the real
+  heading-slug set, exiting 1 on any mismatch.
+- Added the generalizable meta-lesson for planners: **a verification command
+  is only valid if it would actually FAIL when the thing it claims to prove is
+  broken.** Construct the failure case (a duplicate-heading slug collision)
+  and confirm the command exits non-zero on it. Prefer an existing repo tool
+  that models the real GFM artifact over a hand-rolled approximation.
+- Added two Failed Attempts rows for the secondary NOGO fixes:
+  (a) header keys generalized from n=1 (P7/POLA) — frame single-sample keys as
+  a non-binding example, not an invented rule; (b) lint rule assumed not
+  checked — read the actual `.markdownlint.yaml` (`MD013: false` disabled;
+  `MD025` one-H1 and `MD003` ATX are what fire) before tailoring prose.
+- Updated `date` to 2026-06-24, added the `history:` frontmatter field, and
+  added tags for the validator (`hephaestus-validate-anchors`,
+  `slug-aware-validation`, `verification-must-fail-when-broken`).
+
+**Why**
+
+- The v1.0.0 skill itself named "anchor-slug verification" as its #1
+  unverified assumption / top risk: the plan's verification loop grepped the
+  heading TEXT, which passes even on a real slug collision. While RE-PLANNING
+  ProjectHephaestus #1544 after a reviewer NOGO, that exact risk was resolved.
+  The reviewer's NOGO named it precisely: a heading-text grep "would pass on a
+  real slug collision; the top stated risk is unverified by the very check
+  meant to catch it." Amending closes the loop — the lesson is the direct
+  resolution of a risk this skill already documents.
+
+**Verification**
+
+- Remains `verification: unverified`. The plan still has not been executed
+  end-to-end (no PR merged, no CI). `pixi run hephaestus-validate-anchors`
+  against the real files is a PROPOSED-but-unrun command this session; it is
+  reflected honestly as such. The "Proposed Workflow" heading + warning banner
+  are retained.
+
+### Prior snapshot — v1.0.0 (2026-06-24)
+
+Frontmatter (v1.0.0):
+
+- name: planning-doc-systematization-onboarding-nitpick
+- category: documentation
+- date: 2026-06-24
+- version: "1.0.0"
+- user-invocable: false
+- verification: unverified
+
+In v1.0.0 the anchor-slug concern lived ONLY in two places, both framing it as
+an UNRESOLVED risk:
+
+1. Workflow step 5 ("Verify anchor SLUGS, not heading text — the single biggest
+   correctness risk") told the planner to "confirm the actual rendered slug (run
+   the linter, a slugify pass, or GitHub's preview)" but named NO concrete tool.
+2. The "Risks (carried from the source plan, unresolved)" section listed it as:
+   "1. Anchor-slug mismatch (highest). Slugs were inferred from the GFM rule and
+   'verified' by grepping heading text — a grep that cannot detect a slug
+   mismatch. Resolve by rendering slugs with the actual linter before asserting
+   any link."
+
+v1.0.0 Failed Attempts table (8 rows) covered: treat maintained file as cruft;
+README without disambiguation; restate `just bootstrap`; verify by grepping
+heading text; infer GFM slugs from memory; stale insertion offset; codify 3
+header keys from one example; assume `pre-commit run --all-files` is the gate.
+
+The full v1.0.0 body is recoverable from git history of
+`skills/planning-doc-systematization-onboarding-nitpick.md` at the commit
+introduced by PR #2808.
