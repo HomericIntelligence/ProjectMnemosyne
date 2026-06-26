@@ -1,3 +1,29 @@
+## v2.2.0 (2026-06-26)
+
+**Changed by:** ProjectHephaestus issue #1393 planning capture for duplicated automation parser setup and state-directory construction.
+**Verification:** unverified
+
+### What changed
+- Expanded the skill from module/function consolidation to include shared helper extraction for duplicated CLI parser and state-directory setup.
+- Added evidence-boundary guidance: label plan facts as verified, inferred, or unverified instead of implying grep/API/GitHub issue facts were live-verified.
+- Added reviewer risks for `argparse` behavior drift, local `_build_parser()` wrapper compatibility, `state_dir is None` defaulting, directory-creation side effects, and stale grep/doc magic strings.
+- Added issue #1393 as a Verified On planning context while keeping the reusable workflow generic.
+
+### Why
+The implementation plan for ProjectHephaestus issue #1393 proposed adding shared helpers such as
+`build_automation_parser`, `DEFAULT_STATE_DIR`, and `ensure_state_dir` after grep-based discovery.
+That plan intentionally needed a reviewer-risk ledger: its source evidence was useful but not an
+end-to-end validation, and some external references were project-doc context rather than live-verified
+GitHub issue/API facts.
+
+### Previous version (v2.1.0) snapshot
+The previous main skill file was `dry-refactoring-plan-assumption-audit.md` at version `2.1.0`,
+dated 2026-06-13, focused on DRY module consolidation pitfalls from issue #1189 plus the R2
+DOTALL-regex and test-count planning findings. It did not yet cover parser helper extraction,
+state-directory side effects, or explicit plan evidence-boundary labeling.
+
+---
+
 ---
 name: dry-refactoring-plan-assumption-audit
 description: "Checklist of hidden assumptions that bite DRY module-consolidation plans before implementation starts. Use when: (1) planning to merge two modules into one canonical, (2) replacing a module with a delegation shim that re-exports from the canonical, (3) porting tests from one file to another, (4) extending a main() function with new sub-checks, (5) consolidating two functions with the same name but different signatures."
