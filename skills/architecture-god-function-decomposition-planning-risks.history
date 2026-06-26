@@ -7,13 +7,11 @@ description: >-
   file locations — before finalizing an extraction plan that waives work on a
   function, verify on disk that the cited size matches reality; apply the
   sentinel return pattern for extracted poll loops; verify test file existence
-  before writing stubs; audit plan documents for helper-defined-but-never-called
-  inconsistencies; and, when decomposing C901-suppressed GitHub/CLI helpers while
-  changing logging setup, make reviewers focus on handler semantics, JSON stdout
-  cleanliness, file-handler compatibility, and gh/git side-effect preservation.
+  before writing stubs; and audit plan documents for helper-defined-but-never-called
+  inconsistencies.
 category: architecture
-date: 2026-06-26
-version: "1.3.0"
+date: 2026-06-13
+version: "1.2.0"
 user-invocable: false
 history: architecture-god-function-decomposition-planning-risks.history
 verification: unverified
@@ -36,11 +34,6 @@ tags:
   - loop-body-measurement
   - docstring-budget
   - return-type-tracing
-  - logging
-  - c901
-  - json-stdout
-  - github-cli
-  - setup-logging
 ---
 
 # Architecture: God-Function Decomposition — Planning Risks
@@ -49,11 +42,10 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-26 |
-| **Source issues** | ProjectHephaestus #1180 — decompose god-functions in `hephaestus/automation/`; ProjectHephaestus #1404 — plan C901 cleanup in `hephaestus/github/tidy.py` and `hephaestus/github/pr_merge.py` while moving logging through `setup_logging` |
+| **Date** | 2026-06-13 |
+| **Source issue** | ProjectHephaestus #1180 — decompose 5 god-functions in `hephaestus/automation/` |
 | **Verification** | unverified (planning-phase learnings; no code ran) |
-| **Objective** | Document recurring planning-phase failure modes when working from issue-cited metadata rather than disk reality, especially where function extraction and logging behavior changes are planned together |
-| **History** | [changelog](./architecture-god-function-decomposition-planning-risks.history) |
+| **Objective** | Document recurring planning-phase failure modes when working from issue-cited metadata rather than disk reality |
 
 These risks surface whenever an engineer or agent plans god-function extractions from
 an issue description that cites line numbers, function sizes, or file paths. The
@@ -69,13 +61,10 @@ Use this skill when:
 2. Reviewing a decomposition plan before approving it — check that each cited function size was measured from disk, not from the issue body.
 3. Implementing a decomposition plan produced by another agent or engineer — verify all arithmetic, helper call sites, and test file assumptions before writing code.
 4. Authoring decomposition plans for ProjectHephaestus `hephaestus/automation/` modules (where the 80-line orchestrator cap is enforced).
-5. Planning C901 cleanup in GitHub helper or CLI modules where extracting helpers is coupled to changing logger initialization, stdout/stderr behavior, or JSON output guarantees.
 
 ---
 
-## Proposed Workflow
-
-> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
+## Verified Workflow
 
 ### Quick Reference
 
@@ -87,8 +76,6 @@ Use this skill when:
 | 4 | For control-flow sentinel returns, enumerate ALL signal states in docstring |
 | 5 | Verify test file existence before writing stubs |
 | 6 | Check empty/sentinel values passed to downstream functions |
-| 7 | If logging setup changes, prove handler deduplication, JSON formatting, stdout/stderr split, and file-handler levels with focused tests |
-| 8 | If CLI/GitHub helpers are extracted, preserve existing argparse shape and `gh`/`git` side effects; do not invent subcommands or command registries absent from disk |
 
 ### Step 1: Measure Functions from Disk
 
@@ -446,112 +433,7 @@ discrepancy in the plan and proceed from disk reality.
 
 ---
 
-## Risk 10: Logging-Aware C901 Decomposition Plans Have Two Independent Drift Surfaces
-
-**What happened**: A plan for ProjectHephaestus issue #1404 scoped from reported disk
-state rather than stale issue text. The plan focused on AST-measured functions in
-`hephaestus/github/tidy.py` and `hephaestus/github/pr_merge.py` that still had C901
-suppressions, and it avoided inventing `argparse` subcommands or a `COMMANDS` registry
-because the current files reportedly did not use `args.command`.
-
-**The failure mode**: Function extraction and logging migration look like one cleanup, but
-they carry different regression surfaces:
-
-- Extraction can change `gh`/`git` invocation order, branch iteration semantics, PR
-  filtering, mock seams, and exception paths.
-- Logger migration can change duplicate-handler behavior, JSON formatter selection,
-  stdout vs stderr routing, file handler levels, date formatting, and whether imported
-  modules pollute JSON stdout.
-
-If a reviewer only checks the C901 arithmetic, a logging regression can still ship. If
-they only check `setup_logging`, the extracted helpers may still alter CLI side effects.
-
-### Most Uncertain Assumptions to Surface in the Plan
-
-- Exact line numbers, AST spans, and caller counts can drift before implementation.
-- Expanding `hephaestus.logging.utils.setup_logging` may interact with existing handler
-  deduplication and JSON formatting semantics.
-- Replacing module-level `get_logger` bypasses with `logging.getLogger` assumes the
-  shared `setup_logging` root handlers fully preserve existing behavior.
-- JSON stdout cleanliness depends on all imported modules avoiding stdout handlers.
-- Helper extraction assumes existing tests can mock `argparse`, `gh`, and `git` branches
-  without changing CLI behavior.
-- File handler level compatibility and date format parity must be verified, not inferred.
-- Removing non-`setup_logging` stdout handlers may be a behavior change if a caller
-  intentionally installed one.
-
-### Relied On Without Direct Verification in the Learn Turn
-
-- The current GitHub issue #1404 body and acceptance criteria.
-- The current disk state of the ProjectHephaestus files cited in the plan.
-- The current behavior and contracts of `hephaestus.logging.utils.setup_logging`.
-- GitHub CLI/API behavior in `tidy`, `pr_merge`, and `fleet_sync`.
-- Availability and exact behavior of the proposed validator, lint, and mypy commands.
-
-### Reviewer Focus Risks
-
-Reviewers should explicitly inspect:
-
-- Duplicate or missing handlers after `setup_logging` runs more than once.
-- Stdout/stderr split and JSON output pollution.
-- JSON formatter and `datefmt` parity.
-- File handler level compatibility with existing caller expectations.
-- Accidental removal of stdout handlers that were not created by `setup_logging`.
-- `gh`/`git` side effects during C901 extraction.
-- Branch and PR processing semantic drift in `tidy` and `pr_merge`.
-- Brittle anti-drift AST tests that flag examples/tests or miss aliased imports.
-- Lack of an end-to-end migration validation path for the proposed logging change.
-
-**Rule**: In plans that combine C901 decomposition with logging migration, split the
-review checklist into two explicit tracks: behavior-preserving extraction and
-logging-contract preservation. Each track needs focused tests, and the plan must mark any
-unverified source/API dependency as a reviewer task.
-
----
-
-## Verified Workflow
-
-Not applicable. This skill is currently `verification: unverified`; the actionable
-hypothesis-level methodology is under **Proposed Workflow** above. This placeholder exists
-only because the current ProjectMnemosyne validator requires the literal
-`## Verified Workflow` heading.
-
----
-
 ## Failed Attempts
-
-### Issue #1404: Treating Logging Migration as a Mechanical Follow-On to C901 Extraction
-
-**What was tried**: The implementation plan paired C901 helper extraction in
-`hephaestus/github/tidy.py` and `hephaestus/github/pr_merge.py` with replacing
-module-level logger bypasses through shared `setup_logging` behavior.
-
-**Why it is risky**: The plan had not executed the migration. `setup_logging` handler
-deduplication, JSON formatter semantics, stdout/stderr routing, file handler levels, and
-date formatting are all externally observable contracts. A helper extraction can pass
-line-count tests while changing log output or CLI side effects.
-
-**Lesson**: Treat logging migration as its own acceptance surface. Require focused tests
-for repeated setup, JSON stdout cleanliness, file handler behavior, and date format parity
-in addition to C901/AST tests.
-
----
-
-### Issue #1404: Trusting Current Function Shape Without Drift Guards
-
-**What was tried**: The plan scoped from reported disk state and avoided stale issue-text
-assumptions such as invented `args.command` branches or a `COMMANDS` table.
-
-**Why it is risky**: The learn turn did not independently verify issue #1404, the cited
-ProjectHephaestus disk state, or exact caller counts. By the time implementation starts,
-the target functions, suppressions, and tests may have moved again.
-
-**Lesson**: Keep AST measurement commands and grep-based caller checks in the plan, and
-run them immediately before implementation. Anti-drift tests should target production
-modules narrowly enough that examples/tests do not false-positive and aliased imports do
-not bypass the guard.
-
----
 
 ### R1: Single Helper Insufficient for `_run_implementation_and_review` (130L)
 
@@ -703,15 +585,6 @@ Before submitting or approving a god-function decomposition plan:
     [ ] Read the downstream function's first 20 lines
     [ ] Confirm it handles the empty value correctly
     [ ] Cite the verification in the plan (file:line range)
-
-[ ] If C901 decomposition is coupled to logging setup changes:
-    [ ] Separate extraction risks from logging-contract risks in the review checklist
-    [ ] Verify `setup_logging` handler deduplication and repeated-call behavior
-    [ ] Verify JSON stdout remains clean when CLI JSON mode is enabled
-    [ ] Verify stderr/text logging, file handler level, and date format parity
-    [ ] Confirm any removed stdout handler was created by `setup_logging`, not user code
-    [ ] Preserve existing argparse shape; do not invent absent `args.command`/`COMMANDS`
-    [ ] Preserve `gh`/`git` call order, branch filtering, and PR processing semantics
 ```
 
 ---
@@ -726,8 +599,6 @@ Before submitting or approving a god-function decomposition plan:
 | grep-by-name before grep-by-line | ProjectHephaestus #1180 R1 | Found `_run_impl_review_loop` moved from `ci_driver.py:1513` to `_review_phase.py:374` |
 | Subtraction arithmetic chain | ProjectHephaestus #1180 R1 | Revealed 5 extractions needed (not 3) for `_run_ci_fix_session` to reach ≤80L |
 | Sentinel return contract docstring | ProjectHephaestus #1180 R1 | Made all 3 control-flow states explicit; prevented silent fall-through bugs |
-| Disk-scoped C901 planning | ProjectHephaestus #1404 plan | Avoided stale issue-text inventions such as nonexistent `args.command`/`COMMANDS`; still requires re-measurement before implementation |
-| Separate logging-contract review track | ProjectHephaestus #1404 plan | Identifies handler deduplication, JSON stdout cleanliness, file handler levels, datefmt parity, and non-setup stdout handlers as first-class reviewer risks |
 
 ### Key Thresholds (ProjectHephaestus)
 
@@ -768,4 +639,23 @@ for node in ast.walk(tree):
 | ProjectHephaestus (R0) | Planning session for issue #1180 — decompose 5 god-functions in `hephaestus/automation/`; `_implement_issue` cited as 354 lines in issue, found as 127 lines on disk; `_run_impl_review_loop` cited at `ci_driver.py:1513`, found at `_review_phase.py:374-503`; `_finalize_address_state` defined in plan but not called in replacement block; test file existence unverified; `_poll_ci_until_concluded` sentinel contract risk identified |
 | ProjectHephaestus (R1) | Second planning iteration for issue #1180 after R0 NOGO review; AST re-measurement confirmed `_implement_issue` is 128L not 354L and `_run_impl_review_loop` is at `_review_phase.py:374`; arithmetic subtraction chain revealed `_run_ci_fix_session` needs 5 helpers (not 3) to reach ≤80L; `_run_address_step_if_needed` sentinel return pattern documented with all 3 control-flow states; R0 waiver-on-"marginal" grounds rejected — 128L = 60% over cap and is in scope |
 | ProjectHephaestus | Issue #1180 R2 plan (2026-06-13) — 3rd TASK/PLAN/REVIEW cycle; all 7 target functions scoped to ≤80L |
-| ProjectHephaestus | Issue #1404 planning artifact (2026-06-26) — unverified plan for C901 cleanup in `hephaestus/github/tidy.py` and `hephaestus/github/pr_merge.py` plus logging migration through `setup_logging`; learn turn did not directly verify the issue body, cited disk state, `setup_logging` contracts, GitHub CLI/API behavior, or validator/lint/mypy availability |
+# architecture-god-function-decomposition-planning-risks - History
+
+## v1.3.0 (2026-06-26)
+
+**Changed by:** Session context (ProjectHephaestus issue #1404 planning risk capture)
+**Verification:** unverified
+
+### What changed
+- Added issue #1404 planning guidance for decomposing C901-suppressed GitHub helper functions while migrating module-level logger bypasses to `setup_logging`.
+- Captured the highest-risk unverified assumptions around `setup_logging` handler semantics, JSON stdout cleanliness, file handler levels, and `gh`/`git` side effects during extraction.
+- Renamed the actionable workflow section to Proposed Workflow and added the required unverified warning.
+
+### Why
+The issue #1404 implementation plan was a planning artifact, not an executed workflow.
+It scoped from reported disk evidence instead of stale issue text, but it still relied
+on several unverified external contracts. Reviewers need a durable checklist that
+separates measured disk facts from assumptions before approving or implementing the
+refactor.
+
+### Previous version (v1.2.0) snapshot
