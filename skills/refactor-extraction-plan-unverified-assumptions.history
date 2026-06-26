@@ -1,35 +1,31 @@
 ---
 name: refactor-extraction-plan-unverified-assumptions
-description: "The uncertain assumptions and reviewer risks baked into refactor plans that move functions behind compatibility re-exports or aliases. Use when: (1) reviewing or authoring a plan that moves a function cluster out of a god-module and re-exports the moved names from the original module to preserve mock patch paths, (2) removing a one-line passthrough while preserving the old import path as an alias, (3) the plan claims `patch(\"...old_module._fn\")` keeps working after the move, (4) the plan cites exact line numbers for a multi-step sequential edit, (5) the plan asserts downstream compatibility from repo grep or object identity tests."
+description: "The uncertain assumptions and reviewer risks baked into a verbatim-move cluster-extraction PLAN that extracts a group of functions from a large module into a new sibling module with backward-compat `import X as X` re-exports in the parent. Use when: (1) reviewing or authoring a plan that moves a function cluster out of a god-module and re-exports the moved names from the original module to preserve mock patch paths, (2) the plan claims `patch(\"...old_module._fn\")` keeps working after the move, (3) the plan cites exact line numbers for a multi-step sequential edit, (4) the plan depends on a 'frozen' allowlist/magic-number invariant, (5) the plan asserts 'no circular import' or 'unused import removable' by static reasoning rather than execution."
 category: architecture
-date: 2026-06-26
-version: "1.1.0"
+date: 2026-06-15
+version: "1.0.0"
 user-invocable: false
 verification: unverified
-history: refactor-extraction-plan-unverified-assumptions.history
-tags: [refactoring, extraction, cluster-extraction, backward-compat, re-export, compatibility-alias, mock-patch-path, monkeypatch, planning, reviewer-risks, line-number-drift, circular-import, assumptions]
+tags: [refactoring, extraction, cluster-extraction, backward-compat, re-export, mock-patch-path, planning, reviewer-risks, line-number-drift, circular-import, assumptions]
 ---
 
 # Refactor Extraction Plan — Unverified Assumptions & Reviewer Risks
-
-**History:** [changelog](./refactor-extraction-plan-unverified-assumptions.history)
 
 ## Overview
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-26 |
-| **Objective** | Capture the uncertain assumptions a refactor PLAN makes when it moves functions behind backward-compat re-exports or aliases, including one-line passthrough removal and canonical-writer import rewires. |
-| **Outcome** | Plan artifacts produced; NOT executed. These are the assumptions a reviewer must verify and an implementer must not take on faith. |
+| **Date** | 2026-06-15 |
+| **Objective** | Capture the uncertain assumptions a verbatim-move cluster-extraction PLAN makes — extracting a 12-function repo-management cluster from `hephaestus/automation/loop_runner.py` into a new `loop_repo_manager.py` with backward-compat `import X as X` re-exports (issue #1360) — so a reviewer knows exactly what to check before approving. |
+| **Outcome** | Plan produced; NOT executed. These are the assumptions a reviewer must verify and an implementer must not take on faith. |
 | **Verification** | unverified — planning artifact only; no code was written or run |
-| **History** | [changelog](./refactor-extraction-plan-unverified-assumptions.history) |
+| **History** | v1.0.0: initial capture of 5 uncertain assumptions + reviewer focus checklist from issue #1360 extraction plan. |
 
 > This skill is about the **PLANNING-RISK** angle, not the mechanics of *how* to extract a cluster.
 > For the how-to mechanics see `python-module-decomposition-and-refactor-patterns` and
 > `testing-module-patch-target-after-extraction`. For DRY *consolidation* (two modules → one)
 > see `dry-refactoring-plan-assumption-audit`. This skill covers a *single module → two modules*
-> verbatim move with re-exports, plus small canonicalization refactors where an old module keeps a
-> compatibility alias for a moved function.
+> verbatim move with re-exports, and what silently breaks.
 
 ## When to Use
 
@@ -38,9 +34,6 @@ tags: [refactoring, extraction, cluster-extraction, backward-compat, re-export, 
 - The plan cites exact line numbers (`module.py:566-942`, `pyproject.toml:263`) for a sequence of edits that delete/insert large blocks.
 - The plan depends on a "frozen" list or magic number (e.g. an omit/coverage allowlist "frozen at N modules") that must be bumped in multiple places.
 - The plan asserts "introduces no circular import" or "this import is now unused and can be removed" by static reasoning rather than by actually importing/linting.
-- The plan removes a one-line passthrough wrapper and preserves the old import path with `from canonical.module import fn` in the legacy module.
-- The plan treats `old_module.fn is canonical_module.fn` object identity as sufficient compatibility evidence.
-- The plan changes production callers from a legacy module import to a canonical implementation import, while tests still monkeypatch the legacy module.
 
 ## Verified Workflow
 
@@ -91,23 +84,6 @@ ruff check ${OLD_PATH} --select F401   # then `ruff check --fix` only after the 
 # 6. LINE-NUMBER DRIFT REMINDER — after the FIRST block deletion, every later cited line number is stale.
 #    Re-derive targets by stable marker, not by the plan's pre-edit numbers:
 grep -n "# Repo discovery\|^def _gh_list_repos\|^def _gh_" ${OLD_PATH}
-
-# === Canonical function + legacy compatibility alias plan checks ===
-LEGACY_PATH="hephaestus/automation/github_api.py"
-CANONICAL_PATH="hephaestus/io/utils.py"
-FUNC="write_secure"
-
-# A. Re-derive planned line-number evidence against the current checkout.
-grep -n "def ${FUNC}\|${FUNC}\|__all__\|io_write_secure" "${LEGACY_PATH}" "${CANONICAL_PATH}"
-
-# B. Repo grep proves only in-repo call sites; preserve the alias for unknown downstream users.
-grep -rn "from hephaestus.automation.github_api import ${FUNC}\|github_api.${FUNC}\|from \\.github_api import ${FUNC}" hephaestus/ tests/ scripts/ || true
-
-# C. Identity proves import compatibility, not monkeypatch compatibility.
-python -c "import hephaestus.automation.github_api as g; import hephaestus.io.utils as u; assert g.write_secure is u.write_secure"
-
-# D. Behavior test the real persistence path and content after import rewiring.
-pytest tests/unit/automation/test_implementer_state.py tests/unit/io/test_utils.py::TestWriteSecure
 ```
 
 ### Detailed Steps
@@ -145,32 +121,6 @@ pytest tests/unit/automation/test_implementer_state.py tests/unit/io/test_utils.
    deletion, grep each symbol in the file and let `ruff check --select F401` (then `--fix`) be the source
    of truth instead of eyeballing it.
 
-6. **Treat line-number evidence as stale until rechecked against the current checkout.**
-   A plan that says the canonical implementation is at `utils.py:144`, the passthrough wrapper is at
-   `github_api.py:995`, or `__all__` omits a symbol at `github_api.py:60-66` is citing a snapshot.
-   Before implementing or reviewing, rerun `grep -n` or open the current files. The plan can name the
-   suspected locations, but approval should be based on current anchors (`def write_secure`, `io_write_secure`,
-   `__all__`), not pre-review line numbers.
-
-7. **Separate import compatibility from monkeypatch compatibility.**
-   `from hephaestus.io.utils import write_secure` inside the legacy module preserves
-   `from hephaestus.automation.github_api import write_secure`, and an identity assertion can prove the two
-   names initially point to the same object. That does **not** prove tests or callers that monkeypatch one name
-   affect another module that already bound the function at import time. Reviewers must inspect whether callers
-   import the function directly, import the module and look it up at call time, or intentionally patch a separate
-   seam such as `github_api.io_write_secure`.
-
-8. **Repo grep is not downstream evidence.**
-   A repo-wide grep can show the checked-in tree no longer imports a passthrough through `.github_api`, but it
-   cannot prove external users do not import it. Preserving the old import path as an alias is therefore a
-   compatibility mitigation, not evidence that removing the wrapper is safe for every downstream caller.
-
-9. **Behavior tests must exercise the persistence path, not only alias identity.**
-   Object-identity tests catch a missing alias, but they can miss lazy-import and monkeypatch-target regressions.
-   Add or preserve a behavior test that calls the real state manager save path and asserts the expected file path
-   and content. Keep canonical behavior tests in the canonical module's test suite; use compatibility tests only
-   for the legacy import contract.
-
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -180,10 +130,6 @@ pytest tests/unit/automation/test_implementer_state.py tests/unit/io/test_utils.
 | Trust the "frozen at 16 modules" comment | Plan asserted the omit allowlist is frozen at 16 and only the comment + one test need bumping to 17, without running the test or reading its assertion body | The "16" figure and the assertion mechanism (count literal vs set membership) were read, not verified; a hardcoded `len(...) == 16` elsewhere, or a third copy of the count, would be missed and fail CI | When a plan depends on a frozen-list/magic-number invariant, READ the actual assertion body (don't trust the comment) and grep the literal to enumerate EVERY place it appears |
 | Reason about circular imports statically | Plan claimed `loop_repo_manager → ci_driver` adds no cycle because ci_driver references loop_runner only in comments | Static reasoning; ci_driver could import another automation module that transitively imports loop_runner at module load, creating a cycle the comment-scan never sees | The import-graph claim is only proven by the smoke-test step actually executing — label it "verify by execution," not "verified by reading" |
 | Hand-judge conditional unused-import removal | Plan said to drop `urlparse` and `gh_cli_timeout` from loop_runner "only if no other references remain," left to manual judgement | Removing a still-used import breaks the module; leaving a genuinely-unused one fails ruff F401 — both directions of hand-judgement are wrong | Gate each import removal on a per-symbol grep AFTER the deletion and make `ruff check --select F401` / `--fix` the source of truth, not eyeballing |
-| Treat line-number evidence as current | Plan cited `hephaestus/io/utils.py:144`, `hephaestus/automation/github_api.py:995`, and `github_api.py:60-66` as if they were stable facts | Line numbers drift quickly in active files; an implementer can remove or edit the wrong symbol if they target the snapshot instead of current anchors | Re-derive locations by `grep -n "def write_secure\|io_write_secure\|__all__"` against the current checkout before editing |
-| Equate alias identity with patch-seam preservation | Plan replaced wrapper tests with `github_api.write_secure is io.utils.write_secure` assertions | Identity proves the compatibility import exists, but callers that bind `write_secure` at import time will not see later monkeypatches applied to another module name | Review both object identity and lookup timing; behavior tests should patch the same name the production code actually reads |
-| Use repo grep as downstream proof | Plan grepped in-repo production callers and moved them to canonical imports | Grep cannot see external downstream packages, old scripts, or user code importing `hephaestus.automation.github_api.write_secure` | Keep the legacy alias and document it as compatibility mitigation; do not claim external safety from repo-only grep |
-| Test only compatibility object identity | Planned tests asserted old and canonical names are the same object while relying on existing canonical tests for behavior | Alias tests can pass even if a lazy import target or state-manager save path is wrong | Add a behavior test that calls `ImplementationStateManager.save()` and asserts the actual path/content written |
 
 ## Results & Parameters
 
@@ -193,8 +139,6 @@ pytest tests/unit/automation/test_implementer_state.py tests/unit/io/test_utils.
 - **Enumerated call sites and patch sites with grep before asserting re-exports are safe** — correct instinct; the only defect was incomplete scope (see assumption #1).
 - **Added an identity smoke test** (`assert loop_runner.X is loop_repo_manager.X`) to prove the re-export wiring binds the same object.
 - **Mapped a per-criterion verification command to each acceptance criterion** so the plan is checkable rather than narrative.
-- **Preserved a legacy import path when removing a passthrough** — this is the right compatibility mitigation for unknown external importers.
-- **Kept a separate named patch seam where production behavior already depends on it** — preserving `io_write_secure` for code that patches `github_api.io_write_secure` is valid when verified by behavior tests.
 
 ### Reviewer focus (the 5 things to check hardest in such a plan)
 
@@ -212,19 +156,6 @@ pytest tests/unit/automation/test_implementer_state.py tests/unit/io/test_utils.
 - [ ] Are conditional import removals deferred to ruff (F401), not hand-judged?
 ```
 
-### Canonical-alias refactor review checklist
-
-```text
-## Canonical function + legacy alias plan review checklist
-
-- [ ] Were all cited line numbers re-derived from the current checkout before implementation?
-- [ ] Does the legacy module still expose the old public import path for downstream callers?
-- [ ] Does the plan distinguish object identity from monkeypatch behavior and lookup timing?
-- [ ] Did repo grep cover in-repo production callers without claiming to prove external callers?
-- [ ] Are behavior tests covering the real save/write path and expected content, not only alias identity?
-- [ ] Were `__all__` membership and existing test locations rechecked from current source?
-```
-
 ### Issue #1360 specific findings
 
 | Assumption in the plan | Status | What a reviewer must do |
@@ -235,20 +166,30 @@ pytest tests/unit/automation/test_implementer_state.py tests/unit/io/test_utils.
 | `loop_repo_manager → ci_driver` adds no cycle | REASONED, NOT RUN | Run `python -c "import ...loop_runner; from ...automation import loop_repo_manager"` |
 | `urlparse` / `gh_cli_timeout` are safely removable | CONDITIONAL | Per-symbol grep after deletion; let `ruff --select F401` decide |
 
-### Issue #1401 specific findings
-
-| Assumption in the plan | Status | What a reviewer must do |
-|------------------------|--------|-------------------------|
-| Canonical `write_secure` lives at `hephaestus/io/utils.py:144` and passthrough wrapper at `github_api.py:995` | STALE UNTIL RECHECKED | Re-open current files and locate by `def write_secure`, not by line number |
-| `_reviewer_base.py` and `implementer_state.py` are the only production callers still importing through `.github_api` | IN-REPO ONLY | Grep current `hephaestus/`, `tests/`, and `scripts/`; preserve `github_api.write_secure` because external callers are unknowable from repo grep |
-| Direct alias preserves downstream compatibility | PARTIAL | Verify `from hephaestus.automation.github_api import write_secure` still works; do not claim monkeypatch compatibility from this alone |
-| `io_write_secure = write_secure` keeps `gh_pr_review_post()` patch seam intact | PATCH-SEAM RISK | Verify tests patch the exact name production code reads, such as `hephaestus.automation.github_api.io_write_secure` |
-| `__all__` omission means no `__all__` update is needed | ASSUMED | Re-read current `github_api.__all__`; omission from an older source snapshot is not evidence |
-| Object-identity compatibility tests replace wrapper behavior tests | INCOMPLETE | Keep identity assertions for import compatibility, but add behavior coverage for lazy imports and `ImplementationStateManager.save()` path/content |
-
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | Planning phase for issue #1360 (extract 12-function repo-management cluster from `automation/loop_runner.py` into `loop_repo_manager.py` with backward-compat re-exports) | Plan produced, NOT executed; this skill records the unverified assumptions and reviewer risks. Implementation pending. |
-| ProjectHephaestus | Planning phase for issue #1401 (canonicalize `write_secure` imports while preserving `hephaestus.automation.github_api.write_secure`) | Plan produced, NOT executed; this amendment records stale line evidence, downstream-compatibility, monkeypatch, and behavior-test risks. |
+# refactor-extraction-plan-unverified-assumptions — History
+
+## v1.1.0 (2026-06-26)
+
+**Changed by:** ProjectHephaestus issue #1401 planning-risk capture for `write_secure` canonicalization.
+**Verification:** unverified
+
+### What changed
+- Added reviewer-risk guidance for one-line passthrough removal plus canonical compatibility aliases.
+- Added monkeypatch/patch-seam warnings for aliases bound at import time.
+- Added behavior-test guidance for lazy imports and persistence paths.
+- Added issue #1401 specific findings.
+
+### Why
+The issue #1401 plan correctly tried to keep `hephaestus.automation.github_api.write_secure`
+as an import-compatible alias while moving production persistence callers to
+`hephaestus.io.utils.write_secure`, but several assumptions were only static planning evidence:
+line-number locations, `__all__` non-membership, downstream caller scope, and whether object-identity
+tests prove monkeypatch behavior. Reviewers need a checklist that distinguishes compatibility
+mitigation from evidence that a refactor is safe.
+
+### Previous version (v1.0.0) snapshot
