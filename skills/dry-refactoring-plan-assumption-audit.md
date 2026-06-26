@@ -1,12 +1,13 @@
 ---
 name: dry-refactoring-plan-assumption-audit
-description: "Checklist of hidden assumptions that bite DRY module-consolidation plans before implementation starts. Use when: (1) planning to merge two modules into one canonical, (2) replacing a module with a delegation shim that re-exports from the canonical, (3) porting tests from one file to another, (4) extending a main() function with new sub-checks, (5) consolidating two functions with the same name but different signatures."
+description: "Checklist of hidden assumptions that bite DRY module-consolidation plans before implementation starts. Use when: (1) planning to merge two modules into one canonical, (2) replacing a module with a delegation shim that re-exports from the canonical, (3) porting tests from one file to another, (4) extending a main() function with new sub-checks, (5) consolidating two functions with the same name but different signatures, (6) centralizing duplicated argparse setup across validation CLIs, including parse_known_args paths."
 category: architecture
-date: 2026-06-13
-version: "2.1.0"
+date: 2026-06-26
+version: "2.2.0"
 user-invocable: false
 verification: unverified
-tags: [dry, refactoring, module-consolidation, planning, assumptions, shim, __all__, packaging, test-delegation, signature-collision]
+history: dry-refactoring-plan-assumption-audit.history
+tags: [dry, refactoring, module-consolidation, planning, assumptions, shim, __all__, packaging, test-delegation, signature-collision, argparse, validation-cli, repo-root, parse-known-args, behavioral-tests]
 ---
 
 # DRY Refactoring — Plan Assumption Audit
@@ -15,11 +16,11 @@ tags: [dry, refactoring, module-consolidation, planning, assumptions, shim, __al
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-13 |
-| **Objective** | Capture the hidden assumptions that invalidated parts of the plan for consolidating `hephaestus/scripts_lib/check_python_version_consistency.py` into `hephaestus/validation/python_version.py` (issue #1189) |
-| **Outcome** | Plan produced; NOGO on first version; revised plan addresses all 5 failure modes |
-| **Verification** | unverified — plan not yet implemented or CI-confirmed |
-| **History** | v1.0.0: initial 5-assumption capture. v2.0.0: revised with concrete fix patterns for signature collision and test delegation. v2.1.0: add R2 findings — DOTALL regex crosses TOML sections, wrong test count stated in plan. |
+| **Date** | 2026-06-26 |
+| **Objective** | Capture hidden assumptions that invalidate DRY refactoring plans before implementation, including module consolidation and validation CLI parser centralization |
+| **Outcome** | Planning-only checklist extended for ProjectHephaestus issue #1409: centralize duplicated validation parser setup with `create_validation_parser()` while preserving `--repo-root`, `--json`, `--version`, `parse_known_args`, optional path, and multi-entry-point semantics |
+| **Verification** | unverified — #1409 workflow was captured from an implementation plan; no code, tests, CLI runs, or CI validated it |
+| **History** | [changelog](./dry-refactoring-plan-assumption-audit.history). v2.2.0 adds validation CLI parser centralization planning risks. |
 
 ## When to Use
 
@@ -31,6 +32,10 @@ tags: [dry, refactoring, module-consolidation, planning, assumptions, shim, __al
 - Adding a `from packaging.version import Version` (or any ecosystem dependency) to a new function
 - Two modules share a function name with different signatures
 - Extracting values from structured config files (TOML, YAML) using regex — always verify section-boundary behavior with a cross-section test case
+- Centralizing duplicated `argparse.ArgumentParser` setup across validation entry points
+- Adding or migrating a shared validation CLI parser that owns `--repo-root`, `--json`, and `--version`
+- A validation script uses `parse_known_args()` to forward unknown tool arguments, such as mypy flags, and the refactor must preserve that unknown list exactly
+- A module contains multiple CLI entry points or wrapper functions; each entry point must be inventoried and migrated independently
 
 ## Verified Workflow
 
@@ -58,6 +63,12 @@ grep -rn "from hephaestus.scripts_lib import\|from hephaestus.validation import"
 
 # 6. Find same-name functions across both modules
 grep -rn "^def <function_name>" hephaestus/<module_a>.py hephaestus/<module_b>.py
+
+# 7. Inventory validation parser construction and known/unknown parsing
+rg -n "ArgumentParser\\(|add_json_arg|add_version_arg|parse_args\\(|parse_known_args\\(" hephaestus/validation hephaestus/cli
+
+# 8. Find every validation entry point, including argv-aware wrappers
+rg -n "^def main\\(|argv|parse_known_args\\(" hephaestus/validation
 ```
 
 ### Detailed Steps
@@ -124,6 +135,30 @@ grep -rn "^def <function_name>" hephaestus/<module_a>.py hephaestus/<module_b>.p
    )
    ```
 
+6. **For validation CLI parser centralization, inventory current entry points at planning time.**
+   Do not rely on a stale `rg` snapshot embedded in a prompt or prior review. Re-run the search in the
+   current checkout and record both parser setup helpers and parsing mode (`parse_args` vs `parse_known_args`).
+   Adjacent modules near the issue boundary are review risk; explicitly include or exclude them by name.
+
+7. **Normalize `repo_root` after both `parse_args()` and `parse_known_args()`.**
+   If the shared helper returns a parser subclass or factory, prove that both parsing APIs apply the same
+   `repo_root` normalization. For `parse_known_args`, preserve the unknown argument list byte-for-byte:
+   normalization must only mutate `args.repo_root`, never filter, reorder, or reinterpret forwarded tool args.
+
+8. **Preserve optional path semantics when adding `--repo-root`.**
+   If a validation script accepts an explicit file/path argument, only derive the default repo-relative path from
+   `args.repo_root` when that explicit argument is omitted. A central parser must not silently override an
+   operator-provided path.
+
+9. **Migrate every entry point independently.**
+   Some validation modules expose more than one CLI entry point or `argv`-aware wrapper. A plan that migrates only
+   the obvious `main()` can leave a second parser path with duplicated flags or divergent behavior.
+
+10. **Prefer behavioral tests over structural text checks.**
+    Structural assertions such as "source contains `create_validation_parser`" are useful smoke checks, not proof.
+    Add tests that call each entry point with representative argv and assert normalized `repo_root`, JSON/version flag
+    behavior, optional path defaults, and exact preservation of unknown forwarded args.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -135,6 +170,11 @@ grep -rn "^def <function_name>" hephaestus/<module_a>.py hephaestus/<module_b>.p
 | Assumed `packaging` is a declared dependency | Used `from packaging.version import Version` in a new function | `packaging` may not be in `[project.dependencies]`; runtime `ImportError` on CI | `grep packaging pyproject.toml` before adding the import |
 | R2 — DOTALL regex crosses TOML sections | Ported `_extract_versions_from_text` inherited `re.DOTALL` from `_extract_via_regex:113`. With DOTALL, `\[tool\.mypy\].*?python_version` lazy-matches past blank lines and `[tool.other]` headers — `test_mypy_version_not_crossed_from_other_section` fails. | Fix: use scripts_lib's section-bounded negative-lookahead `\[tool\.mypy\]\n(?:(?!\[).+\n)*?python_version` instead. `_extract_via_regex` now delegates to `_extract_versions_from_text`, eliminating the DOTALL regex entirely. | Always use section-bounded negative-lookahead `(?:(?!\[).+\n)*?` for TOML section extraction — never `re.DOTALL` across sections. |
 | R0/R1 — Wrong test count stated as "44" | Plans stated "44 test functions" but actual scripts_lib test file has 35 functions / 9 classes. | Count test functions by direct grep before writing the plan (`grep -c "def test_" file`). | Verify counts by reading the actual file before stating them in a plan. |
+| #1409 — Stale validation parser inventory | Planned from an `rg` snapshot of `add_json_arg`, `add_version_arg`, and `parse_known_args` without re-running it in the final planning turn | Dynamic parser setup, adjacent validation modules, or future drift can be missed, especially when one module has multiple entry points | Re-run the inventory in the current checkout and state the inclusion/exclusion boundary for every adjacent validation module |
+| #1409 — `parse_known_args` treated like `parse_args` | Proposed parser subclass normalization without executing it against a forwarded-args CLI | Unknown mypy/tool args could be filtered, reordered, or interpreted by the shared parser while `repo_root` normalization appears to work | Add a behavioral test proving `args.repo_root` is normalized and the returned unknown list is exactly unchanged |
+| #1409 — Optional explicit path semantics inferred | Planned `audit.py`/`coverage.py` repo-root defaults from line references rather than re-reading behavior | A shared parser can accidentally apply `args.repo_root` even when the operator provided an explicit path | Test both cases: omitted path derives from repo root; explicit path wins unchanged |
+| #1409 — Only the obvious entry point migrated | Treated a validation module as having one parser path when it had two entry points/wrappers | One path keeps duplicated `--json`/`--version` flags or skips `--repo-root` normalization | Inventory `def main`, `argv`, and parser calls together; migrate every entry point independently |
+| #1409 — Structural tests only | Planned text-shape checks for helper usage without enough CLI behavior coverage | Code can satisfy string checks while breaking call semantics, unknown forwarding, or optional path defaults | Keep structural tests as a supplement; require argv-level behavior tests for each migrated CLI |
 
 ## Results & Parameters
 
@@ -148,6 +188,11 @@ grep -rn "^def <function_name>" hephaestus/<module_a>.py hephaestus/<module_b>.p
 - [ ] Counted test classes in source test file (`grep "^class Test" | wc -l`) — shim imports test classes (not symbols)?
 - [ ] Verified `packaging` in `pyproject.toml [project.dependencies]`
 - [ ] Same-name collision resolved: path-vs-string identified, `_extract_versions_from_text` helper added, shim aliases new name?
+- [ ] Validation CLI parser inventory re-run in current checkout (`rg` over parser construction and parsing calls)
+- [ ] `parse_known_args()` path tested: normalized `args.repo_root`, exact unknown-args preservation
+- [ ] Optional explicit path behavior tested: repo-root default only applies when path is omitted
+- [ ] Multi-entry-point modules checked independently; no secondary `main()`/wrapper left unmigrated
+- [ ] Tests cover CLI behavior through argv, not only source text shape
 ```
 
 ### Issue #1189 Specific Findings
@@ -160,8 +205,29 @@ grep -rn "^def <function_name>" hephaestus/<module_a>.py hephaestus/<module_b>.p
 | `packaging` is a declared dependency | UNVERIFIED | Not checked against `pyproject.toml` before plan was written |
 | Same-name `extract_pyproject_versions` collision is safe to shim | WRONG | `path: Path` vs `content: str` — shim at wrong layer returns `{}` silently; fix = `extract_pyproject_versions_str` + `_extract_versions_from_text` helper |
 
+### Issue #1409 Specific Findings
+
+| Assumption | Status | Correct Answer |
+|------------|--------|----------------|
+| Validation parser inventory is complete from a prior `rg` snapshot | UNVERIFIED | Re-run parser and entry-point inventory in the current checkout before implementation |
+| `parse_args()` and `parse_known_args()` can share normalization without dedicated tests | UNVERIFIED | Test both APIs; `parse_known_args` must normalize `repo_root` while preserving unknown args exactly |
+| `audit.py` and `coverage.py` default files can always be made repo-relative | UNVERIFIED | Use `args.repo_root` only when the optional explicit path is omitted |
+| `markdown.py` can be treated as one migration site | WRONG RISK | It has two entry points in the plan context; migrate and test each independently |
+| A CLI barrel export is harmless | UNVERIFIED | Check for import cycles before adding exports through `hephaestus/cli/__init__.py` or similar barrels |
+| Structural source tests are enough for parser migration | WRONG RISK | Add behavioral argv tests for flags, version handling, repo-root normalization, and unknown forwarding |
+
+### #1409 Unverified Inputs To Re-open
+
+| Input | Why It Must Be Re-opened |
+|-------|--------------------------|
+| GitHub issue #1409 text and prior NOGO review | They were referenced from prompt context, not fetched in the final planning turn |
+| `utils.py:75`, `audit.py:31`, `coverage.py:31`, `markdown.py:474/708`, `mypy_per_file.py:151` | Line references came from an earlier/current inventory and were not re-opened during final plan authoring |
+| `rg -n "add_json_arg|add_version_arg|parse_known_args" hephaestus/validation` | Cited as evidence but not re-run in the final message |
+| No tests or CLI commands executed | The workflow is planning-only and remains unverified |
+
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | Planning phase for issue #1189 (python-version-consistency consolidation) | v1.0.0 plan NOGO'd; v2.0.0 revised plan addresses all 5 failure modes; implementation pending |
+| ProjectHephaestus | Planning phase for issue #1409 (validation CLI parser centralization) | v2.2.0 capture; implementation plan only. No issue fetch, file re-open, `rg`, tests, CLI command, or CI run validated the proposed workflow. |
