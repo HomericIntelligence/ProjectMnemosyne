@@ -1,9 +1,30 @@
+# dry-refactoring-plan-assumption-audit — History
+
+## v2.2.0 (2026-06-26)
+
+**Changed by:** ProjectHephaestus issue #1386 planning-review capture for a behavior-preserving automation option-model DRY refactor.
+**Verification:** unverified
+
+### What changed
+
+- Added option-model hierarchy risks to the DRY refactor assumption-audit skill.
+- Added reviewer focus for preserving public worker field names (`parallel` vs `max_workers`), avoiding `agent` scope creep, and rejecting stale `state_dir` option fields.
+- Added `DEFAULT_MAX_WORKERS` parser/model default alignment checks.
+- Added constructor behavior guard for avoiding new `verbose=args.verbose` propagation in previously omitted planner, implementer, and PR-reviewer paths.
+- Added RED-test expectations for inherited Pydantic fields, `model_dump()` compatibility, constructor keyword compatibility, parser defaults, and absence of `state_dir`.
+
+### Why
+
+The issue #1386 plan was an unexecuted planning artifact for a behavior-preserving refactor. Its durable value is the reviewer-risk catalogue: inherited Pydantic behavior and CLI parser defaults must be tested, public field names are API, and a DRY hierarchy must not introduce runtime behavior changes merely because fields move into a base class.
+
+### Previous version (v2.1.0) snapshot
+
 ---
 name: dry-refactoring-plan-assumption-audit
 description: "Checklist of hidden assumptions that bite DRY module-consolidation plans before implementation starts. Use when: (1) planning to merge two modules into one canonical, (2) replacing a module with a delegation shim that re-exports from the canonical, (3) porting tests from one file to another, (4) extending a main() function with new sub-checks, (5) consolidating two functions with the same name but different signatures."
 category: architecture
 date: 2026-06-13
-version: "2.0.0"
+version: "2.1.0"
 user-invocable: false
 verification: unverified
 tags: [dry, refactoring, module-consolidation, planning, assumptions, shim, __all__, packaging, test-delegation, signature-collision]
@@ -19,7 +40,7 @@ tags: [dry, refactoring, module-consolidation, planning, assumptions, shim, __al
 | **Objective** | Capture the hidden assumptions that invalidated parts of the plan for consolidating `hephaestus/scripts_lib/check_python_version_consistency.py` into `hephaestus/validation/python_version.py` (issue #1189) |
 | **Outcome** | Plan produced; NOGO on first version; revised plan addresses all 5 failure modes |
 | **Verification** | unverified — plan not yet implemented or CI-confirmed |
-| **History** | v1.0.0: initial 5-assumption capture. v2.0.0: revised with concrete fix patterns for signature collision and test delegation. |
+| **History** | v1.0.0: initial 5-assumption capture. v2.0.0: revised with concrete fix patterns for signature collision and test delegation. v2.1.0: add R2 findings — DOTALL regex crosses TOML sections, wrong test count stated in plan. |
 
 ## When to Use
 
@@ -30,6 +51,7 @@ tags: [dry, refactoring, module-consolidation, planning, assumptions, shim, __al
 - Extending a `main()` function with new sub-checks
 - Adding a `from packaging.version import Version` (or any ecosystem dependency) to a new function
 - Two modules share a function name with different signatures
+- Extracting values from structured config files (TOML, YAML) using regex — always verify section-boundary behavior with a cross-section test case
 
 ## Verified Workflow
 
@@ -132,6 +154,8 @@ grep -rn "^def <function_name>" hephaestus/<module_a>.py hephaestus/<module_b>.p
 | Added new sub-checks after `if args.json:` | Placed new `check_*` calls after an existing `if args.json: ...; return 0` block | JSON callers exit before reaching the new checks; CI never sees the new coverage | List all early exits in `main()` first; move check calls above the format-branching block |
 | Did not update `validation/__init__.py __all__` | Added 8+ new functions to `python_version.py` without updating the package's `__init__.py` | `from hephaestus.validation import new_function` raises `AttributeError` even though the function exists | Grep all `__init__.py` files that import from the modified module; add every new symbol to `__all__` |
 | Assumed `packaging` is a declared dependency | Used `from packaging.version import Version` in a new function | `packaging` may not be in `[project.dependencies]`; runtime `ImportError` on CI | `grep packaging pyproject.toml` before adding the import |
+| R2 — DOTALL regex crosses TOML sections | Ported `_extract_versions_from_text` inherited `re.DOTALL` from `_extract_via_regex:113`. With DOTALL, `\[tool\.mypy\].*?python_version` lazy-matches past blank lines and `[tool.other]` headers — `test_mypy_version_not_crossed_from_other_section` fails. | Fix: use scripts_lib's section-bounded negative-lookahead `\[tool\.mypy\]\n(?:(?!\[).+\n)*?python_version` instead. `_extract_via_regex` now delegates to `_extract_versions_from_text`, eliminating the DOTALL regex entirely. | Always use section-bounded negative-lookahead `(?:(?!\[).+\n)*?` for TOML section extraction — never `re.DOTALL` across sections. |
+| R0/R1 — Wrong test count stated as "44" | Plans stated "44 test functions" but actual scripts_lib test file has 35 functions / 9 classes. | Count test functions by direct grep before writing the plan (`grep -c "def test_" file`). | Verify counts by reading the actual file before stating them in a plan. |
 
 ## Results & Parameters
 
@@ -162,3 +186,9 @@ grep -rn "^def <function_name>" hephaestus/<module_a>.py hephaestus/<module_b>.p
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | Planning phase for issue #1189 (python-version-consistency consolidation) | v1.0.0 plan NOGO'd; v2.0.0 revised plan addresses all 5 failure modes; implementation pending |
+
+---
+
+## v2.1.0 (2026-06-13)
+
+**Initial version in file history.** Earlier inline history recorded v1.0.0, v2.0.0, and v2.1.0 inside the skill body before this dedicated history file was introduced.
