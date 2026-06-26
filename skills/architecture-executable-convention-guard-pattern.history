@@ -1,5 +1,23 @@
 # architecture-executable-convention-guard-pattern — History
 
+## v1.4.0 (2026-06-26)
+
+**Changed by:** ProjectHephaestus issue #1506 R1 re-plan (PLANNING learning — after the R0 plan was graded B / NOGO despite a reviewer-affirmed sound design).
+**Verification:** unverified (PLAN only — code not executed, CI not run).
+
+### What changed
+- Added a new sub-pattern section, "Sub-Pattern: The NOGO→GO Tightenings a Plan Reviewer Demands Even on a Sound Design," the planning companion to the v1.2.0 coverage-altitude sub-pattern. Context: R0 plan for #1506 (per-symbol API tables in `COMPATIBILITY.md` + a bidirectional drift guard `api_table_docs.py` mirroring `cli_tier_docs.py`) was graded B / NOGO even though the reviewer affirmed the DESIGN as sound; the NOGO was driven purely by MINOR tightenings.
+- Captured five durable planning lessons: (1) a sound design can NOGO on negative-branch coverage that is only INCIDENTAL — add a DEDICATED test for the error/empty verdict (`table-not-found`) with a fixture whose whole purpose is to trigger it; (2) test the orchestrator's argparse default branch (`args.repo_root or get_repo_root()`) by calling `main([])` with the default resolver monkeypatched; (3) verify the testability precondition (`get_repo_root(start_path=None)` accepts no args, `helpers.py:99`) before promising the test; (4) inferred data in a user-facing doc cell needs an inline honesty caveat, not just a guard that skips validating it (POLA); (5) pre-emptively harden a "fragile but backstopped" hand-rolled parser flagged at MINOR (named separator regex + `## ` next-section break) while keeping the live-tree alignment test as the backstop.
+- Added 5 Failed Attempts rows for the #1506 R0-NOGO failures (incidental error-verdict coverage; `main()` tested only with the flag always supplied; promising a default-branch test without checking testability; relying on the guard ignoring the inferred field with no caveat; leaving the fragile parser unhardened).
+- Added a "NOGO→GO-tightening generalization (v1.4.0, unverified)" note to Results & Parameters and a row to the Verified On table (issue #1506 R1 re-plan, PLAN — unverified), including the carry-forward risks (inferred version anchors, hand-rolled parser, `default` pixi env requirement).
+- Added tags: `coverage-altitude`, `negative-branch-test`, `argparse-default-branch`, `nogo-tightening`, `inferred-data-honesty` (frontmatter + footer). Updated the DCO sub-pattern warning banner version range to `v1.1.0–v1.4.0`. Bumped frontmatter version 1.3.0 → 1.4.0 and `date` to 2026-06-26.
+
+### Why
+The #1506 R0 plan demonstrated that a reviewer can grade a guard's design sound and still NOGO on a small, predictable set of MINOR tightenings. Capturing exactly which tightenings convert a NOGO into a GO-ready plan (dedicated negative-branch tests, the argparse default branch, verifying testability preconditions, honesty caveats for inferred user-facing data, pre-emptive parser hardening) lets future plans pre-empt the NOGO round entirely. This is the planning-side companion to the v1.2.0 coverage-altitude lesson and belongs in the same skill. All of it is unverified (plan-only) — the tests, caveats, and parser hardening were designed but never executed or CI-validated.
+
+### Previous version (v1.3.0) snapshot
+The v1.3.0 rendered `.md` content prior to this amendment is preserved in git history at the parent commit of this amendment. It carried `verification: unverified`, the coredump `verify_crash_bundle` v1.0.0 material, the v1.1.0 bidirectional mirror/parity sub-pattern, the v1.2.0 coverage-altitude step 8, and the v1.3.0 commit-trailer (DCO) sub-pattern — but did NOT yet contain the NOGO→GO-tightening (#1506) sub-pattern.
+
 ## v1.3.0 (2026-06-24)
 
 **Changed by:** ProjectHephaestus issue #1516 (PLANNING learning — making the documented DCO `Signed-off-by` trailer mechanically enforced).
