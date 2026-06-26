@@ -1,13 +1,13 @@
 ---
 name: code-quality-enforcement-gates
-description: "Canonical guide to code-quality enforcement THRESHOLDS, remediation workflow, and post-audit verification: when to fail builds on complexity, when to enable mypy strict modes, when to promote warnings to errors, how to scope override subsets, deprecation removal policy, how to fix production asserts/hardcoded paths, how to run a post-remediation audit, how to verify audit/PR-reviewer findings against ground truth before acting, and how to verify a TRACKING/REMEDIATION DOC's checkbox state against live `gh issue view` before editing it, and how to keep human-facing DEPRECATION docs (COMPATIBILITY.md / MIGRATION.md) in sync with a function that emits a DeprecationWarning by mirroring an existing precedent symbol's annotation and guarding with a property-based offline regression test. Use when: (1) deciding fix-vs-suppress for a new lint rule, (2) enabling mypy check-untyped-defs or new ruff rules, (3) promoting CI warnings to exit-1, (4) tuning markdownlint MD024 / ruff C901 thresholds, (5) narrowing mypy module override globs to specific paths, (6) replacing production assert input-validation or hardcoded /tmp paths with safe equivalents, (7) executing a post-remediation audit to close remaining CI/classifier/release/docs gaps after an initial cleanup, (8) strict-mode repo audits or PR-reviewer sub-agents produce hallucinated findings (nonexistent files, phantom CI checks, red-on-main checks cited as PR blockers) — verify against live state before acting, (9) the task is 'fix stale checkboxes in a tracking/remediation markdown doc' — verify EVERY box against live `gh issue view` (the doc AND the bug report's own stale-list are not authoritative) before editing, and guard re-drift with a PROPERTY-based regression test, (10) a function is deprecated in CODE (emits DeprecationWarning) but COMPATIBILITY.md / docs/MIGRATION.md don't reflect it — mirror the ONE already-correctly-annotated precedent symbol's inline '(deprecated)' table annotation AND prose callout, copy its removal-timeline wording verbatim, and guard with a property-based OFFLINE regression test asserting 'emits DeprecationWarning ⇒ annotated in COMPATIBILITY.md AND listed in MIGRATION.md Deprecated-symbols section'."
+description: "Canonical guide to code-quality enforcement THRESHOLDS, remediation workflow, and post-audit verification: when to fail builds on complexity, when to enable mypy strict modes, when to promote warnings to errors, how to scope override subsets, deprecation removal policy, how to fix production asserts/hardcoded paths, how to run a post-remediation audit, how to verify audit/PR-reviewer findings against ground truth before acting, and how to verify a TRACKING/REMEDIATION DOC's checkbox state against live `gh issue view` before editing it, and how to keep human-facing DEPRECATION docs (COMPATIBILITY.md / MIGRATION.md) in sync with a function that emits a DeprecationWarning by mirroring an existing precedent symbol's annotation and guarding with a property-based offline regression test. Use when: (1) deciding fix-vs-suppress for a new lint rule, (2) enabling mypy check-untyped-defs or new ruff rules, (3) promoting CI warnings to exit-1, (4) tuning markdownlint MD024 / ruff C901 thresholds, (5) narrowing mypy module override globs to specific paths, (6) replacing production assert input-validation or hardcoded /tmp paths with safe equivalents, (7) executing a post-remediation audit to close remaining CI/classifier/release/docs gaps after an initial cleanup, (8) strict-mode repo audits or PR-reviewer sub-agents produce hallucinated findings (nonexistent files, phantom CI checks, red-on-main checks cited as PR blockers) — verify against live state before acting, (9) the task is 'fix stale checkboxes in a tracking/remediation markdown doc' — verify EVERY box against live `gh issue view` (the doc AND the bug report's own stale-list are not authoritative) before editing, and guard re-drift with a PROPERTY-based regression test, (10) a function is deprecated in CODE (emits DeprecationWarning) but COMPATIBILITY.md / docs/MIGRATION.md don't reflect it — mirror the ONE already-correctly-annotated precedent symbol's inline '(deprecated)' table annotation AND prose callout, copy its removal-timeline wording verbatim, and guard with a property-based OFFLINE regression test asserting 'emits DeprecationWarning ⇒ annotated in COMPATIBILITY.md AND listed in MIGRATION.md Deprecated-symbols section'; each insertion point (table row AND callout block) must be asserted INDEPENDENTLY by scoping to its own section — a global scan that returns on the first match leaves callout blocks unguarded, (11) writing a deprecation-doc-sync property test — scope EACH assertion to its own section of the markdown file (table row scope vs callout-block scope); a global scan + early return is silent green when any ONE section matches."
 category: ci-cd
 date: 2026-06-26
-version: "1.3.0"
+version: "1.4.0"
 user-invocable: false
 verification: verified-local
 history: code-quality-enforcement-gates.history
-tags: [merged, code-quality, quality-gate, mypy, ruff, complexity-budget, deprecation, deprecation-doc-sync, compatibility-md, migration-md, property-based-test, offline-regression-guard, mirror-precedent-symbol, post-remediation-audit, audit-verification, fact-checking, production-code-fixes, tracking-doc, remediation-plan, checkbox-drift]
+tags: [merged, code-quality, quality-gate, mypy, ruff, complexity-budget, deprecation, deprecation-doc-sync, compatibility-md, migration-md, property-based-test, offline-regression-guard, mirror-precedent-symbol, section-scoped-assertion, two-halves-test, post-remediation-audit, audit-verification, fact-checking, production-code-fixes, tracking-doc, remediation-plan, checkbox-drift]
 ---
 
 # Code-Quality Enforcement Gates
@@ -36,6 +36,7 @@ tags: [merged, code-quality, quality-gate, mypy, ruff, complexity-budget, deprec
 11. **Verifying audit or PR-reviewer findings against ground truth** before writing a remediation plan, filing issues, or posting a REQUEST_CHANGES verdict (strict-mode audits and reviewer sub-agents hallucinate ~10–30% of findings)
 12. **Planning a tracking/remediation-doc checkbox correction** — the task is "fix stale `- [ ]` / `- [x]` state in a remediation-plan / roadmap / status markdown doc": verify EVERY checkbox against live `gh issue view <n> --json state` before editing, then guard re-drift with a property-based regression test (see §11)
 13. **Annotating a code-deprecated symbol in human-facing deprecation docs** — a function emits `DeprecationWarning` but COMPATIBILITY.md / `docs/MIGRATION.md` don't reflect it: mirror the ONE precedent symbol already correctly annotated (inline `(deprecated)` table cell + a prose callout, removal-timeline wording copied verbatim), then guard with a property-based OFFLINE regression test (see §12)
+14. **Writing a doc-sync property test that guards multiple insertion points** — the task is "test that a deprecated symbol appears in BOTH the stable table AND the callout block of COMPATIBILITY.md": scope each assertion to its own section — never do a global scan and return early; a single `assert symbol in full_text and "(deprecated)" in full_text` silently passes even when the callout block is missing (see §12a)
 
 ---
 
@@ -57,7 +58,8 @@ tags: [merged, code-quality, quality-gate, mypy, ruff, complexity-budget, deprec
 | Post-remediation audit | Read state in parallel → fix classifier/release/docs gaps | Classifiers reflect what CI tests; release needs `needs: test` gate |
 | Verify audit/reviewer findings | `ls` / `grep` / `git ls-files` / `gh run list --branch main` | 10–30% of strict-audit & reviewer findings are hallucinated; verify before acting |
 | Verify tracking-doc checkboxes (PLANNING) | `gh issue view <n> --json state` per box; property regression test | Doc + bug-report list are NOT authoritative; box ticked ⟺ ALL issues on line CLOSED. Planning-stage; test shape unverified until PR lands |
-| Deprecation doc-sync (PLANNING) | Mirror precedent symbol's `(deprecated)` annotation; property OFFLINE regression test | `DeprecationWarning ⇒ annotated in COMPATIBILITY.md AND listed in MIGRATION.md`; re-grep at edit time, never edit by line number. Planning-stage; test shape unverified until PR lands |
+| Deprecation doc-sync | Mirror precedent symbol's `(deprecated)` annotation; property OFFLINE regression test | `DeprecationWarning ⇒ annotated in COMPATIBILITY.md AND listed in MIGRATION.md`; re-grep at edit time, never edit by line number. Verified ProjectHephaestus #1508/PR #1647 |
+| Doc-sync test: multiple insertion points | Scope each assertion to its own section (table row section vs callout block section) | A global scan + early return is silent-green when ANY ONE section matches; each insertion point needs its own scoped assertion (see §12a) |
 
 ---
 
@@ -648,14 +650,11 @@ see the dedicated `tracking-doc-checkbox-sync-regression-guard` skill.
 
 ---
 
-### 12. Sync Deprecation Docs with a DeprecationWarning Symbol (planning-stage sub-pattern of §3 + §5)
+### 12. Sync Deprecation Docs with a DeprecationWarning Symbol (sub-pattern of §3 + §5)
 
-> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
-> It comes from a PLANNING session for ProjectHephaestus issue #1508 (annotate `get_config_value` as
-> deprecated in COMPATIBILITY.md + `docs/MIGRATION.md`, plus a property-based regression test). The plan
-> was **written but NOT implemented or CI-run** — no markdownlint run, no pytest run. `verification:
-> unverified` for this section; the §3 deprecation-gate and §5 assert-property principles it extends are
-> `verified-local`, this concrete sub-pattern is not.
+> **Verification:** `verified-local` as of ProjectHephaestus PR #1647 (issue #1508). The plan was
+> validated end-to-end: doc annotations written, markdownlint verified, pytest run, pre-commit green.
+> An implementation refinement was discovered — see §12a for the two-halves assertion pattern.
 
 The **doc-vs-runtime deprecation-sync gap**: a function is deprecated in CODE (it emits a
 `DeprecationWarning`) but the human-facing compatibility/migration docs (`COMPATIBILITY.md`,
@@ -687,43 +686,142 @@ function.** No `gh`, no network, no auth ⇒ no silent-false-green-on-unauth ris
 Trigger the warning with `pytest.warns(DeprecationWarning)` around a real call:
 
 ```python
-import warnings, pathlib, pytest
+import pathlib, pytest
 from hephaestus.config.utils import get_config_value  # the deprecated symbol
 
 REPO = pathlib.Path(__file__).resolve().parents[...]   # derive, don't hardcode
 COMPAT = (REPO / "COMPATIBILITY.md").read_text(encoding="utf-8")
 MIGRATION = (REPO / "docs" / "MIGRATION.md").read_text(encoding="utf-8")
 
-def test_get_config_value_doc_sync():
-    # 1) the symbol really emits DeprecationWarning (no required config files needed)
+
+def _section(text: str, start_marker: str, stop_markers: tuple[str, ...]) -> str:
+    """Extract a section from a markdown document between start_marker and the first stop."""
+    after = text.split(start_marker, 1)[-1]
+    for marker in stop_markers:
+        after = after.split(marker, 1)[0]
+    return after
+
+
+def test_get_config_value_emits_deprecation_warning():
+    # The symbol really emits DeprecationWarning (no required config files needed)
     with pytest.warns(DeprecationWarning):
         get_config_value("nonexistent.key", default=None)
-    # 2) property: annotated in COMPATIBILITY.md (mirror retry_with_jitter's style)
-    assert "get_config_value" in COMPAT and "(deprecated)" in COMPAT
-    # 3) property: listed in MIGRATION.md's Deprecated-symbols section (section-scoped)
-    section = _migration_deprecated_section(MIGRATION)
-    assert "get_config_value" in section
+
+
+def test_compatibility_md_annotates_get_config_value_deprecated():
+    # ASSERTION 1: table row in the hephaestus.config section (section-scoped)
+    config_section = _section(
+        COMPAT,
+        start_marker="### `hephaestus.config`",
+        stop_markers=("### ", "## "),
+    )
+    assert "get_config_value" in config_section, "symbol missing from table"
+    assert "deprecated" in config_section.lower(), "table row not annotated as deprecated"
+
+    # ASSERTION 2: **Deprecated symbols** callout block (section-scoped independently)
+    callout_section = _section(
+        COMPAT,
+        start_marker="**Deprecated symbols**",
+        stop_markers=("### ", "## ", "\n| "),
+    )
+    assert "get_config_value" in callout_section, "symbol missing from callout block"
+
+
+def test_migration_md_lists_get_config_value_deprecated():
+    # section-scoped: stop at next ## or ### heading
+    deprecated_section = _section(
+        MIGRATION,
+        start_marker="### Deprecated symbols",
+        stop_markers=("## ", "### "),
+    )
+    assert "get_config_value" in deprecated_section
 ```
 
-**Risks to record in the plan (the durable part — do not gloss over these):**
+> **Critical (§12a):** The two COMPATIBILITY.md assertions MUST be in separate scoped checks.
+> A single `assert "get_config_value" in COMPAT and "(deprecated)" in COMPAT` is silent-green
+> if the table row exists but the callout block is absent. See §12a for the full pattern.
 
-- **Section-scoping is brittle.** The test parses MIGRATION.md's "Deprecated symbols" section by
-  splitting on the next H2/H3 heading. If a sibling H3 is inserted between the heading and the symbol
-  bullet, OR the `### Deprecated symbols` heading text changes, the scoping silently mis-scopes. This is
-  the spot a reviewer should focus on — anchor on a stable heading and assert the section is non-empty.
-- **Stale line/coordinate refs.** Line numbers read once at plan time (`COMPATIBILITY.md:210/190-195/214/238-243`,
-  `MIGRATION.md:59-66`, `utils.py:329-335`) WILL go stale — **re-grep at edit time, never edit by line
-  number.** (Matches the §10/§11 rule: line refs go stale even when the finding is true.)
-- **Markdownlint not verified.** The plan ASSUMES the edits won't trip markdownlint (MD013 line-length;
-  MD055/MD056 table-pipe rules), but the inline-annotation row is long and the callout uses em-dashes —
-  **NOT verified.** Run `markdownlint` on the two edited files before claiming done.
-- **Warning-trigger ordering assumption.** `get_config_value("nonexistent.key", default=None)` is assumed
-  to reach `warnings.warn` without raising. Verified in source that `warn()` is the FIRST statement in the
-  body (`utils.py:329`), so it holds today — but flag it: if a future refactor moves `warn()` below an
-  early return/raise, the warning-trigger call mis-fires and the test silently stops exercising the path.
-- **Anchor-slug assumption.** The deprecation callout reuses the anchor link
-  `../COMPATIBILITY.md#deprecation-policy`, assuming the GitHub-rendered slug matches `## Deprecation
-  Policy` — NOT independently verified against rendered output. Confirm the slug or use an explicit anchor.
+**Risks — verified and still-durable:**
+
+- **Section-scoping is brittle.** The test parses sections by splitting on headings. If a sibling H3
+  is inserted between the heading and the symbol bullet, OR the heading text changes, the scoping
+  silently mis-scopes. Anchor on a stable heading and assert the scoped section is non-empty.
+  **(VERIFIED: stop_markers tuple covers `### `, `## `, and `\n| ` for the callout scope.)**
+- **Stale line/coordinate refs.** Line numbers WILL go stale — **re-grep at edit time, never edit by
+  line number.** (Matches the §10/§11 rule.) **(VERIFIED: no line numbers were used.)**
+- **Markdownlint risk for long rows.** The inline-annotation row in COMPATIBILITY.md is long and uses
+  em-dashes — run `markdownlint` on the edited files before claiming done.
+  **(VERIFIED: ran pre-commit including markdownlint; no trips.)**
+- **Warning-trigger ordering.** `get_config_value("nonexistent.key", default=None)` reaches
+  `warnings.warn` because `warn()` is the FIRST body statement. If a future refactor moves `warn()`
+  past an early return/raise, the warning-trigger call mis-fires. **(VERIFIED: holds in PR #1647.)**
+- **Multiple COMPATIBILITY.md insertion points need SEPARATE scoped assertions** (see §12a).
+  A global scan that returns early on the first match leaves the callout block unguarded.
+  **(VERIFIED: implementation split assertions into separate scoped tests; see §12a.)**
+
+---
+
+### 12a. Doc-Sync Property Test: Scope Each Insertion Point Independently (sub-pattern of §12)
+
+> **Verification:** `verified-local` — ProjectHephaestus PR #1647 (issue #1508). Discovered during
+> implementation of §12; this specific failure mode was NOT in the planning-stage write-up.
+
+When a deprecated symbol must appear in **multiple distinct locations** in a markdown file (e.g. a
+table row AND a `**Deprecated symbols**` callout block in COMPATIBILITY.md), a property test that
+does a **global scan + early return** is silently incomplete:
+
+```python
+# WRONG — silent-green even when the callout block is absent
+assert "get_config_value" in COMPAT and "(deprecated)" in COMPAT
+```
+
+This passes as long as the table row exists and the word `deprecated` appears anywhere in the file —
+the callout block is never independently verified.
+
+**Correct pattern: one scoped assertion per insertion point.**
+
+```python
+# CORRECT — scope to the hephaestus.config TABLE section
+config_section = _section(
+    COMPAT,
+    start_marker="### `hephaestus.config`",
+    stop_markers=("### ", "## "),
+)
+assert "get_config_value" in config_section, "symbol missing from table"
+assert "deprecated" in config_section.lower(), "table row not annotated deprecated"
+
+# CORRECT — scope to the **Deprecated symbols** CALLOUT BLOCK independently
+callout_section = _section(
+    COMPAT,
+    start_marker="**Deprecated symbols**",
+    stop_markers=("### ", "## ", "\n| "),  # stop at next heading OR table
+)
+assert "get_config_value" in callout_section, "symbol missing from callout"
+```
+
+**Rule:** For any doc-sync property test that guards N insertion points in a markdown file, write N
+independent scoped assertions — one per insertion point. Never write a single global scan and rely on
+early-return or short-circuit logic to count as "verified."
+
+**Why this matters:** The original test for `retry_with_jitter` (the precedent symbol in §12) used a
+global scan. When a new symbol (`get_config_value`) was added following the same pattern, the test was
+written to mirror the existing structure. The global scan returned on the first match (the table row),
+leaving the callout block completely unguarded. Removing the callout left the test green.
+
+**Section-scoping helper (reusable):**
+
+```python
+def _section(text: str, start_marker: str, stop_markers: tuple[str, ...]) -> str:
+    """Extract the text between start_marker and the first stop_marker that appears after it."""
+    after = text.split(start_marker, 1)[-1]
+    for marker in stop_markers:
+        after = after.split(marker, 1)[0]
+    return after
+```
+
+The `stop_markers` tuple should include all heading levels that could terminate the section
+(`"## "`, `"### "`) PLUS any structural boundary specific to the insertion point (e.g. `"\n| "` for
+a callout that is followed immediately by a table).
 
 ---
 
@@ -769,6 +867,8 @@ def test_get_config_value_doc_sync():
 | Assuming the markdown edits pass markdownlint without running it | Plan claimed no MD013/MD055/MD056 trips | The inline-annotation row is long and the callout uses em-dashes — UNVERIFIED | Run `markdownlint` on the two edited files before claiming done |
 | Assuming the warning fires before any file I/O / early return | `get_config_value("nonexistent.key", default=None)` assumed to reach `warnings.warn` | Holds only because `warn()` is the FIRST body statement (`utils.py:329`); a future refactor moving it below an early return/raise silently breaks the trigger | Verify `warn()` is the first statement at edit time; add a comment so refactors don't reorder it past an early exit |
 | Reusing `#deprecation-policy` anchor without verifying the rendered slug | Callout links `../COMPATIBILITY.md#deprecation-policy`, assuming it matches `## Deprecation Policy` | GitHub slug generation not independently verified against rendered output | Confirm the rendered anchor slug or use an explicit `<a name>` anchor |
+| Global-scan doc-sync test returns on first match | `assert "get_config_value" in COMPAT and "(deprecated)" in COMPAT` — global scan, returns as soon as table row matches | The callout block is never independently checked; removing the callout leaves the test green | Scope EACH insertion point to its own markdown section; write N scoped assertions for N insertion points (see §12a) |
+| Mirroring the precedent test structure without auditing the precedent | Wrote the new test for `get_config_value` following the `retry_with_jitter` test's pattern | The original `retry_with_jitter` test had the same global-scan flaw — the new test inherited the bug | When mirroring a precedent test, first verify the precedent's test actually guards EVERY insertion point, not just one |
 
 ---
 
@@ -833,4 +933,4 @@ false-positive PR; post-remediation audit moved a repo 82% → 86% across 15 dim
 | AchaeanFleet | verify-audit-findings-before-acting (Dependabot review session — 2 reviewer agents cited pre-existing main-branch CI failures as PR blockers; PR #688 flipped to APPROVE) |
 | HomericIntelligence (ecosystem) | ci-deprecation-enforcement (PR #834); testing-regression-guard sweep (PR #5385, #5387) |
 | ProjectProteus | verify-tracking-doc-checkboxes (§11, PLANNING-stage, unverified): remediation-plan checkbox correction — per-box `gh issue view` surfaced 2 extra stale entries (#92, #100) the issue body omitted; PR-group line semantics + property-regression-test plan. Test shape not yet implemented/CI-run |
-| ProjectHephaestus | deprecation-doc-sync (§12, issue #1508, PLANNING-stage, unverified): annotate `get_config_value` as deprecated in COMPATIBILITY.md + `docs/MIGRATION.md` mirroring `retry_with_jitter`'s precedent annotation, plus a property-based OFFLINE regression test (`DeprecationWarning ⇒ annotated in COMPATIBILITY.md AND listed in MIGRATION.md Deprecated-symbols section`). Plan WRITTEN but NOT implemented or CI-run — no markdownlint/pytest run this session |
+| ProjectHephaestus | deprecation-doc-sync (§12 + §12a, issue #1508, PR #1647, **verified-local**): annotated `get_config_value` as deprecated in COMPATIBILITY.md + `docs/MIGRATION.md` mirroring `retry_with_jitter`'s precedent (inline `(deprecated)` table annotation + prose callout). Property-based OFFLINE regression test implemented with TWO independently-scoped assertions (table row scope vs callout block scope) — each guarded separately after discovering the global-scan+early-return left the callout unguarded. Pre-commit (incl. markdownlint) + pytest green |
