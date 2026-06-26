@@ -1,9 +1,9 @@
 ---
 name: verify-issue-premise-against-code-before-planning
-description: "An issue body that asserts 'the current code does X' is a CLAIM, not ground truth — before writing a plan, grep the repo for the distinctive tokens in the issue's premise and confirm WHICH file/job actually matches, and ENUMERATE EVERY site that matches before scoping. Issues drift from code; follow-up issues especially describe a since-changed state, and CI/workflow issues are dangerous because the same step pattern appears in several workflow files AND in several jobs of one file. In ProjectAgamemnon #248 the premise said the repo used `setup-pixi` with `cache: false` skipping built-in save; grepping `cache: false` (the issue's OWN premise token) showed the scenario lived in TWO jobs of `_required.yml` (`lint` AND `pixi-check`), plus a look-alike `security-dependency-scan` with a DIFFERENT defect. A first plan that grepped the INCIDENTAL token `pixi install --locked` (which the issue never named) matched only `pixi-check`, silently dropped `lint`, and earned a NOGO. Use when: (1) planning any issue whose description asserts current code structure/config, (2) the issue is a follow-up to a prior issue, (3) CI/workflow issues where similar steps appear in multiple workflow files OR multiple jobs, (4) the premise tokens may have already been fixed, (5) the issue fixes a recurring code pattern likely present in more than one place — especially after a single-site plan or when a sibling/look-alike site exists."
+description: "An issue body that asserts 'the current code does X' is a CLAIM, not ground truth — before writing a plan, grep the repo for the distinctive tokens in the issue's premise and confirm WHICH file/job actually matches, and ENUMERATE EVERY site that matches before scoping. Issues drift from code; follow-up issues especially describe a since-changed state, and CI/workflow issues are dangerous because the same step pattern appears in several files/jobs. In ProjectAgamemnon #248 the premise token `cache: false` matched TWO in-scope jobs (`lint` and `pixi-check`), while a first plan grepped incidental token `pixi install --locked` and silently dropped one. In ProjectHephaestus #1417 the issue TITLE and BODY pointed at different scopes (shared `@patch` fixtures vs agent timeout centralization), so the plan had to make scope confirmation a hard gate and flag unverified timeout/refactor assumptions. Use when: (1) planning any issue whose description asserts current code structure/config, (2) issue title/body/metadata disagree about scope, (3) the issue is a follow-up to a prior issue, (4) CI/workflow issues have similar steps in several files/jobs, (5) premise tokens may already be fixed, (6) the issue fixes a recurring code pattern likely present in more than one place."
 category: documentation
-date: 2026-06-19
-version: "1.1.0"
+date: 2026-06-26
+version: "1.2.0"
 history: verify-issue-premise-against-code-before-planning.history
 user-invocable: false
 verification: unverified
@@ -25,6 +25,10 @@ tags:
   - under-scoping
   - self-fulfilling-narrowing
   - multi-site
+  - issue-title-body-conflict
+  - scope-gate
+  - timeout-centralization
+  - reviewer-risk
 ---
 
 # Verify the Issue Premise Against the Code Before Planning
@@ -33,10 +37,10 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-19 |
+| **Date** | 2026-06-26 |
 | **Objective** | Capture a durable planning-discipline lesson: an issue's description of "what the current code does" is a CLAIM to verify against the actual files, not ground truth to plan on — grep the distinctive premise tokens to confirm WHICH file/job actually matches, AND enumerate EVERY site that matches the premise before scoping, ratifying in-scope and excluded sites explicitly |
-| **Outcome** | Plan written for ProjectAgamemnon #248 ("Add pixi.lock restore-only cache fallback on miss"). **(v1.0.0)** The premise implied `python-client.yml`, but those jobs use the full `actions/cache@v4` (auto-saves) — grepping the premise tokens disambiguated `_required.yml`. **(v1.1.0)** The FIRST revision of that plan fixed only ONE job (`pixi-check`) and got a NOGO: grepping the incidental token `pixi install --locked` (which the issue never named) silently dropped a SECOND matching job, `lint`. Grepping the issue's OWN premise token `cache: false` enumerated BOTH `lint` + `pixi-check` as in-scope and surfaced a look-alike `security-dependency-scan` (different defect) to ratify as out-of-scope |
-| **Verification** | unverified — PLANNING session only; neither the disambiguation plan nor the enumerate-and-ratify revision was implemented or run through CI, and the proposed `actions/cache/restore@v5` + `actions/cache/save@v5` split was not executed end-to-end |
+| **Outcome** | Plan written for ProjectAgamemnon #248 ("Add pixi.lock restore-only cache fallback on miss"). **(v1.0.0)** The premise implied `python-client.yml`, but those jobs use the full `actions/cache@v4` (auto-saves) — grepping the premise tokens disambiguated `_required.yml`. **(v1.1.0)** The FIRST revision of that plan fixed only ONE job (`pixi-check`) and got a NOGO: grepping the incidental token `pixi install --locked` (which the issue never named) silently dropped a SECOND matching job, `lint`. **(v1.2.0)** ProjectHephaestus #1417 added the issue-metadata conflict case: title evidence pointed at shared `@patch` fixtures while the body pointed at timeout centralization, so the plan must stop at a scope-confirmation gate and list every unverified timeout/refactor assumption for reviewer ratification. |
+| **Verification** | unverified — PLANNING sessions only; the plans were not implemented or run through CI. Premise-grep and local file observations in the source sessions may be useful evidence, but this skill records planning discipline and reviewer-risk framing, not an executed implementation workflow. |
 
 This is a planning-DISCIPLINE learning, distinct from the cache-mechanics skill
 `pixi-cache-true-unreliable`. The lesson is not "how cache syntax works" — it is "do not
@@ -49,6 +53,11 @@ premise matches — fix every in-scope one and ratify every excluded look-alike.
 failure modes are different: wrong-file (disambiguate) vs under-scoping / silently-dropped
 sibling (enumerate-and-ratify). Both share one root: grep the issue's OWN premise token, not
 an incidental token from your first-found site.
+
+**v1.2.0 adds the metadata-conflict case.** When the issue title, body, comments, or labels imply
+different work, do not "pick the better story" and start editing. Treat the disagreement itself as
+the first acceptance criterion: identify both candidate scopes, gather lightweight code evidence for
+each, and make human/reviewer confirmation a hard gate before implementation.
 
 > **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until
 > CI confirms.
@@ -71,6 +80,10 @@ an incidental token from your first-found site.
   more than ONE place. Especially after you have already written a SINGLE-site plan, and
   especially when a sibling or look-alike site exists in the same file/dir. The choice of which
   sites to fix is a scope DECISION the reviewer must ratify; enumerate them all first.
+- **(v1.2.0)** The issue title, body, comments, or labels disagree about the intended target. Example:
+  the title says "extract shared `@patch` fixtures" while the body says "centralize timeout
+  defaults." Both scopes may still have real code evidence; implementation must wait for an explicit
+  scope decision.
 
 ## Verified Workflow
 
@@ -121,6 +134,14 @@ grep -rn 'cache: false' .github/workflows/_required.yml   # the issue's premise 
 #      lint  uses cache key `pixi-lint-*` and path clients/python/.pixi
 #      pixi-check uses cache key `pixi-*` and a different path
 #    A uniform save would write under a key the restore never looks up -> silent cache miss.
+
+# 6. (v1.2.0) If title/body/metadata disagree, make the conflict a hard gate.
+gh issue view 1417 --repo HomericIntelligence/ProjectHephaestus --json title,body,labels,comments
+rg -n '@patch\\(\"hephaestus\\.automation\\.git_utils\\.(run|get_repo_root)\"' \
+  tests/unit/automation/test_git_utils.py
+rg -n 'timeout=(300|600|60|30|120|1800)|HEPH_.*TIMEOUT|_TIMEOUT' hephaestus/ tests/
+# In the plan, state BOTH candidate scopes, the evidence for each, and the exact question that must
+# be answered before editing. Do not let body detail silently override a still-valid title target.
 ```
 
 ### Detailed Steps
@@ -183,6 +204,16 @@ grep -rn 'cache: false' .github/workflows/_required.yml   # the issue's premise 
    cache miss. Inspect each in-scope site's specifics and fit the fix to each, rather than
    templating one site's parameters across all.
 
+10. **(v1.2.0) Treat issue metadata conflict as a stop-the-line scope gate.** If the title/body
+    point at different tasks, verify that each task still plausibly exists and write the plan around
+    the unresolved conflict. For #1417, the title-side evidence was repeated
+    `@patch("hephaestus.automation.git_utils.run")` / `get_repo_root` decorators in
+    `tests/unit/automation/test_git_utils.py`; the body-side evidence was scattered agent subprocess
+    timeout literals and environment-variable wrappers. The plan should not begin implementation
+    until the owner/reviewer confirms which target is intended. Also list unverified external
+    dependencies separately: issue metadata not re-fetched live, file line numbers as snapshots,
+    env-var aliases not reverified, and any call-site semantics inferred rather than tested.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -192,6 +223,7 @@ grep -rn 'cache: false' .github/workflows/_required.yml   # the issue's premise 
 | **(v1.1.0)** Scoped the fix by grepping `pixi install --locked` | Assumed that token defined the issue's target job | It's incidental to ONE job; the issue's real premise token is `cache: false`, which also matched the `lint` job — silently dropped → NOGO | Grep the issue's OWN premise token, not a distinctive token from your first-found site |
 | **(v1.1.0)** Fixed only the first matching job and didn't mention the others | Treated single-site as obviously-complete | Reviewer reads a dropped matching sibling as an oversight; ambiguous scope must be surfaced, not silently resolved | Enumerate all sites; ratify which are in/out of scope with reasons |
 | **(v1.1.0)** Considered treating all pixi-cache jobs uniformly | Would have copied one job's cache key to all | `lint` and `pixi-check` use DIFFERENT keys (`pixi-lint-*` vs `pixi-*`) and paths; a uniform save would write under a key the restore never looks up | Check per-site divergence before applying a templated fix |
+| **(v1.2.0)** Let a detailed issue body override a contradictory title | Planned timeout centralization while the title still pointed at shared `@patch` fixtures | Both targets had plausible local code evidence, and issue metadata was not re-fetched live; starting edits would risk implementing the wrong issue | Make title/body/comment/label conflict an explicit scope gate and ask the reviewer to ratify the intended target before implementation |
 
 ## Results & Parameters
 
@@ -243,6 +275,25 @@ jobs (`lint`, `pixi-check`) plus one ratified exclusion. The residual uncertaint
   follow-up (different defect: built-in setup-pixi caching active, no `cache:` key). Confirm that
   deferral is intended for #248.
 
+### (v1.2.0) Metadata-conflict residuals from the ProjectHephaestus #1417 plan
+
+For issue #1417, the plan assumed timeout centralization was the desired scope because the body was
+specific, but the title still named a different test-refactor target. Reviewer focus:
+
+- **SCOPE GATE:** Confirm whether #1417 is about timeout centralization or extracting shared
+  `@patch` fixtures in `tests/unit/automation/test_git_utils.py`. Do not start implementation until
+  this is answered.
+- **UNVERIFIED:** The issue title/body/comments were not re-fetched live during the planning turn;
+  treat the issue metadata snapshot as stale until `gh issue view 1417` confirms it.
+- **ASSUMPTION:** Cited file line numbers and repeated decorator ranges are planning snapshots; re-run
+  `rg` before editing.
+- **UNVERIFIED:** Existing `HEPH_<PHASE>_AGENT_TIMEOUT` aliases and wrapper defaults must be checked
+  against current code/tests before preserving or changing compatibility behavior.
+- **REVIEW RISK:** Timeout call sites span layers. `hephaestus.agents` must not import
+  `hephaestus.automation`; env reads must remain call-time for `monkeypatch.setenv`; and replacing
+  literal domains (`60s` diff, `600s` pre-PR gate) with shared accessors may change semantics even if
+  tests still pass.
+
 ### Related skills
 
 - `pixi-cache-true-unreliable` — the cache-MECHANICS skill (when `cache: true` / built-in save is
@@ -253,9 +304,12 @@ jobs (`lint`, `pixi-check`) plus one ratified exclusion. The residual uncertaint
 - `planning-verify-issue-premise-before-implementing` — verify an issue-named ARTIFACT exists
   (repo-wide, across branches) before concluding it was never built. THIS skill instead
   disambiguates WHICH same-repo file/job a premise's tokens actually match.
+- `dry-refactoring-plan-assumption-audit` — complementary checklist for refactor plans whose
+  behavior-preserving claims depend on wrappers, aliases, import direction, or test delegation.
 
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectAgamemnon | Issue #248 ("Add pixi.lock restore-only cache fallback on miss") — a follow-up from #62 | unverified — planning session only. The premise implied `python-client.yml`, but grepping `cache: false` + `pixi install --locked` resolved the described scenario to `_required.yml` job `pixi-check`. Plan proposes splitting that job's single restore-only `actions/cache@v5` into `actions/cache/restore@v5` + a guarded `actions/cache/save@v5` after `pixi install --locked`. Not implemented or CI-run. |
+| ProjectHephaestus | Issue #1417 planning (title/body conflict: shared `@patch` fixtures vs agent timeout centralization) | unverified — planning session only. The durable lesson is to make scope confirmation the first gate, then list unverified issue metadata, line-number, env-alias, dependency-direction, and timeout-domain assumptions for reviewer ratification. |
