@@ -1,9 +1,9 @@
 ---
 name: audit-remediation-verify-evidence-before-planning
-description: "Before planning a fix for an audit/remediation issue, verify the audit's cited evidence (file:line) against the live tree — audit findings go stale once the target is independently remediated, and an audit that names SEVERAL targets can have a SUBSET already fixed. Re-read EVERY cited file:line before planning, fix ONLY the issue-named targets (a repo-wide survey will surface more non-compliant siblings — note them out-of-scope, do not expand the PR), and do not invent a unit test for a doc/UX field that has no test contract. Use when: (1) planning a fix for an audit-filed issue with file:line evidence, (2) the issue spans multiple repos or submodules, (3) the issue recommends doc/field-name/frontmatter changes that may already be done, (4) the audit names multiple targets and any subset may already be remediated."
+description: "Before planning a fix for an audit/remediation issue, verify the audit's cited evidence (file:line) against the live tree — audit findings go stale once the target is independently remediated, and an audit that names SEVERAL targets can have a SUBSET already fixed. Re-read EVERY cited file:line before planning, fix ONLY the issue-named targets (a repo-wide survey will surface more non-compliant siblings — note them out-of-scope, do not expand the PR), do not invent a unit test for a doc/UX field that has no test contract, and close already-remediated security/documentation policy issues only after rechecking the actual implementation branch. Use when: (1) planning a fix for an audit-filed issue with file:line evidence, (2) the issue spans multiple repos or submodules, (3) the issue recommends doc/field-name/frontmatter/security-policy changes that may already be done, (4) the audit names multiple targets and any subset may already be remediated, (5) the intended outcome may be a no-op issue close rather than a policy rewrite."
 category: architecture
-date: 2026-06-21
-version: "1.2.0"
+date: 2026-06-26
+version: "1.3.0"
 user-invocable: false
 verification: verified-local
 history: audit-remediation-verify-evidence-before-planning.history
@@ -28,6 +28,8 @@ tags: []
 > **v1.1.0 note:** The canonical mapping (`subject`/`assign_to`/`blocked_by` model fields serialized as `subject`/`assigneeAgentId`/`blockedBy`) was verified this session by reading BOTH `models.py` AND `agamemnon_client.py` against the live tree. The corresponding architecture.md table edit itself was **planned only**, not executed or CI-validated.
 >
 > **v1.2.0 note (single-repo, multi-target frontmatter case):** Planning ProjectHephaestus issue #1553 ("Skills missing `argument-hint` frontmatter field"), which named TWO targets — `skills/brainstorm/SKILL.md` and `skills/python-repo-modernization/SKILL.md`. Reading `skills/brainstorm/SKILL.md:1-6` showed `argument-hint: <idea or feature description>` **already present at line 4** — the audit snapshot (2026-06-16) was stale for that target; only `python-repo-modernization` genuinely lacked the field. Re-reading every cited file:line before planning (not trusting the issue text) is what `verified-local` attests to here; the PR/CI for #1553 had **not landed at capture time** — state honestly, this is `verified-local`, not `verified-ci`. A repo-wide `awk` survey over all `skills/*/SKILL.md` both confirmed `brainstorm` was already compliant AND surfaced ~10 OTHER skills missing the field — deliberately EXCLUDED to respect one-issue-per-PR scope. The field is unenforced: `grep -rl "argument-hint" tests/` returned nothing and `ls tests/unit/ | grep -i skill` was empty, so verification is a YAML-frontmatter parse (`yaml.safe_load_all`), NOT a unit test — do not invent a test where no contract exists.
+>
+> **v1.3.0 note (already-remediated security policy case):** Planning ProjectHephaestus issue #1421 concluded the issue should be verified and closed as already remediated because the live tree reportedly had a root `SECURITY.md` with supported versions, private vulnerability reporting, a response timeline, and security scope. This capture records the planning/review lesson, not a fresh re-run of that ProjectHephaestus evidence. Treat the issue body, audit output, prior plan text, claimed line ranges, exact-reference search results, and branch state as assumptions until the implementer re-runs them on the actual implementation branch. The highest-risk mistake is rewriting or recreating a security policy that already exists on the branch under implementation.
 
 ## When to Use
 
@@ -38,6 +40,8 @@ tags: []
 - Authoring a doc/table that CLAIMS canonical names or values — every cell must be code-traceable.
 - The audit names MULTIPLE targets (e.g. "these 2 skills are missing field Z"). Any subset may already be remediated — verify EACH named target independently; never plan for all of them on the strength of the issue title.
 - The recommendation is a config/frontmatter/UX field change (e.g. a Claude Code plugin `argument-hint`) that may be unenforced — confirm whether a test/validator contract exists before scoping any verification step.
+- The issue is a stale documentation or security-policy audit where the correct implementation may be to verify the branch and close the issue with evidence, not to rewrite the policy file.
+- A reviewer is checking a no-op remediation plan and needs to challenge whether the planner re-ran the line-range, path, reference-search, guard-coverage, and branch-state claims.
 
 **Related:** `agent-config-validation-and-integrity` covers HOW to validate YAML frontmatter structurally (`yaml.safe_load_all`, required fields). This skill is distinct: it is about VERIFYING AUDIT FINDINGS before planning — re-reading every cited target on disk, detecting stale/partially-fixed multi-target audits, and resisting scope creep. Reach for that skill once you know what to validate; reach for this one to decide whether the audit's claim is even still true.
 
@@ -56,6 +60,9 @@ The evidence-verification phase (steps 1-3) was actually executed against the li
 9. **Run a repo-wide survey to learn the convention AND the true scope — then fix ONLY the issue-named targets.** A one-liner (`awk`/`grep` over the whole population) both confirms which named targets are genuinely non-compliant and reveals the convention to follow (field position, quoting). It will usually surface MORE non-compliant siblings than the issue named. Resist fixing them: note them explicitly as out-of-scope (they belong to the broader audit bundle), keep the PR to one issue's targets.
 10. **Don't invent a test where no contract exists.** For a pure doc/UX/frontmatter field, check whether any test or validator actually asserts it (`grep -rl "<field>" tests/`, `ls tests/unit/ | grep -i <area>`). If nothing does, the verification is a structural parse (`yaml.safe_load_all` over the frontmatter), not a new unit test. Adding a bespoke test for an unenforced field is scope creep and a false-rigor signal.
 11. **Derive the field VALUE from the artifact's actual behavior, and place it per the dominant convention.** For `argument-hint`, read what the skill operates on (it modernizes a target repo -> `<path to Python repo to modernize>`) rather than copying a generic placeholder, and position it where sibling skills put it (immediately after `description`) confirmed by reading siblings, not by guessing.
+12. **For security-policy no-op remediation, verify the actual implementation branch before closing.** Do not rely on the audited live tree, a prior plan, or remembered line numbers. Check the branch you will PR/close from for the root policy file, required policy elements, absence of stale references, and existing drift guards. If the implementation branch differs from the verified live tree, reconcile that branch first; otherwise close with evidence and no policy rewrite.
+13. **Review existing drift guards before adding new ones.** Confirm the repo already has checks for the exact drift class (for example, supported-version consistency, no hardcoded policy dates, pre-commit wiring, and unit tests for those scripts). If the guards exist and cover the claim, do not add duplicate scripts; if they do not, scope a guard in the repo's established pattern.
+14. **Reviewer checklist for already-remediated audit plans:** require the actual commands or file reads used to prove the policy exists; challenge un-rerun line ranges; reject unnecessary docs churn; verify no unrelated docs references need editing; and confirm tests/guards cover the claimed drift instead of merely existing nearby.
 
 ### Quick Reference
 
@@ -84,6 +91,17 @@ for f in skills/*/SKILL.md; do printf '%s: ' "$f"; awk -F': ' '/^argument-hint:/
 grep -rl "argument-hint" tests/ ; ls tests/unit/ | grep -i skill
 # 9. Verification IS a frontmatter parse, not a unit test
 python3 -c "import yaml,sys; list(yaml.safe_load_all(open(sys.argv[1]).read().split('---')[1]))" skills/python-repo-modernization/SKILL.md
+
+# --- security/documentation policy audit that may already be remediated ---
+# 10. Verify the root policy file on the ACTUAL branch under implementation
+test -f SECURITY.md && nl -ba SECURITY.md | sed -n '1,80p'
+# Example required elements: supported versions, private reporting path, response timeline, scope.
+grep -nEi 'supported versions|report|vulnerabil|timeline|scope|private' SECURITY.md
+# 11. Re-run exact-reference searches instead of trusting prior plan text
+rg -n 'SECURITY\.md|security policy|vulnerability|supported versions' CLAUDE.md docs .github README.md 2>/dev/null || true
+# 12. Confirm existing guard coverage before proposing another guard
+ls scripts/check_security_* tests/unit/scripts 2>/dev/null
+rg -n 'check_security_version_consistency|check_security_policy_no_hardcoded_date|security' .pre-commit-config.yaml pyproject.toml .github/workflows 2>/dev/null || true
 ```
 
 ## Failed Attempts
@@ -100,6 +118,10 @@ python3 -c "import yaml,sys; list(yaml.safe_load_all(open(sys.argv[1]).read().sp
 | Expanding the fix to all skills missing the field | A repo-wide `awk` survey surfaced ~10 OTHER skills also missing `argument-hint`; tempting to fix them all in one PR | Scope creep — violates one-issue-per-PR; those skills belong to the broader audit bundle, not #1553 | Fix ONLY the issue-named targets; note the additional non-compliant siblings as explicitly out-of-scope |
 | Inventing a unit test for the frontmatter field | Considered adding a `tests/unit/` test asserting `argument-hint` is present | No test contract exists: `grep -rl "argument-hint" tests/` is empty and there are no skill tests under `tests/unit/`; the field is unenforced | Verification is a YAML-frontmatter parse (`yaml.safe_load_all`), not a unit test — don't add false-rigor tests for an unenforced doc/UX field |
 | Copying a generic placeholder for the field VALUE | Almost used a vague `<argument>` hint | The value must describe what the artifact actually operates on, positioned per the dominant convention | Derive the value from behavior (`<path to Python repo to modernize>`), place it after `description` as confirmed by reading sibling skills |
+| Treating the audited live tree as the implementation branch | Plan concluded root `SECURITY.md` already satisfied the issue but did not require rechecking the branch that would close it | A branch can differ from the audited live tree; stale branch state is the highest-risk assumption in no-op remediation | Re-confirm the policy file and required elements on the actual branch before closing or opening a no-op PR |
+| Rewriting an already-compliant security policy | Planned to recreate or normalize `SECURITY.md` content because an audit issue existed | Churn risks weakening precise reporting/timeline/scope language and distracts reviewers from the real question: is the issue already satisfied? | If the branch already has the required policy elements, preserve the file and close with evidence |
+| Trusting exact line ranges from a prior plan | Claimed supported versions/reporting/timeline/scope line ranges without re-running `nl -ba SECURITY.md` | Line ranges drift after edits and are not evidence unless generated from the current checkout | Regenerate line-number evidence immediately before using it in a plan, review, PR, or close comment |
+| Assuming "guards exist" means "this drift is covered" | Pointed to security scripts, pre-commit wiring, tests, Bandit config, lint tasks, and security workflow as generic reassurance | Some tooling is adjacent security context, not a guard for the policy requirement being audited | Map each guard to the exact drift claim it prevents; separate policy-drift checks from general security scanning |
 
 ## Results & Parameters
 
@@ -119,3 +141,9 @@ python3 -c "import yaml,sys; list(yaml.safe_load_all(open(sys.argv[1]).read().sp
   - Enforcement: NONE. `grep -rl "argument-hint" tests/` -> no matches; no skill tests under `tests/unit/`. Verification = structural YAML-frontmatter parse (`yaml.safe_load_all`), not a unit test. `argument-hint` is optional/advisory in the Claude Code plugin format (inferred from the absence of any validator, not confirmed against upstream plugin-spec docs).
   - Out-of-scope (deliberately NOT fixed in #1553): ~10 other `skills/*/SKILL.md` also missing `argument-hint`, surfaced by the survey — they belong to the broader audit bundle (split from #1518), one issue per PR.
   - Provenance taken at face value (low risk): the audit timestamp (2026-06-16) and the split-from-#1518 origin.
+- **Security policy already-remediated planning pattern (v1.3.0 case):**
+  - Objective: verify and close a stale security-policy audit issue as already remediated when the implementation branch's root `SECURITY.md` already contains all required policy elements.
+  - Required branch-local evidence to regenerate: supported versions table, private vulnerability reporting instructions, response timeline, and policy scope. In the captured ProjectHephaestus plan, these were cited as `SECURITY.md` lines 3-12, 14-24, 25-26, and 28-43 respectively; those line ranges are examples to re-run, not durable facts.
+  - Reference-search evidence to regenerate: exact searches for stale `SECURITY.md` or security-policy references in `CLAUDE.md`, docs, workflow docs, and other repo surfaces. A prior plan said no `CLAUDE.md` or docs references existed; reviewers should require the command output from the current checkout.
+  - Existing guard context to inspect before adding anything: `scripts/check_security_version_consistency.py`, `scripts/check_security_policy_no_hardcoded_date.py`, pre-commit wiring, and tests under `tests/unit/scripts`. General security context such as Bandit configuration in `pyproject.toml`, pixi lint tasks, and `.github/workflows/security.yml` should be reported separately from policy-drift guards.
+  - Correct no-op outcome: if the actual branch matches the verified live tree, do not recreate, rewrite, or restyle `SECURITY.md`; close the issue with regenerated evidence. If the branch differs, reconcile only the missing requirement and keep existing wording where it already satisfies the audit.
