@@ -1,3 +1,25 @@
+## v2.2.0 (2026-06-26)
+
+**Changed by:** Planning-learning capture for a wrapper-removal / canonical-helper refactor plan.
+**Verification:** unverified
+
+### What changed
+- Added reviewer-risk checks for deleting thin instance-method wrappers around a canonical helper.
+- Added module-qualified import guidance so tests patch the same canonical module seam that production uses.
+- Added guidance to classify wrapper-patching tests into real discovery coverage versus stale no-op mocks.
+- Added checklist items for preserving wrapper-specific kwargs/callbacks and revalidating stale grep/line evidence.
+
+### Why
+The plan being captured was planning-only: no implementation, tests, lint, or CI had run. Its riskiest assumptions
+were not the idea of using a canonical helper, but whether the runtime lookup seam matched the patched test seam,
+whether all wrapper-specific behavior was carried forward, and whether stale line/grep evidence had drifted.
+
+### Previous version (v2.1.0) snapshot
+The v2.1.0 skill content is preserved in git history for this branch and the existing snapshot below records the
+prior v2.0.0-era body. The v2.2.0 amendment is intentionally narrow and additive.
+
+---
+
 ---
 name: dry-refactoring-plan-assumption-audit
 description: "Checklist of hidden assumptions that bite DRY module-consolidation plans before implementation starts. Use when: (1) planning to merge two modules into one canonical, (2) replacing a module with a delegation shim that re-exports from the canonical, (3) porting tests from one file to another, (4) extending a main() function with new sub-checks, (5) consolidating two functions with the same name but different signatures."
