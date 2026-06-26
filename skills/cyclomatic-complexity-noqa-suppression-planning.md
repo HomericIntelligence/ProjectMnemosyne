@@ -1,9 +1,9 @@
 ---
 name: cyclomatic-complexity-noqa-suppression-planning
-description: "Planning patterns for auditing and addressing accumulated # noqa: C901 suppressions in a Python codebase. Use when: (1) an issue asks you to reduce or document C901 suppressions across multiple files, (2) deciding between raising max-complexity threshold vs. refactoring vs. adding rationale text to surviving suppressions, (3) the suppression count in an issue differs from what a codebase grep finds (count discrepancy risk), (4) planning a threshold change in pyproject.toml and needing to verify the impact before committing."
+description: "Planning patterns for auditing and addressing accumulated # noqa: C901 suppressions in a Python codebase. Use when: (1) an issue asks you to reduce or document C901 suppressions across multiple files, (2) deciding between raising max-complexity threshold vs. refactoring vs. adding rationale text to surviving suppressions, (3) the suppression count in an issue differs from what a codebase grep finds (count discrepancy risk), (4) planning a threshold change in pyproject.toml and needing to verify the impact before committing, (5) removing specific CLI entrypoint suppressions by extract-method refactoring while preserving argparse shape, JSON envelopes, and dry-run semantics."
 category: ci-cd
-date: 2026-06-13
-version: "1.2.0"
+date: 2026-06-26
+version: "1.3.0"
 user-invocable: false
 verification: verified-ci
 history: cyclomatic-complexity-noqa-suppression-planning.history
@@ -20,6 +20,10 @@ tags:
   - threshold
   - RUF100
   - unused-noqa
+  - cli-entrypoint
+  - extract-method
+  - dry-run
+  - json-output
 ---
 
 # Cyclomatic Complexity noqa Suppression Planning
@@ -34,7 +38,7 @@ tags:
 | **Verification** | verified-ci |
 | **Source Issue** | ProjectHephaestus #1195 |
 | **Related PR** | ProjectHephaestus #1285 |
-| **History** | v1.0.0: initial planning patterns (3 failed attempts). v1.1.0: added measure-first requirement, RUF100 interaction, fragile grep hazard; updated Quick Reference with correct command sequence; added measured CC table. v1.2.0: promoted to verified-ci, added function-level CC table, added `noqa-on-def-line` rule. |
+| **History** | [changelog](./cyclomatic-complexity-noqa-suppression-planning.history). v1.3.0 adds unverified #1405 entrypoint-refactor planning risks. |
 
 ## When to Use
 
@@ -43,6 +47,8 @@ tags:
 - You are deciding between three strategies: (A) raise `max-complexity` threshold, (B) add rationale text to surviving suppressions without changing code, (C) refactor to remove suppressions.
 - You are about to change `max-complexity` in `pyproject.toml` and need to predict the impact.
 - You need to verify a grep pattern used as a CI verification criterion actually matches the suppression format in your codebase.
+- You are planning to remove one or two remaining C901 entrypoint suppressions by extracting workflow helpers while keeping the public CLI unchanged.
+- The issue text describes subcommands or dispatch machinery, but the live CLI may just be a single argparse flow; verify before designing a command-dispatch refactor.
 
 ## Verified Workflow
 
@@ -208,6 +214,9 @@ Standard rationale categories used in this codebase:
 | Trusting the issue's suppression count | The issue title said "15 C901 suppressions" but a grep found only 13 | Two suppressions were unaccounted for — possibly removed by a prior PR, or in a location not searched | Grep the actual codebase first; when the count differs, check `git log -S "noqa: C901"` to find recent removals before writing the plan |
 | Relying on a stale file reference in the issue | Issue cited `hephaestus/automation/implementer_phase_runner.py:255` as a suppression location | Grep found no suppression at that location — the file may have been refactored | Cross-reference every file:line citation in an issue against the actual codebase before building a plan around it |
 | Placing `# noqa: C901` on the closing `) -> T:` line of a multi-line signature | Added the noqa comment to the closing paren/return-type line: `def _drive_issue(\n    self, n: int\n) -> WorkerResult:  # noqa: C901` | Ruff only honours `# noqa` on the opening `def` line; placing it on any other line in a multi-line signature silently fails — C901 fires anyway | Always place `# noqa: C901` on the `def` keyword line, not on the closing `):` or `-> T:` line of a multi-line function signature |
+| Planning a subcommand dispatcher from stale issue wording | ProjectHephaestus #1405 described "subcommands", but `rg -n "add_subparsers|args\\.command|COMMANDS" hephaestus/github/tidy.py hephaestus/github/pr_merge.py` found no live dispatcher in the affected files | Adding a dispatch table would create a new CLI shape instead of reducing complexity in the current one | Before choosing a dispatch-refactor pattern, grep the live parser shape. If no subcommands exist, extract the current workflow branches into private helpers and keep `main()` as the same public entrypoint. |
+| Treating mocked CLI tests as complete behavior proof | The #1405 plan relied on existing mocked tests for JSON paths, dry-run paths, fallback checks, and merge paths before implementation | Mocks prove the expected call sequence only where assertions exist; they can miss changed JSON field names, changed return codes, or reordered dry-run/push-all behavior | Add focused direct tests for extracted helpers, but keep existing `main()` smoke tests and compare exact JSON payloads, exit codes, and push/merge ordering against the pre-refactor behavior. |
+| Citing live line ranges as stable implementation anchors | The #1405 plan measured `tidy.main` at `529-609` and `pr_merge.main` at `336-434` before implementation | Those ranges are valid evidence for the plan, not stable edit coordinates; line numbers drift as soon as imports or helper functions are inserted | Use measured line ranges to justify scope, then anchor implementation edits by function names and behavior branches, not absolute line numbers. |
 
 ## Results & Parameters
 
@@ -251,3 +260,19 @@ Function-level breakdown (verified against actual `ruff check --select C901 --ig
 
 - **`ruff-specific-rule-fixes`** — covers the *refactoring* approach (extract-method pattern, S101 conversions, linter-as-root-cause). Use that skill when the decision is to fix the violation by reducing CC.
 - **This skill** — covers the *audit-and-document* approach (threshold change + rationale). Use this skill when the decision is to raise the threshold or document surviving suppressions without refactoring.
+
+### Unverified Follow-up: Entry Point Suppression Removal Planning (ProjectHephaestus #1405)
+
+> **Warning:** This follow-up is `unverified`. It records reviewer-risk guidance from a planning session only. The implementation, tests, ruff checks, and CI were not run.
+
+For a plan that removes C901 suppressions from `tidy.main()` and `pr_merge.main()` by extract-method refactoring, the reviewer should focus on these checks:
+
+| Risk | Reviewer check |
+| ---- | -------------- |
+| Stale issue premise | Re-run the parser-shape grep before implementation: no `add_subparsers`, `args.command`, or `COMMANDS` in the affected files means do not invent subcommands. |
+| Behavior drift in JSON output | Compare exact JSON envelopes for no-problem, no-swarm, dry-run, environment failure, PR-list failure, and final success paths. |
+| Dry-run and push-all ordering drift | In `pr_merge`, verify `--push-all`, `--dry-run`, missing head SHA, legacy status fallback, and merge-exception continuation still follow the old branch order. |
+| Mock target drift | Existing tests patch helper names in the old modules; preserve public patch points or update tests only when the production lookup path genuinely changes. |
+| C901 goal not proven | Run both focused pytest files and `pixi run ruff check --select C901 hephaestus/github/tidy.py hephaestus/github/pr_merge.py`; helper extraction is not done until the two affected `# noqa: C901` comments are gone. |
+
+The plan's most uncertain assumptions were that the existing mocked tests cover enough CLI behavior to prevent envelope/ordering regressions, and that direct tests for private helpers will add coverage without making future refactors brittle. The plan also relied on live `rg`, AST line measurement, `pyproject.toml`, `.pre-commit-config.yaml`, and test file locations; those were read for planning but the proposed verification commands were not executed.
