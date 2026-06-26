@@ -1,13 +1,13 @@
 ---
 name: automation-529-overload-not-retried-classifier-gap
-description: "Use when: (1) an agent/API call hits 529 Overloaded or 5xx and is treated as fatal despite max_retries being set; (2) a retry loop only fires on quota/429-with-reset-epoch and ignores server-overload; (3) auditing whether retryability covers ALL transient failure families; (4) a subprocess hard-codes a timeout that bypasses a centralized timeout module; (5) a reviewer/agent path records a synthetic ERROR verdict and IMMEDIATELY retries against an exhausted 429 session-limit quota instead of waiting until reset; (6) a transient-failure (429/529/timeout) handler exists in ONE agent-call path but a SIBLING path that calls the same invoker lacks it — audit every sibling path that calls the same invoker; (7) a CLI exits 0 but returns an `is_error:true` JSON envelope carrying api_error_status 429 that a caller silently treats as a real result."
+description: "Use when: (1) an agent/API call hits 529 Overloaded or 5xx and is treated as fatal despite max_retries being set; (2) a retry loop only fires on quota/429-with-reset-epoch and ignores server-overload; (3) auditing whether retryability covers ALL transient failure families; (4) a subprocess hard-codes a timeout that bypasses a centralized timeout module; (5) a reviewer/agent path records a synthetic ERROR verdict and IMMEDIATELY retries against an exhausted 429 session-limit quota instead of waiting until reset; (6) a transient-failure (429/529/timeout) handler exists in ONE agent-call path but a SIBLING path that calls the same invoker lacks it — audit every sibling path that calls the same invoker; (7) a CLI exits 0 but returns an `is_error:true` JSON envelope carrying api_error_status 429 that a caller silently treats as a real result; (8) reviewing a plan that centralizes cross-agent timeout defaults while issue title/body metadata conflicts or was not re-fetched live."
 category: debugging
-date: 2026-06-19
-version: "1.1.0"
+date: 2026-06-26
+version: "1.2.0"
 user-invocable: false
 verification: verified-ci
 history: automation-529-overload-not-retried-classifier-gap.history
-tags: []
+tags: [automation, timeout, transient-failure, retry, planning, reviewer-risks, issue-metadata, scope-mismatch, projecthephaestus]
 ---
 
 # Automation 529 Overload Not Retried — Classifier Gap
@@ -16,10 +16,10 @@ tags: []
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-19 |
+| **Date** | 2026-06-26 |
 | **Objective** | Identify and fix why transient-failure handling (429 session-limit / 529 Overloaded) is wired into one agent-call code path but absent from a sibling path that calls the same Claude invoker, so the gap recurs per-path |
-| **Outcome** | Root cause found and fixed in two instances: (1) 529 single-classifier gap in the planner (PR #1375); (2) 429 session-limit gap in the in-loop PR-review path (PRs #1531/#1537) — the detect-quota-then-`wait_until` pattern present in the implement phase was missing from the review phase, so an exhausted quota fired ~39 doomed reviewer sessions in one hour. Fix: shared `_handle_reviewer_quota_or_overload` helper + opt-in `raise_for_error_envelope` for the exit-0 is_error envelope |
-| **Verification** | verified-ci AND verified end-to-end against a live automation-loop run |
+| **Outcome** | Root cause found and fixed in two instances: (1) 529 single-classifier gap in the planner (PR #1375); (2) 429 session-limit gap in the in-loop PR-review path (PRs #1531/#1537) — the detect-quota-then-`wait_until` pattern present in the implement phase was missing from the review phase, so an exhausted quota fired ~39 doomed reviewer sessions in one hour. Fix: shared `_handle_reviewer_quota_or_overload` helper + opt-in `raise_for_error_envelope` for the exit-0 is_error envelope. v1.2.0 adds an unverified planning-only reviewer-risk checklist for issue scope conflicts plus cross-agent timeout-default refactors. |
+| **Verification** | verified-ci AND verified end-to-end against a live automation-loop run for the retry/timeout fixes; v1.2.0 planning addendum is unverified |
 
 ## When to Use
 
@@ -30,6 +30,9 @@ tags: []
 - **A reviewer/agent path records a synthetic ERROR verdict (e.g. `Verdict=ERROR Grade=F`) and IMMEDIATELY re-reviews against an exhausted 429 session-limit quota** instead of detecting the reset epoch and waiting (`wait_until`) — this burns dozens of doomed sessions per hour against a quota that does not reset until a fixed time (e.g. "resets 5pm")
 - **A sibling code path that calls the same Claude invoker lacks the quota/overload handling its peer has** — when you find a transient-failure handler in ONE path, audit EVERY sibling catch site that calls the same invoker; the gap recurs per-path
 - **A CLI exits 0 but returns an `is_error:true` JSON envelope** (carrying `api_error_status` 429) that a caller parses as a real result — this is a distinct, easily-missed detection gap from the non-zero-exit / `CalledProcessError` path
+- A planning/review session proposes centralizing timeout defaults across multiple agent providers (for example Claude and Codex) while the issue title/body point at different scopes; stop implementation until the scope conflict is resolved.
+- A timeout refactor would preserve existing environment-variable aliases or wrapper helpers; verify the aliases exist in current code/tests before treating them as compatibility requirements.
+- A reviewer needs a risk checklist for timeout centralization plans: import direction, call-time env reads, wrapper semantics, default arithmetic, and removal of hardcoded literals only at targeted sites.
 
 ## Verified Workflow
 
@@ -111,6 +114,28 @@ def raise_for_error_envelope(stdout: str) -> None:
     raise RuntimeError("Claude CLI returned an is_error envelope")
 ```
 
+### Plan-Only Reviewer Addendum (UNVERIFIED)
+
+> **Warning:** This addendum came from a planning-only session for ProjectHephaestus issue #1417.
+> The GitHub issue metadata was not re-fetched live during that planning turn, no code was
+> implemented, and no tests or CI validated the proposed refactor. Treat it as a reviewer checklist,
+> not as an approved implementation recipe.
+
+```bash
+# If issue title and body disagree, confirm scope before implementation.
+gh issue view 1417 --repo HomericIntelligence/ProjectHephaestus --json title,body,labels,state
+
+# Re-open the current code before preserving aliases/defaults mentioned in a plan.
+rg -n "AGENT_REVIEW_TIMEOUT|agent_git_timeout|HEPH_.*TIMEOUT|timeout=60|timeout=.*\\* 2" \
+  hephaestus tests
+
+# Check provider layering before moving shared timeout helpers.
+rg -n "from hephaestus\\.automation|from hephaestus\\.agents" hephaestus/agents hephaestus/automation
+
+# Env-var timeout helpers must read at call time so monkeypatch.setenv tests work.
+rg -n "os\\.getenv|environ|getenv" hephaestus/automation hephaestus/agents tests
+```
+
 ### Detailed Steps
 
 1. **Identify the single-classifier gate**: locate the retry loop and find the ONLY condition that enables retry. If that condition requires a reset epoch (or any field 529s never carry), the loop is structurally broken for 529s.
@@ -134,6 +159,34 @@ def raise_for_error_envelope(stdout: str) -> None:
 
 9. **Validate**: run `pixi run pytest tests/unit -v` — confirm new unit tests pass and existing retry tests are unaffected. Then re-run the live automation loop end-to-end and confirm zero 429/ERROR/Traceback lines.
 
+10. **For timeout-centralization plans, verify issue scope before editing.** If the issue title and
+    body point at different work items, treat both as untrusted metadata until `gh issue view`
+    confirms current title/body/labels. In the ProjectHephaestus #1417 planning session, the body
+    appeared to support timeout centralization, but title evidence suggested shared `@patch`
+    fixtures in `tests/unit/automation/test_git_utils.py` could still be the intended scope. That
+    conflict is a STOP condition for implementation, not a reviewer footnote.
+
+11. **Verify compatibility aliases and defaults against current code/tests.** A plan may preserve
+    names like `AGENT_REVIEW_TIMEOUT` or wrapper functions because it remembers them from local
+    inspection. Before approving, grep current code and tests to prove those names still exist and
+    are part of the public/tested contract. Do not preserve ghosts.
+
+12. **Keep timeout env reads call-time, not import-time.** Timeout helpers that read env vars during
+    module import break `monkeypatch.setenv` tests and long-running agent processes. Reviewer check:
+    every helper should call `os.getenv`/`os.environ` inside the function that returns the timeout,
+    not bind the env-derived value as a module constant.
+
+13. **Check import direction before sharing timeout helpers across providers.** A provider-neutral
+    `hephaestus.agents` module must not import `hephaestus.automation` just to reuse timeout
+    defaults; that reverses the intended dependency direction. If automation needs provider-neutral
+    helpers, automation imports agents/runtime helpers, not the other way around.
+
+14. **Audit semantics, not just literal removal.** Replacing `timeout=60` with
+    `agent_git_timeout() * 2`, or using `AGENT_REVIEW_TIMEOUT` for pre-PR tests, can silently change
+    timeout domains. Reviewers should verify each hardcoded literal removed was one of the targeted
+    sites, that default arithmetic preserves the old budget where intended, and that a new shared
+    helper does not collapse distinct domains into one misleading name.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -142,6 +195,9 @@ def raise_for_error_envelope(stdout: str) -> None:
 | Hard-coded 600s subprocess timeout | `plan-issues` subprocess used `timeout=600` literal instead of the centralized `planner_claude_timeout()` | The configured budget is 7200s (`HEPH_PLANNER_AGENT_TIMEOUT`); the literal 600s cap silently killed long-running plan runs 12x earlier than intended | Every subprocess timeout must be routed through the centralized timeout helper — never a literal value — to honor the operator-configured budget |
 | Record synthetic ERROR verdict + immediate re-review on quota exhaustion | The in-loop reviewer caught a 429 session-limit, recorded `Verdict=ERROR Grade=F`, and immediately looped back to re-review — with NO `wait_until(reset_epoch)` (the implement phase HAD this; the review phase did not) | The quota does not reset until a fixed time (e.g. "resets 5pm"), so every re-review hit the same exhausted quota — ~39 doomed reviewer sessions fired in one hour | When a sibling path lacks the wait-on-quota handling its peer has, the gap recurs per-path; the handler must `wait_until` the reset BEFORE returning the INFRA_ERROR sentinel, never re-invoke immediately |
 | Centralize the raise inside `invoke_claude_with_session` | Considered raising `ClaudeUsageCapError` centrally inside the shared invoker so every caller would see the typed error | Retry-aware callers (`planner_claude`, `_implement_phase`) inspect `CalledProcessError.stdout` themselves and a central raise would break their existing flows (they never see the `CalledProcessError`) | The error-envelope guard MUST be OPT-IN (`raise_for_error_envelope(stdout)`), called only by callers that want it, so it does not change the invoker's contract for retry-aware callers |
+| Begin a timeout refactor from conflicting issue metadata | Treated the issue body as timeout-centralization scope while the issue title pointed at a different test-fixture refactor | The title/body conflict means the implementer could ship technically correct code for the wrong task | Re-fetch issue metadata live and ask the owner/reviewer to choose scope before implementation; do not let a plan choose body over title by assumption |
+| Preserve timeout aliases from memory | Planned around wrappers or env-var aliases documented as existing without re-grepping current code/tests | The planning turn did not verify current definitions, line numbers, or tests, so aliases could be stale or already removed | Treat line numbers and alias names as unverified until current `rg`/test inspection proves them |
+| Collapse distinct timeout domains into one helper | Proposed sharing defaults across agent review, pre-PR tests, git/diff subprocesses, and provider wrappers | A shared helper can change behavior even when tests still pass: `timeout=60` vs `agent_git_timeout() * 2`, or using review timeout for pre-PR tests, may alter retry and CI expectations | Review semantic equivalence per call site; remove only targeted literals and preserve domain names when budgets differ |
 
 ## Results & Parameters
 
@@ -161,9 +217,22 @@ def raise_for_error_envelope(stdout: str) -> None:
 | Prereq + supporting PRs | #1530 (prereq), #1533, #1535 | All merged green to ProjectHephaestus main |
 | End-to-end re-validation | Issue #1517 → PR #1538 | Re-ran the automation loop: plan phase `Verdict=GO`; implement phase created PR #1538; in-loop review `Verdict=GO`; ZERO 429/ERROR/Traceback lines |
 
+### Plan-only risk checklist for ProjectHephaestus issue #1417-style timeout refactors
+
+| Risk | Reviewer check |
+|------|----------------|
+| Conflicting issue metadata | Re-fetch `title` and `body`; implementation must not start until owner/reviewer confirms whether title or body is authoritative |
+| Stale line numbers / local context | Re-open files at current HEAD before editing; never rely on plan-time line numbers |
+| Wrapper/env alias drift | `rg` every alias and wrapper named by the plan; preserve only names that still exist or are deliberately added with tests |
+| Provider dependency direction | `hephaestus.agents` must stay provider-neutral; avoid importing `hephaestus.automation` from agents/runtime helpers |
+| Call-time env reads | Add/keep `monkeypatch.setenv` coverage proving helper calls read env vars at invocation time |
+| Timeout-domain collapse | Review each replacement of `timeout=60`, `agent_git_timeout() * 2`, or `AGENT_REVIEW_TIMEOUT` for semantic equivalence |
+| Scope creep | Verify hardcoded literals are removed only at the issue-targeted sites, not every timeout-like number in the repo |
+
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | PR #1375 / issue #1374 — automation-loop planner hit 529 on issue #1357 | CI green; `detect_server_overload` unit tests pass; subprocess timeout routed through `planner_claude_timeout()` |
 | ProjectHephaestus | PRs #1531 (issue #1528) + #1537 (issue #1536) — 429 session-limit in the in-loop PR-review sibling path | Shared `_handle_reviewer_quota_or_overload` helper + opt-in `raise_for_error_envelope`; PRs #1530/#1531/#1533/#1535/#1537 merged green; end-to-end re-validated on issue #1517 → PR #1538, Verdict=GO, zero error lines |
+| ProjectHephaestus | Planning-only issue #1417 addendum — conflicting issue metadata plus cross-agent timeout defaults | unverified; issue metadata was not re-fetched live, no implementation or tests ran. Use as reviewer-risk checklist only. |
