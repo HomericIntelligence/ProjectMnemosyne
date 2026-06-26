@@ -1,13 +1,33 @@
+# refactor-extraction-plan-unverified-assumptions — History
+
+## v1.1.0 (2026-06-26)
+
+**Changed by:** ProjectHephaestus IssueImplementer wrapper-to-`__getattr__` delegation planning capture
+**Verification:** unverified
+
+### What changed
+
+- Added the wrapper-to-`__getattr__` dynamic delegation planning-risk checklist.
+- Added Failed Attempts rows for unsafe delegate whitelists, instance-only patch compatibility, implementation-overfitted absence tests, and broad `__getattr__` debugging hazards.
+- Added IssueImplementer-specific unverified assumptions and reviewer focus areas.
+- Bumped version `1.0.0` → `1.1.0` and added `history:` frontmatter.
+
+### Why
+
+The new planning artifact has the same durable risk surface as the original skill: a compatibility-preserving refactor where old private names are expected to keep working after explicit code moves or disappears. The risky mechanism differs (`__getattr__` dynamic delegation instead of `import X as X` re-export), so the skill needed an amendment rather than a separate search surface.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
 ---
 name: refactor-extraction-plan-unverified-assumptions
-description: "The uncertain assumptions and reviewer risks baked into compatibility-preserving refactor plans that replace explicit code with re-export shims or whitelist-based dynamic delegates. Use when: (1) reviewing or authoring a plan that moves a function cluster out of a god-module and re-exports moved names to preserve mock patch paths, (2) replacing explicit compatibility wrappers with `__getattr__` delegation, (3) the plan claims `patch.object(instance, \"_method\")` or `patch(\"...old_module._fn\")` keeps working, (4) the plan cites exact line numbers for a multi-step edit, (5) the plan asserts methods are pure pass-throughs by static reasoning rather than execution."
+description: "The uncertain assumptions and reviewer risks baked into a verbatim-move cluster-extraction PLAN that extracts a group of functions from a large module into a new sibling module with backward-compat `import X as X` re-exports in the parent. Use when: (1) reviewing or authoring a plan that moves a function cluster out of a god-module and re-exports the moved names from the original module to preserve mock patch paths, (2) the plan claims `patch(\"...old_module._fn\")` keeps working after the move, (3) the plan cites exact line numbers for a multi-step sequential edit, (4) the plan depends on a 'frozen' allowlist/magic-number invariant, (5) the plan asserts 'no circular import' or 'unused import removable' by static reasoning rather than execution."
 category: architecture
-date: 2026-06-26
-version: "1.1.0"
-history: refactor-extraction-plan-unverified-assumptions.history
+date: 2026-06-15
+version: "1.0.0"
 user-invocable: false
 verification: unverified
-tags: [refactoring, extraction, cluster-extraction, backward-compat, re-export, dynamic-delegation, __getattr__, mock-patch-path, patch-object, autospec, introspection, type-checking, planning, reviewer-risks, line-number-drift, circular-import, assumptions]
+tags: [refactoring, extraction, cluster-extraction, backward-compat, re-export, mock-patch-path, planning, reviewer-risks, line-number-drift, circular-import, assumptions]
 ---
 
 # Refactor Extraction Plan — Unverified Assumptions & Reviewer Risks
@@ -16,25 +36,22 @@ tags: [refactoring, extraction, cluster-extraction, backward-compat, re-export, 
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-26 |
-| **Objective** | Capture uncertain assumptions in compatibility-preserving refactor plans: cluster extraction with re-exports (issue #1360) and explicit-wrapper deletion in favor of whitelist-based `__getattr__` delegation (IssueImplementer plan / issue #1391 context). |
-| **Outcome** | Plans produced; NOT executed. These are assumptions a reviewer must verify and an implementer must not take on faith. |
+| **Date** | 2026-06-15 |
+| **Objective** | Capture the uncertain assumptions a verbatim-move cluster-extraction PLAN makes — extracting a 12-function repo-management cluster from `hephaestus/automation/loop_runner.py` into a new `loop_repo_manager.py` with backward-compat `import X as X` re-exports (issue #1360) — so a reviewer knows exactly what to check before approving. |
+| **Outcome** | Plan produced; NOT executed. These are the assumptions a reviewer must verify and an implementer must not take on faith. |
 | **Verification** | unverified — planning artifact only; no code was written or run |
-| **History** | [changelog](./refactor-extraction-plan-unverified-assumptions.history) |
+| **History** | v1.0.0: initial capture of 5 uncertain assumptions + reviewer focus checklist from issue #1360 extraction plan. |
 
-> This skill is about the **PLANNING-RISK** angle, not the mechanics of *how* to perform the refactor.
+> This skill is about the **PLANNING-RISK** angle, not the mechanics of *how* to extract a cluster.
 > For the how-to mechanics see `python-module-decomposition-and-refactor-patterns` and
 > `testing-module-patch-target-after-extraction`. For DRY *consolidation* (two modules → one)
-> see `dry-refactoring-plan-assumption-audit`. This skill covers compatibility shims that leave old
-> names working — re-exports and dynamic delegates — and what silently breaks.
+> see `dry-refactoring-plan-assumption-audit`. This skill covers a *single module → two modules*
+> verbatim move with re-exports, and what silently breaks.
 
 ## When to Use
 
 - Reviewing or authoring a plan that extracts a cluster of functions out of a large module into a new sibling module.
 - The plan keeps the original module importable by adding `from .new_module import _fn as _fn` re-exports (backward-compat shim) and claims existing `unittest.mock.patch("...old_module._fn")` calls still work.
-- The plan deletes explicit compatibility wrapper methods and relies on instance-level `__getattr__` to delegate a whitelisted set of names to a collaborator.
-- The plan claims existing `patch.object(instance, "_method")` tests keep working even after `_method` disappears from the class body.
-- The review must check introspection, type checking, IDE discoverability, `autospec`, and class-level patch callers before accepting a dynamic delegation seam.
 - The plan cites exact line numbers (`module.py:566-942`, `pyproject.toml:263`) for a sequence of edits that delete/insert large blocks.
 - The plan depends on a "frozen" list or magic number (e.g. an omit/coverage allowlist "frozen at N modules") that must be bumped in multiple places.
 - The plan asserts "introduces no circular import" or "this import is now unused and can be removed" by static reasoning rather than by actually importing/linting.
@@ -88,41 +105,6 @@ ruff check ${OLD_PATH} --select F401   # then `ruff check --fix` only after the 
 # 6. LINE-NUMBER DRIFT REMINDER — after the FIRST block deletion, every later cited line number is stale.
 #    Re-derive targets by stable marker, not by the plan's pre-edit numbers:
 grep -n "# Repo discovery\|^def _gh_list_repos\|^def _gh_" ${OLD_PATH}
-
-# === Reviewer / implementer pre-flight for wrapper-to-__getattr__ delegation ===
-# Replace these names with the real class and collaborator before running.
-WRAPPER_CLASS="IssueImplementer"
-WRAPPER_PATH="hephaestus/automation/implementer.py"
-DELEGATE_PATH="hephaestus/automation/implementer_phase_runner.py"
-
-# 1. Rebuild the delegate whitelist from source, not from the plan summary.
-grep -n "def _" "${WRAPPER_PATH}" "${DELEGATE_PATH}"
-
-# 2. Find every existing patch site. Instance patching, class patching, and autospec
-#    have different compatibility properties after explicit methods disappear.
-grep -RIn "patch.object(.*_[A-Za-z0-9_]*\|patch(.*IssueImplementer.*_" tests/ hephaestus/
-grep -RIn "autospec\|create_autospec\|spec_set\|IssueImplementer.__dict__\|dir(.*IssueImplementer" tests/ hephaestus/
-
-# 3. Add a small regression test before deletion:
-#    with patch.object(impl, "_delegated_name") as mock_method: impl._delegated_name(...)
-#    This is not verified until the test actually runs.
-
-# 4. Run type/lint/import checks after the dynamic seam exists. Dynamic __getattr__
-#    can satisfy runtime tests while degrading mypy/IDE/introspection behavior.
-python -c "from hephaestus.automation.implementer import IssueImplementer; print(IssueImplementer)"
-```
-
-```python
-# Candidate shape only. Keep this whitelist deliberately small and audited.
-_PHASE_RUNNER_DELEGATES = {
-    "_fetch_plan_and_review",
-    "_run_implementation_loop",
-}
-
-def __getattr__(self, name: str):
-    if name in _PHASE_RUNNER_DELEGATES:
-        return getattr(self.phase_runner, name)
-    raise AttributeError(f"{type(self).__name__!s} object has no attribute {name!r}")
 ```
 
 ### Detailed Steps
@@ -160,36 +142,6 @@ def __getattr__(self, name: str):
    deletion, grep each symbol in the file and let `ruff check --select F401` (then `--fix`) be the source
    of truth instead of eyeballing it.
 
-6. **Rebuild the delegate whitelist from the implementation, not from the plan.**
-   For a wrapper-to-`__getattr__` refactor, the exact whitelist is the load-bearing contract. Start from
-   the current class and collaborator on the branch being edited, not from line numbers or an issue body.
-   Every name must have a reason to be dynamic: pure pass-through compatibility only. If a method owns
-   local state, ordering, validation, logging, return normalization, or branch-specific side effects, keep
-   it explicit.
-
-7. **Prove each "mechanical wrapper" is actually pure pass-through.**
-   A method that looks like `return self.phase_runner._x(...)` may still encode a behavioral seam through
-   argument defaults, state initialization, exception translation, or timing. Compare signatures and bodies
-   before deletion. The plan is not verified until tests exercise both the old call path and the new dynamic
-   path.
-
-8. **Test instance-level `patch.object` compatibility before deleting the explicit methods.**
-   `__getattr__` is only invoked after normal lookup fails. `patch.object(impl, "_method")` may work by
-   resolving the delegated attribute, then assigning a mock onto the instance. That does NOT prove
-   `patch.object(IssueImplementer, "_method")`, `create_autospec(IssueImplementer)`, `spec_set`, or tools
-   that inspect `IssueImplementer.__dict__` still behave. Audit all four surfaces separately.
-
-9. **Keep selected explicit methods explicit for documented reasons.**
-   If `_commit_changes`, `_create_pr`, or similarly stateful methods remain on the wrapper, the plan should
-   say why: state initialization ordering, side effects, auditability, patch target stability, or a class-level
-   API contract. "Left explicit" without the reason hides the most important review decision.
-
-10. **Treat docs, line numbers, and issue state as stale until re-verified.**
-    Specific line numbers in `implementer.py`, `implementer_phase_runner.py`, `_stage_context.py`, and
-    `implementer_state.py`; named tests that patch private methods; mypy behavior for the dynamic seam;
-    validate/lint command availability; and the current state of issue #1391 / repository head are all
-    time-sensitive. Re-read them on the implementation branch.
-
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -199,10 +151,6 @@ def __getattr__(self, name: str):
 | Trust the "frozen at 16 modules" comment | Plan asserted the omit allowlist is frozen at 16 and only the comment + one test need bumping to 17, without running the test or reading its assertion body | The "16" figure and the assertion mechanism (count literal vs set membership) were read, not verified; a hardcoded `len(...) == 16` elsewhere, or a third copy of the count, would be missed and fail CI | When a plan depends on a frozen-list/magic-number invariant, READ the actual assertion body (don't trust the comment) and grep the literal to enumerate EVERY place it appears |
 | Reason about circular imports statically | Plan claimed `loop_repo_manager → ci_driver` adds no cycle because ci_driver references loop_runner only in comments | Static reasoning; ci_driver could import another automation module that transitively imports loop_runner at module load, creating a cycle the comment-scan never sees | The import-graph claim is only proven by the smoke-test step actually executing — label it "verify by execution," not "verified by reading" |
 | Hand-judge conditional unused-import removal | Plan said to drop `urlparse` and `gh_cli_timeout` from loop_runner "only if no other references remain," left to manual judgement | Removing a still-used import breaks the module; leaving a genuinely-unused one fails ruff F401 — both directions of hand-judgement are wrong | Gate each import removal on a per-symbol grep AFTER the deletion and make `ruff check --select F401` / `--fix` the source of truth, not eyeballing |
-| Assume the dynamic delegate whitelist is safe | Plan listed wrapper methods to delete and delegate through `__getattr__` | The list was derived from planning-time reads, not from a current branch audit; one misclassified method can hide state ordering, validation, or side effects behind a dynamic fallback | Rebuild the whitelist from current source and require each name to be justified as pure pass-through |
-| Treat `patch.object(impl, "_method")` as the only compatibility contract | Instance-level patching may still work because `__getattr__` resolves the delegate before patching assigns an instance attribute | Class-level `patch.object(IssueImplementer, "_method")`, autospec/spec_set, `dir()`, `IssueImplementer.__dict__`, and static analyzers can all break even when instance patching passes | Audit instance patch, class patch, autospec/spec_set, introspection, and type-checking separately |
-| Overfit tests to method absence | Added/considered assertions that deleted methods are absent from `IssueImplementer.__dict__` | Such tests pin the implementation technique instead of the compatibility contract, making future explicit wrappers look like regressions | Prefer behavior and compatibility tests: old call path works, unsupported names raise `AttributeError`, patch sites still intercept |
-| Use `__getattr__` without an AttributeError/debugging guard | Dynamic fallback delegates whitelisted names and raises for everything else | A broad or typo-tolerant fallback can mask real initialization bugs and make missing attributes harder to debug | Keep the whitelist tiny, raise normal `AttributeError` for unknown names, and test a misspelled private name |
 
 ## Results & Parameters
 
@@ -215,7 +163,7 @@ def __getattr__(self, name: str):
 
 ### Reviewer focus (the 5 things to check hardest in such a plan)
 
-```text
+```
 ## Cluster-extraction-with-re-export plan review checklist
 
 - [ ] Did the grep for cross-module private-name imports cover the WHOLE repo
@@ -229,22 +177,6 @@ def __getattr__(self, name: str):
 - [ ] Are conditional import removals deferred to ruff (F401), not hand-judged?
 ```
 
-### Dynamic delegate plan review checklist
-
-```text
-## Wrapper-to-__getattr__ delegation review checklist
-
-- [ ] Is the delegate whitelist rebuilt from current source, not copied from stale plan line numbers?
-- [ ] Is every delegated method proven pure pass-through: same call signature, no local state,
-      no validation, no side effects, no logging/exception/return normalization?
-- [ ] Does instance-level `patch.object(impl, "_method")` have a regression test?
-- [ ] Were class-level patch callers, autospec/spec_set users, `dir()`/`__dict__` assertions,
-      and type-checking/IDE discoverability audited separately?
-- [ ] Are `_commit_changes`, `_create_pr`, or other explicit holdouts documented with a real reason?
-- [ ] Does unknown-name lookup raise normal `AttributeError` so `__getattr__` does not mask bugs?
-- [ ] Are docs/comment updates discovered by search rather than assumed complete from the plan?
-```
-
 ### Issue #1360 specific findings
 
 | Assumption in the plan | Status | What a reviewer must do |
@@ -255,21 +187,15 @@ def __getattr__(self, name: str):
 | `loop_repo_manager → ci_driver` adds no cycle | REASONED, NOT RUN | Run `python -c "import ...loop_runner; from ...automation import loop_repo_manager"` |
 | `urlparse` / `gh_cli_timeout` are safely removable | CONDITIONAL | Per-symbol grep after deletion; let `ruff --select F401` decide |
 
-### IssueImplementer wrapper-to-delegate plan findings
-
-| Assumption in the plan | Status | What a reviewer must do |
-|------------------------|--------|-------------------------|
-| Exact `__getattr__` delegate whitelist is safe | UNVERIFIED | Rebuild from current `implementer.py` / phase-runner source and justify every name |
-| All mapped phase-runner methods are pure pass-throughs | UNVERIFIED | Compare signatures and bodies; keep stateful or side-effectful methods explicit |
-| `patch.object(impl, "_method")` works through `__getattr__` | UNVERIFIED | Add an instance-level patch regression test before deleting wrappers |
-| Deleting explicit wrappers will not affect introspection, type checking, autospeccing, or class-level patch patterns | HIGH RISK | Grep for class-level patching, `create_autospec`, `spec_set`, `dir`, and `IssueImplementer.__dict__` |
-| Listed comments/docstrings are the only docs needing update | UNVERIFIED | Search docs/tests/comments for each deleted wrapper name and for wrapper-count assumptions |
-| Specific line numbers and existing test names are current | STALE-PRONE | Re-read `implementer.py`, `implementer_phase_runner.py`, `_stage_context.py`, `implementer_state.py`, and tests on current `main`/branch |
-| `_commit_changes` and `_create_pr` remain explicit for the right reason | REVIEWER FOCUS | Confirm the reason is state/order/side-effect/API stability, not accidental omission |
-
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | Planning phase for issue #1360 (extract 12-function repo-management cluster from `automation/loop_runner.py` into `loop_repo_manager.py` with backward-compat re-exports) | Plan produced, NOT executed; this skill records the unverified assumptions and reviewer risks. Implementation pending. |
-| ProjectHephaestus | Planning phase for conservative IssueImplementer wrapper-to-`__getattr__` delegation refactor (issue #1391 context, current state unverified) | Plan produced, NOT executed; this amendment records uncertain assumptions, stale-source risks, and review focus areas. Implementation pending. |
+```
+
+---
+
+## v1.0.0 (2026-06-15)
+
+**Initial version.**
