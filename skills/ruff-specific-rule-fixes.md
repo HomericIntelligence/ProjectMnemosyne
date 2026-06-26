@@ -1,10 +1,11 @@
 ---
 name: ruff-specific-rule-fixes
-description: "Patterns for fixing specific Ruff lint rule violations and addressing systemic linter policy failures. Use when: (1) fixing Ruff S101 violations in production code by replacing bare assert guards with explicit RuntimeError raises, (2) fixing Ruff C901 cyclomatic complexity violations by extracting helper functions, (3) fixing Ruff RUF022 (__all__ not sorted) or I001 (import block un-sorted) — both are [*]-fixable; never manually reorder because isort uses the alias name not the original symbol, always use `ruff check --fix`, (4) the same policy violation reappears in two or more independent documents or configs — indicating the linter/validator that should enforce the policy is absent or misconfigured (root-cause fix: add the lint rule, not re-fix every instance), (5) deciding between adding a noqa suppression, fixing the violation, or promoting the rule to error-level enforcement, (6) main goes red after a ruff/mypy version-floor bump — E501 line-length overruns, ruff-format implicit-string-concat collapses, or unused-ignore mypy errors appear retroactively in files that previously passed CI, (7) a # type: ignore[tag] comment becomes an unused-ignore error after a mypy or ruff floor bump, (8) adding a new scripts/*.py to a repo with an auto-discovering smoke test, or adding a # noqa whose rule may not be in the ruff select list, (9) E501 or ruff format failures appear in newly-added TEST files on a large multi-file feature PR — running only the test suite before pushing misses these; CI fails on line-length or format in the new test files."
+description: "Patterns for fixing specific Ruff lint rule violations and addressing systemic linter policy failures. Use when: (1) fixing Ruff S101 violations in production code by replacing bare assert guards with explicit RuntimeError raises, (2) fixing Ruff C901 cyclomatic complexity violations by extracting helper functions, (3) fixing Ruff RUF022 (__all__ not sorted) or I001 (import block un-sorted) — both are [*]-fixable; never manually reorder because isort uses the alias name not the original symbol, always use `ruff check --fix`, (4) the same policy violation reappears in two or more independent documents or configs — indicating the linter/validator that should enforce the policy is absent or misconfigured (root-cause fix: add the lint rule, not re-fix every instance), (5) deciding between adding a noqa suppression, fixing the violation, or promoting the rule to error-level enforcement, (6) main goes red after a ruff/mypy version-floor bump — E501 line-length overruns, ruff-format implicit-string-concat collapses, or unused-ignore mypy errors appear retroactively in files that previously passed CI, (7) a # type: ignore[tag] comment becomes an unused-ignore error after a mypy or ruff floor bump, (8) adding a new scripts/*.py to a repo with an auto-discovering smoke test, or adding a # noqa whose rule may not be in the ruff select list, (9) E501 or ruff format failures appear in newly-added TEST files on a large multi-file feature PR — running only the test suite before pushing misses these; CI fails on line-length or format in the new test files, (10) a CI validate job runs `ruff format --check` and fails with `Would reformat` even though local pytest, pre-push pytest, and `ruff check` passed."
 category: tooling
-date: 2026-06-13
-version: "1.4.0"
+date: 2026-06-26
+version: "1.5.0"
 user-invocable: false
+verification: verified-ci
 history: ruff-specific-rule-fixes.history
 tags:
   - ruff
@@ -47,6 +48,9 @@ tags:
   - parametrize
   - entry-points
   - add_version_arg
+  - format-check
+  - validate-ci
+  - inference360
 ---
 
 # Ruff Specific Rule Fixes
@@ -55,10 +59,11 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-13 |
+| **Date** | 2026-06-26 |
 | **Objective** | Fix specific Ruff rule violations (S101 assert-in-production, C901 cyclomatic complexity, RUF022 `__all__`-sort, I001 import-sort, RUF100 unused-noqa) and recognize when repeated policy violations mean the linter itself is the root cause; honor the auto-discovered scripts smoke `--help` contract; fix E501/ruff-format failures in newly-added test files on large feature PRs |
-| **Outcome** | Verified — S101 guards converted across 20+ sites (PRs #1142, #1211), C901 extractions verified (PRs #1546, #1050), wrong-direction linter root-cause pattern verified-CI (PRs #863/#865/#866/#867), RUF022 + I001 fixes (issue #1189); RUF100 unused-noqa + scripts smoke `--help` contract verified-precommit (PR #1250); E501/format in new test files fixed (ProjectHephaestus PR #1035) |
+| **Outcome** | Verified — S101 guards converted across 20+ sites (PRs #1142, #1211), C901 extractions verified (PRs #1546, #1050), wrong-direction linter root-cause pattern verified-CI (PRs #863/#865/#866/#867), RUF022 + I001 fixes (issue #1189); RUF100 unused-noqa + scripts smoke `--help` contract verified-precommit (PR #1250); E501/format in new test files fixed (ProjectHephaestus PR #1035); CI `ruff format --check` failure after local tests/`ruff check` fixed and merged in Inference360 PR #282 |
 | **Verification** | verified-ci |
+| **History** | [changelog](./ruff-specific-rule-fixes.history) |
 
 ## When to Use
 
@@ -72,6 +77,7 @@ tags:
 - A `# type: ignore[tag]` comment fires mypy error `[unused-ignore]` after a mypy floor bump — the annotation was covering a type error that no longer exists in the new mypy version.
 - You are **adding a new `scripts/*.py`** to a repo with an auto-discovering smoke test, or **adding a `# noqa: <RULE>` whose `<RULE>` may not be in the ruff `select` list** (RUF100 unused-noqa risk).
 - You pushed a **large feature PR (40+ files)** after running only the test suite and CI fails on **E501 or `ruff format`** in newly-added test files — running tests does not invoke the linter; newly-added test files are subject to the same E501 line-length limit and `ruff format` rules as production code.
+- A repository validate job runs `ruff format --check`, and CI fails with `Would reformat: <file>` even though local pytest, the pre-push pytest suite, and `ruff check <file>` all passed. `ruff check` and `ruff format --check` are separate gates; run both before pushing.
 
 ## Verified Workflow
 
@@ -82,6 +88,16 @@ tags:
 pixi run ruff check hephaestus/ tests/      # E501 line-length (limit = 100)
 pixi run ruff format --check hephaestus/ tests/   # format wants some lines collapsed
 # Newly-ADDED test files are just as subject to E501 + ruff format as production code.
+```
+
+```bash
+# Focused PR / repo validate gate — pytest + ruff check is NOT enough
+python3 -m pytest -q <affected-tests>
+python3 -m ruff check <changed-python-files>
+python3 -m ruff format --check <changed-python-files>
+# If format-check fails:
+python3 -m ruff format <changed-python-files>
+python3 -m ruff format --check <changed-python-files>
 ```
 
 ```bash
@@ -537,6 +553,37 @@ For cross-cutting CLI flag rollouts (e.g., `--version` across all entry points),
   This pattern makes the ENTRY_POINTS list the single source of truth and forces the same
   line-length discipline on every parametrized row.
 
+**F3) CI validate runs `ruff format --check` separately from `ruff check`:**
+
+Some repos put format checking inside a higher-level validation target (e.g. `just validate`).
+In that setup, the following local sequence is insufficient:
+
+```bash
+python3 -m pytest -q tests/test_setup_workflow.py
+python3 -m pytest -q tests/test_governance_docs.py
+python3 -m ruff check tests/test_setup_workflow.py
+git diff --check
+# pre-push hook runs pytest -q only
+```
+
+That exact sequence missed a formatter-only issue in Inference360 PR #282. GitHub CI
+failed `validate` with:
+
+```text
+Would reformat: tests/test_setup_workflow.py
+1 file would be reformatted, 51 files already formatted
+```
+
+Fix it by running `ruff format` on the reported file, committing the formatter-only diff,
+and verifying both gates:
+
+```bash
+python3 -m ruff format tests/test_setup_workflow.py
+python3 -m pytest -q tests/test_setup_workflow.py tests/test_governance_docs.py
+python3 -m ruff check tests/test_setup_workflow.py
+python3 -m ruff format --check tests/test_setup_workflow.py
+```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -558,6 +605,7 @@ For cross-cutting CLI flag rollouts (e.g., `--version` across all entry points),
 | Ship a new `scripts/*.py` guard without a `--help` branch | Added a one-liner guard script with no `--help`/`-h` handling | The auto-discovered `test_script_help_exits_zero` runs `--help` and asserts exit 0 AND non-empty output — it failed the moment the file landed | Honor `--help`/`-h` -> `print(__doc__)`; add a module docstring; don't reach for `HELP_RUNS_REAL_WORK` |
 | Omit docstrings on new pytest test functions | Wrote new test functions under `tests/` without docstrings | ruff `D103` (missing-docstring-in-public-function) is NOT ignored for `tests/**` (per-file-ignores drops only `S101,D102,D107`) | Add a one-line docstring to every new public test function |
 | Pushed 44-file feature PR after only running the test suite | Ran `pixi run python -m pytest` locally; all tests passed; pushed to CI | CI failed on E501 in newly-added test files — the test runner does not invoke ruff check or ruff format | Always run `pixi run ruff check <src>/ tests/` AND `pixi run ruff format --check <src>/ tests/` before pushing any PR that adds new files |
+| Ran pytest and `ruff check`, skipped `ruff format --check` | In Inference360 PR #282, ran focused pytest, `ruff check tests/test_setup_workflow.py`, `git diff --check`, and a pre-push full pytest suite | GitHub `validate` still failed because the repo's validation target ran `ruff format --check` and found `tests/test_setup_workflow.py` would be reformatted | Add `ruff format --check <changed-python-files>` to the local checklist whenever CI has a formatter gate; `ruff check` does not imply formatting is clean |
 | Hand-wrapped a long `for`-header to fix E501 in a test file | Broke the `for command, module_path, attr in [...]` header onto multiple lines | The long string literal inside the list still overflowed col 100 — wrapping the header does not shorten the literal | Extract the literal list to a named constant (e.g., `ENTRY_POINTS`) so each row can be broken independently |
 | Hand-wrapped `subprocess.run(...)` call across multiple lines | Split `subprocess.run(["git", "status"], check=True)` onto 3 lines to "look tidy" | `ruff format` kept collapsing it back to one line on every run — the call already fit within the line-length limit | Stop hand-wrapping calls that fit on one line; `ruff format` is the canonical style authority — let it collapse them |
 
@@ -625,6 +673,33 @@ WRONG ORDER (fails CI):           CORRECT ORDER:
                                     PR4: fix META source (only if META also wrong)
 ```
 
+### Inference360 validate CI format gate
+
+**Context:** Inference360 PR #282 (`Require setup installer checksums`) changed
+`tests/test_setup_workflow.py`. Local focused pytest, `ruff check`, `git diff --check`,
+and the pre-push full pytest suite all passed. GitHub `validate` failed anyway because the
+repo's validation recipe included `ruff format --check`.
+
+**CI failure signature:**
+
+```text
+Would reformat: tests/test_setup_workflow.py
+1 file would be reformatted, 51 files already formatted
+```
+
+**Fix and verification:**
+
+```bash
+python3 -m ruff format tests/test_setup_workflow.py
+python3 -m pytest -q tests/test_setup_workflow.py tests/test_governance_docs.py
+python3 -m ruff check tests/test_setup_workflow.py
+python3 -m ruff format --check tests/test_setup_workflow.py
+git diff --check
+```
+
+**Outcome:** pushed a formatter-only follow-up commit to PR #282. GitHub `validate`,
+`secrets`, `sast`, `python-sca`, and CodeQL all passed; auto-merge merged the PR.
+
 ## Verified On
 
 | Project | Context | Details |
@@ -638,3 +713,4 @@ WRONG ORDER (fails CI):           CORRECT ORDER:
 | ProjectHephaestus | Floor-bump retroactive violations (ruff 0.1.x to 0.15, PR #1294) — 4 violations across 3 test files: (D1) implicit two-literal concat collapse in `test_check_python_version_consistency.py:321-324`; (D2a) E501 in `test_choose_merge_flag_sh.py:60` fixed with bash `\<newline>` continuation inside f-string; (D2b) E501 in `test_planner_loop.py:681` one-line docstring expanded; (D3) unused `# type: ignore[type-arg]` in `test_choose_merge_flag_sh.py:30` removed and `[str]` generic added. Verified-local (pixi run mypy + ruff format --check + ruff check all clean). | Issue #1313 |
 | ProjectHephaestus | RUF100 unused-noqa (`# noqa: S603` not in `select`) + scripts smoke `--help` contract (auto-discovered `test_script_help_exits_zero`), verified-precommit | issue #1214 / PR #1250 |
 | ProjectHephaestus | E501 + `ruff format` failures in newly-added test files on 44-file feature PR; two opposite E501 fix shapes (extract literal vs. stop hand-wrapping); `add_version_arg` helper + parametrized `@pytest.mark.parametrize("command,module_path,attr", ENTRY_POINTS)` integration test pattern | PR #1035 |
+| Inference360 | GitHub `validate` failed on `ruff format --check` after local pytest, `ruff check`, `git diff --check`, and pre-push pytest all passed; formatter-only follow-up fixed `tests/test_setup_workflow.py` | PR #282 |
