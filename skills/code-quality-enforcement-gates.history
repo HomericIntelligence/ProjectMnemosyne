@@ -1,6 +1,27 @@
 <!-- markdownlint-disable MD024 -->
 # code-quality-enforcement-gates — History
 
+## v1.4.0 (2026-06-26) — Promote §12 to verified-local; add §12a two-halves assertion pattern
+
+**Changed by:** /learn session — ProjectHephaestus issue #1508, PR #1647 (verified-local)
+**Verification:** verified-local — doc annotations written, markdownlint verified, pytest run, pre-commit green
+
+### What changed
+
+Promoted §12 (Sync Deprecation Docs with a DeprecationWarning Symbol) from PLANNING-stage/unverified to `verified-local` after ProjectHephaestus PR #1647 implemented it end-to-end.
+
+Added **§12a — Doc-Sync Property Test: Scope Each Insertion Point Independently**, a new sub-pattern discovered during implementation: a property test that does a global scan + early return is silently incomplete when a deprecated symbol must appear in multiple distinct locations in the same markdown file (e.g. a table row AND a `**Deprecated symbols**` callout block). The callout block was unguarded because the test returned on the first match (the table row). Fix: one scoped assertion per insertion point using a `_section(text, start_marker, stop_markers)` helper.
+
+- **§12:** removed PLANNING-stage warning; updated code example to use independently-scoped assertions with the reusable `_section()` helper; risks updated to mark which were verified as met and which remain durable
+- **§12a:** new — documents the two-halves assertion anti-pattern and the correct scoped approach; includes the `_section()` helper and stop-markers guidance
+- **When-to-Use #14:** added trigger for multi-insertion-point doc-sync tests
+- **QR table:** added row for doc-sync test multiple insertion points
+- **Failed Attempts:** 2 new rows (global-scan test; mirroring precedent without auditing the precedent's test)
+- **Tags:** `section-scoped-assertion`, `two-halves-test`
+- **Verified On:** updated ProjectHephaestus #1508 entry from PLANNING-stage/unverified to verified-local PR #1647
+
+---
+
 ## v1.3.0 (2026-06-26) — Add §12: sync deprecation docs with a DeprecationWarning symbol (PLANNING-stage)
 
 **Changed by:** /learn session — ProjectHephaestus issue #1508 deprecation-doc-sync plan (PLANNING stage)
