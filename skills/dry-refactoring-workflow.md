@@ -2,8 +2,8 @@
 name: dry-refactoring-workflow
 description: "Complete TDD-driven workflow for identifying and eliminating code duplication by extracting reusable helper methods. Use when: (1) extracting duplicated helper methods into a shared module using TDD (write a failing test against the canonical, delete the duplicate, run green); (2) creating a private leaf module with leading-underscore naming to centralize a repeated internal call (e.g. importlib.metadata version resolution, path construction) and prevent re-introduction across modules; (3) centralizing hardcoded path constants into a single module to prevent drift when directory structure changes (incl. phase-routed in_progress/completed splits); (4) deduplicating LLM JSON extraction, parser logic, or any call-site pattern copy-pasted across several files; (5) test structure must mirror source structure when extracting helpers; (6) running a full DRY consolidation pass (discovery via grep, classifying true duplicates vs intentional variants, dict-structure consolidation) and refactoring to a single canonical source; (7) extract-method / SRP decomposition of over-long functions (50-LOC) and methods (100-LOC), including converting a mutating closure into a method via a small mutable box; (8) extracting repeated cached lookups into an @lru_cache helper (and clearing the cache so unittest.mock.patch works); (9) removing stale scripts / deprecated stubs (grep callers first) and replacing hardcoded file lists with dynamic Path.rglob discovery; (10) PLANNING a consolidation of two OVERLAPPING but not-identical constant collections (frozensets / keyword lists / error-pattern tuples) — classify true-duplicate vs intentional-variant first, then extract only the shared CORE into one canonical immutable constant and have each consumer compose CORE | its-own-extras, proving anti-drift with CORE.issubset(consumer) parity tests, instead of a flat merge that would violate a deliberate behavioral contract. (11) behavior-preserving duplicate cleanup across test fakes, tiny strategy/kernel modules, and validation wrappers: keep public module exports stable, centralize only identical mechanics, preserve local wrapper names/error messages, and verify with focused + full suites before opening a PR. Also covers cryptographic commit signing requirements in PR workflows. (12) stale issue body in dedup/consolidation tasks: issue 'Evidence:' sections go stale as prior PRs partially resolve them — grep the CURRENT state first; choose inlining over fixtures for pure bytes→str helpers; resolve remote branch divergence by pushing to a new branch rather than force-pushing or rebasing 84 conflicting commits. (13) PLANNING an extraction whose issue claims 'N nearly-identical, M byte-for-byte identical' methods: the COUNT and 'byte-for-byte identical' assertions go STALE exactly like the 'Evidence:' section — count and DIFF every claimed-duplicate body in full before scoping; prior refactors may have already delegated one to a richer printer or changed another's signature/model, and even the truly-similar bodies often hide call-site-varying string args (count noun, header) that a flat merge would silently change — parameterize those as kwargs-with-defaults to guarantee zero behavior change, and place the helper in an EXISTING established-dedup module rather than a new leaf module or base-class method. (14) PLANNING a behavior-preserving method→free-function extraction when the duplicated method is a patched test seam — grep patch.object(.*\"_method\") BEFORE planning any deletion (a method patched at many call sites must be KEPT as a one-line thin wrapper delegating to the new free function, never deleted, or every patch target breaks); read the actual test bodies to confirm which 'near-identical' differences (log level, an extra debug line, exception-message wording) are behavior-bearing vs incidental before collapsing copies (only safe to collapse logging when no test asserts log level/message); match the target module's established convention (free function taking explicit args, not a mixin/base-class method); hedge unverified import assumptions a planner did not execute (is pathlib.Path already imported? is there a 'from ._review_utils import ...' line to extend? is a cross-layer runtime import safe within the automation→library boundary AND absent from the base 'import hephaestus' surface?); and prove a pure extraction with a single-canonical-source grep that must return exactly one hit PLUS the PRE-EXISTING per-class behavioral suites staying green (the real acceptance gate, not the new structural tests)."
 category: architecture
-date: 2026-06-20
-version: "1.9.0"
+date: 2026-06-26
+version: "1.10.0"
 user-invocable: false
 verification: verified-ci
 history: dry-refactoring-workflow.history
@@ -16,9 +16,9 @@ Complete TDD-driven workflow for identifying and eliminating code duplication by
 
 | Attribute | Details |
 | ----------- | --------- |
-| **Date** | 2026-06-20 |
+| **Date** | 2026-06-26 |
 | **Objective** | TDD-driven extraction of duplicated code into reusable helper modules, with emphasis on private module placement, test structure mirroring, and cryptographic commit signing |
-| **Outcome** | ✅ v1.0.0 (Feb 2026): Eliminated token aggregation duplication. v1.1.0 (Jun 2026): Extended with private module patterns, test mirroring enforcement, signing requirements. v1.3.0 (Jun 2026): Absorbed centralized path constants, LLM JSON extraction dedup, full DRY consolidation discovery/classify pass, and canonical-source refactor patterns (Pydantic type hierarchy, dict-structure consolidation, orphan relocation). v1.4.0 (Jun 2026): Restored SRP/extract-method (mutable-box closure), @lru_cache detection util (mock.patch/cache_clear gotcha), stale-script/stub cleanup, and dynamic Path.rglob discovery patterns from the nuance audit. ⚠️ v1.5.0 (Jun 2026, **planning-only / unverified**): Added Phase 10 — planning a consolidation of OVERLAPPING constant collections via the core/extras split (CORE \| consumer-extras) with subset parity anti-drift tests, classifying intentional-variant-with-overlap separately from "do not consolidate". v1.6.0 (Jun 2026): Added Radiance behavior-preserving duplicate cleanup pattern for route-test fakes, layout-only metric kernels, validation field wrappers, and stale tool deletion; verified locally with Ruff, full pytest, compileall, diff check, and pre-push pytest; PR CI pending. v1.7.0 (Jun 2026): Added Phase 12 — stale issue body in dedup tasks (grep current state, don't trust 'Evidence:' section); inline vs fixture decision for pure bytes→str helpers; remote branch divergence resolution (new branch vs force-push). Verified CI via ProjectHermes PR #652. ⚠️ v1.8.0 (Jun 2026, **planning-only / unverified**): Added Phase 13 — stale 'N identical duplicates' claims in extraction issues: count and DIFF every claimed-duplicate body before scoping (the duplicate COUNT and 'byte-for-byte identical' assertion go stale like 'Evidence:'); parameterize call-site-varying string args (count noun, failed-header) as kwargs-with-defaults to guarantee zero behavior change instead of flattening; prefer an EXISTING established-dedup home over a new leaf module. Captured from planning ProjectHephaestus issue #1381; NOT executed (no code, no tests, no CI). ⚠️ v1.9.0 (Jun 2026, **planning-only / unverified**): Added Phase 14 — planning a method→free-function extraction when the duplicated method is a patched test seam (#1383, `_load_impl_session_id` → `load_impl_session_id` in `_review_utils.py`): grep `patch.object` before any deletion and keep each method as a thin wrapper; read tests to separate behavior-bearing diffs (log level/message) from incidental ones before collapsing; match the target module's free-function convention; hedge unverified import/boundary assumptions; verify by single-hit canonical grep + EXISTING behavioral suites green. NOT executed end-to-end. |
+| **Outcome** | ✅ v1.0.0 (Feb 2026): Eliminated token aggregation duplication. v1.1.0 (Jun 2026): Extended with private module patterns, test mirroring enforcement, signing requirements. v1.3.0 (Jun 2026): Absorbed centralized path constants, LLM JSON extraction dedup, full DRY consolidation discovery/classify pass, and canonical-source refactor patterns (Pydantic type hierarchy, dict-structure consolidation, orphan relocation). v1.4.0 (Jun 2026): Restored SRP/extract-method (mutable-box closure), @lru_cache detection util (mock.patch/cache_clear gotcha), stale-script/stub cleanup, and dynamic Path.rglob discovery patterns from the nuance audit. ⚠️ v1.5.0 (Jun 2026, **planning-only / unverified**): Added Phase 10 — planning a consolidation of OVERLAPPING constant collections via the core/extras split (CORE \| consumer-extras) with subset parity anti-drift tests, classifying intentional-variant-with-overlap separately from "do not consolidate". v1.6.0 (Jun 2026): Added Radiance behavior-preserving duplicate cleanup pattern for route-test fakes, layout-only metric kernels, validation field wrappers, and stale tool deletion; verified locally with Ruff, full pytest, compileall, diff check, and pre-push pytest; PR CI pending. v1.7.0 (Jun 2026): Added Phase 12 — stale issue body in dedup tasks (grep current state, don't trust 'Evidence:' section); inline vs fixture decision for pure bytes→str helpers; remote branch divergence resolution (new branch vs force-push). Verified CI via ProjectHermes PR #652. ⚠️ v1.8.0 (Jun 2026, **planning-only / unverified**): Added Phase 13 — stale 'N identical duplicates' claims in extraction issues: count and DIFF every claimed-duplicate body before scoping (the duplicate COUNT and 'byte-for-byte identical' assertion go stale like 'Evidence:'); parameterize call-site-varying string args (count noun, failed-header) as kwargs-with-defaults to guarantee zero behavior change instead of flattening; prefer an EXISTING established-dedup home over a new leaf module. Captured from planning ProjectHephaestus issue #1381; NOT executed (no code, no tests, no CI). ⚠️ v1.9.0 (Jun 2026, **planning-only / unverified**): Added Phase 14 — planning a method→free-function extraction when the duplicated method is a patched test seam (#1383, `_load_impl_session_id` → `load_impl_session_id` in `_review_utils.py`): grep `patch.object` before any deletion and keep each method as a thin wrapper; read tests to separate behavior-bearing diffs (log level/message) from incidental ones before collapsing; match the target module's free-function convention; hedge unverified import/boundary assumptions; verify by single-hit canonical grep + EXISTING behavioral suites green. NOT executed end-to-end. ⚠️ v1.10.0 (Jun 2026, **planning-only / unverified**): Added Phase 15 — planning Pydantic option-model DRY refactors when issue assumptions are stale and inheritance may move introspection order; preserve public constructor keywords, split only real shared defaults, and test field names/defaults/schema/signature presence plus CLI help order. NOT executed end-to-end. |
 | **Primary Issues** | #642 (original), #739 (private module extraction), #917 (pr-policy signing), #503 (LLM JSON dedup) |
 | **Primary PRs** | #714 (original), #900+ (refactoring), #137/#1738 (path constants), #505 (JSON dedup), #201 (DRY consolidation) |
 | **History** | [changelog](./dry-refactoring-workflow.history) |
@@ -68,6 +68,10 @@ Use this workflow when you encounter:
 - "Two near-identical methods differ only in log level / an extra debug line — safe to collapse into one helper?"
 - "Where should a shared cross-reviewer helper live — new leaf module, base class, or the existing `_review_utils.py`?"
 - "I'm planning a refactor but haven't run anything — which import/boundary assumptions must the reviewer double-check?"
+- "The issue mentions an option field that is not in the current model — should the refactor add it?"
+- "How do I extract shared defaults from Pydantic options without renaming constructor keywords?"
+- "Will Pydantic inheritance reorder `model_fields`, JSON schema, or `inspect.signature()`?"
+- "Should a planner test CLI help order separately from Pydantic model field order?"
 
 ## Verified Workflow
 
@@ -988,6 +992,117 @@ Prove the two acceptance criteria explicitly:
   acceptance gate for a behavior-preserving refactor is the EXISTING behavioral tests staying
   green; new structural tests for the free function are necessary but insufficient.
 
+### Phase 15: Planning Pydantic option-model DRY refactors with stale issue assumptions and introspection contracts (NEW in v1.10.0, PLANNING-ONLY)
+
+> **Warning:** This phase is a **proposed workflow** captured from PLANNING ProjectHephaestus
+> issue #1388. It was **NOT validated end-to-end** — no code was written, no tests were run,
+> and no CI confirmed it. Treat every step below as a hypothesis until CI confirms it on a
+> real PR. Verification level for this phase: `unverified`.
+
+The #1388 plan extracted duplicated worker-option defaults in
+`hephaestus/automation/models.py` into a small Pydantic base hierarchy. The durable lesson is
+not "always create a base class." It is: when a DRY refactor touches public option models, first
+verify the issue's premise against current code, then preserve the existing constructor/API
+surface even if that means splitting the requested abstraction into narrower bases.
+
+#### 15a. Verify current state before trusting issue text
+
+Issue text can name fields that no longer exist. In #1388, the issue mentioned `state_dir`, but
+current-state verification found no matches:
+
+```bash
+rg -n "state_dir" hephaestus/automation/models.py
+```
+
+That changed the plan: **do not add `state_dir`** just because the stale issue said it was part
+of the duplicated shape. For option-model DRY work, search the model file and the relevant call
+sites before adopting the issue's field list.
+
+#### 15b. Preserve public constructor keywords even when centralizing defaults
+
+Do not flatten semantically different public names into one "clean" abstraction. In #1388,
+`PlannerOptions.parallel` had to remain distinct from `max_workers` because planner code reads
+`options.parallel` and passes it to `ThreadPoolExecutor`. The non-planner worker stages keep
+`max_workers`.
+
+The safe shape was a narrow hierarchy:
+
+```python
+DEFAULT_WORKER_COUNT = 3
+
+class WorkerOptionsBase(BaseModel):
+    dry_run: bool = False
+
+class ParallelWorkerOptionsBase(WorkerOptionsBase):
+    max_workers: int = DEFAULT_WORKER_COUNT
+
+class VerboseParallelWorkerOptionsBase(ParallelWorkerOptionsBase):
+    verbose: bool = False
+
+class PlannerOptions(WorkerOptionsBase):
+    parallel: int = DEFAULT_WORKER_COUNT
+```
+
+Centralize only the shared default constant (`DEFAULT_WORKER_COUNT`) when option names differ by
+meaning. That removes duplication without renaming `parallel` to `max_workers` or inventing a
+field all stages do not actually expose.
+
+#### 15c. Split an overbroad requested base class when behavior differs
+
+An issue may ask for one broad `WorkerOptionsBase`, but public behavior can require a small
+hierarchy instead:
+
+- `WorkerOptionsBase`: only fields shared by all affected option models, e.g. `dry_run`.
+- `ParallelWorkerOptionsBase`: fields shared by non-planner worker stages, e.g. `max_workers`.
+- `VerboseParallelWorkerOptionsBase`: fields shared by verbose-capable stages, e.g. `verbose`.
+
+This is still a DRY refactor. The important constraint is that every existing constructor keyword
+keeps working: planner callers pass `parallel=...`; other workers pass `max_workers=...`.
+
+#### 15d. Treat Pydantic inheritance introspection as a public contract risk
+
+Pydantic inherited fields can move to the front of `model_fields`, JSON schema properties, and
+`inspect.signature()`. Do not assume declaration order remains identical after introducing base
+classes. In a planning-only review, call this out as an explicit risk and test the public
+contracts that matter:
+
+- field names are exactly the expected set for each option class;
+- defaults remain synchronized (`DEFAULT_WORKER_COUNT`, `dry_run=False`, `verbose=False`);
+- constructor overrides still work for every affected class;
+- JSON schema and `inspect.signature()` contain the expected public names/defaults;
+- CLI help order is tested via argparse parser output, separately from Pydantic model field order.
+
+Avoid adding a fragile custom ordering shim unless a real caller depends on Pydantic field order.
+If CLI help is produced by argparse, verify argparse help order directly.
+
+#### 15e. Reviewer focus for unexecuted option-model DRY plans
+
+When the plan is not executed, the reviewer should focus on the assumptions the planner relied on
+without directly verifying:
+
+- the exact option construction sites for planner, implementer, PR reviewer, plan reviewer,
+  address-review, and CI-driver still use the stated keywords;
+- the code path really reads `PlannerOptions.parallel` and non-planner code reads `max_workers`;
+- argparse help order comes from parser definitions, not Pydantic field order;
+- the repository's installed Pydantic version has the inherited-field behavior assumed by the plan;
+- the existing unit-test filenames named in the plan actually exist and cover the intended CLI/model paths.
+
+#### Quick Reference
+
+```bash
+# 1. Verify issue-mentioned fields and current duplicate shape.
+rg -n "state_dir|parallel|max_workers|dry_run|verbose" hephaestus/automation/models.py
+
+# 2. Verify call-site keywords before renaming anything.
+rg -n "PlannerOptions\\(|ImplementerOptions\\(|ReviewerOptions\\(|PlanReviewerOptions\\(|AddressReviewOptions\\(|CIDriverOptions\\(" hephaestus/automation
+rg -n "options\\.parallel|options\\.max_workers" hephaestus/automation
+
+# 3. Contract-test the refactor, not just the new base classes.
+pixi run pytest tests/unit/automation/test_options_contract.py -v
+pixi run pytest tests/unit/automation -q
+pixi run ruff check hephaestus/automation/models.py tests/unit/automation/test_options_contract.py
+```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -1027,8 +1142,32 @@ Prove the two acceptance criteria explicitly:
 | (PLANNING #1383) Invent a new sharing mechanism for the shared helper | Considered a mixin / base class for `load_impl_session_id` | The target module `_review_utils.py` already houses cross-reviewer helpers as free functions with explicit args (`find_pr_for_issue`, `instance_log`, `parse_json_block`); a new mechanism is higher-risk | Grep the target module's existing helpers and match its established convention (free function, explicit args) rather than introducing a mixin/base-class method |
 | (PLANNING #1383) Assert un-run imports/boundary facts as true in the plan | Wrote "Path is imported", "the `from ._review_utils import ...` line exists", "no boundary violation" without executing | A planning-only plan ran nothing; stating unverified facts as certain misleads the implementer/reviewer | Hedge: "add `pathlib.Path` if not present"; "verify-and-extend the existing import line, else add"; confirm the automation→library import (`hephaestus.agents.runtime`) is the allowed direction with no cycle and that the new helper stays out of the base `import hephaestus` surface (`test_import_surface.py` / `test_automation_boundary.py`) |
 | (PLANNING #1383) Accept new structural helper tests alone as proof of a behavior-preserving refactor | Planned to add tests for `load_impl_session_id` and call the refactor done | New structural tests prove the helper exists, not that behavior is unchanged | The real acceptance gate is the PRE-EXISTING per-class suites (`test_ci_driver.py`, `test_address_review.py`) staying green, plus a single-canonical-source grep that returns exactly one hit (`grep -rn 'state_dir / f"issue-{issue_number}.json"' hephaestus/automation/`) |
+| (PLANNING #1388) Trust the issue's stale option-field list | Issue mentioned `state_dir`; a broad option-base plan could have added it to every worker option model | Current `models.py` had no `state_dir` matches, so adding it would invent a public field instead of reducing duplication | Grep current model state before adopting issue text; do not add fields that are not present unless the issue explicitly asks for a new public API |
+| (PLANNING #1388) Normalize `PlannerOptions.parallel` into `max_workers` | A single `ParallelWorkerOptionsBase(max_workers=...)` for all stages looked cleaner | Planner code reads `options.parallel`; changing the keyword/name would break callers and the planner execution path | Preserve existing constructor/API keywords. Centralize the shared default constant, not semantically different option names |
+| (PLANNING #1388) Use one overbroad `WorkerOptionsBase` for all fields | Put `dry_run`, `max_workers`, and `verbose` on one base because several classes share some of them | Not every option model exposes the same fields; planner has `parallel`, and only some non-planner stages expose `verbose` | Split by real shared surface: base for `dry_run`, parallel base for `max_workers`, verbose base for verbose-capable stages |
+| (PLANNING #1388) Assume Pydantic field declaration order stays stable after inheritance | Planned to compare field order before/after or ignore introspection entirely | Inherited Pydantic fields can move in `model_fields`, JSON schema, and `inspect.signature()`; field order may change even when public keywords/defaults are compatible | Test public contract explicitly: field names/defaults, schema/signature presence, constructor overrides, and CLI help order from argparse |
 
 ## Results & Parameters
+
+### ProjectHephaestus #1388 Planning Checklist
+
+Use this reviewer checklist when a DRY refactor plan extracts shared Pydantic option defaults:
+
+```text
+- [ ] Current-state grep proves every issue-mentioned field still exists, or the plan explicitly
+      drops stale fields instead of adding them.
+- [ ] Existing constructor keywords are preserved (`parallel` stays `parallel`; `max_workers`
+      stays `max_workers`).
+- [ ] The base hierarchy reflects only fields actually shared by each group.
+- [ ] Shared defaults are centralized without flattening semantically different option names.
+- [ ] Contract tests cover field names/defaults, constructor overrides, JSON schema,
+      `inspect.signature()`, and CLI help order.
+- [ ] Any call-site references, argparse behavior, Pydantic version behavior, and named test files
+      cited by the plan are verified during implementation, not treated as proven by planning.
+```
+
+Verification level for this planning capture: `unverified` — the #1388 refactor was planned but
+not executed, tests were not run, and CI was not confirmed.
 
 ### Radiance v1.6.0 Local Verification
 
@@ -1115,6 +1254,7 @@ def _aggregate_token_stats(self, tier_results: dict[TierID, TierResult]) -> Toke
 | ProjectHermes | #329 / PR #652 | Phase 12 — stale issue body (3 of 4 files already migrated), inline over fixture for pure HMAC helper, new-branch resolution for diverged remote | verified-ci — all pytest passed, signed commit, PR opened |
 | ProjectHephaestus | #1381 | Phase 13 — stale "6 methods / 5 byte-for-byte identical" claim (only 4 real duplicates), parameterize call-site-varying `count_noun`/`failed_header` instead of flat-merge, place helper in existing `_review_utils.py` | ⚠️ **unverified — planning only, NOT executed** (no code, no tests, no CI) |
 | ProjectHephaestus | #1383 | Phase 14 — planning a method→free-function extraction (`_load_impl_session_id` → `load_impl_session_id` in `_review_utils.py`) where the method is a patched test seam | ⚠️ **unverified — planning only, NOT executed** (no code, no tests, no CI) |
+| ProjectHephaestus | #1388 | Phase 15 — planning a Pydantic option-model DRY refactor where stale issue assumptions (`state_dir`) and inherited-field introspection order are reviewer risks | ⚠️ **unverified — planning only, NOT executed** (no code, no tests, no CI) |
 
 ## Related Skills
 
@@ -1124,10 +1264,11 @@ def _aggregate_token_stats(self, tier_results: dict[TierID, TierResult]) -> Toke
 
 ## Tags
 
-`refactoring`, `dry-principle`, `helper-methods`, `radiance`, `test-fakes`, `validation-wrappers`, `layout-kernels`, `tdd`, `code-quality`, `python`, `pytest`, `private-modules`, `test-structure`, `git-signing`, `importlib-metadata`, `srp`, `extract-method`, `lru-cache`, `mock-patch`, `rglob`, `dead-code-removal`, `constants`, `frozenset`, `drift`, `intentional-variant`, `core-extras-split`, `planning`, `stale-issue-body`, `inline-vs-fixture`, `remote-branch-divergence`, `hmac`, `test-helper-dedup`, `stale-duplicate-count`, `diff-before-merge`, `parameterize-defaults`, `print-summary`, `existing-dedup-home`, `patched-test-seam`, `thin-wrapper`, `free-function-extraction`, `automation-library-boundary`
+`refactoring`, `dry-principle`, `helper-methods`, `radiance`, `test-fakes`, `validation-wrappers`, `layout-kernels`, `tdd`, `code-quality`, `python`, `pytest`, `private-modules`, `test-structure`, `git-signing`, `importlib-metadata`, `srp`, `extract-method`, `lru-cache`, `mock-patch`, `rglob`, `dead-code-removal`, `constants`, `frozenset`, `drift`, `intentional-variant`, `core-extras-split`, `planning`, `stale-issue-body`, `inline-vs-fixture`, `remote-branch-divergence`, `hmac`, `test-helper-dedup`, `stale-duplicate-count`, `diff-before-merge`, `parameterize-defaults`, `print-summary`, `existing-dedup-home`, `patched-test-seam`, `thin-wrapper`, `free-function-extraction`, `automation-library-boundary`, `pydantic`, `option-models`, `constructor-keywords`, `contract-tests`, `cli-help-order`, `model-fields`, `inspect-signature`
 
 ## Version History
 
+- **v1.10.0** (2026-06-26, **planning-only for the new phase / unverified**): Added Phase 15 — planning Pydantic option-model DRY refactors when issue assumptions may be stale and inherited fields may affect public introspection contracts. Captured from ProjectHephaestus #1388 (`PlannerOptions.parallel` stays distinct from non-planner `max_workers`; stale `state_dir` mention dropped; `DEFAULT_WORKER_COUNT` centralizes only the shared default). Reviewer focus: verify call-site keywords, argparse help source, Pydantic version behavior, and existing unit-test filenames; test field names/defaults, constructor overrides, JSON schema, `inspect.signature()`, and CLI help order. Added 4 Failed Attempts rows, a checklist under Results & Parameters, a Verified On entry, trigger phrases, and tags. NOT executed end-to-end (no code, no tests, no CI). The rest of the skill keeps its prior verification history; Phase 15 carries an explicit `unverified` warning. Prior v1.9.0 snapshot archived to history.
 - **v1.9.0** (2026-06-20, **planning-only for the new phase / unverified**): Added Phase 14 — planning a behavior-preserving method→free-function extraction when the duplicated method is a patched test seam, captured from ProjectHephaestus #1383 (extract `_load_impl_session_id` → `load_impl_session_id(state_dir, issue_number, agent)` in `hephaestus/automation/_review_utils.py`). Five sub-sections: (14a) grep `patch.object` before deletion — keep each method as a thin wrapper to preserve the seam; (14b) read tests to separate behavior-bearing diffs (log level/message) from incidental ones before collapsing "near-identical" copies; (14c) match the target module's free-function convention rather than a mixin/base class; (14d) hedge unverified import/boundary assumptions (Path import, existing import line, automation→library direction, base-import-surface cleanliness); (14e) prove a pure extraction via a single-hit canonical grep + EXISTING per-class behavioral suites staying green. Added 5 Failed Attempts rows, a Verified On entry, new trigger phrases, and tags. NOT executed end-to-end (no code, no tests, no CI). The rest of the skill stays `verified-ci`; Phase 14 carries its own unverified warning. Sibling to the #1381 Phase 13 (stale-count) added the same day. Prior v1.8.0 snapshot archived to history.
 - **v1.8.0** (2026-06-20, **planning-only / unverified**): Added Phase 13 — stale "N identical duplicates" claims in extraction issues. Captured from PLANNING ProjectHephaestus issue #1381 ("Extract shared `print_worker_summary` helper"); NOT executed end-to-end (no code, no tests, no CI). Lessons: (1) an issue's duplicate COUNT and "byte-for-byte identical" assertion go stale exactly like its "Evidence:" section (extends Phase 12a) — an issue claiming "6 methods, 5 byte-for-byte identical" had only 4 true duplicates (one already delegated to a richer `ImplementationSummaryPrinter`, one with a different signature/model `PlanResult` vs `WorkerResult`); count and DIFF every claimed-duplicate body before scoping. (2) Even the 4 "identical" bodies hid two call-site-varying literals (`"Total PRs:"` vs `"Total issues:"`; leading-newline `"\nFailed issues:"` header vs none) — parameterize as kwargs-with-defaults (`count_noun=`, `failed_header=`) to guarantee zero behavior change, an application of Phase 8c classify-before-merge to a shared function's string args. (3) Placement: prefer an EXISTING established-dedup module (`_review_utils.py`, already houses #599 reviewer-trio dedup + a module `logger`) over a new leaf module or base-class method. Added 3 Failed Attempts rows and a Verified On row. Recorded most-uncertain planning assumptions as explicit risks. Prior v1.7.0 snapshot archived to history.
 - **v1.7.0** (2026-06-19): Added Phase 12 — three concrete lessons from ProjectHermes #329 (HMAC `_sign()` dedup): (1) grep the CURRENT state before trusting issue body "Evidence:" sections (prior PRs may have partially resolved it); (2) inline a pure `bytes→str` helper over adding a pytest fixture or conftest entry when the function closes over a module-local constant; (3) when a remote branch has diverged with a competing solution, push as a new branch rather than force-pushing or rebasing 84 conflicting commits. Added 3 Failed Attempts rows. Updated Verified On table. Verification: verified-ci via ProjectHermes PR #652. Prior v1.6.0 snapshot archived to history.

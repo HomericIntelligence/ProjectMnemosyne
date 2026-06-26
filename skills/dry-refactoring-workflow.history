@@ -1,6 +1,56 @@
 <!-- markdownlint-disable MD024 -->
 # dry-refactoring-workflow — History
 
+## v1.10.0 (2026-06-26)
+
+**Changed by:** ProjectHephaestus issue #1388 planning — /learn
+**Verification:** unverified (planning-only for the new Phase 15; no code, tests, or CI executed for the refactor)
+
+### What changed
+
+- Added Phase 15 (PLANNING-ONLY, **unverified**) — planning Pydantic option-model DRY refactors
+  where issue assumptions may be stale and inherited fields may affect public introspection
+  contracts.
+- Captured the #1388 option-model lessons:
+  - grep current state before trusting issue text; do not add stale/nonexistent `state_dir`;
+  - preserve public constructor keywords (`PlannerOptions.parallel` remains distinct from
+    non-planner `max_workers`);
+  - split the requested base class into a narrow hierarchy: shared `dry_run`, non-planner
+    `max_workers`, and verbose-capable `verbose`;
+  - centralize only the shared worker-count default (`DEFAULT_WORKER_COUNT`);
+  - treat Pydantic inherited-field ordering in `model_fields`, JSON schema, and
+    `inspect.signature()` as a contract risk to test explicitly.
+- Added 4 Failed Attempts rows, a ProjectHephaestus #1388 planning checklist under Results &
+  Parameters, a Verified On row, trigger phrases, and tags (`pydantic`, `option-models`,
+  `constructor-keywords`, `contract-tests`, `cli-help-order`, `model-fields`,
+  `inspect-signature`).
+- Bumped frontmatter `version` to 1.10.0 and `date` to 2026-06-26.
+
+### Why
+
+ProjectHephaestus issue #1388 produced an implementation plan, not an executed refactor. The
+review-relevant risks were in the assumptions: an issue-mentioned `state_dir` field was stale,
+call-site references for six option constructors were cited but not re-opened during planning,
+argparse help generation and Pydantic inheritance behavior were assumed, and existing unit-test
+filenames still needed verification during implementation. The durable planning pattern is to
+separate real shared defaults from semantically different public option names, then test public
+contracts directly instead of relying on Pydantic field declaration order staying unchanged.
+
+### Previous version (v1.9.0) snapshot
+
+````markdown
+---
+name: dry-refactoring-workflow
+description: "Complete TDD-driven workflow for identifying and eliminating code duplication by extracting reusable helper methods. Use when: (1) extracting duplicated helper methods into a shared module using TDD (write a failing test against the canonical, delete the duplicate, run green); (2) creating a private leaf module with leading-underscore naming to centralize a repeated internal call (e.g. importlib.metadata version resolution, path construction) and prevent re-introduction across modules; (3) centralizing hardcoded path constants into a single module to prevent drift when directory structure changes (incl. phase-routed in_progress/completed splits); (4) deduplicating LLM JSON extraction, parser logic, or any call-site pattern copy-pasted across several files; (5) test structure must mirror source structure when extracting helpers; (6) running a full DRY consolidation pass (discovery via grep, classifying true duplicates vs intentional variants, dict-structure consolidation) and refactoring to a single canonical source; (7) extract-method / SRP decomposition of over-long functions (50-LOC) and methods (100-LOC), including converting a mutating closure into a method via a small mutable box; (8) extracting repeated cached lookups into an @lru_cache helper (and clearing the cache so unittest.mock.patch works); (9) removing stale scripts / deprecated stubs (grep callers first) and replacing hardcoded file lists with dynamic Path.rglob discovery; (10) PLANNING a consolidation of two OVERLAPPING but not-identical constant collections (frozensets / keyword lists / error-pattern tuples) — classify true-duplicate vs intentional-variant first, then extract only the shared CORE into one canonical immutable constant and have each consumer compose CORE | its-own-extras, proving anti-drift with CORE.issubset(consumer) parity tests, instead of a flat merge that would violate a deliberate behavioral contract. (11) behavior-preserving duplicate cleanup across test fakes, tiny strategy/kernel modules, and validation wrappers: keep public module exports stable, centralize only identical mechanics, preserve local wrapper names/error messages, and verify with focused + full suites before opening a PR. Also covers cryptographic commit signing requirements in PR workflows. (12) stale issue body in dedup/consolidation tasks: issue 'Evidence:' sections go stale as prior PRs partially resolve them — grep the CURRENT state first; choose inlining over fixtures for pure bytes→str helpers; resolve remote branch divergence by pushing to a new branch rather than force-pushing or rebasing 84 conflicting commits. (13) PLANNING an extraction whose issue claims 'N nearly-identical, M byte-for-byte identical' methods: the COUNT and 'byte-for-byte identical' assertions go STALE exactly like the 'Evidence:' section — count and DIFF every claimed-duplicate body in full before scoping; prior refactors may have already delegated one to a richer printer or changed another's signature/model, and even the truly-similar bodies often hide call-site-varying string args (count noun, header) that a flat merge would silently change — parameterize those as kwargs-with-defaults to guarantee zero behavior change, and place the helper in an EXISTING established-dedup module rather than a new leaf module or base-class method. (14) PLANNING a behavior-preserving method→free-function extraction when the duplicated method is a patched test seam — grep patch.object(.*\"_method\") BEFORE planning any deletion (a method patched at many call sites must be KEPT as a one-line thin wrapper delegating to the new free function, never deleted, or every patch target breaks); read the actual test bodies to confirm which 'near-identical' differences (log level, an extra debug line, exception-message wording) are behavior-bearing vs incidental before collapsing copies (only safe to collapse logging when no test asserts log level/message); match the target module's established convention (free function taking explicit args, not a mixin/base-class method); hedge unverified import assumptions a planner did not execute (is pathlib.Path already imported? is there a 'from ._review_utils import ...' line to extend? is a cross-layer runtime import safe within the automation→library boundary AND absent from the base 'import hephaestus' surface?); and prove a pure extraction with a single-canonical-source grep that must return exactly one hit PLUS the PRE-EXISTING per-class behavioral suites staying green (the real acceptance gate, not the new structural tests)."
+category: architecture
+date: 2026-06-20
+version: "1.9.0"
+user-invocable: false
+verification: verified-ci
+history: dry-refactoring-workflow.history
+---
+````
+
 ## v1.9.0 (2026-06-20)
 
 **Changed by:** ProjectHephaestus issue #1383 planning — /learn
