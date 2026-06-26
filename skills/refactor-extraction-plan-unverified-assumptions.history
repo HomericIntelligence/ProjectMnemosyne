@@ -1,13 +1,32 @@
+# refactor-extraction-plan-unverified-assumptions — History
+
+## v1.1.0 (2026-06-26)
+
+**Changed by:** Session context ("ProjectHephaestus issue #1392 prompt nonce helper extraction planning risks")
+**Verification:** unverified
+
+### What changed
+
+- Broadened the skill from only verbatim cluster extraction with re-exports to unexecuted extraction/refactor plans generally.
+- Added prompt-safety helper extraction guidance for `random_nonce()` and untrusted-content fence nonce generation.
+- Added reviewer risks for stale/conflicting issue scope, drift-prone call counts, nonce format changes, brittle monkeypatch targets, and unnecessary public re-export.
+
+### Why
+
+The prior skill already covered extraction-plan risk review, but it was too narrowly worded around a large module-to-module function-cluster move. ProjectHephaestus issue #1392 produced a smaller unexecuted DRY helper extraction plan where the risky assumptions were different: preserving prompt-fence nonce grammar, avoiding parser-refactor scope creep, re-running duplicate discovery, and testing randomness through the new helper lookup site.
+
+### Previous version (v1.0.0) snapshot
+
+~~~markdown
 ---
 name: refactor-extraction-plan-unverified-assumptions
-description: "The uncertain assumptions and reviewer risks baked into unexecuted extraction/refactor plans: verbatim function-cluster moves with re-exports, or smaller DRY helper extractions for prompt-safety primitives such as nonce generation. Use when: (1) reviewing or authoring a plan that moves a function cluster out of a god-module and re-exports the moved names from the original module to preserve mock patch paths, (2) extracting duplicated security/prompt-fence helper calls into a shared primitive, (3) the plan claims `patch(\"...old_module._fn\")` keeps working after the move, (4) the plan cites exact line numbers or exact duplicate counts from live discovery, (5) the plan depends on preserving a token/fence format, 'frozen' allowlist, magic number, or public package export, (6) the plan asserts 'no circular import', 'unused import removable', or 'safe public re-export' by static reasoning rather than execution."
+description: "The uncertain assumptions and reviewer risks baked into a verbatim-move cluster-extraction PLAN that extracts a group of functions from a large module into a new sibling module with backward-compat `import X as X` re-exports in the parent. Use when: (1) reviewing or authoring a plan that moves a function cluster out of a god-module and re-exports the moved names from the original module to preserve mock patch paths, (2) the plan claims `patch(\"...old_module._fn\")` keeps working after the move, (3) the plan cites exact line numbers for a multi-step sequential edit, (4) the plan depends on a 'frozen' allowlist/magic-number invariant, (5) the plan asserts 'no circular import' or 'unused import removable' by static reasoning rather than execution."
 category: architecture
-date: 2026-06-26
-version: "1.1.0"
+date: 2026-06-15
+version: "1.0.0"
 user-invocable: false
 verification: unverified
-history: refactor-extraction-plan-unverified-assumptions.history
-tags: [refactoring, extraction, cluster-extraction, helper-extraction, prompt-safety, nonce, untrusted-fence, backward-compat, re-export, mock-patch-path, planning, reviewer-risks, line-number-drift, circular-import, assumptions]
+tags: [refactoring, extraction, cluster-extraction, backward-compat, re-export, mock-patch-path, planning, reviewer-risks, line-number-drift, circular-import, assumptions]
 ---
 
 # Refactor Extraction Plan — Unverified Assumptions & Reviewer Risks
@@ -16,29 +35,23 @@ tags: [refactoring, extraction, cluster-extraction, helper-extraction, prompt-sa
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-26 |
-| **Objective** | Capture the uncertain assumptions an extraction/refactor PLAN makes before implementation, from large verbatim module moves to small DRY helper extractions in prompt-safety code. |
-| **Outcome** | Plans produced; NOT executed. These are the assumptions a reviewer must verify and an implementer must not take on faith. |
+| **Date** | 2026-06-15 |
+| **Objective** | Capture the uncertain assumptions a verbatim-move cluster-extraction PLAN makes — extracting a 12-function repo-management cluster from `hephaestus/automation/loop_runner.py` into a new `loop_repo_manager.py` with backward-compat `import X as X` re-exports (issue #1360) — so a reviewer knows exactly what to check before approving. |
+| **Outcome** | Plan produced; NOT executed. These are the assumptions a reviewer must verify and an implementer must not take on faith. |
 | **Verification** | unverified — planning artifact only; no code was written or run |
-| **History** | [changelog](./refactor-extraction-plan-unverified-assumptions.history) |
+| **History** | v1.0.0: initial capture of 5 uncertain assumptions + reviewer focus checklist from issue #1360 extraction plan. |
 
-> This skill is about the **PLANNING-RISK** angle, not the mechanics of *how* to perform the extraction.
+> This skill is about the **PLANNING-RISK** angle, not the mechanics of *how* to extract a cluster.
 > For the how-to mechanics see `python-module-decomposition-and-refactor-patterns` and
 > `testing-module-patch-target-after-extraction`. For DRY *consolidation* (two modules → one)
-> see `dry-refactoring-plan-assumption-audit`. This skill covers extraction plans whose assumptions
-> silently break: *single module -> two modules* verbatim moves with re-exports, and small helper
-> extractions where format, fence grammar, patch target, import, or call-count claims are load-bearing.
+> see `dry-refactoring-plan-assumption-audit`. This skill covers a *single module → two modules*
+> verbatim move with re-exports, and what silently breaks.
 
 ## When to Use
 
 - Reviewing or authoring a plan that extracts a cluster of functions out of a large module into a new sibling module.
-- Reviewing or authoring a plan that extracts repeated security-sensitive helper calls into a shared primitive, such as repeated `secrets.token_hex(8).upper()` nonce generation for prompt fences.
 - The plan keeps the original module importable by adding `from .new_module import _fn as _fn` re-exports (backward-compat shim) and claims existing `unittest.mock.patch("...old_module._fn")` calls still work.
-- The plan proposes exporting a new helper through a package `__init__.py` without proving the package has that public API convention.
 - The plan cites exact line numbers (`module.py:566-942`, `pyproject.toml:263`) for a sequence of edits that delete/insert large blocks.
-- The plan cites an exact duplicate count or call-site count from live discovery (for example, "nine call sites") that must be re-run by the implementer.
-- The issue body contains an older or conflicting scope section; the title/current discovery points elsewhere, but the plan must explicitly decline the stale scope rather than implement both.
-- The extracted helper must preserve an exact format contract such as uppercase 16-hex-character delimiters in `BEGIN_<NONCE>_<LABEL>` / `END_<NONCE>_<LABEL>` fences.
 - The plan depends on a "frozen" list or magic number (e.g. an omit/coverage allowlist "frozen at N modules") that must be bumped in multiple places.
 - The plan asserts "introduces no circular import" or "this import is now unused and can be removed" by static reasoning rather than by actually importing/linting.
 
@@ -95,36 +108,6 @@ grep -n "# Repo discovery\|^def _gh_list_repos\|^def _gh_" ${OLD_PATH}
 
 ### Detailed Steps
 
-0. **Separate current scope from stale issue text before planning any extraction.**
-   Issue bodies drift. If the title and live code discovery point to a specific DRY extraction but the
-   body contains an older parser/refactor section, call that conflict out and explicitly scope it out.
-   Do not satisfy both unless the live issue, maintainer comments, and code state still require both.
-   The plan should say what was NOT included and why, so the implementer does not widen the diff.
-
-0. **For prompt-safety helpers, preserve the exact external grammar first.**
-   Before extracting a helper such as `random_nonce()`, write the format contract in the plan:
-   uppercase, 16 hex characters, produced from `secrets.token_hex(8).upper()`, and embedded unchanged
-   in `BEGIN_<NONCE>_<LABEL>` / `END_<NONCE>_<LABEL>` fences. Tests must assert the grammar and the
-   fenced-output boundaries, not merely that the helper returns "some string."
-
-0. **Re-run duplicate discovery during implementation; treat plan counts as snapshots.**
-   A plan may say "replace nine call sites" after live `rg`, but call counts and line numbers drift
-   as soon as another PR lands. Re-run the structural search before editing and again after editing:
-   no raw duplicate calls should remain in prompt modules, and no direct `secrets` imports should
-   remain where the helper replaced them.
-
-0. **Choose helper placement by ownership of the invariant, not by convenience.**
-   Placing `random_nonce()` beside `_fence_untrusted()` in `prompts/_shared.py` is sensible only if
-   prompt-safety primitives own both nonce generation and fence construction. If the helper is
-   exported from `prompts/__init__.py`, verify that package uses `__init__` as a public facade. If not,
-   import from the private shared module and avoid unnecessary API surface.
-
-0. **Patch tests at the symbol the implementation actually resolves.**
-   When testing randomness, monkeypatch the helper where the code under test looks it up after the
-   refactor, not where the old `secrets.token_hex` call used to live. A brittle monkeypatch can pass
-   while production code still uses the old randomness path, or fail because it patches the wrong
-   imported binding.
-
 1. **Verify re-export patch-path preservation against the WHOLE repo (the central assumption).**
    The plan's load-bearing claim is that `patch("...loop_runner._gh_list_repos")` keeps working after
    the function moves, because the re-export makes the name a real attribute of `loop_runner` and
@@ -163,11 +146,6 @@ grep -n "# Repo discovery\|^def _gh_list_repos\|^def _gh_" ${OLD_PATH}
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
 | Assume re-export preserves all mock patch paths | Plan claimed `patch("...loop_runner._gh_list_repos")` keeps working post-move because the `import X as X` re-export makes the name a real attribute, and only grepped within `loop_runner.py` + `test_loop_runner.py` | True only if every caller resolves the name through the `loop_runner` namespace at call time; a `from loop_runner import _gh_list_repos` in ANY other module is a separate binding that patching `loop_runner` does not affect — and that scope was never grepped | Before claiming re-exports preserve patch paths, grep the ENTIRE repo (`hephaestus/` AND `tests/` AND `scripts/`) for `from <old_module> import _<name>`, not just the two files you happened to read |
-| Treat a stale issue-body section as active scope | Plan saw an older parser-refactor section in the issue body but the issue title and current code discovery pointed to duplicated nonce generation | Implementing both would turn a narrow helper extraction into a broader parser refactor with different risk, tests, and review surface | In the plan, name the stale/conflicting section and scope it out unless live issue state and code discovery still support it |
-| Trust exact duplicate counts from the plan | Plan recorded nine `secrets.token_hex(8).upper()` prompt-fence nonce calls from live discovery | The count was true only for that checkout; another PR can add/remove call sites before implementation | Re-run `rg` at implementation time and again after editing; accept "no raw duplicate calls / no stale direct imports" rather than a frozen numeric count alone |
-| Extract a prompt-fence nonce helper without locking format | Plan proposed `random_nonce()` but did not itself execute tests against the fence grammar | Changing case, byte count, delimiter length, or label placement weakens prompt-fence injection protections and may not be obvious in review | Test for uppercase 16-hex-character nonce and `BEGIN_<NONCE>_<LABEL>` / `END_<NONCE>_<LABEL>` boundaries through `_fence_untrusted()` |
-| Export the helper publicly by default | Plan suggested re-exporting `random_nonce` from `prompts/__init__.py` | A public package API may be unnecessary; extra export surface adds compatibility burden and a second import path reviewers must track | Only re-export if the package already has that facade convention or external callers need it; otherwise keep imports local to the shared prompt module |
-| Monkeypatch the old randomness source after extraction | Tests patch `secrets.token_hex` or the wrong imported symbol after code now calls `random_nonce()` | The test no longer controls the code path it intends to make deterministic, or it hides a stale direct `secrets` call | Patch the helper at the lookup site used by the prompt module under test, and add structural `rg` checks for stale direct calls/imports |
 | Cite exact line numbers for a sequential multi-edit | Plan referenced `loop_runner.py:566-942`, `:1198`, `:1359`, `pyproject.toml:263`, `test_omit_allowlist.py:40-53` read at plan time | An implementer edits sequentially; deleting the `566-942` block shifts every later line, so literal line-number targeting after step 1 hits the wrong lines | Anchor multi-edit instructions to stable markers (function names, section banners, unique strings), or explicitly state line numbers are pre-edit and must be re-derived after each deletion |
 | Trust the "frozen at 16 modules" comment | Plan asserted the omit allowlist is frozen at 16 and only the comment + one test need bumping to 17, without running the test or reading its assertion body | The "16" figure and the assertion mechanism (count literal vs set membership) were read, not verified; a hardcoded `len(...) == 16` elsewhere, or a third copy of the count, would be missed and fail CI | When a plan depends on a frozen-list/magic-number invariant, READ the actual assertion body (don't trust the comment) and grep the literal to enumerate EVERY place it appears |
 | Reason about circular imports statically | Plan claimed `loop_repo_manager → ci_driver` adds no cycle because ci_driver references loop_runner only in comments | Static reasoning; ci_driver could import another automation module that transitively imports loop_runner at module load, creating a cycle the comment-scan never sees | The import-graph claim is only proven by the smoke-test step actually executing — label it "verify by execution," not "verified by reading" |
@@ -184,20 +162,6 @@ grep -n "# Repo discovery\|^def _gh_list_repos\|^def _gh_" ${OLD_PATH}
 
 ### Reviewer focus (the 5 things to check hardest in such a plan)
 
-```
-
-### Prompt-fence nonce helper extraction checklist
-
-```
-## Prompt nonce extraction plan review checklist
-
-- [ ] Stale/conflicting issue-body scope explicitly declined; no parser-refactor creep.
-- [ ] `random_nonce()` keeps `secrets.token_hex(8).upper()` semantics: uppercase, 16 hex chars.
-- [ ] Fence tests cover `BEGIN_<NONCE>_<LABEL>` and `END_<NONCE>_<LABEL>` boundaries.
-- [ ] Implementer re-runs structural discovery; no raw `secrets.token_hex(8).upper()` call sites remain.
-- [ ] Direct `secrets` imports removed only from modules that no longer use `secrets`.
-- [ ] Tests monkeypatch the helper at the module lookup site, not the old randomness source.
-- [ ] `prompts/__init__.py` re-export is justified by existing package API convention; otherwise skipped.
 ```
 ## Cluster-extraction-with-re-export plan review checklist
 
@@ -222,20 +186,15 @@ grep -n "# Repo discovery\|^def _gh_list_repos\|^def _gh_" ${OLD_PATH}
 | `loop_repo_manager → ci_driver` adds no cycle | REASONED, NOT RUN | Run `python -c "import ...loop_runner; from ...automation import loop_repo_manager"` |
 | `urlparse` / `gh_cli_timeout` are safely removable | CONDITIONAL | Per-symbol grep after deletion; let `ruff --select F401` decide |
 
-### Issue #1392 prompt nonce specific findings
-
-| Assumption in the plan | Status | What a reviewer must do |
-|------------------------|--------|-------------------------|
-| Parser-refactor section in issue body is stale/conflicting | UNVERIFIED BY LEARN CAPTURE | Re-read the live GitHub issue title/body/comments before implementation; if stale, keep the PR scoped to nonce helper extraction only |
-| There are exactly nine duplicated nonce calls in prompt modules | SNAPSHOT ONLY | Re-run `rg 'secrets\\.token_hex\\(8\\)\\.upper\\(\\)' hephaestus/automation/prompts tests` at implementation time and after editing |
-| `_shared.py` is the right home for `random_nonce()` | REASONED, NOT RUN | Verify `_shared.py` owns prompt-safety primitives beside `_fence_untrusted()` and does not introduce import cycles |
-| `prompts/__init__.py` should re-export `random_nonce` | OPTIONAL / UNVERIFIED | Inspect existing facade conventions; skip export unless current package API style requires it |
-| `secrets.token_hex(8).upper()` preserves required fence delimiter grammar | STANDARD LIBRARY BEHAVIOR, INTEGRATION UNVERIFIED | Add tests for uppercase 16-hex-character nonce and full fence boundary shape through existing prompt helpers |
-| Removing direct `secrets` imports is safe | CONDITIONAL | Remove only from modules whose final code no longer references `secrets`; run ruff for F401 and structural `rg` |
-
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | Planning phase for issue #1360 (extract 12-function repo-management cluster from `automation/loop_runner.py` into `loop_repo_manager.py` with backward-compat re-exports) | Plan produced, NOT executed; this skill records the unverified assumptions and reviewer risks. Implementation pending. |
-| ProjectHephaestus | Planning phase for issue #1392 (extract `random_nonce()` for duplicated prompt-fence `secrets.token_hex(8).upper()` calls) | Plan produced, NOT executed; issue-body/title and exact call counts were summarized in the plan but should be re-verified before implementation. |
+~~~
+
+---
+
+## v1.0.0 (2026-06-15)
+
+**Initial version.**
