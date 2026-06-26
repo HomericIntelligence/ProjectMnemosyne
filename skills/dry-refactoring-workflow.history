@@ -1,6 +1,79 @@
 <!-- markdownlint-disable MD024 -->
 # dry-refactoring-workflow — History
 
+## v1.10.0 (2026-06-26)
+
+**Changed by:** ProjectHephaestus issue #1504 planning — /learn
+**Verification:** unverified (for the new Phase 15; the rest of the skill remains verified-ci)
+
+### What changed
+
+- Added Phase 15 (PLANNING-ONLY, **unverified**) — planning a duplicate-bearing standalone
+  script → library-shim consolidation with output-contract preservation. Five sub-sections:
+  - 15a: SHIM over DELETE for a duplicate-bearing script with one unique function. The script
+    (`scripts/check_unit_test_structure.py`) duplicates `get_subpackages()`/subpackage-mirror
+    logic from `hephaestus/validation/test_structure.py` but uniquely owns
+    `check_scripts_coverage()`. Move the unique fn into the library as canonical
+    `(ok, error_lines)`, export from `hephaestus/validation/__init__.py`, rewrite the script as
+    a thin shim — because the script is referenced by `scripts/README.md`, the
+    `python-repo-modernization` skill, and auto-discovery smoke tests
+    (`tests/unit/scripts/conftest.py` globs `scripts/*.py`). Keeps the public surface stable
+    (POLA) while removing duplication (DRY).
+  - 15b: Output-contract preservation is the silent risk. The library returns data tuples; the
+    script prints its own ERROR/OK lines (literal `→` arrow, exact phrasing). Reproduce the
+    byte-for-byte stdout/stderr by calling the GRANULAR functions (`check_test_directory_mirrors`
+    + `check_scripts_coverage`), NOT `main()`/`check_test_structure` (which run extra
+    no-loose-files/no-unsanctioned-dirs checks the script never ran).
+  - 15c: Importing the private `_get_subpackages` across the script→library boundary is the
+    reviewer-contentious choice — offer a fallback (compute the count from data the public
+    functions already return) so the reviewer has an out.
+  - 15d: Record un-run reliances as explicit risks — (a) the not-CI/pre-commit-wired claim
+    (`.pre-commit-config.yaml:158`, `_required.yml:574`, `test.yml:105` call
+    `hephaestus-check-test-structure`, not the script), (b) the `scripts/README.md` no-edit
+    judgment call (now the shim is what's transitively wired), (c) the copied glob-marker check
+    (`glob("*.py")` AND `glob('*.py')`) must be preserved exactly or the broken-glob test gives
+    a false pass.
+  - 15e: TDD GREEN-first inversion — a library test written after copying the function body is
+    not RED; don't claim a RED→GREEN cycle you didn't perform.
+- Added 5 Failed Attempts rows (delete-instead-of-shim, route-through-main/check_test_structure,
+  private-import-without-fallback, claim-RED-for-green-first-test, assume-README/not-wired-need-no-recheck).
+- Added a Verified On entry for ProjectHephaestus #1504 (planning only, unverified).
+- Added trigger phrases and tags (`script-to-library-shim`, `shim-vs-delete`,
+  `output-contract-preservation`, `byte-for-byte-stdout`, `granular-vs-main`,
+  `private-import-boundary`, `tdd-green-first-inversion`, `duplicate-bearing-script`).
+- Bumped frontmatter `version` to 1.10.0, `date` to 2026-06-26, and `verification` to
+  `unverified`; Phase 15 carries its own inline unverified warning (like Phases 10, 13, 14).
+
+### Why
+
+ProjectHephaestus issue #1504 produced an IMPLEMENTATION PLAN (no code written, no tests run,
+no CI) to DRY-consolidate `scripts/check_unit_test_structure.py`, which duplicates the
+`get_subpackages()`/subpackage-mirror logic already canonical in
+`hephaestus/validation/test_structure.py` while uniquely owning `check_scripts_coverage()`. The
+plan's decision: move the unique function into the library, export it, and rewrite the script as
+a thin shim over the granular library functions, preserving the script's exact stdout/stderr
+contract. The durable PLANNING insights — shim over delete for a duplicate-bearing script that
+also owns unique behavior, byte-for-byte output-contract preservation via the granular (not
+`main()`) functions, the reviewer-contentious private cross-boundary import with a data-derived
+fallback, honestly recording un-run reliances as risks, and flagging the TDD GREEN-first
+inversion — were not yet captured. Because the session was planning-only, Phase 15 is marked
+unverified.
+
+### Previous version (v1.9.0) snapshot
+
+````markdown
+---
+name: dry-refactoring-workflow
+description: "Complete TDD-driven workflow for identifying and eliminating code duplication by extracting reusable helper methods. Use when: (1) ... (14) PLANNING a behavior-preserving method→free-function extraction when the duplicated method is a patched test seam — grep patch.object(.*\"_method\") BEFORE planning any deletion ... and prove a pure extraction with a single-canonical-source grep that must return exactly one hit PLUS the PRE-EXISTING per-class behavioral suites staying green (the real acceptance gate, not the new structural tests)."
+category: architecture
+date: 2026-06-20
+version: "1.9.0"
+user-invocable: false
+verification: verified-ci
+history: dry-refactoring-workflow.history
+---
+````
+
 ## v1.9.0 (2026-06-20)
 
 **Changed by:** ProjectHephaestus issue #1383 planning — /learn
