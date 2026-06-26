@@ -1,12 +1,34 @@
+# inference360-slurm-control-node-allocation-debugging - History
+
+## v1.0.1 (2026-06-26)
+
+**Changed by:** Follow-up after ProjectMnemosyne PR #2844 markdownlint failure.
+**Verification:** verified-ci
+
+### What changed
+
+- Replaced angle-bracket job placeholders with shell-style `"$JOB_ID"` placeholders.
+- Added the first history file and linked it from the skill frontmatter and overview.
+- Bumped the skill version from `1.0.0` to `1.0.1`.
+
+### Why
+
+ProjectMnemosyne PR #2844 auto-merged, but the later `markdownlint` job reported
+`MD033/no-inline-html` on the inline `<job>` placeholder inside a table cell.
+The learning was correct; only the placeholder spelling needed to match the repo
+markdownlint rules.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
 ---
 name: inference360-slurm-control-node-allocation-debugging
 description: "Debug pending Inference360 Slurm control-node allocations and correct control defaults. Use when: (1) `inference360 control up` is pending on a CPU control job, (2) `cpuonly`, account, QOS, or `cpus_per_task` settings are suspected, (3) interactive `srun --gres=gpu:0` behavior disagrees with control sbatch behavior."
 category: debugging
 date: 2026-06-26
-version: "1.0.1"
+version: "1.0.0"
 user-invocable: false
 verification: verified-ci
-history: inference360-slurm-control-node-allocation-debugging.history
 tags:
   - inference360
   - slurm
@@ -28,7 +50,6 @@ tags:
 | **Objective** | Explain why `uv run inference360 control up` was pending for a CPU control-node allocation and update the Inference360 control-node Slurm defaults. |
 | **Outcome** | Successful. LLM360/Inference360 PR #286 fixed issue #285 and merged on 2026-06-26 after CI passed. |
 | **Verification** | verified-ci. PR #286 passed `validate`, `secrets`, `sast`, `python-sca`, and CodeQL before auto-merge. Local host fallback validation also passed with 852 passed and 8 skipped; plain `just validate` was blocked locally only because rootless Podman was unavailable. |
-| **History** | [changelog](./inference360-slurm-control-node-allocation-debugging.history) |
 
 ## When to Use
 
@@ -44,10 +65,10 @@ tags:
 
 ```bash
 # Inspect live queue state for the control job.
-squeue -j "$JOB_ID" -o '%i|%T|%R|%P|%q|%b|%D|%C|%m|%l|%S|%u|%j'
+squeue -j <job> -o '%i|%T|%R|%P|%q|%b|%D|%C|%m|%l|%S|%u|%j'
 
 # Inspect the full Slurm job record.
-scontrol show job "$JOB_ID"
+scontrol show job <job>
 
 # Compare the candidate partitions directly.
 scontrol show partition cpuonly
@@ -62,7 +83,7 @@ srun -n 1 --cpus-per-task=32 --gres=gpu:0 --pty bash
 1. Capture the live pending job with:
 
    ```bash
-   squeue -j "$JOB_ID" -o '%i|%T|%R|%P|%q|%b|%D|%C|%m|%l|%S|%u|%j'
+   squeue -j <job> -o '%i|%T|%R|%P|%q|%b|%D|%C|%m|%l|%S|%u|%j'
    ```
 
    Record the partition, QOS, GRES, node count, CPU count, memory, time limit, start time, user, job name, and pending reason.
@@ -70,7 +91,7 @@ srun -n 1 --cpus-per-task=32 --gres=gpu:0 --pty bash
 2. Inspect the full job record with:
 
    ```bash
-   scontrol show job "$JOB_ID"
+   scontrol show job <job>
    ```
 
    Do not rely on this alone to reveal the submitted wrap command. For the observed pending sbatch, `Command=(null)` was possible.
@@ -111,7 +132,7 @@ srun -n 1 --cpus-per-task=32 --gres=gpu:0 --pty bash
 
 8. Add validation that any `slurm.*.cpus_per_task` field is a positive integer. This fails closed on invalid manifest values before sbatch generation.
 
-9. Update `_control_sbatch_command` so it emits `--cpus-per-task=$VALUE` when the resolved control Slurm config includes `cpus_per_task`.
+9. Update `_control_sbatch_command` so it emits `--cpus-per-task=<value>` when the resolved control Slurm config includes `cpus_per_task`.
 
 10. Add a regression test for `control up --cluster m2` showing the submitted command includes:
 
@@ -129,7 +150,7 @@ srun -n 1 --cpus-per-task=32 --gres=gpu:0 --pty bash
 |---------|----------------|---------------|----------------|
 | Infer partition from `--gres=gpu:0` | Treated an interactive `srun -n 1 --cpus-per-task=32 --gres=gpu:0 --pty bash` placement as evidence that GPU-free requests target `cpuonly` | Without an explicit partition, the interactive job used the default `main` partition, not `cpuonly` | Always verify actual partition and QOS with `squeue` and `scontrol`; `--gres=gpu:0` is not a partition selector |
 | Debug only the low CPU count | Focused on the pending control job requesting only 1 CPU | The pending reason was priority in the explicitly selected `cpuonly` partition with account/QOS `k2m`; CPU count alone did not explain the scheduling lane | Inspect partition, account, QOS, CPU count, and pending reason together |
-| Expect Slurm to reveal the full wrapped command | Used `scontrol show job "$JOB_ID"` expecting to see every sbatch detail | The pending sbatch record could show `Command=(null)` | Reconstruct the command from `_control_sbatch_command` and resolved manifest state |
+| Expect Slurm to reveal the full wrapped command | Used `scontrol show job <job>` expecting to see every sbatch detail | The pending sbatch record could show `Command=(null)` | Reconstruct the command from `_control_sbatch_command` and resolved manifest state |
 | Switch partition based on the interactive comparison | Considered the fast interactive job on `main` as evidence to move control jobs to `main` | The requested product change was account/QOS `main` and `cpus_per_task: 32` while keeping `partition: cpuonly` | Preserve the intended control-node partition unless the user or platform policy explicitly changes it |
 | Wait for a pending job after editing the manifest | Left an already-submitted pending control job in place after updating defaults | Slurm jobs retain submit-time attributes | Cancel and re-submit control jobs to pick up manifest changes |
 
@@ -151,7 +172,7 @@ slurm:
 ### Code and Test Contract
 
 - Manifest validation must reject any `slurm.*.cpus_per_task` value that is not a positive integer.
-- `_control_sbatch_command` must include `--cpus-per-task=$VALUE` when the resolved control Slurm config includes `cpus_per_task`.
+- `_control_sbatch_command` must include `--cpus-per-task=<value>` when the resolved control Slurm config includes `cpus_per_task`.
 - The `control up --cluster m2` regression must assert the submitted sbatch includes `--qos=main`, `--account=main`, and `--cpus-per-task=32`.
 
 ### Debug Evidence to Preserve
@@ -160,8 +181,8 @@ Use sanitized summaries in durable docs, issues, and PRs. Keep raw endpoint addr
 
 | Evidence | Purpose |
 |----------|---------|
-| `squeue -j "$JOB_ID" -o '%i|%T|%R|%P|%q|%b|%D|%C|%m|%l|%S|%u|%j'` | Confirms state, reason, partition, QOS, GRES, node count, CPU count, and job name |
-| `scontrol show job "$JOB_ID"` | Confirms full job attributes where available |
+| `squeue -j <job> -o '%i|%T|%R|%P|%q|%b|%D|%C|%m|%l|%S|%u|%j'` | Confirms state, reason, partition, QOS, GRES, node count, CPU count, and job name |
+| `scontrol show job <job>` | Confirms full job attributes where available |
 | `scontrol show partition cpuonly` and `scontrol show partition main` | Confirms partition policy differences directly |
 | Resolved manifest state | Shows which partition, account, QOS, and CPU count Inference360 intended to submit |
 | `_control_sbatch_command` output | Reconstructs the actual sbatch command when Slurm does not expose the wrap command |
@@ -171,3 +192,10 @@ Use sanitized summaries in durable docs, issues, and PRs. Keep raw endpoint addr
 | Project | Context | Details |
 |---------|---------|---------|
 | LLM360/Inference360 | PR #286 for issue #285, merged 2026-06-26 | CI passed `validate`, `secrets`, `sast`, `python-sca`, and CodeQL before auto-merge. Local fallback validation passed with 852 passed and 8 skipped; rootless Podman unavailability blocked plain local `just validate` only. |
+```
+
+---
+
+## v1.0.0 (2026-06-26)
+
+**Initial version.**
