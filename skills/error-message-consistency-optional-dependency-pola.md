@@ -1,11 +1,12 @@
 ---
 name: error-message-consistency-optional-dependency-pola
-description: "Fix a POLA violation where a config loader collapses format-detection and dependency-availability into one branch, causing a missing-dependency failure to masquerade as 'Unsupported format'. Use when: (1) two public functions reach the same missing-dependency failure by different code paths and one already raises the right error; (2) a catch-all branch collapses 'unsupported format' and 'dependency missing' into one misleading message; (3) you are tempted to add a discriminator enum or custom exception class for a one-line consistency fix; (4) the absent-dependency branch is only ever exercised via monkeypatch and could pass vacuously; (5) flipping an exception type (ValueError→RuntimeError) requires grepping callers for type-specific except handlers and potentially collapsing identical-body arms to a tuple."
+description: "Resolve a POLA audit finding about a function that silently mishandles input — either the wrong-exception-message arm (collapse format-detection and dependency-availability) or the silently-ignores-invalid-input arm (raise vs document the existing fallback). Use when: (1) two public functions reach the same missing-dependency failure by different code paths and one already raises the right error; (2) a catch-all branch collapses 'unsupported format' and 'dependency missing' into one misleading message; (3) an audit says 'function X silently ignores invalid input — raise an error OR document the fallback' and you must decide which; (4) a sibling/related function already documents and TESTS the silent fallback as intended behavior; (5) you are tempted to add a discriminator enum or custom exception class for a one-line consistency fix; (6) the absent-dependency branch is only ever exercised via monkeypatch and could pass vacuously; (7) flipping an exception type (ValueError→RuntimeError) requires grepping callers for type-specific except handlers and potentially collapsing identical-body arms to a tuple."
 category: architecture
-date: 2026-06-25
-version: "2.0.0"
+date: 2026-06-27
+version: "2.1.0"
 user-invocable: false
-verification: verified-local
+verification: unverified
+history: error-message-consistency-optional-dependency-pola.history
 tags:
   - pola
   - error-message
@@ -13,6 +14,10 @@ tags:
   - exception-consistency
   - exception-type-flip
   - caller-reconciliation
+  - silently-ignores-invalid-input
+  - raise-vs-document-fallback
+  - existing-test-as-contract
+  - secondary-silent-fallthrough
   - dry
   - planning
   - yaml
@@ -24,17 +29,30 @@ tags:
   - value-error
 ---
 
-# Error-Message Consistency for Optional-Dependency Failures (POLA)
+# Resolving POLA Audit Findings on Functions That Silently Mishandle Input
+
+This skill covers **two arms of the same POLA either/or** that recurs in "silently
+mishandles input" audit findings:
+
+- **Arm A — change the exception (verified-local, #1510):** a function reports the
+  *wrong cause* for a failure (collapsed format/dependency condition); fix by raising
+  the sibling's actionable error verbatim. This is the original skill content.
+- **Arm B — document the fallback, do NOT raise (unverified planning, #1509):** an audit
+  says "function X silently ignores invalid input — raise an error OR document the
+  fallback". The correct first move is **not** to default to "raise". Grep ALL callers
+  AND grep existing tests first: a sibling may already document AND test the fallback as
+  an intended contract, and every caller may pass only valid literals — in which case the
+  non-breaking POLA fix is to **document the fallback + add a regression test**, not raise.
 
 ## Overview
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-25 |
-| **Objective** | Fix ProjectHephaestus issue #1510 — `load_config()` raised a misleading `ValueError("Unsupported config format")` when PyYAML was absent for a `.yaml`/`.yml` file, instead of the actionable `RuntimeError("PyYAML is required for YAML config support")` that the sibling `load_yaml_config()` already raises. |
-| **Outcome** | Implemented and verified locally: split the collapsed `suffix in {...} and YAML_AVAILABLE` condition into (detect format) THEN (check dependency); updated the one `except ValueError` caller (`fleet_sync.py:_load_fleet_config`) to also catch `RuntimeError`; collapsed three identical-body `except` arms to a tuple. 140 tests passing locally; CI pending (PR #1608). |
-| **Verification** | verified-local — 140 tests passing locally; CI pending |
-| **History** | v1.0.0 (2026-06-25): planning session only, unverified. v2.0.0 (2026-06-25): implementation verified locally; adds caller-reconciliation and DRY tuple-collapse patterns. |
+| **Date** | 2026-06-27 |
+| **Objective** | (Arm A, #1510) Fix `load_config()` raising a misleading `ValueError("Unsupported config format")` when PyYAML was absent, instead of the actionable `RuntimeError` the sibling `load_yaml_config()` already raises. (Arm B, #1509) Plan the fix for an `[audit][S14 API Design]` finding that `format_output()` (`hephaestus/cli/utils.py:368`) and `format_system_info()` (`hephaestus/system/info.py:237-239`) silently ignore an invalid `format_type` — "raise OR document the fallback". |
+| **Outcome** | (Arm A) Implemented and verified locally for #1510 — split condition, reconciled the one `except ValueError` caller, DRY tuple-collapse; 140 tests local, PR #1608. (Arm B) Plan only for #1509: do NOT raise — `format_system_info`'s text fallback is already documented AND asserted by an existing test (`tests/unit/system/test_info.py:167 test_invalid_format_falls_back_to_text`), so raising would break a tested contract; ~25 callers all pass `"json"`/`"text"` literals; resolution = document the fallback in the under-documented sibling + add regression tests for both the named fallback AND a secondary unnamed one (`"table"` on a dict). Plan NOT executed. |
+| **Verification** | **unverified** for the #1509 (Arm B) planning content added in v2.1.0 — plan produced, no code run, no CI. The #1510 (Arm A) content remains **verified-local** (140 tests local; CI pending). |
+| **History** | [changelog](./error-message-consistency-optional-dependency-pola.history) — v1.0.0 (2026-06-25) planning only; v2.0.0 (2026-06-25) #1510 verified-local; v2.1.0 (2026-06-27) adds the #1509 "document the fallback, do NOT raise" arm (unverified planning). |
 
 ## When to Use
 
@@ -44,6 +62,14 @@ tags:
 - The missing-dependency branch is almost never exercised because the dependency is installed in every normal test/CI env, so the only coverage is a `monkeypatch.setattr(..., AVAILABLE_FLAG, False)`.
 - You are about to flip an exception type (e.g. `ValueError` → `RuntimeError`) in a public function and need to find all callers that had type-specific `except` handlers to update them.
 - After adding a new `except` arm to a caller, you notice multiple arms now have byte-identical bodies and can be collapsed to a tuple for DRY.
+
+### When to Use — Arm B (silently-ignores-invalid-input: raise vs document the fallback)
+
+- An **audit finding** is phrased as an either/or: *"function X silently ignores an invalid input value — raise an error OR document the fallback."* Do **not** default to "raise"; this skill exists to make you grep first.
+- A **sibling or related function** already documents the same silent fallback in its docstring **and** has an **existing test** that asserts the fallback as intended behavior. That existing test is decisive evidence the fallback is a tested **contract**, not a bug — so raising would break it. (In #1509: `format_system_info` documented the text fallback at `info.py:237-239` and `tests/unit/system/test_info.py:167 test_invalid_format_falls_back_to_text` asserted it.)
+- **Every caller passes only valid string literals** (`"json"`/`"text"`), none passes a runtime variable or relies on rejection. With no caller depending on the function raising, raising adds risk for zero benefit (YAGNI/KISS) → document the fallback to reach parity with the already-documented sibling.
+- The change would be **docstring-only + tests-only** (no logic change). Beware: such tests encode *current* behavior rather than driving new behavior, so they can pass **vacuously** — confirm each new test would FAIL if the fallback branch were deleted.
+- You suspect a **secondary silent fallthrough the audit did NOT name** in the same function (e.g. `format_output`'s `format_type == "table" and isinstance(data, (list, tuple))` — a `"table"` request on a *dict* silently falls through to text). Document and test that one too.
 
 ## Proposed Workflow
 
@@ -105,6 +131,47 @@ def load_config(config_path):
 7. **Treat the monkeypatched branch as vacuous-until-proven.** PyYAML is installed in every normal env, so the missing-PyYAML branch is *only* reachable via the patch. A wrong patch target makes the new test pass without ever entering the branch (the real code path is never exercised). Assert on the **exact** error message/type AND, if feasible, assert the branch was taken (e.g. the loader function was not called). There is no real-absence integration coverage, so the unit test is the only guard — make it strict.
 
 8. **Emit only the FINAL form of any test in the plan.** Do not ship a broken-then-corrected draft (see Failed Attempts). A reviewer may copy the wrong version.
+
+### Arm B — "silently ignores invalid input: raise OR document the fallback" decision procedure (#1509)
+
+> **Warning:** This arm is unverified — a planning learning for issue #1509 that was NOT executed. Treat the steps as a hypothesis until CI confirms.
+
+When the audit phrases the finding as *"function X silently ignores an invalid value — raise an error OR document the fallback"*, run this BEFORE writing any code:
+
+```bash
+# 1. Grep EVERY caller. Do callers pass literals, or a runtime variable?
+grep -rn "format_output\|format_system_info" hephaestus/ tests/ scripts/
+#    In #1509: ~25 call sites, ALL pass "json"/"text" string literals; none passes a
+#    variable or relies on the function rejecting bad input. (CAVEAT below.)
+
+# 2. Grep the EXISTING tests. Does a sibling already ASSERT the silent fallback?
+grep -rn "falls_back\|invalid_format\|format_type" tests/
+#    In #1509: tests/unit/system/test_info.py:167 test_invalid_format_falls_back_to_text
+#    explicitly asserts format_system_info() falls back to text on a bogus format_type.
+#    An EXISTING passing test on the fallback == the fallback is an INTENTIONAL CONTRACT.
+
+# 3. Read the sibling's docstring. Is the fallback already documented there?
+#    In #1509: format_system_info (info.py:237-239) documents the text fallback;
+#    format_output (cli/utils.py:368) does NOT — so the gap is documentation parity,
+#    not a missing exception.
+```
+
+Then **decide raise-vs-document** with this rule:
+
+| Condition (all observed) | Resolution |
+|---|---|
+| A sibling already **documents AND tests** the fallback as intended, **and** every caller passes a valid literal | **Document the fallback + add a regression test.** Do NOT raise — raising breaks a tested contract for zero caller benefit (YAGNI/KISS). Achieve parity by documenting the under-documented sibling. |
+| No documented/tested fallback exists, callers pass runtime values, and a wrong value should fail loudly | Raise (and then this is Arm A — reuse a sibling's actionable message, grep callers for `except`). |
+
+Hunt for **secondary silent fallthroughs the audit did not name.** In #1509 `format_output` has a second one: `format_type == "table" and isinstance(data, (list, tuple))` means a `"table"` request on a **dict** silently falls through to text. Document and test that too — the audit only named one.
+
+**Make the docstring-only/tests-only change non-vacuous.** Because there is no logic change, a new test could pass whether or not the fallback exists. For each new test, confirm it would **FAIL if the fallback branch were removed** (e.g. mentally delete the `else: return text` arm and check the assertion breaks). State this explicitly so the reviewer can verify it.
+
+**Top residual risks to hand the reviewer (the most uncertain assumptions):**
+
+1. The "every one of ~25 callers passes a valid literal" claim came from a single `grep` over `hephaestus/ tests/ scripts/`. The grep showed visible call sites use literals; it did **not** prove no caller builds `format_type` from a runtime **variable** (argparse `choices`, a config value). A dynamic caller is the residual risk if anyone later switches to raising.
+2. The plan documents **different** contracts for the two siblings: `format_output`'s match is **case-sensitive** (`cli/utils.py:366` `format_type == "json"` → `"JSON"` falls back to text) while `format_system_info` is **case-insensitive** (`info.py:245` `format_type.lower() == "json"`). The new test `for bogus in (..., "JSON")` depends on `format_output` staying case-sensitive. Reviewer must confirm the asymmetry is **real in the code and intended**, not accidentally "fixed" to match.
+3. The change is docstring-only + tests-only, so the new tests encode current behavior rather than driving it (not true RED-GREEN). Reviewer must confirm each new test would FAIL if the fallback branch were removed (i.e. it is not vacuous).
 
 ## Verified Workflow
 
@@ -228,6 +295,9 @@ def test_load_fleet_config_yaml_missing_dep_raises_with_context(self, tmp_path, 
 | 6 | Assumed `monkeypatch.setattr(..., "YAML_AVAILABLE", False)` exercises the branch without confirming the flag is read at call time. | If the function captured the flag into a local or another module import-bound the value, the patch silently no-ops and the test passes vacuously without entering the missing-PyYAML branch. | Verify the flag is read module-level at call time; assert the exact error AND that the real branch was taken; remember the branch is only ever reachable via the patch. |
 | 7 | Added `except RuntimeError` as a third separate arm alongside existing `FileNotFoundError` and `ValueError` arms in the caller. | Technically correct but left three arms with byte-identical bodies — DRY violation flagged in review. | Collapse all three to a tuple in the same commit as adding the new arm. |
 | 8 | Used `except Exception` to catch all load errors in the caller. | Too broad — catches programmer errors unrelated to `load_config`. | Only catch the specific exception types that `load_config` can actually raise; use the tuple form. |
+| 9 (Arm B, #1509) | On a "silently ignores invalid input — raise OR document" audit finding, **defaulted to "raise `ValueError`"** without grepping callers or existing tests. | A sibling (`format_system_info`) already documented the silent text fallback AND an existing test (`test_info.py:167 test_invalid_format_falls_back_to_text`) asserted it as intended — raising would have **broken a documented, tested contract**; and all ~25 callers pass valid literals, so rejection benefits no one. | When the audit offers "raise OR document", do NOT pick raise by default. Grep ALL callers AND existing tests first; an existing test on the fallback is decisive proof it is an intentional contract → document it, don't raise. |
+| 10 (Arm B, #1509) | Fixed only the one silent fallthrough the audit **named**, missing a second one in the same function. | `format_output` has a secondary silent fallthrough the audit did not call out: `format_type == "table" and isinstance(data, (list, tuple))` means a `"table"` request on a **dict** silently falls through to text — left undocumented and untested. | Audit findings name the symptom they noticed, not every instance. Scan the whole function for SECONDARY silent fallthroughs and document/test those too. |
+| 11 (Arm B, #1509) | Shipped docstring-only + tests-only changes whose new tests **pass vacuously** (they assert current behavior with no logic change, so they would still pass if the fallback branch were deleted). | A test that does not fail when the behavior is removed is not protecting anything — it is not RED-GREEN; it can give false confidence that the contract is guarded. | For a no-logic-change documentation fix, prove each new test would FAIL if the fallback branch were removed; also verify case-sensitivity asymmetries (e.g. `format_output` case-sensitive vs `format_system_info` `.lower()`) are real and intended, not accidentally normalized. |
 
 ## Results & Parameters
 
@@ -302,8 +372,25 @@ except (FileNotFoundError, ValueError, RuntimeError) as e:
 - Zero new public types; the two existing exception types encode the distinction.
 - One caller updated: `fleet_sync.py:_load_fleet_config` — three separate `except` arms collapsed to a tuple.
 
+### Arm B — #1509 fallback-contract reference (unverified planning)
+
+> **Warning:** unverified — the #1509 plan was produced but NOT executed. The tables below describe the *intended* contract to document, not a verified outcome.
+
+The two siblings' `format_type` contracts (to be documented; NOT changed):
+
+| Function | Location | Invalid `format_type` behavior | Case sensitivity |
+|----------|----------|--------------------------------|------------------|
+| `format_system_info` | `hephaestus/system/info.py:237-239`, `:245` | Already documented + tested (`test_info.py:167`): falls back to text | **case-insensitive** (`format_type.lower() == "json"`) |
+| `format_output` (primary) | `hephaestus/cli/utils.py:366,368` | **Under-documented** silent fallback to text on unknown `format_type` | **case-sensitive** (`format_type == "json"` → `"JSON"` falls back to text) |
+| `format_output` (secondary, audit did NOT name) | `hephaestus/cli/utils.py:368` | `"table"` requested on a **dict** (not list/tuple) silently falls through to text | n/a |
+
+Planned resolution (parity, no logic change): document both `format_output` fallbacks in its docstring to match the already-documented sibling, and add regression tests — one over bogus values including `"JSON"` (depends on `format_output` staying case-sensitive), and one asserting `"table"` on a dict yields text. Each test must be confirmed to FAIL if its fallback branch were removed (non-vacuous).
+
+Residual reviewer risks for #1509 (ranked): (1) the "all ~25 callers pass valid literals" claim came from a single literal-scan grep — it does NOT prove no caller builds `format_type` from a runtime variable; (2) confirm the case-sensitivity asymmetry between the two siblings is real and intended, not accidentally normalized; (3) confirm the docstring-only/tests-only new tests are non-vacuous.
+
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | Issue #1510 / PR #1608 — `load_config()` misleading missing-PyYAML error | v1.0.0: Planning session only; plan unverified, not executed in CI. v2.0.0: Implementation complete; 140 tests passing locally; CI pending. Sibling `load_yaml_config()` already raised the target `RuntimeError`; caller `fleet_sync.py:_load_fleet_config` had `except ValueError` updated to `except (FileNotFoundError, ValueError, RuntimeError)` tuple. |
+| ProjectHephaestus | Issue #1509 — `format_output()` / `format_system_info()` silently ignore invalid `format_type` (POLA, S14 API Design) | v2.1.0 (unverified planning): plan produced, NOT executed, no code run, no CI. Decision = document the existing text fallback + add regression tests, do NOT raise — the fallback is already documented in `format_system_info` (`info.py:237-239`) and asserted by `tests/unit/system/test_info.py:167 test_invalid_format_falls_back_to_text`, and all ~25 callers pass `"json"`/`"text"` literals. Also covers a secondary unnamed fallthrough: `"table"` on a dict in `format_output` (`cli/utils.py:368`). |
