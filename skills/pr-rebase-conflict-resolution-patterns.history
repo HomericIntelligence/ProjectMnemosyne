@@ -1,6 +1,63 @@
 <!-- markdownlint-disable MD024 -->
 # pr-rebase-conflict-resolution-patterns — History
 
+## v1.9.0 (2026-06-26)
+
+**Changed by:** ProjectHephaestus 5-PR same-file refactor cluster #1383/1384/1381/1385/1392
+(PRs #1613/#1615/#1612/#1616/#1621 — all merged). Five sibling refactor PRs all edited
+`address_review.py`; four also touched `_review_utils.py` + `ci_driver.py`. The automation loop ran
+them in parallel with no file-overlap serialization, so only the first merged and the rest went
+CONFLICTING/DIRTY; an operator `state:skip` then permanently stranded them.
+
+**Verification:** verified-ci — all five PRs merged after serializing into a smallest-first rebase
+chain with union-resolved extractions and re-signed (DCO+GPG) commits.
+
+**What changed:**
+
+- Added **trigger (17)** to frontmatter `description`: a CLUSTER of sibling refactor PRs all edit the
+  SAME shared files and were run in parallel so all but one are CONFLICTING/DIRTY (and possibly
+  hand-braked with `state:skip`) — land them as a SEQUENTIAL rebase chain SMALLEST-DIFF-FIRST,
+  rebasing each onto trunk only AFTER the prior merges, union-resolving each refactor's extractions
+  into thin delegates (merge import lists, drop now-unused imports via lint), then re-sign with
+  `git rebase --exec '...-s -S' origin/main` for DCO+GPG.
+- Added a new `When to Use` bullet describing the same-file refactor cluster and pointing to § K3;
+  notes it complements trigger #15/§ K2 (resolving ONE add/add conflict) by ordering N
+  mutually-conflicting refactors.
+- Added **Section K3** ("Cluster of same-file refactor PRs → sequential smallest-first rebase chain")
+  documenting the five-step orchestration: (1) order smallest-diff-first so conflicts shrink as the
+  chain progresses, with a `gh pr view` ranking snippet; (2) union-resolve extractions — keep both
+  helpers in the shared module, make each duplicated method a thin delegate, merge import lists, drop
+  now-unused imports via ruff; (3) rebase each branch onto `origin/main` ONLY after the prior PR
+  merges; (4) re-sign with the copy-paste `git rebase --exec "git commit --amend --no-edit -s -S"
+  origin/main` command for DCO + GPG; (5) earn `state:implementation-go` via
+  `hephaestus-implement-issues` rather than force-flipping `state:implementation-no-go`.
+- Added a **Failed Attempts** row: tried to rebase/land all cluster PRs in parallel (as the loop did)
+  — only the first merged; the other 4 went CONFLICTING and `state:skip` stranded them; lesson:
+  serialize a same-file refactor cluster into a smallest-first rebase chain because the loop's
+  parallel dispatch has no file-overlap awareness.
+- Added tags: `same-file-cluster`, `sequential-rebase-chain`, `smallest-first`, `thin-delegate`,
+  `union-resolution`, `dco-signoff`, `state-skip-stranded`.
+- Added a **Verified On** row: ProjectHephaestus 2026-06-26 5-PR cluster, all merged.
+- Bumped version 1.8.0 → 1.9.0; updated date to 2026-06-26.
+
+**Why:** The skill already covered resolving ONE add/add conflict between two parallel extractions
+(trigger #15 / § K2), but had no guidance for the broader operational problem of an entire CLUSTER of
+N refactor PRs that all edit the same shared files and were dispatched in parallel with no
+file-overlap awareness. Without serialization only the first merges and the rest go CONFLICTING; an
+operator `state:skip` then strands them indefinitely. § K3 supplies the missing orchestration:
+smallest-diff-first sequencing (so conflicts shrink), union-into-thin-delegates resolution,
+rebase-only-after-prior-merges, DCO+GPG re-signing, and earning (not forcing) the implementation-go
+label.
+
+**Previous v1.8.0 description line (snapshot):**
+
+> "Use when: (1) a PR branch is CONFLICTING or DIRTY after main advances and needs rebasing … (15)
+> two parallel cluster-extraction PRs both create the same new module file and the rebase produces an
+> add/add conflict on BOTH the source module AND its test file — main's source is authoritative, test
+> files must be semantically merged … (16) a rebase hits AA (both-added) conflicts on new files — the
+> conflicted file shows NO `<<<<<<<` markers and contains only one side's content; you must use git
+> show HEAD:<path> and git show REBASE_HEAD:<path> to read both versions before resolving"
+
 ## v1.8.0 (2026-06-19)
 
 **Changed by:** ProjectOdyssey PR #5500 (`5451-auto-impl` branch) — AA (both-added) conflicts on
