@@ -1,0 +1,63 @@
+# error-message-consistency-optional-dependency-pola — History
+
+## v2.1.0 (2026-06-27)
+
+**Changed by:** Planning session for ProjectHephaestus issue #1509 — `[audit][S14 API Design] format_output() and format_system_info() silently ignore invalid format_type — POLA violation`. Sibling audit finding to #1510 (which produced v1.0.0/v2.0.0).
+**Verification:** unverified — PLANNING learning only; plan produced but NOT executed, no code run, no CI.
+
+### What changed
+
+- Added the **complementary arm** of the same POLA either/or this skill already covered. v2.0.0 documented the case where the fix is to **change the raised exception type** (`ValueError` → `RuntimeError`) for cross-entry-point consistency. v2.1.0 adds the opposite case: when the audit says "raise OR document the fallback", the correct resolution is often to **document the existing silent fallback and add a regression test — NOT raise** — because a sibling function may already document the fallback in its docstring AND have an existing test asserting it as intended behavior, making it a tested contract that raising would break.
+- Added two "When to Use" triggers: (a) an audit finding of the form "function X silently ignores invalid input — raise OR document the fallback"; (b) a sibling/related function already documents+tests the fallback.
+- Added a "Decide raise-vs-document" decision procedure to the Proposed Workflow: grep ALL callers AND grep existing tests BEFORE defaulting to raise.
+- Added three Failed Attempts rows (#9–#11): defaulting to "raise" without grepping callers/tests; missing a secondary silent fallthrough the audit did not name; and shipping docstring-only/tests-only changes whose new tests pass vacuously (do not encode RED-GREEN).
+- Added a Results section subsection for the #1509 fallback-contract table and the case-sensitivity asymmetry between the two sibling functions.
+- Set frontmatter `verification: unverified` to reflect that the newly added #1509 content is an unexecuted planning learning. The #1510 content remains verified-local and is labeled as such inline in the Overview and Verified Workflow sections.
+- Added the `history:` frontmatter field (first time a `.history` file is materialized for this skill; prior v1.0.0→v2.0.0 changelog had only been summarized inline in the Overview).
+
+### Why
+
+#1509 and #1510 are sibling POLA audit findings on the same family of formatter functions in ProjectHephaestus. A reader who searches for the #1509 pattern ("silently ignores invalid format_type") would land here, but the v2.0.0 skill only taught the "raise the right error" arm. Without the complementary "document the fallback, do NOT raise" arm, the skill risks steering a reader toward breaking a documented, tested contract. The decisive evidence for #1509 was an *already-existing* test (`tests/unit/system/test_info.py:167 test_invalid_format_falls_back_to_text`) that asserts the silent text fallback as intended — proof the fallback is a contract, not a bug.
+
+### Previous version (v2.0.0) snapshot
+
+The full v2.0.0 content is preserved in git history at commit `eae289ee` (and any commit touching this file prior to the v2.1.0 amendment). Frontmatter snapshot:
+
+```yaml
+name: error-message-consistency-optional-dependency-pola
+category: architecture
+date: 2026-06-25
+version: "2.0.0"
+user-invocable: false
+verification: verified-local
+```
+
+v2.0.0 Overview (verbatim):
+
+> Objective: Fix ProjectHephaestus issue #1510 — `load_config()` raised a misleading `ValueError("Unsupported config format")` when PyYAML was absent for a `.yaml`/`.yml` file, instead of the actionable `RuntimeError("PyYAML is required for YAML config support")` that the sibling `load_yaml_config()` already raises.
+>
+> Outcome: Implemented and verified locally: split the collapsed `suffix in {...} and YAML_AVAILABLE` condition into (detect format) THEN (check dependency); updated the one `except ValueError` caller (`fleet_sync.py:_load_fleet_config`) to also catch `RuntimeError`; collapsed three identical-body `except` arms to a tuple. 140 tests passing locally; CI pending (PR #1608).
+
+v2.0.0 taught: reuse the sibling's actionable error message verbatim; split the collapsed format/dependency condition; reject a custom exception class/discriminator enum for a one-line fix (YAGNI/KISS); TOP RISK — grep callers for type-specific `except` handlers before flipping an exception type; collapse identical-body `except` arms to a tuple (DRY); treat the monkeypatched missing-dependency branch as vacuous-until-proven.
+
+---
+
+## v2.0.0 (2026-06-25)
+
+**Changed by:** Implementation of ProjectHephaestus issue #1510 / PR #1608.
+**Verification:** verified-local — 140 tests passing locally; CI pending.
+
+### What changed
+
+- Promoted the skill from planning-only (v1.0.0) to verified-local: added a "Verified Workflow" section documenting the executed split-condition fix, the caller reconciliation in `fleet_sync.py:_load_fleet_config`, and the DRY tuple-collapse of identical `except` arms.
+- Added caller-reconciliation and DRY tuple-collapse Failed Attempts rows.
+
+### Why
+
+The v1.0.0 plan was executed for #1510; the implementation confirmed the approach and surfaced the caller-reconciliation and DRY-collapse sub-patterns worth recording.
+
+---
+
+## v1.0.0 (2026-06-25)
+
+**Initial version.** Planning session only for ProjectHephaestus issue #1510; plan unverified, not executed in CI.
