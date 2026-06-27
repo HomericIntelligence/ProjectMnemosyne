@@ -1,24 +1,31 @@
+# refactor-extraction-plan-unverified-assumptions — History
+
+## v1.1.0 (2026-06-27)
+
+**Changed by:** ProjectHephaestus issue #1407 fleet_sync package-conversion planning capture
+**Verification:** unverified
+
+### What changed
+
+- Added package-vs-module conversion risks for moving `hephaestus/github/fleet_sync.py` into a `hephaestus.github.fleet_sync` package while preserving facade imports and the `hephaestus.github.fleet_sync:main` entry point.
+- Added reviewer risks around destructive git paths, rebase cleanup coverage, `--force-with-lease`, dry-run conflict worktrees, branch push verification, AST line-span extraction, and exact Unicode preservation.
+- Recorded external sources that were relied on without direct verification because the artifact was a plan, not an executed implementation.
+
+### Why
+
+The previous version covered a sibling-module extraction with re-export shims. Issue #1407's plan has the same planning-risk shape, but its highest-risk assumptions are package conversion semantics and destructive git automation behavior. Those need explicit reviewer gates before implementation is trusted.
+
+### Previous version (v1.0.0) snapshot
+
 ---
 name: refactor-extraction-plan-unverified-assumptions
-description: >-
-  The uncertain assumptions and reviewer risks baked into an unexecuted Python
-  refactor-extraction PLAN: cluster moves with backward-compatible re-exports,
-  module-to-package conversions that must preserve facade imports and console
-  entry points, destructive git automation extraction, stale line-number
-  evidence, and static claims that need execution proof. Use when: (1) reviewing
-  a plan that moves private helpers while keeping old mock patch paths alive,
-  (2) converting `package/module.py` into `package/module/__init__.py` plus
-  submodules while preserving `module:main`, (3) extracting rebase/push/worktree
-  code paths where cleanup and `--force-with-lease` are safety-critical, (4) the
-  plan relies on issue-supplied line numbers or unrun AST spans, (5) the plan
-  cites GitHub CLI/API semantics or signing behavior without direct verification.
+description: "The uncertain assumptions and reviewer risks baked into a verbatim-move cluster-extraction PLAN that extracts a group of functions from a large module into a new sibling module with backward-compat `import X as X` re-exports in the parent. Use when: (1) reviewing or authoring a plan that moves a function cluster out of a god-module and re-exports the moved names from the original module to preserve mock patch paths, (2) the plan claims `patch(\"...old_module._fn\")` keeps working after the move, (3) the plan cites exact line numbers for a multi-step sequential edit, (4) the plan depends on a 'frozen' allowlist/magic-number invariant, (5) the plan asserts 'no circular import' or 'unused import removable' by static reasoning rather than execution."
 category: architecture
-date: 2026-06-27
-version: "1.1.0"
+date: 2026-06-15
+version: "1.0.0"
 user-invocable: false
 verification: unverified
-history: refactor-extraction-plan-unverified-assumptions.history
-tags: [refactoring, extraction, cluster-extraction, package-conversion, backward-compat, entrypoint, re-export, mock-patch-path, planning, reviewer-risks, destructive-git, force-with-lease, dry-run, line-number-drift, ast-spans, circular-import, assumptions]
+tags: [refactoring, extraction, cluster-extraction, backward-compat, re-export, mock-patch-path, planning, reviewer-risks, line-number-drift, circular-import, assumptions]
 ---
 
 # Refactor Extraction Plan — Unverified Assumptions & Reviewer Risks
@@ -27,11 +34,11 @@ tags: [refactoring, extraction, cluster-extraction, package-conversion, backward
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-27 |
-| **Objective** | Capture the uncertain assumptions unexecuted refactor-extraction plans make: sibling-module cluster moves with re-export shims (issue #1360) and package conversion of `hephaestus/github/fleet_sync.py` into `hephaestus.github.fleet_sync` while preserving facade imports and the `hephaestus.github.fleet_sync:main` entry point (issue #1407). |
-| **Outcome** | Plans produced; NOT executed. These are reviewer gates and implementation hypotheses, not validated implementation facts. |
+| **Date** | 2026-06-15 |
+| **Objective** | Capture the uncertain assumptions a verbatim-move cluster-extraction PLAN makes — extracting a 12-function repo-management cluster from `hephaestus/automation/loop_runner.py` into a new `loop_repo_manager.py` with backward-compat `import X as X` re-exports (issue #1360) — so a reviewer knows exactly what to check before approving. |
+| **Outcome** | Plan produced; NOT executed. These are the assumptions a reviewer must verify and an implementer must not take on faith. |
 | **Verification** | unverified — planning artifact only; no code was written or run |
-| **History** | [changelog](./refactor-extraction-plan-unverified-assumptions.history) |
+| **History** | v1.0.0: initial capture of 5 uncertain assumptions + reviewer focus checklist from issue #1360 extraction plan. |
 
 > This skill is about the **PLANNING-RISK** angle, not the mechanics of *how* to extract a cluster.
 > For the how-to mechanics see `python-module-decomposition-and-refactor-patterns` and
@@ -46,10 +53,6 @@ tags: [refactoring, extraction, cluster-extraction, package-conversion, backward
 - The plan cites exact line numbers (`module.py:566-942`, `pyproject.toml:263`) for a sequence of edits that delete/insert large blocks.
 - The plan depends on a "frozen" list or magic number (e.g. an omit/coverage allowlist "frozen at N modules") that must be bumped in multiple places.
 - The plan asserts "introduces no circular import" or "this import is now unused and can be removed" by static reasoning rather than by actually importing/linting.
-- The plan converts a leaf module file into a package of the same dotted name and assumes `pyproject.toml` console scripts such as `old.module:main` keep resolving.
-- The plan extracts destructive git automation paths (`rebase`, `push`, worktree cleanup, conflict inspection) and claims behavior-preserving coverage without exercising all failure exits.
-- The plan uses `git ls-remote origin <branch>` as branch-push proof, cites GitHub CLI/API fields, or relies on GPG signing identity behavior without validating the exact branch/head/identity involved.
-- The plan uses AST line-span extraction or exact Unicode-preservation claims as acceptance criteria without running the extractor/tests that reviewers will use.
 
 ## Verified Workflow
 
@@ -73,8 +76,6 @@ literal token; this content is a PROPOSAL, not a verified procedure. See the war
 OLD_MODULE="hephaestus.automation.loop_runner"   # the module losing functions
 OLD_PATH="hephaestus/automation/loop_runner.py"  # its file
 NEW_MODULE="loop_repo_manager"                    # the new sibling (bare name as imported within the pkg)
-PACKAGE_MODULE="hephaestus.github.fleet_sync"     # example for a module.py -> module/ package conversion
-ENTRY_POINT="hephaestus.github.fleet_sync:main"   # pyproject console script target to preserve
 
 # 1. CENTRAL CHECK — does ANY module import the moved private names directly (not via the namespace)?
 #    Re-exports only preserve patch paths for callers that look up the name through OLD_MODULE
@@ -102,34 +103,6 @@ ruff check ${OLD_PATH} --select F401   # then `ruff check --fix` only after the 
 # 6. LINE-NUMBER DRIFT REMINDER — after the FIRST block deletion, every later cited line number is stale.
 #    Re-derive targets by stable marker, not by the plan's pre-edit numbers:
 grep -n "# Repo discovery\|^def _gh_list_repos\|^def _gh_" ${OLD_PATH}
-
-# 7. PACKAGE-CONVERSION CHECK — package __init__ must expose the old facade attributes.
-python - <<'PY'
-import importlib
-mod = importlib.import_module("hephaestus.github.fleet_sync")
-for name in ("main", "__all__"):
-    assert hasattr(mod, name), f"facade missing {name}"
-print("package facade import OK")
-PY
-
-# 8. ENTRY-POINT CHECK — parse pyproject and import the exact module:function target.
-python - <<'PY'
-import importlib
-import pathlib
-import tomllib
-
-data = tomllib.loads(pathlib.Path("pyproject.toml").read_text())
-target = data["project"]["scripts"]["hephaestus-fleet-sync"]
-module_name, func_name = target.split(":", 1)
-func = getattr(importlib.import_module(module_name), func_name)
-assert callable(func), target
-print(f"entry point OK: {target}")
-PY
-
-# 9. DESTRUCTIVE-GIT SAFETY CHECKS — prove command shape and cleanup paths, not just happy path.
-grep -rn -- "--force\\|force-with-lease\\|worktree remove\\|rebase --abort\\|dry_run" hephaestus/ tests/
-#    Every push after rebase should be --force-with-lease, never bare --force.
-#    Every failure path should abort/cleanup real inspection worktrees with dry_run=False.
 ```
 
 ### Detailed Steps
@@ -167,40 +140,6 @@ grep -rn -- "--force\\|force-with-lease\\|worktree remove\\|rebase --abort\\|dry
    deletion, grep each symbol in the file and let `ruff check --select F401` (then `--fix`) be the source
    of truth instead of eyeballing it.
 
-6. **Treat module-to-package conversion as a runtime contract change until proven.**
-   A `pyproject.toml` entry point like `hephaestus.github.fleet_sync:main` imports the dotted name and
-   then reads `main` from that imported object. After `fleet_sync.py` becomes `fleet_sync/__init__.py`,
-   the package facade must re-export `main` and any compatibility names the old module exposed. If the
-   implementation moves `main` into `cli.py` but forgets `from .cli import main as main` in `__init__`,
-   imports can still succeed while the console script breaks. Prove the exact entry-point target by
-   parsing `pyproject.toml` and importing/calling the resolved attribute.
-
-7. **Enumerate private imports and patch targets before deleting the old module file.**
-   Package facades only preserve old patch targets for names actually re-exported from `__init__`.
-   They do not preserve tests that patch a moved submodule's local binding, nor callers that imported a
-   private helper by name before the refactor. Grep for `patch("hephaestus.github.fleet_sync...")`,
-   `patch.object(...fleet_sync...)`, and `from hephaestus.github.fleet_sync import _` across tests and
-   first-party code before deciding which private attributes belong in the facade `__all__`.
-
-8. **Regression-test destructive git exits before trusting an extraction.**
-   Rebase automation extraction is not behavior-preserving unless tests cover failed rebase, push
-   exception, dry-run conflict inspection, agent failure, and broad exception cleanup paths. Each path
-   should prove: `git rebase --abort` happens when a real rebase started, inspection worktrees are removed
-   only under the run clone, dry-run conflict inspection cleans up with `dry_run=False` because the
-   inspection worktree is real, and pushes use `--force-with-lease` rather than bare `--force`.
-
-9. **Make branch-push verification compare the intended head, not just branch existence.**
-   `git ls-remote origin <branch>` proves a remote ref exists; it does not prove the agent pushed the
-   commit just produced, nor that the PR head moved. Capture the intended local SHA before/after agent
-   work and compare it to the remote ref or PR head. Treat a no-op agent run or unchanged remote SHA as
-   a failed iteration, even when the push command exits 0.
-
-10. **Separate AST-extraction and Unicode-preservation claims from implementation faith.**
-    If the plan promises AST line-span extraction will match reviewer expectations, include tests for
-    decorators, nested definitions, class methods, comments/trailing whitespace, and exact line endings.
-    If exact glyphs matter, test the literal strings; do not let a formatter, doc rewrite, or fallback
-    ASCII normalization silently replace arrows or status glyphs.
-
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -210,10 +149,6 @@ grep -rn -- "--force\\|force-with-lease\\|worktree remove\\|rebase --abort\\|dry
 | Trust the "frozen at 16 modules" comment | Plan asserted the omit allowlist is frozen at 16 and only the comment + one test need bumping to 17, without running the test or reading its assertion body | The "16" figure and the assertion mechanism (count literal vs set membership) were read, not verified; a hardcoded `len(...) == 16` elsewhere, or a third copy of the count, would be missed and fail CI | When a plan depends on a frozen-list/magic-number invariant, READ the actual assertion body (don't trust the comment) and grep the literal to enumerate EVERY place it appears |
 | Reason about circular imports statically | Plan claimed `loop_repo_manager → ci_driver` adds no cycle because ci_driver references loop_runner only in comments | Static reasoning; ci_driver could import another automation module that transitively imports loop_runner at module load, creating a cycle the comment-scan never sees | The import-graph claim is only proven by the smoke-test step actually executing — label it "verify by execution," not "verified by reading" |
 | Hand-judge conditional unused-import removal | Plan said to drop `urlparse` and `gh_cli_timeout` from loop_runner "only if no other references remain," left to manual judgement | Removing a still-used import breaks the module; leaving a genuinely-unused one fails ruff F401 — both directions of hand-judgement are wrong | Gate each import removal on a per-symbol grep AFTER the deletion and make `ruff check --select F401` / `--fix` the source of truth, not eyeballing |
-| Assume `module.py` to `module/` is transparent because the dotted name is unchanged | Plan preserved `hephaestus.github.fleet_sync:main` while moving code into a package | The dotted import can still resolve while the console script fails if `__init__.py` does not expose `main`; private facade names and `__all__` can also drift | Parse the entry point from `pyproject.toml`, import the exact module, assert `main` is callable, and smoke-test old facade imports |
-| Treat cleanup coverage as implied by a helper extraction | Plan moved rebase/push/worktree logic and listed tests, but the planning artifact did not run them | Destructive git paths fail in the gaps: failed rebase, push exception, dry-run conflict inspection, agent failure, and broad exceptions each need different abort/remove behavior | Require one regression per failure exit before trusting the extraction; assert cleanup acts only on paths under the run clone |
-| Use `git ls-remote origin <branch>` as sufficient push proof | Plan proposed remote branch verification after agent success | Branch existence is weaker than "the intended commit reached the intended PR head"; an old remote ref or unchanged no-op push can pass | Compare the intended local SHA to the remote branch or PR head SHA after push, and treat unchanged/no-op heads as iteration failures |
-| Trust claimed AST spans and exact glyph preservation from the plan text | Plan relied on AST line-span extraction and exact Unicode glyph retention without executing the extractor/tests during planning | Reviewers may expect decorator-inclusive spans, class/nested function behavior, comments, or byte-for-byte glyph preservation that the theoretical extractor does not match | Add fixture tests for the line-span shapes reviewers care about and literal string tests for glyphs before accepting the refactor |
 
 ## Results & Parameters
 
@@ -250,30 +185,14 @@ grep -rn -- "--force\\|force-with-lease\\|worktree remove\\|rebase --abort\\|dry
 | `loop_repo_manager → ci_driver` adds no cycle | REASONED, NOT RUN | Run `python -c "import ...loop_runner; from ...automation import loop_repo_manager"` |
 | `urlparse` / `gh_cli_timeout` are safely removable | CONDITIONAL | Per-symbol grep after deletion; let `ruff --select F401` decide |
 
-### Issue #1407 specific findings
-
-| Assumption in the plan | Status | What a reviewer must do |
-|------------------------|--------|-------------------------|
-| `hephaestus/github/fleet_sync.py` can become a `hephaestus.github.fleet_sync` package without breaking `hephaestus.github.fleet_sync:main` | UNVERIFIED | Parse `pyproject.toml`, import the exact console-script module, and assert `main` is callable from the package facade |
-| All private imports, `unittest.mock.patch` targets, and facade `__all__` names were enumerated | UNVERIFIED | Grep first-party code and tests for direct private imports and patch targets before deleting the old module file; add compatibility tests for old paths |
-| Helpers in `tidy.py` are identical enough to share with extracted fleet sync helpers | UNVERIFIED | Diff behavior at call-site level, including command strings, return contracts, error handling, and output text; extract only genuinely identical mechanics |
-| Dry-run conflict inspection creates real rebase/worktree state needing cleanup | UNVERIFIED | Test that dry-run conflict inspection removes real inspection worktrees with `dry_run=False` and aborts any real rebase state it creates |
-| Remote branch verification via `git ls-remote origin <branch>` is meaningful after agent success | TOO WEAK | Compare intended local SHA against remote branch or PR head SHA, not just ref existence |
-| AST line-span extraction targets exactly match reviewer expectations | UNVERIFIED | Add fixture tests for decorated functions, nested definitions, class methods, comments, and trailing whitespace before relying on spans |
-| Provider-neutral dispatch/static path checks cover moved agent-invoking modules | UNVERIFIED | Include moved modules in direct-dispatch and static path checks so Claude/Codex selection behavior does not regress |
-| Exact Unicode glyphs are preserved by the refactor | UNVERIFIED | Add literal string tests or snapshot checks for the glyph-bearing output before accepting behavior preservation |
-
-### External inputs not directly verified in the planning artifact
-
-- GitHub issue #1407 body and review context supplied in the prompt.
-- Claimed current line numbers and disk measurements for `hephaestus/github/fleet_sync.py`, `pyproject.toml:101`, `tests/unit` paths, and `tidy.py` line spans from the prior plan context.
-- GitHub CLI/API behavior for `mergeable`, `mergeStateStatus`, `statusCheckRollup`, and PR head/remote branch semantics.
-- GPG signing identity behavior and environment variables.
-- Conflict-agent behavior and the ProjectHephaestus tests listed in the plan.
-
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | Planning phase for issue #1360 (extract 12-function repo-management cluster from `automation/loop_runner.py` into `loop_repo_manager.py` with backward-compat re-exports) | Plan produced, NOT executed; this skill records the unverified assumptions and reviewer risks. Implementation pending. |
-| ProjectHephaestus | Planning phase for issue #1407 (refactor `hephaestus/github/fleet_sync.py` into a `hephaestus.github.fleet_sync` package while preserving facade imports and entry point) | Plan produced, NOT executed; this skill records package-conversion, destructive-git, branch-verification, AST-span, provider-dispatch, and Unicode-preservation risks. |
+
+---
+
+## v1.0.0 (2026-06-15)
+
+**Initial version.**
