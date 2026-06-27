@@ -1,3 +1,28 @@
+# architecture-god-function-decomposition-planning-risks - History
+
+## v1.3.0 (2026-06-27)
+
+**Changed by:** ProjectHephaestus issue #1407 fleet sync package split planning
+**Verification:** unverified
+
+### What changed
+
+- Added module-to-package conversion review risks beyond line-count arithmetic.
+- Added reviewer checklist coverage for legacy dotted entry points, facade exports, stale module deletion, package/file shadowing, public import surface, and import-cycle proof.
+- Added planning-risk coverage for extracted shared git helpers, destructive worktree cleanup guards, and dry-run paths that still create real worktrees.
+- Added unverified external/runtime assumptions to flag in plans: GitHub CLI JSON/merge-state semantics, GPG signing key behavior, force-with-lease/rebase behavior, filesystem symlink resolution, and moved-test patch targets.
+
+### Why
+
+The previous v1.2.0 skill focused on function-size arithmetic, stale issue metadata,
+sentinel return values, and test-file existence. Planning a large Python
+module-to-package split showed another class of decomposition risk: even if the
+line-count reduction is coherent, reviewers still need evidence that old import
+contracts, entry points, package layout, git workflow behavior, cleanup guards,
+and external runtime assumptions survive the split.
+
+### Previous version (v1.2.0) snapshot
+
 ---
 name: architecture-god-function-decomposition-planning-risks
 description: >-
@@ -8,12 +33,10 @@ description: >-
   function, verify on disk that the cited size matches reality; apply the
   sentinel return pattern for extracted poll loops; verify test file existence
   before writing stubs; and audit plan documents for helper-defined-but-never-called
-  inconsistencies. Also use when converting a large Python module into a package:
-  prove legacy entry points, facade exports, file/package shadowing, import
-  layering, shared helper placement, and cleanup guards before approving the plan.
+  inconsistencies.
 category: architecture
-date: 2026-06-27
-version: "1.3.0"
+date: 2026-06-13
+version: "1.2.0"
 user-invocable: false
 history: architecture-god-function-decomposition-planning-risks.history
 verification: unverified
@@ -36,13 +59,6 @@ tags:
   - loop-body-measurement
   - docstring-budget
   - return-type-tracing
-  - module-to-package
-  - package-facade
-  - import-compatibility
-  - import-cycles
-  - worktree-cleanup
-  - dry-run-cleanup
-  - git-helpers
 ---
 
 # Architecture: God-Function Decomposition — Planning Risks
@@ -51,18 +67,14 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-27 |
-| **Source issue** | ProjectHephaestus #1180 and #1407 planning reviews |
+| **Date** | 2026-06-13 |
+| **Source issue** | ProjectHephaestus #1180 — decompose 5 god-functions in `hephaestus/automation/` |
 | **Verification** | unverified (planning-phase learnings; no code ran) |
-| **Objective** | Document recurring planning-phase failure modes when working from issue-cited metadata, line-count arithmetic, or module-to-package decomposition assumptions rather than disk and runtime evidence |
+| **Objective** | Document recurring planning-phase failure modes when working from issue-cited metadata rather than disk reality |
 
 These risks surface whenever an engineer or agent plans god-function extractions from
 an issue description that cites line numbers, function sizes, or file paths. The
 issue body may be weeks or months old; the code on disk is authoritative.
-
-They also surface when a large Python module is converted into a package. A package
-split can satisfy size and layering goals while still breaking legacy dotted entry
-points, facade imports, test patch targets, cleanup guards, or interactive git flows.
 
 ---
 
@@ -89,11 +101,6 @@ Use this skill when:
 | 4 | For control-flow sentinel returns, enumerate ALL signal states in docstring |
 | 5 | Verify test file existence before writing stubs |
 | 6 | Check empty/sentinel values passed to downstream functions |
-| 7 | For module-to-package splits, prove old dotted entry points and facade exports still work |
-| 8 | Verify the old `.py` file is removed or intentionally retained without shadowing the package |
-| 9 | Prove import layering and cycle boundaries after moving helpers |
-| 10 | If extracting shared git helpers, keep interactive flows out of noninteractive helper rewrites |
-| 11 | Treat dry-run paths that create temporary worktrees as real cleanup obligations |
 
 ### Step 1: Measure Functions from Disk
 
@@ -142,26 +149,6 @@ grep the replacement code blocks for `helper_name(`
 ### Step 4: Document Sentinel Return Contracts
 
 When a helper encodes control-flow signals in its return value, enumerate all states in the docstring and show all branches in the caller's replacement block.
-
-### Step 5: Prove Module-to-Package Compatibility
-
-When converting `some_module.py` into `some_module/`, the extraction plan must prove
-more than "the large file got shorter." Require explicit evidence for:
-
-```text
-[ ] The old dotted entry point still resolves, for example `package.some_module:main`
-[ ] The new package `__init__.py` deliberately exports the old public names
-[ ] No stale sibling `some_module.py` shadows or conflicts with `some_module/`
-[ ] Existing tests that import or monkeypatch public names still target live objects
-[ ] Lower-level packages do not import higher-level orchestration packages
-[ ] Shared helpers moved to a common module preserve the old interactive/noninteractive split
-[ ] Cleanup guards compare resolved paths and reject root, clone, and outside paths
-[ ] Dry-run paths that create real temporary resources clean them with real removal
-```
-
-Plans should include at least one import/facade smoke test and one import-cycle or
-layering proof. If a moved helper touches git state, the plan should also identify
-which call paths are interactive and which are safe for noninteractive helper reuse.
 
 ---
 
@@ -471,93 +458,7 @@ discrepancy in the plan and proceed from disk reality.
 
 ---
 
-## Risk 10: Module-to-Package Splits Are Not Just Line-Count Arithmetic
-
-**What happened**: A planning pass for a large Python module split focused on carving a
-monolithic module into smaller package files plus shared helpers. The decomposition
-shape was plausible, but the riskiest parts were not the line counts. The reviewer
-needed proof that existing import contracts, entry points, patch targets, cleanup
-guards, and git workflows survived the package conversion.
-
-**The failure mode**: A plan can reduce a 1,000+ line module into clean submodules and
-still break users because the old module path no longer resolves, `__init__.py` omits
-public facade exports, a stale sibling `.py` file shadows the package, tests patch a
-moved symbol, or an extracted helper changes an interactive git flow. These failures
-often appear only after import collection, CLI invocation, or destructive cleanup tests,
-so they must be review targets before implementation starts.
-
-**Rule**: For every large module-to-package conversion, add a reviewer checklist that
-separates size goals from compatibility and runtime-boundary risks:
-
-| Reviewer focus | Why it matters | Evidence to demand |
-| --------------- | -------------- | ------------------ |
-| Legacy dotted entry point | Console scripts and docs may still call the old path, such as `hephaestus.github.fleet_sync:main` | Import smoke test or CLI entry-point check against the old path |
-| Facade exports | Users and tests may rely on `from package.module import Name` even after internals move | Explicit `__init__.py` export list plus tests for public imports |
-| Package/file shadowing | A stale `module.py` next to `module/` can hide the package or make import behavior environment-dependent | Plan states whether the old file is deleted, retained as a shim, or absent after the split |
-| Public import surface | Tests often patch public names rather than private implementation paths | Patch-target audit after moving tests into package-aware files |
-| Import-cycle and layering proof | A lower-level package should not import its caller/orchestrator layer | Import graph check showing, for example, `github` does not import `automation` |
-| Shared helper placement | A common helper can accidentally change callers with different interaction models | Call-site inventory proving noninteractive helpers do not rewrite interactive flows |
-| Destructive cleanup guards | Worktree cleanup must remove only intended temporary siblings | Resolved-path truth table: allow sibling conflict worktrees under the temp root; reject temp root, clone root, and outside paths |
-| Dry-run resource cleanup | A dry-run inspection path can still create real worktrees or temp dirs | Cleanup path calls real removal for real resources, even when the operation being inspected was dry-run |
-
-**Unverified external/runtime assumptions to flag**:
-
-- GitHub CLI JSON and merge-state semantics may not match the planner's mental model.
-- GPG signing key behavior and commit email validation can differ by host, keyring, and git config.
-- Rebase and `--force-with-lease` behavior depends on the remote ref state at push time.
-- Filesystem path resolution and symlink behavior can change cleanup-guard outcomes.
-- Test file locations and monkeypatch targets may be wrong after tests move into a package layout.
-
-**Review rule**: If any of those assumptions is not directly verified during planning,
-mark it as unverified in the plan and add a reviewer bullet that asks for evidence
-during implementation.
-
----
-
 ## Failed Attempts
-
-### R2: Treating a Module-to-Package Split as Pure Extraction Arithmetic
-
-**What was tried**: Planning focused on breaking a large module into submodules and
-counting the resulting line-count reduction.
-
-**Why it failed**: A package split changes import resolution. The old module path,
-entry point, facade exports, stale-file deletion, public import surface, and test patch
-targets are separate compatibility contracts that line-count arithmetic cannot prove.
-
-**Lesson**: For module-to-package refactors, reviewers should demand compatibility
-evidence in addition to extraction arithmetic: old dotted entry point, facade imports,
-stale sibling file handling, and public patch-target tests.
-
----
-
-### R2: Assuming Dry-Run Conflict Inspection Cannot Leave Real Worktrees
-
-**What was tried**: Treating dry-run conflict inspection as if it were a purely virtual
-operation with no real cleanup obligations.
-
-**Why it failed**: Dry-run code may still create real temporary worktrees to inspect a
-conflict safely. If cleanup also honors dry-run and skips removal, the plan leaks real
-worktrees.
-
-**Lesson**: Distinguish "do not push or mutate the target repo" from "do not clean up
-temporary resources." Temporary worktrees created during dry-run inspection need real
-removal guarded by resolved-path safety checks.
-
----
-
-### R2: Centralizing Git Helpers Without Proving Interactive Flow Boundaries
-
-**What was tried**: Moving reusable git operations into a shared helper module without
-explicitly proving which callers are interactive and which are noninteractive.
-
-**Why it failed**: A helper that is correct for automated branch/rebase/push flows can
-still change user-facing interactive behavior if reused by a command that intentionally
-uses `Popen`, streams output, or waits for human prompts.
-
-**Lesson**: Shared git helpers should have a call-site inventory. Keep interactive flows
-on their existing process model unless the plan explicitly tests and preserves the
-interaction contract.
 
 ### R1: Single Helper Insufficient for `_run_implementation_and_review` (130L)
 
@@ -696,26 +597,6 @@ Before submitting or approving a god-function decomposition plan:
     [ ] Enumerate ALL signal states in the docstring (not just the happy path)
     [ ] Show all branches (if/elif/else) in the caller's replacement block
 
-[ ] For each module-to-package conversion:
-    [ ] Prove the old dotted entry point still works (for example, `package.module:main`)
-    [ ] List facade exports intentionally preserved by `__init__.py`
-    [ ] State whether the old `.py` module is deleted, retained as a shim, or absent
-    [ ] Verify no stale file/package shadowing remains
-    [ ] Audit public imports and monkeypatch targets used by tests
-    [ ] Prove import layering and cycles after helper extraction
-    [ ] Confirm lower-level modules do not import higher-level orchestration modules
-
-[ ] For each shared git helper extraction:
-    [ ] Identify all call sites and classify them as interactive or noninteractive
-    [ ] Keep interactive process flows unchanged unless explicitly tested
-    [ ] Verify helper placement does not create a reverse dependency or cycle
-
-[ ] For each destructive cleanup guard:
-    [ ] Compare resolved paths, not raw strings
-    [ ] Allow only intended sibling conflict worktrees under the temp root
-    [ ] Reject the temp root itself, the clone root, and paths outside the allowed root
-    [ ] If dry-run creates real temporary resources, cleanup uses real removal
-
 [ ] For each extracted poll/retry loop:
     [ ] Document the full sentinel return contract (what each return value means)
     [ ] Add a unit test distinguishing the empty-list vs None sentinels
@@ -743,31 +624,6 @@ Before submitting or approving a god-function decomposition plan:
 | grep-by-name before grep-by-line | ProjectHephaestus #1180 R1 | Found `_run_impl_review_loop` moved from `ci_driver.py:1513` to `_review_phase.py:374` |
 | Subtraction arithmetic chain | ProjectHephaestus #1180 R1 | Revealed 5 extractions needed (not 3) for `_run_ci_fix_session` to reach ≤80L |
 | Sentinel return contract docstring | ProjectHephaestus #1180 R1 | Made all 3 control-flow states explicit; prevented silent fall-through bugs |
-| Module-to-package compatibility checklist | ProjectHephaestus #1407 planning | Separated import/entry-point/facade risks from line-count arithmetic |
-| Resolved-path cleanup truth table | ProjectHephaestus #1407 planning | Focused reviewer attention on allowed sibling worktrees vs rejected root/clone/outside paths |
-| Interactive git-flow call-site inventory | ProjectHephaestus #1407 planning | Prevented shared noninteractive helpers from silently changing interactive commands |
-
-### Reviewer Focus: Module-to-Package Splits
-
-| Check | Reviewer Question |
-| ----- | ----------------- |
-| Entry point compatibility | Does the old `package.module:main` path still import and run? |
-| Facade imports | Are all public names that tests or users import re-exported deliberately? |
-| Stale module deletion | Is the old `.py` file removed or preserved as an intentional compatibility shim? |
-| Import layering | Does the extracted package avoid importing callers or orchestration layers? |
-| Shared helper behavior | Did moving helpers preserve interactive vs noninteractive git behavior? |
-| Cleanup safety | Do resolved-path guards reject root, clone, and outside paths while allowing intended siblings? |
-| Dry-run cleanup | Are real temporary resources removed even when the inspected operation is dry-run? |
-
-### Unverified Runtime Assumptions to Call Out
-
-| Assumption | Why It Needs Direct Verification |
-| ---------- | -------------------------------- |
-| GitHub CLI JSON and merge-state fields | CLI output and mergeability semantics can drift or differ by repo state |
-| GPG signing key and email validation | Local keyring, git config, and commit identity may not match the plan |
-| Rebase plus `--force-with-lease` push behavior | Correctness depends on the remote ref at push time |
-| Filesystem `resolve()` and symlink behavior | Cleanup guards can pass or fail differently through symlinked paths |
-| Test file and patch target locations | Moving tests into a package layout can invalidate old import and monkeypatch paths |
 
 ### Key Thresholds (ProjectHephaestus)
 
@@ -808,4 +664,3 @@ for node in ast.walk(tree):
 | ProjectHephaestus (R0) | Planning session for issue #1180 — decompose 5 god-functions in `hephaestus/automation/`; `_implement_issue` cited as 354 lines in issue, found as 127 lines on disk; `_run_impl_review_loop` cited at `ci_driver.py:1513`, found at `_review_phase.py:374-503`; `_finalize_address_state` defined in plan but not called in replacement block; test file existence unverified; `_poll_ci_until_concluded` sentinel contract risk identified |
 | ProjectHephaestus (R1) | Second planning iteration for issue #1180 after R0 NOGO review; AST re-measurement confirmed `_implement_issue` is 128L not 354L and `_run_impl_review_loop` is at `_review_phase.py:374`; arithmetic subtraction chain revealed `_run_ci_fix_session` needs 5 helpers (not 3) to reach ≤80L; `_run_address_step_if_needed` sentinel return pattern documented with all 3 control-flow states; R0 waiver-on-"marginal" grounds rejected — 128L = 60% over cap and is in scope |
 | ProjectHephaestus | Issue #1180 R2 plan (2026-06-13) — 3rd TASK/PLAN/REVIEW cycle; all 7 target functions scoped to ≤80L |
-| ProjectHephaestus | Issue #1407 fleet sync package split plan (2026-06-27) — plan-only, unverified; refactor `hephaestus/github/fleet_sync.py` into a `hephaestus.github.fleet_sync` package while preserving `hephaestus.github.fleet_sync:main`, facade exports, public imports, import layering, shared `github/git_ops.py` behavior, cleanup guards, and dry-run real-resource cleanup |
