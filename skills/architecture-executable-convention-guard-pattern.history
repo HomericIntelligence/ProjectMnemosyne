@@ -1,5 +1,25 @@
 # architecture-executable-convention-guard-pattern — History
 
+## v1.5.0 (2026-06-26)
+
+**Changed by:** ProjectHephaestus issue #1506 R2 (PLANNING learning — a **critical D / NOGO** on the R1 re-plan; this is the second NOGO on the same #1506 session, distinct from the v1.4.0 MINOR tightenings).
+**Verification:** unverified (PLAN only — code not executed, CI not run).
+
+### What changed
+- Added a new sub-pattern section, "Sub-Pattern: Scope a Membership Guard to Named Targets, Not the Whole Population." Core lesson: an executable membership-guard that iterates a POPULATION must be scoped to the issue's NAMED targets — never the whole population — when sibling members are only PARTIALLY compliant, or the guard fails its OWN acceptance test on the shipped tree.
+- Concrete case: R0/R1 set `DOCUMENTED_PACKAGES` to all SEVEN Stable subpackages; R2 found config/io/logging/utils have pre-existing PARTIAL `COMPATIBILITY.md` tables (measured via `ast` + `awk`: config 13-in-`__all__` vs ~6 rows, utils 14 vs ~6), so `find_violations()` returns ~17 `missing-from-docs` findings on the shipped tree → `test_live_tree_is_aligned` (asserts `== []`) FAILS, `hephaestus-check-api-table-docs` exits 1 not 0, and the pre-commit `files:` regex (which included config/utils) would BLOCK every unrelated config/utils PR. Fix: scope the iteration set AND the `files:` trigger to `{cli, system, version}`, add a `test_scope_is_three_named_packages` scope-lock, and correct the docstring's false "config/io/logging/utils already have tables" claim (they have PARTIAL tables).
+- Captured the generalizable rules (measure compliance of EVERY member before iterating; scope iteration set + CI/pre-commit `files:` to named targets; lock the scope with an equality test; this is the EXECUTABLE-GUARD corollary of the audit-survey rule; "exists" ≠ "complete/aligned") plus the process meta-lesson (the defect survived R0 and R1 because alignment was re-confirmed only for the subset — a global property over a SET must be measured over the ENTIRE set).
+- Added a 5th "When to Use" trigger group ("iterates a population and you must decide its iteration scope"), trigger (8) in the frontmatter description, 4 Failed Attempts rows (pointed guard at whole population; assumed exists==aligned; re-confirmed only the subset; left scope unlocked), a "Scope-a-membership-guard generalization (v1.5.0, unverified)" note in Results & Parameters, and a Verified On row (issue #1506 R2, PLAN — unverified).
+- Added tags `guard-scope-population`, `partial-compliance`, `scope-lock-test` (frontmatter + footer). Bumped the two stale warning-banner version ranges from `v1.1.0–v1.4.0` to `v1.1.0–v1.5.0`. Bumped frontmatter version 1.4.0 → 1.5.0 (date stays 2026-06-26).
+
+### Why
+The #1506 R2 review surfaced a defect more severe than R1's MINOR tightenings: the guard's iteration scope made its OWN acceptance test red on the shipped tree, and the over-broad pre-commit `files:` regex would have blocked unrelated PRs — an unplanned scope explosion. The durable, generalizable insight (scope an executable membership-guard to the issue's named targets when siblings are partially compliant; measure the global assertion over the entire set before claiming it passes) extends the same skill's bidirectional-invariant, coverage-altitude, and NOGO→GO-tightening material and belongs in the same skill. All of it is unverified (plan-only) — the scoped guard, the scope-lock test, and the `ast`/`awk` row-count measurement were designed/run during planning but the implementation was never executed or CI-validated.
+
+### Previous version (v1.4.0) snapshot
+The v1.4.0 rendered `.md` content prior to this amendment is preserved in git history at the parent commit of this amendment. It carried `verification: unverified`, the coredump `verify_crash_bundle` v1.0.0 material, the v1.1.0 bidirectional mirror/parity sub-pattern, the v1.2.0 coverage-altitude step 8, the v1.3.0 commit-trailer (DCO) sub-pattern, and the v1.4.0 NOGO→GO-tightening (#1506 R1) sub-pattern — but did NOT yet contain the scope-a-membership-guard (#1506 R2) sub-pattern.
+
+---
+
 ## v1.4.0 (2026-06-26)
 
 **Changed by:** ProjectHephaestus issue #1506 R1 re-plan (PLANNING learning — after the R0 plan was graded B / NOGO despite a reviewer-affirmed sound design).
