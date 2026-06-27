@@ -1,5 +1,47 @@
 # error-message-consistency-optional-dependency-pola — History
 
+## v2.2.0 (2026-06-27)
+
+**Changed by:** Implementation session for ProjectHephaestus issue #1509 — `[audit][S14 API Design] format_output() and format_system_info() silently ignore invalid format_type — POLA violation`. Arm B of the POLA either/or this skill covers (the "document the fallback, do NOT raise" arm).
+**Verification:** verified-local — 77 tests passing locally; CI pending.
+
+### What changed
+
+- Upgraded Arm B (the `format_output` silent-fallback documentation arm, #1509) from **unverified planning** to **verified-local**: the v2.1.0 plan was executed as written, with no surprises and no new failure modes.
+- Updated frontmatter: `version: "2.1.0"` → `"2.2.0"`, `verification: unverified` → `verified-local`.
+- Updated the Overview table: Arm B Outcome entry changed from "Plan NOT executed" to "77 tests passing locally; PR pending"; Verification field changed from "unverified" to "verified-local"; History line added v2.2.0.
+- Updated the Arm B decision-procedure section header: removed the "Warning: unverified" callout and replaced with a "Verified Locally (v2.2.0)" note naming the exact files changed.
+- Updated the "Arm B — #1509 fallback-contract reference" section header: removed the "Warning: unverified" callout and replaced with a "Verified Locally (v2.2.0)" note.
+- Added new entry to the "Verified On" table: ProjectHephaestus Issue #1509 / PR pending — v2.2.0 verified-local, 77 tests, docstring at `hephaestus/cli/utils.py:355-373`, two regression tests at `tests/unit/cli/test_utils.py:328-356`.
+
+### Why
+
+The v2.1.0 plan for #1509 was executed cleanly on first attempt — no new failure modes encountered. The plan was accurate: the implementation consisted of a docstring expansion in `format_output` (documenting both silent fallbacks) and two regression tests. All 77 tests passed locally. Upgrading from "unverified planning" to "verified-local" ensures future readers can trust the Arm B steps as a validated workflow, not merely a hypothesis.
+
+### Key execution details
+
+- Files changed in ProjectHephaestus: `hephaestus/cli/utils.py:355-373` (docstring only, no logic change) and `tests/unit/cli/test_utils.py:328-356` (two new tests).
+- New tests: `test_invalid_format_falls_back_to_text` (probes `"bogus"`, `"yaml"`, `""`, `"JSON"`; asserts text content present and `"{" not in result`) and `test_table_format_on_dict_falls_back_to_text` (dict input with `"table"` format_type falls to text).
+- Non-vacuity: confirmed as argued in the plan — both tests would fail if the relevant fallback branch were removed.
+- No new failure modes: the three residual reviewer risks documented in v2.1.0 remain as reviewer caveats (single-grep caller-scan, case-sensitivity asymmetry, non-RED-GREEN test nature) but none blocked execution.
+
+### Previous version (v2.1.0) snapshot
+
+Frontmatter snapshot:
+
+```yaml
+name: error-message-consistency-optional-dependency-pola
+category: architecture
+date: 2026-06-27
+version: "2.1.0"
+user-invocable: false
+verification: unverified
+```
+
+v2.1.0 added: the "document the fallback, do NOT raise" arm (Arm B) for the #1509 "silently ignores invalid format_type" POLA finding; the raise-vs-document decision procedure (grep callers AND existing tests before defaulting to raise); Failed Attempts #9–#11 (defaulting to raise, missing secondary fallthrough, vacuous tests); the Arm B fallback-contract table; and the case-sensitivity asymmetry note. All labeled "unverified planning" pending execution.
+
+---
+
 ## v2.1.0 (2026-06-27)
 
 **Changed by:** Planning session for ProjectHephaestus issue #1509 — `[audit][S14 API Design] format_output() and format_system_info() silently ignore invalid format_type — POLA violation`. Sibling audit finding to #1510 (which produced v1.0.0/v2.0.0).

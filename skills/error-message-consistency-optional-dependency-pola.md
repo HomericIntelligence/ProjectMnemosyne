@@ -3,9 +3,9 @@ name: error-message-consistency-optional-dependency-pola
 description: "Resolve a POLA audit finding about a function that silently mishandles input — either the wrong-exception-message arm (collapse format-detection and dependency-availability) or the silently-ignores-invalid-input arm (raise vs document the existing fallback). Use when: (1) two public functions reach the same missing-dependency failure by different code paths and one already raises the right error; (2) a catch-all branch collapses 'unsupported format' and 'dependency missing' into one misleading message; (3) an audit says 'function X silently ignores invalid input — raise an error OR document the fallback' and you must decide which; (4) a sibling/related function already documents and TESTS the silent fallback as intended behavior; (5) you are tempted to add a discriminator enum or custom exception class for a one-line consistency fix; (6) the absent-dependency branch is only ever exercised via monkeypatch and could pass vacuously; (7) flipping an exception type (ValueError→RuntimeError) requires grepping callers for type-specific except handlers and potentially collapsing identical-body arms to a tuple."
 category: architecture
 date: 2026-06-27
-version: "2.1.0"
+version: "2.2.0"
 user-invocable: false
-verification: unverified
+verification: verified-local
 history: error-message-consistency-optional-dependency-pola.history
 tags:
   - pola
@@ -37,7 +37,7 @@ mishandles input" audit findings:
 - **Arm A — change the exception (verified-local, #1510):** a function reports the
   *wrong cause* for a failure (collapsed format/dependency condition); fix by raising
   the sibling's actionable error verbatim. This is the original skill content.
-- **Arm B — document the fallback, do NOT raise (unverified planning, #1509):** an audit
+- **Arm B — document the fallback, do NOT raise (verified-local, #1509):** an audit
   says "function X silently ignores invalid input — raise an error OR document the
   fallback". The correct first move is **not** to default to "raise". Grep ALL callers
   AND grep existing tests first: a sibling may already document AND test the fallback as
@@ -50,9 +50,9 @@ mishandles input" audit findings:
 |-------|-------|
 | **Date** | 2026-06-27 |
 | **Objective** | (Arm A, #1510) Fix `load_config()` raising a misleading `ValueError("Unsupported config format")` when PyYAML was absent, instead of the actionable `RuntimeError` the sibling `load_yaml_config()` already raises. (Arm B, #1509) Plan the fix for an `[audit][S14 API Design]` finding that `format_output()` (`hephaestus/cli/utils.py:368`) and `format_system_info()` (`hephaestus/system/info.py:237-239`) silently ignore an invalid `format_type` — "raise OR document the fallback". |
-| **Outcome** | (Arm A) Implemented and verified locally for #1510 — split condition, reconciled the one `except ValueError` caller, DRY tuple-collapse; 140 tests local, PR #1608. (Arm B) Plan only for #1509: do NOT raise — `format_system_info`'s text fallback is already documented AND asserted by an existing test (`tests/unit/system/test_info.py:167 test_invalid_format_falls_back_to_text`), so raising would break a tested contract; ~25 callers all pass `"json"`/`"text"` literals; resolution = document the fallback in the under-documented sibling + add regression tests for both the named fallback AND a secondary unnamed one (`"table"` on a dict). Plan NOT executed. |
-| **Verification** | **unverified** for the #1509 (Arm B) planning content added in v2.1.0 — plan produced, no code run, no CI. The #1510 (Arm A) content remains **verified-local** (140 tests local; CI pending). |
-| **History** | [changelog](./error-message-consistency-optional-dependency-pola.history) — v1.0.0 (2026-06-25) planning only; v2.0.0 (2026-06-25) #1510 verified-local; v2.1.0 (2026-06-27) adds the #1509 "document the fallback, do NOT raise" arm (unverified planning). |
+| **Outcome** | (Arm A) Implemented and verified locally for #1510 — split condition, reconciled the one `except ValueError` caller, DRY tuple-collapse; 140 tests local, PR #1608. (Arm B) Executed and verified locally for #1509: do NOT raise — `format_system_info`'s text fallback is already documented AND asserted by an existing test (`tests/unit/system/test_info.py:167 test_invalid_format_falls_back_to_text`), so raising would break a tested contract; ~25 callers all pass `"json"`/`"text"` literals; resolution = document the fallback in the under-documented sibling + add regression tests for both the named fallback AND a secondary unnamed one (`"table"` on a dict). 77 tests passing locally; PR pending. |
+| **Verification** | **verified-local** for the #1509 (Arm B) content (v2.2.0) — docstring expanded, two regression tests added, all 77 tests passing locally; CI pending. The #1510 (Arm A) content remains **verified-local** (140 tests local; CI pending). |
+| **History** | [changelog](./error-message-consistency-optional-dependency-pola.history) — v1.0.0 (2026-06-25) planning only; v2.0.0 (2026-06-25) #1510 verified-local; v2.1.0 (2026-06-27) adds the #1509 "document the fallback, do NOT raise" arm (unverified planning); v2.2.0 (2026-06-27) upgrades Arm B to verified-local after executing the plan. |
 
 ## When to Use
 
@@ -134,7 +134,7 @@ def load_config(config_path):
 
 ### Arm B — "silently ignores invalid input: raise OR document the fallback" decision procedure (#1509)
 
-> **Warning:** This arm is unverified — a planning learning for issue #1509 that was NOT executed. Treat the steps as a hypothesis until CI confirms.
+> **Verified Locally (v2.2.0):** This arm was executed for issue #1509 — docstring expanded at `hephaestus/cli/utils.py:355-373` and two regression tests added to `tests/unit/cli/test_utils.py:328-356`. All 77 tests passing locally. CI pending.
 
 When the audit phrases the finding as *"function X silently ignores an invalid value — raise an error OR document the fallback"*, run this BEFORE writing any code:
 
@@ -372,9 +372,9 @@ except (FileNotFoundError, ValueError, RuntimeError) as e:
 - Zero new public types; the two existing exception types encode the distinction.
 - One caller updated: `fleet_sync.py:_load_fleet_config` — three separate `except` arms collapsed to a tuple.
 
-### Arm B — #1509 fallback-contract reference (unverified planning)
+### Arm B — #1509 fallback-contract reference (verified locally, v2.2.0)
 
-> **Warning:** unverified — the #1509 plan was produced but NOT executed. The tables below describe the *intended* contract to document, not a verified outcome.
+> **Verified Locally (v2.2.0):** The #1509 plan was executed — docstring expanded at `hephaestus/cli/utils.py:355-373` and two regression tests added at `tests/unit/cli/test_utils.py:328-356`. All 77 tests passing locally. CI pending. The tables below describe the documented and tested contract.
 
 The two siblings' `format_type` contracts (to be documented; NOT changed):
 
@@ -394,3 +394,4 @@ Residual reviewer risks for #1509 (ranked): (1) the "all ~25 callers pass valid 
 |---------|---------|---------|
 | ProjectHephaestus | Issue #1510 / PR #1608 — `load_config()` misleading missing-PyYAML error | v1.0.0: Planning session only; plan unverified, not executed in CI. v2.0.0: Implementation complete; 140 tests passing locally; CI pending. Sibling `load_yaml_config()` already raised the target `RuntimeError`; caller `fleet_sync.py:_load_fleet_config` had `except ValueError` updated to `except (FileNotFoundError, ValueError, RuntimeError)` tuple. |
 | ProjectHephaestus | Issue #1509 — `format_output()` / `format_system_info()` silently ignore invalid `format_type` (POLA, S14 API Design) | v2.1.0 (unverified planning): plan produced, NOT executed, no code run, no CI. Decision = document the existing text fallback + add regression tests, do NOT raise — the fallback is already documented in `format_system_info` (`info.py:237-239`) and asserted by `tests/unit/system/test_info.py:167 test_invalid_format_falls_back_to_text`, and all ~25 callers pass `"json"`/`"text"` literals. Also covers a secondary unnamed fallthrough: `"table"` on a dict in `format_output` (`cli/utils.py:368`). |
+| ProjectHephaestus | Issue #1509 / PR pending — `format_output()` document-the-fallback arm executed | v2.2.0: Arm B verified-local; 77 tests passing locally. Docstring expanded at `hephaestus/cli/utils.py:355-373`; two regression tests added at `tests/unit/cli/test_utils.py:328-356` (`test_invalid_format_falls_back_to_text` and `test_table_format_on_dict_falls_back_to_text`). No logic change. CI pending. |
