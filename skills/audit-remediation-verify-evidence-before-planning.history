@@ -1,5 +1,25 @@
 # Changelog: audit-remediation-verify-evidence-before-planning
 
+## v1.3.0 -> v1.4.0 (2026-06-26)
+
+- **Version:** 1.3.0 -> 1.4.0 (MINOR — adds new findings/failed-attempts for the #1507 follow-on, not a rewrite)
+- **Date:** 2026-06-26
+- **Changed by:** ProjectHephaestus issue #1507 ("`hephaestus.utils` and `hephaestus.config` stable tables in COMPATIBILITY.md are severely incomplete — majority of `__all__` symbols undocumented") planning
+- **Verification level:** UNVERIFIED — PLAN ONLY. No code executed, no tests run, no CI. The frontmatter `verification` field stays at `verified-local` because the pre-existing v1.0.0–v1.2.0 evidence-verification content remains genuinely verified-local; the v1.3.0 and new v1.4.0 additions are `unverified` and labeled as such inline.
+- **Snapshot reference:** v1.3.0 rendered `.md` preserved in git history at the parent commit of this amendment (frontmatter `version: "1.3.0"`, `verification: verified-local`; Overview carried the v1.1.0/v1.2.0/v1.3.0 notes; Verified Workflow had 11 steps + a Proposed Workflow steps 12-16; Failed Attempts had 16 rows; Results & Parameters covered the canonical mapping, submodule dirs, #1553, and #1506).
+- **What changed:**
+  - Extended the description with the predecessor-artifact lesson (a captured plan ≠ a merged change; `test -f` before assuming prior work shipped) and added trigger (6).
+  - Added a `v1.4.0 note (UNVERIFIED — plan only; predecessor-artifact-never-landed case)` to the Overview documenting #1507: `test -f hephaestus/validation/api_table_docs.py` -> NO (the #1506 guard never landed; #1507 is the FIRST issue to create it); the #1507 audit counts were ACCURATE (utils=14/config=13, tables listed 5 each); and a deprecated `__all__` member (`retry_with_jitter`) still needs a table row.
+  - Added three "When to Use" triggers (count can be accurate too — re-derive each time; predecessor-artifact-not-landed verification; deprecated-member-still-needs-a-row).
+  - Added a predecessor-artifact / re-derive-count / deprecated-row block (steps 15-17) to Quick Reference.
+  - Added three Failed Attempts rows tagged `(v1.4.0, UNVERIFIED)`: assumed #1506's guard had shipped because a skill captured its plan -> `test -f` showed it never landed; assumed the #1507 count was stale like #1506's -> it was accurate; skipping a deprecated symbol when completing a membership table -> it still needs a row.
+  - Added a ProjectHephaestus #1507 block to Results & Parameters (FIRST issue to create `api_table_docs.py`; accurate counts; deprecated-row precedent; `git log -S --reverse` "Added" anchors; reciprocal Console-Script Tiers row).
+  - Bumped frontmatter version 1.3.0 -> 1.4.0.
+- **Why:**
+  - Planning #1507 (the direct follow-on to #1506), a literal `test -f hephaestus/validation/api_table_docs.py` returned NO and `COMPATIBILITY.md` still lacked the cli/system/version tables — proving the #1506 plan captured in this skill's v1.3.0 note NEVER shipped. The durable lesson: a captured plan is not a merged change; re-verify the artifact on disk before assuming a predecessor's work is done. Re-deriving the counts also showed #1507's audit was ACCURATE (utils=14/config=13) — contrast #1506 where the count was stale — reinforcing "re-derive every issue, never inherit." And `retry_with_jitter` (deprecation prose only, absent from the table) sharpened the membership-table rule: a deprecated `__all__` member still needs a row.
+
+---
+
 ## v1.2.0 -> v1.3.0 (2026-06-26)
 
 - **Version:** 1.2.0 -> 1.3.0 (MINOR — adds new findings/failed-attempts for a new audit shape, not a rewrite)

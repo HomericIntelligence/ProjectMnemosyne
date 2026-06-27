@@ -1,5 +1,23 @@
 # architecture-executable-convention-guard-pattern — History
 
+## v1.5.0 (2026-06-26)
+
+**Changed by:** ProjectHephaestus issue #1507 (PLANNING learning — the FIRST issue to actually CREATE `hephaestus/validation/api_table_docs.py`, after #1506's plan to create it never merged).
+**Verification:** unverified (PLAN only — code not executed, CI not run). Frontmatter `verification` stays `unverified`; the #1507 additions are labeled plan-only.
+
+### What changed
+- Added a new sub-pattern section, "Sub-Pattern: Bidirectional Membership Guard for a Doc-Table↔Code Invariant" — the concrete SECOND worked instance of the bidirectional-membership-guard pattern, applied to a DOC-TABLE↔CODE invariant (not a test-dir↔src-dir mirror). `api_table_docs.py` cross-checks each ``### `hephaestus.<pkg>` `` table in `COMPATIBILITY.md` against `importlib.import_module(pkg).__all__`, emitting `missing-from-docs` (in `__all__`, no row — incl. deprecated members like `retry_with_jitter`) AND `missing-from-all` (row exists, not in `__all__`). Mirrors `cli_tier_docs.py` EXACTLY (dataclass finding, parse fn, `find_violations` fn, `main()→0/1`, `add_json_arg`/`add_version_arg`).
+- Captured the central lesson: **guard a MIXED table by membership only** — assert the verifiable column (symbol membership) and NEVER the unverifiable inferred "Added" version, or you lend false authority to fabricated data. Plus: the predecessor-artifact-not-landed check (`test -f` before extending a guard a prior plan only described); a defensive `parser-found-no-rows` finding (header present but zero rows → fail loud, not "every symbol missing"); the `--environment default` pre-commit pin (importlib needs the installed packages); and the recurring reciprocal-gate cost (the new console script trips the sibling `cli_tier_docs` guard unless a Console-Script Stability Tiers row is added).
+- Added 5 Failed Attempts rows tagged `(issue #1507, UNVERIFIED)`: assumed #1506's guard already existed → `test -f` showed it never landed; considered guarding the inferred "Added" column too → assert membership only; reporting every symbol as missing on a header-present/no-rows parse → add a `parser-found-no-rows` finding; mirrored only the sibling's core check not its full shape.
+- Added a "Doc-table↔code membership-guard generalization (v1.5.0, unverified)" note to Results & Parameters and a row to the Verified On table (issue #1507, PLAN — unverified).
+- Added tags: `doc-table-code-parity`, `membership-only-guard` (frontmatter + footer). Updated the NOGO and DCO sub-pattern warning banners' version range to `v1.1.0–v1.5.0`. Bumped frontmatter version 1.4.0 → 1.5.0.
+
+### Why
+ProjectHephaestus issue #1507 is the direct follow-on to #1506 and the FIRST issue to actually create `api_table_docs.py` — a literal `test -f hephaestus/validation/api_table_docs.py` returned NO and `COMPATIBILITY.md` still lacked the cli/system/version tables, so #1506's captured plan never merged. The #1507 plan grounds the abstract "mirror existing guard, validate BOTH directions" rule in a concrete doc-table↔code instance and adds the durable membership-only discipline for a MIXED table (verifiable symbol membership vs unverifiable inferred "Added" version), plus the `parser-found-no-rows` defensive finding and the recurring reciprocal-gate cost. All of it is unverified (plan-only) — no code, tests, or CI.
+
+### Previous version (v1.4.0) snapshot
+The v1.4.0 rendered `.md` content prior to this amendment is preserved in git history at the parent commit of this amendment. It carried `verification: unverified`, the coredump `verify_crash_bundle` v1.0.0 material, the v1.1.0 bidirectional mirror/parity sub-pattern, the v1.2.0 coverage-altitude step 8, the v1.3.0 commit-trailer (DCO) sub-pattern, and the v1.4.0 NOGO→GO-tightening (#1506) sub-pattern — but did NOT yet contain the doc-table↔code membership-guard (#1507) sub-pattern.
+
 ## v1.4.0 (2026-06-26)
 
 **Changed by:** ProjectHephaestus issue #1506 R1 re-plan (PLANNING learning — after the R0 plan was graded B / NOGO despite a reviewer-affirmed sound design).
