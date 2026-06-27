@@ -2,6 +2,26 @@
 
 # pytest-configuration-discovery-and-ci-pitfalls — History
 
+## v1.4.0 (2026-06-26)
+
+amend: add host-dependent EXPECTED-value pitfall (machine-specific absolute path baked into a golden) + full-parametrized-run lesson (verified-ci)
+
+- **Changed by**: ProjectHephaestus PR #1621 — machine-path test portability
+- **Verification**: verified-ci
+- **What changed**:
+  - When to Use: new trigger (14) — agent/dev hardcodes a machine-specific absolute path (or other host/env-derived value) into an EXPECTED/golden so it passes on the authoring host but fails on CI; derive from the production constant the code interpolates and run the FULL parametrized test
+  - Quick Reference: section 12 (host-dependent EXPECTED value — green local / red CI)
+  - Detailed Steps: Step 12 (machine-specific absolute path baked into a golden; fix = `f"``{DEFAULT_PROJECTS_DIR}``"` derived from the same constant the parser interpolates; run FULL parametrized test, not a subset)
+  - Failed Attempts: 2 rows (baked authoring host's absolute path into `EXPECTED_SPECS`; ran a narrowed subset locally, saw green, pushed)
+  - Verified On: ProjectHephaestus issue #1392 / PR #1621 row
+  - Frontmatter: version 1.3.0 -> 1.4.0, date -> 2026-06-26, description trigger (14), tags +machine-path/+host-dependent/+golden-value/+parametrize
+  - Overview: Date -> 2026-06-26; Objective extended with the host-dependent golden-value pitfall
+- **Why**: an agent baked its OWN host's absolute path into `EXPECTED_SPECS` for the `loop_runner` `--projects-dir` help text. The help string interpolates `DEFAULT_PROJECTS_DIR` (per-host: `~/Projects`, or `/mnt/weka/home/micah.villmow/Projects` on the authoring machine), so the test was green on that machine and RED on every CI runner. Fix imports the production constant and builds the expected value via f-string from the same source the parser uses. Also: a narrowed local subset run masked the failing parametrization — the FULL matrix ran on CI and failed.
+
+### Superseded v1.3.0 description snapshot
+
+`description: "Use when: (1) CI Python test job hangs until timeout with no explicit failure — hang signature from asyncio daemon tasks blocking epoll; (2) pytest warns 'ignoring pytest config in pyproject.toml!' or pytest.ini coexists with pyproject.toml causing dual-config conflicts; (3) test collection count is suspiciously low or ImportError on a scripts/ module — conftest.py missing sys.path guard; (4) slim 'pip install pytest' CI jobs silently inherit addopts from pyproject.toml and fail because pytest-cov or other plugins in addopts are not installed; (5) developers run bare pytest and only unit tests are discovered because tests/integration/ is not in testpaths; (6) CI test counts differ from local collection counts — marker-based selection (-m unit, -m integration) inconsistency; (7) a CI matrix has patterns referencing renamed or deleted test files — stale pattern detection; (8) pytest-watch dependency must be replaced with an alternative watcher dependency; (9) test is flaky only in the full suite due to class-level patch.object or hardcoded calendar dates/Unix timestamps; (10) coverage gate fires for a partial test run (e.g. pytest -m integration) but full-suite coverage is fine; (11) a ModuleNotFoundError fires when patching a scripts/ module not on sys.path during single-file pytest runs — add sys.path guard to conftest.py; (12) a test file PASSES when run via explicit path but contributes ZERO coverage in CI because it lives OUTSIDE testpaths and is never collected by the default run — verify COLLECTION with --collect-only, not just that the file passes; (13) deciding whether a sys.path.insert hack in a test is redundant given pythonpath already makes the dir importable as a namespace package."`
+
 ## v1.2.0 (2026-06-21)
 
 amend: add uncollected stray-test-file detection + redundant sys.path.insert sub-finding (verified-local)
