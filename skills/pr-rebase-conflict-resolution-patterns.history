@@ -1,6 +1,80 @@
 <!-- markdownlint-disable MD024 -->
 # pr-rebase-conflict-resolution-patterns — History
 
+## v1.11.0 (2026-06-27)
+
+**Changed by:** ProjectHephaestus #1657 Option-A timeout rebase
+
+**Verification:** verified-ci
+
+**What changed:** Added TWO new failure modes discovered while rebasing
+ProjectHephaestus PR #1657 (Option-A per-phase timeout restore):
+
+- **Failure mode A — rebase reported success but the branch was NEVER re-parented
+  (stale merge-base).** Two Opus agents each claimed to rebase onto current main and
+  force-push, but `git merge-base origin/main origin/<branch>` stayed at the stale base
+  (29 commits behind) and the branch never contained a known main-only symbol
+  (`load_state_file`) from a merged sibling. Root cause: the rebase ran from/onto a stale
+  ref, or a later force-push from a SECOND worktree built off the OLD branch tip silently
+  reset the base. Added new **Section M** ("Rebase reported success but the branch was
+  NEVER re-parented (stale merge-base)") with the MANDATORY post-rebase verification
+  contract: re-fetch, then `git merge-base origin/main HEAD == git rev-parse origin/main`
+  (and the same against `origin/<branch>` to catch a wrong-base force-push) AND grep the
+  pushed branch for a known main-only symbol (`git show origin/<branch>:<file> | grep -c
+  <symbol>` > 0). Prevention: always create the rebase worktree from the CURRENT
+  `origin/<branch>` and re-verify the remote merge-base after pushing.
+
+- **Failure mode B — half-applied multi-layer refactor rebase (options-object defaults
+  fixed but the helper FUNCTIONS still flattened).** A per-phase-timeout restore
+  (300/1800/600 over a flat 7200) was resolved correctly in `models.py`
+  (`AGENT_PLAN_TIMEOUT=300`, `AGENT_IMPL_TIMEOUT=1800`) but every `*_claude_timeout()`
+  helper in `claude_timeouts.py` still returned the flat `DEFAULT_AGENT_TIMEOUT=7200`, and
+  `constants.py`'s `AGENT_*` constants + `read_timeout_env` were DELETED. The regression
+  passed a `models.py` spot-check and was caught ONLY by CI's `assert 300 == 7200` (test
+  `test_uses_central_learn_timeout`). Added new **Section N** ("Half-applied multi-layer
+  refactor rebase") with the correct resolution: for a "restore main's values" conflict
+  take main's constants/helpers/tests files WHOLESALE (`git show origin/main:<file> >
+  <file>`), then re-add ONLY the PR's genuinely-new additions (e.g. a new CLI `DEFAULT_`
+  constant); add explicit per-value assertions (`assert planner_claude_timeout()==300`);
+  run the contract test; and READ the CI `assert 300 == 7200` output to pinpoint the
+  still-flattened layer.
+
+- Added two new **When to Use** triggers (one per failure mode) plus matching
+  common-trigger phrases ("agent said it rebased but merge-base is stale", "branch is N
+  commits behind after a claimed rebase", "rebased timeout PR but functions still return
+  the flat value", "assert 300 == 7200 after rebase").
+- Added two new **Failed Attempts** rows: (A) trusting a rebase agent's "rebased and
+  force-pushed" self-report when the merge-base stayed stale; (B) resolving a multi-layer
+  timeout refactor by fixing only `models.py` while the helper functions stayed flattened.
+- Added two **Verified On** rows for ProjectHephaestus PR #1657 (stale-merge-base and
+  half-applied-multi-layer cases).
+- Added tags: `rebase-not-reparented`, `stale-merge-base`, `merge-base-verification`,
+  `main-only-symbol-check`, `false-rebase-success`, `half-applied-refactor`,
+  `per-phase-timeout-regression`, `multi-layer-refactor`, `options-object-vs-helpers`,
+  `value-regression`.
+- Bumped version 1.10.0 → 1.11.0 (MINOR — new failed attempts + workflow sections);
+  updated date to 2026-06-27.
+
+**Why:** The skill already covered textual conflict resolution and post-rebase test-mock
+divergence (§ L), but had no guidance for two distinct ways a rebase can SILENTLY not do
+what a self-report claims. Failure mode A is a process failure: a "success" report is not
+evidence the branch re-parented — only the merge-base equality plus a main-only-symbol grep
+is. Failure mode B is a resolution-completeness failure: when a refactor spans several
+layers (constants + helper functions + options-object defaults + tests), fixing the most
+visible layer while leaving the parallel layers flattened produces a regression that passes
+spot-checks but fails CI. Both wasted multiple CI rounds on #1657 before being root-caused
+to the merge-base and the actual `assert 300 == 7200` test output respectively.
+
+**Previous v1.10.0 state (snapshot):** v1.10.0 carried the skill through trigger #18 / § L
+("Test mock divergence after rebase — regenerate mocks against actual implementation",
+ProjectHephaestus PR #1633 / issue #1405): rebase completes with no conflict markers but
+tests fail on mock signature mismatches because the rebase brought in origin/main's
+different implementation; fix is to regenerate the test mocks against the ACTUAL current
+code, never to "fix" the code to match stale test expectations. The full v1.10.0 file
+(frontmatter through § L, the Failed Attempts table up to the `state:skip` cluster row, and
+the Verified On table through the #1633 row) is preserved in git history at the commit
+prior to this amendment.
+
 ## v1.9.0 (2026-06-26)
 
 **Changed by:** ProjectHephaestus 5-PR same-file refactor cluster #1383/1384/1381/1385/1392
