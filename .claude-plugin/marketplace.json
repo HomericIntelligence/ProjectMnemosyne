@@ -6,19 +6,19 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "2.1.0",
-  "total_plugins": 522,
+  "total_plugins": 532,
   "categories": {
-    "architecture": 98,
-    "ci-cd": 102,
-    "debugging": 44,
+    "architecture": 99,
+    "ci-cd": 103,
+    "debugging": 48,
     "documentation": 40,
     "evaluation": 11,
     "optimization": 3,
-    "testing": 69,
-    "tooling": 148,
+    "testing": 70,
+    "tooling": 151,
     "training": 7
   },
-  "last_updated": "2026-06-25T20:49:09Z",
+  "last_updated": "2026-06-28T02:15:35Z",
   "plugins": [
     {
       "name": "agent-config-validation-and-integrity",
@@ -160,8 +160,8 @@
     },
     {
       "name": "architecture-executable-convention-guard-pattern",
-      "description": "Turn an un-guarded documented invariant (a prose convention) into a tested, blocking, reusable executable check that CI or any consumer can call. Use when: (1) a contract like 'absence of artifact X means stage Y never ran' lives only in docstrings/comments and nothing asserts it, (2) you are adding an enforcement gate whose whole purpose is signal fidelity and must pick a collision-free exit code distinct from argparse's usage-error 2 and sibling CLIs, (3) a verification step must resolve its inputs strictly read-only and must NOT fabricate the very signal whose absence it checks (e.g. a resolver that mkdir()s the directory), (4) you classify a log/marker line and must anchor on the line prefix instead of a free substring scan vulnerable to user-controlled tokens, (5) you relax argparse requirements (nargs='?') for a new mode and must re-guard the original mode so it does not silently no-op, (6) the same convention is documented in two places (module docstring + sibling shell comment) and must be kept in sync when made executable, (7) you are planning a fix for any 'X mirrors Y' / parity / directory-structure invariant audit finding and must determine WHICH direction(s) the existing guard asserts \u2014 the defect is usually the un-asserted reverse direction (test_packages - src_packages), and the fix is an allowlist-with-rationale plus the reverse check, NOT deletion of flagged items.",
-      "version": "1.3.0",
+      "description": "Turn an un-guarded documented invariant (a prose convention) into a tested, blocking, reusable executable check that CI or any consumer can call. Use when: (1) a contract like 'absence of artifact X means stage Y never ran' lives only in docstrings/comments and nothing asserts it, (2) you are adding an enforcement gate whose whole purpose is signal fidelity and must pick a collision-free exit code distinct from argparse's usage-error 2 and sibling CLIs, (3) a verification step must resolve its inputs strictly read-only and must NOT fabricate the very signal whose absence it checks (e.g. a resolver that mkdir()s the directory), (4) you classify a log/marker line and must anchor on the line prefix instead of a free substring scan vulnerable to user-controlled tokens, (5) you relax argparse requirements (nargs='?') for a new mode and must re-guard the original mode so it does not silently no-op, (6) the same convention is documented in two places (module docstring + sibling shell comment) and must be kept in sync when made executable, (7) you are planning a fix for any 'X mirrors Y' / parity / directory-structure invariant audit finding and must determine WHICH direction(s) the existing guard asserts \u2014 the defect is usually the un-asserted reverse direction (test_packages - src_packages), and the fix is an allowlist-with-rationale plus the reverse check, NOT deletion of flagged items, (8) you are adding an executable membership/coverage guard that ITERATES a population (all packages / dirs / files of a kind) \u2014 you MUST scope its iteration set AND its CI/pre-commit files: trigger to the issue's NAMED targets only when sibling members are partially compliant, or the guard fails its OWN acceptance test on the shipped tree.",
+      "version": "1.6.0",
       "source": "./skills/architecture-executable-convention-guard-pattern.md",
       "category": "architecture",
       "tags": [
@@ -182,6 +182,16 @@
         "dco-signoff",
         "precommit-hook",
         "sibling-checker-mirror",
+        "coverage-altitude",
+        "negative-branch-test",
+        "argparse-default-branch",
+        "nogo-tightening",
+        "inferred-data-honesty",
+        "doc-table-code-parity",
+        "membership-only-guard",
+        "guard-scope-population",
+        "partial-compliance",
+        "scope-lock-test",
         "hephaestus"
       ]
     },
@@ -423,8 +433,8 @@
     },
     {
       "name": "audit-remediation-verify-evidence-before-planning",
-      "description": "Before planning a fix for an audit/remediation issue, verify the audit's cited evidence (file:line) against the live tree \u2014 audit findings go stale once the target is independently remediated, and an audit that names SEVERAL targets can have a SUBSET already fixed. Re-read EVERY cited file:line before planning, fix ONLY the issue-named targets (a repo-wide survey will surface more non-compliant siblings \u2014 note them out-of-scope, do not expand the PR), and do not invent a unit test for a doc/UX field that has no test contract. Use when: (1) planning a fix for an audit-filed issue with file:line evidence, (2) the issue spans multiple repos or submodules, (3) the issue recommends doc/field-name/frontmatter changes that may already be done, (4) the audit names multiple targets and any subset may already be remediated.",
-      "version": "1.2.0",
+      "description": "Before planning a fix for an audit/remediation issue, verify the audit's cited evidence (file:line) against the live tree \u2014 audit findings go stale once the target is independently remediated, and an audit that names SEVERAL targets can have a SUBSET already fixed. Re-read EVERY cited file:line before planning, fix ONLY the issue-named targets (a repo-wide survey will surface more non-compliant siblings \u2014 note them out-of-scope, do not expand the PR), and do not invent a unit test for a doc/UX field that has no test contract. When a doc-table column is genuinely UN-RECOVERABLE from the repo (e.g. a semantic-version 'Added' anchor), INFER it but LABEL the provenance honestly as best-effort, and design any drift-guard to validate ONLY the verifiable invariant (table membership vs live __all__), never the inferred value. CRITICAL: a predecessor issue's plan being captured in a skill does NOT mean it shipped \u2014 re-verify the artifact exists on disk (test -f) before assuming prior work is done. Use when: (1) planning a fix for an audit-filed issue with file:line evidence, (2) the issue spans multiple repos or submodules, (3) the issue recommends doc/field-name/frontmatter changes that may already be done, (4) the audit names multiple targets and any subset may already be remediated, (5) you must author a doc table that mixes a verifiable column (symbol membership) and an unverifiable column (which version first shipped it), (6) a prior/predecessor issue claims to have introduced an artifact (a guard, a doc table) that this issue builds on \u2014 confirm it actually landed before assuming it exists.",
+      "version": "1.4.0",
       "source": "./skills/audit-remediation-verify-evidence-before-planning.md",
       "category": "architecture",
       "tags": []
@@ -695,6 +705,21 @@
       "tags": []
     },
     {
+      "name": "dead-abstraction-investigate-before-removing",
+      "description": "Before removing a 'dead abstraction' (a centralized helper/registry with zero callers), INVESTIGATE rather than pre-emptively delete. A zero-caller module may be useful scaffolding waiting to be wired up OR a harmful orphan duplicate. Use when: (1) a strict review flags a well-built but unused module as a 'dead abstraction' removal candidate, (2) you are tempted to file a bare 'no callers -> delete' PR, (3) several parallel refactor PRs may have produced competing mechanisms for the same goal. The deciding factors for removal are an ALREADY-WIRED competing mechanism, an OPEN PR heading a different direction, and STALE defaults vs trunk (a footgun).",
+      "version": "1.0.0",
+      "source": "./skills/dead-abstraction-investigate-before-removing.md",
+      "category": "architecture",
+      "tags": [
+        "yagni",
+        "dead-code",
+        "duplication",
+        "competing-mechanism",
+        "triage",
+        "refactor-hazard"
+      ]
+    },
+    {
       "name": "dry-refactoring-plan-assumption-audit",
       "description": "Checklist of hidden assumptions that bite DRY module-consolidation plans before implementation starts. Use when: (1) planning to merge two modules into one canonical, (2) replacing a module with a delegation shim that re-exports from the canonical, (3) porting tests from one file to another, (4) extending a main() function with new sub-checks, (5) consolidating two functions with the same name but different signatures.",
       "version": "2.1.0",
@@ -715,16 +740,16 @@
     },
     {
       "name": "dry-refactoring-workflow",
-      "description": "Complete TDD-driven workflow for identifying and eliminating code duplication by extracting reusable helper methods. Use when: (1) extracting duplicated helper methods into a shared module using TDD (write a failing test against the canonical, delete the duplicate, run green); (2) creating a private leaf module with leading-underscore naming to centralize a repeated internal call (e.g. importlib.metadata version resolution, path construction) and prevent re-introduction across modules; (3) centralizing hardcoded path constants into a single module to prevent drift when directory structure changes (incl. phase-routed in_progress/completed splits); (4) deduplicating LLM JSON extraction, parser logic, or any call-site pattern copy-pasted across several files; (5) test structure must mirror source structure when extracting helpers; (6) running a full DRY consolidation pass (discovery via grep, classifying true duplicates vs intentional variants, dict-structure consolidation) and refactoring to a single canonical source; (7) extract-method / SRP decomposition of over-long functions (50-LOC) and methods (100-LOC), including converting a mutating closure into a method via a small mutable box; (8) extracting repeated cached lookups into an @lru_cache helper (and clearing the cache so unittest.mock.patch works); (9) removing stale scripts / deprecated stubs (grep callers first) and replacing hardcoded file lists with dynamic Path.rglob discovery; (10) PLANNING a consolidation of two OVERLAPPING but not-identical constant collections (frozensets / keyword lists / error-pattern tuples) \u2014 classify true-duplicate vs intentional-variant first, then extract only the shared CORE into one canonical immutable constant and have each consumer compose CORE | its-own-extras, proving anti-drift with CORE.issubset(consumer) parity tests, instead of a flat merge that would violate a deliberate behavioral contract. (11) behavior-preserving duplicate cleanup across test fakes, tiny strategy/kernel modules, and validation wrappers: keep public module exports stable, centralize only identical mechanics, preserve local wrapper names/error messages, and verify with focused + full suites before opening a PR. Also covers cryptographic commit signing requirements in PR workflows. (12) stale issue body in dedup/consolidation tasks: issue 'Evidence:' sections go stale as prior PRs partially resolve them \u2014 grep the CURRENT state first; choose inlining over fixtures for pure bytes\u2192str helpers; resolve remote branch divergence by pushing to a new branch rather than force-pushing or rebasing 84 conflicting commits. (13) PLANNING an extraction whose issue claims 'N nearly-identical, M byte-for-byte identical' methods: the COUNT and 'byte-for-byte identical' assertions go STALE exactly like the 'Evidence:' section \u2014 count and DIFF every claimed-duplicate body in full before scoping; prior refactors may have already delegated one to a richer printer or changed another's signature/model, and even the truly-similar bodies often hide call-site-varying string args (count noun, header) that a flat merge would silently change \u2014 parameterize those as kwargs-with-defaults to guarantee zero behavior change, and place the helper in an EXISTING established-dedup module rather than a new leaf module or base-class method. (14) PLANNING a behavior-preserving method\u2192free-function extraction when the duplicated method is a patched test seam \u2014 grep patch.object(.*\"_method\") BEFORE planning any deletion (a method patched at many call sites must be KEPT as a one-line thin wrapper delegating to the new free function, never deleted, or every patch target breaks); read the actual test bodies to confirm which 'near-identical' differences (log level, an extra debug line, exception-message wording) are behavior-bearing vs incidental before collapsing copies (only safe to collapse logging when no test asserts log level/message); match the target module's established convention (free function taking explicit args, not a mixin/base-class method); hedge unverified import assumptions a planner did not execute (is pathlib.Path already imported? is there a 'from ._review_utils import ...' line to extend? is a cross-layer runtime import safe within the automation\u2192library boundary AND absent from the base 'import hephaestus' surface?); and prove a pure extraction with a single-canonical-source grep that must return exactly one hit PLUS the PRE-EXISTING per-class behavioral suites staying green (the real acceptance gate, not the new structural tests).",
-      "version": "1.9.0",
+      "description": "Complete TDD-driven workflow for identifying and eliminating code duplication by extracting reusable helper methods. Use when: (1) extracting duplicated helper methods into a shared module using TDD (write a failing test against the canonical, delete the duplicate, run green); (2) creating a private leaf module with leading-underscore naming to centralize a repeated internal call (e.g. importlib.metadata version resolution, path construction) and prevent re-introduction across modules; (3) centralizing hardcoded path constants into a single module to prevent drift when directory structure changes (incl. phase-routed in_progress/completed splits); (4) deduplicating LLM JSON extraction, parser logic, or any call-site pattern copy-pasted across several files; (5) test structure must mirror source structure when extracting helpers; (6) running a full DRY consolidation pass (discovery via grep, classifying true duplicates vs intentional variants, dict-structure consolidation) and refactoring to a single canonical source; (7) extract-method / SRP decomposition of over-long functions (50-LOC) and methods (100-LOC), including converting a mutating closure into a method via a small mutable box; (8) extracting repeated cached lookups into an @lru_cache helper (and clearing the cache so unittest.mock.patch works); (9) removing stale scripts / deprecated stubs (grep callers first) and replacing hardcoded file lists with dynamic Path.rglob discovery; (10) PLANNING a consolidation of two OVERLAPPING but not-identical constant collections (frozensets / keyword lists / error-pattern tuples) \u2014 classify true-duplicate vs intentional-variant first, then extract only the shared CORE into one canonical immutable constant and have each consumer compose CORE | its-own-extras, proving anti-drift with CORE.issubset(consumer) parity tests, instead of a flat merge that would violate a deliberate behavioral contract. (11) behavior-preserving duplicate cleanup across test fakes, tiny strategy/kernel modules, and validation wrappers: keep public module exports stable, centralize only identical mechanics, preserve local wrapper names/error messages, and verify with focused + full suites before opening a PR. Also covers cryptographic commit signing requirements in PR workflows. (12) stale issue body in dedup/consolidation tasks: issue 'Evidence:' sections go stale as prior PRs partially resolve them \u2014 grep the CURRENT state first; choose inlining over fixtures for pure bytes\u2192str helpers; resolve remote branch divergence by pushing to a new branch rather than force-pushing or rebasing 84 conflicting commits. (13) PLANNING an extraction whose issue claims 'N nearly-identical, M byte-for-byte identical' methods: the COUNT and 'byte-for-byte identical' assertions go STALE exactly like the 'Evidence:' section \u2014 count and DIFF every claimed-duplicate body in full before scoping; prior refactors may have already delegated one to a richer printer or changed another's signature/model, and even the truly-similar bodies often hide call-site-varying string args (count noun, header) that a flat merge would silently change \u2014 parameterize those as kwargs-with-defaults to guarantee zero behavior change, and place the helper in an EXISTING established-dedup module rather than a new leaf module or base-class method. (14) PLANNING a behavior-preserving method\u2192free-function extraction when the duplicated method is a patched test seam \u2014 grep patch.object(.*\"_method\") BEFORE planning any deletion (a method patched at many call sites must be KEPT as a one-line thin wrapper delegating to the new free function, never deleted, or every patch target breaks); read the actual test bodies to confirm which 'near-identical' differences (log level, an extra debug line, exception-message wording) are behavior-bearing vs incidental before collapsing copies (only safe to collapse logging when no test asserts log level/message); match the target module's established convention (free function taking explicit args, not a mixin/base-class method); hedge unverified import assumptions a planner did not execute (is pathlib.Path already imported? is there a 'from ._review_utils import ...' line to extend? is a cross-layer runtime import safe within the automation\u2192library boundary AND absent from the base 'import hephaestus' surface?); and prove a pure extraction with a single-canonical-source grep that must return exactly one hit PLUS the PRE-EXISTING per-class behavioral suites staying green (the real acceptance gate, not the new structural tests). (15) PLANNING a duplicate-bearing standalone SCRIPT \u2192 library-shim consolidation when the script duplicates library logic (e.g. get_subpackages()/subpackage-mirror checks) but ALSO carries one unique function \u2014 prefer SHIM over DELETE: move the unique function into the library as the canonical source (returning a (ok, error_lines) tuple), export it from the package __init__, and rewrite the script as a thin shim importing the granular library functions \u2014 because the script is referenced by docs, a skill, AND auto-discovery smoke tests; the silent risk is OUTPUT-CONTRACT preservation: the shim must reproduce byte-for-byte stdout/stderr (literal arrow \u2192 and exact phrasing), calling the GRANULAR functions, NOT the library main()/check_test_structure (which runs extra checks the script never ran); importing a private symbol (_get_subpackages) across the script\u2192library boundary is the most reviewer-contentious choice \u2014 offer a fallback (compute from already-returned data); record unverified reliances as explicit risks (is the script NOT wired to CI/pre-commit? does the doc/README line stay accurate once the shim is what's wired? is the single-vs-double-quote glob-marker check copied exactly?); and note the TDD INVERSION gotcha \u2014 a library test written AFTER copying the function body is GREEN-first, not RED, so don't claim a RED phase you didn't have.",
+      "version": "1.10.0",
       "source": "./skills/dry-refactoring-workflow.md",
       "category": "architecture",
       "tags": []
     },
     {
       "name": "error-message-consistency-optional-dependency-pola",
-      "description": "Fix a POLA violation where a config loader collapses format-detection and dependency-availability into one branch, causing a missing-dependency failure to masquerade as 'Unsupported format'. Use when: (1) two public functions reach the same missing-dependency failure by different code paths and one already raises the right error; (2) a catch-all branch collapses 'unsupported format' and 'dependency missing' into one misleading message; (3) you are tempted to add a discriminator enum or custom exception class for a one-line consistency fix; (4) the absent-dependency branch is only ever exercised via monkeypatch and could pass vacuously; (5) flipping an exception type (ValueError\u2192RuntimeError) requires grepping callers for type-specific except handlers and potentially collapsing identical-body arms to a tuple.",
-      "version": "2.0.0",
+      "description": "Resolve a POLA audit finding about a function that silently mishandles input \u2014 either the wrong-exception-message arm (collapse format-detection and dependency-availability) or the silently-ignores-invalid-input arm (raise vs document the existing fallback). Use when: (1) two public functions reach the same missing-dependency failure by different code paths and one already raises the right error; (2) a catch-all branch collapses 'unsupported format' and 'dependency missing' into one misleading message; (3) an audit says 'function X silently ignores invalid input \u2014 raise an error OR document the fallback' and you must decide which; (4) a sibling/related function already documents and TESTS the silent fallback as intended behavior; (5) you are tempted to add a discriminator enum or custom exception class for a one-line consistency fix; (6) the absent-dependency branch is only ever exercised via monkeypatch and could pass vacuously; (7) flipping an exception type (ValueError\u2192RuntimeError) requires grepping callers for type-specific except handlers and potentially collapsing identical-body arms to a tuple.",
+      "version": "2.2.0",
       "source": "./skills/error-message-consistency-optional-dependency-pola.md",
       "category": "architecture",
       "tags": [
@@ -734,6 +759,10 @@
         "exception-consistency",
         "exception-type-flip",
         "caller-reconciliation",
+        "silently-ignores-invalid-input",
+        "raise-vs-document-fallback",
+        "existing-test-as-contract",
+        "secondary-silent-fallthrough",
         "dry",
         "planning",
         "yaml",
@@ -2641,8 +2670,8 @@
     },
     {
       "name": "code-quality-enforcement-gates",
-      "description": "Canonical guide to code-quality enforcement THRESHOLDS, remediation workflow, and post-audit verification: when to fail builds on complexity, when to enable mypy strict modes, when to promote warnings to errors, how to scope override subsets, deprecation removal policy, how to fix production asserts/hardcoded paths, how to run a post-remediation audit, how to verify audit/PR-reviewer findings against ground truth before acting, and how to verify a TRACKING/REMEDIATION DOC's checkbox state against live `gh issue view` before editing it. Use when: (1) deciding fix-vs-suppress for a new lint rule, (2) enabling mypy check-untyped-defs or new ruff rules, (3) promoting CI warnings to exit-1, (4) tuning markdownlint MD024 / ruff C901 thresholds, (5) narrowing mypy module override globs to specific paths, (6) replacing production assert input-validation or hardcoded /tmp paths with safe equivalents, (7) executing a post-remediation audit to close remaining CI/classifier/release/docs gaps after an initial cleanup, (8) strict-mode repo audits or PR-reviewer sub-agents produce hallucinated findings (nonexistent files, phantom CI checks, red-on-main checks cited as PR blockers) \u2014 verify against live state before acting, (9) the task is 'fix stale checkboxes in a tracking/remediation markdown doc' \u2014 verify EVERY box against live `gh issue view` (the doc AND the bug report's own stale-list are not authoritative) before editing, and guard re-drift with a PROPERTY-based regression test.",
-      "version": "1.2.0",
+      "description": "Canonical guide to code-quality enforcement THRESHOLDS, remediation workflow, and post-audit verification: when to fail builds on complexity, when to enable mypy strict modes, when to promote warnings to errors, how to scope override subsets, deprecation removal policy, how to fix production asserts/hardcoded paths, how to run a post-remediation audit, how to verify audit/PR-reviewer findings against ground truth before acting, and how to verify a TRACKING/REMEDIATION DOC's checkbox state against live `gh issue view` before editing it, and how to keep human-facing DEPRECATION docs (COMPATIBILITY.md / MIGRATION.md) in sync with a function that emits a DeprecationWarning by mirroring an existing precedent symbol's annotation and guarding with a property-based offline regression test. Use when: (1) deciding fix-vs-suppress for a new lint rule, (2) enabling mypy check-untyped-defs or new ruff rules, (3) promoting CI warnings to exit-1, (4) tuning markdownlint MD024 / ruff C901 thresholds, (5) narrowing mypy module override globs to specific paths, (6) replacing production assert input-validation or hardcoded /tmp paths with safe equivalents, (7) executing a post-remediation audit to close remaining CI/classifier/release/docs gaps after an initial cleanup, (8) strict-mode repo audits or PR-reviewer sub-agents produce hallucinated findings (nonexistent files, phantom CI checks, red-on-main checks cited as PR blockers) \u2014 verify against live state before acting, (9) the task is 'fix stale checkboxes in a tracking/remediation markdown doc' \u2014 verify EVERY box against live `gh issue view` (the doc AND the bug report's own stale-list are not authoritative) before editing, and guard re-drift with a PROPERTY-based regression test, (10) a function is deprecated in CODE (emits DeprecationWarning) but COMPATIBILITY.md / docs/MIGRATION.md don't reflect it \u2014 mirror the ONE already-correctly-annotated precedent symbol's inline '(deprecated)' table annotation AND prose callout, copy its removal-timeline wording verbatim, and guard with a property-based OFFLINE regression test asserting 'emits DeprecationWarning \u21d2 annotated in COMPATIBILITY.md AND listed in MIGRATION.md Deprecated-symbols section'; each insertion point (table row AND callout block) must be asserted INDEPENDENTLY by scoping to its own section \u2014 a global scan that returns on the first match leaves callout blocks unguarded, (11) writing a deprecation-doc-sync property test \u2014 scope EACH assertion to its own section of the markdown file (table row scope vs callout-block scope); a global scan + early return is silent green when any ONE section matches.",
+      "version": "1.4.0",
       "source": "./skills/code-quality-enforcement-gates.md",
       "category": "ci-cd",
       "tags": [
@@ -2653,6 +2682,14 @@
         "ruff",
         "complexity-budget",
         "deprecation",
+        "deprecation-doc-sync",
+        "compatibility-md",
+        "migration-md",
+        "property-based-test",
+        "offline-regression-guard",
+        "mirror-precedent-symbol",
+        "section-scoped-assertion",
+        "two-halves-test",
         "post-remediation-audit",
         "audit-verification",
         "fact-checking",
@@ -3124,6 +3161,14 @@
       ]
     },
     {
+      "name": "git-dco-signoff-distinct-from-gpg-sign",
+      "description": "The DCO Signed-off-by trailer (git commit -s) is a SEPARATE requirement from GPG/SSH cryptographic signing (git commit -S); a commit can be -S signed yet still fail the pr-policy DCO check because it lacks the trailer. Use when: (1) a PR is BLOCKED and the pr-policy / required-checks-gate CI gate fails with 'missing Signed-off-by: Name <email> trailer' even though git log --show-signature shows a valid GPG signature, (2) automation/agent-generated commits (auto-impl branches) lack the DCO trailer because the generator ran `git commit -S` without `-s`, (3) you need to retroactively add Signed-off-by to every commit on a branch WITHOUT losing GPG signatures, (4) lint passes but required-checks-gate still fails \u2014 check pr-policy sub-checks (Check 4 is DCO), (5) you fixed only one blocker (mypy/lint) but the gate is still red on a second independent DCO failure.",
+      "version": "1.0.0",
+      "source": "./skills/git-dco-signoff-distinct-from-gpg-sign.md",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
       "name": "github-actions-workflow-paths-filter-completeness",
       "description": "Use when: (1) a workflow's paths: filter omits a file that the job reads/depends on, (2) PRs modifying that file don't trigger the job, (3) a compliance audit flags missing files from paths filters, (4) you need to verify paths-filter completeness for all files that a job consumes (e.g. configuration files, data files, license manifests).",
       "version": "1.0.0",
@@ -3140,8 +3185,8 @@
     },
     {
       "name": "github-auto-merge-ci-gating-merge-method",
-      "description": "Use when: (1) a PR has mergeStateStatus CLEAN or MERGEABLE but auto-merge never fires despite all checks passing, (2) gh pr merge --auto --rebase or --squash returns an error or silently fails on a squash-only repo, (3) a PR is BLOCKED because required CI status contexts never post (workflow never triggered, paths filter excluded PR, required check name mismatch), (4) GPG-signing failures or mismatched committer emails cause commits to be unsigned and block the pr-policy gate, (5) branch protection rulesets and classic branch protection disagree and their union blocks merge, (6) a CI ruleset chicken-and-egg deadlock blocks a PR that introduces a new workflow, (7) an advisory check should not block merge but currently does because it lives in the required gate, (8) deciding which merge method a repo supports before arming auto-merge, (9) auditing required-check names after adding or removing CI jobs, (10) state:implementation-go label or pr-policy gates auto-merge arming, (11) per-issue arming-state machine is triggered on the wrong event (optimistic point vs detected merge), (12) mergeStateStatus=BLOCKED with all CI green and auto-merge armed \u2014 unresolved review threads are the PRIMARY blocker to check FIRST before assuming CI failure",
-      "version": "1.4.0",
+      "description": "Use when: (1) a PR has mergeStateStatus CLEAN or MERGEABLE but auto-merge never fires despite all checks passing, (2) gh pr merge --auto --rebase or --squash returns an error or silently fails on a squash-only repo, (3) a PR is BLOCKED because required CI status contexts never post (workflow never triggered, paths filter excluded PR, required check name mismatch), (4) GPG-signing failures or mismatched committer emails cause commits to be unsigned and block the pr-policy gate, (5) branch protection rulesets and classic branch protection disagree and their union blocks merge, (6) a CI ruleset chicken-and-egg deadlock blocks a PR that introduces a new workflow, (7) an advisory check should not block merge but currently does because it lives in the required gate, (8) deciding which merge method a repo supports before arming auto-merge, (9) auditing required-check names after adding or removing CI jobs, (10) state:implementation-go label or pr-policy gates auto-merge arming, (11) per-issue arming-state machine is triggered on the wrong event (optimistic point vs detected merge), (12) mergeStateStatus=BLOCKED with all CI green and auto-merge armed - unresolved review threads are the PRIMARY blocker to check FIRST before assuming CI failure, (13) stale failed status-rollup entries must be distinguished from current-head required checks before deciding a PR is blocked or complete",
+      "version": "1.5.0",
       "source": "./skills/github-auto-merge-ci-gating-merge-method.md",
       "category": "ci-cd",
       "tags": [
@@ -3158,7 +3203,10 @@
         "gpg-signing",
         "arming-state-machine",
         "review-threads",
-        "resolveReviewThread"
+        "resolveReviewThread",
+        "current-head-checks",
+        "status-rollup",
+        "dco-signoff"
       ]
     },
     {
@@ -3794,8 +3842,8 @@
     },
     {
       "name": "pr-rebase-conflict-resolution-patterns",
-      "description": "Use when: (1) a PR branch is CONFLICTING or DIRTY after main advances and needs rebasing, (2) a mass rebase of 10+ PRs is needed after a major refactor causes conflicts across the queue, (3) a stacked PR goes DIRTY when its prerequisite merges and the base must be retargeted \u2014 later CI/lint fix commits on the dependent branch are orphaned and must be cherry-picked, (4) a Safety Net hook blocks git checkout --theirs / --ours during automated rebase conflict resolution, (5) a file was completely rewritten on one branch and small targeted edits exist on the other, (6) a parallel swarm produced overlapping PRs that conflict on the same paths and one must be rebased onto the other, (7) a feature PR conflicts after a sibling refactor merges and edits must be ported to the new file structure, (8) a TypeScript or other language-level shadowing bug appears only after a rebase because two branches independently added identically-named locals to the same scope, (9) numerical or optimizer PRs conflict when main merged its own version of a shared module and API signatures changed, (10) a PR's substantive change independently landed on main via a sibling PR so a rebase produces an add/add conflict on a duplicated new file and the PR becomes a near-no-op residual, (11) a PR is DIRTY with all CI checks green/passing \u2014 the merge conflict itself is the sole blocker (rebase, do not hunt for a failing job), (12) a rebase hits a modify/delete conflict on a file the PR intentionally deletes \u2014 confirm the base copy is still stale then git rm, (13) a PR is BLOCKED with mergeable=MERGEABLE but a required check shows SKIPPED \u2014 the required check is gated by needs: on a job that fails because the branch carries unpinned GitHub Actions rejected by an org-wide SHA-pin policy; fix is rebase to inherit main's pinned workflow files (not an empty re-trigger commit), (14) multiple rebased PRs \u2014 including ones unrelated to the failing test \u2014 all fail the SAME test after merging onto main; suspect a broken main from a SEMANTIC collision between two independently-merged PRs that never textually conflict (e.g. a return-tuple arity change + a stale test mock), prove it by running the failing test against bare origin/main, and fix main first, (15) two parallel cluster-extraction PRs both create the same new module file and the rebase produces an add/add conflict on BOTH the source module AND its test file \u2014 main's source is authoritative, test files must be semantically merged (keep main's richer base + append your branch's unique test classes), (16) a rebase hits AA (both-added) conflicts on new files \u2014 the conflicted file shows NO <<<<<<< markers and contains only one side's content; you must use git show HEAD:<path> and git show REBASE_HEAD:<path> to read both versions before resolving",
-      "version": "1.8.0",
+      "description": "Use when: (1) a PR branch is CONFLICTING or DIRTY after main advances and needs rebasing, (2) a mass rebase of 10+ PRs is needed after a major refactor causes conflicts across the queue, (3) a stacked PR goes DIRTY when its prerequisite merges and the base must be retargeted \u2014 later CI/lint fix commits on the dependent branch are orphaned and must be cherry-picked, (4) a Safety Net hook blocks git checkout --theirs / --ours during automated rebase conflict resolution, (5) a file was completely rewritten on one branch and small targeted edits exist on the other, (6) a parallel swarm produced overlapping PRs that conflict on the same paths and one must be rebased onto the other, (7) a feature PR conflicts after a sibling refactor merges and edits must be ported to the new file structure, (8) a TypeScript or other language-level shadowing bug appears only after a rebase because two branches independently added identically-named locals to the same scope, (9) numerical or optimizer PRs conflict when main merged its own version of a shared module and API signatures changed, (10) a PR's substantive change independently landed on main via a sibling PR so a rebase produces an add/add conflict on a duplicated new file and the PR becomes a near-no-op residual, (11) a PR is DIRTY with all CI checks green/passing \u2014 the merge conflict itself is the sole blocker (rebase, do not hunt for a failing job), (12) a rebase hits a modify/delete conflict on a file the PR intentionally deletes \u2014 confirm the base copy is still stale then git rm, (13) a PR is BLOCKED with mergeable=MERGEABLE but a required check shows SKIPPED \u2014 the required check is gated by needs: on a job that fails because the branch carries unpinned GitHub Actions rejected by an org-wide SHA-pin policy; fix is rebase to inherit main's pinned workflow files (not an empty re-trigger commit), (14) multiple rebased PRs \u2014 including ones unrelated to the failing test \u2014 all fail the SAME test after merging onto main; suspect a broken main from a SEMANTIC collision between two independently-merged PRs that never textually conflict (e.g. a return-tuple arity change + a stale test mock), prove it by running the failing test against bare origin/main, and fix main first, (15) two parallel cluster-extraction PRs both create the same new module file and the rebase produces an add/add conflict on BOTH the source module AND its test file \u2014 main's source is authoritative, test files must be semantically merged (keep main's richer base + append your branch's unique test classes), (16) a rebase hits AA (both-added) conflicts on new files \u2014 the conflicted file shows NO <<<<<<< markers and contains only one side's content; you must use git show HEAD:<path> and git show REBASE_HEAD:<path> to read both versions before resolving, (17) a CLUSTER of sibling refactor PRs all edit the SAME shared files and were run in parallel so all but one are CONFLICTING/DIRTY (and possibly hand-braked with state:skip) \u2014 land them as a SEQUENTIAL rebase chain SMALLEST-DIFF-FIRST, rebasing each onto trunk only AFTER the prior merges, resolving every conflict as the UNION of each refactor's extractions (keep both helpers; every duplicated method becomes a thin delegate; merge import lists and drop now-unused imports via lint), then re-sign all commits with `git rebase --exec '...-s -S' origin/main` for DCO+GPG, (18) after rebase, tests fail because test mocks expected the PR branch's refactored signatures but rebase brought in origin/main's different implementation \u2014 the git conflict resolved cleanly (no text-level conflicts), but the test mocks diverge from actual code. Test expects subprocess.check_output but code uses run_subprocess; mock returns 7-tuple but impl expects 9-tuple. After textual conflict resolution succeeds, run tests to surface semantic mismatches, then regenerate test mocks to match CURRENT implementation, not the PR's expected changes (see \u00a7 L)",
+      "version": "1.10.0",
       "source": "./skills/pr-rebase-conflict-resolution-patterns.md",
       "category": "ci-cd",
       "tags": [
@@ -3838,7 +3886,20 @@
         "uu-conflict",
         "both-added",
         "git-status-codes",
-        "no-markers"
+        "no-markers",
+        "same-file-cluster",
+        "sequential-rebase-chain",
+        "smallest-first",
+        "thin-delegate",
+        "union-resolution",
+        "dco-signoff",
+        "state-skip-stranded",
+        "test-mock-mismatch",
+        "mock-divergence",
+        "subprocess-api-change",
+        "implementation-divergence",
+        "test-fixture-regeneration",
+        "semantic-test-failure"
       ]
     },
     {
@@ -4344,6 +4405,14 @@
       "tags": []
     },
     {
+      "name": "cli-format-output-pola-silent-fallback",
+      "description": "When an audit flags a CLI utility for silently ignoring invalid format_type, the fix can be 'document + test the fallback' rather than raising ValueError \u2014 especially when callers depend on the fallback. Use when: (1) an audit flags POLA violation on silent fallback in format_output(), (2) deciding whether to raise ValueError vs document behavior, (3) writing tests to pin CLI format_type fallback behavior.",
+      "version": "1.0.0",
+      "source": "./skills/cli-format-output-pola-silent-fallback.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
       "name": "cli-validator-cross-section-blind-spot",
       "description": "Markdown-section validators that break on the first non-matching H2 silently miss duplicate sections later in the document. Use when: (1) a tier/table validator parses a markdown section and stops early, (2) a CI gate passes despite a doc contradiction, (3) a 'break' at a section-end guard is the only early-exit in a line-by-line parser.",
       "version": "2.0.0",
@@ -4690,6 +4759,43 @@
       ]
     },
     {
+      "name": "inference360-slurm-control-node-allocation-debugging",
+      "description": "Debug pending Inference360 Slurm control-node allocations and correct control defaults. Use when: (1) `inference360 control up` is pending on a CPU control job, (2) `cpuonly`, account, QOS, or `cpus_per_task` settings are suspected, (3) interactive `srun --gres=gpu:0` behavior disagrees with control sbatch behavior.",
+      "version": "1.0.1",
+      "source": "./skills/inference360-slurm-control-node-allocation-debugging.md",
+      "category": "debugging",
+      "tags": [
+        "inference360",
+        "slurm",
+        "control",
+        "cpuonly",
+        "account",
+        "qos",
+        "cpus-per-task",
+        "allocation-debugging"
+      ]
+    },
+    {
+      "name": "inference360-staging-fresh-allocation-control",
+      "description": "Validate and debug Inference360 staging/control API launches on fresh H200 Slurm allocations. Use when: (1) proving IFM or multi-model vLLM endpoints through the Inference360 control API, (2) reproducing Inference360 issue 257 / IFM corruption with vLLM, SGLang, HF, or XLLM comparison paths, (3) capturing logprobs, token IDs, launch commands, and Slurm cleanup evidence for H200 repro workflows.",
+      "version": "1.1.0",
+      "source": "./skills/inference360-staging-fresh-allocation-control.md",
+      "category": "debugging",
+      "tags": [
+        "inference360",
+        "slurm",
+        "h200",
+        "control",
+        "staging",
+        "vllm",
+        "sglang",
+        "xllm",
+        "ifm",
+        "corruption",
+        "nodepool"
+      ]
+    },
+    {
       "name": "logging-subprocess-context-tracking",
       "description": "Add diagnostic context (working directory, command, cwd) to subprocess execution logging. Use when: (1) run_git_cmd or similar subprocess runners log execution without showing which directory the command ran in, (2) debugging multi-directory workflows where cwd context is critical for tracing, (3) writing tests for subprocess execution and caplog fixture fails with custom logger handlers (propagate=False).",
       "version": "1.0.0",
@@ -4806,6 +4912,24 @@
         "dmesg",
         "reallocated-sectors",
         "ahci"
+      ]
+    },
+    {
+      "name": "subprocess-embedded-null-byte-sanitize",
+      "description": "ValueError: embedded null byte crashes the automation loop before the child process even runs \u2014 subprocess.run/Popen.communicate reject any argv element or text stdin containing a NUL (\\x00) during arg/stdin marshaling. Fix by stripping NUL at EVERY subprocess egress boundary that carries untrusted free text, across ALL sibling runner paths (Claude/Codex/Pi runners + gh --title argv), not just one. Use when: (1) an automation log shows 'ValueError: embedded null byte' with NO 'Running command' line between the invoke-debug line and the error in the same second, (2) a single issue is permanently stranded failing every loop iteration in both planner and implementer, (3) an agent prompt is assembled from untrusted multi-source text (issue body + advise/agent output + prior review), (4) you add a defensive sanitize to one agent-call path and need to confirm every sibling runner path is covered.",
+      "version": "1.0.0",
+      "source": "./skills/subprocess-embedded-null-byte-sanitize.md",
+      "category": "debugging",
+      "tags": [
+        "subprocess",
+        "null-byte",
+        "embedded-null-byte",
+        "automation-loop",
+        "sanitize",
+        "egress-chokepoint",
+        "sibling-runners",
+        "argv",
+        "stdin"
       ]
     },
     {
@@ -6148,22 +6272,6 @@
       ]
     },
     {
-      "name": "inference360-staging-fresh-allocation-control",
-      "description": "Validate Inference360 staging/control API launches on fresh H200 Slurm allocations. Use when: (1) proving IFM or multi-model vLLM endpoints through the Inference360 control API, (2) the user asks for staging/control validation and has not explicitly approved reusing an existing allocation, (3) checking that Slurm nodepool allocations are released after live probes.",
-      "version": "1.0.0",
-      "source": "./skills/inference360-staging-fresh-allocation-control.md",
-      "category": "testing",
-      "tags": [
-        "inference360",
-        "slurm",
-        "h200",
-        "control",
-        "staging",
-        "vllm",
-        "nodepool"
-      ]
-    },
-    {
       "name": "library-product-import-boundary-enforcement-test",
       "description": "Enforce a library-vs-product import boundary with two regression tests: a subprocess-isolated import-surface check and a static import grep. Use when: (1) gating a heavy product subpackage (curses/pydantic/fcntl) behind an optional extra so base `import pkg` stays lean, (2) writing a test that asserts `import pkg` does not pull forbidden modules, (3) a CI import-surface test gives false failures because pytest itself preloads the forbidden dependency.",
       "version": "1.0.0",
@@ -6432,8 +6540,8 @@
     },
     {
       "name": "pytest-configuration-discovery-and-ci-pitfalls",
-      "description": "Use when: (1) CI Python test job hangs until timeout with no explicit failure \u2014 hang signature from asyncio daemon tasks blocking epoll; (2) pytest warns 'ignoring pytest config in pyproject.toml!' or pytest.ini coexists with pyproject.toml causing dual-config conflicts; (3) test collection count is suspiciously low or ImportError on a scripts/ module \u2014 conftest.py missing sys.path guard; (4) slim 'pip install pytest' CI jobs silently inherit addopts from pyproject.toml and fail because pytest-cov or other plugins in addopts are not installed; (5) developers run bare pytest and only unit tests are discovered because tests/integration/ is not in testpaths; (6) CI test counts differ from local collection counts \u2014 marker-based selection (-m unit, -m integration) inconsistency; (7) a CI matrix has patterns referencing renamed or deleted test files \u2014 stale pattern detection; (8) pytest-watch dependency must be replaced with an alternative watcher dependency; (9) test is flaky only in the full suite due to class-level patch.object or hardcoded calendar dates/Unix timestamps; (10) coverage gate fires for a partial test run (e.g. pytest -m integration) but full-suite coverage is fine; (11) a ModuleNotFoundError fires when patching a scripts/ module not on sys.path during single-file pytest runs \u2014 add sys.path guard to conftest.py; (12) a test file PASSES when run via explicit path but contributes ZERO coverage in CI because it lives OUTSIDE testpaths and is never collected by the default run \u2014 verify COLLECTION with --collect-only, not just that the file passes; (13) deciding whether a sys.path.insert hack in a test is redundant given pythonpath already makes the dir importable as a namespace package.",
-      "version": "1.3.0",
+      "description": "Use when: (1) CI Python test job hangs until timeout with no explicit failure \u2014 hang signature from asyncio daemon tasks blocking epoll; (2) pytest warns 'ignoring pytest config in pyproject.toml!' or pytest.ini coexists with pyproject.toml causing dual-config conflicts; (3) test collection count is suspiciously low or ImportError on a scripts/ module \u2014 conftest.py missing sys.path guard; (4) slim 'pip install pytest' CI jobs silently inherit addopts from pyproject.toml and fail because pytest-cov or other plugins in addopts are not installed; (5) developers run bare pytest and only unit tests are discovered because tests/integration/ is not in testpaths; (6) CI test counts differ from local collection counts \u2014 marker-based selection (-m unit, -m integration) inconsistency; (7) a CI matrix has patterns referencing renamed or deleted test files \u2014 stale pattern detection; (8) pytest-watch dependency must be replaced with an alternative watcher dependency; (9) test is flaky only in the full suite due to class-level patch.object or hardcoded calendar dates/Unix timestamps; (10) coverage gate fires for a partial test run (e.g. pytest -m integration) but full-suite coverage is fine; (11) a ModuleNotFoundError fires when patching a scripts/ module not on sys.path during single-file pytest runs \u2014 add sys.path guard to conftest.py; (12) a test file PASSES when run via explicit path but contributes ZERO coverage in CI because it lives OUTSIDE testpaths and is never collected by the default run \u2014 verify COLLECTION with --collect-only, not just that the file passes; (13) deciding whether a sys.path.insert hack in a test is redundant given pythonpath already makes the dir importable as a namespace package; (14) an agent- or developer-authored test hardcodes a machine-specific absolute path (or other host/env-derived value) into an EXPECTED/golden value so it passes on the authoring host but fails on CI \u2014 derive the expected value from the same production constant the code interpolates, and run the FULL parametrized test not a subset.",
+      "version": "1.4.0",
       "source": "./skills/pytest-configuration-discovery-and-ci-pitfalls.md",
       "category": "testing",
       "tags": [
@@ -6456,7 +6564,11 @@
         "mock",
         "collect-only",
         "uncollected-tests",
-        "namespace-package"
+        "namespace-package",
+        "machine-path",
+        "host-dependent",
+        "golden-value",
+        "parametrize"
       ]
     },
     {
@@ -6820,6 +6932,23 @@
       ]
     },
     {
+      "name": "testing-non-vacuous-regression-guards-behavior-unchanged",
+      "description": "Discipline for proving that 'regression guard' tests added alongside a BEHAVIOR-UNCHANGED fix (documents an existing fallback, adds a docstring `Raises:`, clarifies a contract) are NON-VACUOUS \u2014 i.e. that each test would actually FAIL if the guarded branch were removed or altered. Such tests are NOT RED-GREEN TDD: they encode the CURRENT behavior and can pass vacuously, so a reviewer will correctly NOGO a plan that claims 'no behavior change, tests encode the contract' without naming the mutation each test catches. Teaches: (1) a per-test mutation table (Test | Asserts | Mutation it catches); (2) pairing each positive substring assertion with a DISCRIMINATING negative assertion (e.g. `assert '{' not in result`) that excludes the sibling code paths; (3) exploiting a real sibling asymmetry (one function case-SENSITIVE, the other case-INSENSITIVE) as a deliberate discriminator probe; (4) a cheap manual non-vacuity spot-check (temporarily apply the mutation, confirm the test fails, revert). Use when: (1) the fix changes NO logic but adds/clarifies docs and you add tests to 'guard' the now-documented behavior; (2) you wrote a docstring-only / doc-only fix whose regression tests could pass vacuously; (3) a reviewer NOGOs a plan for an un-proven 'tests encode the contract' claim; (4) you assert only a positive substring (`'name: hephaestus' in result`) and need to make it non-vacuous; (5) you are tempted to propose a 'wording alignment' doc edit to text that already states the contract.",
+      "version": "1.0.0",
+      "source": "./skills/testing-non-vacuous-regression-guards-behavior-unchanged.md",
+      "category": "testing",
+      "tags": [
+        "vacuous-test",
+        "regression-guard",
+        "negative-assertion",
+        "docstring-only",
+        "mutation-testing",
+        "sibling-asymmetry",
+        "planning",
+        "hephaestus"
+      ]
+    },
+    {
       "name": "testing-notice-cross-check-value-scoping",
       "description": "Scope NOTICE/registry value assertions to per-key lines, not full-file text. Use when: (1) writing a test that validates a value (e.g. SPDX license ID) is associated with a specific package in NOTICE, (2) any test asserting a value appears in a structured free-text file (changelogs, allowlists, SECURITY.md), (3) reviewing cross-check tests for potential false-pass conditions.",
       "version": "1.0.0",
@@ -6931,6 +7060,25 @@
       "source": "./skills/testing-stale-issue-dedup-inline-pattern.md",
       "category": "testing",
       "tags": []
+    },
+    {
+      "name": "testing-subprocess-helper-mocks-during-refactor",
+      "description": "After refactoring code that calls subprocess helpers (run_subprocess, subprocess.check_output, etc.), unit tests must update mocks to match the ACTUAL return type of the helper being tested. Use when: (1) refactoring code that changes which subprocess helper is used (run_subprocess vs subprocess.check_output), (2) test mocks fail with AttributeError on stdout/stderr/returncode after extraction, (3) tests expect CompletedProcess with specific attributes but the helper returns a different type, (4) test side_effect mocks don't match the actual return type of the helper being called, (5) extracting small helper functions from larger modules that call subprocess \u2014 verify helpers match their callsites' expectations.",
+      "version": "1.0.0",
+      "source": "./skills/testing-subprocess-helper-mocks-during-refactor.md",
+      "category": "testing",
+      "tags": [
+        "python",
+        "testing",
+        "mock",
+        "subprocess",
+        "refactoring",
+        "CompletedProcess",
+        "test-mocks",
+        "unittest-mock",
+        "helper-functions",
+        "function-extraction"
+      ]
     },
     {
       "name": "testing-verification-gate-zero-test-false-pass",
@@ -7871,6 +8019,24 @@
       ]
     },
     {
+      "name": "hephaestus-automation-loop-branch-sync-drive-green",
+      "description": "Diagnose and fix ProjectHephaestus automation-loop completion failures by enforcing fresh branch/worktree sync before implementation, limiting each worker's drive-green scope to its owned issue/PR, and running a final catch-all drive-green pass. Use when: (1) automation loops leave planned issues or PRs unfinished, (2) existing issue worktrees or branches are reused across runs, (3) drive-green acts on unrelated PRs, (4) Codex-authored commits must satisfy signed and Signed-off-by policy gates.",
+      "version": "1.0.0",
+      "source": "./skills/hephaestus-automation-loop-branch-sync-drive-green.md",
+      "category": "tooling",
+      "tags": [
+        "projecthephaestus",
+        "automation-loop",
+        "drive-green",
+        "git-worktree",
+        "branch-sync",
+        "codex",
+        "signed-commits",
+        "dco",
+        "pr-scope"
+      ]
+    },
+    {
       "name": "hephaestus-implement-issues-bulk-implementer",
       "description": "How to use ProjectHephaestus's canonical bulk issue-implementer (hephaestus-implement-issues) to implement many GitHub issues per repo instead of hand-rolling agent prompts \u2014 flags, worker-cap math, and the three failure modes that actually bite (signal-not-main-thread, 429 session-quota, blocking-inside-a-schema'd-Workflow-subagent). Use when: (1) you need to implement N GitHub issues across one or more repos and are tempted to write your own agent loop, (2) you hit 'ValueError: signal only works in main thread', (3) you hit HTTP 429 'session limit' mid-batch, (4) a Workflow subagent wrapping the implementer fails with 'subagent completed without calling StructuredOutput', (5) you need to size --max-workers to a per-CPU-core cap, (6) cleaning up orphaned .worktrees/issue-N after an interrupted run.",
       "version": "1.0.0",
@@ -7887,6 +8053,22 @@
         "workflow-subagent",
         "automation",
         "pixi"
+      ]
+    },
+    {
+      "name": "inference360-diffusion-sglang-dllm-manifests",
+      "description": "Bring up diffusion checkpoints in Inference360 with manifest-driven SGLang DLLM launch fields. Use when: (1) adding SGLang-only DLLM serving options, (2) rendering diffusion model launch flags into Slurm templates, (3) keeping experimental diffusion manifests gated off from production.",
+      "version": "1.0.0",
+      "source": "./skills/inference360-diffusion-sglang-dllm-manifests.md",
+      "category": "tooling",
+      "tags": [
+        "inference360",
+        "diffusion",
+        "sglang",
+        "dllm",
+        "manifest",
+        "h200",
+        "slurm"
       ]
     },
     {
@@ -8353,6 +8535,25 @@
       "tags": []
     },
     {
+      "name": "pr-review-two-dot-vs-three-dot-diff",
+      "description": "When reviewing OPEN auto-impl / long-lived feature PRs for MERGE-READINESS, diff with two-dot (git diff origin/main..branch) NOT three-dot (origin/main...branch). Use when: (1) reviewing a stale *-auto-impl or long-lived feature branch that is N commits behind origin/main, (2) a three-dot diff shows a scary regression (e.g. a timeout 7200s->300s) that turns out to already be on main via a sibling PR, (3) deciding whether re-merging a stale branch is safe or would REVERT sibling work already landed on trunk, (4) you suspect a PR is a zombie whose feature already merged, (5) verifying a PR's true revert footprint before issuing a GO/NO-GO verdict.",
+      "version": "1.0.0",
+      "source": "./skills/pr-review-two-dot-vs-three-dot-diff.md",
+      "category": "tooling",
+      "tags": [
+        "pr-review",
+        "git-diff",
+        "two-dot",
+        "three-dot",
+        "merge-base",
+        "stale-branch",
+        "merge-readiness",
+        "zombie-pr",
+        "auto-impl",
+        "revert-footprint"
+      ]
+    },
+    {
       "name": "pre-commit-hooks-and-linting-config",
       "description": "Canonical guide to pre-commit hook configuration, single-source-of-truth versioning, CI/local parity, and integration of ruff/mypy/clang-format/yamllint/actionlint/golangci-lint/bandit/hadolint/shellcheck/markdownlint. Use when: (1) writing or amending .pre-commit-config.yaml, (2) diagnosing why a hook passes locally but fails in CI (version drift), (3) deciding fix-vs-suppress for lint findings, (4) adding a new linter to an existing pre-commit pipeline, (5) reconciling ruff/mypy/markdownlint config across multiple repos, (6) a pre-commit hook using a pixi console script false-fails locally even though CI passes \u2014 system-installed package in ~/.local/bin shadows the local dev version, (7) ruff I001/RUF059 fires on inline imports or unused tuple unpacking inside test functions after adding new tests, (8) mypy pre-commit hook fails because an UNTRACKED test file references methods not yet committed \u2014 the hook checks ALL .py files on disk including untracked ones, (9) CI ruff-format hook fails even though local `ruff check` passed \u2014 `ruff check` (lint) and `ruff format --check` (formatter) are SEPARATE tools sharing one binary and running only `check` never exercises the formatter, (10) running pre-commit against the full PR diff (every file changed since merge-base) with `--from-ref/--to-ref` not just `--files <current edit>` \u2014 a sub-agent's earlier commit can carry stale-formatter content that fails only in CI, (11) adding .editorconfig for cross-editor formatting consistency on non-Python files (YAML, JSON, Markdown, shell, Makefile), (12) an automated PR-reviewer flags lint/formatter/pre-commit-forced incidental churn as scope creep \u2014 toolchain-forced churn is exempt from YAGNI/scope review while author-chosen opportunistic work is still flagged, (13) removing a duplicate standalone markdownlint CI job when the lint job already runs pre-commit --all-files \u2014 MUST verify the job is NOT a required-check context in branch protection before deleting it, and MUST pre-scan the newly-in-scope files for violations that --fix cannot auto-fix, (14) the pre-commit hook exclude pattern for .claude/ may be LOAD-BEARING (not merely defensive) \u2014 confirm with git ls-files .claude/ before removing it; two tracked .md files (.claude/security/guidelines.md and .claude/workflows/development.md) exist in ProjectHephaestus and must remain excluded to match the standalone CI job's intent, (15) after removing a duplicate markdownlint CI job update every doc that names that job by its old CI name (e.g. docs/DEFINITION_OF_DONE.md and .github/README.md) or CI job name references become stale; (16) BOTH the required `lint` check AND the `pre-commit` check are red in a PR \u2014 they share the same `ruff format` hook, so a single `ruff format <files>` run clears both; do not debug as two separate problems; (17) adding a commit-msg-stage hook (e.g. conventional-commit validator) \u2014 must set `default_install_hook_types: [pre-commit, commit-msg]` in .pre-commit-config.yaml or plain `pre-commit install` silently omits the commit-msg stage and the hook is permanently inert for all contributors; (18) verifying that a commit-msg-stage hook actually fires \u2014 `pre-commit run --all-files` does NOT invoke commit-msg-stage hooks; drive them via `pre-commit run --hook-stage commit-msg --commit-msg-filename <file>` instead; (19) adding a Bandit SAST hook that scans a whole directory via --ini config \u2014 must use `pass_filenames: false` or pre-commit appends individual changed filenames, bypassing the .bandit INI targets and recursive settings; (20) adding a repo: local pre-commit hook for a pixi.toml-scoped stdlib-only checker script \u2014 use `files: ^pixi\\.toml$` and `pass_filenames: false` so the checker finds pixi.toml via get_repo_root() rather than receiving it as an argument; (21) a pip-audit task-definition regex also matches dep-version lines in the same pixi.toml because the value group was not anchored to start with `pip-audit` \u2014 causing false parser errors; anchor the value group: `r'\"(?P<value>pip-audit[^\"]*)'` to distinguish task definitions from version pins like `pip-audit = \">=2.7,<3\"`; (22) IGNORE_VULN_RE.findall(text) on the whole file hits `--ignore-vuln below` in ledger documentation comments, producing spurious matches \u2014 scope the raw scan to non-comment lines only before running findall; (23) a pixi.toml comment claiming a script enforces an invariant fails review if the hook wiring does not exist yet \u2014 never document enforcement automation before the hook/CI step is actually wired; (24) `git commit` appears to fail or the resulting commit shows an unexpected/unknown-key GPG signature (`%G? = E`, 'Can't check signature: No public key') \u2014 FIRST check whether a pre-commit hook ABORTED the commit (rc=1) so HEAD never moved; `git log --show-signature -1` is then showing the PARENT/main-tip commit (authored by someone else), NOT yours \u2014 verify with `git log -1 --format='%H %G? %s'` (is the hash NEW?) plus `git diff --cached --name-only` (are files still staged?) BEFORE debugging signing/gpg-agent; the pre-commit hooks are STRICTER than `pixi run ruff check`/`pixi run mypy`, so run the REAL hooks (`pre-commit run ruff-check-python ruff-format-python --files <files>` + `pre-commit run mypy-check-python --all-files`), not just the pixi tasks, before committing new test code.",
       "version": "2.5.0",
@@ -8564,8 +8765,8 @@
     },
     {
       "name": "ruff-specific-rule-fixes",
-      "description": "Patterns for fixing specific Ruff lint rule violations and addressing systemic linter policy failures. Use when: (1) fixing Ruff S101 violations in production code by replacing bare assert guards with explicit RuntimeError raises, (2) fixing Ruff C901 cyclomatic complexity violations by extracting helper functions, (3) fixing Ruff RUF022 (__all__ not sorted) or I001 (import block un-sorted) \u2014 both are [*]-fixable; never manually reorder because isort uses the alias name not the original symbol, always use `ruff check --fix`, (4) the same policy violation reappears in two or more independent documents or configs \u2014 indicating the linter/validator that should enforce the policy is absent or misconfigured (root-cause fix: add the lint rule, not re-fix every instance), (5) deciding between adding a noqa suppression, fixing the violation, or promoting the rule to error-level enforcement, (6) main goes red after a ruff/mypy version-floor bump \u2014 E501 line-length overruns, ruff-format implicit-string-concat collapses, or unused-ignore mypy errors appear retroactively in files that previously passed CI, (7) a # type: ignore[tag] comment becomes an unused-ignore error after a mypy or ruff floor bump, (8) adding a new scripts/*.py to a repo with an auto-discovering smoke test, or adding a # noqa whose rule may not be in the ruff select list, (9) E501 or ruff format failures appear in newly-added TEST files on a large multi-file feature PR \u2014 running only the test suite before pushing misses these; CI fails on line-length or format in the new test files.",
-      "version": "1.4.0",
+      "description": "Patterns for fixing specific Ruff lint rule violations and addressing systemic linter policy failures. Use when: (1) fixing Ruff S101 violations in production code by replacing bare assert guards with explicit RuntimeError raises, (2) fixing Ruff C901 cyclomatic complexity violations by extracting helper functions, (3) fixing Ruff RUF022 (__all__ not sorted) or I001 (import block un-sorted) \u2014 both are [*]-fixable; never manually reorder because isort uses the alias name not the original symbol, always use `ruff check --fix`, (4) the same policy violation reappears in two or more independent documents or configs \u2014 indicating the linter/validator that should enforce the policy is absent or misconfigured (root-cause fix: add the lint rule, not re-fix every instance), (5) deciding between adding a noqa suppression, fixing the violation, or promoting the rule to error-level enforcement, (6) main goes red after a ruff/mypy version-floor bump \u2014 E501 line-length overruns, ruff-format implicit-string-concat collapses, or unused-ignore mypy errors appear retroactively in files that previously passed CI, (7) a # type: ignore[tag] comment becomes an unused-ignore error after a mypy or ruff floor bump, (8) adding a new scripts/*.py to a repo with an auto-discovering smoke test, or adding a # noqa whose rule may not be in the ruff select list, (9) E501 or ruff format failures appear in newly-added TEST files on a large multi-file feature PR \u2014 running only the test suite before pushing misses these; CI fails on line-length or format in the new test files, (10) a CI validate job runs `ruff format --check` and fails with `Would reformat` even though local pytest, pre-push pytest, and `ruff check` passed.",
+      "version": "1.5.0",
       "source": "./skills/ruff-specific-rule-fixes.md",
       "category": "tooling",
       "tags": [
@@ -8608,7 +8809,10 @@
         "feature-pr",
         "parametrize",
         "entry-points",
-        "add_version_arg"
+        "add_version_arg",
+        "format-check",
+        "validate-ci",
+        "inference360"
       ]
     },
     {
