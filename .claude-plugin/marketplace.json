@@ -6,19 +6,19 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "2.1.0",
-  "total_plugins": 561,
+  "total_plugins": 597,
   "categories": {
-    "architecture": 103,
-    "ci-cd": 105,
-    "debugging": 52,
-    "documentation": 40,
-    "evaluation": 11,
+    "architecture": 112,
+    "ci-cd": 119,
+    "debugging": 54,
+    "documentation": 41,
+    "evaluation": 12,
     "optimization": 3,
-    "testing": 78,
-    "tooling": 162,
+    "testing": 82,
+    "tooling": 167,
     "training": 7
   },
-  "last_updated": "2026-07-02T15:09:03Z",
+  "last_updated": "2026-07-04T07:05:10Z",
   "plugins": [
     {
       "name": "agent-config-validation-and-integrity",
@@ -160,8 +160,8 @@
     },
     {
       "name": "architecture-executable-convention-guard-pattern",
-      "description": "Turn an un-guarded documented invariant (a prose convention) into a tested, blocking, reusable executable check that CI or any consumer can call. Use when: (1) a contract like 'absence of artifact X means stage Y never ran' lives only in docstrings/comments and nothing asserts it, (2) you are adding an enforcement gate whose whole purpose is signal fidelity and must pick a collision-free exit code distinct from argparse's usage-error 2 and sibling CLIs, (3) a verification step must resolve its inputs strictly read-only and must NOT fabricate the very signal whose absence it checks (e.g. a resolver that mkdir()s the directory), (4) you classify a log/marker line and must anchor on the line prefix instead of a free substring scan vulnerable to user-controlled tokens, (5) you relax argparse requirements (nargs='?') for a new mode and must re-guard the original mode so it does not silently no-op, (6) the same convention is documented in two places (module docstring + sibling shell comment) and must be kept in sync when made executable, (7) you are planning a fix for any 'X mirrors Y' / parity / directory-structure invariant audit finding and must determine WHICH direction(s) the existing guard asserts \u2014 the defect is usually the un-asserted reverse direction (test_packages - src_packages), and the fix is an allowlist-with-rationale plus the reverse check, NOT deletion of flagged items, (8) you are adding an executable membership/coverage guard that ITERATES a population (all packages / dirs / files of a kind) \u2014 you MUST scope its iteration set AND its CI/pre-commit files: trigger to the issue's NAMED targets only when sibling members are partially compliant, or the guard fails its OWN acceptance test on the shipped tree.",
-      "version": "1.7.0",
+      "description": "Turn an un-guarded documented invariant (a prose convention) into a tested, blocking, reusable executable check that CI or any consumer can call. Use when: (1) a contract like 'absence of artifact X means stage Y never ran' lives only in docstrings/comments and nothing asserts it, (2) you are adding an enforcement gate whose whole purpose is signal fidelity and must pick a collision-free exit code distinct from argparse's usage-error 2 and sibling CLIs, (3) a verification step must resolve its inputs strictly read-only and must NOT fabricate the very signal whose absence it checks (e.g. a resolver that mkdir()s the directory), (4) you classify a log/marker line and must anchor on the line prefix instead of a free substring scan vulnerable to user-controlled tokens, (5) you relax argparse requirements (nargs='?') for a new mode and must re-guard the original mode so it does not silently no-op, (6) the same convention is documented in two places (module docstring + sibling shell comment) and must be kept in sync when made executable, (7) you are planning a fix for any 'X mirrors Y' / parity / directory-structure invariant audit finding and must determine WHICH direction(s) the existing guard asserts \u2014 the defect is usually the un-asserted reverse direction (test_packages - src_packages), and the fix is an allowlist-with-rationale plus the reverse check, NOT deletion of flagged items, (8) you are adding an executable membership/coverage guard that ITERATES a population (all packages / dirs / files of a kind) \u2014 you MUST scope its iteration set AND its CI/pre-commit files: trigger to the issue's NAMED targets only when sibling members are partially compliant, or the guard fails its OWN acceptance test on the shipped tree, (9) you are adding an install/package-consumability CI gate (cmake --install layout check + find_package consumer compile) for a library, or need a guard to exercise its own failure branches on every CI run via an always-on self-test against a mutated throwaway copy of its input, (10) a repo missing a canonical ecosystem CI check name (install/package/release) must choose between adding a REAL check vs documenting N/A \u2014 prefer a real check when the repo's documented quick-start install path IS an install surface (dependency-manager env + hook install), and verify the board's badge mechanism (check-runs on main) before picking the workflow/trigger, (11) you are adding a canonical `release`/packaging CI check-run for an ecosystem CI board to a manifest/dataset repo \u2014 the check must do REAL packaging work (archive the dataset with a deterministic manifest, refuse an empty dataset) rather than fabricate a pass with a no-op job, split write permissions into a separate tag-gated publish job, and verify third-party action pins against the tag before use, (12) a repo with a REAL tag-only OIDC PyPI publish pipeline needs a canonical `release` check-run on PR/main \u2014 implement a dry-run pipeline VALIDATOR (tag gating, id-token permission, action SHA pin, dist-filename\u2194pyproject version match) that rides the consolidated required-checks workflow's build artifact, rather than a no-op stub, a republish, or a duplicate packaging job.",
+      "version": "1.11.0",
       "source": "./skills/architecture-executable-convention-guard-pattern.md",
       "category": "architecture",
       "tags": [
@@ -194,6 +194,25 @@
         "scope-lock-test",
         "ghost-directory-guard",
         "prefiltered-population-fixture",
+        "install-smoke-test",
+        "self-test-in-guard",
+        "imported-location",
+        "find-package",
+        "canonical-check-name",
+        "ecosystem-ci-board",
+        "manifest-repo-install",
+        "check-run-on-main",
+        "real-check-vs-na",
+        "canonical-check-run",
+        "release-packaging",
+        "least-privilege-workflow",
+        "sigpipe-safe",
+        "action-pin-verification",
+        "dry-run-release-check",
+        "trusted-publishing-oidc",
+        "pipeline-validator",
+        "projectscylla",
+        "myrmidons",
         "hephaestus"
       ]
     },
@@ -246,7 +265,7 @@
     },
     {
       "name": "architecture-god-function-decomposition-planning-risks",
-      "description": "Use when: planning an extraction pass on over-long functions (god functions) in hephaestus/automation/ or similar large Python codebases, especially when working from an issue that cites specific line numbers, function sizes, or file locations \u2014 before finalizing an extraction plan that waives work on a function, verify on disk that the cited size matches reality; apply the sentinel return pattern for extracted poll loops; verify test file existence before writing stubs; and audit plan documents for helper-defined-but-never-called inconsistencies.",
+      "description": "Use when: planning an extraction pass on over-long functions (god functions) OR an over-long god CLASS in hephaestus/automation/ or similar large Python codebases, especially when working from an issue that cites specific line numbers, function sizes, or file locations \u2014 before finalizing an extraction plan that waives work on a function, verify on disk that the cited size matches reality; apply the sentinel return pattern for extracted poll loops; verify test file existence before writing stubs; and audit plan documents for helper-defined-but-never-called inconsistencies. For god-CLASS decomposition, the dominant constraint is preserving existing patch.object(instance, \"_method\") test seams via thin delegation stubs, and the intra-class-helper vs injected-provider-collaborator decision is driven by the count of sibling self._ calls each method makes. The #1 non-obvious failure when extracting a collaborator is a circular import \u2014 if the moved method body uses a module-level helper defined in the god module, relocate that helper to a cycle-free leaf module and re-export it (name as name) rather than back-importing from the god module.",
       "version": "1.3.0",
       "source": "./skills/architecture-god-function-decomposition-planning-risks.md",
       "category": "architecture",
@@ -268,7 +287,17 @@
         "pipeline-stages",
         "loop-body-measurement",
         "docstring-budget",
-        "return-type-tracing"
+        "return-type-tracing",
+        "god-class",
+        "collaborator-extraction",
+        "patch-object-seams",
+        "delegation-stub",
+        "injected-provider",
+        "srp",
+        "circular-import",
+        "import-cycle",
+        "leaf-module",
+        "re-export"
       ]
     },
     {
@@ -460,7 +489,7 @@
     {
       "name": "audit-remediation-verify-evidence-before-planning",
       "description": "Before planning a fix for an audit/remediation issue, verify the audit's cited evidence (file:line) against the live tree \u2014 audit findings go stale once the target is independently remediated, and an audit that names SEVERAL targets can have a SUBSET already fixed. Re-read EVERY cited file:line before planning, fix ONLY the issue-named targets (a repo-wide survey will surface more non-compliant siblings \u2014 note them out-of-scope, do not expand the PR), and do not invent a unit test for a doc/UX field that has no test contract. When a doc-table column is genuinely UN-RECOVERABLE from the repo (e.g. a semantic-version 'Added' anchor), INFER it but LABEL the provenance honestly as best-effort, and design any drift-guard to validate ONLY the verifiable invariant (table membership vs live __all__), never the inferred value. CRITICAL: a predecessor issue's plan being captured in a skill does NOT mean it shipped \u2014 re-verify the artifact exists on disk (test -f) before assuming prior work is done. Use when: (1) planning a fix for an audit-filed issue with file:line evidence, (2) the issue spans multiple repos or submodules, (3) the issue recommends doc/field-name/frontmatter changes that may already be done, (4) the audit names multiple targets and any subset may already be remediated, (5) you must author a doc table that mixes a verifiable column (symbol membership) and an unverifiable column (which version first shipped it), (6) a prior/predecessor issue claims to have introduced an artifact (a guard, a doc table) that this issue builds on \u2014 confirm it actually landed before assuming it exists.",
-      "version": "1.4.0",
+      "version": "1.10.0",
       "source": "./skills/audit-remediation-verify-evidence-before-planning.md",
       "category": "architecture",
       "tags": []
@@ -772,8 +801,8 @@
     },
     {
       "name": "dry-refactoring-workflow",
-      "description": "Complete TDD-driven workflow for identifying and eliminating code duplication by extracting reusable helper methods. Use when: (1) extracting duplicated helper methods into a shared module using TDD (write a failing test against the canonical, delete the duplicate, run green); (2) creating a private leaf module with leading-underscore naming to centralize a repeated internal call (e.g. importlib.metadata version resolution, path construction) and prevent re-introduction across modules; (3) centralizing hardcoded path constants into a single module to prevent drift when directory structure changes (incl. phase-routed in_progress/completed splits); (4) deduplicating LLM JSON extraction, parser logic, or any call-site pattern copy-pasted across several files; (5) test structure must mirror source structure when extracting helpers; (6) running a full DRY consolidation pass (discovery via grep, classifying true duplicates vs intentional variants, dict-structure consolidation) and refactoring to a single canonical source; (7) extract-method / SRP decomposition of over-long functions (50-LOC) and methods (100-LOC), including converting a mutating closure into a method via a small mutable box; (8) extracting repeated cached lookups into an @lru_cache helper (and clearing the cache so unittest.mock.patch works); (9) removing stale scripts / deprecated stubs (grep callers first) and replacing hardcoded file lists with dynamic Path.rglob discovery; (10) PLANNING a consolidation of two OVERLAPPING but not-identical constant collections (frozensets / keyword lists / error-pattern tuples) \u2014 classify true-duplicate vs intentional-variant first, then extract only the shared CORE into one canonical immutable constant and have each consumer compose CORE | its-own-extras, proving anti-drift with CORE.issubset(consumer) parity tests, instead of a flat merge that would violate a deliberate behavioral contract. (11) behavior-preserving duplicate cleanup across test fakes, tiny strategy/kernel modules, and validation wrappers: keep public module exports stable, centralize only identical mechanics, preserve local wrapper names/error messages, and verify with focused + full suites before opening a PR. Also covers cryptographic commit signing requirements in PR workflows. (12) stale issue body in dedup/consolidation tasks: issue 'Evidence:' sections go stale as prior PRs partially resolve them \u2014 grep the CURRENT state first; choose inlining over fixtures for pure bytes\u2192str helpers; resolve remote branch divergence by pushing to a new branch rather than force-pushing or rebasing 84 conflicting commits. (13) PLANNING an extraction whose issue claims 'N nearly-identical, M byte-for-byte identical' methods: the COUNT and 'byte-for-byte identical' assertions go STALE exactly like the 'Evidence:' section \u2014 count and DIFF every claimed-duplicate body in full before scoping; prior refactors may have already delegated one to a richer printer or changed another's signature/model, and even the truly-similar bodies often hide call-site-varying string args (count noun, header) that a flat merge would silently change \u2014 parameterize those as kwargs-with-defaults to guarantee zero behavior change, and place the helper in an EXISTING established-dedup module rather than a new leaf module or base-class method. (14) PLANNING a behavior-preserving method\u2192free-function extraction when the duplicated method is a patched test seam \u2014 grep patch.object(.*\"_method\") BEFORE planning any deletion (a method patched at many call sites must be KEPT as a one-line thin wrapper delegating to the new free function, never deleted, or every patch target breaks); read the actual test bodies to confirm which 'near-identical' differences (log level, an extra debug line, exception-message wording) are behavior-bearing vs incidental before collapsing copies (only safe to collapse logging when no test asserts log level/message); match the target module's established convention (free function taking explicit args, not a mixin/base-class method); hedge unverified import assumptions a planner did not execute (is pathlib.Path already imported? is there a 'from ._review_utils import ...' line to extend? is a cross-layer runtime import safe within the automation\u2192library boundary AND absent from the base 'import hephaestus' surface?); and prove a pure extraction with a single-canonical-source grep that must return exactly one hit PLUS the PRE-EXISTING per-class behavioral suites staying green (the real acceptance gate, not the new structural tests). (15) PLANNING a duplicate-bearing standalone SCRIPT \u2192 library-shim consolidation when the script duplicates library logic (e.g. get_subpackages()/subpackage-mirror checks) but ALSO carries one unique function \u2014 prefer SHIM over DELETE: move the unique function into the library as the canonical source (returning a (ok, error_lines) tuple), export it from the package __init__, and rewrite the script as a thin shim importing the granular library functions \u2014 because the script is referenced by docs, a skill, AND auto-discovery smoke tests; the silent risk is OUTPUT-CONTRACT preservation: the shim must reproduce byte-for-byte stdout/stderr (literal arrow \u2192 and exact phrasing), calling the GRANULAR functions, NOT the library main()/check_test_structure (which runs extra checks the script never ran); importing a private symbol (_get_subpackages) across the script\u2192library boundary is the most reviewer-contentious choice \u2014 offer a fallback (compute from already-returned data); record unverified reliances as explicit risks (is the script NOT wired to CI/pre-commit? does the doc/README line stay accurate once the shim is what's wired? is the single-vs-double-quote glob-marker check copied exactly?); and note the TDD INVERSION gotcha \u2014 a library test written AFTER copying the function body is GREEN-first, not RED, so don't claim a RED phase you didn't have. (16) REMOVING a deprecated PUBLIC-API symbol (one that already emits DeprecationWarning) across ALL surfaces \u2014 a deprecated symbol lives on far more surfaces than its definition: enumerate and delete from impl, the subpackage __init__ import + __all__, the top-level package lazy-loader map (_LAZY_IMPORTS) + __all__, the deprecation-warning INFRASTRUCTURE (a _DEPRECATED_LAZY dict + the __getattr__ branch that emits the access-time warning \u2014 and SIMPLIFY __getattr__ once the last deprecated lazy symbol is gone), tests, and multi-location docs; discovery-first repo-wide grep classifying every hit (def/re-export/lazy-map/deprecation-infra/test/doc) and confirming ZERO runtime callers before treating it as a pure removal; TDD absence-guard tests FIRST (assert `not hasattr`, `symbol not in __all__`, `symbol not in _LAZY_IMPORTS`, `symbol not in dir()`) which FAIL first as a real RED \u2014 busting the PEP 562 cache with `pkg.__dict__.pop(symbol, None)` and ignoring DeprecationWarning for the top-level guard; DELETE deprecation-GUARD test files outright (don't trim them) and the per-symbol deprecated test CLASS in mixed files (re-grep before pruning patch/MagicMock imports); repoint integration fixtures that USE the symbol onto a non-deprecated lazy symbol; scrub docs across COMPATIBILITY.md (prose list + callout + table-row annotation + per-subpackage callout), MIGRATION.md (convert to a Removed-symbols table noting the BREAKING ImportError), and ROADMAP.md; verify via a three-tier grep gauntlet (package source / docs-except-MIGRATION / repo-wide-except-tests) then ruff then the full suite above the coverage gate; and treat it as a BREAKING public-API removal \u2014 name the exact broken import forms in the PR body and record the rollback path. (17) EXECUTING a consolidation against an APPROVED implementation plan whose exact `file:line` anchors may be stale: a stale anchor can be a wrong FILENAME (not just a wrong line number or stale count), and a plan that passed STRICT review claiming 'verified accurate against disk' does NOT exempt the implementer from re-grepping \u2014 the named file may merely CALL the indirection root (a shared helper) where the literal actually lives. Before editing, grep the CURRENT tree for the literal pattern the plan DESCRIBES (`grep -rn '<the literal>' src/`), map the plan's INTENT onto the real call sites, and re-count every occurrence yourself (the per-module count drifts like the 'Evidence:' section); fixing the indirection root transitively fixes the symptom the plan pointed at. (verified-local \u2014 ProjectHephaestus #1427, consolidated two log-format strings into `constants.AUTOMATION_LOG_FORMAT`/`LOG_DATEFMT`; the approved plan named `ensure_state_labels.py:189` but the real drifted literal lived at `cli/utils.py:222` in `configure_cli_logging`; full local suite green 5203 passed / 23 skipped, 87.22% coverage, CI pending at capture.) (18) RESOLVING an issue whose TITLE and BODY describe DIFFERENT tasks before implementing a DRY consolidation \u2014 in a TASK/PLAN/REVIEW automation pipeline the issue TITLE can be a stale MISLABEL: read `gh issue view <n> --comments` FIRST and treat the issue BODY plus the approved `# Implementation Plan` comment (and its `## \ud83d\udd0d Plan Review` verdict, e.g. 'A / GO') as the AUTHORITATIVE source of truth for WHAT to build, NOT the title; do not implement the title's task when the body and approved plan describe a different one (e.g. a title saying 'narrow Ruff S102 exec suppressions across scripts/' over a body entirely about consolidating two coexisting CLI log-format strings \u2014 the plan review explicitly confirmed the title-vs-body mismatch and graded the body's plan GO). The accompanying worked CLI-log-format DRY consolidation reinforces existing phases: place the shared `CLI_LOG_FORMAT` / `CLI_LOG_DATEFMT` constants in the LIBRARY layer (`hephaestus/constants.py`) because the automation\u2192library boundary forbids library\u2192automation imports but allows automation\u2192library, keeping ONE canonical source reachable from both; classify-don't-blindly-merge a THIRD terse log format (`github/fleet_sync.py` + `github/tidy.py`) as an INTENTIONAL VARIANT left untouched and documented (mirrors the `TRANSIENT_ERROR_CORE` precedent), proven by a grep gauntlet (zero inline CLI literals in `hephaestus/automation/` AND exactly 2 github-terse hits remain); preserve each call site's exact shape \u2014 keep a consumer's local `fmt`/`datefmt` names but assign them FROM the constants when a later `setFormatter()` reuses them (`implementer_cli.py`), and do NOT add a `datefmt=` argument to a call site that never had one (`audit_reviewer.py`); and do NOT change the VALUE of the pre-existing library `LOG_FORMAT` (consumed by `logging/utils.py`, asserted in `tests/unit/utils/test_constants.py`) \u2014 changing it would alter every library log line for no functional gain. (verified-local \u2014 ProjectHephaestus #1428; full automation suite 2238 passed + 29 boundary/constants/import-surface tests passed, ruff check+format clean, mypy clean over 447 files; CI pending at capture.) (19) EXECUTING an env-coercion/duplicate-reader dedup where you collapse a duplicate private reader (e.g. `_read_int_env`) into a thin delegate to the canonical public helper (`read_timeout_env`): collapsing the last real consumer of a module-level import (`os`) makes that import UNUSED even though an approved plan said 'leave it' \u2014 re-derive usage from the POST-edit tree (`grep -cnE '\\bos\\.' file`; docstring/comment hits do NOT count) and run `ruff check --fix` per file to catch F401 + the I001 import re-sort triggered by adding a second `from pkg import X` line; and a stale plan anchor can be a wrong TEST-FILE PATH (guard tests relocated `tests/unit/ -> tests/unit/validation/`) so `find tests -name '<file>'` before running any plan-listed verification path \u2014 'no tests ran' reads as a false success. (verified-local \u2014 ProjectHephaestus #1431.) (20) EXECUTING a duplicate `try/finally` \u2192 context-manager consolidation across many worker call sites (the classic acquire/release resource pattern), e.g. wrapping `StatusTracker.acquire_slot()`/`release_slot()` in an additive `@contextmanager slot(initial_msg=\"\", timeout=None) -> Iterator[int | None]` and migrating 6 call sites: a context manager CANNOT make its caller `return` \u2014 the wrapped primitive `acquire_slot()` returns `int | None` (None on timeout) and EVERY call site guarded that with a caller-specific early `return <DomainResult>`, so the CM must `yield int | None` and each caller KEEPS its `if slot_id is None: return <DomainResult>` guard, now MOVED INSIDE the `with` (POLA \u2014 do not try to make the CM swallow the domain-return); guard the release against the None yield (`release_slot` does `if 0 <= slot_id < num_slots`, so `0 <= None` \u2192 `TypeError` on 3.10+ \u2014 the `finally` must be `if slot_id is not None: self.release_slot(slot_id)`, with a test that exhausts the pool, enters `slot(timeout=...)`, asserts the yielded id is None AND the still-held real slot is NOT spuriously released); classify per-site `finally` SIDE EFFECTS as behavior-bearing vs incidental BEFORE collapsing (of 6 sites, 2 had a `time.sleep(1)` throttle in `finally` BEFORE `release_slot` that MUST stay \u2014 keep it as an inner `try/finally: time.sleep(1)` that no longer releases \u2014 and 4 were release-only and collapse entirely into the `with`); `initial_msg` adoption is PER-SITE (only sites that set an initial status right after acquiring move it into `slot(initial_msg=...)`; sites with none pass `\"\"` to preserve exact behavior \u2014 the CM only calls `update_slot` when `initial_msg` is non-empty AND the slot is non-None); make the wrapper a strict SUPERSET of the wrapped primitive (`acquire_slot` already takes `timeout`, so exposing `timeout` on `slot()` default None is opt-in and behavior-preserving \u2014 justify net-new surface as \"pre-existing primitive capability, not invented surface\" for YAGNI review); re-grep and re-count yourself (the approved Grade-A/GO plan's `file:line` anchors were +1 off for all 6 sites, and one verification test path had relocated dirs) \u2014 the self-falsifying grep gate (assert ZERO `release_slot` in the 6 worker modules; only `status_tracker.py` retains it) is the real acceptance gate, not the structural tests; script the re-indent (replace the acquire+guard head with `with ...:` + a unique sentinel marker, then a tiny Python script that swaps the marker\u2192`try:`, indents the body +4, and deletes the `finally:`+`release_slot` lines for release-only sites or only the `release_slot` line for throttle sites \u2014 AST-parse each file after to confirm syntax); +4 indentation pushes lines over the line-length limit and `ruff format` re-wraps most but will NOT split f-strings / implicit string-concatenation, so hand-wrap the residual E501s (run `ruff check --fix` then `ruff format` then `ruff check` again); and verify the failure-path helpers (`_fail`/`_record_issue_failure`/`_handle_runtime_error`) that also receive `slot_id` only `update_slot` and never `release_slot` (else moving release into the CM double-releases). (verified-local \u2014 ProjectHephaestus #1437; additive `slot()` CM on `StatusTracker`, 6 call sites migrated (`pr_reviewer.py`, `address_review.py`, `implementer_phase_runner.py`, `planner.py`, `plan_reviewer.py`, `ci_driver.py`), 5 new TDD tests RED\u2192GREEN, leak-grep gate green (zero `release_slot` in the 6 modules), ruff + mypy clean (448 files), 507 tests passed across all affected suites + import-surface/automation-boundary; PR CI not yet merged at capture.) (21) EXECUTING a tiny-module merge consolidation (N sub-40-line single-purpose modules folded into their natural established siblings) when the issue's TITLE and BODY name DIFFERENT module sets \u2014 reinforces Phase 17/18 (title/body mismatch) at the SET level: the TITLE named three tiny modules (`_interfaces.py` 22L, `_secret_patterns.py` 25L, `work_report.py` 58L) to merge into siblings while the BODY described a COMPLETELY DIFFERENT four-module set; the approved `# Implementation Plan` comment correctly treated the TITLE as authoritative for WHICH modules and its strict `## \ud83d\udd0d Plan Review` graded it A/GO, so read `gh issue view <n> --comments` and let the approved plan + its review verdict be the source of truth (when title and body name different concrete module SETS, the plan's chosen set is the deliverable). Durable move-specific lessons: (a) a behavior-preserving symbol MOVE between two LIBRARY files can surface a lint rule the SOURCE file was incidentally exempt from \u2014 moving a `@runtime_checkable Protocol` whose stub method was `def run(self) -> Any: ...` (NO docstring, no `# noqa`, passed CI) from `_interfaces.py` into the fully-linted `protocol.py` made `ruff check` flag `D102 Missing docstring in public method`; fix by adding a one-line method docstring above the `...` (ruff does NOT complain about a redundant `...` after a docstring, so keep both) \u2014 always run `ruff check` on the TARGET after the move, never assume 'it passed before' transfers; (b) the acceptance gate for a PURE relocation is the orphan-reference grep + source-deleted check + the EXISTING repointed tests staying green \u2014 NOT new tests: repoint existing tests, do not write RED tests; verify with `grep -rn 'from .work_report\\|from ._interfaces\\|from ._secret_patterns\\|automation.work_report\\|automation._interfaces\\|automation._secret_patterns' hephaestus/ tests/` returning EMPTY, `test ! -e <each source>` printing OK, and the repointed suites green; (c) resolve a plan's OWN self-contradiction via its runnable Verification commands \u2014 the plan listed `test_interfaces.py`/`test_secret_patterns.py` under BOTH 'Files to Modify' (repoint imports) AND 'Files to Delete', and the strict review flagged it while noting the Verification commands ran those files by name \u2192 intent is 'retain + repoint, do NOT delete'; when a plan and its review disagree internally, the runnable Verification commands disambiguate. Also two repo-specific pixi task gotchas: `pixi run python -m pytest ... -p no:cov` FAILS with `unrecognized arguments: --cov=...` because `--cov` lives in `addopts` (you cannot disable cov via `-p no:cov` on the CLI) \u2014 run pytest normally and treat the trailing 'Required test coverage of 83.0% not reached' line on a PARTIAL selection as EXPECTED, not a test failure (the `N passed` line is the real signal); and `pixi run mypy hephaestus/automation` (passing an extra path) FAILS with `Duplicate module named \"hephaestus.automation\"` because the configured `mypy` task already targets the package \u2014 run the bare `pixi run mypy` (no extra args, here 445 source files). And reinforces Phase 18/19: plan/CLAUDE.md-listed guard-test paths can be STALE \u2014 `tests/unit/test_automation_boundary.py` / `tests/unit/test_import_surface.py` had relocated to `tests/unit/validation/`, so the stale path gives `ERROR: file or directory not found` (a silent false-negative); `find tests -name '<file>'` before running any plan-listed verification path. (verified-local \u2014 ProjectHephaestus #1437/#1442; 3 merges `_interfaces.py`\u2192`protocol.py`, `_secret_patterns.py`\u2192`pr_manager.py`, `work_report.py`\u2192`_review_utils.py`; importers `planner.py`/`plan_reviewer.py` + 8 import lines in `test_loop_runner_early_exit.py` repointed; 3 source files deleted, their test files retained+repointed; 159 passed across targeted+guard suites, ruff check+format clean, mypy success 445 files, omit-allowlist 8 passed confirmed none of the deleted modules were omit-listed; PR CI not yet merged at capture.) (22) EXECUTING a tiny SINGLE-CONSUMER module MERGE where the approved plan's stale-reference FIX step is ITSELF already stale \u2014 a plan step that says 'fix reference X to the file you're deleting' can be a no-op because a prior commit already removed X. After deleting the module, do NOT trust the plan's enumerated reference-fix steps: run a repo-wide ORPHAN grep for the deleted name (`grep -rn 'planner_claude' hephaestus/ tests/ scripts/ docs/ skills/`, EXCLUDING the unrelated same-prefix symbol `planner_claude_timeout`) to find what ACTUALLY references it, and treat a no-op plan step as EXPECTED \u2014 note it in the summary, do not fabricate a fix. Reinforces Phase 17/18/21: the issue TITLE/BODY can be stale (claimed '210 lines / 5 free functions' + 'only consumer is planner_review_loop.py' when the module was a single 231-line class `PlannerClaudeRunner` + 2 backoff constants whose SOLE real consumer was `planner.py`, which imported+instantiated it; `planner_review_loop.py` only NAMED it in a docstring describing the `PlannerHost` Protocol routing \u2014 merging there would have ADDED a cross-import) \u2014 the approved `# Implementation Plan` + its strict 'A / GO' review are authoritative for WHICH module is the merge target. Pure-move mechanics: verbatim relocate the class + constants above the consumer's main class, add ONLY the imports the consumer lacked, drop the now-dead `from .planner_claude import PlannerClaudeRunner`, `ruff check --fix` + `ruff format` per file (F401/I001). Repoint EXISTING tests, write NO new RED tests; a static path-list guard that `read_text()`s its entries needs DELETE-if-the-merge-target-is-already-listed vs RENAME-if-not \u2014 classify before editing (here: a `sed` repointed 7 `patch('hephaestus.automation.planner_claude.<sym>')` seams to `.planner.`; a `test_provider_neutral_direct_dispatch.py` path-list entry was DELETED because `planner.py` was already listed; a `test_invoke_allowed_tools_scoping.py` CALL_SITES filename was RENAMED to `planner.py` because it was NOT otherwise listed). Always check the deleted module is NOT in the coverage `[tool.coverage.run].omit` allowlist nor any `tests/unit/validation/` guard (here it was neither \u2014 no omit edit needed). Acceptance gate for the pure move: `test ! -e hephaestus/automation/planner_claude.py` OK + orphan grep (excl. `planner_claude_timeout`) empty + repointed suites green. (verified-local \u2014 ProjectHephaestus #1444; merged `planner_claude.py` into `planner.py` and deleted it; the plan's cosmetic 'update the comment at `agents/invoker.py:84`' step was a no-op (comment already gone); 95 passed across `test_planner`/`test_provider_neutral_direct_dispatch`/`test_invoke_allowed_tools_scoping`/`test_claude_timeouts`/`validation/test_import_surface`/`test_automation_boundary` \u2014 the trailing 'Required test coverage of 83.0% not reached' line on a PARTIAL selection is EXPECTED not a failure; ruff clean, mypy Success over 449 source files; PR CI not yet merged at capture.) (23) EXECUTING a duplicate concurrent-futures drain-loop \u2192 shared generator-helper consolidation across N worker loops: extract the structurally-identical `while futures: try: done,_pending = wait(futures.keys(), timeout=1.0, return_when=FIRST_COMPLETED) except ...:` SCAFFOLD (the only true duplicate) as a generator `drain_completed_futures(futures: Mapping[Future[Any], int], *, timeout=1.0) -> Iterator[Future[Any]]` that owns the while/wait/backoff/except loop and `yield from done`, while each caller keeps its per-future `for ... in done:` body VERBATIM (rebind the loop source to `for future in drain_completed_futures(futures):`) because the body differs deliberately per call site (`with self.lock:`, `issue_ref(...)`, call-site log text) \u2014 do NOT flatten it into the helper (Phase 13/14 preservation); prefer the good backoff version (exponential `min(wait_backoff*2,5.0)`, reset on success, named-exc WARNING log) and unify any silent `except Exception: time.sleep(0.1); continue` busy-loops onto it. Caller-driven termination is PRESERVED \u2014 the generator only reads `futures.keys()` and `while futures:` truthiness; each caller still does its own `futures.pop(future)` inside the body, so type the param `Mapping[Future[Any], int]` (not `dict`) to DOCUMENT read-only intent. The `wait` grep guard gives FALSE POSITIVES \u2014 don't `grep -cE '\\bwait\\b'` to decide whether to trim the `concurrent.futures` import (`wait` matches `wait_until`, `await`, prose/comments, and the import line itself); inspect actual lines or just run `ruff check --fix` (F401) per file then re-sort (I001) \u2014 `Future`/`ThreadPoolExecutor` STAY (annotation + executor). `import time` STAYS in workers that retain other `time.` uses even though the removed scaffold held their only `time.sleep` \u2014 re-derive per-file usage with `grep -cE '\\btime\\.'` from the POST-edit tree, never trust plan prose claiming it became unused (reinforces Phase 18/19). Removing the `while`/`try` wrapper dedents the kept body one level \u2014 do the replace as a SINGLE Edit of head+body then `ruff format`. New-test mypy gotchas (NOT the impl): replace inline `lambda n=n: n` with a named `def _identity(n: int) -> int` (mypy 'Cannot infer type of lambda'), and use `MagicMock(spec=Future)` + an explicit `dict[Future[Any], int]` annotation for the `Mapping` param (mypy 'incompatible type'); patch `_review_utils.wait` / `._review_utils.time.sleep` (valid ONLY because the import-edit made them module-level names). Place the helper in an EXISTING established-dedup home (`_review_utils.py`), automation\u2192library boundary respected (no library import added), and append it to the module docstring's Provides list. Acceptance gate = self-falsifying grep (exactly ONE `while futures:` remains \u2014 the helper; ZERO `time.sleep(0.1)` in the migrated silent-busy-loop workers) PLUS the PRE-EXISTING per-class behavioral suites staying green. Test-path gotcha: a SPLIT test file means a nonexistent path (e.g. `test_pr_reviewer.py` when tests live in `_main`/`_posting`) collects ZERO tests and exits 0 SILENTLY (a false pass) \u2014 `ls` the test dir before trusting a green; a PARTIAL selection's 'Required test coverage of 83.0% not reached' line is EXPECTED. (verified-local \u2014 ProjectHephaestus #1463; extracted `drain_completed_futures` into `_review_utils.py` and migrated `ci_driver.py`/`pr_reviewer.py`/`address_review.py`/`plan_reviewer.py`; `TestDrainCompletedFutures` 3 passed + 362 passed across affected+guard suites, `pixi run mypy` Success over 443 files, ruff clean; PR CI not yet merged at capture.)",
-      "version": "1.18.0",
+      "description": "Complete TDD-driven workflow for identifying and eliminating code duplication by extracting reusable helper methods. Use when: (1) extracting duplicated helper methods into a shared module using TDD (write a failing test against the canonical, delete the duplicate, run green); (2) creating a private leaf module with leading-underscore naming to centralize a repeated internal call (e.g. importlib.metadata version resolution, path construction) and prevent re-introduction across modules; (3) centralizing hardcoded path constants into a single module to prevent drift when directory structure changes (incl. phase-routed in_progress/completed splits); (4) deduplicating LLM JSON extraction, parser logic, or any call-site pattern copy-pasted across several files; (5) test structure must mirror source structure when extracting helpers; (6) running a full DRY consolidation pass (discovery via grep, classifying true duplicates vs intentional variants, dict-structure consolidation) and refactoring to a single canonical source; (7) extract-method / SRP decomposition of over-long functions (50-LOC) and methods (100-LOC), including converting a mutating closure into a method via a small mutable box; (8) extracting repeated cached lookups into an @lru_cache helper (and clearing the cache so unittest.mock.patch works); (9) removing stale scripts / deprecated stubs (grep callers first) and replacing hardcoded file lists with dynamic Path.rglob discovery; (10) PLANNING a consolidation of two OVERLAPPING but not-identical constant collections (frozensets / keyword lists / error-pattern tuples) \u2014 classify true-duplicate vs intentional-variant first, then extract only the shared CORE into one canonical immutable constant and have each consumer compose CORE | its-own-extras, proving anti-drift with CORE.issubset(consumer) parity tests, instead of a flat merge that would violate a deliberate behavioral contract. (11) behavior-preserving duplicate cleanup across test fakes, tiny strategy/kernel modules, and validation wrappers: keep public module exports stable, centralize only identical mechanics, preserve local wrapper names/error messages, and verify with focused + full suites before opening a PR. Also covers cryptographic commit signing requirements in PR workflows. (12) stale issue body in dedup/consolidation tasks: issue 'Evidence:' sections go stale as prior PRs partially resolve them \u2014 grep the CURRENT state first; choose inlining over fixtures for pure bytes\u2192str helpers; resolve remote branch divergence by pushing to a new branch rather than force-pushing or rebasing 84 conflicting commits. (13) PLANNING an extraction whose issue claims 'N nearly-identical, M byte-for-byte identical' methods: the COUNT and 'byte-for-byte identical' assertions go STALE exactly like the 'Evidence:' section \u2014 count and DIFF every claimed-duplicate body in full before scoping; prior refactors may have already delegated one to a richer printer or changed another's signature/model, and even the truly-similar bodies often hide call-site-varying string args (count noun, header) that a flat merge would silently change \u2014 parameterize those as kwargs-with-defaults to guarantee zero behavior change, and place the helper in an EXISTING established-dedup module rather than a new leaf module or base-class method. (14) PLANNING a behavior-preserving method\u2192free-function extraction when the duplicated method is a patched test seam \u2014 grep patch.object(.*\"_method\") BEFORE planning any deletion (a method patched at many call sites must be KEPT as a one-line thin wrapper delegating to the new free function, never deleted, or every patch target breaks); read the actual test bodies to confirm which 'near-identical' differences (log level, an extra debug line, exception-message wording) are behavior-bearing vs incidental before collapsing copies (only safe to collapse logging when no test asserts log level/message); match the target module's established convention (free function taking explicit args, not a mixin/base-class method); hedge unverified import assumptions a planner did not execute (is pathlib.Path already imported? is there a 'from ._review_utils import ...' line to extend? is a cross-layer runtime import safe within the automation\u2192library boundary AND absent from the base 'import hephaestus' surface?); and prove a pure extraction with a single-canonical-source grep that must return exactly one hit PLUS the PRE-EXISTING per-class behavioral suites staying green (the real acceptance gate, not the new structural tests). (15) PLANNING a duplicate-bearing standalone SCRIPT \u2192 library-shim consolidation when the script duplicates library logic (e.g. get_subpackages()/subpackage-mirror checks) but ALSO carries one unique function \u2014 prefer SHIM over DELETE: move the unique function into the library as the canonical source (returning a (ok, error_lines) tuple), export it from the package __init__, and rewrite the script as a thin shim importing the granular library functions \u2014 because the script is referenced by docs, a skill, AND auto-discovery smoke tests; the silent risk is OUTPUT-CONTRACT preservation: the shim must reproduce byte-for-byte stdout/stderr (literal arrow \u2192 and exact phrasing), calling the GRANULAR functions, NOT the library main()/check_test_structure (which runs extra checks the script never ran); importing a private symbol (_get_subpackages) across the script\u2192library boundary is the most reviewer-contentious choice \u2014 offer a fallback (compute from already-returned data); record unverified reliances as explicit risks (is the script NOT wired to CI/pre-commit? does the doc/README line stay accurate once the shim is what's wired? is the single-vs-double-quote glob-marker check copied exactly?); and note the TDD INVERSION gotcha \u2014 a library test written AFTER copying the function body is GREEN-first, not RED, so don't claim a RED phase you didn't have. (16) REMOVING a deprecated PUBLIC-API symbol (one that already emits DeprecationWarning) across ALL surfaces \u2014 a deprecated symbol lives on far more surfaces than its definition: enumerate and delete from impl, the subpackage __init__ import + __all__, the top-level package lazy-loader map (_LAZY_IMPORTS) + __all__, the deprecation-warning INFRASTRUCTURE (a _DEPRECATED_LAZY dict + the __getattr__ branch that emits the access-time warning \u2014 and SIMPLIFY __getattr__ once the last deprecated lazy symbol is gone), tests, and multi-location docs; discovery-first repo-wide grep classifying every hit (def/re-export/lazy-map/deprecation-infra/test/doc) and confirming ZERO runtime callers before treating it as a pure removal; TDD absence-guard tests FIRST (assert `not hasattr`, `symbol not in __all__`, `symbol not in _LAZY_IMPORTS`, `symbol not in dir()`) which FAIL first as a real RED \u2014 busting the PEP 562 cache with `pkg.__dict__.pop(symbol, None)` and ignoring DeprecationWarning for the top-level guard; DELETE deprecation-GUARD test files outright (don't trim them) and the per-symbol deprecated test CLASS in mixed files (re-grep before pruning patch/MagicMock imports); repoint integration fixtures that USE the symbol onto a non-deprecated lazy symbol; scrub docs across COMPATIBILITY.md (prose list + callout + table-row annotation + per-subpackage callout), MIGRATION.md (convert to a Removed-symbols table noting the BREAKING ImportError), and ROADMAP.md; verify via a three-tier grep gauntlet (package source / docs-except-MIGRATION / repo-wide-except-tests) then ruff then the full suite above the coverage gate; and treat it as a BREAKING public-API removal \u2014 name the exact broken import forms in the PR body and record the rollback path. (17) EXECUTING a consolidation against an APPROVED implementation plan whose exact `file:line` anchors may be stale: a stale anchor can be a wrong FILENAME (not just a wrong line number or stale count), and a plan that passed STRICT review claiming 'verified accurate against disk' does NOT exempt the implementer from re-grepping \u2014 the named file may merely CALL the indirection root (a shared helper) where the literal actually lives. Before editing, grep the CURRENT tree for the literal pattern the plan DESCRIBES (`grep -rn '<the literal>' src/`), map the plan's INTENT onto the real call sites, and re-count every occurrence yourself (the per-module count drifts like the 'Evidence:' section); fixing the indirection root transitively fixes the symptom the plan pointed at. (verified-local \u2014 ProjectHephaestus #1427, consolidated two log-format strings into `constants.AUTOMATION_LOG_FORMAT`/`LOG_DATEFMT`; the approved plan named `ensure_state_labels.py:189` but the real drifted literal lived at `cli/utils.py:222` in `configure_cli_logging`; full local suite green 5203 passed / 23 skipped, 87.22% coverage, CI pending at capture.) (18) RESOLVING an issue whose TITLE and BODY describe DIFFERENT tasks before implementing a DRY consolidation \u2014 in a TASK/PLAN/REVIEW automation pipeline the issue TITLE can be a stale MISLABEL: read `gh issue view <n> --comments` FIRST and treat the issue BODY plus the approved `# Implementation Plan` comment (and its `## \ud83d\udd0d Plan Review` verdict, e.g. 'A / GO') as the AUTHORITATIVE source of truth for WHAT to build, NOT the title; do not implement the title's task when the body and approved plan describe a different one (e.g. a title saying 'narrow Ruff S102 exec suppressions across scripts/' over a body entirely about consolidating two coexisting CLI log-format strings \u2014 the plan review explicitly confirmed the title-vs-body mismatch and graded the body's plan GO). The accompanying worked CLI-log-format DRY consolidation reinforces existing phases: place the shared `CLI_LOG_FORMAT` / `CLI_LOG_DATEFMT` constants in the LIBRARY layer (`hephaestus/constants.py`) because the automation\u2192library boundary forbids library\u2192automation imports but allows automation\u2192library, keeping ONE canonical source reachable from both; classify-don't-blindly-merge a THIRD terse log format (`github/fleet_sync.py` + `github/tidy.py`) as an INTENTIONAL VARIANT left untouched and documented (mirrors the `TRANSIENT_ERROR_CORE` precedent), proven by a grep gauntlet (zero inline CLI literals in `hephaestus/automation/` AND exactly 2 github-terse hits remain); preserve each call site's exact shape \u2014 keep a consumer's local `fmt`/`datefmt` names but assign them FROM the constants when a later `setFormatter()` reuses them (`implementer_cli.py`), and do NOT add a `datefmt=` argument to a call site that never had one (`audit_reviewer.py`); and do NOT change the VALUE of the pre-existing library `LOG_FORMAT` (consumed by `logging/utils.py`, asserted in `tests/unit/utils/test_constants.py`) \u2014 changing it would alter every library log line for no functional gain. (verified-local \u2014 ProjectHephaestus #1428; full automation suite 2238 passed + 29 boundary/constants/import-surface tests passed, ruff check+format clean, mypy clean over 447 files; CI pending at capture.) (19) EXECUTING an env-coercion/duplicate-reader dedup where you collapse a duplicate private reader (e.g. `_read_int_env`) into a thin delegate to the canonical public helper (`read_timeout_env`): collapsing the last real consumer of a module-level import (`os`) makes that import UNUSED even though an approved plan said 'leave it' \u2014 re-derive usage from the POST-edit tree (`grep -cnE '\\bos\\.' file`; docstring/comment hits do NOT count) and run `ruff check --fix` per file to catch F401 + the I001 import re-sort triggered by adding a second `from pkg import X` line; and a stale plan anchor can be a wrong TEST-FILE PATH (guard tests relocated `tests/unit/ -> tests/unit/validation/`) so `find tests -name '<file>'` before running any plan-listed verification path \u2014 'no tests ran' reads as a false success. (verified-local \u2014 ProjectHephaestus #1431.) (20) EXECUTING a duplicate `try/finally` \u2192 context-manager consolidation across many worker call sites (the classic acquire/release resource pattern), e.g. wrapping `StatusTracker.acquire_slot()`/`release_slot()` in an additive `@contextmanager slot(initial_msg=\"\", timeout=None) -> Iterator[int | None]` and migrating 6 call sites: a context manager CANNOT make its caller `return` \u2014 the wrapped primitive `acquire_slot()` returns `int | None` (None on timeout) and EVERY call site guarded that with a caller-specific early `return DomainResult`, so the CM must `yield int | None` and each caller KEEPS its `if slot_id is None: return DomainResult` guard, now MOVED INSIDE the `with` (POLA \u2014 do not try to make the CM swallow the domain-return); guard the release against the None yield (`release_slot` does `if 0 <= slot_id < num_slots`, so `0 <= None` \u2192 `TypeError` on 3.10+ \u2014 the `finally` must be `if slot_id is not None: self.release_slot(slot_id)`, with a test that exhausts the pool, enters `slot(timeout=...)`, asserts the yielded id is None AND the still-held real slot is NOT spuriously released); classify per-site `finally` SIDE EFFECTS as behavior-bearing vs incidental BEFORE collapsing (of 6 sites, 2 had a `time.sleep(1)` throttle in `finally` BEFORE `release_slot` that MUST stay \u2014 keep it as an inner `try/finally: time.sleep(1)` that no longer releases \u2014 and 4 were release-only and collapse entirely into the `with`); `initial_msg` adoption is PER-SITE (only sites that set an initial status right after acquiring move it into `slot(initial_msg=...)`; sites with none pass `\"\"` to preserve exact behavior \u2014 the CM only calls `update_slot` when `initial_msg` is non-empty AND the slot is non-None); make the wrapper a strict SUPERSET of the wrapped primitive (`acquire_slot` already takes `timeout`, so exposing `timeout` on `slot()` default None is opt-in and behavior-preserving \u2014 justify net-new surface as \"pre-existing primitive capability, not invented surface\" for YAGNI review); re-grep and re-count yourself (the approved Grade-A/GO plan's `file:line` anchors were +1 off for all 6 sites, and one verification test path had relocated dirs) \u2014 the self-falsifying grep gate (assert ZERO `release_slot` in the 6 worker modules; only `status_tracker.py` retains it) is the real acceptance gate, not the structural tests; script the re-indent (replace the acquire+guard head with `with ...:` + a unique sentinel marker, then a tiny Python script that swaps the marker\u2192`try:`, indents the body +4, and deletes the `finally:`+`release_slot` lines for release-only sites or only the `release_slot` line for throttle sites \u2014 AST-parse each file after to confirm syntax); +4 indentation pushes lines over the line-length limit and `ruff format` re-wraps most but will NOT split f-strings / implicit string-concatenation, so hand-wrap the residual E501s (run `ruff check --fix` then `ruff format` then `ruff check` again); and verify the failure-path helpers (`_fail`/`_record_issue_failure`/`_handle_runtime_error`) that also receive `slot_id` only `update_slot` and never `release_slot` (else moving release into the CM double-releases). (verified-local \u2014 ProjectHephaestus #1437; additive `slot()` CM on `StatusTracker`, 6 call sites migrated (`pr_reviewer.py`, `address_review.py`, `implementer_phase_runner.py`, `planner.py`, `plan_reviewer.py`, `ci_driver.py`), 5 new TDD tests RED\u2192GREEN, leak-grep gate green (zero `release_slot` in the 6 modules), ruff + mypy clean (448 files), 507 tests passed across all affected suites + import-surface/automation-boundary; PR CI not yet merged at capture.) (21) EXECUTING a tiny-module merge consolidation (N sub-40-line single-purpose modules folded into their natural established siblings) when the issue's TITLE and BODY name DIFFERENT module sets \u2014 reinforces Phase 17/18 (title/body mismatch) at the SET level: the TITLE named three tiny modules (`_interfaces.py` 22L, `_secret_patterns.py` 25L, `work_report.py` 58L) to merge into siblings while the BODY described a COMPLETELY DIFFERENT four-module set; the approved `# Implementation Plan` comment correctly treated the TITLE as authoritative for WHICH modules and its strict `## \ud83d\udd0d Plan Review` graded it A/GO, so read `gh issue view <n> --comments` and let the approved plan + its review verdict be the source of truth (when title and body name different concrete module SETS, the plan's chosen set is the deliverable). Durable move-specific lessons: (a) a behavior-preserving symbol MOVE between two LIBRARY files can surface a lint rule the SOURCE file was incidentally exempt from \u2014 moving a `@runtime_checkable Protocol` whose stub method was `def run(self) -> Any: ...` (NO docstring, no `# noqa`, passed CI) from `_interfaces.py` into the fully-linted `protocol.py` made `ruff check` flag `D102 Missing docstring in public method`; fix by adding a one-line method docstring above the `...` (ruff does NOT complain about a redundant `...` after a docstring, so keep both) \u2014 always run `ruff check` on the TARGET after the move, never assume 'it passed before' transfers; (b) the acceptance gate for a PURE relocation is the orphan-reference grep + source-deleted check + the EXISTING repointed tests staying green \u2014 NOT new tests: repoint existing tests, do not write RED tests; verify with `grep -rn 'from .work_report\\|from ._interfaces\\|from ._secret_patterns\\|automation.work_report\\|automation._interfaces\\|automation._secret_patterns' hephaestus/ tests/` returning EMPTY, `test ! -e <each source>` printing OK, and the repointed suites green; (c) resolve a plan's OWN self-contradiction via its runnable Verification commands \u2014 the plan listed `test_interfaces.py`/`test_secret_patterns.py` under BOTH 'Files to Modify' (repoint imports) AND 'Files to Delete', and the strict review flagged it while noting the Verification commands ran those files by name \u2192 intent is 'retain + repoint, do NOT delete'; when a plan and its review disagree internally, the runnable Verification commands disambiguate. Also two repo-specific pixi task gotchas: `pixi run python -m pytest ... -p no:cov` FAILS with `unrecognized arguments: --cov=...` because `--cov` lives in `addopts` (you cannot disable cov via `-p no:cov` on the CLI) \u2014 run pytest normally and treat the trailing 'Required test coverage of 83.0% not reached' line on a PARTIAL selection as EXPECTED, not a test failure (the `N passed` line is the real signal); and `pixi run mypy hephaestus/automation` (passing an extra path) FAILS with `Duplicate module named \"hephaestus.automation\"` because the configured `mypy` task already targets the package \u2014 run the bare `pixi run mypy` (no extra args, here 445 source files). And reinforces Phase 18/19: plan/CLAUDE.md-listed guard-test paths can be STALE \u2014 `tests/unit/test_automation_boundary.py` / `tests/unit/test_import_surface.py` had relocated to `tests/unit/validation/`, so the stale path gives `ERROR: file or directory not found` (a silent false-negative); `find tests -name '<file>'` before running any plan-listed verification path. (verified-local \u2014 ProjectHephaestus #1437/#1442; 3 merges `_interfaces.py`\u2192`protocol.py`, `_secret_patterns.py`\u2192`pr_manager.py`, `work_report.py`\u2192`_review_utils.py`; importers `planner.py`/`plan_reviewer.py` + 8 import lines in `test_loop_runner_early_exit.py` repointed; 3 source files deleted, their test files retained+repointed; 159 passed across targeted+guard suites, ruff check+format clean, mypy success 445 files, omit-allowlist 8 passed confirmed none of the deleted modules were omit-listed; PR CI not yet merged at capture.) (22) EXECUTING a tiny SINGLE-CONSUMER module MERGE where the approved plan's stale-reference FIX step is ITSELF already stale \u2014 a plan step that says 'fix reference X to the file you're deleting' can be a no-op because a prior commit already removed X. After deleting the module, do NOT trust the plan's enumerated reference-fix steps: run a repo-wide ORPHAN grep for the deleted name (`grep -rn 'planner_claude' hephaestus/ tests/ scripts/ docs/ skills/`, EXCLUDING the unrelated same-prefix symbol `planner_claude_timeout`) to find what ACTUALLY references it, and treat a no-op plan step as EXPECTED \u2014 note it in the summary, do not fabricate a fix. Reinforces Phase 17/18/21: the issue TITLE/BODY can be stale (claimed '210 lines / 5 free functions' + 'only consumer is planner_review_loop.py' when the module was a single 231-line class `PlannerClaudeRunner` + 2 backoff constants whose SOLE real consumer was `planner.py`, which imported+instantiated it; `planner_review_loop.py` only NAMED it in a docstring describing the `PlannerHost` Protocol routing \u2014 merging there would have ADDED a cross-import) \u2014 the approved `# Implementation Plan` + its strict 'A / GO' review are authoritative for WHICH module is the merge target. Pure-move mechanics: verbatim relocate the class + constants above the consumer's main class, add ONLY the imports the consumer lacked, drop the now-dead `from .planner_claude import PlannerClaudeRunner`, `ruff check --fix` + `ruff format` per file (F401/I001). Repoint EXISTING tests, write NO new RED tests; a static path-list guard that `read_text()`s its entries needs DELETE-if-the-merge-target-is-already-listed vs RENAME-if-not \u2014 classify before editing (here: a `sed` repointed 7 `patch('hephaestus.automation.planner_claude.<sym>')` seams to `.planner.`; a `test_provider_neutral_direct_dispatch.py` path-list entry was DELETED because `planner.py` was already listed; a `test_invoke_allowed_tools_scoping.py` CALL_SITES filename was RENAMED to `planner.py` because it was NOT otherwise listed). Always check the deleted module is NOT in the coverage `[tool.coverage.run].omit` allowlist nor any `tests/unit/validation/` guard (here it was neither \u2014 no omit edit needed). Acceptance gate for the pure move: `test ! -e hephaestus/automation/planner_claude.py` OK + orphan grep (excl. `planner_claude_timeout`) empty + repointed suites green. (verified-local \u2014 ProjectHephaestus #1444; merged `planner_claude.py` into `planner.py` and deleted it; the plan's cosmetic 'update the comment at `agents/invoker.py:84`' step was a no-op (comment already gone); 95 passed across `test_planner`/`test_provider_neutral_direct_dispatch`/`test_invoke_allowed_tools_scoping`/`test_claude_timeouts`/`validation/test_import_surface`/`test_automation_boundary` \u2014 the trailing 'Required test coverage of 83.0% not reached' line on a PARTIAL selection is EXPECTED not a failure; ruff clean, mypy Success over 449 source files; PR CI not yet merged at capture.) (23) EXECUTING a duplicate concurrent-futures drain-loop \u2192 shared generator-helper consolidation across N worker loops: extract the structurally-identical `while futures: try: done,_pending = wait(futures.keys(), timeout=1.0, return_when=FIRST_COMPLETED) except ...:` SCAFFOLD (the only true duplicate) as a generator `drain_completed_futures(futures: Mapping[Future[Any], int], *, timeout=1.0) -> Iterator[Future[Any]]` that owns the while/wait/backoff/except loop and `yield from done`, while each caller keeps its per-future `for ... in done:` body VERBATIM (rebind the loop source to `for future in drain_completed_futures(futures):`) because the body differs deliberately per call site (`with self.lock:`, `issue_ref(...)`, call-site log text) \u2014 do NOT flatten it into the helper (Phase 13/14 preservation); prefer the good backoff version (exponential `min(wait_backoff*2,5.0)`, reset on success, named-exc WARNING log) and unify any silent `except Exception: time.sleep(0.1); continue` busy-loops onto it. Caller-driven termination is PRESERVED \u2014 the generator only reads `futures.keys()` and `while futures:` truthiness; each caller still does its own `futures.pop(future)` inside the body, so type the param `Mapping[Future[Any], int]` (not `dict`) to DOCUMENT read-only intent. The `wait` grep guard gives FALSE POSITIVES \u2014 don't `grep -cE '\\bwait\\b'` to decide whether to trim the `concurrent.futures` import (`wait` matches `wait_until`, `await`, prose/comments, and the import line itself); inspect actual lines or just run `ruff check --fix` (F401) per file then re-sort (I001) \u2014 `Future`/`ThreadPoolExecutor` STAY (annotation + executor). `import time` STAYS in workers that retain other `time.` uses even though the removed scaffold held their only `time.sleep` \u2014 re-derive per-file usage with `grep -cE '\\btime\\.'` from the POST-edit tree, never trust plan prose claiming it became unused (reinforces Phase 18/19). Removing the `while`/`try` wrapper dedents the kept body one level \u2014 do the replace as a SINGLE Edit of head+body then `ruff format`. New-test mypy gotchas (NOT the impl): replace inline `lambda n=n: n` with a named `def _identity(n: int) -> int` (mypy 'Cannot infer type of lambda'), and use `MagicMock(spec=Future)` + an explicit `dict[Future[Any], int]` annotation for the `Mapping` param (mypy 'incompatible type'); patch `_review_utils.wait` / `._review_utils.time.sleep` (valid ONLY because the import-edit made them module-level names). Place the helper in an EXISTING established-dedup home (`_review_utils.py`), automation\u2192library boundary respected (no library import added), and append it to the module docstring's Provides list. Acceptance gate = self-falsifying grep (exactly ONE `while futures:` remains \u2014 the helper; ZERO `time.sleep(0.1)` in the migrated silent-busy-loop workers) PLUS the PRE-EXISTING per-class behavioral suites staying green. Test-path gotcha: a SPLIT test file means a nonexistent path (e.g. `test_pr_reviewer.py` when tests live in `_main`/`_posting`) collects ZERO tests and exits 0 SILENTLY (a false pass) \u2014 `ls` the test dir before trusting a green; a PARTIAL selection's 'Required test coverage of 83.0% not reached' line is EXPECTED. (verified-local \u2014 ProjectHephaestus #1463; extracted `drain_completed_futures` into `_review_utils.py` and migrated `ci_driver.py`/`pr_reviewer.py`/`address_review.py`/`plan_reviewer.py`; `TestDrainCompletedFutures` 3 passed + 362 passed across affected+guard suites, `pixi run mypy` Success over 443 files, ruff clean; PR CI not yet merged at capture.) (24) audit-snapshot DRY issues can already be fully resolved by post-snapshot merged PRs; re-grep current state and ship a verification-only anti-drift guard instead of refactoring when consolidation is already done.",
+      "version": "1.19.0",
       "source": "./skills/dry-refactoring-workflow.md",
       "category": "architecture",
       "tags": []
@@ -1154,7 +1183,7 @@
     {
       "name": "mojo-planning-verify-type-semantics-and-source-counts",
       "description": "When planning Mojo code that DEPENDS on load-bearing type/data semantics (AnyTensor value-vs-reference copy semantics for a 'snapshot before mutation' pattern; `@fieldwise_init` constructor shape \u2014 positional vs keyword-only \u2014 for a factory that passes 80+ arguments; `Tuple[...]` return types mixing multiple struct types) OR that DEPENDS on a specific COUNT of fields/parameters in an existing file, do NOT infer these from analogy, from another skill's summary, or from CLAUDE.md prose. Verify them BY DIRECT PROBE: (1) run the exact grep the plan hinges on and paste the raw output into the plan, (2) build a 20-line throwaway `.mojo` file that exercises `var x = self.field` on the actual struct type and asserts value-copy semantics against later mutation, (3) build a throwaway that instantiates the target struct with the constructor shape the plan assumes (positional or kwargs), (4) build a throwaway that returns the actual mixed Tuple shape. When the task text disagrees with the code (e.g. issue says '~81 params', comment says '84', grep says '82'), the AUTHORITATIVE number is `git show HEAD:<path> | grep -cE '<pattern>'` \u2014 cite that command in the plan and stop rounding. Use when: (1) planning a Mojo forward-with-cache / snapshot-before-mutate pattern that assumes `var snap = self.tensor_field` is a value copy, (2) planning a factory that constructs a struct with 10+ fields via `@fieldwise_init` and needs to know positional vs keyword-only, (3) planning a function whose return type is a Tuple mixing AnyTensor with named struct types, (4) reconciling parameter/field counts across issue text + code comments + actual source, (5) any Mojo plan whose correctness rests on a semantics claim you sourced from CLAUDE.md, another skill, or a related struct rather than a compiler run.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "source": "./skills/mojo-planning-verify-type-semantics-and-source-counts.md",
       "category": "architecture",
       "tags": [
@@ -1170,7 +1199,8 @@
         "parameter-count",
         "grep-authoritative",
         "throwaway-build",
-        "unverified"
+        "refcounted-snapshot",
+        "named-struct-over-tuple"
       ]
     },
     {
@@ -1271,6 +1301,26 @@
         "creative-premise",
         "science-grounding",
         "wave-dispatch"
+      ]
+    },
+    {
+      "name": "nats-jetstream-jserrcode-stream-exists-misclassification",
+      "description": "In cnats (nats.c), ALL JetStream API errors surface as natsStatus == NATS_ERR with the distinguishing code in the jsErrCode out-param of js_AddStream/js_Publish; a branch that treats bare s == NATS_ERR as the benign 'stream already exists' case silently swallows real provisioning failures (subject overlap 10065, account limits, invalid config). Only s == NATS_ERR && jerr == JSStreamNameExistErr (10058) is benign \u2014 fail closed on every other (s, jerr) combination, including jerr == 0 (client-side error). The misclassification only becomes an outage when paired with a swallowed void result upstream (void ensure_streams() logged-but-not-returned failures under a provision function that returns true unconditionally), so the provisioner never retries. Use when: (1) writing or reviewing C/C++ NATS JetStream provisioning code that branches on the natsStatus of js_AddStream/js_UpdateStream/js_Publish, (2) fixing error classification inside an ensure_* helper \u2014 audit the call chain upward for swallowed void/bool results or the retry path never engages, (3) designing a live regression test for subject-overlap stream conflicts \u2014 a publish-probe is the wrong failure signal because the conflicting stream captures the subject; probe stream existence with js_GetStreamInfo instead, (4) a plan cites specific jsErrCode values (10058/10065) or 'already exists with different config' server behavior from memory \u2014 rank those as top reviewer-verification items against the pinned cnats/NATS server version, (5) a live test mutates shared broker state (deletes/recreates a production-named stream) \u2014 require an RAII cleanup guard and note that restoration depends on the fix under test.",
+      "version": "1.0.0",
+      "source": "./skills/nats-jetstream-jserrcode-stream-exists-misclassification.md",
+      "category": "architecture",
+      "tags": [
+        "nats",
+        "jetstream",
+        "jserrcode",
+        "cnats",
+        "error-classification",
+        "provisioner-retry",
+        "cpp",
+        "planning",
+        "pola",
+        "swallowed-result",
+        "live-broker-test"
       ]
     },
     {
@@ -1665,6 +1715,29 @@
       ]
     },
     {
+      "name": "planning-mirror-existing-training-template",
+      "description": "Uncertain assumptions and reviewer risks baked into a PLAN that adds a manual backward-pass training loop to a Mojo ML model by mirroring an existing sibling training script in the same repo (MobileNetV1 mirroring VGG16 in ProjectOdyssey). Planning done by reading source files only \u2014 nothing was built, compiled, or run. The core lesson: a working reference implementation in the same repo is NOT a verified spec \u2014 sibling backward primitives return different types (GradientTriple vs bare Tuple), the reference's loss-call convention may not match the dataset it's paired with, and issue-body parameter counts routinely disagree with the actual model struct. Use when: (1) writing a training-loop plan that mirrors an existing per-block forward-with-caching + reverse backward + in-place SGD-momentum script in the same repo, (2) enumerating trainable parameters for a manual backward pass where the GitHub issue's parameter count disagrees with the model struct, (3) about to copy a sibling training script's `cross_entropy(logits, labels)` or similar loss call verbatim without independently verifying the dataset's label shape, (4) mirroring backward-primitive call sites where sibling primitives (conv2d_backward vs batch_norm2d_backward vs linear_backward) may return DIFFERENT types (GradientTriple field access vs bare Tuple index unpack), (5) the training loop discards mutating state returned by a primitive (BN running_mean/running_var, dropout masks) \u2014 this is a correctness gap for inference, not just a code comment, (6) putting a new smoke test under `tests/<newdir>/` and unsure whether the runner discovers it.",
+      "version": "1.0.0",
+      "source": "./skills/planning-mirror-existing-training-template.md",
+      "category": "architecture",
+      "tags": [
+        "planning-methodology",
+        "mirror-sibling-pattern",
+        "training-loop",
+        "manual-backward-pass",
+        "reference-implementation-not-spec",
+        "api-return-type-drift",
+        "gradient-triple-vs-tuple",
+        "batch-norm-running-stats",
+        "loss-input-contract",
+        "parameter-enumeration",
+        "test-discovery-path",
+        "projectodyssey",
+        "mojo",
+        "unverified"
+      ]
+    },
+    {
       "name": "planning-mirror-sibling-pattern-thread-all-consumers",
       "description": "Planning discipline for 'mirror-a-sibling-pattern' fixes: when you copy a hardening/config pattern (a new token/env-var/identifier) from one listener/handler block to a PARALLEL block, the new identifier must be threaded through EVERY consumer of that config in the SAME plan \u2014 not just the config file. Adding a `$NEW_TOKEN` reference to a config block silently breaks any tool that PARSES that config (CI `nats-server -t` parse step, validators, deploy scripts) unless the env var is also set in THAT invocation, and the var must resolve NON-EMPTY even on single-host deploys where the parallel block has no routes/remotes. The convention-guard corollary: a new config identifier gets THREE synchronized homes \u2014 the validator gets a new check, the parse/CI step gets the new env var, and the docs get the var documented. Use when: (1) planning a fix that mirrors a sibling hardening across parallel config blocks (cluster{} mirroring leafnodes{}, one IAM/OPA block mirroring another), (2) you add a `$VAR`/token to a config that a CI step parses with a structural validator (nats-server -t, nomad fmt, opa parse), (3) a brace-depth-aware or section-scoped validator already guards a sibling block and you add a Nth check, (4) you assert an ADR is editable because its Status is 'Proposed', (5) you assume one config engine's env-substitution behavior carries over to a parallel block of the SAME engine, (6) you grep for the consumers of the original pattern's identifiers and must confirm enumeration is COMPLETE before scoping the plan.",
       "version": "1.0.0",
@@ -1685,6 +1758,85 @@
       ]
     },
     {
+      "name": "planning-pr-body-extract-sibling-artifact-at-runtime",
+      "description": "When planning a PR-open task whose body must embed content produced by an UPSTREAM sibling issue (loss log, benchmark table, verification transcript, dataset checksum), the plan MUST specify a run-time extraction pipeline that pulls the artifact from `gh issue view <sibling> --comments` at execute time, via an explicit placeholder token (e.g. `<<LOSS_LOG>>`) that the create-PR step substitutes; the plan MUST NOT include an illustrative numeric example inline with a hedging note telling the executor to overwrite it. Illustrative values leak into shipped PRs when the hedging note is skimmed. The dependency guard is a TWO-part check: (a) `gh issue view <sibling> --json state -q .state == \"CLOSED\"` AND (b) the sibling's comments contain a well-defined sentinel section (e.g. `## Loss Log`, `## Verification Transcript`, `## Benchmark Results`) that carries the artifact; a CLOSED-as-duplicate or CLOSED-as-wontfix sibling passes (a) but fails (b), and the plan must abort with a specific verdict message on either failure. Use when: (1) planning a `Closes #N` PR-open task where the PR body must cite quantitative evidence produced by a sibling verification/validation task, (2) the PR body template has a section (loss log, benchmark table, checksum) whose CONTENT lives in a dependent issue's comments not in the branch, (3) any planning session where you catch yourself writing example numbers inline with a note saying 'the executor must replace these before creating the PR', (4) a dependent PR-open task where the sibling is `CLOSED` but you have not confirmed the required artifact section actually exists in its comments.",
+      "version": "1.1.0",
+      "source": "./skills/planning-pr-body-extract-sibling-artifact-at-runtime.md",
+      "category": "architecture",
+      "tags": [
+        "planning",
+        "pr-body",
+        "pr-open",
+        "sibling-task",
+        "sentinel-section",
+        "placeholder-token",
+        "runtime-extraction",
+        "dependency-guard",
+        "verification-evidence",
+        "illustrative-values-hazard",
+        "structural-gate-vs-conditional-override",
+        "paired-sentinel-boundary",
+        "artifact-property-verification-before-embed",
+        "monotone-loss-check"
+      ]
+    },
+    {
+      "name": "planning-pr-body-numeric-claims-source-derived",
+      "description": "When a PR-open plan writes a body that STATES specific quantitative claims (parameter counts, tensor counts, file counts, test counts, epoch counts, dataset sizes), the plan MUST either (a) derive the number from a grep/read command on the actual source and cite the command inline, OR (b) treat the number as a placeholder for the executor to fill from a specific command; the plan MUST NOT invent an explanation with fabricated arithmetic. A concrete anti-pattern from ProjectOdyssey #5527 planning: claimed '110 trainable tensors' with the arithmetic '3 + 78 + 2 = 83 core params, then 110 after including per-block bias tensors' \u2014 the arithmetic does not sum to 110 (83 \u2260 110) and the source was never read. Reviewers may miss the mismatch; even if they catch it, the plan has lost credibility. The correct pattern: for MobileNetV1 tensor counts, the plan should specify `pixi run mojo run -c 'from projectodyssey.models.mobilenetv1 import Model; var m = Model(); print(len(m.trainable_tensors()))'` (or the analogous grep over the constructor), leave the number as `<<TRAINABLE_TENSOR_COUNT>>` in the body template, and let the executor substitute. Use when: (1) drafting a PR body that includes any specific integer count of source artifacts (params, tensors, files, tests, lines), (2) writing plan prose that includes 'arithmetic to justify a number' (e.g. `3 + 78 + 2 = 83`), (3) catching yourself citing a number sourced from analogy, memory, or a similar model's spec rather than the branch under test.",
+      "version": "1.0.0",
+      "source": "./skills/planning-pr-body-numeric-claims-source-derived.md",
+      "category": "architecture",
+      "tags": [
+        "planning",
+        "pr-body",
+        "numeric-claims",
+        "source-derived",
+        "parameter-count",
+        "tensor-count",
+        "fabrication-hazard",
+        "placeholder-substitution",
+        "arithmetic-error"
+      ]
+    },
+    {
+      "name": "planning-pr-open-file-scope-via-git-diff",
+      "description": "When planning a PR-open task, file-scope assertions ('this PR touches train.mojo and tests/models/test_mobilenetv1_train_step.mojo') MUST come from `git diff --name-only <base>...HEAD` run against the checked-out feature branch, never from hardcoded paths in the plan prose. Plan-authored hardcoded paths are always guesses about where files live \u2014 the test file might be under `tests/training/`, the source might be under `src/projectodyssey/training/train.mojo`, or the branch may contain files the planner did not anticipate. The correct pattern: the plan specifies `git diff --name-only <base>...HEAD | tee /tmp/changed_files.txt` runs first, the executor pastes the raw output verbatim into the PR body, and the plan includes a documented allow-list pattern (e.g. `train.mojo` or `tests/**/test_*.mojo`) that must match every path in the diff \u2014 if the count is unexpected OR any path falls outside the allow-list, abort with a specific verdict. This makes the plan branch-state-driven, not planner-state-driven. Use when: (1) planning any PR-open task where the plan wants to name the files that will change, (2) planning a PR that touches source + tests and the planner is tempted to hardcode the test filename based on the source filename, (3) any planning session where a file path in the plan does not appear in a `git diff --name-only` output the planner has actually seen.",
+      "version": "1.0.0",
+      "source": "./skills/planning-pr-open-file-scope-via-git-diff.md",
+      "category": "architecture",
+      "tags": [
+        "planning",
+        "pr-open",
+        "file-scope",
+        "git-diff",
+        "hardcoded-paths-hazard",
+        "allow-list",
+        "branch-state"
+      ]
+    },
+    {
+      "name": "planning-pr-open-load-bearing-assumption-hygiene",
+      "description": "PR-open plans routinely depend on load-bearing external assumptions the planner did not verify: (a) `gh pr merge --auto --rebase` requires the repo to allow rebase-merge AND for auto-merge to be enabled at the repo level; on some `gh` versions and configurations, `--auto` fails with a non-obvious error, (b) a compat wrapper (e.g. `scripts/mojo-format-compat.sh`) exits 0 on hosts with older GLIBC \u2014 a load-bearing claim that the plan uses to assert '`just precommit` will pass without `SKIP=mojo-format`,' but is only true if the wrapper is actually present AND its GLIBC-detection logic is correct AND the referenced doc is current. The planner MUST either (1) probe the assumption before writing the plan (`gh repo view --json autoMergeAllowed,rebaseMergeAllowed`; `cat scripts/mojo-format-compat.sh`; `cat docs/dev/mojo-glibc-compatibility.md`), or (2) hedge the assumption explicitly with a documented fallback (`SKIP=mojo-format` with the doc-required reason; manual auto-merge enablement). Silent load-bearing assumptions cause execute-time failures that are hard to diagnose because the plan reads as if the issue was considered. Use when: (1) drafting any plan step that says `gh pr merge --auto`, (2) drafting any plan step that says `just precommit` on a repo with GLIBC-sensitive tooling, (3) writing a plan that depends on a compat wrapper OR a docs file being current, (4) writing a plan that depends on ANY repo setting (auto-merge, merge methods, required checks, branch protection) that the planner has not viewed via `gh repo view --json`.",
+      "version": "1.1.0",
+      "source": "./skills/planning-pr-open-load-bearing-assumption-hygiene.md",
+      "category": "architecture",
+      "tags": [
+        "planning",
+        "pr-open",
+        "load-bearing-assumption",
+        "auto-merge",
+        "autoMergeAllowed",
+        "compat-wrapper",
+        "glibc",
+        "precommit",
+        "probe-before-plan",
+        "documented-fallback",
+        "task-mandated-merge-method",
+        "no-silent-fallback",
+        "block-on-method-mismatch"
+      ]
+    },
+    {
       "name": "planning-reuse-existing-public-env-reader",
       "description": "When a TASK/issue says to PROMOTE or EXPORT a private helper (e.g. `make _read_int_env public`), FIRST grep the whole package for an ALREADY-PUBLIC function that does the same job and reuse THAT as the canonical source \u2014 the issue's suggested fix may be superseded by repo reality. Then collapse the private duplicate to a 1-line delegate (do NOT delete it if it has in-module callers), and prioritize any MODULE-TOP-LEVEL env coercion as the real bug (fatal-at-import beats function-body reads). Use when: (1) an issue proposes exporting/renaming a private `_helper` to public, (2) you suspect an already-public equivalent exists in a library-layer module like constants.py, (3) a base-layer module reads `int(os.environ.get(...))` at import time, (4) routing a base-layer module through another module risks pulling forbidden transitive imports into the base import surface, (5) swapping `int(os.environ.get(NAME, \"1800\"))` for a typed reader and the string default must become an int default.",
       "version": "1.0.0",
@@ -1702,6 +1854,54 @@
         "library-layer",
         "hephaestus",
         "anchor-on-literal"
+      ]
+    },
+    {
+      "name": "planning-self-identified-defects-must-be-fixed-not-noted",
+      "description": "When a planning agent writes a plan that includes both (a) load-bearing content (fabricated file paths, illustrative numeric values, tensor arithmetic, benchmark tables, verification transcripts) AND (b) a self-authored 'Learnings captured during planning' / 'Known Issues' / 'Caveats' addendum that flags the SAME content as defective (wrong arithmetic, guessed paths, unverified assumptions), the plan is a NOGO regardless of how carefully the addendum is worded. The addendum is a CONFESSION, not a FIX. Reviewers observe the confession and reject; executors may skip the addendum and ship the defective content. The self-identification proves the planner could have fixed the defect \u2014 declining to do so and shifting the burden to the reader is what causes the NOGO. RULE: if you (the planner) identify a defect in your own plan, you have exactly two acceptable paths \u2014 (1) FIX the defect in the plan body before submitting (replace fabricated content with a placeholder token + structural gate that blocks execution until resolved, or delete the section and mark scope as reduced), OR (2) DOWNGRADE the plan verdict to `BLOCKED` and mark the affected section `## TODO: BLOCKED ON <specific missing input>` with no defective content in that section. NEVER emit BOTH a defect note AND the defective content in the plan body; NEVER present a defect note as 'transparency' \u2014 transparency is not a substitute for correctness. Use when: (1) you are writing a 'Learnings' / 'Caveats' / 'Known Gaps' section in your own plan, (2) a reviewer asks you to revise a plan they NOGO'd where your prior revision self-flagged defects but did not fix them, (3) you are tempted to add a hedging note ('the executor must overwrite these values before creating the PR') alongside illustrative content in a plan template, (4) you are drafting any plan where you notice you cannot verify something a section claims \u2014 decide FIX or BLOCK before writing that section, not after.",
+      "version": "1.0.0",
+      "source": "./skills/planning-self-identified-defects-must-be-fixed-not-noted.md",
+      "category": "architecture",
+      "tags": [
+        "planning",
+        "plan-verdict",
+        "self-identified-defect",
+        "addendum-not-fix",
+        "transparency-not-correctness",
+        "blocked-vs-fabricated",
+        "reviewer-nogo",
+        "fix-or-block",
+        "meta-rule"
+      ]
+    },
+    {
+      "name": "planning-unmerged-parent-contract-compile-smoke-gate",
+      "description": "Plan an issue whose dependency parent issue is NOT yet merged (verified via `gh pr list --search '<N>' --state all` returning `[]`) but has an APPROVED plan on file. Consume the parent's approved-plan contract (function signatures, struct field names, return types) instead of re-implementing or hedging \u2014 but mandate a compile-smoke-test (`pixi run mojo build --Werror`) as the FIRST verification step immediately after the parent PR merges to catch contract drift. When a reviewer NOGOs the plan for unverified APIs, Read each flagged API's on-disk source line NOW and revise every assumption that was wrong \u2014 empirically 4-of-4 flagged assumptions were wrong (2 would not have compiled, 1 would silently have produced wrong loss). Assume a 100% wrong-rate on any cited-but-unread API. Grep-verify every numeric count claim (parameter counts, field counts) against the current tree AND flag same-line coordination hazards when multiple planned PRs touch identical stale comments. List every external API you cite but did NOT `Read` in a dedicated 'Unverified API Assumptions' section so reviewers can target verification. For random-init deep-network convergence thresholds, use a two-tier assertion (hard floor `loss[final] < loss[0]` + issue-prescribed `loss[final] < 0.95 * loss[0]`) \u2014 never weaken the issue's threshold; mitigate on data/hyperparams (more samples, larger bias amplitude, warm-up epoch). Grep for cross-file callers (`grep -rn 'fname(' --include='*.mojo'`) before changing a per-example function's signature. Smoke-run the example's `main()` itself, not just an importing test file. **Validation-only sub-case (v1.2.0):** when the child issue is validation-only (run a script, capture a log, assert a criterion \u2014 no code corrections in this task), the SAME plan-authoring discipline applies to the entrypoint path, CLI flag names, batch log format, data-loader defaults, container invocation form (`just shell -c '<cmd>'`), and wall-clock budget \u2014 every one is a cited-but-unread assumption unless the parent PR has merged. For log-parsers, mandate a `parsed N > 0` sanity check so a format mismatch fails LOUDLY instead of producing a garbage summary next to an exit-0 wrapper. For loss-decrease criteria on short/noisy runs, prefer a smoothed trend (linear fit slope) over first-decile-vs-last-decile means; a monotonically-decreasing epoch can still fail a decile comparison if the last decile plateaus above the first decile due to noise. Include an 'Assumption Mapping for Mechanical Re-Plan' table (Assumption \u2192 File/line to fix once parent merges) so re-planning after dep merge is line-anchored and mechanical. Flag container-network assumptions (dataset auto-download inside the podman network namespace) and gitignored-artifact-attachment (attach via `gh pr comment --body-file` when `logs/` is gitignored). Use when: (1) planning issue B where B depends on unmerged issue A but A has an approved plan comment, (2) a reviewer NOGOed a plan for cited-but-unread APIs and you're revising, (3) about to cite an API signature (`randn`, `AnyTensor.store`, `cross_entropy`) you have not `Read`, (4) writing a numeric count into a plan that another planned PR also touches, (5) asserting a loss-decrease threshold on random-init deep networks, (6) changing a per-example function's signature and unsure whether other files call it, (7) authoring a validation-only issue that runs a script produced by an unmerged parent, (8) writing a bash wrapper + Python log-parser pair without a `parsed N > 0` sanity check, (9) picking a wall-clock budget or fallback batch count by heuristic with no benchmark data.",
+      "version": "1.2.0",
+      "source": "./skills/planning-unmerged-parent-contract-compile-smoke-gate.md",
+      "category": "architecture",
+      "tags": [
+        "planning",
+        "nogo-revision",
+        "unmerged-parent",
+        "approved-plan-contract",
+        "compile-smoke-test",
+        "contract-drift",
+        "verify-each-flagged-api-on-disk",
+        "grep-verify-counts",
+        "same-line-coordination-hazard",
+        "unverified-api-assumptions",
+        "two-tier-loss-threshold",
+        "random-init-convergence-hypothesis",
+        "cross-file-caller-grep",
+        "smoke-run-example-main",
+        "validation-only-task",
+        "log-parser-sanity-check",
+        "smoothed-trend-vs-decile-means",
+        "container-network-assumption",
+        "gitignored-artifact-attachment",
+        "wall-clock-heuristic-without-benchmark",
+        "assumption-mapping-for-mechanical-replan"
       ]
     },
     {
@@ -1788,6 +1988,24 @@
         "json-validation",
         "importlib",
         "planning"
+      ]
+    },
+    {
+      "name": "pydantic-basemodel-to-dataclass-behavioral-parity",
+      "description": "Swapping a pydantic BaseModel for a stdlib @dataclass is NOT a behavioral drop-in: pydantic v2 silently IGNORES unknown kwargs and COERCES str/int -> float, while a dataclass raises TypeError on both. Use when: (1) removing pydantic from a package's base dependencies to satisfy an import/automation boundary, (2) replacing a BaseModel config/event model with @dataclass, (3) a loader does Model(**yaml_dict) with possibly-extra keys or string-typed numeric fields, (4) planning an audit-remediation that claims a validation-library swap has no behavior change.",
+      "version": "1.0.0",
+      "source": "./skills/pydantic-basemodel-to-dataclass-behavioral-parity.md",
+      "category": "architecture",
+      "tags": [
+        "pydantic",
+        "dataclass",
+        "basemodel",
+        "behavioral-parity",
+        "dependency-strip",
+        "coercion",
+        "audit-remediation",
+        "config-loading",
+        "tdd"
       ]
     },
     {
@@ -2245,6 +2463,81 @@
       ]
     },
     {
+      "name": "ci-cd-canonical-install-check-inline-build",
+      "description": "Plan/implement a canonical `install` CI check-run (clean-venv install smoke of the built artifact, per the Odysseus ci-naming convention) when the upstream `package` job does NOT exist yet and the repo may not even be buildable. Use when: (1) an ecosystem CI-naming issue asks for `name: install` but the sibling `package` gap issue has not merged (no [build-system] in pyproject.toml, setuptools flat-layout auto-discovery failure), (2) you must decide between `needs: package` + download-artifact handoff vs building the wheel inline inside the install job, (3) designing an import-smoke that must not depend on the not-yet-decided package layout \u2014 derive modules from the installed wheel's top_level.txt and fail loudly if empty, (4) tempted to add a 'skip if not buildable' branch to a canonical check (don't \u2014 a skipping canonical check emits green without testing), (5) the repo keeps mirrored workflow files (a PR/push gate like _required.yml plus a workflow_call mirror like _checks.yml) and every canonical job must be added to both, (6) writing the plan's step 1 as an explicit buildability gate (`python -m build`) that STOPS implementation if the prerequisite is still missing.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd-canonical-install-check-inline-build.md",
+      "category": "ci-cd",
+      "tags": [
+        "canonical-checks",
+        "ci-naming-convention",
+        "install-check",
+        "package-check",
+        "install-smoke",
+        "clean-venv",
+        "import-smoke",
+        "top-level-txt",
+        "wheel",
+        "sdist",
+        "python-build",
+        "blocked-prerequisite",
+        "workflow-mirror",
+        "fail-loud",
+        "signal-fidelity",
+        "planning-methodology"
+      ]
+    },
+    {
+      "name": "ci-cd-canonical-release-check-manifest-repo",
+      "description": "How to plan the canonical `release` CI check (Odysseus ecosystem CI-naming board) for a GitOps/manifest/dataset repo where a release step looks N/A \u2014 the board is GENERATED from live check-runs on main (scripts/gen-ecosystem-table.sh), so documenting 'N/A' in the repo can never fill the board cell; the only real options are (a) a genuine release job emitting check-run name `release` on main or (b) leaving the issue-linked gap. For a dataset repo the honest release artifact is a versioned dataset snapshot (tar of the manifest dirs + RELEASE_INFO manifest with commit SHA/date/counts) uploaded as a workflow artifact on every main push and published via `gh release create` on v* tags \u2014 the convention explicitly sanctions 'a release-tag-gated job that still emits release on main' and forbids fabricating a passing no-op. Use when: (1) an ecosystem CI-naming issue asks to add a canonical check (release/package/install) to a repo where the category seems inapplicable, (2) you are choosing between 'add real job' vs 'document N/A' for a generated status board, (3) you plan a release job in a repo with strict no-silent-failure guards (forbid-continue-on-error, forbid-or-true, forbid-advisory-warnings) and pinned-SHA action policy, (4) the job needs `gh release create` with GITHUB_TOKEN and you have not verified org settings allow workflow-created releases, (5) you pin a third-party action SHA from memory instead of the release page, (6) versioning on shallow checkouts \u2014 git describe sees no tags, so tag names must come from GITHUB_REF_NAME.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd-canonical-release-check-manifest-repo.md",
+      "category": "ci-cd",
+      "tags": [
+        "ci-naming-convention",
+        "canonical-check-run",
+        "ecosystem-status-board",
+        "release-check",
+        "manifest-repo",
+        "dataset-repo",
+        "gitops",
+        "myrmidons",
+        "odysseus",
+        "publish-artifacts",
+        "gh-release-create",
+        "github-token-permissions",
+        "pinned-action-sha",
+        "upload-artifact",
+        "shallow-checkout-tags",
+        "no-silent-failures",
+        "planning-methodology",
+        "unverified-assumptions"
+      ]
+    },
+    {
+      "name": "ci-cd-codeql-default-to-advanced-canonical-names",
+      "description": "Migrate GitHub CodeQL from managed default setup to an advanced-setup workflow so the check-run names can be canonicalized (e.g. Analyze (python) \u2192 security/codeql-python). Use when: (1) a repo's CodeQL checks report as 'Analyze (<lang>)' and an ecosystem CI board requires canonical namespaced names like security/codeql-<lang>, (2) `gh api repos/<owner>/<repo>/code-scanning/default-setup` returns state=configured and no .github/workflows/codeql.yml exists so the check name cannot be changed via YAML, (3) you must decide whether emit-before-require sequencing is needed \u2014 query the ruleset's required_status_checks via the API instead of assuming, (4) you need a matrix analyze job whose per-language check names have no '(python)' suffix, (5) you must sequence disabling default setup vs. the first advanced-workflow run because SARIF uploads from advanced configs are rejected while default setup is enabled, (6) you need default-setup parity (languages, query suite, threat model, weekly schedule) preserved in the committed workflow.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd-codeql-default-to-advanced-canonical-names.md",
+      "category": "ci-cd",
+      "tags": [
+        "codeql",
+        "code-scanning",
+        "default-setup",
+        "advanced-setup",
+        "canonical-check-name",
+        "check-run-names",
+        "security-namespace",
+        "emit-before-require",
+        "ruleset-required-checks",
+        "sarif-upload",
+        "matrix-job-name",
+        "threat-model",
+        "action-pin-verification",
+        "github-actions"
+      ]
+    },
+    {
       "name": "ci-cd-cpp-asan-gtest-discovery-branch-protection",
       "description": "C++ CI repair patterns for ASAN/UBSAN test discovery failures and GitHub branch protection drift. Use when: (1) gtest_discover_tests() aborts at CMake configure time with ASan runtime error, (2) branch ruleset required_approving_review_count resets to 0 causing daily audit CI failures, (3) upgrading peter-evans/create-pull-request from v6 to v8, (4) upgrading gitleaks/gitleaks-action from v2 to v3.",
       "version": "1.0.0",
@@ -2290,9 +2583,32 @@
       ]
     },
     {
-      "name": "ci-cd-github-code-quality-findings-no-api",
-      "description": "Fixing GitHub Code Quality (/security/quality) findings \u2014 a product distinct from CodeQL code-scanning, with NO public REST API. Use when: (1) a /security/quality/rules/py%2F... URL reports open findings, (2) deciding how to locate Code Quality violations when the code-scanning alerts API returns them empty, (3) reconciling ruff vs CodeQL semantic differences for py/unused-local-variable, py/unused-global-variable, py/repeated-import, py/import-and-import-from, py/empty-except, py/undefined-export, (4) a Copilot/AI-findings autofix PR fails to merge, (5) a Code Quality finding is a false positive and you must refactor working code to satisfy the analyser without changing behaviour.",
+      "name": "ci-cd-git-boundary-merge-conflict-staged-handoff",
+      "description": "Resolve a PR merge conflict when the agent may not commit (orchestrator owns signed commits). Use when: (1) an independent PR reviewer returns CONFLICT / mergeStateStatus=DIRTY inside an implement-review loop where the implementing agent operates under a MANDATORY git boundary (may edit files and run tests, must NOT run git commit or git push \u2014 the orchestrator creates the signed, DCO signed-off commit with `git commit -S -s` after the turn), (2) the reviewer's literal instruction is 'rebase onto origin/main and commit the resolution (signed)' but a literal rebase is impossible under the boundary (rebase creates commits or strands REBASE_HEAD state that a plain `git commit -S -s` cannot finish), (3) sibling PRs of a convention/ecosystem rollout wave race on the same shared doc lines (README/CLAUDE.md CI bullet lists, branch-protection required-check tables) and one lands on main first. Mechanism: `git merge origin/main --no-commit --no-ff`, resolve keeping BOTH sides, stage everything, re-run gates on the merged tree, and end the turn with MERGE_HEAD still set \u2014 the orchestrator's plain `git commit -S -s` then automatically finalizes the signed merge-resolution commit.",
       "version": "1.0.0",
+      "source": "./skills/ci-cd-git-boundary-merge-conflict-staged-handoff.md",
+      "category": "ci-cd",
+      "tags": [
+        "merge-conflict",
+        "git-boundary",
+        "orchestrator-handoff",
+        "merge-no-commit",
+        "MERGE_HEAD",
+        "signed-commit",
+        "dco",
+        "rebase-alternative",
+        "review-loop",
+        "parallel-pr-race",
+        "staged-handoff",
+        "mergestatestatus-dirty",
+        "convention-rollout",
+        "union-resolution"
+      ]
+    },
+    {
+      "name": "ci-cd-github-code-quality-findings-no-api",
+      "description": "Fixing GitHub Code Quality (/security/quality) findings \u2014 a product distinct from CodeQL code-scanning, with NO public REST API. Use when: (1) a /security/quality/rules/py%2F... URL reports open findings, (2) deciding how to locate Code Quality violations when the code-scanning alerts API returns them empty, (3) reconciling ruff vs CodeQL semantic differences for py/unused-local-variable, py/unused-global-variable, py/repeated-import, py/import-and-import-from, py/empty-except, py/undefined-export, (4) a Copilot/AI-findings autofix PR fails to merge, (5) a Code Quality finding is a false positive and you must refactor working code to satisfy the analyser without changing behaviour, (6) consolidating or moving Python modules and leaving a thin re-export backward-compat shim, (7) a CodeQL/static-analyzer flags re-exported names as unused/dead imports even though the shim uses the `name as name` redundant-alias idiom that Ruff already accepts.",
+      "version": "1.1.0",
       "source": "./skills/ci-cd-github-code-quality-findings-no-api.md",
       "category": "ci-cd",
       "tags": [
@@ -2300,7 +2616,11 @@
         "codeql",
         "ruff",
         "code-quality",
-        "static-analysis"
+        "static-analysis",
+        "re-export",
+        "shim",
+        "__all__",
+        "backward-compat"
       ]
     },
     {
@@ -2349,6 +2669,25 @@
       "source": "./skills/ci-cd-opencode-asset-arch-naming.md",
       "category": "ci-cd",
       "tags": []
+    },
+    {
+      "name": "ci-cd-pixi-lock-version-skew-regeneration",
+      "description": "Regenerate pixi.lock with the exact pixi version CI pins so the lock-file format version does not silently skew. Use when: (1) regenerating pixi.lock in a repo whose CI pins a specific pixi version (e.g. `pixi-version:` in prefix-dev/setup-pixi), (2) a pixi.lock diff is unexpectedly huge or structurally rewritten (hundreds of lines, new top-level `platforms:` block, re-sorted URL lists) after a small manifest change, (3) CI `pixi install --locked` fails or is at risk after a local lock regeneration, (4) `head -1 pixi.lock` shows a different `version:` than the committed lock after running `pixi lock` locally.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd-pixi-lock-version-skew-regeneration.md",
+      "category": "ci-cd",
+      "tags": [
+        "pixi",
+        "lockfile",
+        "ci",
+        "conda",
+        "dependencies",
+        "lock-format-version",
+        "setup-pixi",
+        "version-skew",
+        "pixi-lock",
+        "install-locked"
+      ]
     },
     {
       "name": "ci-cd-pixi-macos-runner-integration-test-gotcha",
@@ -2682,6 +3021,32 @@
       ]
     },
     {
+      "name": "ci-release-pipeline-must-mirror-required-pr-gate",
+      "description": "A required PR gate (integration tests, lint, schema check) only protects the auto-tag-from-merged-PR path \u2014 a workflow_dispatch/manual release can target an ARBITRARY commit that never passed that gate, so the release/publish pipeline must run the SAME gate itself. Use when: (1) auditing or hardening a release.yml / publish pipeline and a required PR-gate job (e.g. `_required.yml` `integration-tests`) enforces an invariant the release path does NOT re-run, (2) a workflow has BOTH a tag-push trigger AND a `workflow_dispatch`/manual trigger and you must reason about which commits actually passed the PR gates, (3) you are tempted to justify a missing release-time check with 'the PR gate already covers it' \u2014 true only for merged-PR tags, false for dispatch, (4) you are adding the missing check and must decide between a NEW parallel CI job vs a STEP in an existing job, (5) you must mirror the required gate's exact invocation (including addopts overrides like `--override-ini` and marker flags) so the release run cannot drift from the merged-PR guarantee, (6) proving an integration/e2e suite is actually COLLECTED by a new command and that build-backend-dependent tests do not silently skip in the release env.",
+      "version": "1.0.0",
+      "source": "./skills/ci-release-pipeline-must-mirror-required-pr-gate.md",
+      "category": "ci-cd",
+      "tags": [
+        "ci-cd",
+        "release-pipeline",
+        "publish",
+        "pypi",
+        "workflow-dispatch",
+        "required-pr-gate",
+        "integration-tests",
+        "gate-parity",
+        "already-wired-gate",
+        "reuse-existing-job",
+        "invocation-mirroring",
+        "override-ini",
+        "strict-markers",
+        "collection-proof",
+        "sdist",
+        "manual-trigger-bypass",
+        "hephaestus"
+      ]
+    },
+    {
       "name": "ci-required-check-path-filter-pitfall",
       "description": "Use when: (1) an issue asks you to run a build/job ONLY on PRs that touch certain paths (e.g. a Dockerfile, a subdirectory) and the target workflow is a REQUIRED status check \u2014 adding a workflow-level on.pull_request.paths: filter is a trap that makes path-irrelevant PRs un-mergeable, (2) planning a smoke/build gate that you are tempted to soft-fail with continue-on-error: true (a repo may have a forbid-suppressions guard that fails CI on it), (3) tempted to rewrite a digest-pinned Dockerfile FROM to an mcr.microsoft.com mirror to dodge Docker Hub rate limits (this changes the shipped image digest), (4) deciding base-image arch for a pixi/conda smoke build (linux-64 workspace cannot build linux/arm64), (5) writing a CI implementation plan and you need an uncertain-assumptions checklist a reviewer can verify (is the workflow actually a required check? are cited line numbers fresh? is the action SHA verified upstream?).",
       "version": "1.1.0",
@@ -2745,6 +3110,29 @@
         "dependency-install",
         "runner-hang",
         "gh-run-rerun"
+      ]
+    },
+    {
+      "name": "cicd-canonical-package-check-dataset-repo",
+      "description": "How to fill a canonical `package` CI check-run for a GitOps/manifest dataset repo (no sdist/wheel/container): build the dataset itself as a reproducible tar.gz + SHA256SUMS, round-trip-verify it, and upload as artifact. Use when: (1) an ecosystem CI-status board tracks canonical check-run names (build/test/lint/security/package/...) and a manifest-only repo shows a `package` gap, (2) you must choose between adding a real package job vs documenting N/A \u2014 check whether the board is GENERATED from live check-runs (then N/A has no marker mechanism and only a real job fills the cell), (3) you need a deterministic/reproducible tar of dataset dirs (--sort=name --owner=0 --group=0 --numeric-owner --mtime pinned), (4) a repo has forbid-suppression guards (no `|| true`, no `continue-on-error: true`, no `::warning::`) and the new job must pass them, (5) you must verify a CI job's run blocks locally before pushing (byte-identical simulation), including when the actionlint system binary is absent locally or a safety net blocks `rm -rf` on mktemp dirs, (6) registering the new job as a required branch-protection context post-merge with an idempotent jq snippet.",
+      "version": "1.0.0",
+      "source": "./skills/cicd-canonical-package-check-dataset-repo.md",
+      "category": "ci-cd",
+      "tags": [
+        "canonical-check-run",
+        "ecosystem-ci-board",
+        "package-job",
+        "dataset-repo",
+        "manifest-repo",
+        "reproducible-tar",
+        "sha256sums",
+        "round-trip-verify",
+        "upload-artifact",
+        "branch-protection",
+        "required-status-checks",
+        "actionlint",
+        "forbid-suppressions",
+        "doc-sync"
       ]
     },
     {
@@ -3017,6 +3405,42 @@
       "source": "./skills/doc-comment-count-drift-verify-frozen-test.md",
       "category": "ci-cd",
       "tags": []
+    },
+    {
+      "name": "dockerhub-digest-check-null-guard",
+      "description": "Correctly fetch and compare Docker Hub tag digests in CI digest-pin checkers. CRITICAL: jq -r on an error JSON prints the STRING 'null', which passes [ -z ] emptiness checks and poisons downstream compares (auto-filed 'Latest: null' issues); Docker Hub returns 401 JSON without an anonymous bearer token even for public images; the value comparable to a FROM image@sha256 pin is the docker-content-digest RESPONSE HEADER fetched with manifest-list/OCI-index Accept types \u2014 NEVER .config.digest. Use when: (1) a digest-pin check workflow reports null/always-stale, (2) writing any CI job that queries registry-1.docker.io, (3) updating base-image digest pins and needing to verify the new digest before committing.",
+      "version": "1.0.0",
+      "source": "./skills/dockerhub-digest-check-null-guard.md",
+      "category": "ci-cd",
+      "tags": [
+        "docker-hub",
+        "registry-v2",
+        "digest-pin",
+        "docker-content-digest",
+        "jq-null",
+        "github-actions",
+        "oci-image-index",
+        "supply-chain",
+        "base-image"
+      ]
+    },
+    {
+      "name": "gcovr-lcov-excl-region-exclusion",
+      "description": "Replace file-level gcovr excludes with fine-grained LCOV_EXCL_START/STOP region markers so complex C++ files stay inside the coverage gate, excluding only regions provably unreachable without a live external dependency. Use when: (1) removing a file-level `--exclude foo.cpp` from a gcovr coverage gate and replacing it with fine-grained LCOV_EXCL_START/STOP markers, (2) deciding which regions to exclude vs leave measured when code requires a live external service (broker/DB) to execute, (3) a reviewer flags measured-but-provably-unreachable lines or 'covered by integration tests' comments that assert nonexistent coverage, (4) coverage numbers must be evidenced reviewer-visibly (PR body / --print-summary).",
+      "version": "1.0.0",
+      "source": "./skills/gcovr-lcov-excl-region-exclusion.md",
+      "category": "ci-cd",
+      "tags": [
+        "gcovr",
+        "lcov-excl",
+        "coverage-threshold",
+        "cpp",
+        "ctest",
+        "fail-under-line",
+        "coverage-exclusion",
+        "live-dependency-code",
+        "review-driven"
+      ]
     },
     {
       "name": "gh-create-pr-linked",
@@ -3407,6 +3831,42 @@
       "tags": []
     },
     {
+      "name": "inference360-release-version-tag-pr-sync",
+      "description": "Inference360 release version bump and annotated tag workflow, including uv.lock refresh behavior and the GitHub PR head synchronization caveat. Use when: (1) preparing an Inference360 SemVer tag, (2) bumping pyproject.toml with uv.lock, (3) verifying annotated tag object vs commit SHA, (4) deciding whether PR checks actually ran against the release commit.",
+      "version": "1.0.0",
+      "source": "./skills/inference360-release-version-tag-pr-sync.md",
+      "category": "ci-cd",
+      "tags": [
+        "inference360",
+        "release",
+        "semver",
+        "git-tag",
+        "annotated-tags",
+        "uv-lock",
+        "pyproject",
+        "github-pr",
+        "pr-head-sha",
+        "local-validation"
+      ]
+    },
+    {
+      "name": "inference360-validation-sqsh-harden-wrapper",
+      "description": "Harden Inference360 local validation around digest-verified Enroot/SquashFS wrappers. Use when: (1) replacing a removed Podman dev-container validation path, (2) resolving validation images from WardenRuntime manifests, (3) strict review requires fail-closed shell wrapper and CI/local validation separation.",
+      "version": "1.0.0",
+      "source": "./skills/inference360-validation-sqsh-harden-wrapper.md",
+      "category": "ci-cd",
+      "tags": [
+        "inference360",
+        "validation",
+        "enroot",
+        "squashfs",
+        "wardenruntime",
+        "ci",
+        "shell",
+        "strict-review"
+      ]
+    },
+    {
       "name": "justfile-and-local-build-verification",
       "description": "Use when: (1) just recipe fails with 'inconsistent leading whitespace' due to heredoc; (2) build completes suspiciously fast with 0-1 compiled files (silent no-op from over-eager find exclusions); (3) running local builds before push to mirror CI; (4) taking a dirty working tree through verify\u2192fix\u2192commit\u2192PR.",
       "version": "1.0.0",
@@ -3735,6 +4195,29 @@
         "odysseus",
         "self-surfacing-assumptions",
         "verification-honesty"
+      ]
+    },
+    {
+      "name": "planning-canonical-package-check-nonlibrary-repo",
+      "description": "Plan the ecosystem-mandated canonical `package` CI check for a repo whose distributable is NOT a Python library (data/skills marketplace, config repo, doc repo, manifest/dataset repo). Use when: (1) a CI-naming convention requires a `package` check-run but the repo has no [build-system] and python -m build fails on flat-layout multi-top-dir, (2) deciding between making pyproject buildable vs defining `package` as the repo's real bundle artifact, (3) mirroring a new job into a workflow_call file whose caller you have not verified, (4) an issue paraphrases an external convention doc you did not fetch, (5) a canonical category 'seems N/A' for the repo \u2014 the ecosystem board is generated from live check-runs on main and has no N/A marker, so the only way to fill the cell is a real check-run, (6) the workflow you would add the job to is PR-only (the check-run would never appear on main), (7) the target workflow has policy-guard jobs (forbid-suppressions) that reject || true / continue-on-error / ::warning::, (8) sequencing branch-protection registration of the new required context.",
+      "version": "1.1.0",
+      "source": "./skills/planning-canonical-package-check-nonlibrary-repo.md",
+      "category": "ci-cd",
+      "tags": [
+        "ci-naming-convention",
+        "canonical-check",
+        "package-check",
+        "bundle-artifact",
+        "data-repo",
+        "manifest-repo",
+        "release-archive",
+        "deterministic-tar",
+        "workflow-call",
+        "board-check-runs",
+        "branch-protection",
+        "policy-guards",
+        "plan-review-risks",
+        "yagni"
       ]
     },
     {
@@ -4155,6 +4638,29 @@
       "tags": []
     },
     {
+      "name": "release-auto-tag-token-trigger-and-doc-guard-traps",
+      "description": "Two traps in a GitHub Actions auto-tag \u2192 tag-triggered release pipeline (hatch-vcs, tag-driven versioning, ProjectHephaestus auto-tag.yml \u2192 release.yml): (1) a tag pushed by an Actions job using GITHUB_TOKEN NEVER triggers the on:push release workflow \u2014 GitHub suppresses workflow triggers for GITHUB_TOKEN-created events (anti-recursion), so the release silently does not run with no error anywhere; (2) a doc version-currency guard evaluated against the TAG's checked-out tree permanently strands any tag cut before the doc bump \u2014 the tag tree is immutable, so bumping main cannot fix it, only superseding with the next version can. Use when: (1) a tag-triggered release workflow never fires after an Actions-pushed tag, (2) a release test job fails a doc-version drift guard against an immutable tag, (3) authoring an auto-tag\u2192release pipeline, (4) deciding recovery for a stranded release tag.",
+      "version": "1.0.0",
+      "source": "./skills/release-auto-tag-token-trigger-and-doc-guard-traps.md",
+      "category": "ci-cd",
+      "tags": [
+        "release",
+        "auto-tag",
+        "github-actions",
+        "github-token",
+        "workflow-trigger-suppression",
+        "tag-triggered-release",
+        "version-drift",
+        "drift-guard",
+        "immutable-tag",
+        "stranded-tag",
+        "migration-md",
+        "hatch-vcs",
+        "workflow-dispatch",
+        "pypi-publish"
+      ]
+    },
+    {
       "name": "release-tag-drift-recut-on-fixed-commit",
       "description": "Diagnose and fix a tag-time version-currency drift guard that silently skips PyPI publish, then re-cut the release tag on a fixed commit. Use when: (1) a vX.Y.Z git tag exists but the package was never published to PyPI even though main's push-CI is green; (2) a Release GitHub Actions run shows the `test` job failing and `build-and-publish` SKIPPED (not failed); (3) a drift-guard unit test (e.g. test_migration_md_version_does_not_trail_latest_git_tag) fails inside the tag-triggered Release workflow because a doc's 'latest released version' line trails the new tag; (4) you need to delete and re-create a release tag on a corrected commit without reproducing the same failure (land-on-main-then-recut, never recut-in-place); (5) a failing CI run's headBranch is a vX.Y.Z tag and you must tell a tag-triggered Release run apart from a push-to-main run; (6) an UNRELATED open PR (incl. a Dependabot PR) suddenly fails test_version_currency / required-checks-gate right after a vX.Y.Z tag was pushed \u2014 the stale tag's blast radius reaches every open PR, not just the Release run.",
       "version": "1.1.0",
@@ -4178,8 +4684,8 @@
     },
     {
       "name": "release-workflow-planning-assumptions-and-risks",
-      "description": "Planning-phase risk checklist for designing an automated release workflow in a repo (especially a meta-repo) that has NEVER shipped a versioned release. The implementation mechanics live in `gha-release-package-workflow-patterns` and `lockfile-and-release-pipeline-management`; this skill is the DIFFERENT search surface a plan REVIEWER reaches for \u2014 'are the plan's release assumptions verified?' not 'how do I write release.yml'. Core thesis: a first-release plan is full of assertions that look like decisions but are actually unverified guesses \u2014 the target version, the CHANGELOG link-footer tags, the TOML table name, the runner Python version, and signing-key availability. Each must be VERIFIED during implementation, not asserted in the plan. Use when: (1) reviewing or writing a plan that bumps a manifest version to 'match' the CHANGELOG without reconciling against real git tags + GitHub Releases, (2) a plan hard-codes keepachangelog compare-URLs (.../compare/vA...vB) that assume those tags exist as real refs, (3) a reused consistency script hard-indexes pixi['workspace']['version'] (or assumes [project]) without reading the target file's actual table name, (4) scripts `import tomllib` with no `tomli` fallback and the CI runner Python version is unconfirmed, (5) a justfile/release recipe uses `git tag -s` but signing-key availability in CI/local was never confirmed, (6) the issue body cites commit SHAs or file states that do not match the live repo and the plan does not flag the mismatch, (7) a third-party action SHA was copied from a skill/template rather than re-looked-up at plan time.",
-      "version": "1.2.1",
+      "description": "Planning-phase risk checklist for designing an automated release workflow in a repo (especially a meta-repo) that has NEVER shipped a versioned release. The implementation mechanics live in `gha-release-package-workflow-patterns` and `lockfile-and-release-pipeline-management`; this skill is the DIFFERENT search surface a plan REVIEWER reaches for \u2014 'are the plan's release assumptions verified?' not 'how do I write release.yml'. Core thesis: a first-release plan is full of assertions that look like decisions but are actually unverified guesses \u2014 the target version, the CHANGELOG link-footer tags, the TOML table name, the runner Python version, and signing-key availability. Each must be VERIFIED during implementation, not asserted in the plan. Use when: (1) reviewing or writing a plan that bumps a manifest version to 'match' the CHANGELOG without reconciling against real git tags + GitHub Releases, (2) a plan hard-codes keepachangelog compare-URLs (.../compare/vA...vB) that assume those tags exist as real refs, (3) a reused consistency script hard-indexes pixi['workspace']['version'] (or assumes [project]) without reading the target file's actual table name, (4) scripts `import tomllib` with no `tomli` fallback and the CI runner Python version is unconfirmed, (5) a justfile/release recipe uses `git tag -s` but signing-key availability in CI/local was never confirmed, (6) the issue body cites commit SHAs or file states that do not match the live repo and the plan does not flag the mismatch, (7) a third-party action SHA was copied from a skill/template rather than re-looked-up at plan time, (8) an ecosystem CI-naming convention demands a canonical `release` check-run in a repo with NO release wiring at all \u2014 the plan must BOOTSTRAP the release contract (CHANGELOG, version-parity invariant, validator script) in the SAME PR as the gate, because a bare always-green job is exactly the fabricated check the convention forbids.",
+      "version": "1.3.0",
       "source": "./skills/release-workflow-planning-assumptions-and-risks.md",
       "category": "ci-cd",
       "tags": [
@@ -4213,7 +4719,13 @@
         "root-commit",
         "cross-artifact-consistency",
         "test-artifact-parity",
-        "tomllib"
+        "tomllib",
+        "canonical-release-check",
+        "ci-naming-convention",
+        "never-tagged-repo",
+        "release-contract-bootstrap",
+        "orphan-workflow-call",
+        "json-version-regex-ordering"
       ]
     },
     {
@@ -4322,6 +4834,22 @@
       ]
     },
     {
+      "name": "training-log-parsing-exit-codes",
+      "description": "Parse ML training logs with regex pattern matching and return distinct exit codes per failure mode (SUCCESS, TRAINING_FAILURE, LOG_FORMAT_MISMATCH, LOSS_NOT_DECREASING, NUMERIC_INSTABILITY). Use when: (1) validating training runs in CI/automation, (2) distinguishing between script bugs and training bugs, (3) requiring clear failure attribution for debugging.",
+      "version": "1.0.0",
+      "source": "./skills/training-log-parsing-exit-codes.md",
+      "category": "ci-cd",
+      "tags": [
+        "python",
+        "log-parsing",
+        "regex",
+        "exit-codes",
+        "ml-training",
+        "validation",
+        "ci-cd"
+      ]
+    },
+    {
       "name": "verify-infrastructure-tracking",
       "description": "Verify a known environment incompatibility is tracked as an open infrastructure issue before re-implementing a workaround. Use when: a pre-commit hook silently skips due to host constraints, or an issue asks you to 'verify X is tracked'.",
       "version": "1.0.0",
@@ -4381,8 +4909,8 @@
     },
     {
       "name": "automation-529-overload-not-retried-classifier-gap",
-      "description": "Use when: (1) an agent/API call hits 529 Overloaded or 5xx and is treated as fatal despite max_retries being set; (2) a retry loop only fires on quota/429-with-reset-epoch and ignores server-overload; (3) auditing whether retryability covers ALL transient failure families; (4) a subprocess hard-codes a timeout that bypasses a centralized timeout module; (5) a reviewer/agent path records a synthetic ERROR verdict and IMMEDIATELY retries against an exhausted 429 session-limit quota instead of waiting until reset; (6) a transient-failure (429/529/timeout) handler exists in ONE agent-call path but a SIBLING path that calls the same invoker lacks it \u2014 audit every sibling path that calls the same invoker; (7) a CLI exits 0 but returns an `is_error:true` JSON envelope carrying api_error_status 429 that a caller silently treats as a real result.",
-      "version": "1.1.0",
+      "description": "Use when: (1) an agent/API call hits 529 Overloaded or 5xx and is treated as fatal despite max_retries being set; (2) a retry loop only fires on quota/429-with-reset-epoch and ignores server-overload; (3) auditing whether retryability covers ALL transient failure families; (4) a subprocess hard-codes a timeout that bypasses a centralized timeout module; (5) a reviewer/agent path records a synthetic ERROR verdict and IMMEDIATELY retries against an exhausted 429 session-limit quota instead of waiting until reset; (6) a transient-failure (429/529/timeout) handler exists in ONE agent-call path but a SIBLING path that calls the same invoker lacks it \u2014 audit every sibling path that calls the same invoker; (7) a CLI exits 0 but returns an `is_error:true` JSON envelope carrying api_error_status 429 that a caller silently treats as a real result; (8) a 429 carries a remediation hint (switch models with /model) instead of a reset epoch \u2014 needs a model-switch fallback, not wait-until-reset.",
+      "version": "1.2.0",
       "source": "./skills/automation-529-overload-not-retried-classifier-gap.md",
       "category": "debugging",
       "tags": []
@@ -4617,8 +5145,8 @@
     },
     {
       "name": "cluster-endpoint-incident-reproducer-validation",
-      "description": "Build and harden cluster endpoint incident reproducer PRs after strict review. Use when: (1) a model-serving/HPC incident needs a checkout-to-validation reproducer, (2) a shell reproducer allocates Slurm or similar cluster resources, (3) artifacts may contain private prompts, responses, tokens, endpoint metadata, or control-plane evidence, (4) a strict PR review produced blockers around security, cleanup, reproducibility, tests, typing, docs, or CI.",
-      "version": "1.0.0",
+      "description": "Build and harden cluster endpoint incident reproducer PRs after strict review. Use when: (1) a model-serving/HPC incident needs a checkout-to-validation reproducer, (2) a shell reproducer allocates Slurm or similar cluster resources, (3) artifacts may contain private prompts, responses, tokens, endpoint metadata, profiler traces, or control-plane evidence, (4) a strict PR review produced blockers around security, cleanup, reproducibility, shell quoting, tests, operator docs, or CI.",
+      "version": "1.1.0",
       "source": "./skills/cluster-endpoint-incident-reproducer-validation.md",
       "category": "debugging",
       "tags": [
@@ -4631,7 +5159,10 @@
         "cleanup",
         "dry-run",
         "strict-review",
-        "validation"
+        "validation",
+        "profiler",
+        "shell-quoting",
+        "operator-contract"
       ]
     },
     {
@@ -4793,6 +5324,43 @@
         "reasoning-fields",
         "serving-debugging",
         "redacted"
+      ]
+    },
+    {
+      "name": "debugging-podman-wsl2-netavark-hostnetwork-workaround",
+      "description": "Bypass podman-compose network creation failures on WSL2 rootless podman by running one-off host-network containers. Use when: (1) podman-compose up -d fails with netavark/nftables errors ('Could not process rule: No such file or directory', 'IPAM error: failed to get ips', 'nft did not return successfully') on WSL2/rootless podman; (2) a Makefile/CI recipe wrapping podman-compose exec -T dev fails with 'can only create exec sessions on running containers' because the compose network silently failed; (3) you need to replicate a compose dev-service environment for a one-off in-container command without the compose network.",
+      "version": "1.0.0",
+      "source": "./skills/debugging-podman-wsl2-netavark-hostnetwork-workaround.md",
+      "category": "debugging",
+      "tags": [
+        "podman",
+        "podman-compose",
+        "wsl2",
+        "netavark",
+        "nftables",
+        "rootless",
+        "host-network",
+        "dev-container",
+        "keep-id"
+      ]
+    },
+    {
+      "name": "debugging-prefix-cache-nsight-kernel-evidence",
+      "description": "Capture and interpret Nsight kernel-name evidence for vLLM or SGLang prefix-cache nondeterminism. Use when: (1) cache hits change output despite temperature=0, (2) warm prefix-cache paths may select different GEMM tiling, (3) you need actual GPU kernel names rather than profiler-free hypotheses, (4) batch-invariant or deterministic kernels are being considered as a replay control instead of a production fix.",
+      "version": "1.0.0",
+      "source": "./skills/debugging-prefix-cache-nsight-kernel-evidence.md",
+      "category": "debugging",
+      "tags": [
+        "inference",
+        "vllm",
+        "sglang",
+        "prefix-cache",
+        "nsight",
+        "nsys",
+        "ncu",
+        "h200",
+        "slurm",
+        "determinism"
       ]
     },
     {
@@ -4989,8 +5557,8 @@
     },
     {
       "name": "inference360-staging-fresh-allocation-control",
-      "description": "Validate and debug Inference360 staging/control API launches on fresh H200 Slurm allocations. Use when: (1) proving IFM or multi-model vLLM endpoints through the Inference360 control API, (2) reproducing Inference360 issue 257 / IFM corruption with vLLM, SGLang, HF, or XLLM comparison paths, (3) capturing logprobs, token IDs, launch commands, and Slurm cleanup evidence for H200 repro workflows.",
-      "version": "1.1.0",
+      "description": "Validate and debug Inference360 staging/control API launches and issue 257 reproducers. Use when: (1) proving IFM or multi-model vLLM endpoints through the Inference360 control API, (2) reproducing Inference360 issue 257 / IFM corruption with vLLM, SGLang, HF, XLLM, or public NanoGPT cache-logits comparison paths, (3) capturing logprobs, token IDs, launch commands, logits tensors, and cleanup evidence for H200 repro workflows.",
+      "version": "1.2.0",
       "source": "./skills/inference360-staging-fresh-allocation-control.md",
       "category": "debugging",
       "tags": [
@@ -5004,7 +5572,9 @@
         "xllm",
         "ifm",
         "corruption",
-        "nodepool"
+        "nodepool",
+        "nanogpt",
+        "cache-logits"
       ]
     },
     {
@@ -5374,15 +5944,18 @@
     },
     {
       "name": "communication-redaction-avoid-internal-leaks",
-      "description": "Prevent internal infrastructure identifiers from leaking into user-facing summaries, durable notes, PR bodies, reports, and reusable examples. Use when: (1) reporting operational validation or launch details, (2) writing durable artifacts from logs, endpoints, checkpoints, or commands.",
-      "version": "1.0.0",
+      "description": "Prevent internal infrastructure identifiers from leaking into user-facing summaries, durable notes, PR bodies, reports, reproducibility packages, golden files, and reusable examples. Use when: (1) reporting operational validation or launch details, (2) writing durable artifacts from logs, endpoints, checkpoints, prompts, or commands, (3) committing repro artifacts copied from cluster runs.",
+      "version": "1.1.0",
       "source": "./skills/communication-redaction-avoid-internal-leaks.md",
       "category": "documentation",
       "tags": [
         "communication",
         "redaction",
         "documentation",
-        "reporting"
+        "reporting",
+        "reproducibility",
+        "artifacts",
+        "security"
       ]
     },
     {
@@ -5480,6 +6053,28 @@
         "review",
         "consistency",
         "endpoint"
+      ]
+    },
+    {
+      "name": "documentation-table-from-frontmatter-drift-safe-edit",
+      "description": "How to safely add/edit a markdown documentation TABLE whose cell values are derived VERBATIM from another file's YAML frontmatter (e.g. a CLAUDE.md skill-catalog table whose new Arguments column mirrors each skill's argument-hint: field), and how to drift-check the result without false failures. Use when: (1) adding a column to a doc table where each row value must equal a per-file frontmatter field (argument-hint, name, description) extracted verbatim; (2) executing an approved plan that cites specific doc line ranges for the table location \u2014 the numbers WILL have drifted, re-grep the section heading anchor instead; (3) a grep -qF drift check reports a spurious MISS on a value containing markdown table metacharacters (a raw pipe | that must be escaped as \\| inside a table cell, so the raw form is intentionally absent from the rendered file); (4) invoking the markdownlint pre-commit hook and needing its REAL hook id (markdownlint-cli2, not markdownlint) before claiming the gate is green; (5) representing no-value rows with an em dash \u2014 as the sentinel.",
+      "version": "1.0.0",
+      "source": "./skills/documentation-table-from-frontmatter-drift-safe-edit.md",
+      "category": "documentation",
+      "tags": [
+        "documentation",
+        "markdown-table",
+        "frontmatter-derivation",
+        "doc-table-drift",
+        "line-number-drift",
+        "content-anchoring",
+        "escaped-pipe",
+        "grep-false-miss",
+        "markdownlint",
+        "precommit-hook-id",
+        "argument-hint",
+        "claude-md-catalog",
+        "hephaestus"
       ]
     },
     {
@@ -6165,6 +6760,26 @@
       ]
     },
     {
+      "name": "inference360-ifm-warden-inferencex-matrix-results",
+      "description": "Run IFM benchmarks through Inference360 Warden and PerfHC without masking serving gaps. Use when: (1) benchmarking routed Warden OpenAI-compatible endpoints, (2) requiring route-aware server-side /tokenize for exact counts, (3) publishing sanitized InferenceX or PerfHC artifacts.",
+      "version": "1.1.0",
+      "source": "./skills/inference360-ifm-warden-inferencex-matrix-results.md",
+      "category": "evaluation",
+      "tags": [
+        "inference360",
+        "ifm",
+        "warden",
+        "inferencex",
+        "perfhc",
+        "benchmark",
+        "tokenize",
+        "openai-compatible",
+        "h200",
+        "slurm",
+        "haproxy"
+      ]
+    },
+    {
       "name": "issue-validation-workflow",
       "description": "Validate GitHub issue state against codebase reality before implementation. Use when starting work on multiple issues to prevent wasted effort on already-resolved issues.",
       "version": "1.0.0",
@@ -6520,6 +7135,22 @@
       ]
     },
     {
+      "name": "hypothesis-property-fuzz-llm-output-parsers",
+      "description": "EXECUTED procedure (verified-local) + pitfalls for adding Hypothesis property-based / fuzz tests for LLM-output string parsers in a pixi+pyproject dual-manifest Python repo. Use when: (1) adding property/fuzz tests for parsers that ingest free-form LLM output (verdict markers, ```json fences, bold/CRLF noise), (2) the goal is to assert a parser's FAIL-SAFE CONTRACT (never-raises + typed default) rather than parsed values, (3) you must add a new test/dev dependency (e.g. hypothesis) and need it in BOTH pyproject.toml [project.optional-dependencies].dev AND pixi.toml [feature.dev.dependencies] (conda path is what `pixi run test` uses), (4) deciding whether a new dep triggers a floor-consistency guard, (5) composing st.text() with crafted fragments so Hypothesis reaches structured parser branches, (6) deciding to append a Test<Parser>Properties class vs create a new _property sibling test file. RELATED but distinct: llm-output-verdict-parse-last-line-not-substring (parser CORRECTNESS, not fuzz-test planning) and dependency-manifest-single-source-of-truth (manifest alignment).",
+      "version": "1.1.0",
+      "source": "./skills/hypothesis-property-fuzz-llm-output-parsers.md",
+      "category": "testing",
+      "tags": [
+        "hypothesis",
+        "property-based-testing",
+        "fuzz-testing",
+        "llm-output-parsing",
+        "pixi",
+        "pyproject",
+        "dual-manifest"
+      ]
+    },
+    {
       "name": "library-product-import-boundary-enforcement-test",
       "description": "Enforce a library-vs-product import boundary with regression tests and CI install-string guards. Use when: (1) gating a heavy product subpackage (curses/pydantic/fcntl) behind an optional extra so base `import pkg` stays lean, (2) writing a test that asserts `import pkg` does not pull forbidden modules, (3) a CI import-surface test gives false failures because pytest itself preloads the forbidden dependency, (4) pip-based CI jobs collect product-layer tests and must install the product extra after moving deps out of base.",
       "version": "1.1.0",
@@ -6821,8 +7452,8 @@
     },
     {
       "name": "pytest-coverage-threshold-and-enforcement",
-      "description": "Use when: (1) establishing [tool.coverage.report].fail_under as the single source of truth by removing redundant --cov-fail-under from CI and pyproject.toml addopts; (2) configuring multiple coverage report formats (xml, html, lcov) for CI and local use; (3) CI coverage % is lower than local because GitHub computes coverage against the merge-preview tree (PR HEAD merged with main HEAD) \u2014 adding entries to coverage.run.omit for files not on the branch IS the correct fix; (4) aggregate coverage gates hide under-tested critical modules \u2014 enforce per-file floors via parse_module_coverage() + coverage.toml + CI step; (5) some modules are intentionally omitted from measurement (live CLI/TTY) and need an integration backstop to catch import-time regressions; (6) pytest.importorskip() guards hide easy coverage wins \u2014 install optional deps and write targeted branch tests; (7) tuning coverage thresholds to match actual baselines and avoid false CI failures; (8) generate_coverage.sh fails in CI with wrong paths, cmake source dir errors, lcov gcov version mismatch on Ubuntu 24.04, or geninfo 'unable to create link .gcda'; (9) coverage is raised by adding targeted tests for uncovered branches plus unlocking skipped optional-dependency test groups; (10) planning a coverage threshold consolidation \u2014 verify actual coverage %, confirm consistency-checker accepts addopts absence, check whether CI uses --override-ini=addopts= before deciding where the real gate lives; (11) setting per-module branch-rate floor values in coverage.toml \u2014 choose margin 3-4pp below actual to avoid brittle thresholds that fail CI on unrelated PRs.",
-      "version": "1.3.0",
+      "description": "Use when: (1) establishing [tool.coverage.report].fail_under as the single source of truth by removing redundant --cov-fail-under from CI and pyproject.toml addopts; (2) configuring multiple coverage report formats (xml, html, lcov) for CI and local use; (3) CI coverage % is lower than local because GitHub computes coverage against the merge-preview tree (PR HEAD merged with main HEAD) \u2014 adding entries to coverage.run.omit for files not on the branch IS the correct fix; (4) aggregate coverage gates hide under-tested critical modules \u2014 enforce per-file floors via parse_module_coverage() + coverage.toml + CI step; (5) some modules are intentionally omitted from measurement (live CLI/TTY) and need an integration backstop to catch import-time regressions; (6) pytest.importorskip() guards hide easy coverage wins \u2014 install optional deps and write targeted branch tests; (7) tuning coverage thresholds to match actual baselines and avoid false CI failures; (8) generate_coverage.sh fails in CI with wrong paths, cmake source dir errors, lcov gcov version mismatch on Ubuntu 24.04, or geninfo 'unable to create link .gcda'; (9) coverage is raised by adding targeted tests for uncovered branches plus unlocking skipped optional-dependency test groups; (10) planning a coverage threshold consolidation \u2014 verify actual coverage %, confirm consistency-checker accepts addopts absence, check whether CI uses --override-ini=addopts= before deciding where the real gate lives; (11) setting per-module branch-rate floor values in coverage.toml \u2014 choose margin 3-4pp below actual to avoid brittle thresholds that fail CI on unrelated PRs; (12) RAISING an existing per-module coverage floor by ADDING tests \u2014 measure the RIGHT number first (the floor is compared against branch_rate when > 0, else line_rate; the term-missing combined % and line_rate diverge from branch_rate and will mislead you), use `-o addopts=\"\"` to strip the global aggregate gate and read the true per-file number, read branch-rate authoritatively from the Cobertura XML `<class branch-rate>` attribute, and interpret `NN->exit` term-missing markers as the FALSE side of an uncovered branch.",
+      "version": "1.4.0",
       "source": "./skills/pytest-coverage-threshold-and-enforcement.md",
       "category": "testing",
       "tags": [
@@ -6837,7 +7468,10 @@
         "importorskip",
         "lcov",
         "gcov",
-        "ci-cd"
+        "ci-cd",
+        "branch-rate",
+        "addopts-override",
+        "term-missing-markers"
       ]
     },
     {
@@ -7123,6 +7757,30 @@
       ]
     },
     {
+      "name": "testing-deterministic-clock-vs-thread-sleep-classification",
+      "description": "Eliminate real time.sleep() from a test suite by classifying EVERY sleep by WHAT IT WAITS ON before choosing a fix, because the fix differs per class. A timer-boundary sleep (waits only for a monotonic/wall clock to cross a timeout like recovery_timeout) is fixed by patching the EXACT clock name the production code reads (@patch('<module>.time.monotonic')) and advancing the return value past the threshold \u2014 NOT by constructor-injecting a clock (YAGNI when the code already calls time.monotonic() at module scope). A thread-coordination sleep (orders real OS threads against a threading.Condition/Event/Barrier) has NO clock to mock; the CORRECT fix is deterministic Event-based coordination (instrument condition.wait to set a threading.Event from inside the lock right before parking), NOT @pytest.mark.slow \u2014 quarantining behind slow removes the wait/notify code from the fast CI suite AND leaves the flakiness intact, and a reviewer will reject it. Use when: (1) a refactor wants to remove real sleeps from unit tests for speed/determinism; (2) you see time.sleep near recovery_timeout/circuit-breaker/backoff logic; (3) you see time.sleep near threading.Barrier/Condition/Event 'give threads time to start' comments; (4) you are tempted to inject a clock into a constructor that already calls time.monotonic() directly; (5) you are tempted to mark a thread-coordination test @pytest.mark.slow instead of making it deterministic.",
+      "version": "2.0.0",
+      "source": "./skills/testing-deterministic-clock-vs-thread-sleep-classification.md",
+      "category": "testing",
+      "tags": [
+        "time-sleep",
+        "monotonic",
+        "mock-clock",
+        "threading-event",
+        "condition-wait-instrumentation",
+        "deterministic-test",
+        "circuit-breaker",
+        "recovery-timeout",
+        "thread-coordination",
+        "happens-before",
+        "flaky",
+        "yagni",
+        "dry",
+        "kiss",
+        "ruff-unused-import"
+      ]
+    },
+    {
       "name": "testing-doc-guard-markdown-linewrap-substring",
       "description": "A doc-content presence guard that asserts a required multi-word phrase via a raw `in` substring check yields FALSE FAILURES the moment a formatter (markdownlint / mdformat / prettier / manual 80-col wrapping) line-wraps that phrase across a newline \u2014 a plain substring does not span `\\n`. Normalize `\\s+`\u2192single-space BEFORE the `in` check. Use when: (1) a regression test asserts `'some documented phrase' in section` against prose and fails even though the phrase is visibly present in the source markdown (it is wrapped, e.g. `**auto tag\\nrelease**`), (2) you are writing a doc-content membership/presence guard that pins required wording in a doc so a future edit can't silently re-vague it, (3) a freshly-authored `test_*` function trips ruff D103 (missing-docstring-in-public-function) in a repo with pydocstyle enabled, (4) a single-file `pixi run pytest <file>` run fails the repo's `--cov-fail-under` coverage gate.",
       "version": "1.0.0",
@@ -7150,6 +7808,31 @@
       "source": "./skills/testing-dual-patch-multiple-call-paths.md",
       "category": "testing",
       "tags": []
+    },
+    {
+      "name": "testing-env-gated-live-broker-gtest-suite",
+      "description": "Pattern for adding a live-broker (NATS/JetStream via docker-compose) gtest integration suite alongside unit tests without destabilizing default presets: tests GTEST_SKIP when the gating env var (e.g. NESTOR_LIVE_NATS_URL) is unset and HARD-FAIL when it is set (no silent pass in CI); a dedicated gtest_discover_tests pass assigns a ctest label (live-nats) with RUN_SERIAL + generous TIMEOUT and the unit-pass negative filter excludes the live suite; the compose file exposes host ports as ${VAR:-default} so it coexists with a developer's local broker. Use when: (1) adding integration tests that need a real broker/server container to cover connect/reconnect/provisioning happy paths excluded from unit coverage, (2) writing broker-bounce (stop/start) tests for disconnect/reconnect callbacks, (3) a bounce test's RAII restore guard runs `docker compose start` \u2014 which returns BEFORE the service accepts connections \u2014 so the guard must poll readiness (fresh throwaway client connect per attempt) before returning, because CTest schedules by recorded cost, NOT declaration order (RUN_SERIAL prevents overlap, not reordering), (4) choosing stop+start over restart to get a deterministic disconnected window, (5) using first-publish-success as the provisioning-readiness probe when provisioning and publish serialize on one mutex.",
+      "version": "1.0.0",
+      "source": "./skills/testing-env-gated-live-broker-gtest-suite.md",
+      "category": "testing",
+      "tags": [
+        "integration-tests",
+        "gtest",
+        "ctest-labels",
+        "docker-compose",
+        "nats",
+        "jetstream",
+        "env-gated",
+        "skip-when-unset",
+        "hard-fail-when-set",
+        "broker-bounce",
+        "run-serial",
+        "ctest-scheduling",
+        "readiness-polling",
+        "raii-guard",
+        "port-collision",
+        "ci-job"
+      ]
     },
     {
       "name": "testing-env-leak-local-fail-ci-pass",
@@ -7190,6 +7873,26 @@
         "read-the-source",
         "reviewer-nogo",
         "scope-down"
+      ]
+    },
+    {
+      "name": "testing-gtest-skip-inside-helper-keeps-test-running",
+      "description": "GTEST_SKIP() called inside a helper/fixture method only aborts THAT function (it uses the fatal-assertion mechanism), so the test is marked skipped but the TEST body keeps executing every statement after the helper returns. Use when: (1) you factor an env-var/precondition skip into a fixture helper like require_X() and call it from test bodies, (2) a test reports SKIPPED yet its side effects (docker commands, file writes, crashes) still happen, (3) a 'skipped' test dies with std::logic_error/segfault from std::string(nullptr) built from an unset getenv, or with std::terminate because an exception unwound through a throwing RAII guard, (4) reviewing gtest code where GTEST_SKIP/ASSERT_* live in non-void helpers or subroutines. Fix: inline GTEST_SKIP() directly in the TEST body, or follow every possibly-skipping helper call with `if (::testing::Test::IsSkipped()) return;`. Same rule applies to ASSERT_* in helpers (gtest docs: fatal assertions abort only the current function).",
+      "version": "1.0.0",
+      "source": "./skills/testing-gtest-skip-inside-helper-keeps-test-running.md",
+      "category": "testing",
+      "tags": [
+        "gtest",
+        "gtest-skip",
+        "skip-semantics",
+        "fixture-helper",
+        "fatal-assertion",
+        "undefined-behavior",
+        "std-terminate",
+        "raii-guard",
+        "getenv-null",
+        "integration-tests",
+        "code-review"
       ]
     },
     {
@@ -8023,6 +8726,23 @@
       ]
     },
     {
+      "name": "conan-cmakeuserpresets-duplicate-preset-collision",
+      "description": "Fix 'Duplicate preset: \"conan-debug\"' errors after a second conan install in the same repo. Use when: (1) cmake --preset, cmake --build --preset, or ctest --preset suddenly fails with Duplicate preset: \"conan-debug\" (or conan-release etc.), (2) running conan install into a SECOND --output-folder with the same build_type in one repo, (3) deciding how to get a compile_commands.json/second build dir (e.g. for clang-tidy) without breaking existing preset invocations.",
+      "version": "1.0.0",
+      "source": "./skills/conan-cmakeuserpresets-duplicate-preset-collision.md",
+      "category": "tooling",
+      "tags": [
+        "conan",
+        "cmake",
+        "cmake-presets",
+        "CMakeUserPresets",
+        "duplicate-preset",
+        "ninja",
+        "toolchain",
+        "build-system"
+      ]
+    },
+    {
       "name": "config-default-model-drift",
       "description": "Skill: config-default-model-drift. Use when working with config default model drift.",
       "version": "1.0.0",
@@ -8250,8 +8970,8 @@
     },
     {
       "name": "git-branch-state-triage-and-recovery",
-      "description": "Diagnose and recover branches that have entered an invalid or obsolete state. Use when: (1) a branch is many commits behind main and its remote tracking ref is gone, (2) a branch has no common ancestor with main and needs content extraction, (3) stacked or diverged PR fixes must be cherry-picked onto the correct tip, (4) a branch has many HEAD-only files after main-side consolidation, (5) a squash-merged branch looks unmerged because git cherry/ahead counts lie, (6) an auto-merge PR already merged, its remote head ref is gone or stale, and a validated local amended commit must be converted into a clean follow-up branch from current trunk using git diff --binary plus git apply --index, (7) the current branch has an already-merged PR but contains uncommitted follow-up work, so stash it, create a fresh branch from current trunk, pop the stash, re-verify, sign, push, and open a new linked PR, or (8) an issue has a closed unmerged PR whose branch can be rebased and force-with-lease updated, but GitHub refuses `gh pr reopen`, so you need a replacement PR from the same recovered branch.",
-      "version": "1.5.0",
+      "description": "Diagnose and recover branches that have entered an invalid or obsolete state. Use when: (1) a branch is many commits behind main and its remote tracking ref is gone, (2) a branch has no common ancestor with main and needs content extraction, (3) stacked or diverged PR fixes must be cherry-picked onto the correct tip, (4) a branch has many HEAD-only files after main-side consolidation, (5) a squash-merged branch looks unmerged because git cherry/ahead counts lie, (6) an auto-merge PR already merged, its remote head ref is gone or stale, and a validated local amended commit must be converted into a clean follow-up branch from current trunk using git diff --binary plus git apply --index, (7) the current branch has an already-merged PR but contains uncommitted follow-up work, so stash it, create a fresh branch from current trunk, pop the stash, re-verify, sign, push, and open a new linked PR, (8) an issue has a closed unmerged PR whose branch can be rebased and force-with-lease updated, but GitHub refuses `gh pr reopen`, so you need a replacement PR from the same recovered branch, or (9) a user asks you to create a PR from the current branch but that branch's existing PR is already MERGED and a squash/rebase-style merge rewrote SHAs, making triple-dot diff look noisy even though the work is already on trunk.",
+      "version": "1.6.0",
       "source": "./skills/git-branch-state-triage-and-recovery.md",
       "category": "tooling",
       "tags": [
@@ -8282,6 +9002,10 @@
         "merged-pr",
         "closed-pr",
         "replacement-pr",
+        "duplicate-pr",
+        "rewritten-sha",
+        "two-dot",
+        "triple-dot",
         "uncommitted-follow-up",
         "signed-commit"
       ]
@@ -8418,6 +9142,22 @@
       ]
     },
     {
+      "name": "github-cli-pr-body-api-edit",
+      "description": "Update a GitHub PR body from automation when gh pr edit --body-file fails on missing read:project scope and gh auth refresh cannot complete headlessly. Use when: (1) gh pr edit only needs to change the PR body but reports missing read:project, (2) gh auth refresh starts a browser or device-code flow, (3) existing repo auth can still call gh api.",
+      "version": "1.0.0",
+      "source": "./skills/github-cli-pr-body-api-edit.md",
+      "category": "tooling",
+      "tags": [
+        "github-cli",
+        "gh-api",
+        "pull-request",
+        "pr-body",
+        "auth-scope",
+        "read-project",
+        "automation"
+      ]
+    },
+    {
       "name": "github-default-branch-standardization-ecosystem-verification",
       "description": "Verify, remediate, and document GitHub default-branch standardization across a multi-repo fleet. Use when: (1) confirming all repos in an org have migrated from `master` to `main` as the default branch, (2) scanning for stale `refs/heads/master` orphan branches after a default-branch rename, (3) safely deleting an unprotected orphan branch that has no open PRs targeting it and no common ancestor with main, (4) classifying `master` literals in workflow YAML to distinguish stale branch refs from legitimate third-party action pins or pre-commit guards, (5) verifying a branch-protection ruleset is active across all fleet repos after migration, (6) writing migration records in standing docs with historical framing that does not drift as point-in-time facts, or (7) a branch has 0 commits ahead of main and GitHub refuses to open a PR \u2014 forcing a minimal doc artifact to give the branch a real commit.",
       "version": "1.0.0",
@@ -8462,6 +9202,23 @@
         "automation",
         "validation-artifacts",
         "bug-template"
+      ]
+    },
+    {
+      "name": "harness-protected-file-edit-block-silently-defeats-precommit-deliverable",
+      "description": "Recognize a harness per-file Edit denial as a deliberate restriction, not a bug, and stop it from cascading into false docs and un-resolvable review threads. Use when: (1) an issue's central deliverable is 'add a pre-commit hook' / edit .pre-commit-config.yaml and your Edit calls are denied by don't-ask permission mode, (2) a sub-agent AND the coordinator both get 'Permission to use Edit has been denied' on the SAME specific file while other files edit fine, (3) you must decide whether a permission-denied edit is a bug to work around or a deliberate restriction to surface, (4) you are a review-thread coordinator and 2+ threads all depend on one un-editable file.",
+      "version": "1.0.0",
+      "source": "./skills/harness-protected-file-edit-block-silently-defeats-precommit-deliverable.md",
+      "category": "tooling",
+      "tags": [
+        "precommit",
+        "permission-mode",
+        "dont-ask",
+        "protected-file",
+        "harness",
+        "blocked-deliverable",
+        "agent-boundary",
+        "honest-verification"
       ]
     },
     {
@@ -9324,6 +10081,22 @@
       "tags": []
     },
     {
+      "name": "shell-wrapper-container-detection",
+      "description": "Implement shell script wrappers that detect container context and route commands via container orchestrator (podman/docker) when on host. Use when: (1) wrapping CLI tools that must run inside containers, (2) dev environment uses podman compose with detached environments, (3) same script must work both on host (via podman compose exec) and inside container (direct execution).",
+      "version": "1.0.0",
+      "source": "./skills/shell-wrapper-container-detection.md",
+      "category": "tooling",
+      "tags": [
+        "shell-script",
+        "podman",
+        "container",
+        "routing",
+        "mojo",
+        "automation",
+        "dev-environment"
+      ]
+    },
+    {
       "name": "skill-consolidation-nuance-audit-workflow",
       "description": "Use when: (1) a bulk skill consolidation (10+ skills merged into bundles) has just completed and you need to verify no knowledge was lost, (2) a canonical skill was absorbed into a larger bundle and the bundle must preserve all failed attempts, trigger conditions, and copy-paste commands, (3) you need to run a parallel swarm audit across many source\u2192bundle pairs and automatically generate amendment PRs for any detected gaps",
       "version": "1.1.0",
@@ -9746,6 +10519,21 @@
         "automation-loop",
         "stash-apply",
         "commit-early"
+      ]
+    },
+    {
+      "name": "tooling-gitignore-broad-pattern-swallows-new-files",
+      "description": "An unanchored .gitignore directory pattern (install/, build/, dist/, out/, target/) matches EVERY directory with that name at ANY depth and silently swallows newly created source files \u2014 they never appear in git status, not even as untracked, and nothing errors. Use when: (1) files you just created never appear in `git status` (not even as untracked) \u2014 suspect an ignore rule, not a tooling bug; (2) adding new source/test files whose path shares a name with a build-output ignore pattern (install/, build/, dist/, out/, target/); (3) writing a .gitignore negation to re-include a directory that a broad unanchored directory pattern excludes.",
+      "version": "1.0.0",
+      "source": "./skills/tooling-gitignore-broad-pattern-swallows-new-files.md",
+      "category": "tooling",
+      "tags": [
+        "gitignore",
+        "check-ignore",
+        "untracked-files",
+        "negation-pattern",
+        "silent-failure",
+        "new-files"
       ]
     },
     {
