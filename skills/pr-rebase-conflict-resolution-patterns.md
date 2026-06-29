@@ -1,12 +1,12 @@
 ---
 name: pr-rebase-conflict-resolution-patterns
-description: "Use when: (1) a PR branch is CONFLICTING or DIRTY after main advances and needs rebasing, (2) a mass rebase of 10+ PRs is needed after a major refactor causes conflicts across the queue, (3) a stacked PR goes DIRTY when its prerequisite merges and the base must be retargeted — later CI/lint fix commits on the dependent branch are orphaned and must be cherry-picked, (4) a Safety Net hook blocks git checkout --theirs / --ours during automated rebase conflict resolution, (5) a file was completely rewritten on one branch and small targeted edits exist on the other, (6) a parallel swarm produced overlapping PRs that conflict on the same paths and one must be rebased onto the other, (7) a feature PR conflicts after a sibling refactor merges and edits must be ported to the new file structure, (8) a TypeScript or other language-level shadowing bug appears only after a rebase because two branches independently added identically-named locals to the same scope, (9) numerical or optimizer PRs conflict when main merged its own version of a shared module and API signatures changed, (10) a PR's substantive change independently landed on main via a sibling PR so a rebase produces an add/add conflict on a duplicated new file and the PR becomes a near-no-op residual, (11) a PR is DIRTY with all CI checks green/passing — the merge conflict itself is the sole blocker (rebase, do not hunt for a failing job), (12) a rebase hits a modify/delete conflict on a file the PR intentionally deletes — confirm the base copy is still stale then git rm, (13) a PR is BLOCKED with mergeable=MERGEABLE but a required check shows SKIPPED — the required check is gated by needs: on a job that fails because the branch carries unpinned GitHub Actions rejected by an org-wide SHA-pin policy; fix is rebase to inherit main's pinned workflow files (not an empty re-trigger commit), (14) multiple rebased PRs — including ones unrelated to the failing test — all fail the SAME test after merging onto main; suspect a broken main from a SEMANTIC collision between two independently-merged PRs that never textually conflict (e.g. a return-tuple arity change + a stale test mock), prove it by running the failing test against bare origin/main, and fix main first, (15) two parallel cluster-extraction PRs both create the same new module file and the rebase produces an add/add conflict on BOTH the source module AND its test file — main's source is authoritative, test files must be semantically merged (keep main's richer base + append your branch's unique test classes), (16) a rebase hits AA (both-added) conflicts on new files — the conflicted file shows NO <<<<<<< markers and contains only one side's content; you must use git show HEAD:<path> and git show REBASE_HEAD:<path> to read both versions before resolving, (17) a CLUSTER of sibling refactor PRs all edit the SAME shared files and were run in parallel so all but one are CONFLICTING/DIRTY (and possibly hand-braked with state:skip) — land them as a SEQUENTIAL rebase chain SMALLEST-DIFF-FIRST, rebasing each onto trunk only AFTER the prior merges, resolving every conflict as the UNION of each refactor's extractions (keep both helpers; every duplicated method becomes a thin delegate; merge import lists and drop now-unused imports via lint), then re-sign all commits with `git rebase --exec '...-s -S' origin/main` for DCO+GPG, (18) after rebase, tests fail because test mocks expected the PR branch's refactored signatures but rebase brought in origin/main's different implementation — the git conflict resolved cleanly (no text-level conflicts), but the test mocks diverge from actual code. Test expects subprocess.check_output but code uses run_subprocess; mock returns 7-tuple but impl expects 9-tuple. After textual conflict resolution succeeds, run tests to surface semantic mismatches, then regenerate test mocks to match CURRENT implementation, not the PR's expected changes (see § L)"
+description: "Use when: (1) a PR branch is CONFLICTING or DIRTY after main advances and needs rebasing, (2) a mass rebase of 10+ PRs is needed after a major refactor causes conflicts across the queue, (3) a stacked PR goes DIRTY when its prerequisite merges and the base must be retargeted — later CI/lint fix commits on the dependent branch are orphaned and must be cherry-picked, (4) a Safety Net hook blocks git checkout --theirs / --ours during automated rebase conflict resolution, (5) a file was completely rewritten on one branch and small targeted edits exist on the other, (6) a parallel swarm produced overlapping PRs that conflict on the same paths and one must be rebased onto the other, (7) a feature PR conflicts after a sibling refactor merges and edits must be ported to the new file structure, (8) a TypeScript or other language-level shadowing bug appears only after a rebase because two branches independently added identically-named locals to the same scope, (9) numerical or optimizer PRs conflict when main merged its own version of a shared module and API signatures changed, (10) a PR's substantive change independently landed on main via a sibling PR so a rebase produces an add/add conflict on a duplicated new file and the PR becomes a near-no-op residual, (11) a PR is DIRTY with all CI checks green/passing — the merge conflict itself is the sole blocker (rebase, do not hunt for a failing job), (12) a rebase hits a modify/delete conflict on a file the PR intentionally deletes — confirm the base copy is still stale then git rm, (13) a PR is BLOCKED with mergeable=MERGEABLE but a required check shows SKIPPED — the required check is gated by needs: on a job that fails because the branch carries unpinned GitHub Actions rejected by an org-wide SHA-pin policy; fix is rebase to inherit main's pinned workflow files (not an empty re-trigger commit), (14) multiple rebased PRs — including ones unrelated to the failing test — all fail the SAME test after merging onto main; suspect a broken main from a SEMANTIC collision between two independently-merged PRs that never textually conflict (e.g. a return-tuple arity change + a stale test mock), prove it by running the failing test against bare origin/main, and fix main first, (15) two parallel cluster-extraction PRs both create the same new module file and the rebase produces an add/add conflict on BOTH the source module AND its test file — main's source is authoritative, test files must be semantically merged (keep main's richer base + append your branch's unique test classes), (16) a rebase hits AA (both-added) conflicts on new files — the conflicted file shows NO <<<<<<< markers and contains only one side's content; you must use git show HEAD:<path> and git show REBASE_HEAD:<path> to read both versions before resolving, (17) a CLUSTER of sibling refactor PRs all edit the SAME shared files and were run in parallel so all but one are CONFLICTING/DIRTY (and possibly hand-braked with state:skip) — land them as a SEQUENTIAL rebase chain SMALLEST-DIFF-FIRST, rebasing each onto trunk only AFTER the prior merges, resolving every conflict as the UNION of each refactor's extractions (keep both helpers; every duplicated method becomes a thin delegate; merge import lists and drop now-unused imports via lint), then re-sign all commits with `git rebase --exec '...-s -S' origin/main` for DCO+GPG, (18) after rebase, tests fail because test mocks expected the PR branch's refactored signatures but rebase brought in origin/main's different implementation — the git conflict resolved cleanly (no text-level conflicts), but the test mocks diverge from actual code. Test expects subprocess.check_output but code uses run_subprocess; mock returns 7-tuple but impl expects 9-tuple. After textual conflict resolution succeeds, run tests to surface semantic mismatches, then regenerate test mocks to match CURRENT implementation, not the PR's expected changes (see § L), (19) an Inference360 H200 Slurm PR branch has stale/dirty local checkout work before rebase and master renamed control lifecycle to Warden; preserve unrelated staged work first, rebase onto origin/master, keep Warden env names while preserving nested srun --mem=0, and push with an explicit force-with-lease after local + remote head comparison (see § O)"
 category: ci-cd
-date: 2026-06-27
-version: "1.11.0"
+date: 2026-06-29
+version: "1.12.0"
 user-invocable: false
 history: pr-rebase-conflict-resolution-patterns.history
-tags: [git, rebase, merge-conflict, pr, batch, stacked-pr, cherry-pick, safety-net, parallel-swarm, serial-merge-train, full-rewrite, shadow-variable, tdz, numeric-equivalence, clang-format, cmake, pixi-lock, force-with-lease, auto-merge, already-merged-sibling, add-add-conflict, sha-pin, unpinned-actions, skipped-required-check, markdownlint, lint-blocked, org-policy, myrmidon-swarm, semantic-collision, broken-main, tuple-arity, stale-mock, merge-train-cascade, cluster-extraction, parallel-pr-same-module, aa-conflict, uu-conflict, both-added, git-status-codes, no-markers, same-file-cluster, sequential-rebase-chain, smallest-first, thin-delegate, union-resolution, dco-signoff, state-skip-stranded, test-mock-mismatch, mock-divergence, subprocess-api-change, implementation-divergence, test-fixture-regeneration, semantic-test-failure, rebase-not-reparented, stale-merge-base, merge-base-verification, main-only-symbol-check, false-rebase-success, half-applied-refactor, per-phase-timeout-regression, multi-layer-refactor, options-object-vs-helpers, value-regression]
+tags: [git, rebase, merge-conflict, pr, batch, stacked-pr, cherry-pick, safety-net, parallel-swarm, serial-merge-train, full-rewrite, shadow-variable, tdz, numeric-equivalence, clang-format, cmake, pixi-lock, force-with-lease, auto-merge, already-merged-sibling, add-add-conflict, sha-pin, unpinned-actions, skipped-required-check, markdownlint, lint-blocked, org-policy, myrmidon-swarm, semantic-collision, broken-main, tuple-arity, stale-mock, merge-train-cascade, cluster-extraction, parallel-pr-same-module, aa-conflict, uu-conflict, both-added, git-status-codes, no-markers, same-file-cluster, sequential-rebase-chain, smallest-first, thin-delegate, union-resolution, dco-signoff, state-skip-stranded, test-mock-mismatch, mock-divergence, subprocess-api-change, implementation-divergence, test-fixture-regeneration, semantic-test-failure, rebase-not-reparented, stale-merge-base, merge-base-verification, main-only-symbol-check, false-rebase-success, half-applied-refactor, per-phase-timeout-regression, multi-layer-refactor, options-object-vs-helpers, value-regression, inference360, warden, slurm, h200, dirty-local-checkout, staged-work-backup, explicit-force-lease, uv-verify, ruff-shell-split]
 ---
 
 # PR Rebase & Conflict Resolution Patterns
@@ -15,7 +15,7 @@ tags: [git, rebase, merge-conflict, pr, batch, stacked-pr, cherry-pick, safety-n
 
 | Field | Value |
 |-------|-------|
-| Date | 2026-06-07 |
+| Date | 2026-06-29 |
 | Objective | One canonical playbook for rebasing PR branches onto an advanced main and resolving every class of rebase/merge conflict — single PRs, mass waves, stacked PRs, parallel-swarm collisions, Safety-Net-blocked resolution, full-file rewrites, and language-level bugs introduced by merging two independent branch edits |
 | Outcome | Verified across the HomericIntelligence ecosystem (ProjectOdyssey, ProjectScylla, ProjectMnemosyne, ProjectKeystone, ProjectHephaestus, ProjectHermes, ProjectNestor, AchaeanFleet, Myrmidons, Agamemnon, Odysseus) — hundreds of PRs rebased and merged |
 | Verification | verified-ci |
@@ -46,7 +46,8 @@ tags: [git, rebase, merge-conflict, pr, batch, stacked-pr, cherry-pick, safety-n
 - **Rebase completes with NO git conflict markers, but tests fail on mock signature mismatches** — the PR branch's test mocks expected refactored function signatures; rebase brought in origin/main's different implementation. Git resolved textually cleanly (no `<<<<<<<` markers), but test mocks no longer match: test expects `subprocess.check_output` but code uses `run_subprocess`; mock returns 7-tuple but implementation expects 9-tuple; test function signature doesn't match current module. After rebase, run tests to surface these semantic divergences, then regenerate test mocks against ACTUAL current implementation, not the PR's expected changes. Do NOT try to "fix" the implementation to match test expectations — test expectations are stale; regenerate mocks to match code (see § L / ProjectHephaestus PR #1633, issue #1405).
 - **A rebase agent reports "rebased onto origin/main, force-pushed" but the branch was NEVER re-parented** — `git merge-base origin/main origin/<branch>` is STILL the old stale base (e.g. 29 commits behind) and the branch does NOT contain main's recently-merged content (a known main-only symbol from a merged sibling is ABSENT). The rebase was run from/onto a stale ref, or a later force-push from a worktree built off the OLD branch tip silently reset the base. Do NOT trust the self-report — MANDATORY verify `git merge-base origin/main HEAD == git rev-parse origin/main` AND grep the pushed branch for a known main-only symbol (see § M).
 - **A multi-layer refactor rebase is half-applied: one layer fixed, parallel layers still flattened** — a PR intentionally restores a set of related values (e.g. per-phase timeouts 300/1800/600 vs a flat 7200), and the conflict resolution fixes ONE layer (the dataclass/options-object field defaults in `models.py`) while LEAVING the parallel layers (the `*_timeout()` helper FUNCTIONS in `claude_timeouts.py` + the constants in `constants.py`) in the wrong/flattened state. A spot-check of `models.py` looks correct, but every helper function used at the call sites returns the wrong value — caught ONLY by reading the actual CI unit-test failure (`assert 300 == 7200`), never by any self-report (see § N).
-- Common trigger phrases: "fix these failing PRs", "rebase all branches onto main", "mass rebase after merge wave", "stacked PR went dirty", "Safety Net blocked git checkout", "markdownlint SKIPPED BLOCKED", "action not allowed must be pinned", "CONFLICT (add/add) on new module", "rebase clean but tests fail on mock", "test mock divergence after rebase", "agent said it rebased but merge-base is stale", "branch is N commits behind after a claimed rebase", "rebased timeout PR but functions still return the flat value", "assert 300 == 7200 after rebase".
+- **An Inference360 H200 Slurm PR branch needs cleanup before rebase** — local checkout is stale/dirty and contains unrelated staged operator/wizard work; preserve it with a patch, backup branch, and stash before resetting to the remote PR branch, then rebase onto `origin/master` and resolve Warden rename conflicts without losing nested `srun --mem=0` behavior (see § O).
+- Common trigger phrases: "fix these failing PRs", "rebase all branches onto main", "mass rebase after merge wave", "stacked PR went dirty", "Safety Net blocked git checkout", "markdownlint SKIPPED BLOCKED", "action not allowed must be pinned", "CONFLICT (add/add) on new module", "rebase clean but tests fail on mock", "test mock divergence after rebase", "agent said it rebased but merge-base is stale", "branch is N commits behind after a claimed rebase", "rebased timeout PR but functions still return the flat value", "assert 300 == 7200 after rebase", "Inference360 control renamed to Warden", "safe PR cleanup before hard reset", "explicit force-with-lease with expected old SHA".
 
 ## Verified Workflow
 
@@ -693,6 +694,116 @@ If EITHER check fails, the rebase did NOT take — discard the "success" report 
 
 **Why this happens**: Git's textual conflict resolution operates file-by-file. A resolver focused on the most-visible layer (`models.py`) can cleanly resolve it while the parallel layers — the helper functions and constants that the call sites actually use — silently retain the regressed/flattened values from whichever side the rebase happened to keep. The options-object default and the helper-function return are two independent encodings of the SAME contract; fixing one does not fix the other.
 
+#### O. Inference360 dirty local PR checkout + Warden rename conflict
+
+**Trigger**: An Inference360 H200 Slurm PR branch must be rebased onto current `origin/master`, but
+the local checkout is stale/dirty and contains unrelated staged work. Main has also renamed the
+control lifecycle to Warden, so a PR commit that still touches the launch path conflicts in
+`inference360/__init__.py` and `tests/test_warden_lifecycle.py`.
+
+**Verified case**: Inference360 PR #289, branch `feat/config-derived-8b-serving-limits`,
+rebased on 2026-06-29. Objective: clean up a stale/dirty local PR checkout, rebase onto current
+`origin/master`, resolve Warden rename conflicts while preserving the PR's nested `srun --mem=0`
+serving-launch behavior, and make the PR mergeable again.
+
+**Quick reference**:
+
+```bash
+# 1. Before syncing a dirty local PR checkout, inspect and preserve unrelated work.
+git status --short --branch
+git log --oneline --decorate --left-right --cherry-pick \
+  origin/feat/config-derived-8b-serving-limits...HEAD
+git diff --staged > /tmp/inference360-pr289-local-staged-backup-20260629.patch
+git branch backup/pr289-local-pre-sync-20260629
+git stash push --staged -m "backup wizard work before syncing PR 289 2026-06-29"
+git reset --hard origin/feat/config-derived-8b-serving-limits
+
+# 2. Rebase onto Inference360 trunk (master, not main).
+git fetch origin master feat/config-derived-8b-serving-limits
+git log --oneline --decorate --left-right --cherry-pick \
+  origin/master...origin/feat/config-derived-8b-serving-limits
+git rebase origin/master
+# Resolve conflicts, then stage only the resolved files.
+git add inference360/__init__.py tests/test_warden_lifecycle.py
+env GIT_EDITOR=true git rebase --continue
+
+# 3. Verify locally before pushing.
+git diff --check origin/master...HEAD
+rg -n "<<<<<<<|=======|>>>>>>>" inference360 tests scripts manifests
+env UV_CACHE_DIR=/tmp/uv-cache uv run --extra dev pytest \
+  tests/test_warden_lifecycle.py \
+  tests/test_inference360_utils.py \
+  tests/test_manifest_validation.py \
+  tests/test_quality_gate_scripts.py -q
+env UV_CACHE_DIR=/tmp/uv-cache uv run --extra dev ruff check \
+  inference360/__init__.py \
+  tests/test_warden_lifecycle.py \
+  tests/test_inference360_utils.py \
+  tests/test_manifest_validation.py \
+  tests/test_quality_gate_scripts.py
+bash -n scripts/run_inference360_container.sh
+env UV_CACHE_DIR=/tmp/uv-cache uv run inference360 check manifests --cluster m2
+env UV_CACHE_DIR=/tmp/uv-cache uv run --extra dev ruff format --check \
+  inference360/__init__.py \
+  tests/test_warden_lifecycle.py \
+  tests/test_inference360_utils.py \
+  tests/test_manifest_validation.py \
+  tests/test_quality_gate_scripts.py
+
+# 4. Force-push only after proving the remote still points at the expected old SHA.
+git rev-parse HEAD
+git ls-remote origin refs/heads/feat/config-derived-8b-serving-limits
+git push --force-with-lease=refs/heads/feat/config-derived-8b-serving-limits:864f86889bddaaffdced6c0fdf66ff53d87ab43e \
+  origin HEAD:feat/config-derived-8b-serving-limits
+```
+
+**Local cleanup contract**:
+
+- Do NOT hard-reset a dirty PR checkout until unrelated local work has all three recovery paths:
+  a patch backup, a backup branch, and a stash. In PR #289 those were
+  `/tmp/inference360-pr289-local-staged-backup-20260629.patch`,
+  `backup/pr289-local-pre-sync-20260629`, and
+  `stash@{0}: backup wizard work before syncing PR 289 2026-06-29`.
+- After the safeguards exist, reset the local branch to the remote PR branch before rebasing.
+  This avoids mixing unrelated staged work into the conflict resolution.
+
+**Warden conflict resolution rule**:
+
+- Keep Warden environment names introduced on `master`:
+  `INFERENCE360_WARDEN_SLURM_JOB_ID`, `INFERENCE360_WARDEN_NODE_ID`, and
+  `INFERENCE360_WARDEN_LAUNCH_SCRIPT`.
+- Preserve the PR's nested `srun --mem=0` behavior. The test helper
+  `_parse_safe_warden_srun_arguments` expects the ten-argument shape including `--mem=0`; do not
+  resolve the conflict by reverting to the old control lifecycle names or by dropping that nested
+  `srun` argument.
+
+**Verification details**:
+
+- Conflict-marker scans should use the full marker regex. A search for only `=======` can flag
+  decorative shell separator lines made of `====` and waste time on false positives.
+- Do not pass `.sh` files to Ruff. Ruff parses Python and will report invalid syntax on shell
+  scripts; use `bash -n scripts/run_inference360_container.sh` for shell syntax.
+- In the verified PR #289 run, the targeted pytest command reported `489 passed`; Ruff check,
+  Ruff format check, shell syntax, `git diff --check`, and
+  `inference360 check manifests --cluster m2` all passed.
+
+**Safe push rule**:
+
+- Compare local `HEAD` and the remote branch tip immediately before pushing.
+- Use an explicit lease pinned to the observed old remote SHA. For PR #289, remote still pointed to
+  `864f86889bddaaffdced6c0fdf66ff53d87ab43e`, local rebased head was
+  `bbf82e799fa430f868af3d96c807e1e18a5eb15a`, and the safe push command was:
+
+  ```bash
+  git push --force-with-lease=refs/heads/feat/config-derived-8b-serving-limits:864f86889bddaaffdced6c0fdf66ff53d87ab43e \
+    origin HEAD:feat/config-derived-8b-serving-limits
+  ```
+
+**Result**: PR #289 head became `bbf82e799fa430f868af3d96c807e1e18a5eb15a`; GitHub reported
+`mergeStateStatus=CLEAN`, `mergeable=MERGEABLE`, no active unresolved review threads, and green
+required checks (`validate`, CodeQL, secrets, SAST, Python SCA, analyzers). Verification level:
+`verified-ci`.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -745,6 +856,10 @@ If EITHER check fails, the rebase did NOT take — discard the "success" report 
 | Tried to rebase/land all cluster PRs in parallel (as the loop did) | Assumed independent PRs could merge concurrently | Only the first merged; the other 4 went CONFLICTING because they edit the same files — operator `state:skip` then stranded them | Serialize a same-file refactor cluster into a smallest-first rebase chain; the loop's parallel dispatch has no file-overlap awareness (§ K3) |
 | Trusted a rebase agent's "rebased onto origin/main, force-pushed" self-report | Believed the success report and moved on without verifying the merge-base | The branch's merge-base stayed at the stale base (29 commits behind); the branch never contained main's merged sibling refactors (known main-only symbol absent); two Opus agents both reported success while the rebase never took — a later force-push from a worktree built on the OLD branch tip silently reset the base. Wasted multiple CI rounds. | ALWAYS verify after any claimed rebase: `git merge-base origin/main HEAD == git rev-parse origin/main` (re-fetch first) AND `git show origin/<branch>:<file> \| grep -c <known-main-only-symbol>` > 0 before believing a rebase succeeded; create the rebase worktree from the CURRENT `origin/<branch>` and re-verify the remote merge-base after pushing (ProjectHephaestus #1657, § M) |
 | Resolved a multi-layer timeout refactor rebase by fixing only `models.py` options-object defaults | Spot-checked `models.py`, saw correct per-phase values (300/1800/600), declared the rebase resolved | `claude_timeouts.py`'s `*_claude_timeout()` functions stayed flattened to `7200` and `constants.py`'s `AGENT_*` constants + `read_timeout_env` were DELETED — a hidden per-phase value regression that passed the `models.py` spot-check but failed CI with `assert 300 == 7200` (test `test_uses_central_learn_timeout`). The options-object default and the helper-function return are two independent encodings of the same contract; fixing one didn't fix the other. | Verify EVERY layer of a multi-layer refactor (constants + helper functions + options-object defaults + tests), not just the most-visible one; for a "restore main's values" conflict take main's constants/helpers/tests files WHOLESALE (`git show origin/main:<file> > <file>`) then re-add ONLY the PR's genuinely-new additions; assert the actual function return values (`assert planner_claude_timeout()==300`) and run the contract test; read the CI `assert 300 == 7200` output to pinpoint the still-flattened layer (ProjectHephaestus #1657, § N) |
+| Hard-resetting a dirty local Inference360 PR checkout before preserving unrelated staged work | Local branch had stale PR state plus unrelated staged wizard/operator work; a reset was needed before rebasing | A reset without backups would discard work that did not belong to the PR cleanup | Before syncing, inspect status and left/right commits, then create all three safeguards: patch backup, backup branch, and stash; only then `git reset --hard origin/<pr-branch>` (§ O) |
+| Resolving Inference360 Warden rename conflicts by keeping old control env names | Conflict was in `inference360/__init__.py` and `tests/test_warden_lifecycle.py` after master renamed control lifecycle to Warden | Old control names no longer match current platform contracts and would regress the H200 Slurm Warden lifecycle | Keep `INFERENCE360_WARDEN_*` env names from master while preserving the PR's nested `srun --mem=0`; `_parse_safe_warden_srun_arguments` expects the ten-argument shape including `--mem=0` (§ O) |
+| Running `git rebase --continue` interactively in a non-interactive session | Conflict files were staged, but rebase opened an editor and failed | The rebase needed the original commit message reused without an editor | Rerun as `env GIT_EDITOR=true git rebase --continue`; do not invent a new message or use unsupported `--no-edit` (§ O) |
+| Passing shell scripts to Ruff during post-rebase verification | Included `.sh` files in a broad Ruff command | Ruff parses Python and reports invalid syntax for shell files, creating a false failure | Run Ruff only on Python files; use `bash -n scripts/run_inference360_container.sh` for shell syntax (§ O) |
 
 ## Results & Parameters
 
@@ -752,6 +867,7 @@ If EITHER check fails, the rebase did NOT take — discard the "success" report 
 rebase_strategy: rebase (never merge main into the branch; keep history linear)
 worktree: git worktree add /tmp/<name> origin/<branch>   # never local checkout
 push_flag: --force-with-lease            # dependabot: --force (GitHub auto-rebases)
+explicit_lease_for_shared_pr_branch: --force-with-lease=refs/heads/<branch>:<observed-old-remote-sha>
 auto_merge: re-arm after EVERY force-push; --squash if rebase-merge disabled; arm AFTER push
 silent_drop_check: git log origin/main..HEAD --oneline   # empty → close as superseded
 ours_theirs_in_rebase: ours=:2:=HEAD=main ; theirs=:3:=REBASE_HEAD=your replayed commit
@@ -759,6 +875,11 @@ safety_net_take: git show :2:file > file (ours) | git show :3:file > file (their
 pixi_lock: rm + git add, then `pixi lock`  (never --ours/--theirs/hand-merge)
 marketplace_json: git checkout --ours     (main = union of all merged entries)
 changelog: take HEAD/main; consolidation PR gathers entries
+inference360_trunk: origin/master
+inference360_dirty_checkout_safeguards: patch backup + backup branch + stash before hard reset
+inference360_warden_conflict_rule: keep INFERENCE360_WARDEN_* env names and preserve nested srun --mem=0
+inference360_shell_validation: bash -n scripts/run_inference360_container.sh
+inference360_python_validation: uv run pytest targeted tests + ruff check/format on Python files only
 shared_hot_files: SERIAL MERGE TRAIN (rebase→wait-MERGE→fetch→next), simplest-first
 disjoint_files: parallel Sonnet/Haiku sub-agents in worktrees (~9 PRs/agent)
 post_rebase_check: run type-checker/linter/local-build before pushing (semantic conflicts)
@@ -831,3 +952,4 @@ git -C /tmp/pr-<N> push --force-with-lease origin HEAD:<branch>
 | ProjectHephaestus | 2026-06-27, PR #1633 (issue #1405): Rebased autoimpl-generated PR onto origin/main; git conflicts in `hephaestus/github/pr_merge.py` and `tidy.py` resolved cleanly (no markers). Post-rebase tests failed with mock signature mismatches: test mocks expected PR's refactored code (`run_subprocess` calls) but rebase brought origin/main's pre-refactor implementation (`subprocess.check_output` calls). TRIGGER #18 / § L scenario: textual conflict resolved but semantic divergence hidden until test-run. FIX: regenerated test mocks to match ACTUAL current implementation (not PR's expected changes). Changed subprocess mocking target from `subprocess.check_output` back to `run_subprocess`; updated test function signatures to match current module. Also fixed implementation bug: `local_branch_exists()` needed to use `run_subprocess` to match test expectations of current code. verified-ci: all 335 github tests pass, pre-commit clean. | verified-ci |
 | ProjectHephaestus | 2026-06-27, PR #1657 (Option-A timeout rebase) — STALE MERGE-BASE: two Opus agents each reported "rebased onto origin/main, force-pushed", but `git merge-base origin/main origin/<branch>` stayed at the stale base (29 commits behind) and the branch never contained `load_state_file` (a known main-only symbol from a merged sibling). Root cause: a later force-push from a worktree built on the OLD branch tip silently reset the base. Lesson: after any claimed rebase, verify `git merge-base origin/main HEAD == origin/main` (re-fetch first) AND grep the pushed branch for a known main-only symbol; create the rebase worktree from the CURRENT `origin/<branch>` and re-verify the remote merge-base after pushing (§ M). | verified-ci |
 | ProjectHephaestus | 2026-06-27, PR #1657 (Option-A timeout rebase) — HALF-APPLIED MULTI-LAYER REFACTOR: a per-phase-timeout restore (300/1800/600 over a flat 7200) was resolved correctly in `models.py` (`AGENT_PLAN_TIMEOUT=300`, `AGENT_IMPL_TIMEOUT=1800`) but every `*_claude_timeout()` helper in `claude_timeouts.py` still returned the flat `DEFAULT_AGENT_TIMEOUT=7200`, and `constants.py`'s `AGENT_*` constants + `read_timeout_env` were deleted. Passed a `models.py` spot-check; caught only by CI's `assert 300 == 7200` (test `test_uses_central_learn_timeout`). Fix: take main's constants/helpers/tests wholesale (`git show origin/main:<file> > <file>`), re-add only the PR's new CLI DEFAULT_ constant, assert the actual function returns (`planner_claude_timeout()==300`), run the contract test (§ N). | verified-ci |
+| Inference360 | 2026-06-29, PR #289 (`feat/config-derived-8b-serving-limits`): stale/dirty local checkout cleaned safely by preserving unrelated staged wizard work with `/tmp/inference360-pr289-local-staged-backup-20260629.patch`, `backup/pr289-local-pre-sync-20260629`, and `stash@{0}: backup wizard work before syncing PR 289 2026-06-29`; branch reset to remote, rebased onto `origin/master`, and Warden conflicts in `inference360/__init__.py` + `tests/test_warden_lifecycle.py` resolved by keeping `INFERENCE360_WARDEN_*` env names while preserving nested `srun --mem=0`. Verified with `git diff --check`, conflict-marker scan, 489 targeted pytest passes, Ruff check/format on Python files, `bash -n` for shell, and `inference360 check manifests --cluster m2`; pushed with explicit lease from `864f86889bddaaffdced6c0fdf66ff53d87ab43e` to `bbf82e799fa430f868af3d96c807e1e18a5eb15a`. GitHub reported `mergeStateStatus=CLEAN`, `mergeable=MERGEABLE`, no unresolved review threads, and green required checks. | verified-ci |
