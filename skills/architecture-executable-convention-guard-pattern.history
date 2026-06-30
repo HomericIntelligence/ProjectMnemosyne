@@ -1,5 +1,28 @@
 # architecture-executable-convention-guard-pattern — History
 
+## v1.7.0 (2026-06-30)
+
+**Changed by:** ProjectHephaestus issue #1448 / PR #1703 (IMPLEMENTATION learning — the FIRST end-to-end execution of the bidirectional-mirror sub-pattern, specifically its ghost-directory / name-only-mirror variant, which the skill had previously described as PLAN-ONLY).
+**Verification:** verified-local for THIS instance (the full targeted test suite — 42 passed — and `pre-commit run --all-files` both passed locally; CI on PR #1703 was still pending at capture time, so NOT verified-ci). The frontmatter `verification` field stays `unverified` because the weakest sub-patterns (#1506/#1507/#1516 and the #1543 allowlist reverse-check) remain plan-only; the #1448 ghost-directory material is clearly marked `verified-local` inline.
+
+### What changed
+- Added a "Verified-local instance: the ghost-directory / name-only-mirror check (ProjectHephaestus #1448 / PR #1703)" subsection inside the existing "Sub-Pattern: Bidirectional Mirror / Parity Invariants." Documents `check_no_ghost_packages(src_root, test_root) -> (ok, ghosts)` added as a 4th check inside the already-required `check_test_structure` orchestrator in `hephaestus/validation/test_structure.py`, riding the already-wired `hephaestus-check-test-structure` gate (pre-commit hook id `check-unit-test-structure`, plus `_required.yml`/`test.yml`) — NO new CI job (confirms the "tested predicate on the already-wired gate" rule).
+- Captured the key NEW correctness nuance: the predicate intersects `_get_subpackages(src) & _get_subpackages(test)`, and `_get_subpackages` already EXCLUDES `__pycache__`-only / stale-`.pyc` dirs (via `_has_python_source`), so the issue's literal stale-`.pyc` `tests/unit/git/` is NOT enumerable and is intentionally out of scope; the in-scope ghost is an `__init__.py`-only SHELL pair (source has no module beyond `__init__.py` AND test dir has no `test_*.py`). The first failure fixture used a BARE `tests/git/` (no `.py`) which `_get_subpackages` filters out, so the ghost was never detected and the test passed VACUOUSLY — the fixture had to add `__init__.py` on BOTH sides to land in `shared`.
+- Confirmed the coverage-altitude lesson in practice: BOTH a helper-altitude `TestCheckNoGhostPackages` (incl. `test_real_repo_has_no_ghosts` so the gate ships green on the real tree) AND an orchestrator-altitude `capsys` `test_ghost_package_fails` driving the new stderr print loop; module reached 91.37% line coverage (>= 83% gate), 42 tests passed.
+- Recorded the PR-review documentation-only clarification (a 3-line inline comment at the `shared = ...` line recording the narrower-than-audit scope) and the ground-truth re-derivation (the literal `git/` dirs were already gone; the durable fix was the structural mirror gap, not a file deletion).
+- Updated the bidirectional sub-pattern's warning banner to mark the ghost-directory variant as verified-local for the #1448 instance while keeping the #1543 reverse-check material and the #1506/#1507/#1516 sub-patterns unverified.
+- Added a Failed Attempts row (ghost-package failure fixture used a BARE test dir → filtered out by the guard's pre-filter → ghost not detected → test passed vacuously → fixture must add `__init__.py` on both sides).
+- Added a "Ghost-directory generalization (v1.7.0, verified-local for the #1448 instance)" note to Results & Parameters and a Verified On row (issue #1448 / PR #1703, verified-local).
+- Added tags `ghost-directory-guard`, `prefiltered-population-fixture` (frontmatter + footer). Bumped frontmatter version 1.6.0 → 1.7.0 (MINOR — new verified findings + a new Failed-Attempts row, extends the existing sub-pattern) and `date` 2026-06-26 → 2026-06-30.
+
+### Why
+ProjectHephaestus issue #1448 / PR #1703 is the first time the bidirectional-mirror sub-pattern (previously PLAN-ONLY/unverified) was implemented end-to-end and proven locally. It CONFIRMS the skill's own previously-unverified guidance — add the content-aware predicate on the already-wired gate (no new CI job), the coverage-altitude helper-vs-orchestrator test split, and re-derive the audit's described state — and surfaces a NEW durable lesson: when a guard's population is pre-filtered (here by "has Python source"), the in-scope failure fixture must satisfy that pre-filter on BOTH sides or the test silently exercises nothing. This material belongs in the same skill as the rest of the executable-convention-guard family. It is verified-local (not verified-ci) because CI on PR #1703 was still pending at capture time; the other plan-only sub-patterns are NOT promoted.
+
+### Previous version (v1.6.0) snapshot
+The v1.6.0 rendered `.md` content prior to this amendment is preserved in git history at the parent commit of this amendment. It carried `verification: unverified`, the coredump `verify_crash_bundle` v1.0.0 material (verified-local), the v1.1.0 bidirectional mirror/parity sub-pattern (plan-only), the v1.2.0 coverage-altitude step 8, the v1.3.0 commit-trailer (DCO) sub-pattern, the v1.4.0 NOGO→GO-tightening (#1506 R1) sub-pattern, the v1.5.0 doc-table↔code membership-guard (#1507) sub-pattern, and the v1.6.0 scope-a-membership-guard (#1506 R2) sub-pattern — but did NOT yet contain the verified-local ghost-directory (#1448 / PR #1703) instance subsection.
+
+---
+
 ## v1.6.0 (2026-06-26)
 
 **Changed by:** ProjectHephaestus issue #1506 R2 (PLANNING learning — a **critical D / NOGO** on the R1 re-plan; this is the second NOGO on the same #1506 session, distinct from the v1.4.0 MINOR tightenings). Renumbered from the originally-authored v1.5.0 to v1.6.0 because the concurrent #1507 amendment (PR #2850) took v1.5.0 first; this entry was rebased on top of it.
