@@ -1,6 +1,88 @@
 <!-- markdownlint-disable MD024 -->
 # dry-refactoring-workflow — History
 
+## v1.13.0 (2026-06-30)
+
+**Changed by:** ProjectHephaestus #1428 — consolidate two coexisting CLI log-format strings into named constants — /learn
+**Verification:** verified-local (for the new Phase 17; the rest of the skill is unchanged — `verified-ci` except the planning-only Phases 10/13/14/15 and the verified-local Phases 16/12d)
+
+### What changed
+
+- Added Phase 17 (**VERIFIED-LOCAL** — EXECUTED end-to-end, not planning-only) — "Issue TITLE vs
+  BODY mismatch: read the BODY + approved plan, treat the title as a possibly-stale label." This is
+  the **upstream sibling** of Phase 12a/12d (stale `Evidence:` sections / stale plan anchors): those
+  fight stale *locations* once the task is known; Phase 17 fires one step earlier, when the title and
+  body describe *two DIFFERENT tasks* and you must first decide which task is even real.
+- Captured from an EXECUTED ProjectHephaestus #1428 session. The issue **TITLE** said
+  "[security] Ruff S102 (exec) suppression blanket across all scripts/ — narrow to specific files",
+  but the **BODY** was entirely about standardizing / consolidating two coexisting CLI log-format
+  strings (the library `LOG_FORMAT` ` - `-separated format vs the automation `[LEVEL] name:` CLI
+  format). Two unrelated tasks; the title was a mislabel.
+- The resolution rule (17a/17b): in ProjectHephaestus's TASK → `# Implementation Plan` →
+  `## 🔍 Plan Review` automation pipeline the title is the least-trustworthy field. Read
+  `gh issue view <n> --comments` FIRST and treat the issue BODY + the approved `# Implementation
+  Plan` comment + its `## 🔍 Plan Review` verdict as the authoritative source of WHAT to build,
+  never the title. In #1428 the plan review graded the plan "A / GO" and explicitly confirmed the
+  title-vs-body mismatch was resolved in favor of the body.
+- The worked CLI-log-format consolidation (17c) reinforces existing phases rather than adding new
+  mechanics: two CLI log literals (`"%(asctime)s [%(levelname)s] %(name)s: %(message)s"` +
+  `datefmt="%Y-%m-%d %H:%M:%S"`) copy-pasted across 6 automation modules (`_review_utils.py`,
+  `planner.py`, `ci_driver.py`, `audit_reviewer.py`, `plan_reviewer.py`, `implementer_cli.py`) were
+  consolidated into new `CLI_LOG_FORMAT` / `CLI_LOG_DATEFMT` constants in the LIBRARY-layer
+  `hephaestus/constants.py` — the boundary-placement rule (automation→library is allowed,
+  library→automation is forbidden, so `constants.py` keeps ONE canonical source reachable from both).
+  A THIRD terse github format (`"%(asctime)s %(levelname)-7s %(message)s"` in `github/fleet_sync.py`
+  + `github/tidy.py`) was LEFT UNTOUCHED and documented as an intentional variant (mirrors the
+  `TRANSIENT_ERROR_CORE` precedent), proven by a grep gauntlet (0 inline CLI literals in
+  `hephaestus/automation/` AND exactly 2 github-terse hits). Per-call-site preservation: keep
+  `implementer_cli.py`'s local `fmt`/`datefmt` names but assign them FROM the constants (its later
+  `setFormatter()` reuses them), and do NOT add a `datefmt=` arg to `audit_reviewer.py` (it never had
+  one). The pre-existing library `LOG_FORMAT` value was left UNCHANGED (consumed by `logging/utils.py`,
+  asserted in `tests/unit/utils/test_constants.py`). TDD RED-first via `TestCliLogFormat`
+  (`ImportError` before defining the constants, then GREEN).
+- Verification (verified-local): full automation suite green (2238 passed) + 29 constants /
+  import-surface / automation-boundary tests, `ruff check` + `ruff format` clean, `mypy` clean over
+  447 files, and the grep gauntlet (0 automation inline literals / exactly 2 github-terse hits).
+  Verified locally only; PR CI not yet merged at capture time (hence verified-local, NOT verified-ci).
+- Added 3 Failed Attempts rows (implement-the-title's-task, inline-only-at-basicConfig,
+  consolidate-the-intentional-github-variant), a Verified On entry (#1428), an Outcome bullet, a
+  description item (18), a Phase 17 body section, a Version History entry, and tags
+  (`title-body-mismatch`, `stale-issue-title`, `task-plan-review-pipeline`,
+  `authoritative-source-of-truth`, `approved-plan`, `cli-log-format`, `boundary-placement`,
+  `intentional-variant-carveout`, `grep-gauntlet`). Bumped frontmatter `version` 1.12.0 → 1.13.0;
+  `date` stays 2026-06-30; frontmatter `verification` stays `unverified` (Phase 17 carries its own
+  inline `verified-local` label, matching the v1.10.0+ convention).
+
+### Why
+
+A purely additive amendment. The single most transferable, non-obvious insight from #1428 was the
+title-vs-body mismatch resolution rule — in an automated TASK/PLAN/REVIEW pipeline the issue title
+can be a stale label, and implementing it would have shipped the wrong change. The worked DRY
+consolidation is captured as a reinforcing example for the existing boundary-placement (Phase 10) and
+intentional-variant (Phase 8c/10) phases, not as new mechanics.
+
+### Snapshot of the prior version
+
+v1.13.0 is a purely additive amendment (adds Phase 17, 3 Failed Attempts rows, a Verified On row, an
+Outcome entry, a description item, a Version History entry, and tags; no prior content was removed or
+altered). The v1.12.0 frontmatter, immediately prior to this amendment, was:
+
+````markdown
+---
+name: dry-refactoring-workflow
+description: "Complete TDD-driven workflow for identifying and eliminating code duplication by extracting reusable helper methods. Use when: (1) ... (17) EXECUTING a consolidation against an APPROVED implementation plan whose exact `file:line` anchors may be stale ... fixing the indirection root transitively fixes the symptom the plan pointed at. (verified-local — ProjectHephaestus #1427 ...)"
+category: architecture
+date: 2026-06-30
+version: "1.12.0"
+user-invocable: false
+verification: unverified
+history: dry-refactoring-workflow.history
+---
+````
+
+The complete v1.11.0 (and earlier) skill bodies remain preserved in the entries below; the body is
+additive across versions, so each entry snapshots the frontmatter of its immediate predecessor.
+
 ## v1.12.0 (2026-06-30)
 
 **Changed by:** ProjectHephaestus #1427 — consolidate two coexisting log-format strings into named constants — /learn
