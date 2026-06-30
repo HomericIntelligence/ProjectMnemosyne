@@ -2,6 +2,31 @@
 
 # History: python-import-patterns-and-compatibility-guards
 
+## v1.8.0 (2026-06-29)
+
+**Changed by:** ProjectHephaestus issue #1419 (refactor: share validation CLI parser + centralize CLI logging; branch `1419-auto-impl`) — executed the addition of a single public symbol (`configure_cli_logging`) to `hephaestus/cli/utils.py:__all__` (re-exported in `hephaestus/cli/__init__.py:__all__`) in a repo whose `### hephaestus.cli` COMPATIBILITY.md section carries a PER-SYMBOL API table guarded by a LIVE-TREE-SCANNING validation test (`tests/unit/validation/test_api_table_docs.py` — `TestLiveTreeAlignment::test_real_compatibility_md_is_aligned` / `TestMain::test_main_returns_zero_on_real_repo`). Two tightly-coupled facets, SAME search surface ("I added a public symbol and an unrelated test broke"): (A) the missing-row failure and its alphabetical-row + same-cycle-sibling-version fix; (B) the live-tree test is a FALSE NEGATIVE in isolation and only fails in the full module.
+**Verification:** `verified-local` for ALL new section G′ material (fix executed end-to-end; `tests/unit/cli/test_utils.py`, `tests/unit/automation/test_ensure_state_labels.py`, `tests/unit/validation/test_api_table_docs.py` all green — 3186 passed; ruff clean; `pixi run mypy` "Success: no issues found in 446 source files"; `markdownlint-cli2 COMPATIBILITY.md` clean). Verified locally; CI confirmation pending on the originating PR. This also UPGRADES the previously-`unverified` issue #1513 COMPATIBILITY.md version-stamping guidance to `verified-local`. All pre-existing sections retain their prior verification levels.
+
+### What changed
+
+- Added a 10th "Use when" trigger to the frontmatter `description` and a matching "When to Use" bullet: EXECUTING a fix that adds a public symbol to a package `__all__` in a repo with a per-symbol COMPATIBILITY.md API table guarded by a live-tree-scanning validation test — covering the `missing-from-docs` failure, the alphabetical-row fix, the same-cycle-sibling version-column rule, and the full-suite-only false-negative hazard. Marked `verified-local` (ProjectHephaestus #1419); noted it upgrades the #1513 version-stamping guidance.
+- Bumped `version` frontmatter field: `1.7.0` → `1.8.0`; updated `date` to `2026-06-29`.
+- Added 10 frontmatter tags: `compatibility-md`, `api-table`, `missing-from-docs`, `live-tree-scan`, `full-suite-only`, `false-negative-isolation`, `version-column`, `same-cycle-siblings`.
+- Updated Overview `Date`, `Objective`, `Outcome`, and `Verification` rows to add the per-symbol API-table alignment + full-suite-only live-tree-scan hazard (section G′) as `verified-local`, and to record the #1513 version-stamping upgrade to `verified-local`.
+- Added detailed-steps subsection **G′. Keeping a per-symbol COMPATIBILITY.md API table aligned when you widen `__all__` — and the FULL-SUITE-ONLY live-tree-scan hazard (verified-local)** with a `verified-local` banner and five points: (1) add an alphabetical row to the matching `### <pkg>` section; (2) resolve the "since" version from same-cycle siblings, not `git describe`; (3) the full-suite-only false-negative hazard — isolated runs pass with the bug present, run the whole module; (4) markdownlint the doc; (5) cross-link to `dry-refactoring-workflow` for the stale-plan/sibling-PR-#1637 pattern (pointer only, not duplicated).
+- Added a `(10)` Quick Reference block: grep for the package section, alphabetical-insert rule, `git describe` vs same-cycle-sibling version rule, the authoritative full-module pytest command, and markdownlint.
+- Added 5 Failed Attempts rows (all `verified-local`, ProjectHephaestus #1419): ran the failing tests in isolation and called it green (false negative); added the symbol without a COMPATIBILITY.md row (per-symbol table vs tier-level entry); stamped the version from the latest tag (use same-cycle siblings); followed the stale plan's narrow-API instruction (would reverse merged #1637 code).
+- Added a "Per-symbol COMPATIBILITY.md API-table alignment" subsection under Results & Parameters with the failure signature, the one-row fix, and the false-negative-vs-authoritative pytest commands.
+- Added a Verified On row for issue #1419 (`verified-local`), and appended an "Update (issue #1419)" note to the existing #1513 Verified On row marking the version-stamp trap resolved.
+
+### Why
+
+ProjectHephaestus issue #1419 hit a distinct, high-surprise failure mode: adding one name to a package `__all__` broke an *unrelated-looking* documentation-table validation test, and — worse — that test PASSED when run in isolation, making a clean isolated run a false negative that would have shipped the bug. The search surface ("I added a public export and an unrelated doc-table test broke") is the same as this skill's section G (`__all__` widening + COMPATIBILITY.md), so it belongs here rather than in a new file or buried in `dry-refactoring-workflow` (someone debugging a broken api-table test would never search a DRY skill). Issue #1419 also empirically resolved the issue #1513 open question — how to stamp the COMPATIBILITY.md "since" column — by confirming the rule is "match same-cycle siblings", not tag arithmetic, upgrading that guidance from `unverified` to `verified-local`.
+
+### Previous version (v1.7.0) snapshot
+
+The v1.7.0 entry is directly below. Key differences from v1.8.0: v1.7.0 had no section G′, no `(10)` trigger/bullet/Quick-Reference block, no api-table/live-tree-scan tags, the #1513 version-stamping guidance still entirely `unverified`, and no Verified On row for issue #1419.
+
 ## v1.7.0 (2026-06-24)
 
 **Changed by:** ProjectHephaestus issue #1511 — executed the `hephaestus/cli/__init__.py` `__all__` alignment fix. Section G was previously `unverified` planning-guidance derived from a plan for issue #1513. Issue #1511 executed the same `__all__`-alignment pattern end-to-end (for the `cli` package rather than `logging`), confirming the core workflow locally.
