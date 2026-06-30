@@ -13,12 +13,13 @@ description: >-
   install extra (e.g. [automation]) so the library/product boundary is preserved,
   (7) consolidating a small cluster of always-co-imported modules into ONE canonical
   module while keeping the original paths as explicit re-export shims (the inverse
-  direction — merge, not split — but the same shim discipline applies).
+  direction — merge, not split — but the same shim discipline applies), (8) hardening
+  explicit re-export shims for static analyzers by declaring __all__ on every shim.
 category: architecture
 date: 2026-06-30
-version: "2.1.0"
+version: "2.2.0"
 user-invocable: false
-verification: verified-local
+verification: verified-ci
 history: automation-god-package-shim-first-decomposition.history
 tags:
   - python
@@ -35,6 +36,8 @@ tags:
   - optional-extra
   - re-export
   - ruff-f401
+  - static-analysis
+  - codeql
   - module-consolidation
 ---
 
@@ -44,11 +47,11 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-30 (v2.1.0) |
-| **Objective** | (v1.0.0) Decompose a 52-file flat god-package into 8 domain sub-packages via shim files. (v2.0.0) ALSO covers the inverse: consolidate a small cluster of always-co-imported config modules into ONE canonical module, keeping the originals as explicit re-export shims — executed for real in ProjectHephaestus #1441. (v2.1.0) ALSO records a verified-local SPLIT/move execution (#1443) and the **whole-test-tree patch-seam sweep** it surfaced |
-| **Outcome** | v1.0.0 plan for #1177 was never executed. v2.0.0 records a verified-local execution of the shim consolidation for #1441 ("Merge 4 Claude agent modules"): merge confirmed with ruff + mypy clean and a 145-test focused suite green. v2.1.0 records a verified-local SPLIT of 3 `*_state.py` modules into `state/` (#1443): full `tests/unit/automation` suite **2284 passed**, ruff + mypy clean — after a whole-test-tree patch-seam sweep fixed 4 failures the approved plan missed |
+| **Date** | 2026-06-30 (v2.2.0) |
+| **Objective** | (v1.0.0) Decompose a 52-file flat god-package into 8 domain sub-packages via shim files. (v2.0.0) ALSO covers the inverse: consolidate a small cluster of always-co-imported config modules into ONE canonical module, keeping the originals as explicit re-export shims — executed for real in ProjectHephaestus #1441. (v2.1.0) ALSO records a verified-local SPLIT/move execution (#1443) and the **whole-test-tree patch-seam sweep** it surfaced. (v2.2.0) ALSO records the CI-verified analyzer hardening for explicit re-export shims: every shim must declare an explicit `__all__` listing the public re-exported names |
+| **Outcome** | v1.0.0 plan for #1177 was never executed. v2.0.0 records a verified-local execution of the shim consolidation for #1441 ("Merge 4 Claude agent modules"): merge confirmed with ruff + mypy clean and a 145-test focused suite green. v2.1.0 records a verified-local SPLIT of 3 `*_state.py` modules into `state/` (#1443): full `tests/unit/automation` suite **2284 passed**, ruff + mypy clean — after a whole-test-tree patch-seam sweep fixed 4 failures the approved plan missed. v2.2.0 records the PR #1697 analyzer fix: `name as name` satisfied ruff, but static-analysis/review tooling still treated a shim import as dead until the shim declared explicit `__all__`; CI then went green |
 | **Trigger** | Either direction: a flat package with 40+ .py files (split), OR a cluster of 3-4 tiny always-co-imported modules (merge). Both keep original module paths as explicit re-export shims |
-| **Verification** | verified-local (MERGE #1441: ruff + mypy + 145-test focused suite green. SPLIT #1443: ruff + mypy clean, full `tests/unit/automation` suite 2284 passed, 0 failed) |
+| **Verification** | verified-ci for the v2.2.0 shim `__all__` analyzer fix in PR #1697; verified-local for MERGE #1441 (ruff + mypy + 145-test focused suite green) and SPLIT #1443 (ruff + mypy clean, full `tests/unit/automation` suite 2284 passed, 0 failed) |
 | **History** | [changelog](./automation-god-package-shim-first-decomposition.history) |
 
 ## When to Use
@@ -64,12 +67,13 @@ Apply this skill when any of the following is true:
 - You are planning (not yet executing) a migration and need to enumerate **unverified assumptions** for reviewer focus
 - **(Merge direction, v2.0.0)** You have a small cluster of **3-4 tiny modules that are always imported together** (e.g. `claude_models.py` + `claude_timeouts.py` + `session_naming.py`) and want to consolidate them into ONE canonical module while leaving each original path as a thin explicit re-export shim
 - You are writing an **explicit `from X import (name as name, ...)` re-export shim** and need to know whether `# ruff: noqa: F401` is required (it is NOT — and adding it triggers RUF100)
+- You have a backward-compat shim that already uses explicit `name as name` re-exports and ruff is green, but CodeQL/static-analysis/review tooling still flags a re-export as an unused/dead import; declare an explicit shim `__all__` containing every public re-exported symbol
 - A test reads a **private symbol** (`_KNOWN_MODELS`), calls `importlib.reload`, or pins a **logger name** (`caplog.at_level(..., logger="...")`) of a module you are about to turn into a shim — these tests CANNOT stay on the shim and must be repointed at the canonical module
 - **(Split direction, v2.1.0)** A test anywhere in the tree `mock.patch("...<flat_path>.<name>")` or `monkeypatch.setattr`s a name that the module you are moving **imported from elsewhere** (not one of the module's OWN public symbols) — after the move that bound name lives in the canonical sub-package and the flat shim no longer carries it, so the patch target vanishes. These seams hide in OTHER test files, not just the moved module's own test file, and require a whole-test-tree grep sweep (Step 8b below) — the `dir(shim)` parity test cannot catch them
 
 ## Verified Workflow
 
-> **Verification level: verified-local.** The SPLIT workflow (Steps 0-9 below) was designed
+> **Verification level: mixed.** The SPLIT workflow (Steps 0-9 below) was designed
 > during planning for ProjectHephaestus #1177 and remains a proposal for the full 52-file split,
 > but a **partial SPLIT was executed end-to-end** for ProjectHephaestus #1443 — moving the three
 > `*_state.py` modules into a `state/` sub-package with explicit `name as name` shims — and is
@@ -83,6 +87,9 @@ Apply this skill when any of the following is true:
 > green. Where the two disagree, the executed lessons win — most importantly the
 > **explicit-`as`-alias re-export shim needs NO `# ruff: noqa: F401`** (v1.0.0's templates added
 > that noqa; that is now corrected — see the Shim Consolidation section and Failed Attempts).
+> The v2.2.0 static-analysis hardening for explicit shim `__all__` is verified-ci from
+> ProjectHephaestus PR #1697: after `claude_models.py` declared its public re-export list,
+> the analyzer/review finding was addressed and CI reached green.
 
 ### Shim Consolidation (Merge Direction — verified-local, ProjectHephaestus #1441)
 
@@ -108,6 +115,9 @@ module (the inverse of the split below), keeping each original path as an explic
         module (they cannot read privates through a shim — shims omit privates by design).
      6. Add a full-surface parity test: parametrize over each shim, assert every public
         name `is` the same object in agent_config (filter module objects out of dir()).
+     7. Give every explicit re-export shim an explicit __all__ containing exactly the
+        public re-exported names. Ruff accepts `name as name`, but other static analyzers
+        may still treat imports as dead unless the public export surface is unambiguous.
 ```
 
 #### Step C1: Explicit re-export shim — NO `# ruff: noqa: F401`
@@ -128,6 +138,11 @@ The `name as name` re-binding is exactly what ruff treats as an intentional re-e
 to silence a warning that does not fire makes the directive itself unused, and ruff's RUF100
 (`unused noqa`) then fails CI. **This reverses v1.0.0's shim templates**, which carried
 `# ruff: noqa: F401` — drop that comment from any explicit-`as`-alias shim.
+
+The explicit `__all__` is still required on the shim. Ruff's re-export idiom and a static
+analyzer's dead-import model are separate checks: `name as name` can make ruff happy while a
+CodeQL-style analyzer or review tool still reports a re-export import as unused. `__all__`
+documents the intended public surface and makes export intent machine-readable.
 
 #### Step C2: `__all__` must be isort-sorted (RUF022)
 
@@ -179,6 +194,49 @@ def test_shim_reexports_match_canonical(shim_name):
             continue
         assert getattr(agent_config, name) is obj, f"{shim_name}.{name} drifted from agent_config"
 ```
+
+#### Step C5: Static-analyzer hardening with shim `__all__` (verified-ci, PR #1697)
+
+For every explicit re-export shim, declare `__all__` with the public symbols the shim owns.
+Keep the list literal in the shim, even if the canonical module also has `__all__`, so
+reviewers and static analyzers can see the compatibility surface without following aliases:
+
+```python
+from hephaestus.automation.agent_config import (
+    CODEX_ADVISE as CODEX_ADVISE,
+    FABLE as FABLE,
+    HAIKU as HAIKU,
+    OPUS as OPUS,
+    OPUS_48 as OPUS_48,
+    SONNET as SONNET,
+    advise_model as advise_model,
+    codex_advise_model as codex_advise_model,
+    git_message_model as git_message_model,
+    implementer_model as implementer_model,
+    learn_model as learn_model,
+    planner_model as planner_model,
+    reviewer_model as reviewer_model,
+)
+
+__all__ = [
+    "CODEX_ADVISE",
+    "FABLE",
+    "HAIKU",
+    "OPUS",
+    "OPUS_48",
+    "SONNET",
+    "advise_model",
+    "codex_advise_model",
+    "git_message_model",
+    "implementer_model",
+    "learn_model",
+    "planner_model",
+    "reviewer_model",
+]
+```
+
+Pair this with the parity test in Step C4. `__all__` makes the public surface explicit;
+the test catches missing or drifted re-exports before callers hit `AttributeError`.
 
 ### Quick Reference
 
@@ -499,6 +557,7 @@ A reviewer or implementer should check each one before executing the migration.
 | Group `__all__` by domain with comment banners in the merged module | Wrote a readable, domain-clustered `__all__` for agent_config.py | ruff RUF022 requires `__all__` to be isort-sorted (flat alphabetical); domain grouping with comments fails the check | Run `ruff check --fix --unsafe-fixes` to sort `__all__`; accept the flat alphabetical list — domain grouping is lost |
 | Leave a private-symbol / reload / caplog-logger test pointed at the shim | Kept `test_claude_models.py` importing the original (now-shim) module path | The shim deliberately omits privates (`_KNOWN_MODELS`), and the merged module's logger name changed to `hephaestus.automation.agent_config` (uses `getLogger(__name__)`), so `caplog.at_level(..., logger="...claude_models")` captured nothing | Repoint such tests via a local alias `from ... import agent_config as claude_models` AND retarget every caplog logger-name string to the canonical module's logger |
 | Rely only on focused per-module tests to catch shim drift | Assumed the focused suites covered every re-exported symbol | A missing re-export surfaces only as an `AttributeError` at a future call site — focused tests that don't touch that symbol stay green | Add a parametrized full-surface parity test asserting every public name `is` the same object in the canonical module (filter module objects out of `dir()`) |
+| Rely on `name as name` alone for analyzer intent | Used explicit re-export aliases that ruff accepts, but left one shim without an explicit public export list | Ruff stayed green, but CodeQL/static-analysis/review tooling still treated the alias import as dead/unused because the shim's public surface was implicit | Add `__all__ = [...]` to every compatibility shim and keep a parity test comparing shim symbols to the canonical module |
 | Repoint patch seams only in the moved module's own test file | Followed a plan that listed patch-string repoints for the three moved test files + one known coupling | `test_planner_loop.py` / `test_planner_main.py` patched `planner_state.prefetch_issue_states` / `.fetch_all_issue_labels_graphql` (names imported INTO the module, NOT re-exported by the shim); 4 failures surfaced only on the first full-suite run | Grep the WHOLE test tree for `patch("<flat_path>.<anyname>")`; repoint every imported-into name to the canonical module — the shim carries only the module's OWN symbols |
 
 ## Results & Parameters
@@ -523,13 +582,25 @@ A reviewer or implementer should check each one before executing the migration.
 | Canonical module created | `hephaestus/automation/agent_config.py` |
 | Modules merged into it | `claude_models.py`, `claude_timeouts.py`, `session_naming.py` (3 always-co-imported config modules) |
 | Module kept SEPARATE | `claude_invoke.py` (subprocess logic — merge config, not behavior) |
-| Original paths retained as | thin explicit `from agent_config import (name as name, ...)` re-export shims |
+| Original paths retained as | thin explicit `from agent_config import (name as name, ...)` re-export shims with explicit shim `__all__` |
 | Real cross-import repointed | `claude_invoke.py`: `from ...session_naming` → `from ...agent_config` (the ONE genuine internal import) |
 | `__all__` discipline | flat isort-sorted via `ruff check --fix --unsafe-fixes` (RUF022); domain grouping fails |
 | noqa discipline | NO `# ruff: noqa: F401` on explicit-`as` shims (would trip RUF100) |
 | Tests repointed | `test_claude_models.py` (private `_KNOWN_MODELS` + `importlib.reload` + caplog logger name → `hephaestus.automation.agent_config`) |
 | New test added | full-surface shim-parity test (parametrized `is`-identity over each shim) |
-| Verification | ruff clean (hephaestus/ + tests/); mypy clean (450 source files); 145-test focused suite green; full unit suite re-running at capture (verified-local, NOT verified-ci) |
+| Verification | original consolidation: ruff clean (hephaestus/ + tests/); mypy clean (450 source files); 145-test focused suite green (verified-local). PR #1697 follow-up: `claude_models.py` shim gained explicit `__all__`; analyzer/review finding addressed and CI green (verified-ci) |
+
+### Static-Analyzer Shim Hardening (ProjectHephaestus PR #1697 — verified-ci)
+
+| Parameter | Value |
+| ---------- | ----- |
+| Trigger | backward-compat shim used explicit `from agent_config import name as name` aliases and ruff accepted them, but another analyzer/review check still identified a shim import as dead/unused |
+| Fix | add explicit `__all__` to the shim containing every public re-exported symbol |
+| Concrete shim | `hephaestus/automation/claude_models.py` |
+| Symbols listed | 13: `CODEX_ADVISE`, `FABLE`, `HAIKU`, `OPUS`, `OPUS_48`, `SONNET`, `advise_model`, `codex_advise_model`, `git_message_model`, `implementer_model`, `learn_model`, `planner_model`, `reviewer_model` |
+| Regression guard | `tests/unit/automation/test_agent_config.py::test_shim_reexports_every_public_symbol_identically` imports each shim and compares public objects to `agent_config` |
+| CI retrigger | after the substantive analyzer fix landed, an empty signed commit was used to retrigger the PR branch |
+| Verification | verified-ci — user reported ProjectHephaestus PR #1697 green after the analyzer fix and retrigger |
 
 ### Split-Direction Parameters (ProjectHephaestus issue #1443 — verified-local)
 
@@ -567,6 +638,8 @@ This file is retained so existing import sites need no changes.
 """
 # NOTE: no `# ruff: noqa: F401` here — the explicit `as` re-export idiom does not
 # trigger F401, so a noqa would be unused and fail RUF100 (verified-local, #1441).
+# Still declare __all__ on the shim; ruff and CodeQL-style analyzers communicate
+# different intent signals (verified-ci, PR #1697).
 from hephaestus.automation.<subpkg>.<module_name> import (
     PublicClass as PublicClass,
     public_function as public_function,
@@ -620,12 +693,14 @@ python3 -c "import claude; print(type(claude), getattr(claude, '__file__', 'no _
 | Project | Context | Details |
 | --------- | --------- | --------- |
 | ProjectHephaestus | issue #1441 "Merge 4 Claude agent modules" (executed) | **verified-local** — Shim Consolidation (merge direction) run end-to-end: agent_config.py created, 3 modules turned into explicit re-export shims, claude_invoke.py kept separate; ruff + mypy clean, 145-test focused suite green (full suite re-running at capture) |
+| ProjectHephaestus | PR #1697 / issue #1441 follow-up analyzer fix | **verified-ci** — `claude_models.py` kept explicit `name as name` re-exports and added explicit `__all__` for 13 public symbols so static-analysis/review tooling recognized the shim export surface; existing shim parity test guarded object identity; CI green after retrigger |
 | ProjectHephaestus | issue #1443 "Move *_state.py into state/" (executed, SPLIT direction) | **verified-local** — 3 modules moved into `state/` with explicit `name as name` shims; `_review_phase.py` repointed to `from .state import review as review_state`; `implementer_phase_runner.py:42,77` left on shim paths (preserves #714 patch surface + no-cycle guard). The whole-test-tree patch-seam sweep was the decisive fix (4 failures from imported-into names patched on the flat path). ruff + mypy clean; full `tests/unit/automation` suite 2284 passed, 0 failed |
 | ProjectHephaestus | Plan written for issue #1177 (not yet executed) | Verification level: unverified; the full 52-file SPLIT workflow remains a proposal |
 
 ## References
 
 - [ProjectHephaestus issue #1441](https://github.com/HomericIntelligence/ProjectHephaestus/issues/1441) — merge direction (Shim Consolidation), verified-local execution
+- [ProjectHephaestus PR #1697](https://github.com/HomericIntelligence/ProjectHephaestus/pull/1697) — analyzer hardening follow-up for #1441, verified-ci
 - [ProjectHephaestus issue #1443](https://github.com/HomericIntelligence/ProjectHephaestus/issues/1443) — split direction (move `*_state.py` into `state/`), verified-local; surfaced the whole-test-tree patch-seam sweep
 - [ProjectHephaestus issue #1177](https://github.com/HomericIntelligence/ProjectHephaestus/issues/1177) — source issue for the full 52-file split workflow
 - [python-module-decomposition-and-refactor-patterns.md](python-module-decomposition-and-refactor-patterns.md) — single-module decomposition (Phase 11/12 for CLI extraction and sibling-cycle fixes)
