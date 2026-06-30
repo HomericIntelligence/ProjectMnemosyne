@@ -1,0 +1,92 @@
+# automation-god-package-shim-first-decomposition — History
+
+## v2.0.0 (2026-06-30)
+
+**Changed by:** ProjectHephaestus issue #1441 "Merge 4 Claude agent modules" — first
+real, verified-local execution of the shim discipline (in the MERGE direction).
+**Verification:** verified-local
+
+### What changed
+
+- Promoted the skill from `unverified` to `verified-local` and added a
+  `verification: verified-local` frontmatter field plus a `history` field.
+- Added the **Shim Consolidation (Merge Direction)** section to `## Verified Workflow`:
+  the inverse of the split — consolidate 3-4 always-co-imported modules into one
+  canonical module (`agent_config.py`) while keeping the originals as explicit
+  re-export shims. Includes Steps C1-C4.
+- **Corrected the central re-export-shim recommendation:** v1.0.0's Explicit shim
+  templates carried `# ruff: noqa: F401`. That is WRONG for an explicit `name as name`
+  alias — the alias IS ruff's recognized re-export idiom, so F401 never fires and the
+  unused directive trips RUF100. Removed `# ruff: noqa: F401` from Option B and from the
+  "Explicit Variant" template, with an explicit warning. (Wildcard `import *` shim still
+  needs F403/F401.)
+- Added four real **Failed Attempts** rows (replacing the N/A placeholder): the noqa/RUF100
+  trap, RUF022 `__all__` isort-sort requirement, private-symbol/reload/caplog-logger test
+  repointing, and the need for a full-surface parity test.
+- Added a **Merge-Direction Parameters** table (#1441) under Results & Parameters.
+- Added three "When to Use" triggers and a 7th `description` clause for the merge direction.
+- Added a `## Verified On` row for #1441 and a #1441 reference.
+- New tags: `re-export`, `ruff-f401`, `module-consolidation`.
+
+### Why
+
+v1.0.0 was a pure plan for the 52-file SPLIT (issue #1177) and was never executed, so its
+shim templates were never run through ruff. Executing the inverse (MERGE) refactor for #1441
+exercised the same shim discipline for real and exposed concrete, durable lints the plan got
+wrong — most importantly that an explicit-`as`-alias re-export shim must NOT carry
+`# ruff: noqa: F401` (RUF100 fails CI otherwise). It also surfaced RUF022 `__all__` ordering,
+the private-symbol/caplog-logger test-repointing trap, and the value of a full-surface
+shim-parity test. These are exactly the steps a future merge/split would otherwise re-discover.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: automation-god-package-shim-first-decomposition
+description: >-
+  Use when: (1) a flat Python sub-package has grown to 40+ co-located .py files
+  (god-package) and needs reorganization into domain sub-packages without breaking
+  any existing import sites, (2) planning a shim-first migration where the original
+  module paths remain as thin re-export shims after symbols are moved to new
+  sub-packages, (3) determining migration ordering for a package with an internal
+  import graph (adapters first, orchestrators last), (4) verifying that every
+  moved module defines __all__ before relying on wildcard re-exports in shims,
+  (5) auditing for circular import risk when shims and moved modules both reference
+  each other, (6) decomposing a flat package that is gated behind an optional
+  install extra (e.g. [automation]) so the library/product boundary is preserved.
+category: architecture
+date: 2026-06-12
+version: "1.0.0"
+user-invocable: false
+tags:
+  - python
+  - refactoring
+  - god-package
+  - shim-pattern
+  - sub-package
+  - migration
+  - import-compatibility
+  - automation
+  - flat-to-hierarchical
+  - circular-imports
+  - __all__
+  - optional-extra
+---
+
+# Automation God-Package Shim-First Decomposition
+
+(v1.0.0 body documented the PROPOSED, unexecuted 52-file SPLIT of hephaestus/automation/
+into 8 domain sub-packages: Step 0 pre-flight checks for __all__, pytest import mode,
+circular-import audit, shared-ownership and re-export-name verification; Steps 1-9 for the
+move-and-shim workflow; a 7-row "Unverified Assumptions" table; an N/A Failed Attempts
+placeholder; scale params for issue #1177; and Explicit/Wildcard shim templates. The
+Explicit shim templates carried `# ruff: noqa: F401`, which v2.0.0 corrects. Outcome was
+"Plan written for issue #1177; NOT YET EXECUTED".)
+```
+
+---
+
+## v1.0.0 (2026-06-12)
+
+**Initial version.** Planning-only skill for the proposed 52-file split of
+`hephaestus/automation/` (ProjectHephaestus issue #1177). Verification level: unverified.

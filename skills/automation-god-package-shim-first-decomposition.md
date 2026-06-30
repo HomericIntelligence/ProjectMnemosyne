@@ -10,11 +10,16 @@ description: >-
   moved module defines __all__ before relying on wildcard re-exports in shims,
   (5) auditing for circular import risk when shims and moved modules both reference
   each other, (6) decomposing a flat package that is gated behind an optional
-  install extra (e.g. [automation]) so the library/product boundary is preserved.
+  install extra (e.g. [automation]) so the library/product boundary is preserved,
+  (7) consolidating a small cluster of always-co-imported modules into ONE canonical
+  module while keeping the original paths as explicit re-export shims (the inverse
+  direction — merge, not split — but the same shim discipline applies).
 category: architecture
-date: 2026-06-12
-version: "1.0.0"
+date: 2026-06-30
+version: "2.0.0"
 user-invocable: false
+verification: verified-local
+history: automation-god-package-shim-first-decomposition.history
 tags:
   - python
   - refactoring
@@ -28,6 +33,9 @@ tags:
   - circular-imports
   - __all__
   - optional-extra
+  - re-export
+  - ruff-f401
+  - module-consolidation
 ---
 
 # Automation God-Package Shim-First Decomposition
@@ -36,10 +44,12 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-12 |
-| **Objective** | Decompose a 52-file flat god-package (hephaestus/automation/, 25,403 LOC) into 8 domain sub-packages while preserving all existing import sites via backward-compatible shim files |
-| **Outcome** | Plan written for ProjectHephaestus issue #1177; NOT YET EXECUTED — all workflow steps are proposals, not verified results |
-| **Trigger** | Flat package directory with 40+ .py files, single-level imports from many callers, identifiable domain clusters, optional-extra gating, existing shim proof-of-concept (prompts/) |
+| **Date** | 2026-06-30 (v2.0.0) |
+| **Objective** | (v1.0.0) Decompose a 52-file flat god-package into 8 domain sub-packages via shim files. (v2.0.0) ALSO covers the inverse: consolidate a small cluster of always-co-imported config modules into ONE canonical module, keeping the originals as explicit re-export shims — executed for real in ProjectHephaestus #1441 |
+| **Outcome** | v1.0.0 plan for #1177 was never executed. v2.0.0 records a verified-local execution of the shim consolidation for #1441 ("Merge 4 Claude agent modules"): merge confirmed with ruff + mypy clean and a 145-test focused suite green |
+| **Trigger** | Either direction: a flat package with 40+ .py files (split), OR a cluster of 3-4 tiny always-co-imported modules (merge). Both keep original module paths as explicit re-export shims |
+| **Verification** | verified-local (ruff + mypy + focused 145-test suite green locally; full unit suite re-running at capture, NOT verified-ci) |
+| **History** | [changelog](./automation-god-package-shim-first-decomposition.history) |
 
 ## When to Use
 
@@ -52,12 +62,115 @@ Apply this skill when any of the following is true:
 - The package is **gated behind an optional install extra** and you must preserve that gate
 - You need a **leaf-to-root migration ordering** to avoid creating circular imports during the migration
 - You are planning (not yet executing) a migration and need to enumerate **unverified assumptions** for reviewer focus
+- **(Merge direction, v2.0.0)** You have a small cluster of **3-4 tiny modules that are always imported together** (e.g. `claude_models.py` + `claude_timeouts.py` + `session_naming.py`) and want to consolidate them into ONE canonical module while leaving each original path as a thin explicit re-export shim
+- You are writing an **explicit `from X import (name as name, ...)` re-export shim** and need to know whether `# ruff: noqa: F401` is required (it is NOT — and adding it triggers RUF100)
+- A test reads a **private symbol** (`_KNOWN_MODELS`), calls `importlib.reload`, or pins a **logger name** (`caplog.at_level(..., logger="...")`) of a module you are about to turn into a shim — these tests CANNOT stay on the shim and must be repointed at the canonical module
 
 ## Verified Workflow
 
-> **Verification level: unverified** — This workflow was designed during planning for
-> ProjectHephaestus issue #1177. It has not been executed. Treat every step as a proposal
-> until a "Verified On" entry is added below.
+> **Verification level: verified-local.** The SPLIT workflow (Steps 0-9 below) was designed
+> during planning for ProjectHephaestus #1177 and remains a proposal for the full 52-file split.
+> The MERGE workflow (the "Shim Consolidation" section directly below) was **executed end-to-end**
+> for ProjectHephaestus #1441 and is verified-local: ruff + mypy clean, 145-test focused suite
+> green. Where the two disagree, the executed MERGE lessons win — most importantly the
+> **explicit-`as`-alias re-export shim needs NO `# ruff: noqa: F401`** (v1.0.0's templates added
+> that noqa; that is now corrected — see the Shim Consolidation section and Failed Attempts).
+
+### Shim Consolidation (Merge Direction — verified-local, ProjectHephaestus #1441)
+
+Use this when the goal is to **merge** a few always-co-imported modules into one canonical
+module (the inverse of the split below), keeping each original path as an explicit re-export shim.
+
+```text
+3-4 tiny modules always imported together?
+└─ YES → Shim Consolidation
+     1. Create agent_config.py with one labelled section per source module
+        (paste each body VERBATIM under a comment banner).
+     2. Repoint the ONE real cross-import (claude_invoke.py: from ...session_naming
+        → from ...agent_config). Keep subprocess logic (claude_invoke.py) SEPARATE —
+        merge config, not behavior.
+     3. Replace each original module body with an EXPLICIT re-export shim:
+          from hephaestus.automation.agent_config import (name as name, ...)
+        Do NOT add `# ruff: noqa: F401`. The `as name` alias IS ruff's recognized
+        re-export idiom; F401 never fires, so the noqa is unused → RUF100 failure.
+     4. Sort the canonical module's __all__ with `ruff check --fix --unsafe-fixes`
+        (RUF022 requires isort order — a flat alphabetical list; domain-grouped
+        __all__ with comments FAILS RUF022).
+     5. Repoint private-symbol / reload / caplog-logger-name tests at the canonical
+        module (they cannot read privates through a shim — shims omit privates by design).
+     6. Add a full-surface parity test: parametrize over each shim, assert every public
+        name `is` the same object in agent_config (filter module objects out of dir()).
+```
+
+#### Step C1: Explicit re-export shim — NO `# ruff: noqa: F401`
+
+```python
+# hephaestus/automation/session_naming.py  (shim — replaces the original body)
+"""Backward-compatibility shim. Canonical impl: hephaestus.automation.agent_config."""
+from hephaestus.automation.agent_config import (
+    build_session_name as build_session_name,
+    SESSION_PREFIX as SESSION_PREFIX,
+)
+
+__all__ = ["build_session_name", "SESSION_PREFIX"]
+```
+
+The `name as name` re-binding is exactly what ruff treats as an intentional re-export, so
+**F401 (`imported but unused`) is never raised on these lines.** Adding `# ruff: noqa: F401`
+to silence a warning that does not fire makes the directive itself unused, and ruff's RUF100
+(`unused noqa`) then fails CI. **This reverses v1.0.0's shim templates**, which carried
+`# ruff: noqa: F401` — drop that comment from any explicit-`as`-alias shim.
+
+#### Step C2: `__all__` must be isort-sorted (RUF022)
+
+```bash
+# Domain-grouped __all__ with comment banners FAILS RUF022. Let ruff sort it:
+ruff check --fix --unsafe-fixes hephaestus/automation/agent_config.py
+# Result: a single FLAT alphabetical list. Domain grouping is lost — accept it.
+```
+
+#### Step C3: Repoint private-symbol / reload / caplog tests
+
+A test that reaches a module **private** symbol (`claude_models._KNOWN_MODELS`), calls
+`importlib.reload(claude_models)`, or pins the module logger name in
+`caplog.at_level(..., logger="hephaestus.automation.claude_models")` **cannot** keep targeting
+the shim — the shim deliberately does not re-export privates, and the merged module's logger is
+`hephaestus.automation.agent_config` (it uses `logging.getLogger(__name__)`). Fix with a local
+alias plus a logger-name retarget; the alias keeps the rest of the test body unchanged:
+
+```python
+# was: from hephaestus.automation import claude_models
+from hephaestus.automation import agent_config as claude_models  # local alias
+
+# every caplog logger string retargets to the canonical module:
+with caplog.at_level(logging.WARNING, logger="hephaestus.automation.agent_config"):
+    ...
+```
+
+#### Step C4: Full-surface shim-parity test
+
+A missing re-export is only an `AttributeError` at the call site, so focused tests miss drift.
+Parametrize over every shim and assert object identity against the canonical module:
+
+```python
+import importlib
+import pytest
+from hephaestus.automation import agent_config
+
+@pytest.mark.parametrize(
+    "shim_name",
+    ["claude_models", "claude_timeouts", "session_naming"],
+)
+def test_shim_reexports_match_canonical(shim_name):
+    shim = importlib.import_module(f"hephaestus.automation.{shim_name}")
+    public = [n for n in dir(shim) if not n.startswith("_")]
+    for name in public:
+        obj = getattr(shim, name)
+        # filter imported module objects (logging, os) out of dir()
+        if getattr(obj, "__class__", None).__name__ == "module":
+            continue
+        assert getattr(agent_config, name) is obj, f"{shim_name}.{name} drifted from agent_config"
+```
 
 ### Quick Reference
 
@@ -220,7 +333,7 @@ from hephaestus.automation.adapters.github_api import __all__
 ```python
 # hephaestus/automation/github_api.py  (shim — replaces original)
 """Backward-compatibility shim. Real implementation in adapters/github_api.py."""
-from hephaestus.automation.adapters.github_api import (  # noqa: F401
+from hephaestus.automation.adapters.github_api import (
     call_graphql as call_graphql,
     get_pr_diff as get_pr_diff,
     # ... enumerate all public symbols
@@ -233,10 +346,17 @@ __all__ = [
 ]
 ```
 
+> **v2.0.0 correction (verified-local, #1441):** do **NOT** add `# noqa: F401` /
+> `# ruff: noqa: F401` to an explicit `name as name` re-export shim. The `as` re-binding is
+> ruff's recognized re-export idiom, so F401 never fires — the directive is unused and RUF100
+> then fails CI. (v1.0.0 carried `# noqa: F401` here; it is removed.) The noqa is only needed for
+> the wildcard `import *` variant below, which genuinely triggers F403/F401.
+
 Option B is preferred because it:
 1. Does not depend on the moved module defining `__all__`
 2. Makes the shim's public surface explicit (visible to static analysis)
 3. Does not accidentally export private symbols
+4. Needs **no** `# noqa` — keeping it lint-clean without suppression (RUF100-safe)
 
 **The `prompts/` sub-directory** in `hephaestus/automation/` is the existing proof-of-concept
 for this pattern (28 symbols, verified working). Examine it before writing the first shim.
@@ -331,7 +451,10 @@ A reviewer or implementer should check each one before executing the migration.
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 | --------- | ---------------- | --------------- | ---------------- |
-| N/A (plan only) | N/A — no execution attempts yet | N/A | All entries in this section are unverified proposals until a "Verified On" entry is added |
+| Add `# ruff: noqa: F401` to an explicit `as`-alias re-export shim | Followed v1.0.0's shim template, which carried `# ruff: noqa: F401` | The `name as name` re-binding is ruff's recognized re-export idiom, so F401 never fires; the unused directive then trips RUF100 (`unused noqa`) and fails CI | NEVER add `# ruff: noqa: F401` to an explicit-`as`-alias shim. Only the wildcard `import *` variant needs F403/F401 suppression |
+| Group `__all__` by domain with comment banners in the merged module | Wrote a readable, domain-clustered `__all__` for agent_config.py | ruff RUF022 requires `__all__` to be isort-sorted (flat alphabetical); domain grouping with comments fails the check | Run `ruff check --fix --unsafe-fixes` to sort `__all__`; accept the flat alphabetical list — domain grouping is lost |
+| Leave a private-symbol / reload / caplog-logger test pointed at the shim | Kept `test_claude_models.py` importing the original (now-shim) module path | The shim deliberately omits privates (`_KNOWN_MODELS`), and the merged module's logger name changed to `hephaestus.automation.agent_config` (uses `getLogger(__name__)`), so `caplog.at_level(..., logger="...claude_models")` captured nothing | Repoint such tests via a local alias `from ... import agent_config as claude_models` AND retarget every caplog logger-name string to the canonical module's logger |
+| Rely only on focused per-module tests to catch shim drift | Assumed the focused suites covered every re-exported symbol | A missing re-export surfaces only as an `AttributeError` at a future call site — focused tests that don't touch that symbol stay green | Add a parametrized full-surface parity test asserting every public name `is` the same object in the canonical module (filter module objects out of `dir()`) |
 
 ## Results & Parameters
 
@@ -347,6 +470,21 @@ A reviewer or implementer should check each one before executing the migration.
 | Existing shim proof-of-concept | `prompts/` sub-directory (28 symbols) |
 | Optional-extra gate | `HomericIntelligence-Hephaestus[automation]` |
 | Lazy `__getattr__` pattern | `automation/__init__.py` (established pattern) |
+
+### Merge-Direction Parameters (ProjectHephaestus issue #1441 — verified-local)
+
+| Parameter | Value |
+| ---------- | ----- |
+| Canonical module created | `hephaestus/automation/agent_config.py` |
+| Modules merged into it | `claude_models.py`, `claude_timeouts.py`, `session_naming.py` (3 always-co-imported config modules) |
+| Module kept SEPARATE | `claude_invoke.py` (subprocess logic — merge config, not behavior) |
+| Original paths retained as | thin explicit `from agent_config import (name as name, ...)` re-export shims |
+| Real cross-import repointed | `claude_invoke.py`: `from ...session_naming` → `from ...agent_config` (the ONE genuine internal import) |
+| `__all__` discipline | flat isort-sorted via `ruff check --fix --unsafe-fixes` (RUF022); domain grouping fails |
+| noqa discipline | NO `# ruff: noqa: F401` on explicit-`as` shims (would trip RUF100) |
+| Tests repointed | `test_claude_models.py` (private `_KNOWN_MODELS` + `importlib.reload` + caplog logger name → `hephaestus.automation.agent_config`) |
+| New test added | full-surface shim-parity test (parametrized `is`-identity over each shim) |
+| Verification | ruff clean (hephaestus/ + tests/); mypy clean (450 source files); 145-test focused suite green; full unit suite re-running at capture (verified-local, NOT verified-ci) |
 
 ### Leaf-to-Root Migration Ordering (Proposed)
 
@@ -369,7 +507,8 @@ Shared (top-level stays):     top-level     — _stage_context.py, any file with
 Real implementation: hephaestus.automation.<subpkg>.<module_name>
 This file is retained so existing import sites need no changes.
 """
-# ruff: noqa: F401
+# NOTE: no `# ruff: noqa: F401` here — the explicit `as` re-export idiom does not
+# trigger F401, so a noqa would be unused and fail RUF100 (verified-local, #1441).
 from hephaestus.automation.<subpkg>.<module_name> import (
     PublicClass as PublicClass,
     public_function as public_function,
@@ -422,10 +561,12 @@ python3 -c "import claude; print(type(claude), getattr(claude, '__file__', 'no _
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectHephaestus | Plan written for issue #1177 (not yet executed) | Verification level: unverified; all workflow steps are proposals |
+| ProjectHephaestus | issue #1441 "Merge 4 Claude agent modules" (executed) | **verified-local** — Shim Consolidation (merge direction) run end-to-end: agent_config.py created, 3 modules turned into explicit re-export shims, claude_invoke.py kept separate; ruff + mypy clean, 145-test focused suite green (full suite re-running at capture) |
+| ProjectHephaestus | Plan written for issue #1177 (not yet executed) | Verification level: unverified; the full 52-file SPLIT workflow remains a proposal |
 
 ## References
 
-- [ProjectHephaestus issue #1177](https://github.com/HomericIntelligence/ProjectHephaestus/issues/1177) — source issue for this skill
+- [ProjectHephaestus issue #1441](https://github.com/HomericIntelligence/ProjectHephaestus/issues/1441) — merge direction (Shim Consolidation), verified-local execution
+- [ProjectHephaestus issue #1177](https://github.com/HomericIntelligence/ProjectHephaestus/issues/1177) — source issue for the split workflow
 - [python-module-decomposition-and-refactor-patterns.md](python-module-decomposition-and-refactor-patterns.md) — single-module decomposition (Phase 11/12 for CLI extraction and sibling-cycle fixes)
 - [python-circular-import-symbol-extraction.md](python-circular-import-symbol-extraction.md) — leaf-module extraction for circular import errors
