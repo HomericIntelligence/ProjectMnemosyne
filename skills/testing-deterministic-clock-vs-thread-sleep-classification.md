@@ -1,42 +1,40 @@
 ---
 name: testing-deterministic-clock-vs-thread-sleep-classification
-description: "Planning checklist for eliminating real time.sleep() from a test suite: classify EVERY sleep by WHAT IT WAITS ON before choosing a fix, because the fix differs per class. A timer-boundary sleep (waits only for a monotonic/wall clock to cross a timeout like recovery_timeout) is fixed by patching the EXACT clock name the production code reads (@patch('<module>.time.monotonic')) and advancing the return value past the threshold — NOT by constructor-injecting a clock (YAGNI when the code already calls time.monotonic() at module scope). A thread-coordination sleep (orders real OS threads against a threading.Condition/Event/Barrier) has NO clock to mock; removing it introduces a notify-before-wait race, so the low-risk fix is @pytest.mark.slow to deselect it on the fast path. Use when: (1) a refactor wants to remove real sleeps from unit tests for speed/determinism; (2) you see time.sleep near recovery_timeout/circuit-breaker/backoff logic; (3) you see time.sleep near threading.Barrier/Condition/Event 'give threads time to start' comments; (4) you are tempted to inject a clock into a constructor that already calls time.monotonic() directly."
+description: "Eliminate real time.sleep() from a test suite by classifying EVERY sleep by WHAT IT WAITS ON before choosing a fix, because the fix differs per class. A timer-boundary sleep (waits only for a monotonic/wall clock to cross a timeout like recovery_timeout) is fixed by patching the EXACT clock name the production code reads (@patch('<module>.time.monotonic')) and advancing the return value past the threshold — NOT by constructor-injecting a clock (YAGNI when the code already calls time.monotonic() at module scope). A thread-coordination sleep (orders real OS threads against a threading.Condition/Event/Barrier) has NO clock to mock; the CORRECT fix is deterministic Event-based coordination (instrument condition.wait to set a threading.Event from inside the lock right before parking), NOT @pytest.mark.slow — quarantining behind slow removes the wait/notify code from the fast CI suite AND leaves the flakiness intact, and a reviewer will reject it. Use when: (1) a refactor wants to remove real sleeps from unit tests for speed/determinism; (2) you see time.sleep near recovery_timeout/circuit-breaker/backoff logic; (3) you see time.sleep near threading.Barrier/Condition/Event 'give threads time to start' comments; (4) you are tempted to inject a clock into a constructor that already calls time.monotonic() directly; (5) you are tempted to mark a thread-coordination test @pytest.mark.slow instead of making it deterministic."
 category: testing
 date: 2026-06-30
-version: "1.1.0"
+version: "2.0.0"
 history: testing-deterministic-clock-vs-thread-sleep-classification.history
 user-invocable: false
-verification: unverified
+verification: verified-local
 tags:
   - time-sleep
   - monotonic
   - mock-clock
-  - pytest-mark-slow
+  - threading-event
+  - condition-wait-instrumentation
   - deterministic-test
   - circuit-breaker
   - recovery-timeout
   - thread-coordination
-  - threading-barrier
+  - happens-before
   - flaky
-  - planning
   - yagni
   - dry
+  - kiss
   - ruff-unused-import
-  - plan-review-pipeline
-  - plan-artifact-discipline
-  - mechanically-derived-count
 ---
 
-# Deterministic Clock vs Thread-Sleep: Classify Before You Fix (Planning)
+# Deterministic Clock vs Thread-Sleep: Classify Before You Fix
 
 ## Overview
 
 | Field | Value |
 |-------|-------|
 | **Date** | 2026-06-30 |
-| **Objective** | Plan the removal of real `time.sleep()` calls from a unit-test suite (issue #1469) to make tests fast and deterministic, WITHOUT introducing thread races or breaking timeout-ETA assertions. |
-| **Outcome** | Planning hypothesis only. No code was written, no tests run, no CI executed. The plan was reasoned through against the production source (`circuit_breaker.py`, `status_tracker.py`) but every line number and coverage claim is unverified. |
-| **Verification** | unverified — plan only; not executed, not run in CI, failure not reproduced. |
+| **Objective** | Remove real `time.sleep()` calls from a unit-test suite (issue #1469) to make tests fast and deterministic, WITHOUT introducing thread races, breaking timeout-ETA assertions, or quarantining the code under test out of the fast CI suite. |
+| **Outcome** | Successful and verified locally. 13 timer-boundary sleeps in `tests/unit/resilience/test_circuit_breaker.py` replaced with a mocked `time.monotonic`; 6 thread-coordination sleeps in `tests/unit/automation/test_status_tracker.py` replaced with deterministic `threading.Event` coordination. Full targeted suite green across 3 runs; ruff clean. PR #1725. |
+| **Verification** | verified-local — 23 status_tracker tests + 35 circuit_breaker tests passed locally across 3 runs, ruff clean; CI on PR #1725 still pending at capture time. |
 
 ## When to Use
 
@@ -44,14 +42,9 @@ tags:
 - You see `time.sleep(...)` immediately before an assertion about a timeout having elapsed (circuit-breaker `recovery_timeout`, backoff windows, TTL expiry).
 - You see `time.sleep(...)` near `threading.Barrier`/`Condition`/`Event` with comments like "give threads time to start waiting" or "release after delay".
 - You are tempted to add a `clock`/`time_source` constructor parameter to production code that already calls `time.monotonic()` directly at module scope.
-- You need to decide between mocking the clock and marking a test `@pytest.mark.slow`.
+- You are tempted to mark a thread-coordination test `@pytest.mark.slow` instead of making it deterministic.
 
-## Verified Workflow — Proposed Workflow (UNVERIFIED)
-
-> **Warning:** This workflow has not been validated end-to-end. It is a planning
-> hypothesis reasoned against the production source; no test was run, no CI was
-> executed, and the failure was not reproduced. Treat every step — and especially
-> the line numbers and the coverage-gate claim — as a hypothesis until CI confirms.
+## Verified Workflow
 
 ### Quick Reference
 
@@ -59,31 +52,47 @@ tags:
 # CLASS 1 — Timer-boundary sleep: patch the EXACT clock the production code reads.
 # First confirm the source: grep for the clock call in the module under test.
 #   grep -n "time.monotonic\|time.time" hephaestus/resilience/circuit_breaker.py
-# Then patch that exact attribute path (the name in the MODULE UNDER TEST, not `time`):
+# Then patch that exact attribute path (the name in the MODULE UNDER TEST, not `time`).
+# CRITICAL ORDERING: production _record_failure stamps _last_failure_time = time.monotonic()
+# AT FAILURE TIME, so advance the clock AFTER the failing call returns, NOT at construction.
 import unittest.mock as mock
 
 @mock.patch("hephaestus.resilience.circuit_breaker.time.monotonic")
 def test_recovers_after_timeout(self, mono):
-    mono.return_value = 1000.0          # baseline read at construction / _record_failure
+    mono.return_value = 1000.0          # baseline read while tripping the breaker
     cb = CircuitBreaker(recovery_timeout=30.0)   # use a NON-tiny timeout
-    # ... trip the breaker so _record_failure() captures _last_failure_time = 1000.0 ...
-    mono.return_value = 1000.0 + 31.0   # advance unambiguously PAST the 30s boundary
+    # ... trip the breaker: _record_failure() now stamps _last_failure_time = 1000.0 ...
+    mono.return_value = 1030.0          # advance PAST the boundary AFTER the failing call
     assert cb.allow()                    # half-open transition, no real sleep
 
-# CLASS 2 — Thread-coordination sleep: NO clock to mock. Deselect on the fast path.
-import pytest
+# CLASS 2 — Thread-coordination sleep: NO clock to mock. Make it DETERMINISTIC, not slow.
+# Instrument condition.wait to fire an Event from inside the lock right before parking,
+# so the releaser provably cannot run until the main thread is parked in wait().
+import threading
 
-@pytest.mark.slow   # only if the marker is already registered in pyproject.toml
-def test_concurrent_probes_serialize(self):
-    # real threading.Barrier / Condition; the sleep orders the OS scheduler, keep it
-    ...
+def test_release_unblocks_waiter(self):
+    waiting = threading.Event()
+    real_wait = tracker.condition.wait
+
+    def wait_announcing(timeout=None):
+        waiting.set()                    # fires while still holding the condition lock
+        return real_wait(timeout=timeout)
+
+    tracker.condition.wait = wait_announcing  # type: ignore[method-assign]
+
+    def release_when_waiting():
+        assert waiting.wait(timeout=5.0)  # safety net only, never the happy path
+        tracker.release_slot(slot_id)     # contends for the SAME lock -> happens-after
+
+    # ... start release_when_waiting in a thread, then acquire the (full) slot ...
 ```
 
 ```bash
 # Housekeeping after edits:
 #  - removing the last time.sleep -> `import time` is now unused -> ruff F401, delete it
-#  - adding @pytest.mark.slow may require adding `import pytest`
-ruff check tests/unit/resilience/test_circuit_breaker.py
+#  - making thread tests deterministic -> remove @pytest.mark.slow AND the now-unused
+#    `import pytest` if it was only used for the marker
+ruff check tests/unit/resilience/test_circuit_breaker.py tests/unit/automation/test_status_tracker.py
 # Re-grep rather than trusting cited line numbers — they drift between reads:
 grep -rn "time.sleep" tests/unit/
 ```
@@ -91,67 +100,65 @@ grep -rn "time.sleep" tests/unit/
 ### Detailed Steps
 
 1. **Inventory every `time.sleep` by re-grepping** (`grep -rn "time.sleep" tests/`). Do
-   NOT trust line numbers from a prior read — they drift. The cited `:96, :111, … :639`
-   and `pyproject.toml:216` are from one read and may be stale.
+   NOT trust line numbers from a prior read — they drift.
 2. **Classify each sleep** as either **timer-boundary** (waits only for a clock to cross a
    threshold) or **thread-coordination** (orders real OS threads against a sync primitive).
    This classification, not the call site, drives the fix.
 3. **For timer-boundary sleeps**: confirm the production clock source first
    (`grep -n "time.monotonic\|time.time" <module>.py`). Patch THAT exact name with
    `@patch("<module_under_test>.time.monotonic")`. `@patch` targets the name in the module
-   under test, not the global `time` module. Advance `return_value` past the threshold.
-   Reuse any EXISTING in-repo clock-mock pattern (here `TestCircuitBreakerTimeMocking`
-   already used `@patch(...time.monotonic)`) instead of inventing a helper — DRY, and it
-   is already proven-green.
-4. **Pick a non-tiny timeout** (e.g. `30.0`) and large explicit advances so the boundary
+   under test, not the global `time` module. Seed the baseline value, then advance
+   `return_value` past the threshold.
+4. **Respect the failure-time stamp ordering (the #1 bug here).** Production
+   `_record_failure` writes `_last_failure_time = time.monotonic()` at the moment of
+   failure. So set the post-timeout advance AFTER the failing call returns — advancing the
+   clock before/at construction corrupts the baseline and the boundary math is wrong.
+5. **Pick a non-tiny timeout** (e.g. `30.0`) and large explicit advances so the boundary
    crossing is unambiguous, replacing the original sub-second values.
-5. **For thread-coordination sleeps**: do NOT clock-mock — there is no clock. Removing the
-   sleep introduces a `notify_all`-before-`wait()` race. If a `slow` marker is already
-   registered, add `@pytest.mark.slow` so the fast path deselects them.
-6. **A clock-mocked test that still spawns real threads** (concurrency assertions with
+6. **For thread-coordination sleeps**: do NOT clock-mock — there is no clock. Do NOT mark
+   them `@pytest.mark.slow` either (see Failed Attempts — a reviewer rejected this). Make
+   the happens-before **deterministic** by instrumenting the synchronization primitive:
+   wrap `tracker.condition.wait` so it sets a `threading.Event` from INSIDE the lock,
+   immediately before parking. The releaser then `event.wait(timeout=5.0)`s on that Event
+   before acting. Because the releaser contends for the SAME condition lock, it cannot
+   proceed until the main thread atomically releases the lock by entering `wait()`. The
+   5.0s timeout is a safety net only; the happy path has zero wall-clock dependence.
+7. **For pure-contention "simulate work" sleeps** (e.g. `time.sleep(0.01)` inside a worker
+   that the test only checks "eventually acquired/released"): just DELETE the sleep. The
+   assertions (all N threads acquired, all slots released) need no artificial delay;
+   removing it keeps the contention test valid and fast.
+8. **A clock-mocked test that still spawns real threads** (concurrency assertions with
    `threading.Barrier`) keeps the thread machinery; only the timer-boundary sleep inside
-   it is mocked.
-7. **Fix imports last**: after removing the last `time.sleep`, `import time` is unused
-   (ruff F401) — delete it. Adding `@pytest.mark.slow` may require adding `import pytest`.
-8. **Re-verify the coverage gate** (the single biggest risk): confirm whether the default
-   CI invocation deselects `slow` (`-m "not slow"`); if so, the marked tests stop
-   contributing coverage and the module under test could fall below the 83% gate.
-9. **Make every cited count mechanically derived and self-consistent.** A verification
-   criterion that contradicts the plan body is an automatic NOGO. Pin counts to a
-   grep-derived ground truth (issue #1469: 6 sleeps across 5 methods) and assert them with
-   a runnable check — `pytest -m slow --collect-only -q | grep -c "::"` == 5 — never a
-   hand-written prose number. Issue #1469 oscillated "3 vs 4 vs 5" marked-`slow` tests
-   across re-planning rounds until the count was pinned this way; the design was already
-   sound, the prose number was the only thing wrong.
+   it is mocked. This is SAFE because a `MagicMock.return_value` is a frozen, lock-free,
+   thread-shared read AND those tests assert on state/counters/peak-concurrency, never on
+   elapsed/ETA time. Advance the frozen clock BEFORE spawning threads.
+9. **Fix imports last**: after removing the last `time.sleep`, `import time` is unused
+   (ruff F401) — delete it. After removing `@pytest.mark.slow`, delete a now-unused
+   `import pytest`.
+10. **Run the full targeted suite multiple times** to confirm determinism (flakiness only
+    shows up intermittently). Here: 23 status_tracker + 35 circuit_breaker tests green
+    across 3 runs.
 
-### Plan-artifact discipline (TASK/PLAN/REVIEW pipelines)
+### If you DO end up marking tests slow (coverage gate check)
 
-In a pipeline where the plan reviewer ONLY sees the latest emitted artifact, the plan
-author MUST output the COMPLETE plan inline every round. The reviewer cannot follow a
-pointer to a prior message — it grades the visible block. Two concrete rules:
-
-1. **Never let a `/learn` (knowledge-capture) completion report occupy the plan slot.** A
-   `/learn` status summary and the implementation-plan artifact are DIFFERENT outputs to
-   DIFFERENT consumers. If the status summary lands where the plan goes, the reviewed
-   artifact contains zero plan steps → graded "not a plan", F/NOGO even though the
-   off-artifact plan was sound. (Issue #1469 R1 went F purely for this.)
-2. **When re-planning after ANY NOGO, re-emit the FULL plan** — every section (Objective,
-   Approach, Files to Modify with fenced snippets, Implementation Order, Verification,
-   Changes-from-review) — not a diff or a summary of edits. Pointing to "the full plan in
-   my prior message" makes the artifact-under-review contain no plan.
+If a thread test genuinely cannot be made deterministic and you fall back to
+`@pytest.mark.slow`, verify the module under test still clears the coverage gate on the
+fast path: `pytest -m "not slow" --cov=<module>`. In issue #1469 `status_tracker.py` held
+91.76% even with the candidate tests deselected — but the deterministic Event fix made the
+marker (and this check) unnecessary, which is the preferred outcome.
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| Constructor-injected clock | Considered adding a `clock`/`time_source` parameter to production code so tests pass a fake clock | YAGNI: the production code already calls `time.monotonic()` at module scope, so a `@patch` of that name is sufficient and changes no production API | When the code already reads a module-level clock, mock the name — don't widen the constructor surface just for testing |
+| `@pytest.mark.slow` for thread-coordination sleeps | Quarantined the thread tests behind the `slow` marker so the fast CI path deselects them (the v1.x recommendation) | A reviewer REJECTED it: deselecting removes the wait/notify code under test from the default fast suite (less coverage of exactly that logic) AND leaves the underlying flakiness intact, just hidden | Thread-coordination sleeps must be made DETERMINISTIC (instrument `condition.wait` to fire an Event before parking), not quarantined |
+| Constructor-injected clock | Considered adding a `clock`/`time_source` parameter to production code so tests pass a fake clock | YAGNI: the production code already calls `time.monotonic()` at module scope, so a `@patch` of that name is sufficient and changes no production API | When the code already reads a module-level clock, mock the name (KISS) — don't widen the constructor surface just for testing |
 | `@patch("time.monotonic")` (global) | Patching the global `time` module instead of the name imported in the module under test | `@patch` resolves the attribute on the target object; the SUT reads `circuit_breaker.time.monotonic`, so the global patch may not intercept the call the SUT actually makes | Patch the EXACT attribute path the module under test reads, confirmed by grepping the source first |
-| Remove thread-coordination sleeps via mocked clock | Treating "give threads time to start waiting" sleeps the same as timeout sleeps and trying to mock them away | There is no clock involved — the wait is on the OS scheduler; removing the sleep creates a `notify_all`-before-`wait()` race | Thread-ordering sleeps are a different class; deselect with `@pytest.mark.slow`, do not clock-mock |
-| Single fixed mock value across the whole `call()` path | Setting one constant `monotonic.return_value` and assuming all reads are equivalent | The mocked value is read multiple times within one `call()` (`_effective_state` AND the `time_until` ETA at `circuit_breaker.py:179`); a value that makes the boundary cross can make an ETA assertion read `0.0`/negative | When the same mocked clock feeds an ETA assertion (`time_until_recovery > 0`), choose the value so `recovery_timeout - elapsed > 0` still holds |
-| Advance relative to construction time | Computing the post-timeout advance from the construction-time mocked value | `_record_failure` (`circuit_breaker.py:228`) sets `_last_failure_time = time.monotonic()` — the baseline is the value LIVE at the moment of failure, not at construction | Advance relative to the mocked value live when `_record_failure` runs; off-by-one on which value is live is the easiest bug here |
-| Trusting cited line numbers | Planning edits against `:96, :111, … :639`, `pyproject.toml:216` from a single read | Line numbers drift between reads as files change | Re-grep `time.sleep` and the markers at implementation time; never trust a prior read's offsets |
-| Emitted a /learn completion report in the plan-output slot | Returned a knowledge-capture status summary ("skill merged… full plan in my prior message") where the pipeline expected the implementation plan | Reviewer only sees the latest artifact; it contained zero plan steps → graded "not a plan", F/NOGO even though the off-artifact plan was sound | In a TASK/PLAN/REVIEW loop, the plan author must output the COMPLETE plan inline every round; never point to a prior message and never let a /learn status report occupy the plan slot |
-| Cited a marked-test count as a prose number | Wrote "exactly 3 slow tests" in verification while the plan body marked 4, and a later capture said 5 | The verification criterion contradicted the plan body (3 vs 4 vs 5) — a self-inconsistent acceptance check is an automatic NOGO | Derive counts mechanically from ground truth (grep) and assert them with a runnable check (`pytest -m slow --collect-only -q \| grep -c "::"`), never a hand-written number |
+| Remove thread-coordination sleeps via mocked clock | Treating "give threads time to start waiting" sleeps the same as timeout sleeps and trying to mock them away | There is no clock involved — the wait is on the OS scheduler; removing the sleep with no replacement creates a notify-before-wait race | Thread-ordering sleeps are a different class; instrument the sync primitive for a deterministic happens-before |
+| Advance the mocked clock at construction time | Set `monotonic.return_value` past the boundary before tripping the breaker | `_record_failure` stamps `_last_failure_time = time.monotonic()` at FAILURE time, so a pre-set advance corrupts the baseline — the boundary delta is then wrong | Advance the clock AFTER the failing call returns; the baseline is the value LIVE when `_record_failure` runs, not at construction |
+| Single fixed mock value across the whole `call()` path | Setting one constant `monotonic.return_value` and assuming all reads are equivalent | The mocked value is read multiple times within one `call()` (`_effective_state` AND the `time_until` ETA); a value that makes the boundary cross can make an ETA assertion read `0.0`/negative | When the same mocked clock feeds an ETA assertion (`time_until_recovery > 0`), choose the value so `recovery_timeout - elapsed > 0` still holds |
+| Keep "simulate work" `time.sleep(0.01)` in a contention test | Left an artificial work delay inside worker threads of a pure contention test | The test only asserts all threads eventually acquired and all slots released — the delay adds wall-clock time and flakiness for no assertion benefit | Pure-contention tests need no artificial work delay; just delete the sleep |
+| Trusting cited line numbers | Planning edits against offsets from a single read | Line numbers drift between reads as files change | Re-grep `time.sleep` and the markers at implementation time; never trust a prior read's offsets |
 
 ## Results & Parameters
 
@@ -159,29 +166,54 @@ pointer to a prior message — it grades the visible block. Two concrete rules:
 
 | Class | What the sleep waits on | Correct fix | Anti-pattern |
 |-------|-------------------------|-------------|--------------|
-| Timer-boundary | A monotonic/wall clock crossing a timeout threshold (`recovery_timeout`) | `@patch("<module>.time.monotonic")`, advance `return_value` past the threshold | Constructor-injected clock (YAGNI); patching global `time` |
-| Thread-coordination | Real OS threads ordered against `threading.Condition`/`Event`/`Barrier` | `@pytest.mark.slow` to deselect on the fast path (if marker registered) | Mocking a clock that does not exist → notify-before-wait race |
+| Timer-boundary | A monotonic/wall clock crossing a timeout threshold (`recovery_timeout`) | `@patch("<module>.time.monotonic")`, advance `return_value` past the threshold AFTER the failing call | Constructor-injected clock (YAGNI); patching global `time`; advancing at construction |
+| Thread-coordination | Real OS threads ordered against `threading.Condition`/`Event`/`Barrier` | Instrument the sync primitive (set an `Event` from inside `condition.wait` before parking) for a deterministic happens-before | `@pytest.mark.slow` (hides flakiness, drops coverage — reviewer-rejected); mocking a clock that does not exist |
+| Pure-contention "simulate work" | Nothing semantic — just adds delay so threads overlap | DELETE the sleep; assertions are "eventually acquired/released" | Keeping the delay (slow + flaky for no assertion benefit) |
 
-**Most-uncertain assumptions / reviewer-focus risks (unverified):**
+**The deterministic thread-coordination technique (the key technique that converged the review):**
 
-| # | Assumption (unverified) | Risk | Reviewer must check |
-|---|-------------------------|------|---------------------|
-| 1 | Patching `time.monotonic` to a FIXED value across the whole `cb.call()` path is safe | Same value is read in `_effective_state` AND the `time_until` ETA (`circuit_breaker.py:179`); a naive single value can make a `time_until_recovery > 0` assertion read `0.0`/negative | Each rewritten test asserting `time_until_recovery > 0` sets the mock so `recovery_timeout - elapsed > 0` |
-| 2 | `_record_failure` (`circuit_breaker.py:228`) sets `_last_failure_time = time.monotonic()`, so the mocked value AT FAILURE is the baseline | Advance computed from construction-time value instead of failure-time value → off-by-one in which mocked value is live | Which mocked value is live when `_record_failure` runs |
-| 3 | Cited line numbers (`:96, :111, … :639`, `pyproject.toml:216`) are accurate | They are from one read and may have drifted | Implementer re-greps `time.sleep` rather than trusting offsets |
-| 4 | Marking 3 status-tracker tests `slow` does not drop coverage below the 83% gate | If CI runs `-m "not slow"` by default, those tests stop contributing coverage and `status_tracker.py` could fall below gate — **the single biggest unverified risk** | Whether the default CI invocation deselects `slow` AND whether coverage survives |
-| 5 | `test_half_open_exhausted_reports_distinct_reason` can mix a real thread probe with a mocked recovery clock | Probe thread and asserting thread share the SAME patched `time.monotonic`; mock state shared across threads is not how real `time.monotonic` behaves | Whether clock-mocking + live threads coexist safely in that specific test |
+```python
+# Instead of time.sleep(0.1) to "give threads time to start waiting":
+waiting = threading.Event()
+real_wait = tracker.condition.wait
+
+def wait_announcing(timeout=None):
+    waiting.set()                       # set INSIDE the lock, right before parking
+    return real_wait(timeout=timeout)
+
+tracker.condition.wait = wait_announcing  # type: ignore[method-assign]
+
+def release_when_waiting():
+    assert waiting.wait(timeout=5.0)    # generous safety net, never the happy path
+    tracker.release_slot(slot_id)       # contends for the SAME lock -> provably happens-after
+```
+
+Why it is race-free: `release_slot` contends for the same `condition` lock the main thread
+holds, so it cannot proceed until the main thread atomically releases that lock by entering
+`wait()`. The `Event` makes the parked state observable; the lock makes the ordering
+enforced. Wall-clock independence with a timeout only as a backstop.
+
+**Mocked-clock-across-threads safety reasoning:** when a circuit-breaker concurrency test
+spawns real worker threads that read the patched `time.monotonic`, a `MagicMock.return_value`
+is a frozen, lock-free, thread-shared read — SAFE precisely because those tests assert on
+state/counters/peak-concurrency, never on elapsed/ETA time. Advance the frozen clock BEFORE
+spawning threads.
+
+**Verified numbers (issue #1469, local):**
+
+- `tests/unit/resilience/test_circuit_breaker.py`: 13 timer-boundary sleeps removed; 35 tests green ×3 runs.
+- `tests/unit/automation/test_status_tracker.py`: 6 thread-coordination sleeps across 5 methods removed; 23 tests green ×3 runs.
+- ruff clean; `import time` / `import pytest` removed where they became unused.
 
 **Source-of-truth anchors (re-verify before editing):**
 
 - Production clock source: `hephaestus/resilience/circuit_breaker.py` calls `time.monotonic()` at module scope — patch `hephaestus.resilience.circuit_breaker.time.monotonic`.
-- `_record_failure` baseline write: `circuit_breaker.py:228` (`_last_failure_time = time.monotonic()`).
-- ETA computation: `circuit_breaker.py:179` (`time_until` uses the same clock).
-- Existing proven pattern to reuse: test class `TestCircuitBreakerTimeMocking` already mocks `...time.monotonic`.
-- `slow` marker registration: check `pyproject.toml` `[tool.pytest.ini_options] markers` before relying on `@pytest.mark.slow`.
+- `_record_failure` stamps `_last_failure_time = time.monotonic()` at failure time — advance the mock AFTER the failing call.
+- ETA computation reuses the same clock — keep `recovery_timeout - elapsed > 0` for any `time_until_recovery > 0` assertion.
+- Status tracker uses a `threading.Condition`; instrument `tracker.condition.wait` to announce parking via an `Event`.
 
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectHephaestus | Issue #1469 — planning the removal of real `time.sleep()` from `tests/unit/resilience/` and `tests/unit/.../status_tracker` (plan only, unverified) | No notes file |
+| ProjectHephaestus | Issue #1469 / PR #1725 — replaced real `time.sleep()` in `tests/unit/resilience/test_circuit_breaker.py` (mocked clock) and `tests/unit/automation/test_status_tracker.py` (deterministic Event coordination); 58 tests green ×3 runs locally, CI pending | No notes file |

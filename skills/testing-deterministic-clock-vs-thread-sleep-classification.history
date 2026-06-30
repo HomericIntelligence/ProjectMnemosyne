@@ -3,6 +3,57 @@
 
 This file preserves prior versions of the canonical skill body.
 
+## v2.0.0 (2026-06-30)
+
+**Changed by:** ProjectHephaestus issue #1469 / PR #1725 — IMPLEMENTATION of the sleep
+removal (the v1.x versions were plan-only, unverified).
+**Verification:** verified-local (23 status_tracker + 35 circuit_breaker tests green ×3 runs
+locally; ruff clean; CI on PR #1725 pending at capture time).
+
+### What changed
+
+- **Reversed the Class-2 (thread-coordination) core recommendation.** v1.x recommended
+  `@pytest.mark.slow` to deselect thread-coordination sleeps on the fast path. A reviewer
+  REJECTED that: quarantining behind `slow` removes the wait/notify code under test from
+  the default fast CI suite (reducing coverage of the very logic) AND leaves the underlying
+  flakiness intact. The new core fix is **deterministic Event-based coordination** —
+  instrument `condition.wait` to set a `threading.Event` from inside the lock right before
+  parking, so the releaser provably runs happens-after.
+- Verification level promoted `unverified` → `verified-local`; Overview/Outcome rewritten
+  from "planning hypothesis, no code written" to the verified implementation results.
+- Added the **failure-time-stamp ordering** insight: advance the mocked clock AFTER the
+  failing call returns, not at construction, because `_record_failure` stamps
+  `_last_failure_time = time.monotonic()` at failure time.
+- Added a third sleep class — **pure-contention "simulate work" sleeps** — whose fix is
+  simply to DELETE the sleep.
+- Added the mocked-clock-across-threads safety reasoning (frozen MagicMock read is
+  thread-safe because those tests assert on state/counters, never elapsed/ETA time).
+- Removed the plan-only framing (title, "Proposed Workflow (UNVERIFIED)" warning,
+  "Most-uncertain assumptions" risk table, plan-artifact-discipline pipeline note — that
+  process learning lives in its own dedicated skill space and was specific to the planning
+  rounds). Header restored to plain `## Verified Workflow`.
+- Tag set updated: dropped `pytest-mark-slow`, `planning`, `plan-review-pipeline`,
+  `plan-artifact-discipline`, `mechanically-derived-count`, `threading-barrier`; added
+  `threading-event`, `condition-wait-instrumentation`, `happens-before`, `kiss`.
+
+### Why
+
+v1.x was captured at the planning stage and recommended the low-risk-but-wrong `slow`
+marker. Implementation review showed the marker is the anti-pattern; the deterministic
+Event-instrumentation technique is what actually converged the review and removed the
+flakiness without dropping coverage. Because this changes the core recommendation and the
+verification level, it is a MAJOR bump.
+
+### Previous version (v1.1.0) snapshot
+
+The full v1.1.0 body is preserved in git history of this repo (commit prior to PR #1725's
+amendment) and summarized in the v1.1.0 entry below. Key prior content now superseded:
+Class-2 fix was `@pytest.mark.slow`; verification was `unverified` (plan only); the body
+carried a planning title, an UNVERIFIED workflow warning, a "Most-uncertain assumptions"
+risk table, and a TASK/PLAN/REVIEW plan-artifact-discipline section.
+
+---
+
 ## v1.1.0 (2026-06-30)
 
 Added a PLAN-PROCESS failure mode observed across the issue #1469 re-planning rounds: in a TASK/PLAN/REVIEW pipeline where the plan reviewer only sees the latest emitted artifact, the plan author MUST output the COMPLETE plan inline every round. Pointing to "the full plan in my prior message" or emitting a `/learn`-completion / status report in the plan slot makes the reviewed artifact contain NO plan → automatic NOGO/F regardless of how correct the off-artifact plan was (R1 went F purely for this). Re-confirmed the mechanically-derived-count rule (6 sleeps across 5 methods; assert `pytest -m slow --collect-only -q | grep -c "::"` == 5) as the substantive fix that converged the plan after the "3 vs 4 vs 5" oscillation. Added two Failed Attempts rows and a "Plan-artifact discipline" note to the workflow.
