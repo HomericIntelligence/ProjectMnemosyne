@@ -1,5 +1,8 @@
 # ProjectMnemosyne
 
+[![Validate Plugins](https://github.com/HomericIntelligence/ProjectMnemosyne/actions/workflows/validate-plugins.yml/badge.svg)](https://github.com/HomericIntelligence/ProjectMnemosyne/actions/workflows/validate-plugins.yml)
+[![Update Marketplace](https://github.com/HomericIntelligence/ProjectMnemosyne/actions/workflows/update-marketplace.yml/badge.svg)](https://github.com/HomericIntelligence/ProjectMnemosyne/actions/workflows/update-marketplace.yml)
+
 ProjectMnemosyne is a skills marketplace for the HomericIntelligence agentic ecosystem.
 Named after Mnemosyne, the Greek goddess of memory, this repository serves as the
 collective memory where team learnings are preserved and made searchable.
