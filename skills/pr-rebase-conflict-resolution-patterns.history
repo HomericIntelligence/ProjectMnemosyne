@@ -1,6 +1,24 @@
 <!-- markdownlint-disable MD024 -->
 # pr-rebase-conflict-resolution-patterns — History
 
+## v1.13.0 (2026-06-30)
+
+**Changed by:** ProjectHephaestus issue #1429 both-added import-line conflict resolution
+
+**Verification:** verified-local
+
+### What changed
+- Added trigger #20 and a new When-to-Use bullet for the case where two branches each APPEND a DIFFERENT `from <same-module> import <symbols>` line at the same position in the same file (a UU both-modified import-line conflict).
+- Added section P documenting the verified resolution: detect with the non-mutating `git merge-tree $(git merge-base HEAD origin/main) HEAD origin/main | grep -c '<<<<<<<'` dry-run, recognize that a DIRTY PR can have a fully green CI rollup (the conflict is the sole blocker), UNION the imported symbols into ONE ruff-ordered statement (never pick `--ours`/`--theirs`, which silently drops a symbol → NameError/unused-import), then verify at RUNTIME with `python -c` importing both symbols plus `ruff check` and the targeted test class.
+- Added three Failed Attempts rows: `git checkout --ours/--theirs` on a both-added import line (drops a symbol), trusting the green CI rollup as mergeable (DIRTY blocks independently), and assuming `git merge-tree` mutates the worktree (it is read-only).
+- Added Results & Parameters entries: `both_added_import_line`, `conflict_dry_run`, `dirty_with_green_ci`, `runtime_import_verify`.
+- Added a Verified On row for ProjectHephaestus issue #1429 (`ci_driver.py` both-added `hephaestus.constants` import) with verified-local result.
+- Added tags: `import-line-conflict`, `union-imports`, `both-added-import`, `same-module-import`, `merge-tree-dry-run`, `dirty-all-green`, `runtime-import-verify`, `ruff-import-order`, `no-pick-a-side`.
+- Bumped version 1.12.0 -> 1.13.0 (MINOR — new verified workflow section § P + failed attempts); updated date to 2026-06-30.
+
+### Why
+Existing coverage handled AA (both-added) FILE conflicts and a passing mention of "merge import lists" buried inside the cluster-extraction context (§ K3), but did not capture the standalone, high-frequency case of two branches each adding a DIFFERENT import of the SAME module on one line. That case is distinctive because the otherwise-safe "take main for source files" shortcut is WRONG — main's side is an INDEPENDENT addition, not a superset, so picking either side silently drops a needed symbol and breaks at import/usage time. It also reinforces that a green CI rollup does not imply mergeability and that `git merge-tree` is a safe non-mutating way to measure conflicts before and after resolution.
+
 ## v1.12.0 (2026-06-29)
 
 **Changed by:** Inference360 PR #289 safe cleanup and Warden rebase recovery
