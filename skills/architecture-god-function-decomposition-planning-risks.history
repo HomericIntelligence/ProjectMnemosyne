@@ -1,24 +1,91 @@
+<!-- markdownlint-disable -->
+# architecture-god-function-decomposition-planning-risks — History
+
+## v1.3.0 (2026-06-30)
+
+**Changed by:** ProjectHephaestus issue #1462 — produce (and REVISE after a NOGO) an
+implementation plan to decompose the 2103-line `CIDriver` god **CLASS** (6 methods over the
+80-line cap).
+
+**Verification:** unverified (planning-phase learnings; no code ran end-to-end). The honesty
+gate is honored — the class-level workflow is titled "Proposed Workflow" with the UNVERIFIED
+warning banner.
+
+**What changed (minor bump 1.2.0 → 1.3.0 — additive; the function-level core v1.0.0–v1.2.0
+workflow is unchanged):**
+
+- Extended scope from god-FUNCTION extraction to god-CLASS / collaborator extraction. Added
+  two new "When to Use" triggers (5, 6) for class decomposition and the intra-helper-vs-
+  collaborator decision.
+- Added a "God-CLASS Decomposition" section with a **Proposed Workflow** decision tree
+  (STEP 0 seam-count → STEP 1 AST-measure/RED cap-test → STEP 2 helper-vs-collaborator →
+  STEP 3 delegation-stub + injected providers → **STEP 3a circular-import check** → STEP 4
+  whole-test-tree seam sweep).
+- **Risk 10a (the #1 learning — earned the NOGO): "Circular import when extracting a
+  collaborator — relocate shared helpers to a cycle-free leaf + re-export."** When the moved
+  method body uses a module-level helper defined in the god module (here
+  `_without_auto_merge_policy` + `_AUTO_MERGE_POLICY_CHECK` in `ci_driver.py`), a top-level
+  back-import from the collaborator creates a genuine `god → collaborator → god` cycle. Fix:
+  relocate the stateless helper to a cycle-free leaf (`ci_check_inspector.py`, verified leaf
+  via `grep "from .ci_driver"` → no match), re-export from the god module via the
+  `name as name` alias idiom (no `# ruff: noqa: F401`; RUF100 guard), and import it into the
+  collaborator FROM THE LEAF — mirroring the `FAILING_CHECK_CONCLUSIONS` #1357 precedent.
+  Detection rule: enumerate every MODULE-LEVEL symbol the moved body references (not just
+  `self._` calls) and verify with
+  `python -c "import god_module; import new_module; print('no cycle')"`.
+- **Risk 10: patch.object seam preservation is the dominant class-decomposition constraint**
+  (296 `patch.object(driver, ...)` sites in `test_ci_driver.py`); every extracted method keeps
+  a 3-line delegation stub on the original class with lambda providers injected in `__init__`
+  so each seam still intercepts at call time.
+- **Risk 11: intra-class helper vs injected-provider collaborator — decide by sibling
+  `self._` call count.** Many sibling calls → intra-class private helper (small provider
+  surface; KISS/YAGNI). Few external sibling calls + cohesive sub-responsibility (e.g. an
+  "arming state machine") → new injected-provider collaborator.
+- **Risk 12: unverified class-decomposition reliances the reviewer must re-check** (eyeballed
+  helper line counts; whole-test-tree internal-name patch sweep; injected-lambda signature
+  re-read on disk; import-boundary tests; verbatim control-flow body diff; RED cap-test
+  enumerating the TRUE over-cap set; extracted poll loop must RETURN the data the caller
+  recomputes — `_poll_post_fix_ci` returns the `checks` list, not a bool, preserving the
+  caller's pass/fail evaluation at `ci_driver.py:888`).
+- Added 4 `## Failed Attempts` rows: (a) the naive top-level back-import that creates the
+  cycle (the NOGO); (b) extracting every over-cap method into a collaborator (wide provider
+  surface, KISS/YAGNI); (c) writing an injected-lambda signature without re-reading the real
+  method; (d) eyeballing helper line counts from block boundaries.
+- Added god-class items to the planning checklist (including the circular-import check).
+- Extended `description:` and added tags `god-class`, `collaborator-extraction`,
+  `patch-object-seams`, `delegation-stub`, `injected-provider`, `srp`, `circular-import`,
+  `import-cycle`, `leaf-module`, `re-export`.
+- Bumped `version:` 1.2.0 → 1.3.0; `date:` → 2026-06-30.
+
+**Why:** Producing the #1462 plan surfaced a failure mode neither
+`architecture-god-function-decomposition-planning-risks` (function-scoped) nor
+`automation-god-package-shim-first-decomposition` captured: the circular import when a
+collaborator extracted from a god class back-imports a module-level helper from that class.
+The plan took a NOGO until the helper was relocated to a cycle-free leaf and re-exported. The
+class-vs-function decomposition decision criterion (sibling-`self._`-call count) and the
+patch-seam-count-as-risk-metric are likewise new to this skill.
+
+---
+
+### Full snapshot of the PREVIOUS skill content (v1.2.0)
+
+The complete v1.2.0 skill file, preserved verbatim before the v1.3.0 amendment:
+
+````````markdown
 ---
 name: architecture-god-function-decomposition-planning-risks
 description: >-
   Use when: planning an extraction pass on over-long functions (god functions)
-  OR an over-long god CLASS in hephaestus/automation/ or similar large Python
-  codebases, especially when working from an issue that cites specific line
-  numbers, function sizes, or file locations — before finalizing an extraction
-  plan that waives work on a function, verify on disk that the cited size matches
-  reality; apply the sentinel return pattern for extracted poll loops; verify
-  test file existence before writing stubs; and audit plan documents for
-  helper-defined-but-never-called inconsistencies. For god-CLASS decomposition,
-  the dominant constraint is preserving existing patch.object(instance, "_method")
-  test seams via thin delegation stubs, and the intra-class-helper vs
-  injected-provider-collaborator decision is driven by the count of sibling
-  self._ calls each method makes. The #1 non-obvious failure when extracting a
-  collaborator is a circular import — if the moved method body uses a module-level
-  helper defined in the god module, relocate that helper to a cycle-free leaf module
-  and re-export it (name as name) rather than back-importing from the god module.
+  in hephaestus/automation/ or similar large Python codebases, especially when
+  working from an issue that cites specific line numbers, function sizes, or
+  file locations — before finalizing an extraction plan that waives work on a
+  function, verify on disk that the cited size matches reality; apply the
+  sentinel return pattern for extracted poll loops; verify test file existence
+  before writing stubs; and audit plan documents for helper-defined-but-never-called
+  inconsistencies.
 category: architecture
-date: 2026-06-30
-version: "1.3.0"
+date: 2026-06-13
+version: "1.2.0"
 user-invocable: false
 history: architecture-god-function-decomposition-planning-risks.history
 verification: unverified
@@ -41,16 +108,6 @@ tags:
   - loop-body-measurement
   - docstring-budget
   - return-type-tracing
-  - god-class
-  - collaborator-extraction
-  - patch-object-seams
-  - delegation-stub
-  - injected-provider
-  - srp
-  - circular-import
-  - import-cycle
-  - leaf-module
-  - re-export
 ---
 
 # Architecture: God-Function Decomposition — Planning Risks
@@ -59,10 +116,10 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-30 |
-| **Source issue** | ProjectHephaestus #1180 — decompose 5 god-functions in `hephaestus/automation/`; (v1.3.0) ProjectHephaestus #1462 — decompose the 2103-line `CIDriver` god **CLASS** (6 over-cap methods) |
+| **Date** | 2026-06-13 |
+| **Source issue** | ProjectHephaestus #1180 — decompose 5 god-functions in `hephaestus/automation/` |
 | **Verification** | unverified (planning-phase learnings; no code ran) |
-| **Objective** | Document recurring planning-phase failure modes when working from issue-cited metadata rather than disk reality — for both god-FUNCTION extraction (v1.0.0–v1.2.0) and god-CLASS collaborator extraction where preserving `patch.object` test seams is the dominant constraint (v1.3.0) |
+| **Objective** | Document recurring planning-phase failure modes when working from issue-cited metadata rather than disk reality |
 
 These risks surface whenever an engineer or agent plans god-function extractions from
 an issue description that cites line numbers, function sizes, or file paths. The
@@ -78,8 +135,6 @@ Use this skill when:
 2. Reviewing a decomposition plan before approving it — check that each cited function size was measured from disk, not from the issue body.
 3. Implementing a decomposition plan produced by another agent or engineer — verify all arithmetic, helper call sites, and test file assumptions before writing code.
 4. Authoring decomposition plans for ProjectHephaestus `hephaestus/automation/` modules (where the 80-line orchestrator cap is enforced).
-5. **(Class-level, v1.3.0)** Planning the decomposition of an over-long god **CLASS** (e.g. a 2000+-line `CIDriver`) by extracting collaborators or intra-class helpers — where an extensive `test_<class>.py` suite already monkeypatches the class internals via `patch.object(instance, "_method")`. The load-bearing constraint here is NOT line arithmetic but **preserving those patch seams** (see Risk 10 + Risk 11 below).
-6. **(Class-level, v1.3.0)** Deciding, for each over-cap method, between an **intra-class private helper** vs a **new injected-provider collaborator** — the criterion is the count of sibling `self._` calls the method makes (Risk 11).
 
 ---
 
@@ -452,239 +507,6 @@ discrepancy in the plan and proceed from disk reality.
 
 ---
 
-## God-CLASS Decomposition (v1.3.0 — ProjectHephaestus #1462)
-
-> **Verification level: unverified.** Everything in the risks below comes from
-> *producing a plan* — and then REVISING it after a NOGO — for #1462 (decompose the
-> 2103-line `CIDriver` class; 6 methods over the 80L cap). **No code was executed
-> end-to-end.** The "Proposed Workflow" decision tree and every line-count are planning
-> estimates the reviewer must re-measure. See the Proposed Workflow section for the
-> honesty banner. The #1 non-obvious failure that earned the NOGO was a **circular import**
-> when extracting a collaborator (Risk 10a) — read it first.
-
-Class-level decomposition differs from function-level in one decisive way: an over-long
-*function* is extracted into helpers whose only consumers are the function itself, so test
-seams rarely move. An over-long *class* sits behind a large `test_<class>.py` suite that
-monkeypatches its internals with `patch.object(instance, "_method")`. **Those seams are the
-load-bearing constraint** — break one and a swath of tests silently stop exercising real
-code (or crash with `AttributeError`). The line-count arithmetic from Risks 1–9 still
-applies, but it is secondary to seam preservation.
-
-### Proposed Workflow (UNVERIFIED — no code ran end-to-end)
-
-> **Honesty gate:** the steps below were written while planning #1462 and have NOT been
-> executed. Treat them as a proposal to validate, not a verified procedure.
-
-```text
-Decomposing a god CLASS (methods over the cap)?
-└─ STEP 0  (BEFORE planning): count the patch seams — this is the risk metric.
-     grep -c 'patch.object(<instance>' tests/unit/.../test_<class>.py
-     (#1462: 296 patch.object(driver, ...) sites in test_ci_driver.py)
-     Every extracted method MUST keep a thin delegation stub on the original class
-     so each of those 296 seams still intercepts at call time.
-└─ STEP 1  AST-measure every method on disk (Risk 9 command, but for methods).
-     Run the NEW ≤80L-cap test RED FIRST — it asserts ALL methods, so it enumerates
-     the TRUE over-cap set, which may exceed the issue's named list.
-└─ STEP 2  For each over-cap method, choose helper vs collaborator (Risk 11):
-     trace sibling `self._` calls via grep.
-       many sibling self._ calls  → intra-class private helper (small provider surface)
-       cohesive sub-responsibility,
-       few external sibling calls  → new injected-provider collaborator
-└─ STEP 3  For each method moved onto a collaborator, leave a 3-line delegation stub
-     on the original class (Risk 10) and inject lambda providers in __init__ so the
-     existing patch.object seams intercept at call time (the #1357 precedent).
-└─ STEP 3a CIRCULAR-IMPORT CHECK (Risk 10a — this earned the NOGO):
-     List EVERY module-level symbol the moved method body references (not just self._
-     calls — module-level helpers + constants too). Confirm none forces
-     new_module → god_module at import time. If a needed helper lives in god_module,
-     RELOCATE it to a cycle-free LEAF module and re-export via `name as name`.
-     Verify:  python -c "import god_module; import new_module; print('no cycle')"
-     And assert the leaf stays leaf: grep "from .god_module" leaf_module.py  (→ no match)
-└─ STEP 4  Sweep the WHOLE test tree for patches of any INTERNAL name that moves onto
-     the collaborator — not just the public method names (Risk 12, unverified reliance b).
-```
-
----
-
-## Risk 10: Preserving `patch.object` Test Seams Is the Dominant Class-Decomposition Constraint
-
-**What happened (planning #1462)**: `test_ci_driver.py` contains **296** `patch.object(driver, "_method")`
-call sites. The plan extracted two methods (`_wait_for_pr_terminal`, `_check_arming_on_drive_start`)
-onto a new `ArmingLifecycle` collaborator and shrank four others via intra-class helpers — but
-every one of those 296 seams targets a method **on the `CIDriver` instance**. If an extracted
-method simply moves to the collaborator and is deleted from `CIDriver`, the matching
-`patch.object(driver, "_wait_for_pr_terminal")` raises `AttributeError` (or worse, silently
-patches a now-dead attribute) and the test stops exercising real code.
-
-**The failure mode**: A "clean" extraction that deletes the method from the original class breaks
-N test seams at once. The breakage is proportional to the patch-site count — which is why that
-count is the risk metric to gather BEFORE planning, not after.
-
-**Rule**: Before planning any class decomposition, count the seams:
-
-```bash
-grep -c 'patch.object(driver' tests/unit/automation/test_ci_driver.py   # → 296 for #1462
-```
-
-For **every** extracted method, keep a thin delegation stub on the original class so the seam
-still resolves and still intercepts at call time. The established precedent is #1357
-(`PRDiscovery` / `CIFixOrchestrator` / `PostMergeProcessor`): a 3-line stub on `CIDriver`
-delegates to the collaborator, and **lambda providers injected in `__init__`** let the patch
-intercept at the call boundary:
-
-```python
-class CIDriver:
-    def __init__(self, ...):
-        # inject narrow callables so patch.object(driver, "_x") still intercepts
-        self._arming = ArmingLifecycle(
-            wait_for_terminal=lambda pr, deadline: self._wait_for_pr_terminal(pr, deadline),
-            mark_green=lambda *, succeeded: self.mark_drive_green_learn_result(succeeded=succeeded),
-        )
-
-    def _wait_for_pr_terminal(self, pr, deadline):   # 3-line delegation stub
-        return self._arming.wait_for_pr_terminal(pr, deadline)
-```
-
-The stub costs three lines per method; breaking 296 seams costs the whole review cycle.
-
----
-
-## Risk 10a: Circular Import When Extracting a Collaborator — Relocate Shared Helpers to a Cycle-Free Leaf + Re-export (this earned the NOGO)
-
-**This is the #1 non-obvious failure when extracting a collaborator from a god class, and the one
-that earned the #1462 plan a NOGO.** When you extract class `Foo` from `god.py` into `foo.py`, and
-`god.py` imports `Foo` at top level, then `foo.py` must **NOT** import any symbol back from `god.py`
-at top level — that is a genuine import cycle (`god → foo → god`).
-
-**The trap (planning #1462)**: the extracted method's body uses a **stateless module-level helper**
-(`_without_auto_merge_policy` and its constant `_AUTO_MERGE_POLICY_CHECK`) defined in `ci_driver.py`.
-Naively importing that helper into the new `foo.py` collaborator (`from .ci_driver import
-_without_auto_merge_policy`) creates the cycle, because `ci_driver.py` already imports the
-collaborator class at top level. The dependency is invisible if you only look at `self._` calls —
-you must enumerate **module-level** symbols the moved body touches, not just instance methods.
-
-**The failure mode**: A collaborator extraction that looks clean (seams preserved, providers
-injected) still fails at import time with `ImportError: cannot import name ... (most likely due to a
-circular import)`. The poll loop / arming logic that referenced one module-level helper drags the
-whole god module into the collaborator's import graph.
-
-**FIX (lowest-risk, follows the file's own precedent)**: relocate the shared **stateless** helper to
-a cycle-free **LEAF** module that neither file's import creates a cycle with — here
-`ci_check_inspector.py`, confirmed leaf via `grep "from .ci_driver" ci_check_inspector.py` → no
-match. Then **re-export** it from `god.py` (`ci_driver.py`) via the `name as name` alias idiom for
-backward compat, preserving all existing call sites and any external import, and have the new
-collaborator import it **from the LEAF**:
-
-```python
-# ci_check_inspector.py  (the cycle-free leaf — must NOT import from ci_driver)
-_AUTO_MERGE_POLICY_CHECK = "..."
-def _without_auto_merge_policy(...): ...
-
-# ci_driver.py  (god module — re-export for backward compat, NO `# ruff: noqa: F401`)
-from .ci_check_inspector import _without_auto_merge_policy as _without_auto_merge_policy
-from .ci_check_inspector import _AUTO_MERGE_POLICY_CHECK as _AUTO_MERGE_POLICY_CHECK
-
-# foo.py  (the new collaborator — imports from the LEAF, never from ci_driver)
-from .ci_check_inspector import _without_auto_merge_policy
-```
-
-This exactly mirrors the file's own prior precedent: `FAILING_CHECK_CONCLUSIONS` was moved to the
-leaf in #1357 and re-exported from `ci_driver`. **Prefer leaf-relocation** over "inject the helper
-as an 11th provider lambda" when the helper is (a) stateless **and** (b) still needed by the god
-module itself at other call sites the collaborator cannot reach — injecting it as a provider would
-leave the god module without its own access.
-
-**Detection rule (run BEFORE finalizing any collaborator extraction)**: list every **module-level**
-symbol the moved method body references (constants, module functions — not just `self._` calls) and
-confirm none forces `new_module → god_module` at import time. Then verify with a real import:
-
-```bash
-# 1. Prove no cycle exists after the relocation/re-export
-python -c "import hephaestus.automation.ci_driver; import hephaestus.automation.foo; print('no cycle')"
-
-# 2. Assert the leaf stays a leaf (no back-edge to the god module)
-grep "from .ci_driver" hephaestus/automation/ci_check_inspector.py   # → MUST print nothing
-```
-
-**Rule**: never write `from .god_module import X` at the top of a freshly-extracted collaborator.
-If the collaborator needs a god-module symbol, relocate that symbol to a cycle-free leaf and
-re-export it (alias idiom, no `# ruff: noqa: F401` — RUF100 guards the unnecessary suppression).
-
----
-
-## Risk 11: Intra-Class Helper vs Injected-Provider Collaborator — Decide by Sibling `self._` Call Count
-
-**What happened (planning #1462)**: Six methods were over the cap. Two
-(`_wait_for_pr_terminal`, `_check_arming_on_drive_start`) form a cohesive
-"arming state machine" sub-responsibility and were planned as a new injected-provider
-collaborator (`ArmingLifecycle`). The other four (`run`, `_discover_prs`, `_attempt_ci_fixes`,
-`_recheck_and_arm_after_fix`) call **many sibling `self._` methods**, so extracting them into
-a collaborator would force a wide injected-provider surface (one lambda per sibling call) —
-violating KISS/YAGNI. They were planned as **intra-class private helpers** instead
-(`_run_worker_pool`, `_finalize_open_prs_remaining`, `_widen_discovery`,
-`_run_one_ci_fix_iteration`, `_poll_post_fix_ci`), which keep the provider surface minimal.
-
-**The failure mode**: Blindly extracting every over-cap method into a new collaborator
-explodes the injected-provider surface (a lambda for every sibling `self._x` the method
-touched), adding more coupling than it removes. Conversely, leaving a cohesive
-sub-responsibility as scattered private helpers misses an SRP opportunity.
-
-**Rule**: For each over-cap method, grep its body for sibling `self._` calls and count them:
-
-```bash
-# Count distinct sibling self._ calls inside one method's line range
-sed -n '<start>,<end>p' hephaestus/automation/ci_driver.py \
-  | grep -oE 'self\._[a-z_]+' | sort -u | wc -l
-```
-
-| Sibling `self._` call count | Choose | Why |
-| --------------------------- | ------ | --- |
-| Many (method is glue over siblings) | **intra-class private helper** | Keeps injected-provider surface small (KISS/YAGNI); the helper still has `self`, so sibling calls stay free |
-| Few + cohesive sub-responsibility | **new injected-provider collaborator** | A clean SRP boundary; inject only the handful of callables it actually needs |
-
-This is the genuinely new decision criterion beyond function decomposition: a *function*
-helper always keeps the enclosing scope, but a *class* collaborator must re-acquire every
-sibling it calls as an injected provider, so the sibling-call count is the cost signal.
-
----
-
-## Risk 12: Unverified Class-Decomposition Reliances the Reviewer MUST Re-check
-
-**What happened (planning #1462)**: The plan rested on several assumptions that were NOT
-verified on disk because no code ran. Each is a place where the plan can be silently wrong.
-
-**The unverified reliances (reviewer focus list):**
-
-1. **Per-extraction line arithmetic is eyeballed, not measured.** Estimates like
-   `_widen_discovery ~50L` were read off block boundaries, not AST-measured. Re-run the
-   AST measurement (Risk 9) on the REAL post-edit methods before trusting any "≤80L" claim.
-2. **No existing test patches an INTERNAL name that moves onto the collaborator.** The plan
-   spot-checked only the two PUBLIC method names. Only a **whole-test-tree grep** at
-   implementation time confirms no test patches a private name that relocates to
-   `ArmingLifecycle`:
-
-   ```bash
-   grep -rn 'patch.*\.\(_wait_for_pr_terminal\|_check_arming\|<every internal moved name>\)' tests/
-   ```
-3. **`mark_drive_green_learn_result` signature was assumed keyword-only (`*, succeeded`).**
-   The injected lambda `lambda *, succeeded: ...` was written WITHOUT re-reading the real
-   signature on disk. Re-read it; if the real signature is positional, the lambda is wrong.
-4. **The new collaborator lands under `hephaestus/automation/`**, so the
-   library/automation import-boundary tests (`test_import_surface.py`,
-   `test_automation_boundary.py`) must still pass — **assumed, not run.** Run them.
-5. **The verbatim move of `_wait_for_pr_terminal`'s BLOCKED/sentinel control flow** (6 distinct
-   return states) must survive the `self._x` → provider rewrite intact. One missed rewrite
-   silently changes behavior. Diff the moved body against the original branch-by-branch.
-6. **The new 80L-cap test is a NEW invariant** that asserts ALL `CIDriver` methods — on first
-   run it may flag pre-existing over-cap methods BEYOND the 6 named in the issue. **Run it RED
-   first** to enumerate the true over-cap set before sizing the extraction budget.
-
-**Rule**: A class-decomposition plan written without running code MUST ship this reviewer
-focus list explicitly. Each item is a concrete `grep`/`Read`/`pytest` the implementer runs
-to convert an assumption into a fact before writing the extraction.
-
----
-
 ## Failed Attempts
 
 ### R1: Single Helper Insufficient for `_run_implementation_and_review` (130L)
@@ -797,90 +619,6 @@ every defined helper has at least one shown call site.
 
 ---
 
-### #1462 (Class-level, UNVERIFIED): Extracting Every Over-Cap Method Into a New Collaborator
-
-**What was tried**: An early framing of the #1462 plan considered extracting all six over-cap
-`CIDriver` methods into collaborators for a uniform "no method over 80L lives on the god class"
-shape.
-
-**Why it failed (in planning review)**: Four of the six (`run`, `_discover_prs`,
-`_attempt_ci_fixes`, `_recheck_and_arm_after_fix`) are glue over **many** sibling `self._`
-methods. Extracting them would force one injected lambda per sibling call — a wide provider
-surface that adds more coupling than the extraction removes (KISS/YAGNI violation).
-
-**Lesson**: Choose by sibling `self._` call count (Risk 11). Many sibling calls → intra-class
-private helper (keeps the provider surface tiny); few calls + cohesive sub-responsibility → new
-injected-provider collaborator. Only `_wait_for_pr_terminal` + `_check_arming_on_drive_start`
-(the cohesive "arming state machine") justified the `ArmingLifecycle` collaborator.
-
----
-
-### #1462 (Class-level, UNVERIFIED): Deleting an Extracted Method From the Class Breaks 296 Patch Seams
-
-**What was tried**: The intuitive "clean" extraction — move `_wait_for_pr_terminal` onto
-`ArmingLifecycle` and delete it from `CIDriver`.
-
-**Why it failed (in planning review)**: `test_ci_driver.py` has **296** `patch.object(driver, "_method")`
-seams. Deleting the method makes `patch.object(driver, "_wait_for_pr_terminal")` raise
-`AttributeError` (or silently patch a dead attribute), so those tests stop exercising real code.
-
-**Lesson**: Count the seams BEFORE planning (`grep -c 'patch.object(driver'`), and keep a 3-line
-delegation stub on the original class for EVERY extracted method, with lambda providers injected
-in `__init__` so the patch intercepts at call time (#1357 precedent). The seam count is the risk
-metric.
-
----
-
-### #1462 (Class-level, UNVERIFIED): Writing the Injected-Lambda Signature Without Re-reading the Real Method
-
-**What was tried**: The injected provider was written as
-`lambda *, succeeded: self.mark_drive_green_learn_result(succeeded=succeeded)` — assuming the
-target is keyword-only.
-
-**Why it (could) fail**: The `*, succeeded` keyword-only form was assumed, not confirmed by
-reading `mark_drive_green_learn_result`'s real signature on disk. If the real signature is
-positional or has extra params, the lambda is wrong and the delegation silently breaks.
-
-**Lesson**: Before writing any injected-provider lambda, Read the target method's real signature
-on disk. Never reconstruct a callable's signature from memory in a plan (this is the class-level
-analogue of Risk 6 / the R0 sentinel-argument failure).
-
----
-
-### #1462 (Class-level, UNVERIFIED — earned the NOGO): Importing a God-Module Helper Into the New Collaborator at Top Level
-
-**What was tried**: The first `ArmingLifecycle` collaborator imported the stateless module-level
-helper it needed straight from the god module — `from .ci_driver import _without_auto_merge_policy`
-(plus its constant `_AUTO_MERGE_POLICY_CHECK`) — because the moved method body referenced it.
-
-**Why it failed (NOGO in planning review)**: `ci_driver.py` already imports `ArmingLifecycle` at
-top level, so the new top-level back-import creates a genuine cycle (`ci_driver → arming → ci_driver`),
-which fails at import time. The trap is that the dependency is a **module-level** helper, not a
-`self._` call — enumerating only instance methods misses it entirely.
-
-**Lesson**: Relocate the shared **stateless** helper to a cycle-free **leaf** module
-(`ci_check_inspector.py`, verified leaf), re-export it from the god module via the `name as name`
-alias idiom (no `# ruff: noqa: F401`), and import it into the collaborator **from the leaf** — the
-exact `FAILING_CHECK_CONCLUSIONS` precedent from #1357. Verify with
-`python -c "import ci_driver; import arming; print('no cycle')"` and
-`grep "from .ci_driver" ci_check_inspector.py` (→ no match). See Risk 10a.
-
----
-
-### #1462 (Class-level, UNVERIFIED): Eyeballing Extracted-Helper Line Counts From Block Boundaries
-
-**What was tried**: Per-helper sizes (`_widen_discovery ~50L`, etc.) were read off visual block
-boundaries to claim each post-extraction method lands ≤80L.
-
-**Why it (could) fail**: Visual block boundaries are not AST measurements — docstrings, blank lines,
-and continuation lines shift the real count. A helper "obviously ~50L" can land over cap after the
-real extraction, silently failing the ≤80L invariant the new cap-test enforces.
-
-**Lesson**: AST-measure every helper on the REAL post-edit method (Risk 9 command), never from
-eyeballed boundaries. Treat every "≤80L" claim in a plan as unverified until measured on disk.
-
----
-
 ## Planning Checklist for God-Function Decomposition
 
 Before submitting or approving a god-function decomposition plan:
@@ -921,20 +659,6 @@ Before submitting or approving a god-function decomposition plan:
     [ ] Read the downstream function's first 20 lines
     [ ] Confirm it handles the empty value correctly
     [ ] Cite the verification in the plan (file:line range)
-
-[ ] FOR GOD-CLASS DECOMPOSITION (v1.3.0) — additionally:
-    [ ] Count patch.object(<instance>, ...) seams BEFORE planning (this is the risk metric)
-    [ ] CIRCULAR-IMPORT CHECK (Risk 10a): list EVERY module-level symbol the moved body uses;
-        if it lives in the god module, relocate to a cycle-free leaf + re-export (name as name),
-        verify `python -c "import god; import collaborator"` and `grep "from .god" leaf.py` (no match)
-    [ ] Keep a 3-line delegation stub on the original class for EVERY extracted method
-    [ ] Inject lambda providers in __init__ so patch.object seams intercept at call time (#1357)
-    [ ] Choose helper vs collaborator by sibling self._ call count (many → helper; few+cohesive → collaborator)
-    [ ] Run the new ≤cap test RED FIRST — it asserts ALL methods, enumerating the TRUE over-cap set
-    [ ] Re-read every injected lambda's target method signature on disk (no signatures from memory)
-    [ ] Grep the WHOLE test tree for patches of any INTERNAL name that moves onto a collaborator
-    [ ] If the collaborator lands under hephaestus/automation/: run import-boundary tests
-    [ ] Diff any verbatim-moved control-flow body branch-by-branch after self._x → provider rewrites
 ```
 
 ---
@@ -989,3 +713,5 @@ for node in ast.walk(tree):
 | ProjectHephaestus (R0) | Planning session for issue #1180 — decompose 5 god-functions in `hephaestus/automation/`; `_implement_issue` cited as 354 lines in issue, found as 127 lines on disk; `_run_impl_review_loop` cited at `ci_driver.py:1513`, found at `_review_phase.py:374-503`; `_finalize_address_state` defined in plan but not called in replacement block; test file existence unverified; `_poll_ci_until_concluded` sentinel contract risk identified |
 | ProjectHephaestus (R1) | Second planning iteration for issue #1180 after R0 NOGO review; AST re-measurement confirmed `_implement_issue` is 128L not 354L and `_run_impl_review_loop` is at `_review_phase.py:374`; arithmetic subtraction chain revealed `_run_ci_fix_session` needs 5 helpers (not 3) to reach ≤80L; `_run_address_step_if_needed` sentinel return pattern documented with all 3 control-flow states; R0 waiver-on-"marginal" grounds rejected — 128L = 60% over cap and is in scope |
 | ProjectHephaestus | Issue #1180 R2 plan (2026-06-13) — 3rd TASK/PLAN/REVIEW cycle; all 7 target functions scoped to ≤80L |
+
+````````
