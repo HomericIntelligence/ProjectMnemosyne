@@ -16,7 +16,7 @@ description: >-
   direction — merge, not split — but the same shim discipline applies).
 category: architecture
 date: 2026-06-30
-version: "2.0.0"
+version: "2.1.0"
 user-invocable: false
 verification: verified-local
 history: automation-god-package-shim-first-decomposition.history
@@ -44,11 +44,11 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-30 (v2.0.0) |
-| **Objective** | (v1.0.0) Decompose a 52-file flat god-package into 8 domain sub-packages via shim files. (v2.0.0) ALSO covers the inverse: consolidate a small cluster of always-co-imported config modules into ONE canonical module, keeping the originals as explicit re-export shims — executed for real in ProjectHephaestus #1441 |
-| **Outcome** | v1.0.0 plan for #1177 was never executed. v2.0.0 records a verified-local execution of the shim consolidation for #1441 ("Merge 4 Claude agent modules"): merge confirmed with ruff + mypy clean and a 145-test focused suite green |
+| **Date** | 2026-06-30 (v2.1.0) |
+| **Objective** | (v1.0.0) Decompose a 52-file flat god-package into 8 domain sub-packages via shim files. (v2.0.0) ALSO covers the inverse: consolidate a small cluster of always-co-imported config modules into ONE canonical module, keeping the originals as explicit re-export shims — executed for real in ProjectHephaestus #1441. (v2.1.0) ALSO records a verified-local SPLIT/move execution (#1443) and the **whole-test-tree patch-seam sweep** it surfaced |
+| **Outcome** | v1.0.0 plan for #1177 was never executed. v2.0.0 records a verified-local execution of the shim consolidation for #1441 ("Merge 4 Claude agent modules"): merge confirmed with ruff + mypy clean and a 145-test focused suite green. v2.1.0 records a verified-local SPLIT of 3 `*_state.py` modules into `state/` (#1443): full `tests/unit/automation` suite **2284 passed**, ruff + mypy clean — after a whole-test-tree patch-seam sweep fixed 4 failures the approved plan missed |
 | **Trigger** | Either direction: a flat package with 40+ .py files (split), OR a cluster of 3-4 tiny always-co-imported modules (merge). Both keep original module paths as explicit re-export shims |
-| **Verification** | verified-local (ruff + mypy + focused 145-test suite green locally; full unit suite re-running at capture, NOT verified-ci) |
+| **Verification** | verified-local (MERGE #1441: ruff + mypy + 145-test focused suite green. SPLIT #1443: ruff + mypy clean, full `tests/unit/automation` suite 2284 passed, 0 failed) |
 | **History** | [changelog](./automation-god-package-shim-first-decomposition.history) |
 
 ## When to Use
@@ -65,14 +65,22 @@ Apply this skill when any of the following is true:
 - **(Merge direction, v2.0.0)** You have a small cluster of **3-4 tiny modules that are always imported together** (e.g. `claude_models.py` + `claude_timeouts.py` + `session_naming.py`) and want to consolidate them into ONE canonical module while leaving each original path as a thin explicit re-export shim
 - You are writing an **explicit `from X import (name as name, ...)` re-export shim** and need to know whether `# ruff: noqa: F401` is required (it is NOT — and adding it triggers RUF100)
 - A test reads a **private symbol** (`_KNOWN_MODELS`), calls `importlib.reload`, or pins a **logger name** (`caplog.at_level(..., logger="...")`) of a module you are about to turn into a shim — these tests CANNOT stay on the shim and must be repointed at the canonical module
+- **(Split direction, v2.1.0)** A test anywhere in the tree `mock.patch("...<flat_path>.<name>")` or `monkeypatch.setattr`s a name that the module you are moving **imported from elsewhere** (not one of the module's OWN public symbols) — after the move that bound name lives in the canonical sub-package and the flat shim no longer carries it, so the patch target vanishes. These seams hide in OTHER test files, not just the moved module's own test file, and require a whole-test-tree grep sweep (Step 8b below) — the `dir(shim)` parity test cannot catch them
 
 ## Verified Workflow
 
 > **Verification level: verified-local.** The SPLIT workflow (Steps 0-9 below) was designed
-> during planning for ProjectHephaestus #1177 and remains a proposal for the full 52-file split.
+> during planning for ProjectHephaestus #1177 and remains a proposal for the full 52-file split,
+> but a **partial SPLIT was executed end-to-end** for ProjectHephaestus #1443 — moving the three
+> `*_state.py` modules into a `state/` sub-package with explicit `name as name` shims — and is
+> verified-local: ruff + mypy clean, full `tests/unit/automation` suite **2284 passed, 0 failed**.
+> That execution surfaced the **whole-test-tree patch-seam sweep** (Step 8b below): the decisive
+> finding that a name patched on the flat path keeps working after the move ONLY if it is one of
+> the shim's OWN re-exported symbols — any name imported INTO the moved module must be patched on
+> the canonical sub-package module instead, and those broken seams hide in OTHER test files.
 > The MERGE workflow (the "Shim Consolidation" section directly below) was **executed end-to-end**
 > for ProjectHephaestus #1441 and is verified-local: ruff + mypy clean, 145-test focused suite
-> green. Where the two disagree, the executed MERGE lessons win — most importantly the
+> green. Where the two disagree, the executed lessons win — most importantly the
 > **explicit-`as`-alias re-export shim needs NO `# ruff: noqa: F401`** (v1.0.0's templates added
 > that noqa; that is now corrected — see the Shim Consolidation section and Failed Attempts).
 
@@ -414,6 +422,42 @@ grep -n 'LIB_ROOT\|automation' tests/unit/test_automation_boundary.py | head -20
 pixi run pytest tests/unit/test_automation_boundary.py -v
 ```
 
+### Step 8b: Patch-Seam Sweep Across the WHOLE Test Tree (verified-local, #1443)
+
+> **This is a separate, mandatory check — NOT subsumed by the full-surface parity test.**
+> A shim re-exports only the moved module's OWN public symbols. Any name the module
+> *imported from elsewhere* (e.g. `prefetch_issue_states` imported into `planner_state`
+> from `..github_api`) is intentionally absent from the shim, so a `dir(shim)` parity
+> test will never flag it. But `mock.patch("...<flat_path>.<imported_name>")` rebinds the
+> attribute on the *named* module — and after the move that name no longer lives on the
+> flat shim, so the patch target vanishes. These broken seams hide in **OTHER** test files,
+> not just the moved module's own test file.
+
+Before declaring a shim-first move done, grep the WHOLE test tree for every patch /
+monkeypatch / setattr against each moved module's flat namespace and repoint each hit:
+
+```bash
+# For each moved module, find EVERY patch/monkeypatch against its flat namespace across ALL tests:
+for m in planner_state implementer_state review_state; do
+  grep -rn "hephaestus\.automation\.${m}\." tests/ | grep -iE "patch|monkeypatch|setattr"
+done
+# Repoint imported-into names to the canonical module (state.<module>); only the shim's OWN
+# re-exported symbols keep working on the flat path.
+```
+
+**Concrete miss (#1443):** the approved plan listed patch-string repoints only for the three
+moved test files (`test_planner.py` / `test_implementer.py` / `test_review.py`) plus the known
+`test_implementer_loop.py` coupling. It MISSED `tests/unit/automation/test_planner_loop.py` and
+`tests/unit/automation/test_planner_main.py`, which patched
+`hephaestus.automation.planner_state.prefetch_issue_states` and
+`hephaestus.automation.planner_state.fetch_all_issue_labels_graphql` — names imported INTO
+`planner_state` from `..github_api` and `.review`. After the move those bound names live in
+`hephaestus.automation.state.planner`, and the flat `planner_state` shim re-exports only
+`PlannerStateManager` / `_comments_contain_plan`, so the patch targets vanished → **4 test
+failures that surfaced only on the first FULL-suite run.** Fix: repoint to
+`hephaestus.automation.state.planner.*`. This is the split-direction analogue of Step C3
+(which covers private-symbol / reload / caplog repoints in the MERGE direction).
+
 ### Step 9: Final Structural Verification
 
 ```bash
@@ -455,6 +499,7 @@ A reviewer or implementer should check each one before executing the migration.
 | Group `__all__` by domain with comment banners in the merged module | Wrote a readable, domain-clustered `__all__` for agent_config.py | ruff RUF022 requires `__all__` to be isort-sorted (flat alphabetical); domain grouping with comments fails the check | Run `ruff check --fix --unsafe-fixes` to sort `__all__`; accept the flat alphabetical list — domain grouping is lost |
 | Leave a private-symbol / reload / caplog-logger test pointed at the shim | Kept `test_claude_models.py` importing the original (now-shim) module path | The shim deliberately omits privates (`_KNOWN_MODELS`), and the merged module's logger name changed to `hephaestus.automation.agent_config` (uses `getLogger(__name__)`), so `caplog.at_level(..., logger="...claude_models")` captured nothing | Repoint such tests via a local alias `from ... import agent_config as claude_models` AND retarget every caplog logger-name string to the canonical module's logger |
 | Rely only on focused per-module tests to catch shim drift | Assumed the focused suites covered every re-exported symbol | A missing re-export surfaces only as an `AttributeError` at a future call site — focused tests that don't touch that symbol stay green | Add a parametrized full-surface parity test asserting every public name `is` the same object in the canonical module (filter module objects out of `dir()`) |
+| Repoint patch seams only in the moved module's own test file | Followed a plan that listed patch-string repoints for the three moved test files + one known coupling | `test_planner_loop.py` / `test_planner_main.py` patched `planner_state.prefetch_issue_states` / `.fetch_all_issue_labels_graphql` (names imported INTO the module, NOT re-exported by the shim); 4 failures surfaced only on the first full-suite run | Grep the WHOLE test tree for `patch("<flat_path>.<anyname>")`; repoint every imported-into name to the canonical module — the shim carries only the module's OWN symbols |
 
 ## Results & Parameters
 
@@ -485,6 +530,19 @@ A reviewer or implementer should check each one before executing the migration.
 | Tests repointed | `test_claude_models.py` (private `_KNOWN_MODELS` + `importlib.reload` + caplog logger name → `hephaestus.automation.agent_config`) |
 | New test added | full-surface shim-parity test (parametrized `is`-identity over each shim) |
 | Verification | ruff clean (hephaestus/ + tests/); mypy clean (450 source files); 145-test focused suite green; full unit suite re-running at capture (verified-local, NOT verified-ci) |
+
+### Split-Direction Parameters (ProjectHephaestus issue #1443 — verified-local)
+
+| Parameter | Value |
+| ---------- | ----- |
+| Sub-package created | `hephaestus/automation/state/` |
+| Modules moved into it | `planner_state.py` → `state/planner.py`, `implementer_state.py` → `state/implementer.py`, `review_state.py` → `state/review.py` |
+| Original paths retained as | thin explicit `from ...state.<module> import (name as name, ...)` re-export shims at the old flat paths |
+| Cross-import repointed | `_review_phase.py`: `from .state import review as review_state` (consumes the moved module via canonical path) |
+| Deliberately left on shim paths | `implementer_phase_runner.py:42,77` — kept on the flat shim paths to preserve the #714 patch surface and the no-cycle guard |
+| **Decisive fix** | **whole-test-tree patch-seam sweep** — `test_planner_loop.py` / `test_planner_main.py` patched `planner_state.prefetch_issue_states` / `.fetch_all_issue_labels_graphql` (imported-into names, NOT shim symbols); repointed to `state.planner.*` |
+| Failures surfaced | 4 — only on the first FULL `tests/unit/automation` run (the approved plan's per-moved-file seam list missed the two cross-file patches) |
+| Verification | ruff clean; mypy clean; full `tests/unit/automation` suite **2284 passed, 0 failed** (verified-local) |
 
 ### Leaf-to-Root Migration Ordering (Proposed)
 
@@ -562,11 +620,13 @@ python3 -c "import claude; print(type(claude), getattr(claude, '__file__', 'no _
 | Project | Context | Details |
 | --------- | --------- | --------- |
 | ProjectHephaestus | issue #1441 "Merge 4 Claude agent modules" (executed) | **verified-local** — Shim Consolidation (merge direction) run end-to-end: agent_config.py created, 3 modules turned into explicit re-export shims, claude_invoke.py kept separate; ruff + mypy clean, 145-test focused suite green (full suite re-running at capture) |
+| ProjectHephaestus | issue #1443 "Move *_state.py into state/" (executed, SPLIT direction) | **verified-local** — 3 modules moved into `state/` with explicit `name as name` shims; `_review_phase.py` repointed to `from .state import review as review_state`; `implementer_phase_runner.py:42,77` left on shim paths (preserves #714 patch surface + no-cycle guard). The whole-test-tree patch-seam sweep was the decisive fix (4 failures from imported-into names patched on the flat path). ruff + mypy clean; full `tests/unit/automation` suite 2284 passed, 0 failed |
 | ProjectHephaestus | Plan written for issue #1177 (not yet executed) | Verification level: unverified; the full 52-file SPLIT workflow remains a proposal |
 
 ## References
 
 - [ProjectHephaestus issue #1441](https://github.com/HomericIntelligence/ProjectHephaestus/issues/1441) — merge direction (Shim Consolidation), verified-local execution
-- [ProjectHephaestus issue #1177](https://github.com/HomericIntelligence/ProjectHephaestus/issues/1177) — source issue for the split workflow
+- [ProjectHephaestus issue #1443](https://github.com/HomericIntelligence/ProjectHephaestus/issues/1443) — split direction (move `*_state.py` into `state/`), verified-local; surfaced the whole-test-tree patch-seam sweep
+- [ProjectHephaestus issue #1177](https://github.com/HomericIntelligence/ProjectHephaestus/issues/1177) — source issue for the full 52-file split workflow
 - [python-module-decomposition-and-refactor-patterns.md](python-module-decomposition-and-refactor-patterns.md) — single-module decomposition (Phase 11/12 for CLI extraction and sibling-cycle fixes)
 - [python-circular-import-symbol-extraction.md](python-circular-import-symbol-extraction.md) — leaf-module extraction for circular import errors

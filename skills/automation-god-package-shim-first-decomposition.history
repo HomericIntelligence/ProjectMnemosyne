@@ -1,5 +1,60 @@
 # automation-god-package-shim-first-decomposition — History
 
+## v2.1.0 (2026-06-30)
+
+**Changed by:** ProjectHephaestus issue #1443 "Move `*_state.py` into `state/`" — first
+real, verified-local execution of the shim discipline in the SPLIT/move direction.
+**Verification:** verified-local
+
+### What changed
+
+- Added **Step 8b: Patch-Seam Sweep Across the WHOLE Test Tree** to the SPLIT workflow.
+  When you move module X into a subpackage and leave a re-export shim at the old flat path,
+  the shim re-exports only X's OWN public symbols — NOT names X imported from elsewhere.
+  So `mock.patch("...<old_flat_path>.<imported_name>")` BREAKS for any test that patched a
+  name imported INTO X, and those broken seams hide in OTHER test files across the whole tree.
+  Step 8b adds the grep command that sweeps every moved module's flat namespace across ALL
+  tests and repoints each imported-into name to the canonical `state.<module>` path. This is
+  the split-direction analogue of the existing Step C3 (merge-direction repoints).
+- Added an explicit note that the `dir(shim)` parity test CANNOT catch an imported-into-name
+  patch seam (such names are intentionally absent from the shim), so the grep sweep is a
+  SEPARATE, mandatory check.
+- Added one new **Failed Attempts** row: "Repoint patch seams only in the moved module's own
+  test file" — `test_planner_loop.py` / `test_planner_main.py` patched
+  `planner_state.prefetch_issue_states` / `.fetch_all_issue_labels_graphql` (names imported
+  INTO the module), 4 failures surfaced only on the first full-suite run.
+- Added a **Split-Direction Parameters (#1443)** table under Results & Parameters recording the
+  verified-local execution: 3 modules moved into `state/`, explicit `name as name` shims,
+  `_review_phase.py` repointed to `from .state import review as review_state`,
+  `implementer_phase_runner.py:42,77` left on shim paths (preserves #714 patch surface +
+  no-cycle guard), full automation suite 2284 passed, ruff + mypy clean.
+- Added a "When to Use" trigger for the imported-into-name patch seam, updated the Overview
+  table (Date/Objective/Outcome/Verification) to v2.1.0, extended the Verified Workflow intro
+  note to record the executed partial SPLIT, added a `## Verified On` row and a reference for
+  #1443.
+- Bumped version 2.0.0 → 2.1.0 (MINOR — new findings + a new Failed Attempts row + extended
+  workflow; core split/merge recommendation unchanged).
+
+### Why
+
+The approved #1443 plan enumerated patch-seam repoints only in the THREE moved test files plus
+one known coupling (`test_implementer_loop.py`). It MISSED `test_planner_loop.py` and
+`test_planner_main.py`, which patched names imported INTO `planner_state` from `..github_api`
+and `.review`. After the move those bound names live in `hephaestus.automation.state.planner`,
+and the flat `planner_state` shim re-exports only `PlannerStateManager` /
+`_comments_contain_plan`, so the patch targets vanished → 4 failures that surfaced only on the
+first FULL-suite run. The whole-test-tree patch-seam sweep was the decisive fix and is exactly
+the step a future split would otherwise re-discover.
+
+### Snapshot reference
+
+Previous version (v2.0.0) full body is preserved in the v2.0.0 entry below (which itself
+snapshots v1.0.0). v2.1.0 is a strict superset: it adds Step 8b, one Failed Attempts row, the
+Split-Direction Parameters table, and the #1443 Verified On / reference rows without rewriting
+any v2.0.0 content.
+
+---
+
 ## v2.0.0 (2026-06-30)
 
 **Changed by:** ProjectHephaestus issue #1441 "Merge 4 Claude agent modules" — first
