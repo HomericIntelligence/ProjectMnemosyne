@@ -220,6 +220,18 @@ jobs:
           echo "Declared: $declared, Actual: $actual"
           [ "$declared" -eq "$actual" ] || { echo "Plugin count mismatch"; exit 1; }
 
+  # Canonical aggregate test gate (ci-naming-convention.md). Surfaces a single
+  # `test` check-run that fails if either split suite fails. The split
+  # unit-tests / integration-tests sub-checks are KEPT.
+  test:
+    name: test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    needs: [unit-tests, integration-tests]
+    steps:
+      - name: Aggregate test result
+        run: echo "All test suites (unit-tests, integration-tests) passed."
+
   security-dependency-scan:
     name: security/dependency-scan
     runs-on: ubuntu-24.04
