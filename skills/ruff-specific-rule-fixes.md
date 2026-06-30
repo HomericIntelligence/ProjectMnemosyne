@@ -1,9 +1,9 @@
 ---
 name: ruff-specific-rule-fixes
-description: "Patterns for fixing specific Ruff lint rule violations and addressing systemic linter policy failures. Use when: (1) fixing Ruff S101 violations in production code by replacing bare assert guards with explicit RuntimeError raises, (2) fixing Ruff C901 cyclomatic complexity violations by extracting helper functions, (3) fixing Ruff RUF022 (__all__ not sorted) or I001 (import block un-sorted) — both are [*]-fixable; never manually reorder because isort uses the alias name not the original symbol, always use `ruff check --fix`, (4) the same policy violation reappears in two or more independent documents or configs — indicating the linter/validator that should enforce the policy is absent or misconfigured (root-cause fix: add the lint rule, not re-fix every instance), (5) deciding between adding a noqa suppression, fixing the violation, or promoting the rule to error-level enforcement, (6) main goes red after a ruff/mypy version-floor bump — E501 line-length overruns, ruff-format implicit-string-concat collapses, or unused-ignore mypy errors appear retroactively in files that previously passed CI, (7) a # type: ignore[tag] comment becomes an unused-ignore error after a mypy or ruff floor bump, (8) adding a new scripts/*.py to a repo with an auto-discovering smoke test, or adding a # noqa whose rule may not be in the ruff select list, (9) E501 or ruff format failures appear in newly-added TEST files on a large multi-file feature PR — running only the test suite before pushing misses these; CI fails on line-length or format in the new test files, (10) a CI validate job runs `ruff format --check` and fails with `Would reformat` even though local pytest, pre-push pytest, and `ruff check` passed."
+description: "Patterns for fixing specific Ruff lint rule violations and addressing systemic linter policy failures. Use when: (1) fixing Ruff S101 violations in production code by replacing bare assert guards with explicit RuntimeError raises, (2) fixing Ruff C901 cyclomatic complexity violations by extracting helper functions, (3) fixing Ruff RUF022 (__all__ not sorted) or I001 (import block un-sorted) — both are [*]-fixable; never manually reorder because isort uses the alias name not the original symbol, always use `ruff check --fix`, (4) the same policy violation reappears in two or more independent documents or configs — indicating the linter/validator that should enforce the policy is absent or misconfigured (root-cause fix: add the lint rule, not re-fix every instance), (5) deciding between adding a noqa suppression, fixing the violation, or promoting the rule to error-level enforcement, (6) main goes red after a ruff/mypy version-floor bump — E501 line-length overruns, ruff-format implicit-string-concat collapses, or unused-ignore mypy errors appear retroactively in files that previously passed CI, (7) a # type: ignore[tag] comment becomes an unused-ignore error after a mypy or ruff floor bump, (8) adding a new scripts/*.py to a repo with an auto-discovering smoke test, or adding a # noqa whose rule may not be in the ruff select list, (9) E501 or ruff format failures appear in newly-added TEST files on a large multi-file feature PR — running only the test suite before pushing misses these; CI fails on line-length or format in the new test files, (10) a CI validate job runs `ruff format --check` and fails with `Would reformat` even though local pytest, pre-push pytest, and `ruff check` passed, (11) writing or editing a Google-style docstring (Args/Returns/Raises) in a pydocstyle-D413-enabled repo and seeing `D413 [*] Missing blank line after last section` — a docstring's LAST section needs a trailing blank line before the closing `\"\"\"`; `ruff format` neither adds nor flags it, only `ruff check` (and `ruff check --fix`, since D413 is `[*]`-autofixable) does, so a docstring can pass `ruff format` yet fail `ruff check`."
 category: tooling
-date: 2026-06-26
-version: "1.5.0"
+date: 2026-06-30
+version: "1.6.0"
 user-invocable: false
 verification: verified-ci
 history: ruff-specific-rule-fixes.history
@@ -51,6 +51,14 @@ tags:
   - format-check
   - validate-ci
   - inference360
+  - D413
+  - pydocstyle
+  - docstring
+  - google-style
+  - raises-section
+  - trailing-blank-line
+  - ruff-format-vs-check
+  - projecthephaestus
 ---
 
 # Ruff Specific Rule Fixes
@@ -59,10 +67,10 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-26 |
-| **Objective** | Fix specific Ruff rule violations (S101 assert-in-production, C901 cyclomatic complexity, RUF022 `__all__`-sort, I001 import-sort, RUF100 unused-noqa) and recognize when repeated policy violations mean the linter itself is the root cause; honor the auto-discovered scripts smoke `--help` contract; fix E501/ruff-format failures in newly-added test files on large feature PRs |
-| **Outcome** | Verified — S101 guards converted across 20+ sites (PRs #1142, #1211), C901 extractions verified (PRs #1546, #1050), wrong-direction linter root-cause pattern verified-CI (PRs #863/#865/#866/#867), RUF022 + I001 fixes (issue #1189); RUF100 unused-noqa + scripts smoke `--help` contract verified-precommit (PR #1250); E501/format in new test files fixed (ProjectHephaestus PR #1035); CI `ruff format --check` failure after local tests/`ruff check` fixed and merged in Inference360 PR #282 |
-| **Verification** | verified-ci |
+| **Date** | 2026-06-30 |
+| **Objective** | Fix specific Ruff rule violations (S101 assert-in-production, C901 cyclomatic complexity, RUF022 `__all__`-sort, I001 import-sort, RUF100 unused-noqa, D413 missing-blank-after-last-section) and recognize when repeated policy violations mean the linter itself is the root cause; honor the auto-discovered scripts smoke `--help` contract; fix E501/ruff-format failures in newly-added test files on large feature PRs |
+| **Outcome** | Verified — S101 guards converted across 20+ sites (PRs #1142, #1211), C901 extractions verified (PRs #1546, #1050), wrong-direction linter root-cause pattern verified-CI (PRs #863/#865/#866/#867), RUF022 + I001 fixes (issue #1189); RUF100 unused-noqa + scripts smoke `--help` contract verified-precommit (PR #1250); E501/format in new test files fixed (ProjectHephaestus PR #1035); CI `ruff format --check` failure after local tests/`ruff check` fixed and merged in Inference360 PR #282; D413 trailing-blank-after-last-section fixed in ProjectHephaestus issue #1434 (verified-local) |
+| **Verification** | verified-ci (D413 pattern verified-local) |
 | **History** | [changelog](./ruff-specific-rule-fixes.history) |
 
 ## When to Use
@@ -78,6 +86,9 @@ tags:
 - You are **adding a new `scripts/*.py`** to a repo with an auto-discovering smoke test, or **adding a `# noqa: <RULE>` whose `<RULE>` may not be in the ruff `select` list** (RUF100 unused-noqa risk).
 - You pushed a **large feature PR (40+ files)** after running only the test suite and CI fails on **E501 or `ruff format`** in newly-added test files — running tests does not invoke the linter; newly-added test files are subject to the same E501 line-length limit and `ruff format` rules as production code.
 - A repository validate job runs `ruff format --check`, and CI fails with `Would reformat: <file>` even though local pytest, the pre-push pytest suite, and `ruff check <file>` all passed. `ruff check` and `ruff format --check` are separate gates; run both before pushing.
+- You **wrote or edited a Google-style docstring** (Args/Returns/Raises) in ProjectHephaestus or any pydocstyle-**D413**-enabled repo and see `D413 Missing blank line after last section ("Raises")` — the docstring's LAST section (whichever it is) needs a blank line before the closing `"""`. Most often noticed on `Raises:` because that section is frequently last.
+- A docstring **passed `ruff format` but failed `ruff check`** — D413 is a `ruff check` rule; `ruff format` neither inserts nor flags the trailing blank line. Formatting alone is not enough.
+- You **added a new public function/method/classmethod** and the surrounding existing docstrings already have a blank line before their closing `"""` — match that established convention or D413 fires only on your new docstring.
 
 ## Verified Workflow
 
@@ -116,6 +127,10 @@ pixi run ruff check --fix <file1> <file2>
 # Linter-as-root-cause — count distinct files violating the SAME rule
 audit_output | grep "Rule: <rule-id>" | awk '{print $2}' | sort -u | wc -l
 # >= 2 distinct files  ->  fix the LINTER first, not each file
+
+# D413 (missing blank line after last docstring section) — [*]-autofixable
+# ruff format does NOT add or flag this; only ruff check does. Fastest remedy:
+pixi run ruff check --fix hephaestus/nats/config.py   # auto-inserts the blank line
 ```
 
 ```python
@@ -584,6 +599,76 @@ python3 -m ruff check tests/test_setup_workflow.py
 python3 -m ruff format --check tests/test_setup_workflow.py
 ```
 
+#### Pattern G — Fix Ruff D413 (missing blank line after last docstring section)
+
+> **Verification: verified-local** (ProjectHephaestus issue #1434 / `hephaestus/nats/config.py`, 2026-06-30).
+> `pixi run ruff check` clean and `pixi run mypy` (448 source files) + 26 unit tests passed
+> locally after the fix; full CI for that PR not yet confirmed green at capture time.
+
+ProjectHephaestus enables pydocstyle rule **D413** ("Missing blank line after last section")
+via ruff. It fires on the **LAST** section of a Google-style docstring regardless of which
+section it is (Args/Returns/Raises) — but is most commonly noticed on `Raises:` because that
+section is frequently last. The error text is:
+
+```text
+D413 [*] Missing blank line after last section ("Raises")
+```
+
+**Key insight: `ruff format` does NOT add this blank line and does NOT flag it — only
+`ruff check` does.** A docstring can therefore pass `ruff format` cleanly yet fail
+`ruff check`. Because D413 is marked `[*]` (autofixable), `ruff check --fix` inserts the
+blank line for you.
+
+The fix is a blank line after the final section's content, before the closing `"""`:
+
+```python
+# BEFORE — D413: closing quotes immediately follow the last section's content
+def from_env(cls) -> "NATSConfig":
+    """Build a config from environment variables.
+
+    Returns:
+        A populated NATSConfig instance.
+
+    Raises:
+        ValueError: If a numeric env var is not a valid number.
+    """    # <-- D413 violation: no blank line before the closing quotes
+
+# AFTER — compliant: one blank line before the closing triple-quote
+def from_env(cls) -> "NATSConfig":
+    """Build a config from environment variables.
+
+    Returns:
+        A populated NATSConfig instance.
+
+    Raises:
+        ValueError: If a numeric env var is not a valid number.
+
+    """    # <-- compliant
+```
+
+**Why pre-existing code passed but the new code did not.** In ProjectHephaestus the
+class-level `NATSConfig` docstring already had this trailing blank line, so pre-existing
+code was clean — the convention is established repo-wide. New docstrings added to the same
+file must match it; D413 fires only on the new ones that omit the blank line.
+
+**Steps:**
+
+1. Run `ruff check` (not just `ruff format`) on the new/edited docstrings — `ruff format`
+   will report clean while `ruff check` reports `D413`.
+2. Apply the fix — fastest is the autofix, since D413 is `[*]`:
+
+   ```bash
+   pixi run ruff check --fix hephaestus/nats/config.py
+   ```
+
+   Or manually insert one blank line before the closing `"""` of the docstring's last section.
+3. Verify clean:
+
+   ```bash
+   pixi run ruff check hephaestus/nats/config.py   # must report no D413
+   pixi run mypy                                    # still clean
+   ```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -608,6 +693,8 @@ python3 -m ruff format --check tests/test_setup_workflow.py
 | Ran pytest and `ruff check`, skipped `ruff format --check` | In Inference360 PR #282, ran focused pytest, `ruff check tests/test_setup_workflow.py`, `git diff --check`, and a pre-push full pytest suite | GitHub `validate` still failed because the repo's validation target ran `ruff format --check` and found `tests/test_setup_workflow.py` would be reformatted | Add `ruff format --check <changed-python-files>` to the local checklist whenever CI has a formatter gate; `ruff check` does not imply formatting is clean |
 | Hand-wrapped a long `for`-header to fix E501 in a test file | Broke the `for command, module_path, attr in [...]` header onto multiple lines | The long string literal inside the list still overflowed col 100 — wrapping the header does not shorten the literal | Extract the literal list to a named constant (e.g., `ENTRY_POINTS`) so each row can be broken independently |
 | Hand-wrapped `subprocess.run(...)` call across multiple lines | Split `subprocess.run(["git", "status"], check=True)` onto 3 lines to "look tidy" | `ruff format` kept collapsing it back to one line on every run — the call already fit within the line-length limit | Stop hand-wrapping calls that fit on one line; `ruff format` is the canonical style authority — let it collapse them |
+| Ran only `ruff format` and assumed docstrings were compliant | After writing new Google-style docstrings, ran `pixi run ruff format` (clean) and assumed lint was clean too | `ruff format` neither adds nor flags the trailing blank line — D413 is a `ruff check` rule; the two tools cover different rule sets | Always run `ruff check` (not just format) on new docstrings; `ruff format` clean does NOT imply `ruff check` clean |
+| Wrote a Google-style docstring ending its `Raises:` block immediately followed by `"""` | Closed the docstring with the closing triple-quote on the line directly after the last `Raises:` entry | pydocstyle **D413** requires a blank line after the LAST section (whichever it is) | Add a blank line before the closing triple-quote, or run `ruff check --fix` (D413 is `[*]`-autofixable) |
 
 ## Results & Parameters
 
@@ -700,6 +787,43 @@ git diff --check
 **Outcome:** pushed a formatter-only follow-up commit to PR #282. GitHub `validate`,
 `secrets`, `sast`, `python-sca`, and CodeQL all passed; auto-merge merged the PR.
 
+### D413 missing-blank-after-last-section (verified-local)
+
+**Context:** ProjectHephaestus issue #1434 — adding `NATSConfig.from_env()` and helper
+functions to `hephaestus/nats/config.py`. `ruff format` passed and the code was correct, but
+`pixi run ruff check` failed with **three** D413 errors.
+
+**Exact error text:**
+
+```text
+D413 [*] Missing blank line after last section ("Raises")
+```
+
+**Before/after (the one load-bearing change is the blank line before `"""`):**
+
+```python
+# BEFORE — D413
+    Raises:
+        ValueError: If a numeric env var is not a valid number.
+    """
+
+# AFTER — compliant
+    Raises:
+        ValueError: If a numeric env var is not a valid number.
+
+    """
+```
+
+**One-line fix (D413 is `[*]` auto-fixable):**
+
+```bash
+pixi run ruff check --fix hephaestus/nats/config.py
+```
+
+**Verification:** `pixi run ruff check` clean and `pixi run mypy` (448 source files) + 26
+unit tests passed locally after the fix. Verification level: **verified-local** — not yet
+confirmed in CI for that PR at capture time.
+
 ## Verified On
 
 | Project | Context | Details |
@@ -714,3 +838,4 @@ git diff --check
 | ProjectHephaestus | RUF100 unused-noqa (`# noqa: S603` not in `select`) + scripts smoke `--help` contract (auto-discovered `test_script_help_exits_zero`), verified-precommit | issue #1214 / PR #1250 |
 | ProjectHephaestus | E501 + `ruff format` failures in newly-added test files on 44-file feature PR; two opposite E501 fix shapes (extract literal vs. stop hand-wrapping); `add_version_arg` helper + parametrized `@pytest.mark.parametrize("command,module_path,attr", ENTRY_POINTS)` integration test pattern | PR #1035 |
 | Inference360 | GitHub `validate` failed on `ruff format --check` after local pytest, `ruff check`, `git diff --check`, and pre-push pytest all passed; formatter-only follow-up fixed `tests/test_setup_workflow.py` | PR #282 |
+| ProjectHephaestus | D413 missing-blank-after-last-section — 3 `D413 [*] Missing blank line after last section ("Raises")` errors on new `NATSConfig.from_env()` + helper docstrings in `hephaestus/nats/config.py`; `ruff format` passed but `ruff check` failed; fixed via `ruff check --fix` (D413 is `[*]`-autofixable); `ruff check` clean + `mypy` (448 files) + 26 tests pass. Verified-local. | issue #1434 |
