@@ -1,0 +1,39 @@
+<!-- markdownlint-disable MD024 -->
+# History: architecture-god-function-decomposition-planning-risks
+
+This file records amendments to the canonical skill. Each entry is newest-first.
+
+## v1.3.0 (2026-06-30)
+
+**Changed by**: ProjectHephaestus #1464 plan R0→R1 NOGO recovery (function-level).
+
+**Verification**: unverified (planning-phase learning; no code ran).
+
+**What changed**:
+
+- Strengthened **Risk 7** ("Arithmetic Verification Before Claiming Line-Count
+  Targets") with a new subsection **Risk 7a: The Chain Is on AST SPAN, Not
+  Executable Body — Count Signature + Docstring**. It documents the span-vs-body
+  conflation, gives the AST measurement command that decomposes a function into
+  `span / signature / docstring`, and states the rule that the subtraction chain
+  must start from `end_lineno - lineno + 1` (span) and count a concrete,
+  shown, numbered docstring-trim term.
+- Added a **Failed Attempts** table row: R0 #1464 claimed ≤80L from a "~70L
+  executable body" estimate after 2 extractions; the AC command measures AST span
+  (sig + docstring + body), true span ≈105L > 80L → NOGO.
+- Added a **Verified On** row for issue #1464 capturing the 204L decomposition
+  (14L sig + 43L docstring + 147L body; 2-extraction R0 ≈105L span → NOGO;
+  3-extraction + docstring-trim R1 = 67L span).
+
+**Why**: The pre-existing `_address_issue` failed-attempt noted the docstring must
+be *counted* toward a function's span. This amendment adds the operational
+consequence learned on #1464: because the acceptance-criterion verification command
+measures AST SPAN (not executable body), the subtraction chain must be span-based
+end-to-end, and a large docstring must be trimmed via a concrete, shown, numbered
+term — not an aspirational "trim to ~22 lines". This is a function-level refinement;
+the god-CLASS section (added in v1.3.0 lineage attempts) is unaffected.
+
+**Snapshot reference**: prior canonical was **v1.2.0 (2026-06-13)**, last amended in
+PR #2423 (ProjectHephaestus #1180 R2 planning cycle). See git history of
+`skills/architecture-god-function-decomposition-planning-risks.md` for the full
+v1.2.0 body.

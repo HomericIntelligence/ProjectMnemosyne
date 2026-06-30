@@ -10,8 +10,8 @@ description: >-
   before writing stubs; and audit plan documents for helper-defined-but-never-called
   inconsistencies.
 category: architecture
-date: 2026-06-13
-version: "1.2.0"
+date: 2026-06-30
+version: "1.3.0"
 user-invocable: false
 history: architecture-god-function-decomposition-planning-risks.history
 verification: unverified
@@ -350,6 +350,77 @@ in the plan before stating the result:
 **Only claim the target is met after the subtraction proves it.** If the remaining count
 is still over the cap, plan additional extractions before finalizing.
 
+### Risk 7a: The Chain Is on AST SPAN, Not Executable Body — Count Signature + Docstring
+
+**What happened (ProjectHephaestus #1464)**: The R0 plan to decompose the 204-line god
+function `validate_prior_comments_addressed` in
+`hephaestus/automation/review_validator.py` extracted 2 helpers and claimed the
+orchestrator reached "~70L executable body" and was therefore "≤80L". It got a **NOGO**.
+
+The acceptance-criterion verification command measures **AST span** —
+`node.end_lineno - node.lineno + 1` — which INCLUDES the signature (14L here) AND the
+full docstring (43L here), not just executable statements. The function decomposed as:
+
+```
+204L span = 14L signature + 43L docstring + 147L executable body
+```
+
+The reviewer's subtraction on SPAN:
+
+```
+204L  (AST span)
+− 78L (2 extractions)
+− 21L (docstring trim, 43→22)
+= 105L span   →  still > 80L cap   →  NOGO
+```
+
+The R0 plan asserted an AC it could not meet because it subtracted from an
+**executable-body estimate** (~147L) rather than from the **AST span** (204L) the AC
+command actually measures. The two diverge by exactly `signature + docstring` — here a
+57L gap. A large docstring is a first-class line-budget consumer: 43L was 21% of the
+204L function.
+
+**The R1 fix** reached a 67L span (13L margin) by:
+
+1. Adding a THIRD extraction `_run_validation_and_reconcile` (absorbing the ~48L
+   session-dispatch / reconcile prelude that R0 left untouched), and
+2. Trimming the docstring 43L → 22L, counting that **−21L as an explicit numbered term**
+   in the chain, and
+3. Making the docstring trim **concrete** — pasting the full ~22L replacement docstring
+   into the plan so the −21L term is auditable from the plan itself, not hand-waved as
+   "trim to ~22 lines".
+
+**The failure mode**: Estimating from "executable body lines" while the AC verifies AST
+span guarantees a NOGO whenever the function has a non-trivial signature or docstring.
+The planner believes it cleared the cap; the reviewer's span measurement says otherwise.
+
+**Rule**: When proving a function reaches a ≤N-line cap, the subtraction chain MUST start
+from the **AST span** and account for ALL three components — signature lines + docstring
+lines + executable body lines. Measure each via AST:
+
+```python
+python3 -c "
+import ast
+src = open('FILE').read()
+for n in ast.walk(ast.parse(src)):
+    if getattr(n, 'name', None) == 'TARGET' and isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        d0 = n.body[0]  # docstring node when present
+        print('span', n.end_lineno - n.lineno + 1, 'sig', d0.lineno - n.lineno, 'docstring', d0.end_lineno - d0.lineno + 1)
+"
+```
+
+If the docstring is a large fraction of the cap, plan an explicit docstring trim AND
+count it as a numbered term in the chain (e.g. `− 21L (docstring 43→22)`). **Show the
+full replacement docstring in the plan** so the term is auditable. Verify with the SAME
+span command the AC uses (`end_lineno - lineno + 1`) — never an "executable body"
+eyeball estimate, because the two differ by exactly signature + docstring.
+
+> **Relation to the `_address_issue` lesson below**: that earlier failed attempt noted
+> the docstring must be *counted* in the span. Risk 7a adds the operational consequence:
+> the AC command measures SPAN, so the chain must be span-based end-to-end (start from
+> `end_lineno - lineno + 1`, not from a body estimate), and the docstring trim must be a
+> concrete, shown, numbered term — not an aspirational "trim to ~22 lines".
+
 ---
 
 ## Risk 8: Control-Flow Sentinel Return Values — Enumerate All Signal States
@@ -434,6 +505,10 @@ discrepancy in the plan and proceed from disk reality.
 ---
 
 ## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | -------- |
+| R0 #1464: claimed ≤80L from "~70L executable body" after 2 extractions | 2-helper extraction, span asserted via executable-body estimate | AC command measures AST span (sig+docstring+body); true span ≈105L > 80L cap → NOGO | Subtract on SPAN; add a 3rd extraction + a concrete numbered docstring-trim term; verify with `end_lineno - lineno + 1` |
 
 ### R1: Single Helper Insufficient for `_run_implementation_and_review` (130L)
 
@@ -639,3 +714,4 @@ for node in ast.walk(tree):
 | ProjectHephaestus (R0) | Planning session for issue #1180 — decompose 5 god-functions in `hephaestus/automation/`; `_implement_issue` cited as 354 lines in issue, found as 127 lines on disk; `_run_impl_review_loop` cited at `ci_driver.py:1513`, found at `_review_phase.py:374-503`; `_finalize_address_state` defined in plan but not called in replacement block; test file existence unverified; `_poll_ci_until_concluded` sentinel contract risk identified |
 | ProjectHephaestus (R1) | Second planning iteration for issue #1180 after R0 NOGO review; AST re-measurement confirmed `_implement_issue` is 128L not 354L and `_run_impl_review_loop` is at `_review_phase.py:374`; arithmetic subtraction chain revealed `_run_ci_fix_session` needs 5 helpers (not 3) to reach ≤80L; `_run_address_step_if_needed` sentinel return pattern documented with all 3 control-flow states; R0 waiver-on-"marginal" grounds rejected — 128L = 60% over cap and is in scope |
 | ProjectHephaestus | Issue #1180 R2 plan (2026-06-13) — 3rd TASK/PLAN/REVIEW cycle; all 7 target functions scoped to ≤80L |
+| ProjectHephaestus | Issue #1464 plan (2026-06-30) — decompose 204L god FUNCTION `validate_prior_comments_addressed` in `review_validator.py`; R0 NOGO for asserting ≤80L from a ~70L executable-body estimate while the AC measures AST span (204L = 14L sig + 43L docstring + 147L body; 2-extraction R0 ≈105L span > 80L); R1 reached 67L span via a 3rd extraction `_run_validation_and_reconcile` + a concrete docstring trim 43→22 counted as an explicit −21L term |
