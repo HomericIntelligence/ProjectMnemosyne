@@ -1,5 +1,18 @@
 # Changelog: audit-remediation-verify-evidence-before-planning
 
+## v1.11.0 (2026-07-04)
+
+**Changed by:** Rebased ProjectMnemosyne PR #2926, carrying the ProjectHephaestus issue #1502 stale-line-citation lesson onto the post-v1.10.0 skill.
+**Verification:** verified-local for the captured #1502 evidence and local doc verification described in the skill; this rebase resolution preserved main's v1.10.0 content and renumbered the incoming v1.5.0 amendment as v1.11.0.
+
+### What changed
+- Added the stale-LINE-CITE vs stale-FINDING lesson as the latest amendment after main had already advanced this skill to v1.10.0.
+- Extended the live skill description with the rule that audit coordinates can drift by dozens of lines even while the substantive finding remains valid.
+- Added the #1502 overview note, When-to-Use trigger, Failed Attempts rows, and Results & Parameters block under v1.11.0 numbering.
+
+### Why
+PR #2926 was authored when the skill was at v1.4.0 and labeled the amendment v1.5.0. Main later advanced through v1.10.0 before the PR was rebased, so the conflict was a chronology collision. The semantic content still applies: ProjectHephaestus #1502 showed an audit whose cited `CLAUDE.md:359-369` coordinates were stale by about 26 lines, while the described `## Environment Setup` finding was still real. The durable rule is to search for the described section/content and distinguish stale line-cites from stale findings.
+
 ## v1.10.0 (2026-07-01)
 
 **Changed by:** ProjectHephaestus issue #1501 — audit finding: `.github/workflows/release.yml` PyPI publish step lacks `generate_attestations: true` (PEP 740 / Sigstore build provenance). The evidence-verification (reading the live `release.yml`, confirming the audit's cited coordinates were stale) WAS run this session; the downstream plan (the YAML edit + a new text-assertion test class) was plan-only (no code executed, no tests, no CI).
@@ -295,7 +308,6 @@ grep -n 'retry_with_jitter\|get_config_value' COMPATIBILITY.md   # in prose at :
   - Correct disposition: CLOSE the issue with both pieces of evidence (source fixed + guard exists). The ONLY defensible code edit — a COMMENT on `_TARGETS` documenting why the allowlist is curated — was PLANNED ONLY, never written to disk, no CI. The first plan's NEW guard `tests/unit/github/test_no_bare_gh_subprocess.py` (a strictly-weaker inline-list-literal-only duplicate) earned a NOGO (Grade D) and was removed entirely.
 ````
 
-
 ## v1.6.0 (2026-06-30)
 
 **Changed by:** ProjectHephaestus issue #1456 (audit: "github/severity_label.py:76 bypasses the gh circuit breaker with a bare subprocess.run") — DIAGNOSIS verified-local; the proposed allowlist-documenting comment edit was plan-only
@@ -515,7 +527,6 @@ grep -n 'retry_with_jitter\|get_config_value' COMPATIBILITY.md   # in prose at :
 
 ---
 
-
 ## v1.5.0 (2026-06-30)
 
 **Changed by:** ProjectHephaestus issue #1449 implementation (CLAUDE.md subpackage count/listing mismatch) — ACTUALLY EXECUTED, verified-local
@@ -717,7 +728,6 @@ grep -n 'retry_with_jitter\|get_config_value' COMPATIBILITY.md   # in prose at :
   - "Added" anchors (best-effort, NOT facts; via `git log -S <symbol> --reverse -- hephaestus/`): `get_repo_root` from an early src-merge commit; `validate_config` from the initial impl commit `50c5eca4`; `parse_pixi_toml`/`dep_sync` family from `056462a0` (config port). Pre-1.0 infra with no clearer anchor -> `0.1.0`. The guard does NOT assert these.
   - The `api_table_docs.py` guard validates ONLY membership (both directions: `missing-from-docs` + `missing-from-all`), mirrors `cli_tier_docs.py` exactly, and trips the sibling `cli_tier_docs` guard via the new console script `hephaestus-check-api-table-docs` unless a reciprocal `| hephaestus-check-api-table-docs | Internal | ... |` Console-Script Stability Tiers row is added.
 ````
-
 ---
 
 ## v1.3.0 -> v1.4.0 (2026-06-26)
