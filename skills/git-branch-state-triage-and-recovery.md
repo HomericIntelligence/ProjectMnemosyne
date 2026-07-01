@@ -9,14 +9,14 @@ description: >-
   (5) a squash-merged branch looks unmerged because git cherry/ahead counts lie,
   (6) an auto-merge PR already merged, its remote head ref is gone or stale, and a
   validated local amended commit must be converted into a clean follow-up branch from
-  current trunk using git diff --binary plus git apply --index, or (7) the current branch has an already-merged PR but contains uncommitted follow-up work, so stash it, create a fresh branch from current trunk, pop the stash, re-verify, sign, push, and open a new linked PR.
+  current trunk using git diff --binary plus git apply --index, (7) the current branch has an already-merged PR but contains uncommitted follow-up work, so stash it, create a fresh branch from current trunk, pop the stash, re-verify, sign, push, and open a new linked PR, or (8) an issue has a closed unmerged PR whose branch can be rebased and force-with-lease updated, but GitHub refuses `gh pr reopen`, so you need a replacement PR from the same recovered branch.
 category: tooling
-date: 2026-06-18
-version: "1.4.0"
+date: 2026-07-01
+version: "1.5.0"
 user-invocable: false
 verification: verified-local
 history: git-branch-state-triage-and-recovery.history
-tags: [git, branch, triage, recovery, stale, superseded, orphan, diverged, merge-base, cherry-pick, fork-point, diff-filter, unrelated-histories, non-fast-forward, consolidation, three-way-diff, count-diff, hard-reset, stash, auto-merge, follow-up-branch, force-with-lease, git-apply, current-branch, merged-pr, uncommitted-follow-up, signed-commit]
+tags: [git, branch, triage, recovery, stale, superseded, orphan, diverged, merge-base, cherry-pick, fork-point, diff-filter, unrelated-histories, non-fast-forward, consolidation, three-way-diff, count-diff, hard-reset, stash, auto-merge, follow-up-branch, force-with-lease, git-apply, current-branch, merged-pr, closed-pr, replacement-pr, uncommitted-follow-up, signed-commit]
 ---
 
 # Git Branch State Triage and Recovery
@@ -25,15 +25,15 @@ tags: [git, branch, triage, recovery, stale, superseded, orphan, diverged, merge
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-18 |
+| **Date** | 2026-07-01 |
 | **Objective** | Diagnose what state a branch is in (stale/superseded, orphaned/unrelated history, or diverged from remote) and recover it cleanly |
-| **Outcome** | Success — unified triage tree: confirm-and-discard superseded branches, extract+recreate orphan branches, reset+cherry-pick diverged branches, convert validated local amended commits from already-merged PRs into clean follow-up branches, and move uncommitted follow-up work off a branch whose prior PR is already merged |
+| **Outcome** | Success — unified triage tree: confirm-and-discard superseded branches, extract+recreate orphan branches, reset+cherry-pick diverged branches, convert validated local amended commits from already-merged PRs into clean follow-up branches, move uncommitted follow-up work off a branch whose prior PR is already merged, and recover closed unmerged PR branches into replacement PRs when GitHub refuses reopen |
 | **Verification** | verified-local |
 
 ## When to Use
 
 Use this skill whenever a branch is in an unexpected or unmergeable state. The root question
-is always: **what state is this branch in, and how do I recover it?** Five distinct states:
+is always: **what state is this branch in, and how do I recover it?** Six distinct states:
 
 **State A — Stale / superseded by main:**
 - A branch is many commits behind main **and** its remote tracking ref is gone (`[gone]` in `git branch -vv`)
@@ -67,6 +67,12 @@ is always: **what state is this branch in, and how do I recover it?** Five disti
 - The branch may still exist on origin, but its PR identity is spent; pushing more commits to it will not update an open PR.
 - `git status --short` shows real uncommitted follow-up work that should become a new PR.
 - The correct recovery is: stash including untracked files, fetch current trunk, create a fresh branch from `origin/<trunk>`, pop the stash, re-run verification, sign a new commit, push, and create a new issue-linked PR.
+
+**State F — Closed unmerged PR; branch ref recovered; GitHub refuses reopen:**
+- The issue is still open, but its old PR is `CLOSED` rather than `MERGED`.
+- `gh pr reopen <old-pr>` fails even after you rebase and force-with-lease push the old branch, for example `GraphQL: Could not open the pull request`.
+- `gh pr view` / `gh pr list --head` can keep showing stale closed-PR `headRefOid` metadata, while `git ls-remote --heads origin <branch>` proves the branch ref moved.
+- The correct recovery is: create a detached `/tmp` worktree from the remote branch, rebase onto current `origin/main`, resolve conflicts semantically against current main, push `HEAD:<branch>` with `--force-with-lease`, try reopen once, then create a replacement PR from the same updated branch and link the old closed PR in the body if reopen is refused.
 
 ## Verified Workflow
 
@@ -167,6 +173,24 @@ git log --show-signature -1 --oneline
 git push -u origin <fresh-branch>
 gh issue create --title "<tracking issue>" --body "<kickoff/scope>"
 gh pr create --base <trunk> --head <fresh-branch> --title "<title>" --body "Closes #<issue>"
+
+# === State F: CLOSED unmerged PR branch recovery; reopen refused ===
+ISSUE=<issue>
+OLD_PR=<closed-pr>
+BRANCH=<old-branch>
+git ls-remote --heads origin "$BRANCH"              # authoritative branch ref
+git worktree add --detach /tmp/<issue>-recovery "origin/$BRANCH"
+git -C /tmp/<issue>-recovery fetch origin main
+git -C /tmp/<issue>-recovery rebase origin/main
+# Resolve conflicts semantically; keep current-main architecture where stale branch intent is obsolete.
+git -C /tmp/<issue>-recovery push --force-with-lease origin HEAD:"$BRANCH"
+gh pr reopen "$OLD_PR" --repo OWNER/REPO            # try once
+gh pr create --repo OWNER/REPO --base main --head "$BRANCH" \
+  --title "<replacement title>" \
+  --body "$(printf 'Replaces closed PR #%s after rebasing the recovered branch.\\n\\nCloses #%s\\n' "$OLD_PR" "$ISSUE")"
+git log origin/main..HEAD --format='%h %G? %GS'     # signatures
+python3 scripts/check_conventional_commit.py -
+python3 scripts/check_dco_signoff.py -
 ```
 
 ### Detailed Steps
@@ -448,6 +472,70 @@ patch.
    gh pr checks <new-pr>
    ```
 
+#### State F — Closed unmerged PR branch recovery; replacement PR when reopen is refused
+
+Use this when an issue is still open but its old implementation PR is closed and unmerged. The
+branch may still exist and may be the right carrier for recovered work, but the closed PR object
+can remain stale even after the branch ref moves. Treat GitHub PR metadata as advisory and the
+remote branch ref as authoritative.
+
+1. **Confirm the old PR is closed, not merged, and inspect both PR metadata and the branch ref.**
+   ```bash
+   gh pr view <old-pr> --json number,state,headRefName,headRefOid,title,url
+   gh pr list --head <branch> --state all --json number,state,headRefName,headRefOid,url
+   git ls-remote --heads origin <branch>
+   ```
+   If `gh pr view` keeps reporting the old `headRefOid` after the branch moves, do not conclude
+   that the push failed. `git ls-remote` is the ground truth for the ref.
+2. **Recover in a detached `/tmp` worktree from the remote branch.**
+   ```bash
+   git worktree add --detach /tmp/<issue>-recovery origin/<branch>
+   git -C /tmp/<issue>-recovery fetch origin main
+   git -C /tmp/<issue>-recovery rebase origin/main
+   ```
+   A detached worktree prevents the user's current checkout from switching branches and keeps the
+   recovery disposable after the PR is opened.
+3. **Resolve conflicts semantically, not by preserving stale branch intent literally.** The stale
+   branch may delete files or introduce abstractions that current main has already evolved past.
+   Preserve the live architecture on `origin/main` and carry only the still-valid delta.
+
+   ProjectHephaestus examples:
+   - For issue #1442, do not delete `_interfaces.py` just because the stale branch did. Current
+     main had grown `_interfaces.py` into the broader protocol-contract home. Keep it and carry
+     only the still-valid tiny-module consolidation: move `work_report` into `_review_utils`,
+     secret constants into `pr_manager`, and `ReviewerProtocol` into `protocol.py`.
+   - For issue #1432, current main already had the broader `StateStoreProtocol` union. Skip the
+     stale extra `StateStore` class commit and carry only the remaining persistence change:
+     `ArmingStateStore.load()` routes through `load_state_file`.
+4. **Push the recovered branch with a lease, then try reopening once.**
+   ```bash
+   git -C /tmp/<issue>-recovery push --force-with-lease origin HEAD:<branch>
+   gh pr reopen <old-pr> --repo OWNER/REPO
+   ```
+   If reopen succeeds, continue with the old PR. If it fails with `GraphQL: Could not open the pull
+   request`, do not keep fighting the old PR object.
+5. **Create a replacement PR from the same updated branch.** Link the old PR in the body and keep
+   the issue-closing line exact:
+   ```bash
+   gh pr create --repo OWNER/REPO --base main --head <branch> \
+     --title "<title>" \
+     --body "$(printf 'Replaces closed PR #%s after rebasing the recovered branch.\\n\\nCloses #%s\\n' <old-pr> <issue>)"
+   ```
+   The line must be exactly `Closes #N` with no trailing period for repositories whose `pr-policy`
+   checks parse the body literally.
+6. **If body-only edits do not re-trigger policy checks, create a synchronize event.** Amend the
+   commit message or otherwise push a no-content metadata update only after confirming the repo's
+   policy needs a new push. Do not stack unrelated workflow fixes into the feature PR just to turn
+   CI green.
+7. **Verify local policy prerequisites before relying on GitHub.**
+   ```bash
+   git log origin/main..HEAD --format='%h %G? %GS'
+   python3 scripts/check_conventional_commit.py -
+   python3 scripts/check_dco_signoff.py -
+   ```
+   Focused tests still matter, but PRs can remain red for unrelated current-main CI problems. Keep
+   the verification label at `verified-local` until full CI passes for the replacement PR itself.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -469,8 +557,49 @@ patch.
 | Fetched the old PR branch after merge | `git fetch origin feat/simplify-control-interface` | GitHub had deleted the merged PR head branch, so fetch failed with "couldn't find remote ref" | Treat missing remote ref plus `state: MERGED` as a signal to create a new follow-up branch from current trunk |
 | Treated the local amended commit as a branch update after merge | Local commit `530bd3114d4ae62c01d4ac11729ff4a86fab6706` was validated, so the instinct was to force-push it to PR #160 | `origin/master` already contained the original simplification under new commit `61304b9`; the old PR head SHA was `858e302`, so the branch identity was obsolete | Diff current trunk to the validated commit, apply that patch on a fresh branch, and prove the resulting tree matches the validated commit before opening a follow-up PR |
 | Reused the current branch after discovering its PR was already merged | `gh pr view` on `codex/test-architecture-layout` showed PR #906 as `MERGED`, but the worktree contained new cleanup changes | A merged PR branch is historical; pushing more commits there would not create the intended fresh review and would confuse branch/PR state | Stash the uncommitted work, fetch current trunk, create a fresh branch from `origin/<trunk>`, pop the stash, re-verify, sign, push, and create a new linked PR |
+| Trusted closed-PR `headRefOid` after a branch force-with-lease update | `gh pr view` / `gh pr list --head` still showed old closed PR metadata after the recovered branch was pushed | Closed PR metadata can remain pinned to the old head SHA even when the branch ref moved | Confirm branch movement with `git ls-remote --heads origin <branch>` before deciding the push failed |
+| Kept retrying `gh pr reopen` after GitHub refused | `gh pr reopen <old-pr>` failed with `GraphQL: Could not open the pull request` | GitHub can refuse to reopen a closed PR even when its head branch has been updated | Try reopen once; if refused, create a replacement PR from the same recovered branch and link the old PR |
+| Preserved stale branch deletion of a now-important module | The stale #1442 branch deleted `_interfaces.py` during tiny-module consolidation | Current main had evolved `_interfaces.py` into the home for broader protocol contracts; deleting it would regress architecture | Resolve conflicts against current main semantics, not stale branch shape |
+| Carried an obsolete class from the stale branch | The stale #1432 branch added an extra `StateStore` class | Current main already had the broader `StateStoreProtocol` union, so the stale class was no longer the right abstraction | Skip obsolete commits and carry only the still-valid persistence behavior change |
+| Used `Closes #N.` with a trailing period | PR body contained a sentence-like closing line | `pr-policy` required an exact `Closes #N` line and rejected the body | Put `Closes #N` on its own line with no trailing punctuation |
+| Added unrelated CI workflow fixes to recovered feature PRs | Considered stacking the pydantic CI install fix into replacement PRs whose code was otherwise locally verified | That would mix independent concerns and make the recovered feature PRs depend on unrelated workflow churn | Keep replacement feature PRs scoped; let the dedicated CI workflow PR merge first unless the user explicitly wants stacking |
 
 ## Results & Parameters
+
+### State F — Closed unmerged PR branch recovery with replacement PR
+
+| Parameter | Value |
+| --------- | ----- |
+| Old PR state | `CLOSED`, unmerged |
+| Branch truth source | `git ls-remote --heads origin <branch>` |
+| Recovery worktree | Detached `/tmp/<issue>-recovery` from `origin/<branch>` |
+| Base refresh | Rebase onto current `origin/main` |
+| Push | `git push --force-with-lease origin HEAD:<branch>` |
+| Reopen attempt | `gh pr reopen <old-pr>` once |
+| Reopen failure | `GraphQL: Could not open the pull request` |
+| Fallback | Replacement PR from the same updated branch |
+| PR body policy | Exact `Closes #N` line, no trailing period |
+| Verification level | `verified-local` until replacement PR CI passes independently |
+
+ProjectHephaestus examples:
+
+```text
+Issue #1442 / closed PR #1696 / branch 1442-auto-impl
+Replacement PR: #1731
+Focused verification:
+pixi run pytest tests/unit/automation/test_interfaces.py tests/unit/automation/test_loop_runner_early_exit.py tests/unit/automation/test_secret_patterns.py -v --override-ini=addopts=
+# 80 passed
+
+Issue #1432 / closed PR #1687 / branch 1432-auto-impl
+Replacement PR: #1732
+Focused verification:
+pixi run pytest tests/unit/automation/test_arming_state.py tests/unit/automation/test_interfaces.py -v --override-ini=addopts=
+# 22 passed
+```
+
+Both replacement PRs were created and reached mergeable/policy-passing state. Full CI was still
+red at capture time because those PRs depended on ProjectHephaestus PR #1730's pydantic
+workflow install fix, so this State F addition is `verified-local`, not `verified-ci`.
 
 ### State E — Fresh PR branch from merged current branch with uncommitted work
 
