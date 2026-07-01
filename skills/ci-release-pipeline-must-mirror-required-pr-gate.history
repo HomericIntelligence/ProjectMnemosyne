@@ -1,0 +1,38 @@
+<!-- markdownlint-disable MD024 -->
+# History: ci-release-pipeline-must-mirror-required-pr-gate
+
+This file records the version history of
+`ci-release-pipeline-must-mirror-required-pr-gate`.
+
+## v1.0.0 (2026-07-01)
+
+**What changed:** Initial creation of the skill.
+
+**Why:** ProjectHephaestus issue #1499 — audit finding [S12 Packaging]: `release.yml`
+ran only `pixi run pytest tests/unit` before publishing to PyPI, while the required PR
+gate (`_required.yml` `integration-tests`) ran the integration-only suites
+(`test_sdist_contents.py`, `test_package_import.py`, `test_cli_entry_points.py`) on every
+PR. A `workflow_dispatch` release against an arbitrary commit BYPASSES that merged-PR
+guarantee, so the integration suite could be entirely skipped on the manual publish path.
+
+The durable, generalizable lessons captured:
+
+1. A merged-PR safety guarantee does NOT extend to `workflow_dispatch`/manual triggers —
+   the release/publish pipeline must run the SAME required gate itself.
+2. Reuse the already-wired gate; do NOT add a new CI job. The release `test` job was
+   already `needs`-ed by `build-and-publish` and already ran `pixi run dev-install`, so
+   adding a STEP to it (not a parallel job) gates the publish with zero wiring changes.
+3. Mirror the required gate's invocation VERBATIM, including `--override-ini="addopts="`
+   (escape the unit-coverage addopts) and `--strict-markers` (safe because the marker is
+   registered) — a variant invocation risks behavioral drift.
+4. Verification proof pattern: prove the named integration guards are actually COLLECTED
+   (`--collect-only -q | grep <guards>`) and that the build-backend-dependent sdist test
+   does NOT silently skip in the release env.
+
+**Verification:** verified-local — the integration suite passed locally exactly as the
+release step invokes it (372 passed, 1 skipped; sdist-contents test 2 passed, not
+skipped). CI on the PR was pending at capture time. Considered amending
+`architecture-executable-convention-guard-pattern` (which already carries the
+"reuse the already-wired gate" convention) but the release-pipeline-vs-required-PR-gate
+parity / `workflow_dispatch`-bypass lesson is a distinct, focused theme, so a new skill
+was created to keep it discoverable.
