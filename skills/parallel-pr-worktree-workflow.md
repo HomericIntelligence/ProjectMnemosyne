@@ -1,9 +1,9 @@
 ---
 name: parallel-pr-worktree-workflow
-description: "Use when: (1) launching 2+ parallel rebase agents that need isolated git state to avoid branch collision, (2) implementing 5+ independent fixes in parallel PRs using git worktrees, (3) bulk-merging skill PRs with CI fixes and conflict resolution, (4) batching 10+ PRs across parallel sub-agents for maximum throughput, (5) launching >=2 concurrent sub-agents that each commit/push to the same git repo, (6) sub-agents report file bleed-over or unexpected `git checkout` reverts mid-task, (7) RESCUE pattern when parallel dispatch across distinct branches has already produced cross-contaminated commits — consolidate worker PRs into ONE branch via cherry-pick and close individual PRs, (8) doing ANY multi-fix work in a shared checkout that a concurrent foreign session/automation may also touch — use dedicated worktrees from the start so a foreign session cannot move your HEAD/branch, (9) arming auto-merge on a STACKED PR (base is another open/feature branch) — retarget to main BEFORE arming or it squash-merges into the intermediate base and can ORPHAN the change, (10) recovering an orphaned stacked merge (PR state=MERGED but content stranded on a dead intermediate branch) via cherry-pick onto a fresh main branch, (11) triaging GitHub PR CI where current-head checks are stale, absent, or blocked by merge conflicts — inspect job logs plus PR rollup/mergeability before editing and use one worktree per PR branch, (12) diagnosing Inference360 PRs where stale green checks coexist with `mergeStateStatus=DIRTY` and `mergeable=CONFLICTING` — rebase before waiting on validate, (13) diagnosing Inference360 validate failures after CLI simplification where endpoint-only InferenceX benchmark dry-runs should not auto-detect clusters and validate workflow commands may still reference removed top-level CLIs."
+description: "Use when: (1) launching 2+ parallel rebase agents that need isolated git state to avoid branch collision, (2) implementing 5+ independent fixes in parallel PRs using git worktrees, (3) bulk-merging skill PRs with CI fixes and conflict resolution, (4) batching 10+ PRs across parallel sub-agents for maximum throughput, (5) launching >=2 concurrent sub-agents that each commit/push to the same git repo, (6) sub-agents report file bleed-over or unexpected `git checkout` reverts mid-task, (7) RESCUE pattern when parallel dispatch across distinct branches has already produced cross-contaminated commits — consolidate worker PRs into ONE branch via cherry-pick and close individual PRs, (8) doing ANY multi-fix work in a shared checkout that a concurrent foreign session/automation may also touch — use dedicated worktrees from the start so a foreign session cannot move your HEAD/branch, (9) arming auto-merge on a STACKED PR (base is another open/feature branch) — retarget to main BEFORE arming or it squash-merges into the intermediate base and can ORPHAN the change, (10) recovering an orphaned stacked merge (PR state=MERGED but content stranded on a dead intermediate branch) via cherry-pick onto a fresh main branch, (11) triaging GitHub PR CI where current-head checks are stale, absent, or blocked by merge conflicts — inspect job logs plus PR rollup/mergeability before editing and use one worktree per PR branch, (12) diagnosing Inference360 PRs where stale green checks coexist with `mergeStateStatus=DIRTY` and `mergeable=CONFLICTING` — rebase before waiting on validate, (13) diagnosing Inference360 validate failures after CLI simplification where endpoint-only InferenceX benchmark dry-runs should not auto-detect clusters and validate workflow commands may still reference removed top-level CLIs, (14) rescuing stale automation PR branches whose CI fails because the branch predates a merged trunk workflow/dependency fix — inspect live PR state and logs, rebase detached temporary worktrees from remote PR heads onto current main, verify focused tests/signatures/trailers, then push with an explicit force-with-lease against the old head."
 category: ci-cd
-date: 2026-06-22
-version: "1.7.0"
+date: 2026-07-01
+version: "1.8.0"
 user-invocable: false
 verification: verified-ci
 history: parallel-pr-worktree-workflow.history
@@ -49,6 +49,11 @@ when a worktree is shared or dirty), `git-worktree-parallel-execution-lifecycle`
   mergeability/head metadata, read the full failing job log, guard endpoint-only dry-runs from
   cluster auto-detection, and update `.github/workflows/validate.yml` to current console commands
   (see Phase 1c).
+- **(v1.8.0, verified-ci)** ProjectHephaestus automation PRs fail CI collection with missing
+  dependencies after a trunk workflow/dependency fix has already merged. Confirm the branch is
+  stale relative to `origin/main`, rebase detached temporary worktrees from the remote PR heads,
+  preserve only real conflict intent, verify focused tests plus signed commits/trailers, and push
+  with an explicit old-head `--force-with-lease` (see Phase 1d).
 
 **Do NOT use when:**
 - Issues are interdependent (use sequential PRs from `batch-pr-rebase-conflict-resolution-workflow`)
@@ -252,6 +257,62 @@ Durable fix pattern:
 5. Rename generated-artifact docs from Slurm/HAProxy previews to Slurm/control-node previews.
    HAProxy config generation should use live control-server state, not a stale registry or a
    manifest-only validation workflow.
+
+### Phase 1d (v1.8.0, verified-ci): Stale Automation Branch Predates Trunk CI Dependency Fix
+
+Use this when multiple automation-authored PRs fail during CI collection or environment setup,
+and the failure appears unrelated to the branch diff. The common signature from ProjectHephaestus
+PRs #1731 and #1732 was `ModuleNotFoundError: No module named 'pydantic'` while collecting
+automation unit/integration tests; both PR heads predated a merged `main` fix that installed the
+automation extra in CI.
+
+```bash
+REPO=HomericIntelligence/ProjectHephaestus
+PR=1731
+
+# 1. Inspect live PR state and keep the old head for an explicit lease.
+gh pr view "$PR" --repo "$REPO" \
+  --json number,title,state,isDraft,headRefName,headRefOid,baseRefName,mergeable,mergeStateStatus,statusCheckRollup,url
+
+# 2. Inspect the failed job log before editing branch code.
+gh run view <run-id> --repo "$REPO" --log-failed
+
+# 3. Confirm the suspected fix is already on trunk.
+gh pr view 1730 --repo "$REPO" --json state,mergedAt,mergeCommit
+git fetch origin main <pr-branch>
+
+# 4. If the branch is checked out elsewhere or local state is stale, avoid switching it.
+git worktree add --detach /tmp/ProjectHephaestus-pr1731 origin/<pr-branch>
+cd /tmp/ProjectHephaestus-pr1731
+git rebase origin/main
+
+# 5. Verify locally, preserving CI's addopts override when relevant.
+PIXI_CACHE_DIR=/tmp/pixi-cache-pr1731 pixi run pytest <focused-tests> --override-ini=addopts=.
+git log --format='%h %G? %s%n%b' origin/main..HEAD
+
+# 6. Push only if the remote head is still the old head observed in step 1.
+git push --force-with-lease=refs/heads/<pr-branch>:<old-head-oid> \
+  origin HEAD:refs/heads/<pr-branch>
+
+# 7. Watch current-head checks and confirm mergeability.
+gh pr checks "$PR" --repo "$REPO" --watch --interval 30
+gh pr view "$PR" --repo "$REPO" --json mergeable,mergeStateStatus,headRefOid,statusCheckRollup
+```
+
+Interpretation:
+
+- If the log fails in collection before branch-specific tests run, look for missing trunk workflow
+  or dependency changes before editing product code.
+- If the trunk fix is merged and the PR head predates it, rebasing is the fix; do not cherry-pick
+  the workflow/dependency change unless rebase is impossible.
+- Detached worktrees are appropriate for rescue work when the local branch may be stale, locked by
+  another worktree, or carrying state you do not own.
+- Resolve only real conflicts. For PR #1731, `hephaestus/automation/pr_manager.py` needed to keep
+  `main`'s `DEFAULT_GIT_MESSAGE_AGENT_TIMEOUT` import while preserving the PR's local secret
+  pattern constants after deleting `_secret_patterns.py`.
+- After rebase, verify commits still have good signatures and required `Signed-off-by` trailers.
+- Use the full refspec form of `--force-with-lease` so the push fails if another actor updated the
+  PR branch since the live-state read.
 
 ### Phase 2: Plan Dependency Groups for Parallel Work
 
@@ -898,6 +959,9 @@ gh issue close <issue-number> --comment "Fixed in PR #<number>"
 | Keep removed top-level commands in `.github/workflows/validate.yml` | Continued using `.venv/bin/python -m inference360 generate-slurm` and `generate-haproxy` after CLI simplification | CI exercised dead command surfaces rather than the current console script, so workflow validation drifted from the product CLI | Use `.venv/bin/inference360 control generate slurm ...` and `.venv/bin/inference360 check preview ...`; backstop with workflow drift tests |
 | Treat a local `/mnt/weka` host as enough validation for endpoint-only mode | Ran locally on a host where cluster auto-detection succeeds because `/mnt/weka` exists | The bug is environment-sensitive and only appears on runners without known cluster mounts | Add explicit no-autodetect regression tests and verify on GitHub CI, not only on a cluster-like local host |
 | Treat the full local suite as the single source of truth (LLM360/Inference360, 2026-06-17, verified-ci) | Tried to use the entire local suite as the final readiness signal while fixing PR branches | Local environment failures such as `portpicker.NoFreePortFoundError`, broken `just`, or submodule HEAD mismatch were not the PR's CI gate | Run focused tests that cover the edited surface locally, record unrelated environment failures, and use current-head GitHub CI as the PR rescue source of truth |
+| Diagnose stale automation PRs by editing branch code first (ProjectHephaestus PRs #1731/#1732, 2026-07-01, verified-ci) | Started from failing unit/integration collection and could have chased automation imports in the PR diff | Both branches simply predated merged PR #1730, which installed the automation extra in CI; the branch code was not the immediate cause of `ModuleNotFoundError: No module named 'pydantic'` | Inspect live PR head, failed logs, and trunk history first. If the fix is already on `origin/main`, rebase the stale branch before changing code |
+| Switch local stale PR branches directly for rescue work | Local branches/worktrees may be stale, checked out elsewhere, or carrying state from automation | Switching or overwriting them risks clobbering unrelated work and can fail with branch-in-use errors | Create detached temporary worktrees from `origin/<pr-branch>` for rebase rescue, then push `HEAD` back to the remote branch with an explicit old-head lease |
+| Use bare `--force-with-lease` after rebasing automation PR heads | The default lease may not protect the exact old PR head observed during triage if refs moved or were not fetched as expected | A concurrent automation/user push could be overwritten | Capture `headRefOid` from `gh pr view` and push with `--force-with-lease=refs/heads/<branch>:<old-head-oid>` |
 
 ## Results & Parameters
 
@@ -1023,6 +1087,41 @@ Additional PR #255 verification:
 | GitHub checks after push | `gh pr checks 255 --repo LLM360/Inference360` showed all pass, including `validate` |
 | Mergeability after push | `gh pr view 255 --repo LLM360/Inference360 --json mergeStateStatus,mergeable,url` returned `mergeStateStatus: CLEAN`, `mergeable: MERGEABLE`, URL `https://github.com/LLM360/Inference360/pull/255` |
 
+### ProjectHephaestus Stale Automation PR Rebase Parameters (v1.8.0)
+
+```bash
+# Live-state shape used before rebasing.
+gh pr view <pr> --repo HomericIntelligence/ProjectHephaestus \
+  --json number,title,state,isDraft,headRefName,headRefOid,baseRefName,mergeable,mergeStateStatus,statusCheckRollup,url
+
+# Failed log inspection.
+gh run view <run-id> --repo HomericIntelligence/ProjectHephaestus --log-failed
+
+# Detached worktrees from remote PR heads.
+git worktree add --detach /tmp/ProjectHephaestus-pr1731 origin/1442-auto-impl
+git worktree add --detach /tmp/ProjectHephaestus-pr1732 origin/1432-auto-impl
+
+# Rebase rescue and protected push.
+git rebase origin/main
+PIXI_CACHE_DIR=/tmp/pixi-cache-pr1731 pixi run pytest <focused-tests> --override-ini=addopts=.
+git push --force-with-lease=refs/heads/<branch>:<old-head-oid> origin HEAD:refs/heads/<branch>
+```
+
+Observed verification:
+
+| PR | Branch | Rebased head | Focused local validation | GitHub result |
+| --- | --- | --- | --- | --- |
+| #1731 | `1442-auto-impl` | `eccf63c7aa302426e21d556cb14a77c60b5f4bd6` | `82 passed` | All checks passing; `MERGEABLE`/`CLEAN` |
+| #1732 | `1432-auto-impl` | `07818ce1154bf79d8dbb081dd44ba7cac20dbb2c` | `24 passed` | All checks passing; `MERGEABLE`/`CLEAN` |
+
+Additional checks from the verified session:
+
+- PR #1730 was already merged and `origin/main` contained the CI workflow/dependency fix that
+  installs the automation extra.
+- Rebased commits remained signed and retained `Signed-off-by` trailers.
+- Temporary detached worktrees for PR #1731 and #1732 were removed after the pushes and CI
+  verification completed.
+
 ### Agent Configuration
 
 ```yaml
@@ -1086,3 +1185,4 @@ executor: haiku      # Simple rebase, pre-commit fixes
 | LLM360/Inference360 | GitHub PR CI rescue session, 2026-06-17. Four failing PRs (#149 `feat/endpoint-status`, #155 `claude-config`, #156 `code-cleanup`, #157 `move-inference360-module`) were fixed in isolated PR worktrees using log-first triage, focused local tests, and current-head CI polling. #149/#155 needed rebase after `validate` disappeared because `mergeable: CONFLICTING` prevented the pull-request merge ref; #156/#157 merged after CI passed. | Phase 1b current-head CI triage + per-PR worktree rescue (v1.5.0, verified-ci) |
 | LLM360/Inference360 | PR merge-conflict/mergeability triage follow-up, 2026-06-19. PR #155 (`claude-config`) and PR #254 were failing because GitHub reported merge conflicts against `origin/master`; `gh pr checks` could be stale green while `mergeStateStatus=DIRTY` and `mergeable=CONFLICTING`. Rebased each branch in an isolated `/tmp` worktree, resolved only true conflict blocks, ran focused local validation, pushed with `--force-with-lease`, and verified GitHub checks green at heads `b24c97c` and `4086627`. | Rebase-before-validate mergeability triage (v1.6.0, verified-ci) |
 | LLM360/Inference360 | PR #255 validate failure after CLI simplification, 2026-06-22. Current head `6c457ca` had only `validate` failing; full logs showed endpoint-only `inferencex-benchmark --endpoint ... --dry-run` tests calling `_detect_cluster()` and failing on GitHub runners without `/mnt/weka` or `/lustrefs`. Fixed by skipping cluster auto-detection for endpoint-only runs, adding `_detect_cluster` fail-fast regressions, replacing stale `generate-slurm`/`generate-haproxy` workflow commands with `control generate slurm` and `check preview`, and verifying GitHub checks all passed after commit `4d87527`. | InferenceX endpoint-only autodetect and validate workflow drift (v1.7.0, verified-ci) |
+| HomericIntelligence/ProjectHephaestus | PRs #1731 (`1442-auto-impl`) and #1732 (`1432-auto-impl`), 2026-07-01. Both CI runs failed during unit/integration collection with `ModuleNotFoundError: No module named 'pydantic'` because the branch heads predated merged PR #1730, which installed the automation extra in CI. Each PR was rebased from a detached temporary worktree onto `origin/main`, focused tests passed (`82 passed` for #1731, `24 passed` for #1732), signed/trailered commits were verified, pushes used explicit old-head force-with-lease, and GitHub reported all checks passing with `mergeable=MERGEABLE` and `mergeStateStatus=CLEAN` at heads `eccf63c7aa302426e21d556cb14a77c60b5f4bd6` and `07818ce1154bf79d8dbb081dd44ba7cac20dbb2c`. | Stale automation branch dependency-fix rebase rescue (v1.8.0, verified-ci) |
