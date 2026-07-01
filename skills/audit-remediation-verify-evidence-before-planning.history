@@ -1,5 +1,24 @@
 # Changelog: audit-remediation-verify-evidence-before-planning
 
+## v1.4.0 -> v1.5.0 (2026-07-01)
+
+- **Version:** 1.4.0 -> 1.5.0 (MINOR — adds new findings + Failed Attempts rows for the #1502 stale-line-cite shape; same core recommendation, not a rewrite)
+- **Date:** 2026-07-01
+- **Changed by:** ProjectHephaestus issue #1502 (CLAUDE.md dev-install setup fix)
+- **Verification:** verified-local (the CLAUDE.md edits + acceptance content greps + `pixi run pre-commit run --files CLAUDE.md` were genuinely RUN this session; the PR/CI for #1502 had NOT landed at capture time — the orchestrator owns commit/PR — so this is `verified-local`, NOT `verified-ci`). The frontmatter `verification` field stays at `verified-local`: the pre-existing v1.0.0–v1.2.0 evidence-verification content remains verified-local, the v1.3.0/v1.4.0 additions stay `unverified` (labeled inline), and the new v1.5.0 material is verified-local (labeled inline).
+- **Snapshot reference:** v1.4.0 rendered `.md` preserved in git history at the parent commit of this amendment (frontmatter `version: "1.4.0"`, `date: 2026-06-26`, `verification: verified-local`; Overview carried the v1.1.0/v1.2.0/v1.3.0/v1.4.0 notes; Verified Workflow had 11 steps + a Proposed Workflow steps 12-16; Failed Attempts had 18 rows; Results & Parameters covered the canonical mapping, submodule dirs, #1553, #1506, and #1507).
+- **What changed:**
+  - Extended the description with the stale-LINE-CITE lesson (coordinates can drift by dozens of lines even when the finding is valid — search for the described section/content, never the cited line number; distinguish a stale line-cite from a stale finding) and added trigger (7).
+  - Added a `v1.5.0 note (VERIFIED-LOCAL — stale-LINE-CITE vs stale-FINDING case)` to the Overview documenting #1502: the audit cited `CLAUDE.md:359-369` but the live `## Environment Setup` block was at `385-395` (~26-line drift); the CONTENT finding (missing `pixi run dev-install`, bare `pre-commit install`) was genuinely un-remediated; the fix mirrored the canonical `just bootstrap` wording; no test contract, so verification = content grep + pre-commit.
+  - Added a "When to Use" trigger for the stale-line-cite shape (search for the section/content, distinguish line-cite drift from finding staleness).
+  - Added two Failed Attempts rows tagged `(v1.5.0, verified-local)`: navigated to the cited `359-369` -> stale by ~26 lines (unrelated sections there); assumed a stale line-cite meant the finding was already fixed -> it was genuinely un-remediated.
+  - Added a ProjectHephaestus #1502 block to Results & Parameters (doc-only fix, ~26-line stale line-cite, content genuinely un-remediated, mirrored canonical `just bootstrap`/`justfile:20-23`/`pixi.toml:38` wording, no test contract so verification = content grep + `pixi run pre-commit run --files CLAUDE.md`).
+  - Bumped frontmatter version 1.4.0 -> 1.5.0 and date to 2026-07-01.
+- **Why:**
+  - Remediating #1502, the audit's cited `CLAUDE.md:359-369` was stale by ~26 lines — those lines now held unrelated sections and the real `## Environment Setup` block had drifted to `385-395`. This is a much larger line-cite drift than the skill's prior instances (#1553 was off by a few lines). The durable lesson: NEVER navigate to the cited coordinates — grep for the described section/content, because audits captured against an older tree drift cites by dozens of lines as sections are inserted above. And crucially, unlike the stale-TARGET cases already in the skill (#1553's target was already fixed), #1502's CONTENT finding was genuinely un-remediated — only the line NUMBER was stale. So the skill now distinguishes a stale LINE-CITE (finding valid, coordinates moved) from a stale FINDING (target already fixed); verify content, not coordinates.
+
+---
+
 ## v1.3.0 -> v1.4.0 (2026-06-26)
 
 - **Version:** 1.3.0 -> 1.4.0 (MINOR — adds new findings/failed-attempts for the #1507 follow-on, not a rewrite)
