@@ -1,13 +1,13 @@
 ---
 name: inference360-staging-fresh-allocation-control
-description: "Validate and debug Inference360 staging/control API launches on fresh H200 Slurm allocations. Use when: (1) proving IFM or multi-model vLLM endpoints through the Inference360 control API, (2) reproducing Inference360 issue 257 / IFM corruption with vLLM, SGLang, HF, or XLLM comparison paths, (3) capturing logprobs, token IDs, launch commands, and Slurm cleanup evidence for H200 repro workflows."
+description: "Validate and debug Inference360 staging/control API launches on fresh H200 Slurm allocations. Use when: (1) proving IFM or multi-model vLLM endpoints through the Inference360 control API, (2) reproducing Inference360 issue 257 / IFM corruption with vLLM, SGLang, HF, XLLM, or RMSNorm forward-path ablations, (3) capturing logprobs, token IDs, launch commands, and Slurm cleanup evidence for H200 repro workflows."
 category: debugging
-date: 2026-06-25
-version: "1.1.0"
+date: 2026-07-02
+version: "1.2.0"
 user-invocable: false
-verification: verified-local
+verification: verified-ci
 history: inference360-staging-fresh-allocation-control.history
-tags: [inference360, slurm, h200, control, staging, vllm, sglang, xllm, ifm, corruption, nodepool]
+tags: [inference360, slurm, h200, control, staging, vllm, sglang, xllm, ifm, corruption, nodepool, rmsnorm, compile-cache]
 ---
 
 # Inference360 Fresh-Allocation Staging Control Validation
@@ -16,10 +16,10 @@ tags: [inference360, slurm, h200, control, staging, vllm, sglang, xllm, ifm, cor
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-25 |
+| **Date** | 2026-07-02 |
 | **Objective** | Run Inference360 staging/control tests and deterministic IFM corruption repros through fresh H200 Slurm allocations without reusing existing model endpoints. |
-| **Outcome** | Successful local end-to-end cluster/control validation, plus issue 257 evidence showing the converted IFM 4B path corrupts under vLLM seed 42 while HF/native XLLM and compatible SGLang comparison still require another runtime/cluster. |
-| **Verification** | verified-local. The workflows ran live on H200 Slurm control/API paths and local validation passed, but CI validate was pending for the issue-257 PR at last poll. |
+| **Outcome** | Successful local end-to-end cluster/control validation, issue 257 engine/checkpoint evidence, and a PR #326 RMSNorm forward-path ablation showing the old historical `forward_cuda` path is unlikely to be the sole corruption cause. |
+| **Verification** | verified-ci. PR #326 CI passed for the RMSNorm ablation files; earlier fresh-allocation workflow was verified locally on H200 Slurm. |
 | **History** | [changelog](./inference360-staging-fresh-allocation-control.history) |
 
 ## When to Use
@@ -30,11 +30,14 @@ tags: [inference360, slurm, h200, control, staging, vllm, sglang, xllm, ifm, cor
 - A manifest-driven launch fails and you need to separate control-plane, artifact, and probe-token-budget failures.
 - You are investigating Inference360 issue 257, IFM corruption, converted checkpoint behavior, or parser-product versus true corruption classifications.
 - You need a reproducible engine/checkpoint comparison across vLLM, SGLang, optional HF checkpoint, and optional native XLLM while preserving raw request/response JSONL, logprobs, token IDs, launch commands, and Slurm cleanup snapshots.
+- You need to ablate XLLM/vLLM RMSNorm forward-path behavior without changing unrelated runtime variables.
 
 ## Verified Workflow
 
-> Verification note: This is verified locally only. It was executed live on the
-> H200 Slurm cluster and Inference360 control path on 2026-06-23, but not in CI.
+> Verification note: The original fresh-allocation workflow was verified locally
+> on the H200 Slurm cluster and Inference360 control path on 2026-06-23. The
+> issue 257 RMSNorm ablation runner and smoke tests were verified in PR #326 CI
+> on 2026-07-02.
 
 ### Quick Reference
 
@@ -52,7 +55,9 @@ unless the user explicitly asks for reuse.
    for reasoning-heavy models.
 7. For issue-257 style corruption repros, run the runbook-local
    engine/checkpoint comparison runner against each fresh endpoint variant.
-8. Stop the service, release the nodepool allocation, stop control, and verify
+8. For RMSNorm ablations, keep the baseline and treatment symmetric except for
+   the forward method binding, and confirm server logs prove the intended bind.
+9. Stop the service, release the nodepool allocation, stop control, and verify
    the Slurm job leaves the queue.
 ```
 
@@ -96,6 +101,32 @@ Issue 257 engine/checkpoint comparison extension from the verified 2026-06-25 se
 7. Use `scripts/ifm_corruption_trials.py` to summarize logprob and token-ID presence/count fields while preserving the full raw response body.
 8. For HF/native XLLM comparison on a cluster with those artifacts, run the same runner with `HF_MODEL_PATH`, `XLLM_MODEL_PATH`, `XLLM_TOKENIZER_PATH`, `XLLM_REPO`, and `XLLM_CONTAINER_IMAGE` set explicitly. If those paths are absent, record the path as skipped rather than pretending the comparison ran.
 9. For handoff to another cluster, append a sanitized GitHub issue comment with checkout, env vars, live command, interpretation matrix, and artifact reporting expectations. Keep raw internal paths and Slurm metadata in private runbooks or artifact logs unless explicit approval is given.
+
+Issue 257 RMSNorm forward-path ablation from the verified 2026-07-02 PR #326 session:
+
+1. Keep the ablation runner under `docs/runbooks/issue-257/` with the other issue-specific repro tools. The checked-in runner was `docs/runbooks/issue-257/rmsnorm_forward_ablation_seed_sweep.py`, with smoke tests in `docs/runbooks/issue-257/rmsnorm_forward_ablation_seed_sweep_smoke.py`.
+2. Change only one root-cause variable between variants. The baseline `current-unified` used installed bridge behavior where `forward_native` and `forward_cuda` route through the unified exact implementation. The treatment `old-forward-cuda` used a runtime `sitecustomize` patch to install the historical grouped `XllmRMSNorm.forward_cuda` behavior and bind `self._forward_method = self.forward_cuda` for `XllmRMSNorm` instances.
+3. Preserve symmetric runtime environment. Both variants set `VLLM_DISABLE_COMPILE_CACHE=1` because the old path compiled but vLLM compile-cache persistence could crash on missing standalone artifacts. Do not disable `torch.compile` unless that is the explicit variable under test.
+4. Make the runtime patch self-proving. The patch wraps `vllm.model_executor.custom_op.CustomOp.__init__`, installs the old grouped `forward_cuda`, then writes logs proving installation and per-instance binding.
+5. Confirm server logs before interpreting text output. In the verified run, baseline logs showed `XllmRMSNorm.forward_native`; treatment logs showed `_install_old_forward_cuda.<locals>.old_forward_cuda`.
+6. Preserve the old forward shape exactly: reshape hidden states by `self.n_groups`, reshape residual when present, apply `rms_norm` or `fused_add_rms_norm` with per-group `torch.ones` weight, flatten, multiply by `self.tp_weight`, and return residual when present.
+7. Sweep a broad seed range and classify actual text corruption separately from parser-product or length artifacts. The verified IFM_4B run used seeds `0..255`.
+8. Treat equal aggregate corruption counts as a failed root-cause isolation unless the fixed/regressed seed sets prove a narrower interaction. In PR #326, both variants produced 20/256 actual corruptions.
+
+Copy-paste issue-257 RMSNorm ablation validation commands:
+
+```bash
+cd /mnt/weka/home/micah.villmow/Projects/Inference360
+
+python -m py_compile docs/runbooks/issue-257/rmsnorm_forward_ablation_seed_sweep.py
+
+python -m pytest \
+  docs/runbooks/issue-257/rmsnorm_forward_ablation_seed_sweep_smoke.py
+
+python -m pytest \
+  docs/runbooks/issue-257/sglang_reproducer_seed_sweep_smoke.py \
+  docs/runbooks/issue-257/rmsnorm_forward_ablation_seed_sweep_smoke.py
+```
 
 Copy-paste issue-257 local validation commands:
 
@@ -154,6 +185,10 @@ export XLLM_CONTAINER_IMAGE=<xllm-container-image>
 | SGLang parser flags on incompatible build | Started the dedicated SGLang image with IFM parser flags | That SGLang build rejected `--reasoning-parser ifm` | Parser flag compatibility is engine-build-specific; separate parser flag incompatibility from model generation behavior |
 | SGLang without parser flags on converted checkpoint | Started the dedicated SGLang image without parser flags | Startup reached checkpoint loading but failed importing converted checkpoint remote code with `TypeError: check_model_inputs() missing 1 required positional argument: 'func'` | Do not classify startup/import failures as clean SGLang model behavior; record them as runtime compatibility blockers |
 | Raw legacy model naming in tracked logical surfaces | Used raw legacy naming directly where repository guard tests inspect logical surfaces | Naming guard tests rejected the tracked surface | Construct legacy path stems in code when needed or keep raw details in external artifact logs |
+| RMSNorm old forward only on one side | Considered changing the old forward path without matching the surrounding runtime environment | Any compile-cache or launch difference would confound the root-cause result | Keep all non-target runtime variables symmetric between baseline and treatment |
+| Trusting patch installation without bind evidence | Relied on code review of the `sitecustomize` patch alone | vLLM custom-op dispatch can keep using the original bound method even when a class method is patched | Parse server logs and require proof that each variant bound the intended forward method |
+| Treating all non-golden outputs as corruption | Mixed actual text corruption with parser-product and length artifacts | Aggregate counts become misleading and can hide fixed/regressed seed swaps | Classify actual corruption separately before comparing variants |
+| Empty `ProcessLookupError` swallow | Review bot flagged an empty `except ProcessLookupError` in `stop_direct_endpoint` | The behavior was intentional but undocumented: the process group can exit between `poll()` and signal delivery | Keep swallowing the race, but add a comment explaining the process-group exit window |
 
 ## Results & Parameters
 
@@ -246,9 +281,60 @@ just validate was not usable because just resolved to a broken Python shim
 PR CI at last poll: CodeQL/secrets/SAST/SCA green; validate still in progress
 ```
 
+Issue 257 RMSNorm ablation results from PR <https://github.com/LLM360/Inference360/pull/326>:
+
+```text
+Runner: docs/runbooks/issue-257/rmsnorm_forward_ablation_seed_sweep.py
+Smoke tests: docs/runbooks/issue-257/rmsnorm_forward_ablation_seed_sweep_smoke.py
+Model: IFM_4B
+Seed range: 0..255
+Variants:
+  current-unified:
+    installed bridge behavior
+    forward_native/forward_cuda route through unified exact implementation
+  old-forward-cuda:
+    runtime sitecustomize patch installs old grouped forward_cuda
+    CustomOp.__init__ binds XllmRMSNorm instances to self.forward_cuda
+Shared runtime:
+  VLLM_DISABLE_COMPILE_CACHE=1
+  torch.compile still enabled
+
+Server-log binding evidence:
+  current-unified: XllmRMSNorm.forward_native
+  old-forward-cuda: _install_old_forward_cuda.<locals>.old_forward_cuda
+
+Actual corruption counts:
+  current-unified: 20/256
+  old-forward-cuda: 20/256
+
+Old path fixed these current-unified corrupt seeds:
+  85, 125, 142, 165, 209, 235, 237
+
+Old path regressed these seeds:
+  22, 33, 65, 69, 74, 181, 187
+
+Shared corrupt seeds:
+  10, 28, 29, 31, 42, 62, 93, 116, 121, 128, 133, 173, 247
+
+Interpretation:
+  The unified RMSNorm forward path is unlikely to be the sole cause under this
+  reproduction. The old path moved which seeds corrupt, but did not reduce the
+  aggregate actual-corruption rate.
+```
+
+PR #326 verification evidence:
+
+```text
+python -m py_compile docs/runbooks/issue-257/rmsnorm_forward_ablation_seed_sweep.py passed
+python -m pytest docs/runbooks/issue-257/rmsnorm_forward_ablation_seed_sweep_smoke.py passed, 5 tests
+combined SGLang reproducer + RMSNorm ablation smoke suite passed, 11 tests
+GitHub PR #326 checks passed
+```
+
 ## Verified On
 
 | Project | Context | Details |
 | ------- | ------- | ------- |
 | LLM360/Inference360 | H200 Slurm m2/mbzuai fresh-allocation staging/control validation for IFM 4B and 32B on 2026-06-23 | Live control/API probes passed for fresh job `1782986` on `fs-mbz-gpu-555`, and the allocation was released afterward. |
 | LLM360/Inference360 | Issue 257 IFM 4B converted-checkpoint corruption comparison on 2026-06-25 | Fresh-control H200 repro workflow produced vLLM seed-42 corruption evidence with logprobs/token IDs; HF/native XLLM and compatible SGLang comparison remained blocked on missing/compatible runtime paths. |
+| LLM360/Inference360 | Issue 257 RMSNorm forward-path ablation in PR #326 on 2026-07-02 | CI passed for the ablation runner and smoke tests; 0..255 IFM_4B sweep showed current-unified and old-forward-cuda both had 20/256 actual corruptions. |
