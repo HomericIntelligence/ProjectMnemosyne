@@ -1,13 +1,13 @@
 ---
 name: inference360-staging-fresh-allocation-control
-description: "Validate and debug Inference360 staging/control API launches on fresh H200 Slurm allocations. Use when: (1) proving IFM or multi-model vLLM endpoints through the Inference360 control API, (2) reproducing Inference360 issue 257 / IFM corruption with vLLM, SGLang, HF, or XLLM comparison paths, (3) capturing logprobs, token IDs, launch commands, and Slurm cleanup evidence for H200 repro workflows."
+description: "Validate and debug Inference360 staging/control API launches and issue 257 reproducers. Use when: (1) proving IFM or multi-model vLLM endpoints through the Inference360 control API, (2) reproducing Inference360 issue 257 / IFM corruption with vLLM, SGLang, HF, XLLM, or public NanoGPT cache-logits comparison paths, (3) capturing logprobs, token IDs, launch commands, logits tensors, and cleanup evidence for H200 repro workflows."
 category: debugging
-date: 2026-06-25
-version: "1.1.0"
+date: 2026-07-02
+version: "1.2.0"
 user-invocable: false
-verification: verified-local
+verification: verified-ci
 history: inference360-staging-fresh-allocation-control.history
-tags: [inference360, slurm, h200, control, staging, vllm, sglang, xllm, ifm, corruption, nodepool]
+tags: [inference360, slurm, h200, control, staging, vllm, sglang, xllm, ifm, corruption, nodepool, nanogpt, cache-logits]
 ---
 
 # Inference360 Fresh-Allocation Staging Control Validation
@@ -16,10 +16,10 @@ tags: [inference360, slurm, h200, control, staging, vllm, sglang, xllm, ifm, cor
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-25 |
-| **Objective** | Run Inference360 staging/control tests and deterministic IFM corruption repros through fresh H200 Slurm allocations without reusing existing model endpoints. |
-| **Outcome** | Successful local end-to-end cluster/control validation, plus issue 257 evidence showing the converted IFM 4B path corrupts under vLLM seed 42 while HF/native XLLM and compatible SGLang comparison still require another runtime/cluster. |
-| **Verification** | verified-local. The workflows ran live on H200 Slurm control/API paths and local validation passed, but CI validate was pending for the issue-257 PR at last poll. |
+| **Date** | 2026-07-02 |
+| **Objective** | Run Inference360 staging/control tests and deterministic issue 257 repros, including a public open-source SGLang/NanoGPT cache-logits reproducer that avoids IFM models and private paths. |
+| **Outcome** | Successful local end-to-end cluster/control validation, issue 257 vLLM IFM evidence, and a CI-verified public reproducer for SGLang radix-prefix-cache / chunked-prefill tail-logit instability. |
+| **Verification** | verified-ci for the public SGLang/NanoGPT reproducer in Inference360 PR #326. Prior H200 Slurm fresh-allocation workflow remains verified-local. |
 | **History** | [changelog](./inference360-staging-fresh-allocation-control.history) |
 
 ## When to Use
@@ -30,6 +30,8 @@ tags: [inference360, slurm, h200, control, staging, vllm, sglang, xllm, ifm, cor
 - A manifest-driven launch fails and you need to separate control-plane, artifact, and probe-token-budget failures.
 - You are investigating Inference360 issue 257, IFM corruption, converted checkpoint behavior, or parser-product versus true corruption classifications.
 - You need a reproducible engine/checkpoint comparison across vLLM, SGLang, optional HF checkpoint, and optional native XLLM while preserving raw request/response JSONL, logprobs, token IDs, launch commands, and Slurm cleanup snapshots.
+- You need a public, open-source-only SGLang reproducer for cache/prefix-cache numerical instability that uses `woywan/nanogpt` instead of IFM checkpoints or private artifact paths.
+- You need to compare cached tail logits against cold-prefill logits across radix prefix cache and chunked prefill variants, including block-aligned and non-block-aligned prompt lengths.
 
 ## Verified Workflow
 
@@ -52,7 +54,10 @@ unless the user explicitly asks for reuse.
    for reasoning-heavy models.
 7. For issue-257 style corruption repros, run the runbook-local
    engine/checkpoint comparison runner against each fresh endpoint variant.
-8. Stop the service, release the nodepool allocation, stop control, and verify
+8. For public SGLang cache-logits repros, use NanoGPT prepare-only first,
+   then run the generated SGLang variants and compare cached tail logits
+   against cold-prefill logits.
+9. Stop the service, release the nodepool allocation, stop control, and verify
    the Slurm job leaves the queue.
 ```
 
@@ -97,6 +102,18 @@ Issue 257 engine/checkpoint comparison extension from the verified 2026-06-25 se
 8. For HF/native XLLM comparison on a cluster with those artifacts, run the same runner with `HF_MODEL_PATH`, `XLLM_MODEL_PATH`, `XLLM_TOKENIZER_PATH`, `XLLM_REPO`, and `XLLM_CONTAINER_IMAGE` set explicitly. If those paths are absent, record the path as skipped rather than pretending the comparison ran.
 9. For handoff to another cluster, append a sanitized GitHub issue comment with checkout, env vars, live command, interpretation matrix, and artifact reporting expectations. Keep raw internal paths and Slurm metadata in private runbooks or artifact logs unless explicit approval is given.
 
+Issue 257 public SGLang/NanoGPT cache-logits reproducer from the CI-verified PR #326 session:
+
+1. Keep the public reproducer under `docs/runbooks/issue-257/`, next to the issue-specific runbook material, not under generic product scripts.
+2. Use `docs/runbooks/issue-257/reproduce_sglang_nanogpt_cache_logits.py` and smoke tests in `docs/runbooks/issue-257/reproduce_sglang_nanogpt_cache_logits_smoke.py`.
+3. Use public model `woywan/nanogpt`; do not require IFM checkpoints, internal endpoint names, private checkpoint paths, or private prompts.
+4. Launch SGLang variants with radix prefix cache enabled/disabled and chunked prefill enabled/disabled. Compare cached tail logits against cold-prefill logits, not only cache-on variants against each other.
+5. Cover both block-aligned and non-block-aligned prompt lengths. Keep prefix length fixed when changing aligned versus unaligned cases so the comparison isolates tail length.
+6. Install a runtime `sitecustomize` patch that hooks `SGLang` `LogitsProcessor._get_logits` and dumps tensors per request. Do not modify the installed SGLang package in place.
+7. Dump raw logits and normalized tail tensors to output files, then emit a markdown pass/fail table for the variant/case matrix.
+8. Use `--prepare-only` when the agent only needs command plans and runtime patch artifacts, or when the active environment should not launch SGLang. Put generated artifacts in a private output directory.
+9. Treat raw prompt, output, and logits artifacts as potentially sensitive. Do not commit generated artifacts if they include private prompts, endpoints, absolute infrastructure paths, or private model outputs.
+
 Copy-paste issue-257 local validation commands:
 
 ```bash
@@ -118,6 +135,27 @@ cd /mnt/weka/home/micah.villmow/Inference360
 PYTHON=.venv/bin/python \
 INFERENCE360=.venv/bin/inference360 \
 scripts/validate.sh
+```
+
+Copy-paste public SGLang/NanoGPT reproducer validation commands:
+
+```bash
+cd /mnt/weka/home/micah.villmow/Projects/Inference360
+
+.venv/bin/python -m py_compile \
+  docs/runbooks/issue-257/reproduce_sglang_nanogpt_cache_logits.py
+
+.venv/bin/python -m pytest \
+  docs/runbooks/issue-257/reproduce_sglang_nanogpt_cache_logits_smoke.py
+
+.venv/bin/python -m pytest \
+  docs/runbooks/issue-257/reproduce_sglang_nanogpt_cache_logits_smoke.py \
+  docs/runbooks/issue-257/reproduce_sglang_nanogpt_rmsnorm_smoke.py
+
+.venv/bin/python docs/runbooks/issue-257/reproduce_sglang_nanogpt_cache_logits.py \
+  --model woywan/nanogpt \
+  --output-dir <private-output-dir> \
+  --prepare-only
 ```
 
 Copy-paste issue-257 comparison environment shape:
@@ -154,6 +192,10 @@ export XLLM_CONTAINER_IMAGE=<xllm-container-image>
 | SGLang parser flags on incompatible build | Started the dedicated SGLang image with IFM parser flags | That SGLang build rejected `--reasoning-parser ifm` | Parser flag compatibility is engine-build-specific; separate parser flag incompatibility from model generation behavior |
 | SGLang without parser flags on converted checkpoint | Started the dedicated SGLang image without parser flags | Startup reached checkpoint loading but failed importing converted checkpoint remote code with `TypeError: check_model_inputs() missing 1 required positional argument: 'func'` | Do not classify startup/import failures as clean SGLang model behavior; record them as runtime compatibility blockers |
 | Raw legacy model naming in tracked logical surfaces | Used raw legacy naming directly where repository guard tests inspect logical surfaces | Naming guard tests rejected the tracked surface | Construct legacy path stems in code when needed or keep raw details in external artifact logs |
+| IFM/private-path public repro | Tried to frame the public issue 257 reproducer around IFM models, internal endpoints, or absolute checkpoint paths | That would make the reproducer unusable publicly and risk leaking operational details | Use `woywan/nanogpt`, public SGLang, sanitized command plans, and private output directories |
+| Cache-on-only comparison | Compared SGLang cache-enabled variants against each other | Two cache-enabled paths can share the same numerical defect and mask the instability | Compare cached tail logits against a cold-prefill baseline |
+| Moving prefix length between cases | Changed both prefix length and tail shape while testing aligned versus unaligned prompts | The result no longer isolated the tail-length/block-boundary effect | Keep prefix length fixed and vary the tail case deliberately |
+| Committing raw generated artifacts | Considered checking in prompt/output/logit dumps for convenience | Raw outputs can contain private prompts, endpoints, paths, or model artifacts | Commit the reproducer and smoke tests only; keep generated outputs in private artifact roots |
 
 ## Results & Parameters
 
@@ -246,9 +288,39 @@ just validate was not usable because just resolved to a broken Python shim
 PR CI at last poll: CodeQL/secrets/SAST/SCA green; validate still in progress
 ```
 
+Issue 257 public SGLang/NanoGPT cache-logits reproducer from Inference360 PR #326:
+
+```text
+Issue: https://github.com/LLM360/Inference360/issues/257
+PR: https://github.com/LLM360/Inference360/pull/326
+Runner: docs/runbooks/issue-257/reproduce_sglang_nanogpt_cache_logits.py
+Smoke tests: docs/runbooks/issue-257/reproduce_sglang_nanogpt_cache_logits_smoke.py
+Model: woywan/nanogpt
+
+Behavior covered:
+  radix prefix cache enabled and disabled
+  chunked prefill enabled and disabled
+  block-aligned and non-block-aligned prompt lengths
+  cached tail logits versus cold-prefill logits
+  raw logits and normalized tail tensor dumps
+  markdown pass/fail summary table
+  --prepare-only command-plan/runtime-patch generation
+
+Implementation detail:
+  runtime sitecustomize patch hooks SGLang LogitsProcessor._get_logits
+  and dumps per-request tensors without editing the installed SGLang package
+
+Verification:
+  py_compile on reproducer passed
+  pytest docs/runbooks/issue-257/reproduce_sglang_nanogpt_cache_logits_smoke.py passed
+  combined smoke suite with RMSNorm tests passed 11 tests
+  GitHub PR #326 checks passed after integration
+```
+
 ## Verified On
 
 | Project | Context | Details |
 | ------- | ------- | ------- |
 | LLM360/Inference360 | H200 Slurm m2/mbzuai fresh-allocation staging/control validation for IFM 4B and 32B on 2026-06-23 | Live control/API probes passed for fresh job `1782986` on `fs-mbz-gpu-555`, and the allocation was released afterward. |
 | LLM360/Inference360 | Issue 257 IFM 4B converted-checkpoint corruption comparison on 2026-06-25 | Fresh-control H200 repro workflow produced vLLM seed-42 corruption evidence with logprobs/token IDs; HF/native XLLM and compatible SGLang comparison remained blocked on missing/compatible runtime paths. |
+| LLM360/Inference360 | Issue 257 public SGLang/NanoGPT cache-logits reproducer in PR #326 on 2026-07-02 | Public open-source-only reproducer and smoke tests passed CI after integration, including cache-logits smoke and combined RMSNorm smoke coverage. |
