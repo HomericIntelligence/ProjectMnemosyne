@@ -1,0 +1,67 @@
+<!-- markdownlint-disable MD024 -->
+# History: planning-unmerged-parent-contract-compile-smoke-gate
+
+## v1.1.0 (2026-07-02)
+
+Amended after a NOGO→R1 revision on ProjectOdyssey #5516 revealed that
+**4-of-4** reviewer-flagged unverified APIs were WRONG on first `Read`:
+
+1. `randn` — R0 assumed `mean=/std=` kwargs. On-disk
+   (`src/projectodyssey/tensor/tensor_creation.mojo:531`) signature is
+   `def randn(shape: List[Int], dtype: DType, seed: Int = 0) raises -> AnyTensor`
+   — N(0,1) only. R0 test would not compile.
+2. `cross_entropy` — R0 assumed integer class-index labels. On-disk
+   (`src/projectodyssey/core/loss.mojo:260-292`) targets MUST be one-hot,
+   same shape as logits. R0 would silently produce wrong loss (no dtype
+   guard raise). Fix: `one_hot_encode` from
+   `src/projectodyssey/data/formats/idx_loader.mojo:246`.
+3. `AnyTensor.store[dtype]` — RIGHT (`any_tensor.mojo:1499`) but
+   correct-by-coin-flip: `.set` also exists at line 860 with ~12
+   dtype overloads.
+4. `extract_batch_pair` — RIGHT
+   (`src/projectodyssey/data/batch_utils.mojo:76-78` returns
+   `Tuple[AnyTensor, AnyTensor]`) but unverified in R0.
+
+Primary added learning: **When a reviewer NOGOs a plan for unverified
+APIs, `Read` each flagged API's source line NOW and revise every
+assumption that was wrong — do NOT add a "verify later" step to the
+plan.** Assume 100% wrong-rate on cited-but-unread APIs until proven
+otherwise on disk.
+
+Sub-patterns added (all triggered from the same "planning revision
+after NOGO for a Mojo/ProjectOdyssey issue" context):
+
+- **Two-tier convergence assertion** — hard floor
+  `assert_true(loss_final < loss_initial)` asserted BEFORE the
+  issue-prescribed `< 0.95 * loss_initial` check, so failure logs
+  distinguish "no decrease" from "insufficient decrease." Never
+  weaken the issue-prescribed threshold; mitigate on data/hyperparams
+  side (samples×3.2, class-mean bias×2, warm-up epoch).
+- **Same-line coordination hazard on rebase** — when two concurrent
+  PRs edit the identical line, rebase detects the pre-fixed line as
+  an empty hunk; drop it with `git commit --amend --no-edit`, no
+  merge conflict.
+- **Cross-file caller grep before signature change** —
+  `grep -rn 'fname(' --include='*.mojo'` to prove no other file
+  calls the per-example function before changing its signature.
+- **Smoke-run the example's own `main()`** — a test file that
+  imports from the example proves compile but NOT that `main()`
+  runs end-to-end (arg parser, dataset loader, checkpoint path
+  can all break independently).
+- **Name-collision with overload family trap** — `.set` (12 overloads,
+  `any_tensor.mojo:860`) and `.store[dtype]` (parametric, line 1499)
+  both exist on `AnyTensor`. Two-of-a-kind API names on the same
+  type require explicit grep of BOTH forms before citation.
+
+Failed-attempts table grew from 7 rows to 13 (added attempts 8-13
+capturing the above patterns as concrete R0-vs-R1 misses).
+
+## v1.0.0 (2026-07-02)
+
+Initial capture from ProjectOdyssey issue #5516 plan review (parent
+issue #5515 unmerged; only an approved-plan comment existed). Seven
+learnings distilled from six unverified-API assumptions plus a
+same-line-coordination hazard.
+
+Merged in PR
+[HomericIntelligence/ProjectMnemosyne#2935](https://github.com/HomericIntelligence/ProjectMnemosyne/pull/2935).
