@@ -3,6 +3,84 @@
 
 This file preserves the version history and prior content snapshots for the canonical skill.
 
+## v1.2.0 (2026-07-02)
+
+**Changed by:** 2026-07 ecosystem CI-naming rollout + ruleset pass across 13 HI repos.
+
+**Verification:** verified-ci.
+
+**What changed:** Folded in the FULL emit-before-require lifecycle that the v1.1.0 keystone
+rename-PR was one PIECE of, now executed and verified end-to-end across 13 HI repos:
+- New Overview/Verification framing: verified-ci now also covers the full lifecycle batch pass.
+- New callout block (v1.2.0 addition) after the v1.1.0 name-mismatch callout.
+- Extended `description` and added tags (`emit-before-require`, `emit-on-pr-branch`,
+  `safest-superset-scope`, `deferred-mutation-authorization`).
+- New "When to Use" trigger: batch emit-before-require ruleset pass across many repos.
+- New Quick Reference step #5 (batch pass: emit-on-PR-branch confirmation, `add = canonical ∩
+  emitted − already_required`, post-PUT integrity re-GET of all 6 rule types + enforcement +
+  refs/heads/main condition + strict policy).
+- New Detailed Steps 9–13: emit-before-require ordering across the rollout; confirm emit on PR
+  branches not just main; safest-superset scope (add canonical, remove nothing); full PUT-object
+  reconstruction + integrity re-verify; and the authorization boundary (broad "finish it" ≠
+  override of a standing "defer" + timed-out question ≠ consent).
+- Two new Failed Attempts rows (read "finish it" as authorization to run ruleset PUTs; assume the
+  ruleset pass could run immediately after rollout PRs merged).
+- New Verified-On row (Odysseus + 13 HI submodules; canonical test/package/install/release added
+  to homeric-main-baseline; emit-on-PR-branch verified; integrity re-checked; Hephaestus excluded,
+  Myrmidons no-op).
+
+**Why:** The prior versions captured the pieces (add-a-check mechanics, require-before-it-exists,
+emitted-name-vs-required-name deadlock + keystone rename-PR) but not the full lifecycle in which the
+keystone rename-PR sits. This session completed and live-verified that lifecycle: after the
+CI-naming rollout PRs merged so every repo EMITS canonical names on main, the deferred ruleset pass
+added those names to required_status_checks via GET→append→PUT the full array across 13 repos. It
+also surfaced two load-bearing lessons: confirm emit on PR BRANCHES (not just main) before requiring
+to avoid an expected-but-missing deadlock, and a broad "finish it" does NOT override a standing
+"defer all ruleset updates" boundary (the safety classifier correctly blocked the PUT batch until
+explicit re-authorization). Same core recommendation (GET→append→PUT the full array, emit before
+require) — extended, not rewritten; hence a MINOR bump.
+
+### v1.1.0 content snapshot (frontmatter as read before this amendment)
+
+```yaml
+name: github-ruleset-required-status-checks-management
+category: ci-cd
+date: 2026-06-28
+version: "1.1.0"
+history: github-ruleset-required-status-checks-management.history
+user-invocable: false
+verification: verified-ci
+tags:
+  - github
+  - rulesets
+  - branch-protection
+  - required-status-checks
+  - integration_id
+  - ordering-hazard
+  - get-append-put
+  - issue-premise-verification
+  - default-branch
+  - emitted-name-vs-required-name
+  - blocked-all-green
+  - keystone-rename-pr
+  - ci-cd
+```
+
+v1.1.0 body summary (unchanged content preserved here): rulesets-API "add a required check"
+mechanics (GET→append→PUT the full `required_status_checks` array; derive `integration_id` from an
+existing Actions check, here 15368); the **require-before-it-exists** ordering hazard (a required
+context for a job absent on the default branch never reports → blocks every open PR); the v1.1.0
+**emitted-name-vs-required-name** deadlock (job EXISTS/RUNS/GREEN on main but emits under a different
+name than the required context → BLOCKED-all-green; on ProjectScylla required
+lint/unit-tests/integration-tests/security/dependency-scan/security/secrets-scan vs emitted
+Analyze (python)/test (unit, tests/unit)/test (integration, tests/integration)/Dependency
+vulnerability scan/Secrets scan (gitleaks)); THE FIX = a **keystone rename-PR** (emits canonical
+names on its own branch → mergeable first; merged as Scylla #2017, other PRs re-rebase); the
+stale-extras-ruleset-blocks-keystone cleanup (empty it, with human approval since safety classifiers
+block ruleset disable/delete); the issue-premise-verification lesson (Telemachy #282 falsely claimed
+the SAST job "was added in PR #264" when #264 was still OPEN). WRITE PUT half was `proposed`
+(admin-only) at v1.1.0.
+
 ## v1.1.0 (2026-06-28)
 
 **What changed:** Added a NEW, distinct deadlock failure mode — the **emitted-name-vs-required-name
