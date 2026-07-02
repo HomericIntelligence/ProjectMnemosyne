@@ -163,10 +163,10 @@ New property suites: 10 passed (the 3 appended classes) + 4 passed (new file) = 
 **Verification commands & results (all green LOCAL):**
 
 ```text
-$ pixi run pytest tests/unit/automation -q       -> 2319 passed
-$ pixi run ruff check hephaestus tests            -> clean (after I001 auto-fix)
-$ pixi run mypy                                    -> Success, 445 source files
-$ pixi run python -c "import hypothesis"           -> 6.155.7
+pixi run pytest tests/unit/automation -q       -> 2319 passed
+pixi run ruff check hephaestus tests            -> clean (after I001 auto-fix)
+pixi run mypy                                    -> Success, 445 source files
+pixi run python -c "import hypothesis"           -> 6.155.7
 ```
 
 Note: PR CI was **not yet merged at capture** → this is **verified-local, NOT verified-ci**.
