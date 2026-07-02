@@ -1,0 +1,65 @@
+<!-- markdownlint-disable MD024 -->
+# History: mojo-planning-verify-type-semantics-and-source-counts
+
+This file preserves prior versions of the canonical skill.
+
+## v1.1.0 (2026-07-02)
+
+Ran three of the prescribed probes against ProjectOdyssey `main` during R1 of the same
+planning session (issue #5514). Promoted verification level from `unverified` to
+`verified-local`. Concrete evidence added:
+
+1. `@fieldwise_init` supports BOTH keyword and positional constructors. Verified against
+   `src/projectodyssey/training/precision_config.mojo:68` (`@fieldwise_init struct PrecisionMode`)
+   and its factory calls (`PrecisionConfig(mode=..., compute_dtype=..., storage_dtype=...,
+   use_gradient_scaler=...)`). Reviewer's "positional-only" intuition was WRONG.
+2. `AnyTensor` snapshot is safe under refcounted shared storage. Verified at
+   `src/projectodyssey/tensor/any_tensor.mojo:81-89` (`Copyable, ImplicitlyCopyable, Movable`
+   conformances) and line 96 docstring: "reference counting for safe shared ownership. Copying
+   a tensor increments the reference count." `var snap = self.field; self.field = new_val`
+   keeps `snap` valid via refcount.
+3. Tuple size limit is real. Largest observed Tuple in codebase is 6-element
+   (`examples/alexnet_cifar10/run_train.mojo:59`); no evidence of a 16-element mixed Tuple
+   compiling. Correct mitigation: replace Tuple with a dedicated named `@fieldwise_init` struct
+   (also POLA-compliant — `.field_name` beats `result[6]`).
+4. Grep-verified param count for ResNet-18 = 82 (not "~81", not "84"). The 84 comment folded
+   in `bn1_running_mean/var` (non-trainable stats). Authoritative grep:
+   `grep -cE "^    var (conv1_kernel|conv1_bias|bn1_gamma|bn1_beta|s[0-9]b[0-9]_(conv[0-9]_kernel|conv[0-9]_bias|bn[0-9]_gamma|bn[0-9]_beta|proj_kernel|proj_bias|proj_bn_gamma|proj_bn_beta)|fc_weights|fc_bias): AnyTensor" examples/resnet18_cifar10/model.mojo`
+   → 82.
+
+Removed `## Verified Workflow` "Proposed Workflow" warning banner. Added three new Failed
+Attempts rows (reviewer positional-only claim refuted; 16-element mixed Tuple risk with
+concrete Tuple-size ceiling; trusting `model.mojo:105` comment). Expanded Quick Reference
+with the three concrete probe grep commands.
+
+## v1.0.0 (2026-07-02)
+
+Original skill authored from ProjectOdyssey #5514 planning session. Verification level
+`unverified` — only one grep (returning 82) had been run; every other claim was a
+PRESCRIPTION for a reviewer to probe. Prescribed the three probe patterns that became this
+v1.1.0's evidence base:
+
+```yaml
+name: mojo-planning-verify-type-semantics-and-source-counts
+category: architecture
+date: 2026-07-02
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags:
+  - planning
+  - mojo
+  - verify-before-planning
+  - anytensor
+  - snapshot-semantics
+  - value-vs-reference
+  - fieldwise-init
+  - constructor-shape
+  - tuple-return
+  - parameter-count
+  - grep-authoritative
+  - throwaway-build
+  - unverified
+```
+
+Merged as PR #2931 on 2026-07-02.
