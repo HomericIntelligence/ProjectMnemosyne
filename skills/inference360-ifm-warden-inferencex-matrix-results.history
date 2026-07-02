@@ -1,0 +1,220 @@
+---
+name: inference360-ifm-warden-inferencex-matrix-results
+description: "Run IFM checkpoint matrix benchmarks through Inference360 Warden and publish sanitized InferenceX JSON results. Use when: (1) benchmarking one checkpoint at a time through Warden and HAProxy, (2) publishing InferenceX matrix artifacts to PerfHC, (3) preventing checkpoint, tokenizer, endpoint, or container leaks in benchmark outputs."
+category: evaluation
+date: 2026-07-02
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - inference360
+  - ifm
+  - warden
+  - inferencex
+  - perfhc
+  - benchmark
+  - h200
+  - slurm
+  - haproxy
+---
+
+# Inference360 IFM Warden InferenceX Matrix Results
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-07-02 |
+| **Objective** | Build and run an end-to-end IFM checkpoint matrix benchmark workflow where Warden registers and launches one checkpoint at a time, InferenceX benchmarks the HAProxy route for every 1K/10K/100K input by 1K/10K/100K output pair, sanitized JSON artifacts land in PerfHC, and the endpoint stops before the next model starts. |
+| **Outcome** | Successful. The Inference360 runner and PerfHC result artifacts both merged after CI passed. |
+| **Verification** | verified-ci. Inference360 PR #328 merged with CI passing `pre-commit`, `validate`, `secrets`, `sast`, `python-sca`, and CodeQL. PerfHC PR #41 merged with `tests-and-static-checks` passing. |
+
+## When to Use
+
+- You need to benchmark IFM checkpoints through the real Inference360 Warden lifecycle rather than direct ad hoc server launches.
+- A run must isolate checkpoints by registering, starting, benchmarking, stopping, and then moving to the next checkpoint.
+- InferenceX should exercise the OpenAI-compatible HAProxy route, not a private backend port.
+- Benchmark result JSON is going to PerfHC or another durable repository and must be sanitized before commit.
+- You need to prove both execution completeness and published artifact safety for a large benchmark matrix.
+
+## Verified Workflow
+
+### Quick Reference
+
+```text
+Inputs:
+- private model facts: <REDACTED_CHECKPOINT_ROOT>/models.yaml
+- checked-in runner: manifest-driven Inference360 workflow
+- lengths: 1024, 10000, 100000
+- num_prompts: 1
+- max_concurrency: 1
+- request_rate: inf
+- ignore_eos: true
+
+Loop:
+1. Read checkpoint config.json for max context length.
+2. Generate framework-neutral model id, route, and manifest filename.
+3. warden status
+4. allocate only if no suitable node is available.
+5. registry register the generated manifest.
+6. start the model on the selected node and require state=running and ready=true.
+7. run InferenceX against the HAProxy route for all 9 length pairs.
+8. redact saved JSON fields and scan artifacts.
+9. stop the model in finally before the next checkpoint.
+```
+
+### Detailed Steps
+
+1. Keep private checkpoint roots, tokenizer paths, container paths, and container digests in an external private models YAML. The checked-in runner may accept an explicit file path, but it must not hardcode values such as `<REDACTED_CHECKPOINT_ROOT>`, `<REDACTED_CONTAINER_SQSH>`, or `<REDACTED_CONTAINER_DIGEST>`.
+
+2. Generate logical model IDs, routes, and manifest filenames from lower-case model names. Do not encode serving framework names such as vLLM or SGLang into those logical surfaces. Put the engine only in runtime metadata, benchmark metadata, or report fields.
+
+3. Before launching a checkpoint, read its `config.json` and derive the maximum supported context from known keys such as:
+
+   ```text
+   max_position_embeddings
+   max_sequence_length
+   seq_length
+   model_max_length
+   n_positions
+   ```
+
+   Do not hardcode maximum context limits in the runner.
+
+4. Use Warden as the lifecycle authority:
+
+   ```text
+   status
+   allocate if no suitable node is already available
+   registry register <generated-manifest>
+   start <model> on <chosen-node> with a launch timeout
+   require returned state=running and ready=true
+   run benchmarks
+   stop <model> in finally
+   ```
+
+   A remaining registration is not the same thing as a loaded endpoint. At completion, confirm no active routes and no running servers.
+
+5. Run InferenceX only through the OpenAI-compatible HAProxy endpoint, represented in shared artifacts as `<REDACTED_ENDPOINT>`. Do not benchmark private backend ports when the intended product path is the routed API.
+
+6. Use the verified matrix parameters:
+
+   ```text
+   input lengths: 1024, 10000, 100000
+   output lengths: 1024, 10000, 100000
+   num_prompts: 1
+   max_concurrency: 1
+   request_rate: inf
+   ignore_eos: true
+   trust_remote_code: true only when the manifest or tokenizer requires it
+   ```
+
+7. Save one InferenceX JSON artifact per model and length pair. Redact before publishing because the raw JSON can include endpoint URL, tokenizer/checkpoint paths, tokenizer IDs, and the full command line.
+
+8. Redact at least these fields recursively before commit:
+
+   ```text
+   base_url
+   endpoint_discovery_url
+   command
+   tokenizer
+   tokenizer_id
+   ```
+
+   Use placeholders such as `<REDACTED_ENDPOINT>`, `<REDACTED_CHECKPOINT_PATH>`, `<REDACTED_CONTAINER_SQSH>`, and `<REDACTED_CONTAINER_DIGEST>` where shape matters.
+
+9. Audit the local run log and the published PerfHC tree separately. The run log proves execution count and missing cells. The PerfHC git tree proves durable published artifacts and must be the target of the leak scan.
+
+10. Treat CI failures as workflow feedback:
+    - Bandit B104 can flag intentional `0.0.0.0` bind or comparison in generated launch logic. Add a scoped `# nosec B104` and explain the intentional bind with a preceding comment.
+    - Existing IFM naming guards may reject new legacy `k2v3` logical surfaces. Use an IFM-neutral prompt mix default such as `ifm_single_node`.
+    - If local `just validate` cannot run because rootless Podman is unavailable, say that directly and rely on the GitHub validate job only after it passes.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Framework names in routes | Encoded the serving framework into model IDs and routes | The logical product surface should not change when the runtime engine changes | Keep model IDs, routes, and manifest filenames framework-neutral; store engine in metadata only |
+| Raw PerfHC JSON artifacts | Published saved InferenceX JSON before sanitizing all embedded fields | `tokenizer_id` and related fields can contain checkpoint or tokenizer paths | Post-process JSON artifacts recursively and leak scan the committed tree |
+| Unannotated wildcard bind logic | Left intentional `0.0.0.0` bind/comparison without a scoped suppression | SAST failed on Bandit B104 | Add a narrow `# nosec B104` with a preceding comment explaining the generated launch bind |
+| Legacy prompt mix naming | Used a `k2v3_single_node` prompt mix default in the checked-in runner | Existing IFM naming guard rejects new legacy `k2v3` surfaces | Use an IFM-neutral prompt mix directory name such as `ifm_single_node` |
+| Local-only validation assumption | Tried to use local `just validate` on the cluster host as the final validation | Rootless Podman was unavailable on that host | Document the local blocker and require GitHub validate CI to pass before claiming verified-ci |
+| Scratch-only leak scan | Scanned local scratch output but not the published PerfHC tree | Published artifacts can differ after copy, redaction, or commit selection | Run leak scans against the exact PerfHC git tree that will be pushed |
+
+## Results & Parameters
+
+### Merged Evidence
+
+| Repository | PR | Merge Date | Merge Commit | CI Evidence |
+|------------|----|------------|--------------|-------------|
+| LLM360/Inference360 | #328 | 2026-07-02 | `c32c2b956e2895118869d6ca9b460db22e3337c3` | `pre-commit`, `validate`, `secrets`, `sast`, `python-sca`, CodeQL passed |
+| LLM360/PerfHC | #41 | 2026-07-02 | `aa9feb21878a332e2986a0ae218c8c1d5dd7a9b8` | `tests-and-static-checks` passed |
+
+### Published Artifact Contract
+
+```text
+PerfHC origin/master contains:
+- 45 matrix JSON files
+- 5 models x 9 length pairs
+- length pairs from {1024, 10000, 100000} input x {1024, 10000, 100000} output
+- sanitized benchmark metadata
+- no private checkpoint paths, endpoint hosts/IPs, tokenizer command paths, or container launch paths
+```
+
+### Runtime Completion Contract
+
+```text
+At completion:
+- no active Warden routes
+- no running Warden servers
+- model registrations may remain
+
+Interpretation:
+- registrations are durable registry metadata
+- active routes and running servers are loaded endpoint state
+- do not treat remaining registrations as leaked running endpoints
+```
+
+### Leak Scan Shape
+
+Run the leak scan against the published repository tree, not only temporary output:
+
+```bash
+cd <PerfHC checkout>
+
+rg -n \
+  '<REDACTED_CHECKPOINT_ROOT>|<REDACTED_ENDPOINT>|<REDACTED_CONTAINER_SQSH>|<REDACTED_CONTAINER_DIGEST>|tokenizer_id|base_url|endpoint_discovery_url|command' \
+  <published-artifact-root>
+```
+
+Replace the placeholder patterns with the private path, endpoint, and container substrings that must never be published. The expected result is no private-path or private-endpoint hits. Generic JSON keys may still appear if their values are redacted placeholders.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| LLM360/Inference360 | PR #328, merged 2026-07-02 | Runner merged at `c32c2b956e2895118869d6ca9b460db22e3337c3`; CI passed `pre-commit`, `validate`, `secrets`, `sast`, `python-sca`, and CodeQL. |
+| LLM360/PerfHC | PR #41, merged 2026-07-02 | Result artifacts merged at `aa9feb21878a332e2986a0ae218c8c1d5dd7a9b8`; CI passed `tests-and-static-checks`; published tree contained 45 sanitized matrix JSON files. |
+
+---
+
+## v1.0.0 (2026-07-02)
+
+**Initial version.**
+# inference360-ifm-warden-inferencex-matrix-results — History
+
+## v1.1.0 (2026-07-02)
+
+**Changed by:** PerfHC PR #42 warden-routed endpoint and tokenize contract session
+**Verification:** verified-local
+
+### What changed
+- Added route-aware PerfHC endpoint parsing for bare hosts, `/v1`, routed `/v1`, and routed `/v1/models` URLs.
+- Added the fail-closed `/tokenize` contract for endpoint-only raw runs when local `transformers` tokenizers are unavailable.
+- Added failed-attempt rows for approximate token fallback, host-root tokenization on routed services, and leaking private endpoint details in public artifacts.
+- Added evidence for LLM360/PerfHC PR #42 and LLM360/Inference360 issue #331.
+
+### Why
+Previous v1.0.0 covered the merged IFM Warden benchmark matrix and artifact redaction workflow, but it did not capture the serving-surface gap discovered when PerfHC needed exact token counts against warden-routed OpenAI-compatible endpoints. The correct benchmark behavior is to fail closed when `/tokenize` is missing, because approximating token counts masks an inference-service contract issue.
+
+### Previous version (v1.0.0) snapshot
