@@ -1,0 +1,48 @@
+# planning-pr-body-extract-sibling-artifact-at-runtime — History
+
+## v1.1.0 (2026-07-02)
+
+**Changed by:** ProjectOdyssey issue #5527 R1 revision (R0→R1 NOGO cycle); /learn pass 2.
+**Verification:** unverified
+
+### What changed
+
+- Added three new "When to Use" triggers covering (a) conditional-prose overrides, (b) next-heading sentinel heuristics, (c) prose property claims without structural verification.
+- Rewrote the Quick Reference bash block:
+  - Added paired begin + end sentinel extraction (was: single sentinel with next-heading heuristic).
+  - Added property-verification step (monotone-decreasing loss check) between extraction and substitution.
+  - Reframed the final placeholder gate as an UNCONDITIONAL structural gate, not a conditional prose override.
+- Added three new "Detailed Steps" subsections after the numbered list:
+  - "Structural Gates > Conditional Overrides" with a conditional-vs-structural comparison table.
+  - "Paired Sentinel Boundaries" documenting the two failure modes of next-heading heuristics.
+  - "Property Verification Before Embed" with a catalog of common structural checks.
+- Added three new Failed Attempts rows (Attempts 3, 4, 5) from the ProjectOdyssey #5527 R0 NOGO.
+- Added a second "Verified On" row documenting the R1 revision cycle.
+- Added a cross-reference to `planning-self-identified-defects-must-be-fixed-not-noted` (new sibling skill created in the same /learn PR).
+- Extended tags: `structural-gate-vs-conditional-override`, `paired-sentinel-boundary`, `artifact-property-verification-before-embed`, `monotone-loss-check`.
+- Bumped version 1.0.0 → 1.1.0; kept `verification: unverified` (no PR opened using this pattern in the R1 cycle).
+
+### Why
+
+R0 of the ProjectOdyssey #5527 plan applied the v1.0.0 pattern imperfectly in three specific ways that the reviewer NOGO'd. Rather than treat the NOGO as a one-off, the R1 revision replaced all three anti-patterns with harder gates and this amendment lifts the R1 solutions into the skill so a future planner does not re-derive them:
+
+1. **Conditional-prose override** ("if the values above differ, the executor MUST overwrite this block") is a silent-enforcement gate — it depends on executor attention. R1 replaced it with a `<<TOKEN>>` placeholder plus a render-time `grep -q '<<' && exit 1` gate that fires regardless of attention.
+2. **Next-heading sentinel heuristic** (`sed -n '/## Loss Log/,/^## /p'`) has two silent failure modes (greedy over-capture to EOF, or early truncation on `## Notes`). R1 required the sibling task's plan to emit a paired `## Loss Log` + `## End Loss Log` sentinel and switched extraction to an `awk` with an explicit end-match plus a `grep -qxF` guard for both sentinels.
+3. **Prose property claims** ("loss is monotone-decreasing") were asserted without checking the actual extracted artifact. R1 added a monotone-decreasing check that runs before substitution; on failure the plan verdict is `BLOCKED | Reason: <property> does not hold on artifact from #<sibling>`. The rule generalizes to any structural property (count-N, exit-code-0, no-warnings, checksum-match).
+
+The three amendments share a single theme: replace attention-dependent gates with unconditional structural gates. The v1.0.0 skill articulated the value of run-time extraction; v1.1.0 tightens the gates that make run-time extraction trustworthy.
+
+### Previous version (v1.0.0) snapshot
+
+The v1.0.0 skill body remains as the base of `planning-pr-body-extract-sibling-artifact-at-runtime.md`; v1.1.0 is additive (new triggers, new steps, new failed-attempts rows, new tags). No v1.0.0 content was deleted. The v1.0.0-rendered `.md` content prior to v1.1.0 edits is preserved in git history at the parent commit of this amendment (commit prior to the R1 /learn PR merge).
+
+---
+
+## v1.0.0 (2026-07-02) — Initial skill
+
+**Changed by:** ProjectMnemosyne PR #2944 — /learn pass 1 on ProjectOdyssey #5527 R0 planning session.
+**Verification:** unverified
+
+Initial extraction of the pattern: PR-body content that must come from an upstream sibling issue's comments (loss log, benchmark table, verification transcript) MUST be pulled at execute time via a placeholder-substitution pipeline. Never write illustrative values inline with a hedging note.
+
+Dependency guard is a TWO-part check: (a) sibling state is `CLOSED`, AND (b) sibling comments contain the sentinel section. CLOSED-as-duplicate / CLOSED-as-wontfix passes (a) but fails (b).
