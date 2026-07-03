@@ -11,6 +11,7 @@ pyyaml = ">=6.0"
 
 [feature.dev.dependencies]
 pytest = ">=8.3"
+pytest-cov = ">=7"
 
 [environments]
 default = { features = ["dev"] }
