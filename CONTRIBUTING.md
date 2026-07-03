@@ -15,6 +15,7 @@ PR process.
 - [Validation](#validation)
 - [Code Style](#code-style)
 - [Cross-Repository Compatibility](#cross-repository-compatibility)
+- [Releasing](#releasing)
 
 ## How to Contribute a Skill
 
@@ -218,3 +219,18 @@ Skills should be generic enough to work across multiple repositories:
    ```
 4. **Move specifics to references** -- Put project-specific commands, paths, and code in a `.notes.md` file.
 5. **Generic workflows** -- Write workflows that can be adapted to any repository structure.
+
+## Releasing
+
+The marketplace is released as a tagged snapshot. `pyproject.toml`
+`[project].version` is the single source of truth.
+
+1. Bump the version in `pyproject.toml`, `.claude-plugin/plugin.json`, and
+   `.claude-plugin/marketplace.json` (the marketplace file also regenerates
+   from pyproject via `scripts/generate_marketplace.py`).
+2. Add a matching `## [X.Y.Z] - YYYY-MM-DD` entry at the top of `CHANGELOG.md`.
+3. Merge; the `release` CI check dry-runs
+   `scripts/validate_release_contract.py` on every PR and `main` push.
+4. Tag `vX.Y.Z` and push the tag -- `.github/workflows/release.yml` re-validates
+   the contract against the tag and publishes a GitHub Release with the
+   marketplace snapshot tarball and the changelog entry as notes.

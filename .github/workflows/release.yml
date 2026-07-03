@@ -1,0 +1,52 @@
+name: Release
+
+# Tag-gated publish path for the canonical `release` gate (issue #2913).
+# The dry-run half lives in _required.yml (job `release`) and runs on every
+# PR and main push; this workflow re-validates the same contract against the
+# pushed tag and publishes a GitHub Release with the marketplace snapshot.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+        with:
+          python-version: '3.11'
+      - name: Validate release contract against tag
+        run: python3 scripts/validate_release_contract.py --tag "${GITHUB_REF_NAME}"
+      - name: Extract release notes from CHANGELOG.md
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          # Literal index() match (not a regex) so the version's dots cannot
+          # act as metacharacters.
+          awk -v ver="$version" '
+            BEGIN { hdr = "## [" ver "]" }
+            index($0, hdr) == 1 {found=1; next}
+            found && /^## \[/ {exit}
+            found {print}
+          ' CHANGELOG.md > release-notes.md
+          test -s release-notes.md
+      - name: Build marketplace snapshot
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          tar -czf "mnemosyne-marketplace-${version}.tar.gz" \
+            skills/ .claude-plugin/marketplace.json .claude-plugin/plugin.json
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "ProjectMnemosyne ${GITHUB_REF_NAME}" \
+            --notes-file release-notes.md \
+            "mnemosyne-marketplace-${version}.tar.gz"
