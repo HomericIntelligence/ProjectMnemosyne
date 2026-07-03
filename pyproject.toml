@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=77.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "project-mnemosyne"
 version = "2.1.0"
@@ -12,6 +16,14 @@ dev = [
     "pytest>=9.0",
     "pytest-cov>=7.0",
 ]
+
+# Flat repo layout (scripts/, skills/, tests/, ...) breaks setuptools
+# auto-discovery, so the distributable is declared explicitly: the shared
+# library module scripts/skill_utils.py ships as top-level `skill_utils`,
+# matching the flat `from skill_utils import ...` imports used repo-wide.
+[tool.setuptools]
+package-dir = {"" = "scripts"}
+py-modules = ["skill_utils"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
