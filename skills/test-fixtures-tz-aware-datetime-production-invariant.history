@@ -1,0 +1,21 @@
+---
+# Verified Uses
+
+## 2026-07-04 — ProjectHephaestus PR #1833 (issue #1811)
+
+**Context**: Pipeline foundation layer test fixtures. Coordination layer (WorkItem, HistoryEvent) enforces tz-aware UTC timestamps, but test fixtures used naive `datetime.now()`, causing timestamp comparison failures.
+
+**Verification**:
+- Files fixed: `tests/unit/automation/pipeline/test_work_item.py`
+- Fixtures updated: 3 HistoryEvent test fixtures
+- Pattern: `datetime.now(timezone.utc)` instead of `datetime.now()`
+- Tests: 58 property-based tests, all pass
+- CI: verified-ci (no timezone comparison errors)
+
+**Commits**: Fixed in sub-agent code review response; tested in PR #1833.
+
+## Lesson Applicability
+
+- Used by: Any coordination layer (agents, events, work items)
+- Applies to: Test fixtures for temporal/timestamp data
+- Scope: Fixture authoring, production invariant mirroring, timezone safety
