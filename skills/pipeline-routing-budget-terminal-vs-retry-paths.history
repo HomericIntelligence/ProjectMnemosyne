@@ -1,0 +1,21 @@
+---
+# Verified Uses
+
+## 2026-07-04 — ProjectHephaestus PR #1833 (issue #1811)
+
+**Context**: Pipeline foundation layer implementation. Routing table mapped terminal failure reasons (no_pr, routes to FINISHED) to budget keys (ci_fix), causing incorrect budget deduction and test failures.
+
+**Verification**:
+- Test: `tests/unit/automation/pipeline/test_routing_properties.py`
+- Property-based tests: 58 tests, all pass with hypothesis
+- Terminal path fix: `"no_pr": None` (no budget consumed)
+- Retry path fix: `"ci_fix": "ci_fix_budget"` (1 budget per item)
+- CI: verified-ci (all checks passed)
+
+**Commits**: Fixed in sub-agent code review response; tested in PR #1833.
+
+## Lesson Applicability
+
+- Used by: Pipeline automation, queue-based work-item routing
+- Applies to: Any system with terminal vs retry path routing tables
+- Scope: Test fixtures, property-based testing, routing contracts
