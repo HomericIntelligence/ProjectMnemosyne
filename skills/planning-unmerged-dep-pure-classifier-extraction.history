@@ -1,0 +1,57 @@
+<!-- markdownlint-disable -->
+# planning-unmerged-dep-pure-classifier-extraction — History
+
+## v1.1.0 (2026-07-04) — NOGO→R1 reversal lessons from the #1816 review cycle
+**Changed by**: ProjectHephaestus #1816 plan R0→NOGO→R1 review cycle (same planning
+session that produced v1.0.0; the R1 learnings are the durable, high-value part).
+
+**Verification**: unverified (planning-phase learning; no code ran, no tests ran,
+no CI). The line anchors cited (`ci_driver.py:108`, `auto_merge_coordinator.py:24`,
+`loop_runner.py:822`, `_wait_for_pr_terminal` ~1479) were Read/measured from disk
+during planning and are real; the resulting plan was never implemented.
+
+**What changed**:
+
+- Added four new **Failed Attempts** rows (8–11), each framed as an explicit
+  R0→NOGO→R1 reversal:
+  - **8** — R0 stubbed `on_job_done` as `...` → NOGO (core job-completion routing
+    hand-waved) → R1 enumerated every job-kind transition with legacy-branch citations.
+  - **9** — R0 bodied only one of two stages → NOGO (incomplete state machine) → R1
+    shipped the full dispatcher + all handlers for both stages.
+  - **10** — R0 called the god-module private `_without_auto_merge_policy` bare in the
+    new stage → import-cycle risk → R1 found the pre-existing **public leaf twin**
+    `without_auto_merge_policy` in `auto_merge_coordinator.py:24` and added a cycle check.
+  - **11** — R0 silently reinterpreted a wall-clock timeout as a poll-window count →
+    semantic-change risk → R1 preserved the wall-clock accumulator AND documented the
+    `--max-merge-attempts` reinterpretation (as a re-arm-cycle cap) with a test.
+- Added a new **"Non-Blocking Poll Budget: Preserve the Wall-Clock Accumulator"**
+  section describing the `merge_elapsed` accumulator, the `FINISH_FAIL` on
+  `elapsed >= max_wait` give-up condition, the `--max-merge-attempts` → re-arm-cycle
+  reinterpretation, and the monkeypatch-env timeout test that would prove it.
+- Added a new **"`on_job_done` Is the Design"** section requiring every job-kind
+  transition to be enumerated and the COMPLETE state-machine skeleton shown for EACH
+  stage.
+- Added workflow substeps **7a** (grep for a pre-existing public leaf twin before
+  importing/relocating a helper) and **8a** (never stub `on_job_done`), and extended
+  step **8** with the reversible abort path for the "legacy path untouched" ambiguity.
+- Extended the "Uncertain assumptions" list with three v1.1.0 reliances (leaf-twin
+  byte-identity, the 269-`patch.object`-seam proxy + abort path, `on_job_done` shape).
+- Added frontmatter tags: `on-job-done`, `state-machine`, `import-cycle`,
+  `leaf-twin-helper`, `wall-clock-vs-poll-count`, `budget-semantics`, `stage-handoff`,
+  `nogo-lessons`. Cross-linked `[[architecture-god-function-decomposition-planning-risks]]`.
+
+**Why**: v1.0.0 captured the R1 *plan* (compatibility probe, pure classifier, sentinel
+un-collapse, wall-clock risk) but not the R0→NOGO→R1 *reversals* that produced it. Those
+reversals are the reusable lessons — they show exactly what a first-pass non-blocking-stage
+extraction plan gets wrong (hand-waved job routing, half-bodied state machines, a
+god-module-private import cycle, and a silent wall-clock→count budget swap) so a future
+planner does not re-derive them. The import-cycle lesson also refines the parent
+god-function skill's Risk 10a: prefer a pre-existing public leaf twin over relocating the
+helper.
+
+## v1.0.0 (2026-07-04) — initial capture from the #1816 plan
+Initial capture from planning ProjectHephaestus issue #1816 (epic #1809, dep #1815
+unmerged). Three core themes: plan-against-unmerged-dependency via the epic's frozen
+contract + a compatibility-probe step; pure-classifier extraction to de-block a poll
+loop (with sentinel un-collapse); and six named uncertain-assumption reviewer risks.
+Planning artifact only — `verification: unverified`.
