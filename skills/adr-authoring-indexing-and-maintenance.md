@@ -1,9 +1,9 @@
 ---
 name: adr-authoring-indexing-and-maintenance
-description: "Use when: (1) generating a new Architecture Decision Record (ADR) to document a significant architectural decision; (2) an ADR file exists but is not listed in the index table (docs/adr/README.md); (3) updating ADR status to Accepted (Deferred) when implementation is bypassed pending platform support; (4) two or more functions have nearly identical limitation comments and need consolidating into a single ADR with cross-references replacing duplicates; (5) updating ADR directory tree listings to reflect actual filesystem contents after file deletions or additions; (6) writing an ADR on an epic branch where some child PRs have not yet merged to main — use pending-tense language for open PRs, past-tense only for work already on main; (7) writing an ADR that references decisions from other repos or external docs — verify every ADR number on disk before asserting it exists, use commit SHAs for cross-repo work, cite file:line for cross-repo CLAUDE.md claims; (8) writing an ADR whose Decision section names a code artifact — verify it is git-tracked before citing it as canonical; (9) adding a structural guard test that keeps the ADR index enumerable and in sync with on-disk files."
+description: "Use when: (1) generating a new Architecture Decision Record (ADR) to document a significant architectural decision; (2) an ADR file exists but is not listed in the index table (docs/adr/README.md); (3) updating ADR status to Accepted (Deferred) when implementation is bypassed pending platform support; (4) two or more functions have nearly identical limitation comments and need consolidating into a single ADR with cross-references replacing duplicates; (5) updating ADR directory tree listings to reflect actual filesystem contents after file deletions or additions; (6) writing an ADR on an epic branch where some child PRs have not yet merged to main — use pending-tense language for open PRs, past-tense only for work already on main; (7) writing an ADR that references decisions from other repos or external docs — verify every ADR number on disk before asserting it exists, use commit SHAs for cross-repo work, cite file:line for cross-repo CLAUDE.md claims; (8) writing an ADR whose Decision section names a code artifact — verify it is git-tracked before citing it as canonical; (9) adding a structural guard test that keeps the ADR index enumerable and in sync with on-disk files; (10) creating a pre-implementation architecture skeleton for a multi-stage system — use full identifier names (not abbreviations) in ROUTES tables, complete line-range citations for code anchors, consistent file:line paths for all prompt-builder references, and structure the doc with status banner, topology, contract, per-stage docs, ROUTES table, seeding/reconstruction, and 'finalized-in-cutover' markers."
 category: documentation
-date: 2026-06-30
-version: "1.3.0"
+date: 2026-07-04
+version: "1.4.0"
 user-invocable: false
 history: adr-authoring-indexing-and-maintenance.history
 tags:
@@ -408,6 +408,9 @@ different — document the variant so future ADR work there matches the local co
 | Citing an untracked working-tree file as an ADR's canonical artifact | ADR-0005 named `hephaestus/agents/invoker.py`/`AgentInvoker` as the implemented abstraction | `git ls-files` showed `invoker.py` was untracked; the ADR would reference a symbol absent from `main` | Run `git ls-files <path>` before citing a code artifact in an ADR; anchor on tracked symbols, mark untracked ones illustrative |
 | One-directional ADR-index check | Considered asserting only "every ADR file is linked in README" | A stale link to a deleted ADR would pass silently | Assert SET EQUALITY (`linked == on_disk`) so stale AND missing links both fail |
 | Trusting the audit's "dual-agent" description | Nearly wrote the ADR for two agents | `runtime.py:23` had `Literal["claude","codex","pi"]` — three | Verify the audit's CHARACTERIZATION against live code, not just its file:line evidence |
+| Abbreviations in ROUTES table | Used `already_go_pr` and `not_impl_go` abbreviations in a ROUTES column | Inconsistent abbreviation drift: reviewers noticed some rows used `implementation_go_pr` (full name) and others used `go_pr` (short); abbreviations are harder to search/cross-ref than full names | Use consistent full-length identifiers in ROUTES and architecture tables; e.g., `already_implementation_go_pr`, `not_implementation_go` — same names must appear in stage documentation and stage-failure handling code |
+| Partial line range in code anchor citation | Referenced ASCII diagram with `:9-30` when diagram extended to line 37 | Reader saw only first part of diagram; later lines (31–37) were missing from citation range; created the impression the design was incomplete | Always cite the COMPLETE line range covering all content (`:9-37` not `:9-30`); verify by reading the lines before committing |
+| Inconsistent file:line for prompt paths | Documented `build_learn_prompt` in one location with `learn.py:111` but omitted file paths in other references | ROUTES table and per-stage docs referenced the same prompt-builder without consistent file:line; hard to locate source via search | Add file path and line number (`prompts/planning.py:223`, `learn.py:111`) to EVERY prompt-builder reference, even when the function appears multiple times; consistency enables cross-referencing and code search |
 
 ## Results & Parameters
 
@@ -451,11 +454,28 @@ replace_all: true
 pixi run pre-commit run markdownlint-cli2 --files docs/adr/<file>.md
 ```
 
+### Pre-implementation architecture skeleton structure
+
+When documenting a complex multi-stage system (such as an automation pipeline) that is **not yet fully implemented**, structure the architecture doc to guide future cutover issues:
+
+**Required sections:**
+
+1. **Status banner** — `> Status: pre-implementation` at the top to signal this is a design, not a runtime specification.
+2. **Queue topology** — Mermaid flowchart + ASCII diagram showing message flow, coordinator role, and worker pools (tag workers `[W:A]`, `[W:B]`, `[W:G]` if parallel or differentiated; tag coordinator steps `[M]` for "main").
+3. **Coordinator/Worker contract** — Explicit specification of message types, state transitions, and handoff semantics (e.g., "Coordinator posts work item to Q and waits for verdict; worker reads, validates, executes, writes verdict; coordinator polls").
+4. **Per-stage documentation** — For each stage: states, steps (tagged with worker/coordinator affinity), exact prompt path with file:line (e.g., `prompts/planning.py:223 get_plan_prompt`), verdicts (success/fail/defer), fail routes, execution budgets, owned labels.
+5. **ROUTES table** — Declarative single-location routing for all stage-failure paths; use full, consistent identifiers (not abbreviations); columns: `Stage`, `Success route`, `Failure route`, `Skip-state route`, etc.
+6. **Seeding/reconstruction classification** — Describe which issue-fields seed the pipeline and how to reconstruct state from log/verdict history for stuck items.
+7. **Finalized-in-cutover sections** — Mark sections with `Finalized in [cutover issue #NNN]` for sections that will be completed during implementation, ensuring readers know what is design vs. what is pending.
+
+**Why this structure matters:** Future implementers need to understand intent (topology, contract) before writing code. The ROUTES table as a single source of truth prevents stage handlers from implementing divergent error handling. Full file:line citations in per-stage docs let implementers quickly locate prompt templates and coordinate changes.
+
 ### Expected outcomes
 
 - Index updates are typically a single inserted table row; pre-commit passes (Markdown Lint, ruff, yaml, trailing-whitespace).
 - Status-defer changes are pure label updates with no formatting impact; markdownlint passes first try.
 - Directory-tree fixes are small (e.g., 1 removed, 5 added) and complete in a few minutes.
+- Pre-implementation architecture skeletons pass all doc tests (ADR index guards, link validation, markdown lints) and correctly guide the cutover implementation.
 
 ## Verified On
 
@@ -468,3 +488,4 @@ pixi run pre-commit run markdownlint-cli2 --files docs/adr/<file>.md
 | ProjectOdyssey | Issue #5191, PR #5504 — ADR-014 pending-PR accuracy: corrected past-tense claim for open child PR #5503 (commit 20b0d7c7) | [history](adr-authoring-indexing-and-maintenance.history) |
 | Odysseus | Issue #143, branch 143-auto-impl — ADR-009 cross-repo citation discipline: removed unverifiable ADR-015/016 claims; replaced with `ls docs/adr/` verification, commit SHA citations, and `CLAUDE.md:line` references | [history](adr-authoring-indexing-and-maintenance.history) |
 | ProjectHephaestus | Issue #1452 (2026-06-30) — author 4 ADRs (0002–0005) + `docs/adr/README.md` index + structural guard; tracked-symbol anchoring (ADR-0005), bidirectional README↔disk membership guard, tri-agent audit-characterization fix, Nygard 4-digit format variant (verified-local; CI pending) | [history](adr-authoring-indexing-and-maintenance.history) |
+| ProjectHephaestus | Issue #1810, PR #1811 (2026-07-04) — ADR-0006 queue-based in-process automation pipeline + AUTOMATION_LOOP_ARCHITECTURE.md skeleton; discovered ADR guard enforcement via regex patterns, emphasized consistency in full-name use (not abbreviations) in ROUTES tables, full line-range citations for code anchors, file:line consistency for prompt-path references, and pre-implementation skeleton structure (status banner, topology, coordinator/worker contract, per-stage docs, ROUTES table, seeding/reconstruction table, "finalized-in-cutover" sections) | [history](adr-authoring-indexing-and-maintenance.history) |
