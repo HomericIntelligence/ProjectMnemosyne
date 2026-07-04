@@ -6,9 +6,9 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "2.1.0",
-  "total_plugins": 602,
+  "total_plugins": 603,
   "categories": {
-    "architecture": 115,
+    "architecture": 116,
     "ci-cd": 120,
     "debugging": 54,
     "documentation": 42,
@@ -18,7 +18,7 @@
     "tooling": 167,
     "training": 7
   },
-  "last_updated": "2026-07-04T08:15:20Z",
+  "last_updated": "2026-07-04T08:29:27Z",
   "plugins": [
     {
       "name": "agent-config-validation-and-integrity",
@@ -1675,7 +1675,7 @@
     {
       "name": "planning-cross-pr-interface-dependency",
       "description": "Planning discipline for a CAPSTONE / INTEGRATION issue \u2014 the terminal issue of a serialized epic that fans IN and wires together modules produced by MANY sibling dependency issues that are ALL STILL OPEN/UNMERGED. The capstone's new code calls ~10 symbols (coordinators, queues, worker pools, stage protocols, route tables, config objects, test conftest fakes) that DO NOT EXIST in the working tree \u2014 they are only DESCRIBED in sibling issue bodies and the epic body. You cannot verify them by reading code, so you must plan against the DECLARED (issue-body) contract, and the plan MUST convert that un-verifiable assumption into a checklist gate: (a) add an explicit 'Dependency note' that the PR is cut from a base where the LAST sibling is merged, and (b) make Step 1 of the implementation order a 'pin/confirm upstream interface names on the merged base via grep BEFORE writing any code' gate that rebases onto merged reality if any symbol name drifted. Split the plan's facts into VERIFIED (things you Read from the current repo \u2014 main()/dispatch structure, a sleeper that blocks the coordinator thread, the shared arg parser, a symbol's REAL module home, the coverage omit-list membership) vs ASSUMED (every sibling symbol signature, every conftest fake shape, the tick-order contract) in a dedicated section. Ground every DESIGN decision in a VERIFIED repo fact (a blocking sleeper => the new gate must be a non-blocking predicate; dispatch belongs at the top of main() so legacy paths stay byte-for-byte; store_true default-False gives CLI-wins-over-env for free; new modules stay OUT of the omit list so they get covered by doing nothing). Use when: (1) planning the capstone/integration/terminal issue of a serialized epic whose earlier issues are unmerged, (2) your new code references symbols that only exist in sibling issue bodies or the epic body, not on disk, (3) you are about to grep for a symbol's home and might infer its module from a CALLER instead of its real location (e.g. a status-emitter that lives in cli/utils, not automation), (4) you plan to extract a shared helper out of a coverage-omitted module and might trip an omit-list JUSTIFICATION test, (5) you are changing the semantic of an existing CLI flag or making a blocking operation non-blocking and must document the behavior change.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "source": "./skills/planning-cross-pr-interface-dependency.md",
       "category": "architecture",
       "tags": [
@@ -1695,7 +1695,18 @@
         "store-true-cli-wins",
         "coverage-omit-justification",
         "symbol-home-grep-not-caller",
-        "behavior-change-documentation"
+        "behavior-change-documentation",
+        "nogo-to-go-tightening",
+        "double-mutation-shared-entrypoint",
+        "orphaned-predicate",
+        "collapsed-state-field",
+        "underspecified-mechanism",
+        "yagni-config-field",
+        "positive-verification-not-absence",
+        "evidence-capture-step",
+        "concrete-constructor-call",
+        "false-pola-circular-guard",
+        "handoff-contract-table"
       ]
     },
     {
@@ -1943,6 +1954,37 @@
         "reviewer-nogo",
         "fix-or-block",
         "meta-rule"
+      ]
+    },
+    {
+      "name": "planning-unmerged-dep-pure-classifier-extraction",
+      "description": "Two entangled planning-phase disciplines for building a stage/module against an unmerged dependency AND making a blocking poll loop non-blocking. (1) PLAN-AGAINST-UNMERGED-DEPENDENCY: when planning issue N that depends on unmerged issue N-1 whose package does not exist on disk yet (`ls pkg/` \u2192 not found, `git branch -a | grep pkg` \u2192 empty, `gh pr list` does not list N-1), treat the EPIC's frozen contract (the full approved design pasted verbatim in the epic body) as the interface spec, and make implementation STEP 1 an explicit 'compatibility probe' that reads the real merged base/routing/work-item/jobs modules and pins exact imported names/constructors BEFORE writing stage code. Every `ctx.retry()`, `ctx.advance()`, `ctx.fail_back()`, `Route(next=\u2026, fail_routes=\u2026)`, `item.attempts[...]`, `item.state` name is an ASSUMED API from epic prose, unverified against merged code \u2014 list them for the reviewer. (2) EXTRACT-A-PURE-CLASSIFIER-TO-DE-BLOCK-A-POLL-LOOP: an in-stage `time.sleep` would freeze a single-threaded coordinator, so the sleep/backoff loop CANNOT move into the stage; instead extract ONLY the conclusion-classification logic as a pure `list-in / enum-out` function (`classify_ci_state(checks) -> CiConclusion` with GREEN/FAILING/PENDING/NO_CHECKS), leaving the impure sleep/backoff tail in the legacy method. The classifier takes ALREADY-FETCHED data (`checks: list[dict]`), NOT a PR number \u2014 the `gh` fetch stays in the caller, so the classifier is trivially unit-testable over fixtures and the stage module imports no gh/sleep. UN-COLLAPSE overloaded sentinels: a legacy `None`-for-both-NO_CHECKS-and-TIMEOUT return must become two distinct enum members (NO_CHECKS = advance/success, PENDING = timer-park, no timeout because the coordinator heap owns the deadline). Place the classifier in the module that ALREADY owns the loop (a cycle-free leaf) so the stage imports FROM it, never back. FLAG the semantic-change risk when converting a WALL-CLOCK-bounded sleep loop (`HEPH_PR_MERGE_MAX_WAIT` 1800s, exponential backoff) into a COUNT-bounded timer-park (N poll windows \u00d7 backoff \u2260 1800s). Use when: (1) planning issue N against unmerged issue N-1 with no branch/PR, consuming an epic's frozen contract, (2) extracting a pure classifier so a blocking poll can be timer-heap-parked, (3) you catch a poll helper returning one `None` sentinel for two semantically-different outcomes, (4) refactoring a legacy poll loop to CALL a new classifier and claiming existing `patch.object` seams prove behavior preservation, (5) converting a time-bounded loop into a count-bounded one.",
+      "version": "1.1.0",
+      "source": "./skills/planning-unmerged-dep-pure-classifier-extraction.md",
+      "category": "architecture",
+      "tags": [
+        "planning",
+        "pipeline-stages",
+        "unmerged-dependency",
+        "frozen-contract",
+        "pure-classifier",
+        "non-blocking-poll",
+        "timer-heap",
+        "sentinel-separation",
+        "semantic-change-risk",
+        "epic-serialized-issues",
+        "compatibility-probe",
+        "behavior-preservation",
+        "assumptions",
+        "nogo-revision",
+        "on-job-done",
+        "state-machine",
+        "import-cycle",
+        "leaf-twin-helper",
+        "wall-clock-vs-poll-count",
+        "budget-semantics",
+        "stage-handoff",
+        "nogo-lessons"
       ]
     },
     {

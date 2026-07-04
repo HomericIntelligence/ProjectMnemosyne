@@ -1,0 +1,125 @@
+<!-- markdownlint-disable -->
+# planning-cross-pr-interface-dependency — History
+
+## v1.1.0 (2026-07-04) — NOGO→GO tightening discipline for a capstone-integration plan (R0→NOGO→R1)
+**Changed by**: ProjectHephaestus #1817 capstone plan R0→NOGO(D)→R1 review cycle
+(same planning session that produced v1.0.0; the R1 reversal lessons are the durable,
+high-value companion material). R0 was graded **D / NOGO** with 3 critical + 6 major +
+4 minor findings; R1 addressed every finding. #1817 is the terminal issue of serialized
+epic #1809 (siblings #1810–#1816 unmerged).
+
+**Verification**: unverified (planning-phase learning; no code ran, no tests ran, no
+CI). The line anchors cited (`loop_runner.py:1700` `_clone_missing_repos`; the
+`_rate_budget_ok` / `_admit` predicate wiring; `inflight_per_repo: Counter`;
+`loop_runner.py:1521-1534` zero-work convergence analogue; `--phase-timeout`
+semantic shift; `PipelineScope`) were Read/measured from disk (or transcribed from
+the issue/sibling bodies) during planning and are real to that context; the resulting
+R1 plan was never implemented.
+
+**What changed**:
+
+- Bumped version **1.0.0 → 1.1.0** (MINOR: new NOGO-reversal findings, new
+  Failed-Attempts rows 9–19, a new "NOGO→GO tightening checklist" workflow
+  subsection, a new "Verified On" row for #1817 R0-NOGO→R1, and new frontmatter
+  tags). Added the `history:` frontmatter field pointing at this file.
+- Added the R0→NOGO→R1 tightening companion material — the specific categories of
+  defect a plan reviewer flags on a capstone/integration plan even when the overall
+  design is sound, each with its concrete fix. Captured as eleven new Failed-Attempts
+  rows (9–19) plus a compact "NOGO→GO tightening checklist" in the workflow:
+  - **9  Double-mutation at a shared entry point (double-clone).** R0 dispatched the
+    new path AFTER an unconditional side-effecting `_clone_missing_repos`
+    (`loop_runner.py:1700`) both paths share → repos cloned twice. Fix: dispatch the
+    new branch BEFORE the shared side-effecting call; test that patches the shared call
+    and asserts it is NOT invoked on the new path.
+  - **10 Half-wired design thread / orphaned predicate.** R0 NAMED `_rate_budget_ok()`
+    but never connected its false-branch to a control-flow action. Fix: state where it
+    is called (`_admit`) and what the not-ok branch DOES (timer-park instead of admit);
+    both branches wired.
+  - **11 Silently-collapsed state field.** R0 dropped the explicitly-required
+    `inflight_per_repo: Counter`, implying derivation from `in_flight`. Fix: list it as a
+    DISTINCT field with its increment/decrement sites; reproduce enumerated state fields
+    verbatim.
+  - **12 Under-specified mechanism (zero-work convergence).** R0 said "re-seed with
+    zero-work convergence exit" without the predicate. Fix: exact condition (all queues
+    empty AND no timers AND no in_flight), loop bound, `produced == 0 → exit`, two named
+    tests, legacy analogue `loop_runner.py:1521-1534`.
+  - **13 Undocumented behavior-changing semantic shift (P7/POLA).** R0 left
+    `--phase-timeout`'s meaning-change (per-phase-subprocess → per-agent-job)
+    undocumented though the AC says "document the semantic shift." Fix: document in
+    THREE homes — argparse help, module docstring, inline comment at the mapping site.
+  - **14 YAGNI field with no consumer.** R0 added a `scope: PipelineScope` field no AC
+    needed (belongs to later #1820–#1822). Fix: remove; defer to the owning issue.
+  - **15 Verification by absence-of-edit, not positive assertion (C1).** R0 relied on
+    "we don't touch the omit list, so new modules stay covered." Fix: POSITIVE check —
+    run the frozen-omit-list test AND grep pyproject to assert the new modules are
+    absent, plus per-module `--cov-report=term-missing`.
+  - **16 Missing evidence-capture step for an "evidence in PR" AC (M5).** R0's dry-run
+    command didn't capture output. Fix: `2>&1 | tee build/verify-<issue>-dryrun.log`
+    + an ordered capture step + a PR-body attach note.
+  - **17 Hand-wavy job/type reference blocking TDD (M6).** R0 said "clone via a GitJob"
+    without the constructor. Fix: concrete `GitJob(op="clone", kwargs={...})` against the
+    sibling's declared dataclass + op enum.
+  - **18 False POLA guard (needless circular-import defense).** R0 guarded a
+    child→parent-package import as circular when no cycle exists. Fix: normal module-top
+    import; only defend a cycle you have shown exists.
+  - **19 Handoff-contract ambiguity across siblings (StageOutcome/ROUTES/_route).** Fix:
+    explicit Disposition→action mapping TABLE; coordinator IMPORTS (never redefines) the
+    sibling's types; order implementation so imported types + stages exist before the
+    consumer's routing logic.
+- Added a new workflow substep **"NOGO→GO tightening checklist"** enumerating the eleven
+  tightenings as a copy-paste reviewer/author gate.
+- Extended the "Reviewer / Author Pre-Flight Checklist" with the new NOGO categories.
+- Added frontmatter tags: `nogo-to-go-tightening`, `double-mutation-shared-entrypoint`,
+  `orphaned-predicate`, `collapsed-state-field`, `underspecified-mechanism`,
+  `yagni-config-field`, `positive-verification-not-absence`, `evidence-capture-step`,
+  `concrete-constructor-call`, `false-pola-circular-guard`, `handoff-contract-table`.
+
+**Why**: v1.0.0 captured the capstone-integration *plan discipline* (pin-upstream-names
+Step-1 gate + verified-vs-assumed split). It did NOT capture the R0→NOGO→R1 *reversals*
+— the specific defect categories a plan reviewer flags on a capstone/integration plan
+even when the design is sound, and their concrete fixes. Those eleven reversals are the
+reusable lessons: they show exactly what a first-pass capstone plan gets wrong (a
+double-mutation at a shared entry point, an orphaned predicate, a silently-collapsed
+state field, an under-specified convergence mechanism, an undocumented flag semantic
+shift, a YAGNI config field, absence-of-edit "verification", a missing evidence-capture
+step, a hand-wavy downstream type, a false circular-import guard, and an unresolved
+sibling handoff contract) so a future planner converts a sound-but-incomplete capstone
+plan from NOGO to GO without re-deriving them.
+
+**Full previous snapshot (v1.0.0)**:
+
+```markdown
+---
+name: planning-cross-pr-interface-dependency
+description: "Planning discipline for a CAPSTONE / INTEGRATION issue — the terminal issue of a serialized epic that fans IN and wires together modules produced by MANY sibling dependency issues that are ALL STILL OPEN/UNMERGED. The capstone's new code calls ~10 symbols (coordinators, queues, worker pools, stage protocols, route tables, config objects, test conftest fakes) that DO NOT EXIST in the working tree — they are only DESCRIBED in sibling issue bodies and the epic body. You cannot verify them by reading code, so you must plan against the DECLARED (issue-body) contract, and the plan MUST convert that un-verifiable assumption into a checklist gate: (a) add an explicit 'Dependency note' that the PR is cut from a base where the LAST sibling is merged, and (b) make Step 1 of the implementation order a 'pin/confirm upstream interface names on the merged base via grep BEFORE writing any code' gate that rebases onto merged reality if any symbol name drifted. Split the plan's facts into VERIFIED (things you Read from the current repo — main()/dispatch structure, a sleeper that blocks the coordinator thread, the shared arg parser, a symbol's REAL module home, the coverage omit-list membership) vs ASSUMED (every sibling symbol signature, every conftest fake shape, the tick-order contract) in a dedicated section. Ground every DESIGN decision in a VERIFIED repo fact (a blocking sleeper => the new gate must be a non-blocking predicate; dispatch belongs at the top of main() so legacy paths stay byte-for-byte; store_true default-False gives CLI-wins-over-env for free; new modules stay OUT of the omit list so they get covered by doing nothing). Use when: (1) planning the capstone/integration/terminal issue of a serialized epic whose earlier issues are unmerged, (2) your new code references symbols that only exist in sibling issue bodies or the epic body, not on disk, (3) you are about to grep for a symbol's home and might infer its module from a CALLER instead of its real location (e.g. a status-emitter that lives in cli/utils, not automation), (4) you plan to extract a shared helper out of a coverage-omitted module and might trip an omit-list JUSTIFICATION test, (5) you are changing the semantic of an existing CLI flag or making a blocking operation non-blocking and must document the behavior change."
+category: architecture
+date: 2026-07-04
+version: "1.0.0"
+user-invocable: false
+tags:
+  - planning
+  - capstone-issue
+  - integration-pr
+  - serialized-epic
+  - unmerged-siblings
+  - declared-interface
+  - issue-body-contract
+  - fan-in-integration
+  - pin-upstream-names-first
+  - rebase-onto-merged-base
+  - verified-vs-assumed
+  - non-blocking-predicate
+  - dispatch-at-top-of-main
+  - store-true-cli-wins
+  - coverage-omit-justification
+  - symbol-home-grep-not-caller
+  - behavior-change-documentation
+---
+
+(Body identical to the v1.0.0 skill body: Overview table, Scope-and-companion-skills
+note, When to Use, Verified Workflow with the unverified Proposed-Workflow banner and
+### Quick Reference, nine Detailed Steps, eight Failed-Attempts rows, and the Results &
+Parameters section with Verified-On / VERIFIED-vs-ASSUMED split / design-decisions /
+pre-flight checklist / prescriptive recommendations. Retained verbatim in git history at
+the v1.0.0 commit; summarized here to keep the history file readable.)
+```

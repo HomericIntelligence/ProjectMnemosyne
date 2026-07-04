@@ -3,7 +3,8 @@ name: planning-cross-pr-interface-dependency
 description: "Planning discipline for a CAPSTONE / INTEGRATION issue — the terminal issue of a serialized epic that fans IN and wires together modules produced by MANY sibling dependency issues that are ALL STILL OPEN/UNMERGED. The capstone's new code calls ~10 symbols (coordinators, queues, worker pools, stage protocols, route tables, config objects, test conftest fakes) that DO NOT EXIST in the working tree — they are only DESCRIBED in sibling issue bodies and the epic body. You cannot verify them by reading code, so you must plan against the DECLARED (issue-body) contract, and the plan MUST convert that un-verifiable assumption into a checklist gate: (a) add an explicit 'Dependency note' that the PR is cut from a base where the LAST sibling is merged, and (b) make Step 1 of the implementation order a 'pin/confirm upstream interface names on the merged base via grep BEFORE writing any code' gate that rebases onto merged reality if any symbol name drifted. Split the plan's facts into VERIFIED (things you Read from the current repo — main()/dispatch structure, a sleeper that blocks the coordinator thread, the shared arg parser, a symbol's REAL module home, the coverage omit-list membership) vs ASSUMED (every sibling symbol signature, every conftest fake shape, the tick-order contract) in a dedicated section. Ground every DESIGN decision in a VERIFIED repo fact (a blocking sleeper => the new gate must be a non-blocking predicate; dispatch belongs at the top of main() so legacy paths stay byte-for-byte; store_true default-False gives CLI-wins-over-env for free; new modules stay OUT of the omit list so they get covered by doing nothing). Use when: (1) planning the capstone/integration/terminal issue of a serialized epic whose earlier issues are unmerged, (2) your new code references symbols that only exist in sibling issue bodies or the epic body, not on disk, (3) you are about to grep for a symbol's home and might infer its module from a CALLER instead of its real location (e.g. a status-emitter that lives in cli/utils, not automation), (4) you plan to extract a shared helper out of a coverage-omitted module and might trip an omit-list JUSTIFICATION test, (5) you are changing the semantic of an existing CLI flag or making a blocking operation non-blocking and must document the behavior change."
 category: architecture
 date: 2026-07-04
-version: "1.0.0"
+version: "1.1.0"
+history: planning-cross-pr-interface-dependency.history
 user-invocable: false
 tags:
   - planning
@@ -23,6 +24,17 @@ tags:
   - coverage-omit-justification
   - symbol-home-grep-not-caller
   - behavior-change-documentation
+  - nogo-to-go-tightening
+  - double-mutation-shared-entrypoint
+  - orphaned-predicate
+  - collapsed-state-field
+  - underspecified-mechanism
+  - yagni-config-field
+  - positive-verification-not-absence
+  - evidence-capture-step
+  - concrete-constructor-call
+  - false-pola-circular-guard
+  - handoff-contract-table
 ---
 
 # Planning a Capstone / Integration PR Against Sibling Interfaces That Don't Exist On Disk Yet
@@ -35,7 +47,7 @@ tags:
 | **Objective** | Capture the planning meta-discipline for authoring the CAPSTONE (terminal) issue of a serialized epic — the one issue that fans IN and integrates modules produced by many earlier sibling issues that are ALL STILL OPEN/UNMERGED. The capstone's new code calls ~10 symbols that DO NOT EXIST in the working tree; they are only DESCRIBED in sibling issue bodies and the epic body. Plan against the DECLARED (issue-body) contract of the unmerged siblings, not against verified code — and mandate the mitigations that turn an un-verifiable assumption into a checklist gate: an explicit "Dependency note" pinning the merged base, and a Step-1 "pin/confirm upstream interface names on the merged base by grep before writing any code" gate that rebases onto merged reality on any name drift. Separate VERIFIED repo facts from ASSUMED sibling-contract facts in a dedicated section, and ground every DESIGN decision in a VERIFIED fact. |
 | **Outcome** | Planning artifact produced (an implementation plan for a capstone integration issue). NO code was written, NO build ran, NO CI ran. The sibling modules the plan integrates have never existed in the working tree — every symbol they expose is transcribed from an issue body, not read from source. |
 | **Verification** | **unverified** — this is a PLANNING artifact. No code was executed, no CI ran, and the sibling interfaces the plan integrates are un-verifiable by construction (their producing PRs are unmerged). Treat every checklist item as a hypothesis until CI confirms it post-merge. |
-| **History** | v1.0.0 (2026-07-04): initial capture from a ProjectHephaestus capstone-issue plan (#1817), the terminal issue of the 14-issue serialized queue-pipeline epic #1809, whose dependency issues #1810–#1816 were ALL still open/unmerged at plan time. |
+| **History** | v1.1.0 (2026-07-04): added the R0→NOGO→R1 tightening companion material for a capstone-integration plan — eleven new Failed-Attempts rows (9–19) + a "NOGO→GO tightening checklist" — after the #1817 R0 plan was graded D / NOGO (3 critical + 6 major + 4 minor) and R1 addressed every finding. See `planning-cross-pr-interface-dependency.history`. • v1.0.0 (2026-07-04): initial capture from a ProjectHephaestus capstone-issue plan (#1817), the terminal issue of the 14-issue serialized queue-pipeline epic #1809, whose dependency issues #1810–#1816 were ALL still open/unmerged at plan time. |
 
 > **Scope and companion skills.** This skill is the FAN-IN / MANY-SIBLINGS / CAPSTONE case. It is
 > distinct from three neighbors: `planning-follower-issue-unmerged-dependency-assumptions` and
@@ -184,6 +196,58 @@ grep -rn "omit" pyproject.toml                    # find the frozen omit list + 
    CLI flag. Enumerating these tells the reviewer where to spend their attention and admits, up front,
    where the plan is a hypothesis rather than a fact.
 
+### NOGO→GO tightening checklist (what a plan reviewer flags on a capstone plan whose DESIGN is sound)
+
+A capstone/integration plan can be architecturally correct and still be graded **NOGO** on a
+recurring family of *completeness/wiring* defects — the design is right but a thread is left
+half-connected, a required field is silently dropped, or a mechanism is under-specified to the point
+the implementer must invent it. Each defect below has a mechanical fix. Run this as an author gate
+BEFORE you submit, and as a reviewer gate when grading. (These are drawn from the #1817 R0→NOGO→R1
+cycle — a D-graded R0 with 3 critical + 6 major + 4 minor findings — but every item generalizes.)
+
+```text
+[ ] 1. Double-mutation at a shared entry point. Grep EVERY side-effecting call between your new
+       branch's insertion point and the legacy entry (e.g. an unconditional _clone_missing_repos
+       that both paths share). Dispatch the new branch BEFORE the shared side-effecting call so the
+       new subsystem OWNS that responsibility; add a test that patches the shared call and asserts it
+       is NOT invoked on the new path. A silently-duplicated side effect (repos cloned twice) is an
+       automatic NOGO.
+[ ] 2. No orphaned predicates. Every predicate the plan introduces (e.g. _rate_budget_ok()) must have
+       BOTH branches wired to a concrete control-flow action IN THE SAME PLAN: state WHERE it is
+       called (inside _admit) and what the not-ok branch DOES (timer-park the item instead of
+       admitting). A named-but-unconnected helper reads as incomplete design.
+[ ] 3. Reproduce every enumerated state field verbatim. If the issue lists state fields, reproduce
+       EACH as a DISTINCT field with its increment/decrement sites (e.g. inflight_per_repo: Counter
+       for an O(1) cap lookup). Do NOT "optimize" by deriving one from another (from in_flight) — the
+       reviewer reads the omission as a dropped requirement.
+[ ] 4. Specify every AC-referenced mechanism to zero-remaining-design-decisions. "Re-seed with
+       zero-work convergence exit" is not enough; give the exact predicate (all queues empty AND no
+       timers AND no in_flight), the loop bound, the produced == 0 → exit rule, and NAME the tests.
+       Cite the legacy analogue (loop_runner.py:1521-1534) for parity.
+[ ] 5. Document every behavior-changing semantic shift in THREE homes. When a flag's meaning changes
+       under a new mode (--phase-timeout: per-phase-subprocess → per-agent-job), sync argparse help +
+       module docstring + inline comment at the mapping site. If the AC says "document the semantic
+       shift," the doc update is an acceptance criterion, not a nicety.
+[ ] 6. No YAGNI config fields. A config field whose ONLY consumer is a FUTURE issue (a scope field
+       owned by #1820–#1822) is a NOGO — remove it and defer to the owning module/issue.
+[ ] 7. Verify by POSITIVE assertion, not absence-of-edit. "I didn't touch the omit list so new
+       modules stay covered" is not a verification step. Run the frozen-omit-list test AND grep
+       pyproject to assert the new modules are ABSENT, plus per-module --cov-report=term-missing.
+[ ] 8. Capture-and-attach evidence when an AC says "evidence in PR." The dry-run command must
+       2>&1 | tee build/verify-<issue>-dryrun.log, an implementation-order step must capture it, and
+       a PR-body note must attach it. A runnable command alone does not satisfy an evidence AC.
+[ ] 9. Any downstream type appears with its concrete constructor call. "Clone via a GitJob" blocks
+       TDD; write GitJob(op="clone", kwargs={...}) against the sibling's declared dataclass + op enum
+       so the stage's test can be written.
+[ ] 10. No false POLA guards. Do NOT add in-method imports or "avoid circular import" scaffolding for
+        a cycle you have not SHOWN exists (a child→parent-package import is usually fine at module
+        top). Defensive scaffolding for a nonexistent cycle is POLA noise a reviewer flags.
+[ ] 11. Pin every cross-sibling handoff contract as a TABLE. When two siblings must agree on an
+        enum/route contract (StageOutcome / ROUTES / _route), add an explicit Disposition→action
+        mapping table, state the coordinator IMPORTS (never redefines) the sibling's types, and order
+        implementation so the imported types + stages exist BEFORE the consumer's routing logic.
+```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -196,6 +260,17 @@ grep -rn "omit" pyproject.toml                    # find the frozen omit list + 
 | 6 | Planned to shim-extract `format_preserved_worktrees` out of `implementer_summary` (a coverage-OMITTED module) to reuse it, without checking the omit-list justification test. | Extracting a symbol out of an omitted module can move the anchor that `test_omit_justification.py` keys on (it import-parses `tests/` to prove each omitted module has a backing suite), potentially tripping a test the plan never ran. | When extracting a helper out of a coverage-omitted module, check the omit-JUSTIFICATION test first and hedge with an inline-copy fallback so the extraction cannot strand the omit anchor. |
 | 7 | Wrote the crash-matrix and journal-order acceptance test suites in the plan as if the `FakeGitHub`/`FakeWorkerPool` conftest mutation-log API were known, since it is described in a sibling issue body. | Those fakes do not exist in the working tree; their `mutation_log` shape was never executed. The highest-risk, acceptance-critical suites rest entirely on an unverified fake API — if the fake's real shape differs, every assertion is wrong. | Name the acceptance-critical suites and their unverified-fake dependency as the reviewer's top risk. Do not present tests built on an unrun conftest fake as verified; flag them as the hypothesis they are. |
 | 8 | Left the `--phase-timeout` flag's semantic shift (per-phase-subprocess → per-agent-job) implicit, treating the change as an internal refactor. | It is a behavior change on a user-facing flag; a user relying on the old per-phase meaning gets silently different timeout behavior — a POLA violation and a likely review NOGO. | Document every behavior change explicitly (CLI-flag semantic shifts, blocking→non-blocking). Silent semantic changes on shared/user-facing surfaces must be called out in a dedicated line. |
+| 9 (R0→NOGO) | Dispatched the new pipeline branch AFTER an unconditional side-effecting `_clone_missing_repos` (`loop_runner.py:1700`) that BOTH the new and legacy paths share, so both would run the clone. | A shared side effect between the insertion point and the legacy entry gets duplicated silently — repos cloned twice — because the new path inherited the legacy call in addition to its own. | Dispatch the new branch BEFORE the shared side-effecting call so the new subsystem OWNS that responsibility; add a test that patches the shared call and asserts it is NOT invoked on the new path. When adding a feature-flag branch into an existing `main()`, grep every side-effecting call between your insertion point and the legacy entry and place the branch so ownership is not duplicated. |
+| 10 (R0→NOGO) | NAMED a predicate `_rate_budget_ok()` in the plan but never connected its false-branch to any control-flow action — two design threads left unmerged. | A named-but-unconnected helper reads as incomplete design (an SRP/P5 gap): the reviewer cannot tell what happens when the budget is exceeded, so the plan is not implementable as written. | Every predicate a plan introduces must have BOTH branches wired to a concrete action in the SAME plan: state exactly WHERE it is called (inside `_admit`) and what the not-ok branch DOES (timer-park the item instead of admitting). A named-but-unwired predicate is an automatic NOGO. |
+| 11 (R0→NOGO) | Dropped an explicitly-required `inflight_per_repo: Counter` state field, implying it could be derived from the existing `in_flight` structure. | Deriving it loses the O(1) per-repo cap lookup, and the reviewer reads the omission of an enumerated field as a dropped requirement. | When the issue explicitly enumerates state fields, reproduce EACH verbatim as a distinct field with its increment/decrement sites — do not "optimize" by deriving one from another in the plan. |
+| 12 (R0→NOGO) | Wrote "re-seed with zero-work convergence exit" as the loop's termination mechanism without giving the actual predicate. | An AC-referenced mechanism specified as prose forces the implementer to make a second design decision (what "zero-work convergence" means), which is exactly what the plan must remove. | Give the exact condition (all queues empty AND no timers AND no in_flight), the loop bound, the `produced == 0 → exit` rule, and NAME the two tests; cite the legacy analogue (`loop_runner.py:1521-1534`) for parity. Any AC-referenced mechanism must be specified to the point an implementer writes it without a second design decision. |
+| 13 (R0→NOGO) | Left `--phase-timeout`'s meaning-change (per-phase-subprocess → per-agent-job) undocumented, even though the issue AC literally says "document the semantic shift." | The AC made the documentation a deliverable; leaving it out is a P7/POLA miss and a direct AC failure, not a stylistic nicety. | When a flag's SEMANTICS change under a new mode, the doc update is an acceptance criterion — document it in THREE homes: argparse help, module docstring, and an inline comment at the mapping site; sync every home. |
+| 14 (R0→NOGO) | Added a `scope: PipelineScope` field to `PipelineConfig` that no acceptance criterion needed (it belongs to later cleanup issues #1820–#1822). | A config field whose only consumer is a FUTURE issue is dead weight now: it enlarges the surface, invites premature coupling, and belongs to a module the capstone does not own — a YAGNI violation. | Remove any field whose only consumer is a future issue; leave it to the issue that consumes it. A config field with no current AC consumer is a YAGNI NOGO. |
+| 15 (R0→NOGO) | Relied on "we don't touch pyproject.toml's omit list, so new modules stay covered" as the coverage-safety argument (C1). | "I didn't change X so Y holds" is an absence-of-edit claim, not a verification step; it never runs anything, so a real regression (a module accidentally landing in the omit list, or missing coverage) goes undetected. | Add a POSITIVE check: run the frozen-omit-list test AND grep pyproject to assert the new modules are ABSENT from the omit list, plus per-module `--cov-report=term-missing`. Assert Y directly with a runnable command. |
+| 16 (R0→NOGO) | Gave a dry-run verification command for an "evidence in PR" AC but did not `tee` its output to a file or say the output attaches to the PR (M5). | A runnable command alone does not satisfy an "evidence in PR" AC — nothing captures or attaches the output, so the evidence never reaches the reviewer. | When an AC says "evidence in PR," add an explicit capture-and-attach step: `2>&1 \| tee build/verify-<issue>-dryrun.log`, an implementation-order step that captures it, and a PR-body note that attaches it. |
+| 17 (R0→NOGO) | Said "clone via a GitJob" without the constructor shape, leaving the downstream type reference hand-wavy (M6). | A downstream type used without its concrete constructor call blocks the stage's TDD — the implementer cannot write the RED test because the call shape is undecided. | Write the concrete `GitJob(op="clone", kwargs={...})` call referencing the sibling's declared dataclass + op enum. A downstream type used in a plan must appear with its concrete constructor call. |
+| 18 (R0→NOGO) | Guarded a child→parent-package import with an in-method import and an "avoid circular import" comment, defending against a cycle that does not exist. | Defensive scaffolding for a nonexistent cycle is POLA noise: it obscures the real dependency, implies a problem that isn't there, and a reviewer flags it as either a mistake or a smell. | Use a normal module-top import; only defend against a cycle you have SHOWN exists. Don't add in-method imports or "avoid circular import" comments for a cycle you haven't demonstrated. |
+| 19 (R0→NOGO) | Left the handoff contract across sibling modules (`StageOutcome` / `ROUTES` / `_route`) unresolved — no explicit mapping and no statement of who owns the types. | Without a pinned contract, the coordinator and the sibling can each invent an incompatible enum/route variant, and the TDD ordering is ambiguous (which side's types exist first). | Add an explicit Disposition→action mapping TABLE, state that the coordinator IMPORTS (never redefines) the sibling's types, and order implementation so the imported types + stages exist BEFORE the consumer's routing logic. When two siblings must agree on an enum/route contract, the capstone plan must pin the mapping as a table. |
 
 ## Results & Parameters
 
@@ -204,6 +279,7 @@ grep -rn "omit" pyproject.toml                    # find the frozen omit list + 
 | Repository | Session | Notes |
 |------------|---------|-------|
 | ProjectHephaestus | Capstone plan for GitHub issue #1817 (terminal issue of serialized epic #1809; dependency siblings #1810–#1816 ALL open/unmerged at plan time) | Session 2026-07-04 — implementation plan authored for the queue-pipeline capstone integration. The plan integrates `pipeline/coordinator.py`, `summary.py`, and terminal stages that call ~10 symbols existing only in sibling issue bodies. NO code written, NO build/CI run. Used as the sole "Verified On" instance; the skill itself is generalizable to any serialized-epic capstone. |
+| ProjectHephaestus | #1817 capstone plan **R0 → NOGO (grade D) → R1** review cycle | Session 2026-07-04 — R0 of the same #1817 capstone plan was graded **D / NOGO** with 3 critical + 6 major + 4 minor findings; R1 addressed every finding. The eleven recurring NOGO categories and their concrete fixes (double-clone at a shared entry point, orphaned predicate, collapsed state field, under-specified convergence mechanism, undocumented flag semantic shift, YAGNI config field, absence-of-edit "verification", missing evidence-capture step, hand-wavy downstream type, false circular-import guard, unresolved sibling handoff contract) are captured as Failed-Attempts rows 9–19 and the "NOGO→GO tightening checklist." Planning artifact only — NO code written, NO CI run; the R1 plan was never implemented. |
 
 ### What was VERIFIED vs ASSUMED (the load-bearing split)
 
@@ -254,6 +330,25 @@ grep -rn "omit" pyproject.toml                    # find the frozen omit list + 
 [ ] Reviewer's top risks named: symbol-name drift, omit-justification trip, acceptance suites on
     an unverified conftest fake, the documented flag behavior change.
 [ ] Plan is labeled `unverified`; the sibling contract is a hypothesis until CI confirms post-merge.
+
+# --- NOGO→GO completeness gate (design-is-sound-but-incomplete defects) ---
+[ ] No side effect is duplicated: new branch dispatched BEFORE any shared side-effecting call
+    (e.g. _clone_missing_repos); a test asserts the shared call is NOT invoked on the new path.
+[ ] Every predicate introduced has BOTH branches wired to a concrete action in this plan.
+[ ] Every enumerated state field is reproduced verbatim as a distinct field with inc/dec sites
+    (none silently derived from another).
+[ ] Every AC-referenced mechanism is specified to zero-remaining-design-decisions, with named tests
+    and the legacy analogue cited.
+[ ] Every behavior-changing semantic shift is documented in all three homes (argparse help, module
+    docstring, inline comment at the mapping site).
+[ ] No config field whose only consumer is a future issue (no YAGNI fields).
+[ ] Coverage safety is a POSITIVE assertion (frozen-omit-list test + grep pyproject + term-missing),
+    not "I didn't touch the omit list."
+[ ] Every "evidence in PR" AC has a capture-and-attach step (tee to build/…log + PR-body note).
+[ ] Every downstream type appears with its concrete constructor call (e.g. GitJob(op=…, kwargs=…)).
+[ ] No false circular-import guard: module-top imports unless a cycle is demonstrated.
+[ ] Every cross-sibling handoff contract is pinned as a Disposition→action table; coordinator imports
+    (never redefines) the sibling's types; imported types + stages ordered before the routing logic.
 ```
 
 ### Prescriptive Recommendations for Future Planners
@@ -265,3 +360,4 @@ grep -rn "omit" pyproject.toml                    # find the frozen omit list + 
 5. **Guard extractions out of coverage-omitted modules with an inline-copy fallback.** An extraction can move the anchor an omit-justification test keys on.
 6. **Prefer additive entrypoints over threading new behavior through stable legacy code.** Top-of-`main()` dispatch keeps the legacy path byte-for-byte and the diff auditable.
 7. **Document every behavior change on a shared/user-facing surface.** Silent CLI-flag semantic shifts and blocking→non-blocking changes are POLA violations and common review NOGOs.
+8. **A sound capstone design still NOGOs on completeness/wiring defects — run the NOGO→GO tightening checklist.** The pin-upstream-names Step-1 gate and the verified-vs-assumed split remain the backbone, but a first-pass plan is typically graded NOGO on a *recurring family* of half-finished threads, not on a wrong design: a side effect duplicated at a shared entry point, an orphaned predicate whose false-branch goes nowhere, a silently-collapsed required state field, an under-specified AC mechanism the implementer must invent, an undocumented flag semantic shift, a YAGNI config field for a future issue, coverage "verified" by absence-of-edit, a missing evidence-capture step, a hand-wavy downstream type, a false circular-import guard, and an unresolved cross-sibling handoff contract. Each has a mechanical fix (see the eleven Failed-Attempts rows 9–19 and the checklist). Converting these is what moves a sound-but-incomplete capstone plan from NOGO to GO.
