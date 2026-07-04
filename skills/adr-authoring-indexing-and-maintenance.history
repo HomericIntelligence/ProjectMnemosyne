@@ -1,6 +1,48 @@
 <!-- markdownlint-disable MD024 -->
 # adr-authoring-indexing-and-maintenance — History
 
+## v1.4.0 (2026-07-04)
+
+**Changed by:** ProjectHephaestus issue #1810 — ADR-0006 queue-based in-process
+automation pipeline + AUTOMATION_LOOP_ARCHITECTURE.md skeleton; review of pre-implementation
+architecture documentation practices.
+
+**Verification:** verified-ci (core content); v1.4.0 additions verified-local for
+ProjectHephaestus issue #1810 (all 11 doc tests pass, pre-commit gates pass).
+
+**What changed (minor bump 1.3.0 → 1.4.0 — additive, core workflow unchanged):**
+
+- Added point (10) to `description:` covering pre-implementation architecture skeleton
+  structure for multi-stage systems: status banner, topology, contract, per-stage docs with
+  file:line prompt paths, ROUTES table with full identifiers (not abbreviations),
+  seeding/reconstruction classification, and finalized-in-cutover sections.
+- Added "Pre-implementation architecture skeleton structure" subsection to **Results &
+  Parameters**, detailing the 7 required sections and rationale for each (intent clarity,
+  single-location ROUTES routing, fast prompt-template lookup).
+- Added 3 rows to **Failed Attempts** table:
+  1. Abbreviations in ROUTES table (`already_go_pr` vs. `already_implementation_go_pr`) —
+     use full consistent identifiers that match stage docs and error-handling code.
+  2. Partial line range in code anchor citation (`:9-30` vs. `:9-37`) — cite the complete
+     range covering all content; verify before committing.
+  3. Inconsistent file:line for prompt paths (omitted on second reference) — add file
+     path + line to EVERY prompt-builder reference for cross-referencing and code search.
+- Added verified-on row: ProjectHephaestus issue #1810, PR #1811 (2026-07-04).
+- Bumped `version:` 1.3.0 → 1.4.0; `date:` → 2026-07-04.
+
+**Why:** Issue #1810 created ADR-0006 documenting a 14-issue queue-based automation
+pipeline epic. The review cycle surfaced four consistency lessons: ADR guard enforcement via
+regex patterns (derive format requirements from guard source, not prose); consistency in
+full-name use over abbreviations in routing tables (abbreviations cause drift and require
+later fixes); complete line-range citations for code anchors (partial ranges create the
+impression of incompleteness); and consistent file:line paths for all prompt-builder
+references (enables cross-referencing and code search). The experience also clarified the
+optimal structure for a pre-implementation architecture skeleton: status banner, clear
+coordinator/worker contract, ROUTES table as single source of truth for stage failures,
+full per-stage documentation with exact prompt paths, and explicit "finalized in cutover
+issue" markers to guide future implementers.
+
+**Prior version:** v1.3.0 (2026-06-30). This history file retains all prior version entries.
+
 ## v1.3.0 (2026-06-30)
 
 **Changed by:** ProjectHephaestus issue #1452 — author 4 ADRs (0002–0005) + index +
