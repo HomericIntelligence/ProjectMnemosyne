@@ -193,8 +193,7 @@ python3 generate_matrix.py | git --no-pager diff --no-index --ignore-cr-at-eol -
 
 ## References
 
-- [planning-verify-full-population-not-just-named-entities](planning-verify-full-population-not-just-named-entities.md)
-- [planning-verify-assumptions-before-enforcement-gate](planning-verify-assumptions-before-enforcement-gate.md)
+- [planning-verify-issue-premise-before-implementing](planning-verify-issue-premise-before-implementing.md) — source-of-truth and full-population premise checks before generating derived docs.
 - [ci-hygiene-and-validation-gates](ci-hygiene-and-validation-gates.md)
 - [ci-matrix-yaml-multiformat-regex-fallback](ci-matrix-yaml-multiformat-regex-fallback.md)
 - [doc-comment-count-drift-verify-frozen-test](doc-comment-count-drift-verify-frozen-test.md)

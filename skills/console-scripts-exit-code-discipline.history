@@ -3,12 +3,12 @@
 ## v2.0.0 (2026-07-04)
 
 **Changed by:** ProjectMnemosyne high-confidence skill-cluster consolidation wave.
-**Verification:** unverified for the merge mechanics until this PR passes repository checks; source workflows retain their recorded verification levels.
+**Verification:** verified-local for the merge mechanics via preservation audit and repository validation; source workflows retain their recorded verification levels.
 
 ### What changed
 
 - **MAJOR bump (1.0.0 -> 2.0.0): merged 1 similar skill(s) into `console-scripts-exit-code-discipline` and generalized the canonical body while preserving issue-specific examples.
-- Added `history:` frontmatter and moved exact source snapshots into this history file.
+- Added `history:` frontmatter and moved complete source snapshots into this history file.
 - Deleted absorbed standalone skill files after preserving their complete content below.
 
 ### Why
@@ -329,7 +329,7 @@ class MarkdownLinkFixer:
 ```python
 def fix_file(self, file_path: str) -> Tuple[bool, Optional[Dict]]:
     """Fix markdown links in a file.
-    
+
     Returns:
         Tuple of (success: bool, data: Optional[Dict])
     """
@@ -339,14 +339,14 @@ def fix_file(self, file_path: str) -> Tuple[bool, Optional[Dict]]:
         self.had_error = True  # Track error in instance state
         logger.error(f"Failed to read {file_path}: {e}")
         return False, None
-    
+
     try:
         self._write_file(file_path, fixed_content)
     except OSError as e:
         self.had_error = True  # Track error in instance state
         logger.error(f"Failed to write {file_path}: {e}")
         return False, None
-    
+
     return True, result_data
 ```
 
@@ -356,11 +356,11 @@ def fix_file(self, file_path: str) -> Tuple[bool, Optional[Dict]]:
 def main() -> int:
     """Main entry point with proper exit-code discipline."""
     fixer = MarkdownLinkFixer(...)
-    
+
     # Process files (errors tracked in fixer.had_error)
     for file_path in file_list:
         fixer.fix_file(file_path)
-    
+
     # Return proper exit code
     return 1 if fixer.had_error else 0
 ```
@@ -398,7 +398,7 @@ if __name__ == "__main__":
 class MarkdownLinkFixer:
     def __init__(self, ...):
         self.had_error: bool = False
-    
+
     # No signature changes to existing methods
     def fix_file(self, file_path: str) -> Tuple[bool, Optional[Dict]]:
         try:
@@ -408,7 +408,7 @@ class MarkdownLinkFixer:
             self.had_error = True  # Set error flag
             logger.error(f"Error: {e}")
             return False, None  # Still return same tuple shape
-    
+
     # main() returns exit code
     def main(self) -> int:
         for path in self.files:
@@ -561,22 +561,22 @@ def fix_file(self, file_path: str) -> Tuple[bool, Optional[Dict]]:
         self.had_error = True  # ERROR SITE 1: Read failure
         logger.error(f"Cannot read {file_path}: {e}")
         return False, None
-    
+
     # ... processing ...
-    
+
     try:
         self._write_file(file_path, fixed_content)
     except OSError as e:
         self.had_error = True  # ERROR SITE 2: Write failure
         logger.error(f"Cannot write {file_path}: {e}")
         return False, None
-    
+
     # Path validation error
     if not self._validate_path(file_path):
         self.had_error = True  # ERROR SITE 3: Validation failure
         logger.error(f"Invalid path: {file_path}")
         return False, None
-    
+
     return True, result_data
 ```
 

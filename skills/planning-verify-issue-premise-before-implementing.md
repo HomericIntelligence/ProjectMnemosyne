@@ -2,7 +2,7 @@
 name: planning-verify-issue-premise-before-implementing
 description: "Verify issue and plan premises against authoritative sources before acting. Use this when an issue, PR plan, review, CI fix, or enforcement change assumes an artifact exists, prior work merged, a live service still needs work, a full population was checked, a CI job gates, an implementation returns a shape, or an integration point exists. Convert the premise into deterministic checks before implementing, closing, gating, or declaring work complete."
 category: architecture
-date: 2026-07-04
+date: 2026-06-20
 version: "3.0.0"
 user-invocable: false
 verification: unverified

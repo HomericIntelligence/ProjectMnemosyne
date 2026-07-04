@@ -2,10 +2,10 @@
 name: console-scripts-exit-code-discipline
 description: "Enforce exit-code discipline for Python console-script main() functions without breaking existing return-value contracts. Use when a CLI exits 0 despite recoverable errors, helper methods have tuple-return callers, or cumulative error state must be tracked through instance state instead of changing signatures."
 category: architecture
-date: 2026-07-04
+date: 2026-05-28
 version: "2.0.0"
 user-invocable: false
-verification: verified-ci
+verification: verified-local
 history: console-scripts-exit-code-discipline.history
 tags: [python, console-scripts, exit-codes, error-tracking, instance-state, tuple-contracts, cli, ci-cd]
 ---
@@ -23,7 +23,7 @@ This skill consolidates the exit-code discipline and instance-state error-tracki
 | Date | 2026-07-04 |
 | Objective | Generalize console-script exit-code discipline and preserve tuple-contract compatibility details. |
 | Outcome | Canonical v2 replaces the narrower instance-state skill; notes and source snapshots are preserved in history. |
-| Verification | verified-ci; ProjectHephaestus issue #632 fixes passed CI. |
+| Verification | verified-local for this consolidation; source examples preserve their original verified-ci status in history. |
 
 ## When to Use
 

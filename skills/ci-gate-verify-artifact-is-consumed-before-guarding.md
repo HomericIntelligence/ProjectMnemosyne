@@ -162,4 +162,3 @@ protects nothing is worse than no check — it creates false confidence.
 
 - [planning-verify-issue-premise-before-implementing.md](planning-verify-issue-premise-before-implementing.md) — the parent planning skill (verify the issue's premise repo-wide; make the PR self-contained; vendor-fixes-latent-bugs). This skill is the SECONDARY lesson from that same #556 re-plan, split out because someone debugging "my CI check passes but doesn't catch the bug" would search here, not in a premise-verification skill.
 - [ci-required-check-path-filter-pitfall.md](ci-required-check-path-filter-pitfall.md) — a sibling CI planning pitfall from the same project.
-- [planning-verify-integration-point-exists-before-guarding.md](planning-verify-integration-point-exists-before-guarding.md)

@@ -3,12 +3,12 @@
 ## v2.0.0 (2026-07-04)
 
 **Changed by:** ProjectMnemosyne high-confidence skill-cluster consolidation wave.
-**Verification:** unverified for the merge mechanics until this PR passes repository checks; source workflows retain their recorded verification levels.
+**Verification:** verified-local for the merge mechanics via preservation audit and repository validation; source workflows retain their recorded verification levels.
 
 ### What changed
 
 - **MAJOR bump (1.0.0 -> 2.0.0): merged 3 similar skill(s) into `testing-env-leak-local-fail-ci-pass` and generalized the canonical body while preserving issue-specific examples.
-- Added `history:` frontmatter and moved exact source snapshots into this history file.
+- Added `history:` frontmatter and moved complete source snapshots into this history file.
 - Deleted absorbed standalone skill files after preserving their complete content below.
 
 ### Why

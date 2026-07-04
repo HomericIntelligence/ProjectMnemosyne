@@ -6,19 +6,19 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "2.1.0",
-  "total_plugins": 603,
+  "total_plugins": 591,
   "categories": {
-    "architecture": 116,
-    "ci-cd": 120,
-    "debugging": 54,
-    "documentation": 42,
+    "architecture": 114,
+    "ci-cd": 119,
+    "debugging": 53,
+    "documentation": 39,
     "evaluation": 12,
-    "optimization": 3,
-    "testing": 82,
-    "tooling": 167,
+    "optimization": 4,
+    "testing": 79,
+    "tooling": 164,
     "training": 7
   },
-  "last_updated": "2026-07-04T08:29:27Z",
+  "last_updated": "2026-07-04T21:12:29Z",
   "plugins": [
     {
       "name": "agent-config-validation-and-integrity",
@@ -661,8 +661,8 @@
     },
     {
       "name": "console-scripts-exit-code-discipline",
-      "description": "Enforce exit-code discipline for Python console-script main() functions using instance state for error tracking. Use when: (1) a console-script main() exits 0 unconditionally despite errors, (2) updating error signaling for methods with existing tuple-return callers, (3) preventing pre-commit pipelines from masking failures.",
-      "version": "1.0.0",
+      "description": "Enforce exit-code discipline for Python console-script main() functions without breaking existing return-value contracts. Use when a CLI exits 0 despite recoverable errors, helper methods have tuple-return callers, or cumulative error state must be tracked through instance state instead of changing signatures.",
+      "version": "2.0.0",
       "source": "./skills/console-scripts-exit-code-discipline.md",
       "category": "architecture",
       "tags": [
@@ -670,17 +670,11 @@
         "console-scripts",
         "exit-codes",
         "error-tracking",
+        "instance-state",
         "tuple-contracts",
-        "architecture"
+        "cli",
+        "ci-cd"
       ]
-    },
-    {
-      "name": "console-scripts-instance-state-error-tracking",
-      "description": "How to add exit-code discipline to CLI main() functions without breaking existing return-value callsites. Use when: (1) main() must return int for exit-code discipline, (2) existing code unpacks tuples from helper methods, (3) you need to track error state without changing method signatures.",
-      "version": "1.0.0",
-      "source": "./skills/console-scripts-instance-state-error-tracking.md",
-      "category": "architecture",
-      "tags": []
     },
     {
       "name": "cpp-http-client-wrapper-lifetime-equals-object-not-per-call",
@@ -2018,70 +2012,34 @@
       ]
     },
     {
-      "name": "planning-verify-integration-point-exists-before-guarding",
-      "description": "Guard-an-unguarded-convention planning meta-pattern: when an audit issue or prior-learnings/KB advice says 'the convention is correct but un-guarded \u2014 add a downstream check to the EXISTING X step/job/hook,' VERIFY that the integration point actually exists (grep the workflows/hooks/config) BEFORE building the plan on it; audit findings and KB advice routinely assume infrastructure that is only documented, not implemented. If the assumed step is absent, ship the guard as a tested library function + CLI --verify entrypoint (non-zero exit = invariant violated) that ANY consumer can call, rather than a bare shell assertion in a possibly-nonexistent CI job. CRITICAL re-plan rule: every assumption you flagged 'unverified' last round MUST be verified against source (or resolved) before resubmitting \u2014 a NOGO reviewer treats an acknowledged-but-unfixed defect as equivalent to an unacknowledged one. Use when: (1) planning an issue that asks you to enforce/guard an existing convention, (2) an audit or KB note tells you to 'add the check to the existing CI/artifact step,' (3) deciding enforcement-vs-discovery exit-code semantics for a verifier, (4) a read-only verifier might reuse a resolver with a filesystem side effect, (5) re-planning after a NOGO with an 'uncertain assumptions' block to clear.",
-      "version": "1.1.0",
-      "source": "./skills/planning-verify-integration-point-exists-before-guarding.md",
-      "category": "architecture",
-      "tags": [
-        "planning",
-        "guard",
-        "convention",
-        "invariant",
-        "ci-gate",
-        "verify",
-        "audit-finding",
-        "integration-point",
-        "library-first",
-        "exit-code-semantics",
-        "re-plan",
-        "nogo",
-        "unverified-assumptions",
-        "json-envelope",
-        "exit-code-collision"
-      ]
-    },
-    {
       "name": "planning-verify-issue-premise-before-implementing",
-      "description": "When an issue's premise references an artifact (script, file, committed config, recipe, CI job) that may not exist on the working branch, VERIFY existence FIRST \u2014 and do it REPO-WIDE, not just on the current branch. A branch-scoped `git ls-files | grep` that returns nothing does NOT prove the artifact was never built: it may live on a sibling unmerged branch (often the prerequisite issue's own `<n>-auto-impl` branch). Critically, when an issue is a 'follow-up from #X' / auto-generated by another issue's implementation, do NOT trust that #X's artifacts exist on the default branch \u2014 verify the prerequisite's actual MERGE STATE (`gh pr view <PR> --json state,mergedAt,headRefName` \u2192 must be MERGED, not just OPEN/exists; `gh issue view <issue> --json state` \u2192 OPEN is a red flag), and prove the artifact is present where the new work will run (`git show origin/<branch>:<file>` on the prereq branch vs `grep` on main). Before concluding 'never landed,' scan origin/main AND every remote branch (`git ls-tree -r <ref> | grep`, looped over `git branch -r`). When the artifact exists on an unmerged branch, the issue is usually VALID and merely blocked on merge ordering \u2014 but do NOT stop there: a plan that says 'do X, but only after sibling PR #N merges' is itself a NOGO trigger ('correct but blocked on an external merge \u2192 not actionable today'), and a deterministic `git merge-base --is-ancestor` gate does NOT rescue it because the next stage still cannot proceed. The fix is to make the PR SELF-CONTAINED: regenerate/vendor the prerequisite INTO the current branch from sources already on it (e.g. generate `requirements.txt` from this branch's own `pixi.lock` via `pixi list --json`) so the PR stands alone against main \u2014 only stack/wait if the prerequisite genuinely cannot be reproduced (needs secrets/infra you lack), in which case encode an explicit ordering dependency (`Depends on #X`, a gate step that HALTS if #X is still open) rather than assuming it will land in time. When you DO vendor a copy from another branch, treat it as a chance to FIX latent bugs: replace any frozen mirror of dynamic data (a hardcoded `_RUNTIME_DEPS` allowlist that's supposed to mirror `pyproject.toml`) with a live read of the source of truth \u2014 a frozen mirror is latent drift by construction. Then read the named check script's ACTUAL runtime deps (grep for subprocess/import/external-tool calls) before asserting its CI environment \u2014 two superficially similar drift-check scripts can have OPPOSITE needs (one stdlib-only/pixi-free, one shelling out to `pixi list --json`). Finally, when a plan's correctness hinges on a judgment call, reduce it to a DETERMINISTIC runnable check (`git merge-base --is-ancestor`, file existence, exit code) \u2014 a re-scope/close recommendation that 'requires human ratification' is a NOGO trigger for plan reviewers; and flag any claim sourced from an external doc you cannot open (a prior plan's 'lines 526-540') as an UNVERIFIED-source assumption, not a fact. Use when: (1) planning an issue that names a specific script/file/artifact/recipe/CI-job as already-existing context, (2) the issue is a follow-up to / auto-generated from a prior issue/PR whose deliverables you have not confirmed MERGED, (3) you are about to conclude an artifact 'never existed' from a current-branch check only, (4) your plan would gate the next stage on an external/sibling PR merging, (5) you are vendoring code or a list from another branch and could transcribe its latent bugs, (6) you are about to assert a CI job's toolchain (pixi/node/stdlib) without reading the script's calls, (7) your plan's central decision needs human sign-off rather than a runnable gate, (8) the issue body cites an external source (a prior plan doc) you cannot directly open/verify.",
-      "version": "2.3.0",
+      "description": "Verify issue and plan premises against authoritative sources before acting. Use this when an issue, PR plan, review, CI fix, or enforcement change assumes an artifact exists, prior work merged, a live service still needs work, a full population was checked, a CI job gates, an implementation returns a shape, or an integration point exists. Convert the premise into deterministic checks before implementing, closing, gating, or declaring work complete.",
+      "version": "3.0.0",
       "source": "./skills/planning-verify-issue-premise-before-implementing.md",
       "category": "architecture",
       "tags": [
         "planning",
         "issue-premise",
         "verify-before-implementing",
-        "branch-scoped-vs-repo-scoped",
-        "scan-all-branches",
-        "unmerged-branch",
-        "merge-ordering",
+        "premise-verification",
+        "assumption-verification",
+        "authoritative-source",
+        "full-population-check",
+        "live-state-check",
         "merge-state",
         "prerequisite-verification",
-        "auto-generated-issue",
-        "depends-on",
-        "merge-gate",
+        "unmerged-branch",
         "self-contained-pr",
-        "blocked-on-external-merge",
-        "vendoring",
-        "frozen-mirror-drift",
-        "source-of-truth",
-        "requirements-drift",
-        "single-source-of-truth",
+        "enforcement-gate",
+        "integration-point",
         "ci-gate",
-        "pixi",
+        "ruleset",
+        "implementation-shape",
+        "route-shape",
         "deterministic-gate",
-        "plan-reviewer-nogo",
-        "re-scope",
-        "intent-vs-literal-ask",
-        "follow-up-issue",
-        "unverified-source",
-        "unverified-assumptions",
-        "dependency-sync",
-        "grep-the-working-tree",
-        "mechanical-fix-claim",
-        "cited-site-reclassification",
-        "locate-by-symbol",
-        "helper-on-unmerged-branch"
+        "no-op-forbidden",
+        "issue-claims",
+        "follow-up-issue"
       ]
     },
     {
@@ -3865,7 +3823,7 @@
     },
     {
       "name": "github-ruleset-required-status-checks-management",
-      "description": "Add a required status check to a GitHub repo branch-protection RULESET (rulesets API, not the legacy branch-protection API) and avoid the TWO sibling deadlock hazards: 'require-before-it-exists' (the job is absent on main) AND 'emitted-name-vs-required-name mismatch' (the job EXISTS, RUNS, and is GREEN on main but emits its check-run under a DIFFERENT name than the required context, so the required name never posts and every PR is BLOCKED-all-green forever). The rulesets PUT REPLACES the rule wholesale, so you must GET->append->PUT the full required_status_checks array (deriving integration_id from an existing Actions check, here 15368) or you DROP the existing checks. THE LOAD-BEARING HAZARD: a required context that never reports permanently BLOCKS every open PR \u2014 diagnose by diffing the ruleset's required_status_checks[].context against the check-run NAMES actually emitted on main (gh api repos/<o>/<r>/commits/$sha/check-runs --jq '[.check_runs[].name]|unique'); any required name NOT in the emitted set is a deadlock. THE FIX: a 'keystone' rename-PR that makes the workflow jobs emit the canonical required names (its own branch emits the corrected names so it is itself mergeable \u2014 merge it FIRST, then main posts the names and the other PRs unblock after re-rebase). SEPARATELY, a follow-up issue can assert a FALSE premise (e.g. #282 said the SAST job 'was added in PR #264' but `gh pr view 264` showed PR #264 was still OPEN, not merged) \u2014 verify 'already done' premises against live state. FULL LIFECYCLE (v1.2.0, verified across 13 repos): EMIT BEFORE REQUIRE \u2014 run the ruleset pass only AFTER the CI-naming rollout PRs merge so every repo emits the canonical names (build/test/lint/package/install/release/security) on main; per repo compute add = canonical \u2229 emitted \u2212 already_required and GET->append->PUT, adding ONLY names CONFIRMED emitting; confirm emission on PR BRANCHES not just main (check a merged PR's head sha: commits/<pr_head_sha>/check-runs) so a push:main-only required check does not deadlock every PR (expected-but-missing); adopt SAFEST-SUPERSET scope (add canonical names, REMOVE nothing \u2014 keep old unit-tests/integration-tests alongside the new aggregate test); after PUT re-VERIFY integrity (all 6 rule types + enforcement:active + refs/heads/main condition survived, strict_required_status_checks_policy preserved) because the PUT replaces wholesale and silently drops rules; and a broad 'finish it' does NOT override a standing 'defer ruleset updates' boundary (a timed-out AskUserQuestion is NOT consent \u2014 get explicit re-authorization before mutating shared branch-protection across repos). Use when: (1) adding a new CI job's check context to a GitHub ruleset as a required status check; (2) a required context is BLOCKED-all-green and you suspect the job emits under a different name than the required context; (3) a follow-up issue says 'add X to required checks' and you must verify the job exists on the default branch first; (4) diagnosing why adding/keeping a required status check could permanently block all PRs; (5) needing the correct integration_id for a GitHub Actions check context in a ruleset; (6) running a batch emit-before-require ruleset pass across many repos after an ecosystem CI-naming rollout. Cross-link: gha-required-checks-branch-protection (the YAML/aggregator + legacy branch-protection PUT mechanics), github-ruleset-enforcement-drift (bare-name + integration_id context form), planning-verify-issue-claims-and-required-check-gating (runs-vs-gates + grep-the-claim discipline), github-auto-merge-ci-gating-merge-method (auto-merge gating + merge method), multi-repo-pr-automation-loop-orchestration (the multi-repo rebase sweep that surfaced this).",
+      "description": "Add a required status check to a GitHub repo branch-protection RULESET (rulesets API, not the legacy branch-protection API) and avoid the TWO sibling deadlock hazards: 'require-before-it-exists' (the job is absent on main) AND 'emitted-name-vs-required-name mismatch' (the job EXISTS, RUNS, and is GREEN on main but emits its check-run under a DIFFERENT name than the required context, so the required name never posts and every PR is BLOCKED-all-green forever). The rulesets PUT REPLACES the rule wholesale, so you must GET->append->PUT the full required_status_checks array (deriving integration_id from an existing Actions check, here 15368) or you DROP the existing checks. THE LOAD-BEARING HAZARD: a required context that never reports permanently BLOCKS every open PR \u2014 diagnose by diffing the ruleset's required_status_checks[].context against the check-run NAMES actually emitted on main (gh api repos/<o>/<r>/commits/$sha/check-runs --jq '[.check_runs[].name]|unique'); any required name NOT in the emitted set is a deadlock. THE FIX: a 'keystone' rename-PR that makes the workflow jobs emit the canonical required names (its own branch emits the corrected names so it is itself mergeable \u2014 merge it FIRST, then main posts the names and the other PRs unblock after re-rebase). SEPARATELY, a follow-up issue can assert a FALSE premise (e.g. #282 said the SAST job 'was added in PR #264' but `gh pr view 264` showed PR #264 was still OPEN, not merged) \u2014 verify 'already done' premises against live state. FULL LIFECYCLE (v1.2.0, verified across 13 repos): EMIT BEFORE REQUIRE \u2014 run the ruleset pass only AFTER the CI-naming rollout PRs merge so every repo emits the canonical names (build/test/lint/package/install/release/security) on main; per repo compute add = canonical \u2229 emitted \u2212 already_required and GET->append->PUT, adding ONLY names CONFIRMED emitting; confirm emission on PR BRANCHES not just main (check a merged PR's head sha: commits/<pr_head_sha>/check-runs) so a push:main-only required check does not deadlock every PR (expected-but-missing); adopt SAFEST-SUPERSET scope (add canonical names, REMOVE nothing \u2014 keep old unit-tests/integration-tests alongside the new aggregate test); after PUT re-VERIFY integrity (all 6 rule types + enforcement:active + refs/heads/main condition survived, strict_required_status_checks_policy preserved) because the PUT replaces wholesale and silently drops rules; and a broad 'finish it' does NOT override a standing 'defer ruleset updates' boundary (a timed-out AskUserQuestion is NOT consent \u2014 get explicit re-authorization before mutating shared branch-protection across repos). Use when: (1) adding a new CI job's check context to a GitHub ruleset as a required status check; (2) a required context is BLOCKED-all-green and you suspect the job emits under a different name than the required context; (3) a follow-up issue says 'add X to required checks' and you must verify the job exists on the default branch first; (4) diagnosing why adding/keeping a required status check could permanently block all PRs; (5) needing the correct integration_id for a GitHub Actions check context in a ruleset; (6) running a batch emit-before-require ruleset pass across many repos after an ecosystem CI-naming rollout. Cross-link: gha-required-checks-branch-protection (the YAML/aggregator + legacy branch-protection PUT mechanics), github-ruleset-enforcement-drift (bare-name + integration_id context form), planning-verify-issue-premise-before-implementing (runs-vs-gates + grep-the-claim discipline), github-auto-merge-ci-gating-merge-method (auto-merge gating + merge method), multi-repo-pr-automation-loop-orchestration (the multi-repo rebase sweep that surfaced this).",
       "version": "1.2.0",
       "source": "./skills/github-ruleset-required-status-checks-management.md",
       "category": "ci-cd",
@@ -4418,7 +4376,7 @@
     },
     {
       "name": "planning-validator-ci-gate-tasks",
-      "description": "Planning-phase risk assessment for 'add a build-free validator + required CI gate' tasks in a submodule meta-repo, NOW WITH LOCALLY-VERIFIED findings that overturn the naive design. The headline (EMPIRICALLY CONFIRMED this round): an authoritative-looking validator CLI can FAIL ON VALID INPUT \u2014 `nats-server -c <f> -t` exits 1 on a perfectly valid config because it eagerly loads TLS cert files (`/etc/nats/certs/server-cert.pem`) that do not exist in CI/dev, conflating syntax errors with runtime resource errors; before adopting `<tool> --check`/`-t` as a gate, run it TWO-SIDED at plan time (known-good -> 0 AND known-bad -> nonzero), not just bad->nonzero. Because nats-server/podman/nomad are not installed on the GitHub runners (and `-t` is unreliable even when present), the WINNING DESIGN is binary-free pure-Python validators (stdlib + PyYAML): a HOCON brace/string-balance checker for NATS `.conf` and `yaml.safe_load` + structural assertions for docker-compose \u2014 these run on any runner with python3 so the required gate is never vacuous (defeats the dead-gate failure mode). Also captured: naive brace-balance gives FALSE PASS without comment+string handling (a `#` comment with an apostrophe flips the quote state machine; `{{` is miscounted) so process line-by-line, break at first UNQUOTED `#`, track quote/escape state, AND give the validator its own committed negative test; the real failure-count->exit-code helper in `e2e/lib/common.sh:41` is `exit_code()` (NOT the invented `exit_with_status` \u2014 read the sourced lib for the exact name); CI tooling presence is part of the gate's correctness (the integration-tests job needed `setup-just` + `pip install pyyaml` added or the new steps are a dead gate); commit negative tests as permanent TDD assets (`tests/test-config-validators.sh`), not inline cp/restore. Still applies: forbid-suppressions gate (no `|| true`/`continue-on-error`/`::warning::`), strengthen pinned `_required.yml` contexts IN PLACE never rename/split, Python read->replace->write fallback for hook-blocked workflow edits. Use when: planning to add a config-syntax/compose-validity validator, a justfile-recipe integrity test, strengthening `just validate-configs`, or wiring any new build-free check into a canonical `_required.yml` gate in a meta-repo \u2014 especially when tempted to shell out to a vendor CLI's `--check`/`-t` flag. Cross-link: ci-hygiene-and-validation-gates (dead-gate detection + build-free mechanics, esp. Pattern 4), justfile-and-local-build-verification (recipe authoring + local verify loop), planning-verify-issue-claims-and-required-check-gating (runs-vs-gates + grep-the-claim), planning-verify-assumptions-before-enforcement-gate (verify infra assumptions + git-ls-files scan scope).",
+      "description": "Planning-phase risk assessment for 'add a build-free validator + required CI gate' tasks in a submodule meta-repo, NOW WITH LOCALLY-VERIFIED findings that overturn the naive design. The headline (EMPIRICALLY CONFIRMED this round): an authoritative-looking validator CLI can FAIL ON VALID INPUT \u2014 `nats-server -c <f> -t` exits 1 on a perfectly valid config because it eagerly loads TLS cert files (`/etc/nats/certs/server-cert.pem`) that do not exist in CI/dev, conflating syntax errors with runtime resource errors; before adopting `<tool> --check`/`-t` as a gate, run it TWO-SIDED at plan time (known-good -> 0 AND known-bad -> nonzero), not just bad->nonzero. Because nats-server/podman/nomad are not installed on the GitHub runners (and `-t` is unreliable even when present), the WINNING DESIGN is binary-free pure-Python validators (stdlib + PyYAML): a HOCON brace/string-balance checker for NATS `.conf` and `yaml.safe_load` + structural assertions for docker-compose \u2014 these run on any runner with python3 so the required gate is never vacuous (defeats the dead-gate failure mode). Also captured: naive brace-balance gives FALSE PASS without comment+string handling (a `#` comment with an apostrophe flips the quote state machine; `{{` is miscounted) so process line-by-line, break at first UNQUOTED `#`, track quote/escape state, AND give the validator its own committed negative test; the real failure-count->exit-code helper in `e2e/lib/common.sh:41` is `exit_code()` (NOT the invented `exit_with_status` \u2014 read the sourced lib for the exact name); CI tooling presence is part of the gate's correctness (the integration-tests job needed `setup-just` + `pip install pyyaml` added or the new steps are a dead gate); commit negative tests as permanent TDD assets (`tests/test-config-validators.sh`), not inline cp/restore. Still applies: forbid-suppressions gate (no `|| true`/`continue-on-error`/`::warning::`), strengthen pinned `_required.yml` contexts IN PLACE never rename/split, Python read->replace->write fallback for hook-blocked workflow edits. Use when: planning to add a config-syntax/compose-validity validator, a justfile-recipe integrity test, strengthening `just validate-configs`, or wiring any new build-free check into a canonical `_required.yml` gate in a meta-repo \u2014 especially when tempted to shell out to a vendor CLI's `--check`/`-t` flag. Cross-link: ci-hygiene-and-validation-gates (dead-gate detection + build-free mechanics, esp. Pattern 4), justfile-and-local-build-verification (recipe authoring + local verify loop), planning-verify-issue-premise-before-implementing (runs-vs-gates, grep-the-claim, infra-assumption verification, git-ls-files scan scope).",
       "version": "1.1.0",
       "source": "./skills/planning-validator-ci-gate-tasks.md",
       "category": "ci-cd",
@@ -4450,30 +4408,6 @@
         "two-sided-validation",
         "tdd-negative-test",
         "tool-install-in-job"
-      ]
-    },
-    {
-      "name": "planning-verify-issue-claims-and-required-check-gating",
-      "description": "Before planning a change to CI gating, distinguish a job that RUNS from a job that GATES the PR \u2014 a test 'wired into CI' is not actually enforced unless its job is a REQUIRED status-check context in the branch ruleset. Confirm the gate is real with `gh api repos/<org>/<repo>/rulesets` (and per-id `required_status_checks[].context`); a job absent from that list runs but does NOT block merges. SEPARATELY, treat an issue's own factual claims \u2014 WHICH job a step lives in, WHAT a test covers \u2014 as CLAIMS to grep-verify against the codebase, because they drift from reality. Worked example (ProjectProteus #184, follow-up from #97): the issue claimed a host-contract test was 'wired into CI' as done, but it ran in a standalone `dispatch-contract-test` job that was NOT in the required list (`lint, unit-tests, integration-tests, security/dependency-scan, security/secrets-scan, build, schema-validation, deps/version-sync`) \u2014 running, not gating. The issue also said the step lived in `integration-tests` (naming drift \u2014 it was a separate job) and that the test covers 'RFC 1123 format + allowlist validation' (a `grep -rniE 'rfc.?1123|allowlist|hostname'` over scripts/ .github/ docs/ returned NOTHING \u2014 no such logic exists; the test only checks host-presence/fail-closed). The fix folds the test into the already-required `integration-tests` job so no destructive ruleset PUT is needed. Use when: (1) an issue claims a fix is 'already done' / 'wired into CI' \u2014 confirm the wiring is ENFORCED (required context), not merely running; (2) an issue names WHERE a change lives (a job) or WHAT a test covers \u2014 verify against the actual files first; (3) planning any change to required CI checks / branch protection. Cross-link: gha-required-checks-branch-protection (the YAML/aggregator fix mechanics), verify-issue-premise-against-code-before-planning (grep-the-premise discipline).",
-      "version": "1.1.1",
-      "source": "./skills/planning-verify-issue-claims-and-required-check-gating.md",
-      "category": "ci-cd",
-      "tags": [
-        "planning",
-        "verification",
-        "required-status-checks",
-        "branch-protection",
-        "issue-claims",
-        "evidence-grounded",
-        "ci-cd",
-        "dispatch-apply",
-        "runs-vs-gates",
-        "rulesets",
-        "grep-the-claim",
-        "naming-drift",
-        "working-tree-clean",
-        "guard-dependency-floor",
-        "scope-discipline"
       ]
     },
     {
@@ -5273,8 +5207,8 @@
     },
     {
       "name": "cli-validator-cross-section-blind-spot",
-      "description": "Markdown-section validators that break on the first non-matching H2 silently miss duplicate sections later in the document. Use when: (1) a tier/table validator parses a markdown section and stops early, (2) a CI gate passes despite a doc contradiction, (3) a 'break' at a section-end guard is the only early-exit in a line-by-line parser.",
-      "version": "2.0.0",
+      "description": "Fix markdown-section validators that silently miss duplicate or contradictory sections because a section parser breaks on the first non-matching H2. Use when a CLI/doc validator parses only the first matching section, a duplicate section later in the document passes CI, or a parser return shape must expose section_count without losing per-item duplicate checks.",
+      "version": "3.0.0",
       "source": "./skills/cli-validator-cross-section-blind-spot.md",
       "category": "debugging",
       "tags": [
@@ -5283,7 +5217,9 @@
         "state-machine",
         "cli-tier-docs",
         "duplicate-section",
-        "break-vs-continue"
+        "cross-section",
+        "break-vs-continue",
+        "return-shape"
       ]
     },
     {
@@ -5913,20 +5849,6 @@
       "tags": []
     },
     {
-      "name": "validation-cli-tier-docs-duplicate-section-detection",
-      "description": "Fix load_documented_tiers to detect duplicate H2 section headers in COMPATIBILITY.md. Use when: (1) the cli-tier-docs validator silently accepts a file with two identical H2 sections, (2) a break-on-H2 parser exits early and misses a second occurrence of the target section, (3) adding duplicate-section detection to a state-machine markdown parser.",
-      "version": "2.0.0",
-      "source": "./skills/validation-cli-tier-docs-duplicate-section-detection.md",
-      "category": "debugging",
-      "tags": [
-        "validation",
-        "markdown-parser",
-        "state-machine",
-        "cli-tier-docs",
-        "duplicate-section"
-      ]
-    },
-    {
       "name": "vite-wasm-havok-fix",
       "description": "Skill: vite-wasm-havok-fix",
       "version": "1.0.0",
@@ -6000,8 +5922,8 @@
     },
     {
       "name": "adr-authoring-indexing-and-maintenance",
-      "description": "Use when: (1) generating a new Architecture Decision Record (ADR) to document a significant architectural decision; (2) an ADR file exists but is not listed in the index table (docs/adr/README.md); (3) updating ADR status to Accepted (Deferred) when implementation is bypassed pending platform support; (4) two or more functions have nearly identical limitation comments and need consolidating into a single ADR with cross-references replacing duplicates; (5) updating ADR directory tree listings to reflect actual filesystem contents after file deletions or additions; (6) writing an ADR on an epic branch where some child PRs have not yet merged to main \u2014 use pending-tense language for open PRs, past-tense only for work already on main; (7) writing an ADR that references decisions from other repos or external docs \u2014 verify every ADR number on disk before asserting it exists, use commit SHAs for cross-repo work, cite file:line for cross-repo CLAUDE.md claims; (8) writing an ADR whose Decision section names a code artifact \u2014 verify it is git-tracked before citing it as canonical; (9) adding a structural guard test that keeps the ADR index enumerable and in sync with on-disk files.",
-      "version": "1.3.0",
+      "description": "Use when: (1) generating a new Architecture Decision Record (ADR) to document a significant architectural decision; (2) an ADR file exists but is not listed in the index table (docs/adr/README.md); (3) updating ADR status to Accepted (Deferred) when implementation is bypassed pending platform support; (4) two or more functions have nearly identical limitation comments and need consolidating into a single ADR with cross-references replacing duplicates; (5) updating ADR directory tree listings to reflect actual filesystem contents after file deletions or additions; (6) writing an ADR on an epic branch where some child PRs have not yet merged to main \u2014 use pending-tense language for open PRs, past-tense only for work already on main; (7) writing an ADR that references decisions from other repos or external docs \u2014 verify every ADR number on disk before asserting it exists, use commit SHAs for cross-repo work, cite file:line for cross-repo CLAUDE.md claims; (8) writing an ADR whose Decision section names a code artifact \u2014 verify it is git-tracked before citing it as canonical; (9) adding a structural guard test that keeps the ADR index enumerable and in sync with on-disk files; (10) creating a pre-implementation architecture skeleton for a multi-stage system \u2014 use full identifier names (not abbreviations) in ROUTES tables, complete line-range citations for code anchors, consistent file:line paths for all prompt-builder references, and structure the doc with status banner, topology, contract, per-stage docs, ROUTES table, seeding/reconstruction, and 'finalized-in-cutover' markers.",
+      "version": "1.4.0",
       "source": "./skills/adr-authoring-indexing-and-maintenance.md",
       "category": "documentation",
       "tags": [
@@ -6479,85 +6401,6 @@
       "source": "./skills/planning-slo-sla-adr-meta-repo.md",
       "category": "documentation",
       "tags": []
-    },
-    {
-      "name": "planning-verify-assumptions-before-enforcement-gate",
-      "description": "When planning a fix for an audit/security/POLA finding that ends in a doc-config enforcement gate, verify the cited evidence location AND every infrastructure assumption BEFORE designing the gate \u2014 issue line-number citations, 'the e2e stack' descriptions, and 'add it to the existing CI/hook' advice are frequently imprecise. THROUGH-LINE: verify the gate against the POST-FIX tree, not just the pre-fix tree. When a plan ships BOTH an enforcement-gate matcher AND the edit that must satisfy it, reconcile the matcher's look-back/look-ahead window against the EXACT line offsets the edit produces (the 'matcher-vs-edit contract'), and make every gate self-test mirror the byte-for-byte SHIPPED layout (plus a boundary negative). Scope the gate's file scan with `git ls-files` (the index) instead of filesystem `rglob` so submodules and gitignored worktrees are excluded for free; confirm the language's test runner is actually wired (a polyglot/meta-repo may have no pytest) and prefer a stdlib `--self-test`; resolve every risk in the plan body (a risk merely listed in a Learnings note does NOT count). Use when: (1) an issue cites a fail-open credential/config (e.g. GF_AUTH_ANONYMOUS_ENABLED, admin/admin) in 'the e2e stack' or by file:line, (2) you are about to scope a fix to docs + e2e while leaving 'real prod' alone, (3) you plan to add a doc-as-gate check (pygrep hook / scripts/check_*.py / CI step) that must catch a PRE-EXISTING finding, (4) the gate would scan a tree that contains submodules, (5) the plan leans on a pytest harness / python-at-hook-stage / regex-proximity assumption that was never confirmed on disk, (6) the plan ships a proximity/window matcher AND the edit that must land inside that window \u2014 reconcile the window size against the edit's exact line offset and self-test the shipped layout.",
-      "version": "1.2.0",
-      "source": "./skills/planning-verify-assumptions-before-enforcement-gate.md",
-      "category": "documentation",
-      "tags": [
-        "planning-methodology",
-        "doc-as-gate",
-        "enforcement-gate",
-        "pola",
-        "security-finding",
-        "verify-evidence",
-        "e2e-vs-prod",
-        "full-tree-scan",
-        "submodule-scope",
-        "git-ls-files",
-        "pre-commit-hook",
-        "pygrep",
-        "ci-gate",
-        "self-test",
-        "resolve-not-list-risks",
-        "unverified-assumptions",
-        "matcher-vs-edit-contract",
-        "post-fix-tree",
-        "lookback-window",
-        "self-test-mirrors-shipped-layout"
-      ]
-    },
-    {
-      "name": "planning-verify-impl-return-shapes-before-asserting",
-      "description": "When planning route/API tests or API changes from a follow-up issue, the issue body's claimed file paths, handler line numbers, and response shapes are NOT authoritative \u2014 read the actual source (store + route) per handler before asserting. Route handlers wrap store return values inconsistently, so a plan that assumes a uniform `{\"agent\": ...}` wrapper produces tests that fail to compile or assert. Use when: (1) planning HTTP route/handler tests from a follow-up or refinement issue, (2) the issue cites a specific test file path or handler line numbers, (3) tests assert on JSON response body shape, (4) you are about to rely on a client-library method overload (e.g. httplib Patch) or framework auto-registration (gtest_discover_tests) without building.",
-      "version": "1.0.0",
-      "source": "./skills/planning-verify-impl-return-shapes-before-asserting.md",
-      "category": "documentation",
-      "tags": [
-        "planning",
-        "verify-before-asserting",
-        "return-shape",
-        "route-tests",
-        "api-tests",
-        "issue-premise",
-        "follow-up-issue",
-        "cpp",
-        "cpp-httplib",
-        "gtest",
-        "source-of-truth"
-      ]
-    },
-    {
-      "name": "planning-verify-issue-premises-against-main",
-      "description": "Consolidated / auto-generated follow-up issue bodies often describe a PLANNED or PARALLEL-BRANCH state, not the state of `main` \u2014 AND, conversely, a 'fix this regression / revert this bad value' issue may already be FULLY REMEDIATED on `main` by a prior PR (a stale issue body that quotes a file:line and a specific bad value is NOT evidence the bad value is still present; issue bodies are point-in-time snapshots and are never edited). Before planning, verify EVERY premise against `main`: the issue's OPEN/CLOSED state, whether the PR it claims 'already did X' is actually merged, whether referenced files/recipes/commands exist on `main`, whether a parallel in-flight PR already does this work, AND whether the cited bad value is actually still present on disk + HEAD. Prove commits are/aren't on main with `git merge-base --is-ancestor`, read the on-main file with `git show HEAD:<path>`, find a prior remediating commit with `git log -S<value> -- <path>` / `git show <commit> --stat` (look for 'Closes #<earlier-dup-issue>'), confirm no pending regression with `git diff HEAD -- <path>` / `git status --short`, list on-main tests with `git ls-files`, check issue state with `gh issue view N --json state`, and surface overlapping PRs with `gh pr list`. Make the plan SELF-CONTAINED against main, not dependent on unmerged PRs; if a regression is already fixed, the deliverable is verification evidence + a recommendation to close the issue, NOT a no-op edit (a no-op diff fails review); never re-propose a regression GUARD that already exists; never copy an issue's prescribed 'mark X resolved' wording while the underlying issue is still OPEN; and never wire a CI gate to a recipe/target that does not yet exist on main (it hard-fails on day one). Use when: (1) planning a consolidated / auto-generated / follow-up issue that asserts 'PR #N did X' or 'issue #M is resolved', (2) the issue prescribes editing CLAUDE.md / docs to mark a defect resolved, (3) the issue tells you to wire a hook/gate to a named command (e.g. `just test-all`), (4) the issue overlaps work that may be in flight on a parallel branch / PR, (5) any premise depends on commits that may live on `*-auto-impl` or other unmerged branches, (6) planning a fix for a 'revert this regression / restore this value / fix this bad config value' issue \u2014 verify the cited bad value is actually still present on disk + HEAD before planning edits, because a prior PR may already have remediated it (and added the regression guard).",
-      "version": "1.1.0",
-      "source": "./skills/planning-verify-issue-premises-against-main.md",
-      "category": "documentation",
-      "tags": [
-        "planning",
-        "verify-before-planning",
-        "issue-premise",
-        "against-main",
-        "unmerged-pr",
-        "parallel-branch",
-        "follow-up-issue",
-        "consolidated-issue",
-        "auto-generated-issue",
-        "git-merge-base",
-        "git-show-head",
-        "gh-issue-state",
-        "parallel-pr-overlap",
-        "pre-commit",
-        "justfile-recipe",
-        "self-contained-plan",
-        "stale-issue",
-        "regression-already-fixed",
-        "no-op-edit",
-        "git-log-pickaxe",
-        "verified-local-vs-ci"
-      ]
     },
     {
       "name": "readme-badges-live-sources-and-count-drift-prevention",
@@ -7070,6 +6913,29 @@
       ]
     },
     {
+      "name": "mobilenetv1-epoch-training-validation",
+      "description": "Verified workflow for running long-duration ML training validation (35+ minutes on CPU) in CI-constrained environments with timeout limits. Captures real training-loop behavior by executing full epoch with detached nohup process, polling log output, and committing authentic loss-progression evidence. Use when: (1) training runs exceed 2-minute foreground timeout and require background execution, (2) validating backward-pass implementations by confirming monotone-decreasing loss over full epoch, (3) capturing verification evidence for PR closure without re-running in CI, (4) handling download/data-prep as pre-training subprocess tasks, (5) need to validate loss values fall monotonically to gate PR approval.",
+      "version": "1.0.0",
+      "source": "./skills/mobilenetv1-epoch-training-validation.md",
+      "category": "optimization",
+      "tags": [
+        "epoch-training",
+        "validation-evidence",
+        "loss-monitoring",
+        "detached-process",
+        "nohup-polling",
+        "cpu-training",
+        "timeout-workaround",
+        "verification-checkpoint",
+        "gradient-correctness",
+        "backward-pass-validation",
+        "mobilenetv1",
+        "cifar10",
+        "projectodyssey",
+        "mojo"
+      ]
+    },
+    {
       "name": "optimizer-shampoo-matrix-form-api",
       "description": "Use when: (1) implementing the matrix-form Shampoo optimizer (Anil et al. 2020) in Mojo, (2) calling shampoo_step or initialize_shampoo_state from projectodyssey.training.optimizers.shampoo, (3) wiring a mixed optimizer (Shampoo for rank-2 FC weight matrices, SGD/Lion fallback for conv kernels and biases), (4) adding per-parameter state buffers to a Mojo model struct for Shampoo-eligible parameters, (5) debugging wrong arity or wrong tuple-unpack errors from shampoo_step.",
       "version": "1.0.0",
@@ -7339,14 +7205,6 @@
         "embedded",
         "gocache"
       ]
-    },
-    {
-      "name": "local-test-failures-env-pollution-not-ci",
-      "description": "Integration/unit tests can fail locally for environmental reasons that never occur in CI: a stale console-script binary picked up by shutil.which() from a sibling checkout, and HEPH_*/config env vars leaked into the interactive shell that pollute os.environ.copy()-based tests. Use when: (1) a test fails locally but the same job is green in CI, (2) shutil.which() in a test resolves a binary from another worktree/checkout, (3) a _phase_env / os.environ.copy() test asserts a var is absent but it's present, (4) deciding whether a local red is a real regression before committing.",
-      "version": "1.0.0",
-      "source": "./skills/local-test-failures-env-pollution-not-ci.md",
-      "category": "testing",
-      "tags": []
     },
     {
       "name": "mojo-tensor-unit-test-and-gradient-checking",
@@ -7660,14 +7518,6 @@
         "copytree",
         "checkpoint"
       ]
-    },
-    {
-      "name": "pytest-local-false-failure-inherited-heph-env-vars",
-      "description": "Diagnose automation-loop unit tests that fail LOCALLY ONLY because the running loop's shell already exported HEPH_* vars that os.environ.copy() inherits. Use when: (1) automation-loop unit tests that assert a HEPH_* (or any inherited) env var is ABSENT fail locally but pass in CI; (2) you ran the suite from inside the live automation loop whose shell already exported HEPH_LOOP_INDEX / HEPH_*_MODEL etc.; (3) you need to confirm a local-only failure is environment divergence (not a code regression) before editing any code.",
-      "version": "1.0.0",
-      "source": "./skills/pytest-local-false-failure-inherited-heph-env-vars.md",
-      "category": "testing",
-      "tags": []
     },
     {
       "name": "pytest-nested-marker-walk-up-contract",
@@ -8004,19 +7854,21 @@
     },
     {
       "name": "testing-env-leak-local-fail-ci-pass",
-      "description": "Use when: (1) a pytest test for an env-building helper that does os.environ.copy() then conditionally adds keys FAILS locally but PASSES in CI, (2) an assertion like `assert 'HEPH_X' not in env` fails only on your machine, (3) you are running tests from inside the automation loop (or any wrapper) that exports the very variables the test asserts are absent, (4) deciding whether a local-only test failure is a real bug or ambient shell environment pollution \u2014 re-run with `env -u <VAR>...` before changing any code or weakening an assertion.",
-      "version": "1.0.0",
+      "description": "Diagnose tests that fail locally but pass in CI because the local environment differs: inherited variables copied by os.environ.copy(), stale console scripts resolved by PATH or shutil.which(), or sibling checkout artifacts. Use when local pytest is red, CI is green, and the failure could be ambient shell/PATH pollution rather than a code regression.",
+      "version": "2.0.0",
       "source": "./skills/testing-env-leak-local-fail-ci-pass.md",
       "category": "testing",
       "tags": [
         "pytest",
-        "test-isolation",
-        "environment-variables",
+        "local-vs-ci",
+        "env-pollution",
         "os-environ-copy",
-        "local-fail-ci-pass",
-        "HEPH_",
-        "automation-loop",
-        "monkeypatch-delenv"
+        "path-pollution",
+        "stale-console-script",
+        "heph-env-vars",
+        "shutil-which",
+        "false-failure",
+        "test-isolation"
       ]
     },
     {
@@ -8195,28 +8047,6 @@
       ]
     },
     {
-      "name": "testing-os-environ-pollution-local-vs-ci-false-failure",
-      "description": "A test passes in clean CI but fails ONLY on your local machine because your shell exported env vars that an os.environ.copy()-derived dict inherits, breaking an 'assert VAR not in env' check. Use when: (1) a pytest assertion of the form `assert \"X\" not in env` (env built via os.environ.copy()) is RED locally but GREEN in CI; (2) you ran pytest from inside a live automation loop that exports HEPH_LOOP_INDEX / HEPH_TOTAL_LOOPS / HEPH_PLANNER_MODEL / HEPH_REVIEWER_MODEL / HEPH_IMPLEMENTER_MODEL / HEPH_ADVISE_MODEL; (3) _phase_env / loop_runner tests fail locally with leaked HEPH_* keys; (4) any local-only red that CI shows green and you must decide environment-pollution vs real regression before touching code.",
-      "version": "1.0.0",
-      "source": "./skills/testing-os-environ-pollution-local-vs-ci-false-failure.md",
-      "category": "testing",
-      "tags": [
-        "pytest",
-        "test-isolation",
-        "os-environ",
-        "environ-copy",
-        "env-pollution",
-        "local-vs-ci",
-        "false-failure",
-        "flaky",
-        "phase_env",
-        "loop_runner",
-        "heph-env-vars",
-        "env-minus-u",
-        "monkeypatch-delenv"
-      ]
-    },
-    {
       "name": "testing-oserror-swallow-nonfatal-patch-pattern",
       "description": "Use when: (1) you need to test that a function swallows OSError (file write failures, permission errors, disk-full conditions) without raising to the caller; (2) the code under test calls Path.write_text, open().write(), or similar and catches OSError internally; (3) you want to verify that a logging/state-capture helper is non-fatal when I/O fails; (4) you need to inject a file-system error via unittest.mock.patch with side_effect=OSError.",
       "version": "1.0.0",
@@ -8376,16 +8206,20 @@
     },
     {
       "name": "address-review-preexisting-unrelated-precommit-failure",
-      "description": "During an in-loop address-review / pre-merge gate, `pre-commit run --all-files` fails on a hook you never touched (here `hephaestus-check-api-table-docs` with 4 `hephaestus.cli`/`hephaestus.config`/`hephaestus.utils` COMPATIBILITY.md row violations) while your PR is tightly scoped to unrelated files. The correct action is NOT to fix the hook (that is out-of-scope scope creep belonging to separate issues) \u2014 it is to PROVE the failure is pre-existing debt on base HEAD and commit only the in-scope change. The durable technique: `git stash push <your-changed-file>` then re-run just the failing hook `pre-commit run <hook-id> --all-files`; identical failure with your change stashed = already red on base \u21d2 not introduced by you \u21d2 out-of-scope (`git stash pop` to restore). If the failure DISAPPEARS when stashed, it IS yours and you must fix it. Use when: (1) an address-review / pre-merge gate runs `pre-commit run --all-files` and a hook you did not touch fails; (2) you must decide fix-vs-out-of-scope for a failing gate on a tightly-scoped PR; (3) a scoped `pytest` run prints `FAIL Required test coverage of N% not reached` (that is the GLOBAL coverage gate firing on a partial run, NOT a test failure \u2014 read the `N passed` summary line); (4) a repo-wide hook is red for everyone and you suspect pre-existing debt (trust the CI log / the stash-verify, not a bare local red). Do NOT conflate the three noise traps. Before committing the in-scope change you STILL must run the scoped target test (`pixi run pytest <test> -k <class> -q` \u2192 passes) plus `ruff check` + `ruff format --check` on the edited file (clean), then commit ONLY the in-scope file(s) signed + DCO (`git -c user.email=<key-email> commit -S -s`; committer email MUST match the GPG key or pr-policy silently treats it unsigned \u2014 verify via `gh api .../commits/<sha> .commit.verification`, `git log --show-signature` can lie). Do NOT push if an orchestrator owns push.",
-      "version": "1.0.0",
+      "description": "Use when a local pre-merge/pre-push gate goes red on work your PR did not introduce. Covers two verified variants: (1) `pre-commit run --all-files` fails on an unrelated hook, where the durable proof is stash-verify (`git stash push <your-changed-file>` then rerun just the failing hook; identical failure means pre-existing/out-of-scope); (2) a post-rebase `git push` pre-push hook runs a broad pytest suite and fails on unrelated local host assumptions (for example macOS lacks `/usr/bin/bash` or uses Bash 3.2 without Bash 4 features) while PR-specific tests pass. The rule is: prove/classify the failure, run focused validation against the PR diff, do not expand scope to repair unrelated local gate debt, and document any `--no-verify` push exception with the exact full-hook failure and targeted-pass evidence.",
+      "version": "1.1.0",
       "source": "./skills/address-review-preexisting-unrelated-precommit-failure.md",
       "category": "tooling",
       "tags": [
         "pre-commit",
+        "pre-push",
         "address-review",
         "out-of-scope",
         "preexisting-debt",
         "stash-verify",
+        "targeted-validation",
+        "macos-bash",
+        "no-verify-exception",
         "scope-creep",
         "coverage-gate-partial-run",
         "repo-wide-debt",
@@ -8826,21 +8660,6 @@
         "serialization",
         "nan-sanitization",
         "click"
-      ]
-    },
-    {
-      "name": "cli-tier-docs-duplicate-section-detection",
-      "description": "Fix cli-tier-docs validator blindness to duplicate '## Console-Script Stability Tiers' H2 sections. Use when: (1) load_documented_tiers uses break to exit at the first non-matching H2, silently ignoring a second tier section; (2) cross-section contradictions (same CLI with different tiers in two sections) are not detected by find_duplicate_tiers(); (3) extending a section-scoped parser to accumulate across all matching H2 sections; (4) adding a duplicate-section TierDocFinding sentinel when section_count > 1; (5) updating callers that unpack a 2-tuple return from load_documented_tiers to a 3-tuple.",
-      "version": "1.0.0",
-      "source": "./skills/cli-tier-docs-duplicate-section-detection.md",
-      "category": "tooling",
-      "tags": [
-        "cli-tier-docs",
-        "validation",
-        "markdown-parser",
-        "duplicate-section",
-        "hephaestus",
-        "COMPATIBILITY.md"
       ]
     },
     {
@@ -9918,22 +9737,6 @@
         "red-test",
         "planning-risk"
       ]
-    },
-    {
-      "name": "planning-verify-full-population-not-just-named-entities",
-      "description": "When an issue scopes work to an ENTIRE population ('across the ecosystem', 'all repos', 'every X') but names only a subset, enumerate the full set YOURSELF and loop your verification over ALL of it \u2014 the items the issue names are usually NOT where the residue hides. Verifying only the named subset structurally cannot find defects in the unnamed members, which is exactly where a reviewer flags 'uneven coverage' and where real migration residue survives. Use when: (1) an issue/ticket says 'across the ecosystem / all repos / every X' but lists only some entities, (2) declaring a migration/standardization complete based on checking only the named entities, (3) any verification whose conclusion ('done') depends on NOT finding residue anywhere in a population.",
-      "version": "1.0.0",
-      "source": "./skills/planning-verify-full-population-not-just-named-entities.md",
-      "category": "tooling",
-      "tags": []
-    },
-    {
-      "name": "planning-verify-live-state-before-assuming-work-remains",
-      "description": "When an issue describes work to be done (a migration, rename, or config change), verify the LIVE external state FIRST with gh/grep before planning any edits \u2014 the work may already be complete, OR the deployed state may be the OPPOSITE of what the issue claims, making the correct fix a drift-closure rather than a from-scratch change. An issue body is a snapshot from when it was filed and drifts: the default branch, CI config, open-PR bases, linked-issue states, AND the live applied ruleset all change underneath it. Includes the gh-API gotcha that `gh api repos/ORG/REPO/branches/master` RETURNS the default branch via HTTP redirect for a MISSING branch (false positive that master exists) \u2014 use the `git/refs/heads` listing instead. Also covers the static-analysis-only planning trap: fixing a 'one-line' GitHub ruleset enforcement/required-check issue purely by reading config files (e.g. flipping `enforcement: evaluate` \u2192 `active`) without confirming what is actually applied to the live org/repo \u2014 a single `gh api .../rulesets` query can confirm the live ruleset is ALREADY active (so re-applying the stale on-disk evaluate file via an idempotent PUT would DOWNGRADE it), prove the exact required-context format (bare names + integration_id), settle a docs 9-vs-8 count dispute, and confirm the org endpoint 404s on FREE plan \u2014 resolving several unverified assumptions at once. Use when: (1) an issue/ticket describes a migration or change that may already be done, (2) planning work whose premise depends on live external state (default branch, CI config, issue status, applied ruleset), (3) before recommending edits driven by an issue's stated assumptions, (4) before writing any 'Files to Modify' that exist only because the issue said so, (5) planning a ruleset enforcement flip or required-status-check context change from static file inspection without querying `gh api .../rulesets`, (6) a 'one-line' config fix that also deletes files / removes flags / refactors scripts (scope-creep + irreversible-delete + rollback-regression risk), (7) two in-repo docs disagree on a number \u2014 resolve it against the deployed system, not either doc.",
-      "version": "1.3.0",
-      "source": "./skills/planning-verify-live-state-before-assuming-work-remains.md",
-      "category": "tooling",
-      "tags": []
     },
     {
       "name": "png-jpeg-to-idx-conversion",

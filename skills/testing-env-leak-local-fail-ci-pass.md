@@ -2,10 +2,10 @@
 name: testing-env-leak-local-fail-ci-pass
 description: "Diagnose tests that fail locally but pass in CI because the local environment differs: inherited variables copied by os.environ.copy(), stale console scripts resolved by PATH or shutil.which(), or sibling checkout artifacts. Use when local pytest is red, CI is green, and the failure could be ambient shell/PATH pollution rather than a code regression."
 category: testing
-date: 2026-07-04
+date: 2026-06-11
 version: "2.0.0"
 user-invocable: false
-verification: verified-ci
+verification: verified-local
 history: testing-env-leak-local-fail-ci-pass.history
 tags: [pytest, local-vs-ci, env-pollution, os-environ-copy, path-pollution, stale-console-script, heph-env-vars, shutil-which, false-failure, test-isolation]
 ---
@@ -16,14 +16,14 @@ tags: [pytest, local-vs-ci, env-pollution, os-environ-copy, path-pollution, stal
 
 Local red tests are not automatically code regressions when the same checks are green in CI. First verify whether the local process inherited state CI does not have: exported env vars, stale console-script binaries, sibling checkout packages, or a polluted PATH.
 
-This skill consolidates four ProjectHephaestus local-fail/CI-pass memories. The durable rule is: prove the exact executable, import path, and inherited environment before editing production code or weakening tests.
+This skill consolidates the previous canonical memory plus three ProjectHephaestus local-fail/CI-pass memories. The durable rule is: prove the exact executable, import path, and inherited environment before editing production code or weakening tests.
 
 | Field | Value |
 |-------|-------|
 | Date | 2026-07-04 |
 | Objective | Generalize local-only pytest failure triage for env/PATH pollution while preserving issue-specific examples. |
 | Outcome | Canonical skill replaces three narrower duplicate memories; source snapshots are preserved in history. |
-| Verification | verified-ci for the core pattern, with local reproductions preserved for each absorbed example. |
+| Verification | verified-local for this consolidation; source examples preserve their original verified-ci/local status in history. |
 
 ## When to Use
 

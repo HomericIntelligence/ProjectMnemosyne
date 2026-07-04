@@ -2,10 +2,10 @@
 name: cli-validator-cross-section-blind-spot
 description: "Fix markdown-section validators that silently miss duplicate or contradictory sections because a section parser breaks on the first non-matching H2. Use when a CLI/doc validator parses only the first matching section, a duplicate section later in the document passes CI, or a parser return shape must expose section_count without losing per-item duplicate checks."
 category: debugging
-date: 2026-07-04
+date: 2026-06-13
 version: "3.0.0"
 user-invocable: false
-verification: verified-ci
+verification: verified-local
 history: cli-validator-cross-section-blind-spot.history
 tags: [validation, markdown-parser, state-machine, cli-tier-docs, duplicate-section, cross-section, break-vs-continue, return-shape]
 ---
@@ -23,7 +23,7 @@ This skill consolidates three CLI tier-doc validator memories. The general fix i
 | Date | 2026-07-04 |
 | Objective | Generalize duplicate-section validator repair while preserving ProjectHephaestus issue-specific implementation details. |
 | Outcome | Canonical v3 replaces two duplicate memories and keeps exact source snapshots in history. |
-| Verification | verified-ci; ProjectHephaestus PRs #1301 and #1302 both passed CI. |
+| Verification | verified-local for this consolidation; source examples preserve their original verified-ci status in history. |
 
 ## When to Use
 

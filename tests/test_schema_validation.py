@@ -88,6 +88,21 @@ class TestMarketplaceSchema:
     def test_total_plugins_is_integer(self):
         assert isinstance(self.marketplace["total_plugins"], int)
 
+    def test_total_plugins_matches_plugin_entries(self):
+        assert self.marketplace["total_plugins"] == len(self.marketplace["plugins"])
+
+    def test_plugin_source_paths_exist(self):
+        missing_sources = [
+            plugin["source"]
+            for plugin in self.marketplace["plugins"]
+            if not (ROOT / plugin["source"].lstrip("./")).is_file()
+        ]
+        assert missing_sources == []
+
+    def test_total_plugins_matches_skill_files(self):
+        skill_files = [path for path in (ROOT / "skills").glob("*.md") if not path.name.endswith(".notes.md")]
+        assert self.marketplace["total_plugins"] == len(skill_files)
+
     def test_categories_are_valid(self):
         for cat in self.marketplace["categories"]:
             assert cat in VALID_CATEGORIES, f"Unknown category: {cat}"

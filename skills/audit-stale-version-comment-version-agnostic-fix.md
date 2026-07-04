@@ -241,7 +241,7 @@ the artifact is not a learning, it's a confession. Specifically:
 
 - **Parent principle:** `code-quality-enforcement-gates` §10 (ground-truth verification of audit/reviewer findings before acting) and §11 (tracking-doc checkbox drift — the analogous "stale state in a markdown doc" pattern). This skill is the **comment-specific specialization** of §10.
 - **Coordinate-drift companion:** `audit-doc-consistency-fix-verify-coordinates-on-disk` covers the orthogonal failure mode where `file:line` coordinates inherited from an audit have drifted; this skill assumes you have already applied that re-anchoring discipline and focuses on the *content* of the replacement.
-- **Premise verification:** `planning-verify-issue-premises-against-main` for the analogous failure mode where an issue body asserts a state that does not match `main`.
+- **Premise verification:** `planning-verify-issue-premise-before-implementing` for the analogous failure mode where an issue body asserts a state that does not match `main`.
 - **Same-turn closure (general principle):** The "same-turn learning-loop closure" sub-section in this skill's Verified Workflow generalizes beyond stale-version comments: any self-critique step (`/learn`, plan-self-review, reviewer critique) that surfaces a plan-body flaw must be applied to the artifact in the SAME turn before submission — the critique is a punch-list, not a footnote. This principle is not tied to a single sibling skill; it applies wherever a planning artifact and a self-critique step coexist in one turn.
 
 ## History
