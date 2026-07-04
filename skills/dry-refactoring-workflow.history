@@ -1,6 +1,63 @@
 <!-- markdownlint-disable MD024 -->
 # dry-refactoring-workflow — History
 
+## v1.21.0 (2026-07-04)
+
+**Changed by:** ProjectHephaestus #1823 (R1) — PLANNING a pure-function MOVE (`review_pr_inline` / `resolve_addressed_threads` / `run_pr_review_analysis` → a `pr_review_core.py` sibling) whose moved functions' INTERNAL calls are themselves patched test seams; captured after the R0 plan received a NOGO (grade C) for the CORRECTNESS ERROR of claiming a re-export shim on the OLD module keeps those seams working — /learn
+**Verification:** unverified — PLANNING-ONLY (for the new Phase 26; the plan was never executed, no code/tests/CI). The rest of the skill is unchanged — `verified-ci` except the planning-only Phases 10/13/14/15/25/26 and the verified-local Phases 16/12d/17/18/19/20/21/22/23.
+
+### What changed
+
+- Added Phase 26 (**PLANNING-ONLY / unverified** — NOT executed) — "PLANNING a pure-function MOVE to a new
+  sibling module when the moved function's INTERNAL calls are themselves patched test seams — the
+  transitive-patch-seam repoint rule." This is the **load-bearing CORRECTION to Phase 25f**: Phase 25f (and
+  Phases 14/20/21) say keep the patched name importable at the OLD path via a re-export shim — NECESSARY but
+  **INSUFFICIENT** for the transitive case, and the R0 plan for #1823 MISAPPLIED it, claiming a re-export
+  shim on `pr_reviewer` "keeps tests working" for a `patch("...pr_reviewer.run_pr_review_analysis")` seam
+  that reaches INTO the moved `review_pr_inline`. That was the CORRECTNESS ERROR that earned R0 a NOGO / grade C.
+- **26a — WHY the shim is insufficient: name resolution follows the DEFINING module.** A
+  `patch("pkg.MODULE.name")` overrides ONLY the binding looked up by the function whose BODY reads `name`,
+  and Python resolves a module-level function's globals in THE MODULE THE FUNCTION IS DEFINED IN. So after a
+  pure function `f` moves from `old_mod.py` to `new_core.py`, `f`'s internal `g()` resolves `g` in
+  `new_core`'s namespace; a test doing `patch("pkg.old_mod.g")` while triggering `f` patches a name `f` no
+  longer reads → the mock SILENTLY never fires (and often passes vacuously, or `f` reaches a real
+  `gh`/`claude` subprocess). A re-export shim (`from .new_core import f, g  # noqa: F401`) fixes
+  `from pkg.old_mod import f` IMPORTERS; it does NOT redirect `f`'s internal lookup of `g`. Re-export ≠
+  patch-target redirection.
+- **26b — the repoint decision is PER-PATCH-SITE, driven by where the READING function lives AFTER the
+  move.** Patched name read by a function that STAYS in the wrapper (a class method like
+  `PRReviewer._review_pr`, `AddressReviewer._run_fix_session`) → KEEP the old `pkg.old_mod.name` path (the
+  re-export shim of Phase 25f suffices). Patched name read by a function that MOVES to the core
+  (`run_pr_review_analysis`, `review_pr_inline`, `run_address_fix_session`, `resolve_addressed_threads`) →
+  REPOINT to `pkg.new_core.name`.
+- **26c — the trap is TRANSITIVE / multi-hop; trace the FULL call chain and patch the INNERMOST reader's
+  module.** A test's entry point can be a class method that STAYS
+  (`reviewer._resolve_addressed_threads(...)`) which DELEGATES to a module-level function that MOVES
+  (`resolve_addressed_threads`) which reads the patched name (`gh_pr_resolve_thread`) — so the patch targets
+  `pr_review_core`, not `pr_reviewer`, even though the test never names the moved function. Likewise
+  `_run_impl_review_step → review_pr_inline (MOVES) → run_pr_review_analysis` means
+  `test_implementer_loop.py`'s `patch("...pr_reviewer.run_pr_review_analysis")` must repoint to
+  `...pr_review_core.*`.
+- **26d — the planning deliverable is a per-patch-site TABLE.** Built from
+  `grep -rn 'patch("pkg.<old_mod>.' tests/` (and `patch.object`, which usually STAYS — bound to the
+  instance): columns [test site | patched name | function whose body READS it | does that fn MOVE? |
+  resulting patch path]. This table IS the deliverable that prevents the R0-class NOGO. Also CO-LOCATE
+  cross-core references: a moved `f` that calls a moved `g` should live in the SAME new core module so their
+  mutual call resolves INSIDE the core and `patch("pkg.new_core.g")` correctly overrides it (splitting `f`
+  and `g` re-creates the transitive trap at a new seam).
+- **26e — acceptance gate (planning-only).** (a) Run the repointed test classes and assert the MOCKS FIRE
+  (`mock.assert_called*`) — NOT just that tests pass, because a broken patch commonly passes VACUOUSLY. (b) A
+  self-falsifying grep must return EMPTY: no `patch("pkg.old_mod.<moved-inner-name>")` remains anywhere in
+  `tests/` for any name whose reader moved to the core.
+- Added 3 Failed Attempts rows (rely-on-shim-for-transitive-seam → mock silently never fires; classify by the
+  test entry point rather than the innermost reader; and the co-location / assert-mocks-fire discipline), a
+  Verified On entry, a description item (26), tags, and a Version History entry.
+- Bumped frontmatter `version` `1.20.0` → `1.21.0`; `date` stays `2026-07-04`; frontmatter `verification`
+  stays `unverified` (per the v1.10.0+ convention), with Phase 26 carrying its own inline planning-only
+  label. Built on the branch of the still-open PR #2970 (v1.20.0 / Phase 25), so Phase 25 is preserved in
+  full. Sibling to the planning-only Phases 10/13/14/15/24/25; explicit CORRECTION to Phase 25f. Prior
+  v1.20.0 snapshot archived below.
+
 ## v1.20.0 (2026-07-04)
 
 **Changed by:** ProjectHephaestus #1823 (final issue of strictly-serialized epic #1809) — PLANNING the FINAL (14th) cleanup-wave issue whose deliverables ASSUME infrastructure (`stages/pr_review.py`, `run_pipeline`, `PipelineConfig`, `PipelineScope`, `ADR-0006`) that predecessor issues #1810–#1822 had NOT yet built (all 13 OPEN on disk at planning time) — /learn
