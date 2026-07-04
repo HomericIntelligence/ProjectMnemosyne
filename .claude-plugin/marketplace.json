@@ -6,19 +6,19 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "2.1.0",
-  "total_plugins": 597,
+  "total_plugins": 602,
   "categories": {
-    "architecture": 112,
-    "ci-cd": 119,
+    "architecture": 115,
+    "ci-cd": 120,
     "debugging": 54,
-    "documentation": 41,
+    "documentation": 42,
     "evaluation": 12,
     "optimization": 3,
     "testing": 82,
     "tooling": 167,
     "training": 7
   },
-  "last_updated": "2026-07-04T07:05:10Z",
+  "last_updated": "2026-07-04T08:15:20Z",
   "plugins": [
     {
       "name": "agent-config-validation-and-integrity",
@@ -1673,6 +1673,32 @@
       ]
     },
     {
+      "name": "planning-cross-pr-interface-dependency",
+      "description": "Planning discipline for a CAPSTONE / INTEGRATION issue \u2014 the terminal issue of a serialized epic that fans IN and wires together modules produced by MANY sibling dependency issues that are ALL STILL OPEN/UNMERGED. The capstone's new code calls ~10 symbols (coordinators, queues, worker pools, stage protocols, route tables, config objects, test conftest fakes) that DO NOT EXIST in the working tree \u2014 they are only DESCRIBED in sibling issue bodies and the epic body. You cannot verify them by reading code, so you must plan against the DECLARED (issue-body) contract, and the plan MUST convert that un-verifiable assumption into a checklist gate: (a) add an explicit 'Dependency note' that the PR is cut from a base where the LAST sibling is merged, and (b) make Step 1 of the implementation order a 'pin/confirm upstream interface names on the merged base via grep BEFORE writing any code' gate that rebases onto merged reality if any symbol name drifted. Split the plan's facts into VERIFIED (things you Read from the current repo \u2014 main()/dispatch structure, a sleeper that blocks the coordinator thread, the shared arg parser, a symbol's REAL module home, the coverage omit-list membership) vs ASSUMED (every sibling symbol signature, every conftest fake shape, the tick-order contract) in a dedicated section. Ground every DESIGN decision in a VERIFIED repo fact (a blocking sleeper => the new gate must be a non-blocking predicate; dispatch belongs at the top of main() so legacy paths stay byte-for-byte; store_true default-False gives CLI-wins-over-env for free; new modules stay OUT of the omit list so they get covered by doing nothing). Use when: (1) planning the capstone/integration/terminal issue of a serialized epic whose earlier issues are unmerged, (2) your new code references symbols that only exist in sibling issue bodies or the epic body, not on disk, (3) you are about to grep for a symbol's home and might infer its module from a CALLER instead of its real location (e.g. a status-emitter that lives in cli/utils, not automation), (4) you plan to extract a shared helper out of a coverage-omitted module and might trip an omit-list JUSTIFICATION test, (5) you are changing the semantic of an existing CLI flag or making a blocking operation non-blocking and must document the behavior change.",
+      "version": "1.0.0",
+      "source": "./skills/planning-cross-pr-interface-dependency.md",
+      "category": "architecture",
+      "tags": [
+        "planning",
+        "capstone-issue",
+        "integration-pr",
+        "serialized-epic",
+        "unmerged-siblings",
+        "declared-interface",
+        "issue-body-contract",
+        "fan-in-integration",
+        "pin-upstream-names-first",
+        "rebase-onto-merged-base",
+        "verified-vs-assumed",
+        "non-blocking-predicate",
+        "dispatch-at-top-of-main",
+        "store-true-cli-wins",
+        "coverage-omit-justification",
+        "symbol-home-grep-not-caller",
+        "behavior-change-documentation"
+      ]
+    },
+    {
       "name": "planning-dependent-issue-unverified-upstream",
       "description": "Plan an issue whose dependency it builds on is unconfirmed locally \u2014 and AVOID the trap of writing 'if the dependency did X else Y' conditional fallbacks. A dependent issue's upstream is almost always ALREADY MERGED and READABLE; reading it collapses every fork into one verified fact. Use when: (1) planning an issue that depends on / blocks another issue (e.g. B adds a Dockerfile on top of A's server skeleton), (2) you are tempted to write conditional fallbacks or hardcode the upstream's module path / function signature / directory layout into your plan, (3) an issue body's code snippets reference a base image / module path / file layout created by a not-yet-read dependency, (4) the local submodule is pinned to an older SHA on a detached HEAD so the dependency's output is not in the working tree.",
       "version": "1.1.0",
@@ -1712,6 +1738,25 @@
         "provider-type-verification",
         "options-type-inference",
         "hephaestus"
+      ]
+    },
+    {
+      "name": "planning-follower-issue-unmerged-dependency-assumptions",
+      "description": "You are planning a FOLLOWER issue that `Depends on #<N>` where #N is NOT YET MERGED (state: `plan-go`, `in-progress`, open PR pending, or no branch at all). Every claim you make about the dependency's public surface \u2014 struct field names, constructor signatures, function argument orders, exported symbol names, parameter counts \u2014 is a HYPOTHESIS, not a fact. Grep proves absence but never proves that a symbol WILL exist with a specific shape. Use when: (1) planning an issue whose `Depends on #<N>` target is unmerged and unimplemented (distinct from `planning-dependent-issue-unverified-upstream`, which handles the case where the dependency IS already merged and just needs to be read), (2) you are inventing struct fields, constructor signatures, or exact parameter counts against a dep whose body only describes them in prose, (3) the dep's issue body itself flags stale numbers in the codebase (e.g. 'comment says 84 but real count is 81') and you might copy the wrong number, (4) you are about to write helpers that call functions in the dependency's expected surface (e.g. `initialize_velocities(model)`) without checking whether the constructor is `@fieldwise_init` (positional per-field) vs a hand-written `fn __init__(out self, model: T)`.",
+      "version": "1.0.0",
+      "source": "./skills/planning-follower-issue-unmerged-dependency-assumptions.md",
+      "category": "architecture",
+      "tags": [
+        "planning",
+        "dependent-issue",
+        "unmerged-dependency",
+        "follower-issue",
+        "hypothesis",
+        "assumptions",
+        "scaffold-first",
+        "fieldwise-init",
+        "verify-before-planning",
+        "mojo"
       ]
     },
     {
@@ -1854,6 +1899,32 @@
         "library-layer",
         "hephaestus",
         "anchor-on-literal"
+      ]
+    },
+    {
+      "name": "planning-revising-after-nogo-verify-impl-not-signature",
+      "description": "When a plan reviewer NOGOs your plan for unverified assumptions \u2014 parameter-name semantics, backward-op behavior, param counts, scalar-read APIs, kwargs support \u2014 the fix is NOT to hand-wave more justification. The fix is to READ THE ACTUAL IMPLEMENTATION BODY of every flagged claim (not just the signature) and cite `file:line` inline in the revised plan. Signature-level trust is the recurring failure mode across all six patterns in this skill. Use when: (1) revising a plan after a NOGO on unverified claims, (2) a backward-op has a `training: Bool` parameter and you need to know which inputs the training branch actually consumes vs ignores (parameter names lie \u2014 the training branch of BN backward re-derives from `x` and never touches `running_mean`/`running_var` despite them being in the signature), (3) counting trainable params (grep the source; don't trust arithmetic OR stale docstring comments \u2014 both fail differently), (4) planning `add_backward` for residual sums where downstream reviewers may misread `(dY, dY)` return as a double-count bug (it's the correct path-gradient split; the reconvergence sum happens at the shared upstream input), (5) planning scalar-read assertions in tests (use `AnyTensor.load[dtype](i)` \u2014 sanctioned in `any_tensor.mojo:1479` \u2014 not `._data.bitcast[T]()[i]` UAF hazard), (6) checking whether a stdlib function accepts `seed` as a keyword arg (grep the signature \u2014 don't guess), (7) `@fieldwise_init` factory ergonomics with 80+ fields (kwargs are legal and readable; positional is error-prone at that scale), (8) scaffold-first when a `Depends on #N` target is unmerged (define the contract locally IN THIS PR with a rename-pass plan for the merge case, rather than blocking on the dep). This skill is the POSITIVE PATTERN for recovering from the failure mode captured in `planning-follower-issue-unmerged-dependency-assumptions` (unmerged-dep case) and `mojo-planning-verify-type-semantics-and-source-counts` (probe-before-planning case): after the NOGO, verify by reading impl BODIES, not just signatures or docstrings.",
+      "version": "1.0.0",
+      "source": "./skills/planning-revising-after-nogo-verify-impl-not-signature.md",
+      "category": "architecture",
+      "tags": [
+        "planning",
+        "plan-revision",
+        "nogo-recovery",
+        "verify-impl-not-signature",
+        "mojo",
+        "resnet",
+        "backward-pass",
+        "batch-norm",
+        "add-backward",
+        "residual-network",
+        "fieldwise-init",
+        "anytensor",
+        "load-dtype",
+        "grep-authoritative",
+        "scaffold-first",
+        "unmerged-dependency",
+        "path-gradient-vs-double-count"
       ]
     },
     {
@@ -4764,6 +4835,36 @@
       "tags": []
     },
     {
+      "name": "review-coordination-parallel-serial-subagent-dispatch",
+      "description": "Use when: (1) coordinating multiple sub-agents to fix GitHub PR review inline comments in parallel, (2) a PR has 3+ review threads and you need to avoid file collisions and race conditions, (3) you want to dispatch agents by difficulty tier (simple\u2192Haiku, medium\u2192Sonnet, hard\u2192Opus), (4) review threads touch the same file and must be fixed sequentially to avoid concurrent edits, (5) review threads touch different files and can be fixed in parallel for speed, (6) you need to group review threads by file, sort by difficulty, and dispatch with model-tier routing, (7) fixing a PR review requires invoking /hephaestus:advise per sub-agent for domain knowledge before applying fixes, (8) after sub-agent fixes, you need to coordinate formatting, compilation, and commit creation, (9) sub-agent replies must be aggregated with thread_id and one-liner summaries for verification.",
+      "version": "1.0.0",
+      "source": "./skills/review-coordination-parallel-serial-subagent-dispatch.md",
+      "category": "ci-cd",
+      "tags": [
+        "github-pr-review",
+        "parallel-dispatch",
+        "serial-coordination",
+        "file-grouping",
+        "model-tier",
+        "sub-agent",
+        "haiku",
+        "sonnet",
+        "opus",
+        "review-thread",
+        "inline-comment",
+        "fix-coordination",
+        "domain-knowledge",
+        "hephaestus-advise",
+        "thread-aggregation",
+        "file-collision",
+        "same-file-serialization",
+        "different-file-parallelization",
+        "difficulty-based-routing",
+        "backward-pass",
+        "ml-implementation"
+      ]
+    },
+    {
       "name": "skills-to-plugins-migration",
       "description": "Migrate PRs that add skills to the flat skills/ directory into the correct plugins/<category>/<name>/ structure so CI triggers and the validate check passes. Use when a PR branch puts files under skills/ instead of plugins/, or when the validate CI check never appears on a PR.",
       "version": "1.0.0",
@@ -6236,6 +6337,31 @@
         "kiss-yagni",
         "pola",
         "unverified-assumption"
+      ]
+    },
+    {
+      "name": "planning-epic-first-doc-issue-against-adr-guard",
+      "description": "Plan the FIRST, code-free documentation sub-issue of a large epic \u2014 an 'ADR + architecture-doc skeleton' issue whose entire job is to transcribe the epic's already-approved design VERBATIM while satisfying an existing executable ADR structural-guard test. The plan writes no product code; its only machine-checked acceptance gate is the ADR guard, so treat that test as the spec and READ it directly. Use when: (1) an epic body already carries the full approved design (prompt-function paths, stage tables, diagrams) and the first sub-issue is 'write ADR-NNNN + the architecture doc' \u2014 transcribe from the epic body, do NOT re-derive; (2) the repo enforces ADR structure with an executable guard (e.g. ProjectHephaestus tests/unit/docs/test_adr_records.py) and you must derive requirements from the test's asserts, not from prose docs; (3) you must confirm a long-table / un-tagged-fence doc will lint before assuming it \u2014 grep .markdownlint.yaml for MD013 (line-length) and MD040 (fenced-code-language) being false and MD025 (single H1) true; (4) you are tempted to choose ADR Status Accepted vs Proposed for a decision whose code is not yet written; (5) the plan's acceptance criteria include human-judged checks (N stages present, tags, paths) that a self-written grep 'verifies' \u2014 recognize the self-fulfilling gate and flag it. This is the PLANNING-AGAINST-A-GUARD companion to architecture-executable-convention-guard-pattern (which is about AUTHORING the guard) and to adr-authoring-indexing-and-maintenance (which is about ADR mechanics).",
+      "version": "1.0.0",
+      "source": "./skills/planning-epic-first-doc-issue-against-adr-guard.md",
+      "category": "documentation",
+      "tags": [
+        "planning",
+        "documentation-plan",
+        "epic-first-issue",
+        "adr",
+        "architecture-decision-record",
+        "executable-guard-as-spec",
+        "verbatim-transcription",
+        "epic-body-source-of-truth",
+        "markdownlint-config",
+        "md013-md040-md025",
+        "self-fulfilling-gate",
+        "line-number-drift",
+        "status-accepted-vs-proposed",
+        "code-free-issue",
+        "nygard-4digit",
+        "projecthephaestus"
       ]
     },
     {
