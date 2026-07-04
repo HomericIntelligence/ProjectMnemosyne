@@ -1,9 +1,9 @@
 ---
 name: planning-unmerged-parent-contract-compile-smoke-gate
-description: "Plan an issue whose dependency parent issue is NOT yet merged (verified via `gh pr list --search '<N>' --state all` returning `[]`) but has an APPROVED plan on file. Consume the parent's approved-plan contract (function signatures, struct field names, return types) instead of re-implementing or hedging — but mandate a compile-smoke-test (`pixi run mojo build --Werror`) as the FIRST verification step immediately after the parent PR merges to catch contract drift. When a reviewer NOGOs the plan for unverified APIs, Read each flagged API's on-disk source line NOW and revise every assumption that was wrong — empirically 4-of-4 flagged assumptions were wrong (2 would not have compiled, 1 would silently have produced wrong loss). Assume a 100% wrong-rate on any cited-but-unread API. Grep-verify every numeric count claim (parameter counts, field counts) against the current tree AND flag same-line coordination hazards when multiple planned PRs touch identical stale comments. List every external API you cite but did NOT `Read` in a dedicated 'Unverified API Assumptions' section so reviewers can target verification. For random-init deep-network convergence thresholds, use a two-tier assertion (hard floor `loss[final] < loss[0]` + issue-prescribed `loss[final] < 0.95 * loss[0]`) — never weaken the issue's threshold; mitigate on data/hyperparams (more samples, larger bias amplitude, warm-up epoch). Grep for cross-file callers (`grep -rn 'fname(' --include='*.mojo'`) before changing a per-example function's signature. Smoke-run the example's `main()` itself, not just an importing test file. **Validation-only sub-case (v1.2.0):** when the child issue is validation-only (run a script, capture a log, assert a criterion — no code corrections in this task), the SAME plan-authoring discipline applies to the entrypoint path, CLI flag names, batch log format, data-loader defaults, container invocation form (`just shell -c '<cmd>'`), and wall-clock budget — every one is a cited-but-unread assumption unless the parent PR has merged. For log-parsers, mandate a `parsed N > 0` sanity check so a format mismatch fails LOUDLY instead of producing a garbage summary next to an exit-0 wrapper. For loss-decrease criteria on short/noisy runs, prefer a smoothed trend (linear fit slope) over first-decile-vs-last-decile means; a monotonically-decreasing epoch can still fail a decile comparison if the last decile plateaus above the first decile due to noise. Include an 'Assumption Mapping for Mechanical Re-Plan' table (Assumption → File/line to fix once parent merges) so re-planning after dep merge is line-anchored and mechanical. Flag container-network assumptions (dataset auto-download inside the podman network namespace) and gitignored-artifact-attachment (attach via `gh pr comment --body-file` when `logs/` is gitignored). Use when: (1) planning issue B where B depends on unmerged issue A but A has an approved plan comment, (2) a reviewer NOGOed a plan for cited-but-unread APIs and you're revising, (3) about to cite an API signature (`randn`, `AnyTensor.store`, `cross_entropy`) you have not `Read`, (4) writing a numeric count into a plan that another planned PR also touches, (5) asserting a loss-decrease threshold on random-init deep networks, (6) changing a per-example function's signature and unsure whether other files call it, (7) authoring a validation-only issue that runs a script produced by an unmerged parent, (8) writing a bash wrapper + Python log-parser pair without a `parsed N > 0` sanity check, (9) picking a wall-clock budget or fallback batch count by heuristic with no benchmark data."
+description: "Plan an issue whose dependency parent issue is NOT yet merged (verified via `gh pr list --search '<N>' --state all` returning `[]`) but has an APPROVED plan on file. Consume the parent's approved-plan contract (function signatures, struct field names, return types) instead of re-implementing or hedging — but mandate a compile-smoke-test (`pixi run mojo build --Werror`) as the FIRST verification step immediately after the parent PR merges to catch contract drift. When a reviewer NOGOs the plan for unverified APIs, Read each flagged API's on-disk source line NOW and revise every assumption that was wrong — empirically 4-of-4 flagged assumptions were wrong (2 would not have compiled, 1 would silently have produced wrong loss). Assume a 100% wrong-rate on any cited-but-unread API. Grep-verify every numeric count claim (parameter counts, field counts) against the current tree AND flag same-line coordination hazards when multiple planned PRs touch identical stale comments. List every external API you cite but did NOT `Read` in a dedicated 'Unverified API Assumptions' section so reviewers can target verification. For random-init deep-network convergence thresholds, use a two-tier assertion (hard floor `loss[final] < loss[0]` + issue-prescribed `loss[final] < 0.95 * loss[0]`) — never weaken the issue's threshold; mitigate on data/hyperparams (more samples, larger bias amplitude, warm-up epoch). Grep for cross-file callers (`grep -rn 'fname(' --include='*.mojo'`) before changing a per-example function's signature. Smoke-run the example's `main()` itself, not just an importing test file. **Validation-only sub-case (v1.2.0):** when the child issue is validation-only (run a script, capture a log, assert a criterion — no code corrections in this task), the SAME plan-authoring discipline applies to the entrypoint path, CLI flag names, batch log format, data-loader defaults, container invocation form (`just shell -c '<cmd>'`), and wall-clock budget — every one is a cited-but-unread assumption unless the parent PR has merged. For log-parsers, mandate a `parsed N > 0` sanity check so a format mismatch fails LOUDLY instead of producing a garbage summary next to an exit-0 wrapper. For loss-decrease criteria on short/noisy runs, prefer a smoothed trend (linear fit slope) over first-decile-vs-last-decile means; a monotonically-decreasing epoch can still fail a decile comparison if the last decile plateaus above the first decile due to noise. Include an 'Assumption Mapping for Mechanical Re-Plan' table (Assumption → File/line to fix once parent merges) so re-planning after dep merge is line-anchored and mechanical. Flag container-network assumptions (dataset auto-download inside the podman network namespace) and gitignored-artifact-attachment (attach via `gh pr comment --body-file` when `logs/` is gitignored). **Prerequisite-gate + dispatch-table sub-case (v1.3.0):** when the child plan IMPORTS symbols the unmerged sibling introduces (e.g. `CompletionQueue`, `StageName` from a package that does NOT yet exist on `origin/main`), the plan's FIRST implementation step must be a concrete PREREQUISITE GATE that STOPS if the package directory is absent — not a prose 'Depends on #NNNN' note. Verify empirically before planning: `git fetch origin && git log --oneline origin/main | grep '(#<dep>)'` and `test -d <path/the/dep/creates>`. Any op/route/dispatch table in a plan must resolve EVERY enumerated case to a concrete named callable with a re-grepped `file:line` — never 'dispatch job.op to module X'; when NO clean public seam exists for a case, say so explicitly and pick the minimal one rather than silently leaving the gap. Re-grep every cited `file:line` right before emitting the plan; a `~` or an un-verified line number is a reviewer ding (and a signal you never opened the file there). When a test double stands in for a real interface used by all later tests, enumerate its FULL mutator surface — never 'etc.'. Anticipate the MINOR-tightening cluster a reviewer demands even on a sound design: catch `BaseException` (not `Exception`) in a worker whose result is read via `future.result()` in a callback thread; specify unspecified helper paths (lock-file path); derive an invariant's target set from `__all__` rather than hardcoding private names AND add a non-empty guard so the invariant cannot pass vacuously. Use when: (1) planning issue B where B depends on unmerged issue A but A has an approved plan comment, (2) a reviewer NOGOed a plan for cited-but-unread APIs and you're revising, (3) about to cite an API signature (`randn`, `AnyTensor.store`, `cross_entropy`) you have not `Read`, (4) writing a numeric count into a plan that another planned PR also touches, (5) asserting a loss-decrease threshold on random-init deep networks, (6) changing a per-example function's signature and unsure whether other files call it, (7) authoring a validation-only issue that runs a script produced by an unmerged parent, (8) writing a bash wrapper + Python log-parser pair without a `parsed N > 0` sanity check, (9) picking a wall-clock budget or fallback batch count by heuristic with no benchmark data, (10) planning any issue in a stacked/serialized epic where the issue 'Depends on #NNNN', (11) writing a plan that imports symbols a sibling PR introduces, (12) any plan containing an op/route/dispatch table, (13) re-planning after a plan-review NOGO whose findings are 'hand-waved dispatch' or 'unverified prerequisite'."
 category: architecture
-date: 2026-07-02
-version: "1.2.0"
+date: 2026-07-04
+version: "1.3.0"
 user-invocable: false
 verification: unverified
 history: planning-unmerged-parent-contract-compile-smoke-gate.history
@@ -29,6 +29,16 @@ tags:
   - gitignored-artifact-attachment
   - wall-clock-heuristic-without-benchmark
   - assumption-mapping-for-mechanical-replan
+  - prerequisite-gate-step-zero
+  - imports-from-unmerged-sibling
+  - dispatch-table-named-callable
+  - resolve-every-op-to-file-line
+  - document-missing-public-seam
+  - reverify-line-numbers-before-emit
+  - test-double-full-surface
+  - stacked-serialized-epic
+  - baseexception-in-worker-future
+  - invariant-from-dunder-all-nonempty-guard
 ---
 
 # Planning against an Unmerged Parent — Contract + Compile-Smoke Gate
@@ -37,11 +47,11 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-07-02 |
+| **Date** | 2026-07-04 |
 | **Objective** | Capture the planning meta-discipline for authoring issue B whose dependency parent issue A is NOT yet merged (`gh pr list --search "<A>" --state all` returns `[]`) but has an APPROVED plan comment on file. Consume the parent's approved-plan contract instead of re-implementing or hedging, and gate the whole downstream plan on a compile-smoke-test the moment A's PR merges. When a reviewer NOGOs the plan for unverified APIs, treat that as a 100%-wrong-rate signal on every cited-but-unread symbol: Read each flagged API's on-disk source NOW and revise every assumption. Add same-line coordination-hazard scans, an Unverified-API-Assumptions section for every cited-but-unread symbol, a two-tier loss threshold that preserves the issue-prescribed target, a cross-file-caller grep before changing a per-example function signature, and a smoke-run of the example's `main()` in addition to any test-file compile. |
 | **Outcome** | Planning artifact produced; the training epoch this plan targets has NOT been executed. Learnings are from an adversarial plan review + a NOGO'd R0 → verified R1 revision, not from a green CI run. |
 | **Verification** | unverified — planning meta-skill; the ProjectOdyssey plan itself was reviewed but the resulting training epoch has not been executed. |
-| **History** | v1.0.0 (2026-07-02): initial capture from ProjectOdyssey issue #5516 plan review (parent issue #5515 unmerged; only an approved-plan comment existed). Seven learnings distilled from six unverified-API assumptions plus a same-line-coordination hazard. v1.1.0 (2026-07-02): amended after a NOGO→R1 revision on the same #5516 plan revealed that 4-of-4 reviewer-flagged unverified APIs were WRONG (2 would not compile, 1 would silently produce wrong loss). Added the NOGO-verify-each-flagged-API-on-disk pattern as the primary revision anchor, plus four sub-patterns: hard-floor-before-percent-threshold, cross-file-caller-grep, smoke-run-example-main, and the "name-collision with overload family" trap (`.set` has 12 dtype overloads and would confuse search — `.store[dtype]` was correct but was a coin flip in R0). v1.2.0 (2026-07-02): amended after authoring the plan for ProjectOdyssey #5526 (CIFAR-10 one-epoch loss-decrease validation, depends on unmerged #5525). Extended the meta-discipline to the **validation-only** sub-case where the child issue does not modify code but runs a script produced by the parent and asserts a criterion. Added six sub-patterns: (a) log-parser sanity check (`parsed N > 0`) so a batch-log format mismatch fails loudly instead of a wrapper-exits-0-with-garbage-summary false-negative; (b) smoothed-trend loss-decrease criterion (linear fit slope) over first-decile-vs-last-decile means for short/noisy runs; (c) an explicit "Assumption Mapping for Mechanical Re-Plan" table (Assumption → File/line to fix once parent merges); (d) container-network assumption flag (CIFAR-10 auto-download inside podman namespace may be restricted); (e) gitignored-artifact attachment via `gh pr comment --body-file` when `logs/` is `.gitignore`d and cannot be committed; (f) wall-clock budget/fallback heuristics (60-min threshold, `MAX_BATCHES=200` fallback) must either cite benchmark evidence or be flagged as heuristic-without-data. |
+| **History** | v1.0.0 (2026-07-02): initial capture from ProjectOdyssey issue #5516 plan review (parent issue #5515 unmerged; only an approved-plan comment existed). Seven learnings distilled from six unverified-API assumptions plus a same-line-coordination hazard. v1.1.0 (2026-07-02): amended after a NOGO→R1 revision on the same #5516 plan revealed that 4-of-4 reviewer-flagged unverified APIs were WRONG (2 would not compile, 1 would silently produce wrong loss). Added the NOGO-verify-each-flagged-API-on-disk pattern as the primary revision anchor, plus four sub-patterns: hard-floor-before-percent-threshold, cross-file-caller-grep, smoke-run-example-main, and the "name-collision with overload family" trap (`.set` has 12 dtype overloads and would confuse search — `.store[dtype]` was correct but was a coin flip in R0). v1.2.0 (2026-07-02): amended after authoring the plan for ProjectOdyssey #5526 (CIFAR-10 one-epoch loss-decrease validation, depends on unmerged #5525). Extended the meta-discipline to the **validation-only** sub-case where the child issue does not modify code but runs a script produced by the parent and asserts a criterion. Added six sub-patterns: (a) log-parser sanity check (`parsed N > 0`) so a batch-log format mismatch fails loudly instead of a wrapper-exits-0-with-garbage-summary false-negative; (b) smoothed-trend loss-decrease criterion (linear fit slope) over first-decile-vs-last-decile means for short/noisy runs; (c) an explicit "Assumption Mapping for Mechanical Re-Plan" table (Assumption → File/line to fix once parent merges); (d) container-network assumption flag (CIFAR-10 auto-download inside podman namespace may be restricted); (e) gitignored-artifact attachment via `gh pr comment --body-file` when `logs/` is `.gitignore`d and cannot be committed; (f) wall-clock budget/fallback heuristics (60-min threshold, `MAX_BATCHES=200` fallback) must either cite benchmark evidence or be flagged as heuristic-without-data. v1.3.0 (2026-07-04): amended from ProjectHephaestus issue #1812 (a worker-pool module that imports symbols from unmerged sibling #1811; epic #1809). R0 plan got a B / NOGO; R1 addressed every finding. Extends the discipline from the DEPENDENCY-IMPORT and DISPATCH-TABLE angle: (a) a plan importing symbols an unmerged sibling introduces (`CompletionQueue`, `StageName`) must make its FIRST implementation step a concrete PREREQUISITE GATE that STOPS if the package dir is absent — verified via `git log --oneline origin/main \| grep '(#<dep>)'` + `test -d <path>` — not a prose "Depends on #NNNN" note (R0's "Confirmed via gh issue view" was a MAJOR finding); (b) every op/route/dispatch-table case must resolve to a concrete named callable with a re-grepped `file:line`, never "dispatch job.op to module X" (R0's six-op `_run_git` hand-wave was NOGO'd), and when no clean public seam exists for a case, document that and pick the minimal one rather than leave the gap (the `clone` op had only a private `_ensure_clone` in a coverage-omitted module → direct `git_utils.run(["gh","repo","clone",...])`); (c) re-grep every cited `file:line` right before emitting — R0's `~500` (actual 864), `204` (actual 104), and a wrong test path (`tests/unit/automation/` vs `tests/unit/validation/`) were each a ding; (d) a test double standing in for "the interface used by all later tests" must enumerate its FULL mutator surface, never "etc."; (e) the MINOR-tightening cluster a reviewer demands even on a sound design (catch `BaseException` in a `future.result()`-read worker; specify the lock-file path; derive an invariant's target set from `__all__` + a non-empty guard). |
 
 > This skill is about the **PLAN-AUTHORING** angle when the dependency parent is still just a plan on paper.
 > For the case where the parent is ALREADY MERGED and just needs to be read from `main`, see
@@ -65,6 +75,10 @@ tags:
 - **(v1.2.0)** Asserting a loss-decrease criterion on a SHORT (< 100 batch) or noisy run using first-decile-vs-last-decile means; a legitimately monotonically-decreasing run can still fail this if the last decile plateaus above the first decile due to noise on a small subset.
 - **(v1.2.0)** Planning to attach a run artifact (log, CSV, image) to a PR when the output directory (e.g. `logs/`) is gitignored — `git add` will silently fail, so the plan must either whitelist the exact file (`git add -f`) or attach via `gh pr comment --body-file` instead.
 - **(v1.2.0)** Planning any command that runs inside a container (`podman`, `docker`, `just shell -c '<cmd>'`) where dataset auto-download depends on egress out of the container's network namespace.
+- **(v1.3.0)** Planning any issue in a **stacked / serialized epic** where the issue body says "Depends on #NNNN" and that dependency is not yet merged (epic like ProjectHephaestus #1809 with 14 serialized children #1810–#1823). The "Depends on" line is a HAZARD marker, not a plan step — the plan must convert it into a concrete prerequisite gate.
+- **(v1.3.0)** Writing a plan whose test/impl code **imports a symbol a sibling PR introduces** (a class, enum, or function that does NOT exist on `origin/main` yet — e.g. `CompletionQueue`, `StageName` from a package the sibling creates). The plan must not let the implementer write tests against nonexistent symbols.
+- **(v1.3.0)** Any plan containing an **op / route / dispatch table** (a `job.op → handler`, a command router, a stage dispatcher). Every enumerated case must resolve to a concrete named callable at a verified `file:line`.
+- **(v1.3.0)** **Re-planning after a plan-review NOGO** whose findings are "hand-waved dispatch" (a table that says "dispatch to module X" without naming the function per case) or "unverified prerequisite" (a prose "Depends on #NNNN" with no verification step and no gate).
 
 ## Verified Workflow
 
@@ -113,6 +127,19 @@ pixi run mojo run examples/<arch>/train.mojo --epochs 1 --batch-size <small>
 #    NEVER weaken the issue-prescribed threshold; mitigate on data/hyperparams side.
 #    hard floor: loss[final] < loss[0]         (must hold, else training regressed)
 #    issue-prescribed: loss[final] < 0.95 * loss[0]   (target from issue; do not soften)
+
+# 8. (v1.3.0) PREREQUISITE-GATE verification when the plan imports symbols an unmerged
+#    sibling introduces. Run these BEFORE writing the plan and make step 0 a hard gate:
+git fetch origin
+git log --oneline origin/main | grep -E '\(#1811\)'   # dep PR merged? (empty => NOT merged)
+test -d hephaestus/automation/pipeline/ && echo "pkg present" || echo "PKG ABSENT — gate must STOP"
+#    Plan step 0 (literal): "STOP if `hephaestus/automation/pipeline/` is absent — do not
+#    write tests against CompletionQueue/StageName until #1811 has merged and this dir exists."
+
+# 9. (v1.3.0) Re-grep EVERY cited file:line right before emitting the plan. A `~` or a
+#    guessed number is a reviewer ding and a signal you never opened the file there.
+grep -n 'def run_agent_session' hephaestus/automation/session_runner.py   # confirm 864, not ~500
+grep -n 'self\.lock' hephaestus/automation/worktree_manager.py            # confirm 104, not 204
 ```
 
 ### Detailed Steps
@@ -254,6 +281,58 @@ pixi run mojo run examples/<arch>/train.mojo --epochs 1 --batch-size <small>
     heuristic path is fine when speed matters more than precision, but the label matters because a
     reviewer cannot distinguish "cited number" from "guessed number" from the plan text.
 
+17. **(v1.3.0) A plan that imports symbols from an unmerged sibling must make its FIRST step a
+    concrete PREREQUISITE GATE — not a prose "Depends on #NNNN".**
+    When the child plan's test/impl code imports a class or enum the sibling introduces
+    (`CompletionQueue`, `StageName`), verify EMPIRICALLY before writing the plan:
+    `git fetch origin && git log --oneline origin/main | grep -E '\(#<dep>\)'` (empty output =
+    the dep PR has not merged) and `test -d <path/the/dep/creates>`. If the package directory
+    (e.g. `hephaestus/automation/pipeline/`) does not exist on `origin/main` and the dependency
+    is unmerged, the plan must SAY SO explicitly and make implementation step 0 a gate that
+    STOPS if the package is absent — so the implementer never writes tests against nonexistent
+    symbols. A prose "Depends on #1811" note plus "Confirmed via `gh issue view 1811`" is NOT a
+    gate; the plan reviewer flags it as a MAJOR finding because there is no verification step and
+    the imports are against symbols not on `main`. This is the PRE-implementation analogue of the
+    post-merge compile-smoke gate (step 6): the compile-smoke gate catches drift after the sibling
+    merges; the prerequisite gate stops work before it merges.
+
+18. **(v1.3.0) Every op / route / dispatch-table case must resolve to a concrete named callable
+    at a verified `file:line` — never "dispatch to module X".**
+    A plan that says a router "dispatches `job.op` to `worktree_manager` / `git_utils` calls" for
+    six ops without naming which function handles each op is hand-waving and gets NOGO'd. Write a
+    full table: each op → exact function + re-grepped line. **Corollary — when NO clean public seam
+    exists for a case, say so explicitly and pick the minimal one.** If the only handler for an op
+    is a private `_ensure_clone` in a coverage-omitted module, do not silently leave the gap for the
+    implementer: document the absence and choose a direct minimal call
+    (`git_utils.run(["gh", "repo", "clone", ...])`). The dispatch table is where a reviewer probes
+    for "which real function runs here?" — answer it for every enumerated case.
+
+19. **(v1.3.0) Re-grep every cited `file:line` right before emitting the plan.**
+    Plan reviewers verify cited line numbers. A `~500` or a guessed `204` is a reviewer ding — and
+    a signal that you never actually opened the file at that spot. Right before emitting, re-grep
+    each citation: `grep -n 'def run_agent_session' <file>` (confirmed 864, not the R0 `~500`),
+    `grep -n 'self.lock' <file>` (confirmed 104, not the R0 `204`), and re-derive any cited test
+    path from `ls` (`tests/unit/validation/`, not the R0-guessed `tests/unit/automation/`). Cheap
+    to fix, but each stale ref costs a review round.
+
+20. **(v1.3.0) When a test double stands in for a real interface "used by all later tests",
+    enumerate its FULL surface — never "etc.".**
+    A `FakeGitHub` (or any fake that downstream stage/coordinator tests depend on) must list its
+    COMPLETE mutator method set, not "a few mutators + etc.". Downstream tests build on the fake's
+    contract; deferring "etc." leaves a consumer contract unspecified and the reviewer will demand
+    the full list. Defer nothing that a consumer contract needs.
+
+21. **(v1.3.0) Anticipate the MINOR-tightening cluster a reviewer demands even on a sound design.**
+    Even a well-architected plan draws a small predictable set of MINOR findings; pre-empt them:
+    (a) catch `BaseException` (not `Exception`) in a worker whose result is read via
+    `future.result()` in a callback thread — a bare `Exception` lets `KeyboardInterrupt`/`SystemExit`
+    escape the worker and never reach the future's caller; (b) specify every unspecified helper path
+    (a lock-file path, a state-dir path) rather than leaving it "TBD"; (c) derive an invariant's
+    target set from `__all__` rather than hardcoding private names, AND add a "set is non-empty"
+    guard so the invariant cannot pass VACUOUSLY (an empty target set makes "for each X assert P(X)"
+    trivially true). This is the same NOGO→GO convention-guard sub-pattern captured in
+    `architecture-executable-convention-guard-pattern`, seen here from the dependency/dispatch angle.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -279,6 +358,11 @@ pixi run mojo run examples/<arch>/train.mojo --epochs 1 --batch-size <small>
 | 19 | **(v1.2.0)** Picked "60-minute wall-clock threshold" and "`MAX_BATCHES=200` fallback if projected epoch > 60 min" by intuition, with no benchmark citation for MobileNetV1-on-CIFAR-10 throughput on the target hardware. | The threshold is neither too aggressive nor too lax by any measured standard — it's a guess. A slower runner blows the budget and the plan looks broken; a faster runner completes so fast the fallback never triggers and the threshold is inert. Reviewer cannot tell "guessed" from "cited" from the plan text. | Either cite a benchmark (`prior epoch on <hardware> ran in X minutes for N batches`, `parent PR's smoke test on same runner takes Y seconds/batch`) or explicitly label the numbers as "heuristic, no benchmark data — reviewer should override if their hardware differs." Both paths are valid; hiding the guess is not. |
 | 20 | **(v1.2.0)** Referenced CLAUDE.md sections ("Troubleshooting: Mojo Test Execution and GLIBC Compatibility", "Common Commands", "Language Preference") from the in-context project instructions without re-reading CLAUDE.md from disk in the current turn to confirm the section headings and content still match. | CLAUDE.md may have changed since it was loaded into context (another agent's commit, a PR merged mid-session). The in-context copy is a snapshot, not the current file. Citing a section by name from the snapshot can be stale by seconds. | For plan text that cites configuration/documentation sections, either re-`Read` the file in the current turn or explicitly flag the citation as "from in-context copy, current file may differ." The distinction matters when the plan is reviewed hours later against `main`. |
 | 21 | **(v1.2.0)** Wrote the ProjectOdyssey #5526 plan without running `gh issue view 5525 --comments` first, then transcribed inferred deliverables of #5525 (the entrypoint script + smoke test) into the plan as if they were known contract elements. | The dependent-issue premise ("run the script #5525 produces") is the whole plan. If #5525's approved plan (or the merged code, if any) uses different filenames, flags, or a different smoke-test path, every command in the #5526 plan needs revision. Not fetching #5525's plan comment is the exact trap `planning-dependent-issue-unverified-upstream` warns against — but for the plan-only, parent-still-unmerged case. | Before authoring ANY validation-only plan against an unmerged parent, run `gh issue view <parent#> --comments` and `gh pr list --search "<parent#>" --state all --json number,state,headRefName`. If the parent has a merged PR, read the merged tree (see companion skill). If not, quote the approved-plan comment verbatim and mark every transcribed element as "parent-plan contract, verify via compile-smoke-test post-merge." |
+| 22 | **(v1.3.0, Hephaestus #1812 R0)** Documented the dependency on unmerged sibling #1811 as a prose "Depends on #1811" note plus "Confirmed via `gh issue view 1811`", then wrote tests importing `CompletionQueue` and `StageName` from `hephaestus.automation.pipeline` — a package that does NOT exist on `origin/main`. | The plan reviewer flagged this as a MAJOR finding: there was no verification step, and the imports were against symbols not on `main`. `git log --oneline origin/main \| grep '(#1811)'` was empty and `test -d hephaestus/automation/pipeline/` failed — the package was absent. An implementer following R0 would write tests against nonexistent symbols. | A plan importing symbols from an unmerged sibling must make implementation step 0 a concrete PREREQUISITE GATE that STOPS if the package dir is absent. Verify EMPIRICALLY at plan-time: `git fetch origin && git log --oneline origin/main \| grep -E '\(#<dep>\)'` + `test -d <path>`. A prose "Depends on #NNNN" is not a gate. (R1 fix: step 0 explicitly stops if `hephaestus/automation/pipeline/` is absent.) |
+| 23 | **(v1.3.0, Hephaestus #1812 R0)** Wrote that `_run_git` would "dispatch `job.op` to `worktree_manager` / `git_utils` calls" for six ops, without naming which function handles each op. | The reviewer NOGO'd this as hand-waving: a dispatch table that names a MODULE but not the per-case callable leaves the implementer to guess the seam. One op (`clone`) had NO clean public seam at all — only a private `_ensure_clone` in a coverage-omitted module — and R0 silently left that gap. | Every op/route/dispatch-table case must resolve to a concrete named callable + a re-grepped `file:line`. When no clean public seam exists, say so explicitly and pick the minimal one (R1 fix: full op→function table; `clone` → direct `git_utils.run(["gh","repo","clone",...])` with the missing-seam noted). Do not leave the gap for the implementer. |
+| 24 | **(v1.3.0, Hephaestus #1812 R0)** Cited `run_agent_session` at "~500", `self.lock` at "204", and a test path `tests/unit/automation/` — none re-verified before emitting the plan. | The reviewer verifies cited line numbers. Actual lines were 864 and 104; the actual test path was `tests/unit/validation/`. Each stale/approximate ref was a separate ding. A `~` or a guessed number is a signal the file was never opened at that spot. | Re-grep EVERY cited `file:line` right before emitting the plan (`grep -n 'def run_agent_session' <file>` → 864, `grep -n 'self.lock' <file>` → 104) and re-derive test paths from `ls`. Cheap to fix; each stale ref costs a review round. |
+| 25 | **(v1.3.0, Hephaestus #1812 R0)** Listed a few mutator methods on the `FakeGitHub` test double followed by "etc.", even though the fake is "used by all later tests" (downstream stage/coordinator tests depend on its contract). | The reviewer demanded the COMPLETE mutator list: downstream tests build on the fake's contract, and "etc." leaves a consumer contract unspecified. Deferring surface a consumer needs is a review round wasted. | When a test double stands in for a real interface used by all later tests, enumerate its FULL mutator surface — never "etc.". Defer nothing that a consumer contract needs. |
+| 26 | **(v1.3.0, Hephaestus #1812 R0)** Sound worker-pool design still drew a cluster of MINOR findings: caught bare `Exception` in the worker (result read via `future.result()` in a callback thread), left a lock-file path unspecified, and hardcoded private symbol names in an invariant with no non-empty guard. | Even a well-architected plan draws a predictable MINOR set. Bare `Exception` lets `KeyboardInterrupt`/`SystemExit` escape the worker and never surface at the future's caller; an unspecified helper path is a TBD the implementer must invent; an invariant over hardcoded private names can pass VACUOUSLY (and drifts when `__all__` changes). | Pre-empt the cluster: catch `BaseException` (not `Exception`) in a worker whose result is read via `future.result()`; specify every helper path (lock-file, state-dir); derive an invariant's target set from `__all__` AND add a "set is non-empty" guard so it can't pass vacuously. Reinforces `architecture-executable-convention-guard-pattern` from the dependency/dispatch angle. |
 
 ## Results & Parameters
 
@@ -288,6 +372,32 @@ pixi run mojo run examples/<arch>/train.mojo --epochs 1 --batch-size <small>
 |------------|---------|-------|
 | ProjectOdyssey | GitHub issue #5516 plan (dependency #5515 unmerged) | Session 2026-07-02 — R0 plan reviewed adversarially and NOGO'd (Grade C) for 4 unverified APIs; R1 revision verified each flagged API on disk and found 4-of-4 R0 assumptions wrong. Neither R0 nor R1 has been executed. |
 | ProjectOdyssey | GitHub issue #5526 plan (dependency #5525 unmerged) | Session 2026-07-02 — validation-only child issue (run one CIFAR-10 epoch, assert loss decreases). Plan authored without `gh issue view 5525 --comments` and without grep-verifying paths in the current tree, then flagged as v1.2.0 evidence for the validation-only-child-issue sub-case. Plan never executed. |
+| ProjectHephaestus | GitHub issue #1812 plan (worker-pool module; depends on unmerged sibling #1811; epic #1809) | Session 2026-07-04 — R0 plan got a **B / NOGO** from the plan reviewer for (a) a prose-only "Depends on #1811" with no prerequisite gate while importing `CompletionQueue`/`StageName` from the not-yet-existing `hephaestus.automation.pipeline`, (b) a hand-waved six-op `_run_git` dispatch table, (c) stale/approximate cited line numbers (`~500` vs 864, `204` vs 104) and a wrong test path, (d) a `FakeGitHub` mutator surface listed with "etc.". R1 re-plan addressed every finding (step-0 prerequisite gate, full op→function table, re-grepped line refs, complete fake surface, MINOR-tightening cluster). **Neither R0 nor R1 was executed / CI-validated — plan only.** |
+
+### Copy-Paste (v1.3.0): Prerequisite gate + dispatch table for an unmerged-sibling import
+
+```bash
+# BEFORE writing the plan: prove the sibling has NOT merged and its package is absent.
+git fetch origin
+git log --oneline origin/main | grep -E '\(#1811\)' || echo "DEP #1811 NOT MERGED"
+test -d hephaestus/automation/pipeline/ && echo "pkg present" || echo "PKG ABSENT"
+
+# Plan implementation STEP 0 (make it a hard gate, verbatim in the plan):
+#   "STOP if `hephaestus/automation/pipeline/` is absent on the working tree.
+#    Do NOT write tests importing CompletionQueue / StageName until #1811 has merged
+#    and this package exists. This gate replaces a prose 'Depends on #1811' note."
+```
+
+```markdown
+## Op Dispatch Table (every case → a concrete named callable at a verified file:line)
+
+| job.op   | Handler (function)                        | Source (re-grepped)                          |
+|----------|-------------------------------------------|----------------------------------------------|
+| worktree | `worktree_manager.add_worktree`           | hephaestus/automation/worktree_manager.py:NN |
+| rebase   | `git_utils.rebase`                        | hephaestus/automation/git_utils.py:NN        |
+| clone    | `git_utils.run(["gh","repo","clone",...])`| NO public seam — only private `_ensure_clone` in a coverage-omitted module; minimal direct call chosen and documented |
+| ...      | ... (resolve EVERY enumerated op — no "dispatch to module X") | ...                          |
+```
 
 ### Copy-Paste: NOGO revision loop — Read each flagged API on disk
 

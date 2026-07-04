@@ -1,6 +1,64 @@
 <!-- markdownlint-disable MD024 -->
 # History: planning-unmerged-parent-contract-compile-smoke-gate
 
+## v1.3.0 (2026-07-04)
+
+**Changed by:** ProjectHephaestus issue #1812 plan (worker-pool module; depends on
+unmerged sibling #1811; epic #1809). R0 plan got a **B / NOGO** from the plan reviewer;
+R1 re-plan addressed every finding.
+**Verification:** unverified (plan only — never executed or CI-validated).
+
+### What changed
+
+Extended the skill from the DEPENDENCY-IMPORT and DISPATCH-TABLE angle. The prior
+versions (v1.0.0–v1.2.0) covered the ProjectOdyssey / Mojo cases: unmerged parent with an
+approved-plan CONTRACT, the post-merge compile-smoke gate, unverified-API sections, and the
+validation-only sub-case. v1.3.0 adds the Hephaestus/Python worker-pool case and five new
+Failed-Attempts rows (22–26), five new detailed steps (17–21), four new "When to Use"
+triggers (10–13), a Prerequisite-Gate + Dispatch-Table copy-paste block, and a
+ProjectHephaestus "Verified On" row.
+
+1. **Prerequisite gate as step 0 (not a prose "Depends on #NNNN").** A plan whose code
+   imports symbols an unmerged sibling introduces (`CompletionQueue`, `StageName` from a
+   package that does not yet exist on `origin/main`) must make its FIRST implementation
+   step a concrete gate that STOPS if the package directory is absent. Verify empirically
+   at plan-time: `git log --oneline origin/main | grep '(#<dep>)'` + `test -d <path>`.
+   This is the PRE-implementation analogue of the post-merge compile-smoke gate. R0's
+   prose "Depends on #1811" + "Confirmed via `gh issue view`" was a MAJOR finding.
+
+2. **Dispatch table resolves EVERY case to a named callable at a verified `file:line`.**
+   R0's "dispatch `job.op` to `worktree_manager` / `git_utils`" for six ops was NOGO'd as
+   hand-waving. The fix is a full op→function table. Corollary: when NO clean public seam
+   exists for a case (the `clone` op had only a private `_ensure_clone` in a
+   coverage-omitted module), document that and pick the minimal direct call rather than
+   leaving the gap for the implementer.
+
+3. **Re-grep every cited `file:line` right before emitting.** R0 cited `~500` (actual 864),
+   `204` (actual 104), and a wrong test path (`tests/unit/automation/` vs
+   `tests/unit/validation/`). A `~` or a guessed number is a reviewer ding and a signal the
+   file was never opened at that spot.
+
+4. **Enumerate a test double's FULL surface, no "etc."** R0's `FakeGitHub` listed a few
+   mutators + "etc." while being "used by all later tests"; the reviewer demanded the
+   complete mutator list because downstream stage/coordinator tests depend on the contract.
+
+5. **The MINOR-tightening cluster even on a sound design.** Catch `BaseException` (not
+   `Exception`) in a worker whose result is read via `future.result()` in a callback thread;
+   specify unspecified helper paths (lock-file path); derive an invariant's target set from
+   `__all__` rather than hardcoding private names AND add a "set is non-empty" guard so the
+   invariant can't pass vacuously. Reinforces `architecture-executable-convention-guard-pattern`
+   from the dependency/dispatch angle.
+
+### Why
+
+The prior versions were all Mojo / ProjectOdyssey training-plan cases. The core discipline
+("plan against an unmerged dependency; a reviewer NOGO is a signal every cited-but-unverified
+fact is suspect") is language- and domain-independent, but the concrete failure modes for a
+Python worker-pool module that imports from an unmerged sibling and dispatches an op table
+were not represented. Adding the Hephaestus #1812 R0→R1 cycle broadens the skill's search
+surface to stacked/serialized epics, symbol imports from sibling PRs, and op/route/dispatch
+tables — while keeping the same NOGO-driven revision spine.
+
 ## v1.2.0 (2026-07-02)
 
 Amended after authoring the plan for ProjectOdyssey issue #5526 — a
