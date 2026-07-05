@@ -242,6 +242,19 @@ Agent 2 (Sonnet, medium):
 | Prompt didn't invoke `/hephaestus:advise` | Sub-agents guessed at domain concepts; thread c4 (BN stats) fix was incorrect | Without understanding running-mean EMA semantics, agent couldn't justify deletion | Add `/hephaestus:advise [domain]` as first instruction in every dispatch |
 | Aggregated results without verification step | Assumed all fixes compiled | One fix introduced a compile error that blocked CI | Add explicit "verify compilation" step before commit |
 
+## Verified Extension: Issue #1814 (ProjectHephaestus, 2026-07-04)
+
+**Session context**: Addressed 4 inline review comments on PR #1814 (planning and plan-review stages) in parallel sub-agents with sequential coordination.
+
+**Workflow extension**:
+- **Synchronous completion guarantee**: Used `run_in_background: false` on all sub-agent dispatches to ensure coordinator has all results before verification gates (tests, pre-commit).
+- **Same-file serialization with sequential dispatch**: When multiple review threads target the same file (e.g., `planner_review_loop.py` had 2 threads), created ONE sequential sub-agent instead of parallel agents, avoiding edit races.
+- **Independent-file parallelization**: Threads on different files (`base.py` vs `test_zero_io_imports.py`) were dispatched as separate parallel sub-agents (different model tiers by difficulty).
+- **Sub-agent model selection**: Simple symbol-removal (Haiku), medium docstring addition (Sonnet), hard architectural export guard (Opus).
+- **Verification gate post-completion**: After all sub-agents finished, ran full test suite (115 tests) + pre-commit hooks to catch any compile/lint errors before commit.
+
+**Outcome**: All 4 review comments addressed in one session cycle; 115 tests passing; pre-commit hooks passing; PR merged clean (commit 2352687).
+
 ## Results & Parameters
 
 ### Model Tier Thresholds
