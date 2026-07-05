@@ -6,19 +6,19 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "2.1.0",
-  "total_plugins": 595,
+  "total_plugins": 604,
   "categories": {
-    "architecture": 115,
+    "architecture": 116,
     "ci-cd": 119,
-    "debugging": 53,
+    "debugging": 58,
     "documentation": 39,
     "evaluation": 12,
-    "optimization": 5,
+    "optimization": 6,
     "testing": 81,
-    "tooling": 164,
+    "tooling": 166,
     "training": 7
   },
-  "last_updated": "2026-07-05T00:37:07Z",
+  "last_updated": "2026-07-05T06:28:42Z",
   "plugins": [
     {
       "name": "agent-config-validation-and-integrity",
@@ -2429,6 +2429,25 @@
         "single-quote-guard",
         "llm-output",
         "trailing-comma"
+      ]
+    },
+    {
+      "name": "symbol-scoped-import-exemptions",
+      "description": "Use when: (1) enforcing zero-io-imports architectural guards on pipeline automation modules \u2014 exempting ONLY specific symbols (e.g., parse_review_verdict) from normally-forbidden I/O module imports; (2) writing a guard that validates symbol-scoped exemptions (e.g., asserts that importing ANY OTHER symbol from claude_invoke triggers a violation); (3) designing an import exemption to be explicit-intent-based, forcing future imports to be justified in the exemption list rather than silently slipping through unscoped rules; (4) documenting why a pure function (parse_review_verdict) needs importing an I/O module (claude_invoke) but constraining that import to ONLY the pure function and not hypothetical future uses.",
+      "version": "1.0.0",
+      "source": "./skills/symbol-scoped-import-exemptions.md",
+      "category": "architecture",
+      "tags": [
+        "import-guard",
+        "zero-io-imports",
+        "symbol-scoped",
+        "exemption-list",
+        "pipeline-architecture",
+        "architectural-boundary",
+        "explicit-intent",
+        "pure-function",
+        "constraint-enforcement",
+        "test-validation"
       ]
     },
     {
@@ -5350,6 +5369,25 @@
       "tags": []
     },
     {
+      "name": "debian-apt-kernel-headers-repo-gap-diagnosis",
+      "description": "Diagnose apt-get install --only-upgrade linux-headers-amd64 failing with an unmet-dependency / held-broken-packages error on Debian/PureOS, and distinguish a genuine upstream repository publish gap from a local hold/pin misconfiguration. Use when: (1) apt reports 'Depends: linux-headers-<version> but it is not installable', (2) apt says 'you have held broken packages' but apt-mark showhold is empty, (3) linux-headers-amd64 cannot upgrade even though linux-image-amd64 upgraded fine.",
+      "version": "1.0.0",
+      "source": "./skills/debian-apt-kernel-headers-repo-gap-diagnosis.md",
+      "category": "debugging",
+      "tags": [
+        "apt",
+        "apt-get",
+        "apt-cache",
+        "dpkg",
+        "linux-headers",
+        "kernel",
+        "debian",
+        "pureos",
+        "unmet-dependencies",
+        "homelab"
+      ]
+    },
+    {
       "name": "debugging-blog-bug-validation-methodology",
       "description": "Methodology for systematically validating that bugs documented in blog posts have been fixed in the codebase. Use when: (1) reviewing blog posts that document bugs, (2) verifying historical bug fixes are still in place, (3) auditing codebase against documented issues.",
       "version": "1.0.0",
@@ -5498,6 +5536,14 @@
       ]
     },
     {
+      "name": "debugging-ufw-systemd-active-status-misleading",
+      "description": "systemctl is-active ufw can report active (exited) for weeks while the firewall enforces zero rules, because ufw.service's ExecStart always exits 0. Use when: (1) auditing a host's firewall/security posture and systemctl reports ufw as active, (2) ports that should be blocked are reachable despite ufw appearing enabled, (3) verifying whether a systemd oneshot/exited unit's active status actually reflects the application-level state it manages.",
+      "version": "1.0.0",
+      "source": "./skills/debugging-ufw-systemd-active-status-misleading.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
       "name": "debugging-wsl-host-hang-oom-forensic-diagnosis",
       "description": "Forensic, after-the-fact diagnosis of a WSL2 host that hung/froze under heavy load. Use when: (1) a WSL2 host froze or became unresponsive during a heavy multi-agent build/swarm and you must prove what happened post-mortem, (2) you suspect a swap-death OOM but the kernel did not surgically kill one process (the whole VM hung), (3) you need to distinguish swap-death-by-overcommit from a clean single-process OOM, (4) `dmesg` is empty (WSL2 without root) and you need the real kernel evidence, (5) you must quantify the concurrent load (agent sessions, pixi solves, C++ builds) that caused host resource exhaustion. For the FIX once diagnosed, see concurrency-and-process-reliability-patterns (asyncio.Semaphore agent cap, ulimit -v, -j2 builds).",
       "version": "1.0.0",
@@ -5537,6 +5583,20 @@
         "504",
         "gateway-timeout",
         "network-isolation"
+      ]
+    },
+    {
+      "name": "docker-ufw-published-ports-bypass-forward-chain",
+      "description": "Docker published ports (docker run -p / compose ports:) bypass ufw's normal INPUT-chain allow/deny rules entirely, via the DOCKER-USER/FORWARD chain. Use when: (1) a ufw deny/allow rule doesn't seem to affect a containerized service, (2) auditing firewall coverage for a Docker host, (3) trying to restrict a docker-published port to a trusted interface/VPN mesh.",
+      "version": "1.0.0",
+      "source": "./skills/docker-ufw-published-ports-bypass-forward-chain.md",
+      "category": "debugging",
+      "tags": [
+        "docker",
+        "ufw",
+        "iptables",
+        "firewall",
+        "networking"
       ]
     },
     {
@@ -5843,6 +5903,25 @@
       ]
     },
     {
+      "name": "systemd-inapplicable-failed-units-mask",
+      "description": "Triage systemd units stuck in \"failed\" state that are actually INAPPLICABLE to the hardware/filesystem rather than genuinely broken \u2014 the fix is to mask + reset-failed, not repair. Covers the two canonical cases (fwupd-refresh failing on legacy-BIOS machines with \"0 local devices supported\", snapper-boot failing because root is ext4 not btrfs / no 'root' snapper config) and why masking alone leaves a stale failed flag that reset-failed must clear. Use when: (1) systemctl --failed lists units that can never succeed on this hardware, (2) fwupd-refresh fails on a legacy-BIOS host, (3) snapper-boot fails with \"config 'root' does not exist\", (4) a unit still shows failed after being masked.",
+      "version": "1.0.0",
+      "source": "./skills/systemd-inapplicable-failed-units-mask.md",
+      "category": "debugging",
+      "tags": [
+        "systemd",
+        "systemctl",
+        "failed-units",
+        "mask",
+        "reset-failed",
+        "fwupd",
+        "snapper",
+        "legacy-bios",
+        "btrfs",
+        "ext4"
+      ]
+    },
+    {
       "name": "toml-section-bounded-regex-dotall-bug",
       "description": "Fix for re.DOTALL cross-section matching bug when extracting values from TOML [tool.X] sections via regex. Use when: (1) writing a regex to extract a key from a specific TOML section, (2) a TOML parser regex returns wrong values for keys that appear in multiple sections, (3) refactoring TOML extraction code that uses re.DOTALL.",
       "version": "1.0.0",
@@ -5854,6 +5933,25 @@
         "python",
         "dotall",
         "section-boundary"
+      ]
+    },
+    {
+      "name": "ufw-firewalld-dual-manager-conflict",
+      "description": "Diagnose and fix a Linux host running TWO firewall managers at once (ufw AND firewalld both active), which produces nondeterministic netfilter rule ordering and can silently break DNS/outbound connectivity. Also covers why firewalld is present on Debian/PureOS (pulled by the pureos-standard metapackage, so it cannot be apt-removed cleanly) and the correct disable-not-uninstall fix. Use when: (1) outbound/DNS breaks after adding ufw, (2) `systemctl is-active ufw firewalld` shows both active, (3) deciding ufw vs firewalld on a Debian-family host, (4) a firewall package can't be removed because a distro metapackage depends on it.",
+      "version": "1.0.0",
+      "source": "./skills/ufw-firewalld-dual-manager-conflict.md",
+      "category": "debugging",
+      "tags": [
+        "ufw",
+        "firewalld",
+        "firewall",
+        "netfilter",
+        "dns",
+        "connectivity",
+        "debian",
+        "pureos",
+        "nftables",
+        "iptables"
       ]
     },
     {
@@ -6948,6 +7046,24 @@
         "merge-conflict-resolution",
         "parameter-updates",
         "mojo"
+      ]
+    },
+    {
+      "name": "linux-bbr-fq-network-tuning",
+      "description": "Enable TCP BBR congestion control + fq qdisc on a Linux host, persistently and kernel-version-aware. Use when: (1) tuning throughput on lossy/higher-RTT paths like internet uploads or a Tailscale mesh, (2) tcp_available_congestion_control lists only \"reno cubic\" and bbr is missing because tcp_bbr is not loaded yet, (3) BBR reads back active but interfaces still show pfifo_fast, (4) applying the same tuning across multiple mesh hosts on different kernels (4.19 vs 5.10), (5) an lsmod grep says the module is \"not loaded\" but sysctl already reports bbr.",
+      "version": "1.0.0",
+      "source": "./skills/linux-bbr-fq-network-tuning.md",
+      "category": "optimization",
+      "tags": [
+        "bbr",
+        "fq",
+        "tcp",
+        "congestion-control",
+        "qdisc",
+        "sysctl",
+        "network-tuning",
+        "tailscale",
+        "kernel-module"
       ]
     },
     {
@@ -9372,6 +9488,14 @@
       ]
     },
     {
+      "name": "linux-cpu-governor-persist-without-cpupower",
+      "description": "Set and persist the Linux CPU frequency scaling governor (e.g. performance) across reboots on a system with NO cpufrequtils/linux-cpupower package installed, using direct sysfs writes plus a minimal systemd oneshot unit \u2014 works under the intel_pstate driver without needing any governor-management package. Use when: (1) a host is sitting on the wrong scaling_governor (e.g. powersave when it should be performance) and `dpkg -l | grep -iE 'cpufrequtils|cpupower'` returns empty, (2) you want two servers to have matching CPU throughput behavior, (3) you need the setting to survive a reboot without adding new package surface.",
+      "version": "1.0.0",
+      "source": "./skills/linux-cpu-governor-persist-without-cpupower.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "logical-model-family-rename-with-storage-exceptions",
       "description": "Rename repository logical model-family surfaces without breaking physical checkpoint or benchmark storage paths. Use when: (1) replacing old model-family names in manifests, docs, tests, scripts, and routes, (2) preserving real external paths that still contain the old name, (3) adding a guard that blocks old logical names while allowing storage references.",
       "version": "1.0.1",
@@ -9827,6 +9951,29 @@
       "source": "./skills/podman-from-source-install.md",
       "category": "tooling",
       "tags": []
+    },
+    {
+      "name": "pr-review-thread-coordination-sub-agent-serialization",
+      "description": "Coordinating a small batch (2-5) of independent PR review-thread fixes by dispatching one sub-agent per thread. Use when: (1) a PR has multiple open review comments/threads and you want to fix them without one sub-agent stepping on another's edit, (2) two or more of the threads touch the SAME file \u2014 dispatch those sequentially, not in parallel, (3) a thread's fix is a one-line test-assertion or docstring change that a cheap (haiku-tier) sub-agent can safely execute, (4) you need to verify each sub-agent's edit landed correctly before running the full test/lint/type-check gate and committing, (5) deciding between running N agents in parallel Task calls vs. one after another for a small (<=5) review-comment batch.",
+      "version": "1.0.0",
+      "source": "./skills/pr-review-thread-coordination-sub-agent-serialization.md",
+      "category": "tooling",
+      "tags": [
+        "pr-review",
+        "review-thread",
+        "sub-agent-dispatch",
+        "parallel-dispatch",
+        "same-file-serialization",
+        "file-ownership",
+        "haiku",
+        "trust-but-verify",
+        "test-assertion-strengthening",
+        "tautological-comparison",
+        "docstring-clarity",
+        "constructor-parity",
+        "integration-gate",
+        "small-batch-review-fix"
+      ]
     },
     {
       "name": "pr-review-two-dot-vs-three-dot-diff",
