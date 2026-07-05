@@ -197,8 +197,39 @@ standing in for it must gain the same parameter (even if unused in the fake's bo
 callers that pass the new parameter positionally or by keyword against the fake will not
 catch a real signature drift, and the fake silently diverges from what it doubles for.
 
+## Verified Extensions
+
+### Session 2: Issue #1815, PR #1846 (2026-07-05)
+
+**Context**: Addressed 3 inline review comments on PR #1846 (pipeline implementation and pr-review stages) affecting two distinct files using sequential coordination for same-file comments.
+
+**Workflow refinement**:
+- **Same-file serialization across sub-agents**: Two of the three threads targeted `base.py` (lines 185 and 194). Rather than parallel dispatch, created ONE sequential sub-agent to handle both base.py fixes together, preventing edit-race conditions.
+- **Model tier selection by mechanical simplicity**: All three fixes were simple local changes (bare `...` → `raise NotImplementedError` vs `pass`, and assertion side-effect separation), all routed to haiku despite spanning two files.
+- **Synchronous completion requirement**: Set `run_in_background: false` on all sub-agent calls to ensure coordinator could verify changes before running full test/pre-commit gates.
+- **Verify-after-agent pattern**: After each agent reported completion, immediately read back the modified files to confirm the exact lines changed as expected (no silent no-ops or partial edits).
+- **Full gate verification post-completion**: Once all changes verified via Read, ran complete test suite + pre-commit hooks (42 hooks passed) to catch any unexpected regressions.
+- **Atomic commit with thread IDs**: Single signed commit capturing all three fixes with GPG signature and DCO signoff.
+
+**Threads fixed**:
+
+| Thread | File | Issue | Fix | Model |
+|--------|------|-------|-----|-------|
+| Review #1 | `hephaestus/automation/pipeline/stages/base.py:185` | Bare ellipsis has no effect (linter warning) | `...` → `raise NotImplementedError` | haiku |
+| Review #2 | `hephaestus/automation/pipeline/stages/base.py:194` | Bare ellipsis has no effect (linter warning) | `...` → `pass` | haiku |
+| Review #3 | `tests/unit/automation/test_stage_pr_review.py:798` | Assertion has side-effect in expression (mutates state) | Separate mutation to variable, then assert on pure value | haiku |
+
+**Outcome**: All 3 threads addressed; full test suite (215 tests) passing; pre-commit clean (42 hooks); one signed commit with DCO; PR ready for merge.
+
+**Key learnings from this session**:
+1. **Sequential dispatch for same-file comments is superior to parallel**: Even when logically independent fixes touch the same file, one sub-agent handling both in sequence avoids edit races entirely.
+2. **Verify-immediately pattern catches silent failures**: Reading back modified files right after sub-agent completion caught any formatting drift or partial edits before the full gate suite ran.
+3. **Haiku is sufficient for "mechanical" fixes even across files**: All three fixes were pure pattern application (ellipsis replacement, variable name extraction) with no domain judgment required — haiku model was appropriate despite spanning 2 files and 3 lines.
+4. **Synchronous execution is a prerequisite for verification**: `run_in_background: false` ensures the coordinator can Read the modified files while they're on-disk, before any other concurrent work mutates the repo state.
+
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | PR #1838 (issue #1812, epic #1809) | Worker pool for agent sessions, build/test, and git operations; 4 review threads addressed via parallel haiku-tier sub-agent dispatch (all threads on distinct files); 132 tests pass, mypy/ruff clean, one signed commit (verified-local) |
+| ProjectHephaestus | PR #1846 (issue #1815, epic #1809) | Pipeline implementation and pr-review stages; 3 review threads (2 in same file, 1 in different file) addressed via sequential same-file sub-agent + separate haiku dispatch; 215 tests pass, pre-commit clean (42 hooks), one signed commit with DCO (verified-local) |
