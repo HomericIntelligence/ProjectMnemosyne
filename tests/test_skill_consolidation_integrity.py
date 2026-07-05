@@ -4,6 +4,7 @@
 import json
 import sys
 from pathlib import Path
+from typing import TypedDict, cast
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
@@ -14,7 +15,13 @@ SKILLS_DIR = ROOT / "skills"
 MARKETPLACE_PATH = ROOT / ".claude-plugin" / "marketplace.json"
 
 
-CONSOLIDATIONS = [
+class Consolidation(TypedDict):
+    canonical: str
+    version: str
+    absorbed: list[str]
+
+
+CONSOLIDATIONS: list[Consolidation] = [
     {
         "canonical": "planning-verify-issue-premise-before-implementing",
         "version": "3.0.0",
@@ -53,11 +60,11 @@ CONSOLIDATIONS = [
 ]
 
 
-def _frontmatter_for(skill_name: str) -> dict:
+def _frontmatter_for(skill_name: str) -> dict[str, object]:
     content = (SKILLS_DIR / f"{skill_name}.md").read_text()
     frontmatter, _, errors = parse_frontmatter(content)
     assert errors == []
-    return frontmatter
+    return cast("dict[str, object]", frontmatter)
 
 
 def test_consolidated_canonicals_have_major_versions_and_history():
@@ -65,8 +72,10 @@ def test_consolidated_canonicals_have_major_versions_and_history():
         canonical = consolidation["canonical"]
         frontmatter = _frontmatter_for(canonical)
         assert frontmatter["version"] == consolidation["version"]
-        assert frontmatter["history"] == f"{canonical}.history"
-        assert (SKILLS_DIR / frontmatter["history"]).is_file()
+        history = frontmatter["history"]
+        assert isinstance(history, str)
+        assert history == f"{canonical}.history"
+        assert (SKILLS_DIR / history).is_file()
 
 
 def test_absorbed_skill_snapshots_remain_in_history():
