@@ -2198,7 +2198,7 @@ check dependencies as an afterthought:
 
 ```bash
 # 1. State of every predecessor in the serialized chain
-for n in 1810 1811 1812 1813 1814 1815 1816 1817 1818 1819 1820 1821 1822; do
+for n in {1810..1822}; do
   gh issue view "$n" --json number,state,title --jq '"\(.number) \(.state) \(.title)"'
 done   # ALL 13 were OPEN
 # 2. Does the infrastructure the deliverables NAME actually exist on disk?
