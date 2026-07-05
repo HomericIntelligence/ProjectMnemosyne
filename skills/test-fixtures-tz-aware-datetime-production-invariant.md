@@ -89,7 +89,7 @@ Example from ProjectHephaestus pipeline:
 ```python
 class HistoryEvent:
     """Immutable event in work-item history.
-    
+
     Attributes:
         timestamp: Creation time in UTC (tz-aware). Must not be naive.
         reason: Failure or success reason code.
@@ -134,11 +134,11 @@ from dataclasses import dataclass, field
 @dataclass
 class HistoryEventFixture:
     """Fixture for HistoryEvent with tz-aware UTC defaults."""
-    
+
     @staticmethod
     def default_timestamp() -> datetime:
         return datetime.now(timezone.utc)
-    
+
     timestamp: datetime = field(default_factory=default_timestamp)
     work_item_id: str = "default-w1"
     reason: str = "ci_fix"
@@ -211,10 +211,10 @@ def test_history_event_timestamp_comparison_with_offset():
     """Verify timestamp comparisons work with timezone-aware datetimes."""
     base = datetime(2026, 7, 4, 12, 0, 0, tzinfo=timezone.utc)
     later = datetime(2026, 7, 4, 13, 0, 0, tzinfo=timezone.utc)
-    
+
     event1 = HistoryEvent(timestamp=base, work_item_id="w1", reason="ci_fix")
     event2 = HistoryEvent(timestamp=later, work_item_id="w1", reason="ci_fix")
-    
+
     assert event1.timestamp < event2.timestamp
     assert (event2.timestamp - event1.timestamp) == timedelta(hours=1)
 ```
@@ -230,28 +230,28 @@ def make_history_event(
     reason: str = "ci_fix",
 ) -> HistoryEvent:
     """Create a HistoryEvent fixture.
-    
+
     Args:
         timestamp: Event creation time. MUST be tz-aware UTC.
                    Defaults to datetime.now(timezone.utc).
         work_item_id: Reference to work item.
         reason: Failure or success reason code.
-    
+
     Returns:
         A HistoryEvent with tz-aware UTC timestamp.
-    
+
     Note:
         Production invariant: all timestamps are tz-aware UTC.
         Fixtures enforce the same constraint.
     """
     if timestamp is None:
         timestamp = datetime.now(timezone.utc)
-    
+
     if timestamp.tzinfo is None:
         raise ValueError(
             f"Fixture timestamp must be tz-aware UTC; got naive datetime: {timestamp}"
         )
-    
+
     return HistoryEvent(timestamp=timestamp, work_item_id=work_item_id, reason=reason)
 ```
 

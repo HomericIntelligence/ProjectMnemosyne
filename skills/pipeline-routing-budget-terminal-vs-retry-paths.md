@@ -50,7 +50,7 @@ _REASON_BUDGET = {
     "no_pr": None,                      # routes to FINISHED, one-shot
     "ci_fix_terminal": None,            # FINISHED state, terminal
     "no_work_found": None,              # terminal outcome
-    
+
     # Retry paths (loop/recirculate) → budget per item
     "requeue": "retry_budget",          # loops back to same stage
     "recirculate": "retry_budget",      # loops to earlier stage
@@ -104,7 +104,7 @@ _REASON_BUDGET = {
     "no_pr": None,
     "ci_fix_terminal": None,
     "no_work_found": None,
-    
+
     # Retry → budget key (1 consumed per item per iteration)
     "requeue": "retry_budget",
     "recirculate": "retry_budget",
@@ -127,7 +127,7 @@ ROUTES = {
     "no_pr": "FINISHED",              # terminal
     "ci_fix_terminal": "FINISHED",    # terminal
     "no_work_found": "FINISHED",      # terminal
-    
+
     "requeue": "DISCOVERY",           # loop back to discovery
     "recirculate": "INTAKE",          # loop back to intake
     "ci_fix": "CI_FIX_LOOP",          # retry loop
