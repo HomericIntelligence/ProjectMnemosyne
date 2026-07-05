@@ -1,5 +1,39 @@
 # automation-god-package-shim-first-decomposition — History
 
+## v2.2.0 (2026-07-04)
+
+**Changed by:** ProjectHephaestus issue #1813 "GitHub-journal seeding and admission control" —
+discovered patch-seam corollary during loop-runner test suite refactor.
+**Verification:** verified-local
+
+### What changed
+
+- Added **Step 8c: Patch-Seam Corollary — Cross-Test Patching Strategy** to the SPLIT workflow.
+  When a function F is moved to a subpackage and is called transitively through another moved
+  function G (which is also patched), the patch target for F depends on call context. If F is
+  called within subpackage context (via canonical import), patch at the canonical location
+  (`subpackage.module.F`); if called from flat module context (via shim re-export), patch at
+  the flat location (`flat_module.F`). This is distinct from Step 8b's whole-test-tree grep
+  sweep (which catches imported-into-name patch breaks) — this corollary addresses the scenario
+  where both the caller and callee move together.
+- Updated the Overview table (Date/Objective/Trigger/Verification) to v2.2.0.
+- Added a concrete bug scenario (admission._fetch_planned_files called by _select_non_overlapping),
+  the fix strategy (patch at canonical vs. shim location based on call context), the key insight
+  (patch target is call-site binding, not definition location), and a verification note from #1813
+  (41-test automation-loop suite green after patch retargeting).
+- Bumped version 2.1.0 → 2.2.0 (PATCH — new corollary without altering core split/merge recommendation).
+
+### Why
+
+The #1813 loop-runner test refactor moved `admission._fetch_planned_files` from flat to
+subpackage but initially only retargeted patches in direct tests of the function. Tests that
+called `_select_non_overlapping` (the internal caller) still patched `admission._fetch_planned_files`
+(the flat shim path), which no longer works because the call originates from the canonical
+`admission.seeding` module, not the flat path. The corollary codifies the reasoning: patch target
+depends on WHERE the call originates, not where the symbol is defined.
+
+---
+
 ## v2.1.0 (2026-06-30)
 
 **Changed by:** ProjectHephaestus issue #1443 "Move `*_state.py` into `state/`" — first

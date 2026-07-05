@@ -15,8 +15,8 @@ description: >-
   module while keeping the original paths as explicit re-export shims (the inverse
   direction — merge, not split — but the same shim discipline applies).
 category: architecture
-date: 2026-06-30
-version: "2.1.0"
+date: 2026-07-04
+version: "2.2.0"
 user-invocable: false
 verification: verified-local
 history: automation-god-package-shim-first-decomposition.history
@@ -44,11 +44,11 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-30 (v2.1.0) |
-| **Objective** | (v1.0.0) Decompose a 52-file flat god-package into 8 domain sub-packages via shim files. (v2.0.0) ALSO covers the inverse: consolidate a small cluster of always-co-imported config modules into ONE canonical module, keeping the originals as explicit re-export shims — executed for real in ProjectHephaestus #1441. (v2.1.0) ALSO records a verified-local SPLIT/move execution (#1443) and the **whole-test-tree patch-seam sweep** it surfaced |
-| **Outcome** | v1.0.0 plan for #1177 was never executed. v2.0.0 records a verified-local execution of the shim consolidation for #1441 ("Merge 4 Claude agent modules"): merge confirmed with ruff + mypy clean and a 145-test focused suite green. v2.1.0 records a verified-local SPLIT of 3 `*_state.py` modules into `state/` (#1443): full `tests/unit/automation` suite **2284 passed**, ruff + mypy clean — after a whole-test-tree patch-seam sweep fixed 4 failures the approved plan missed |
-| **Trigger** | Either direction: a flat package with 40+ .py files (split), OR a cluster of 3-4 tiny always-co-imported modules (merge). Both keep original module paths as explicit re-export shims |
-| **Verification** | verified-local (MERGE #1441: ruff + mypy + 145-test focused suite green. SPLIT #1443: ruff + mypy clean, full `tests/unit/automation` suite 2284 passed, 0 failed) |
+| **Date** | 2026-07-04 (v2.2.0) |
+| **Objective** | (v1.0.0) Decompose a 52-file flat god-package into 8 domain sub-packages via shim files. (v2.0.0) ALSO covers the inverse: consolidate a small cluster of always-co-imported config modules into ONE canonical module, keeping the originals as explicit re-export shims — executed for real in ProjectHephaestus #1441. (v2.1.0) ALSO records a verified-local SPLIT/move execution (#1443) and the **whole-test-tree patch-seam sweep** it surfaced. (v2.2.0) **Patch-seam corollary: cross-test patching strategy** — when a moved function F is called transitively through another moved function that is also being patched, the patch target depends on call context |
+| **Outcome** | v1.0.0 plan for #1177 was never executed. v2.0.0 records a verified-local execution of the shim consolidation for #1441 ("Merge 4 Claude agent modules"): merge confirmed with ruff + mypy clean and a 145-test focused suite green. v2.1.0 records a verified-local SPLIT of 3 `*_state.py` modules into `state/` (#1443): full `tests/unit/automation` suite **2284 passed**, ruff + mypy clean — after a whole-test-tree patch-seam sweep fixed 4 failures the approved plan missed. v2.2.0 adds a corollary on cross-test patching after symbol moves (verified-local in ProjectHephaestus #1813) |
+| **Trigger** | Either direction: a flat package with 40+ .py files (split), OR a cluster of 3-4 tiny always-co-imported modules (merge). Both keep original module paths as explicit re-export shims. **v2.2.0 corollary:** tests that `patch.object(flat_module, F)` after a move of F must account for call context — patch at the canonical location if F is called within subpackage context, at the shim location if called from flat module context |
+| **Verification** | verified-local (MERGE #1441: ruff + mypy + 145-test focused suite green. SPLIT #1443: ruff + mypy clean, full `tests/unit/automation` suite 2284 passed. v2.2.0 corollary: verified-local in ProjectHephaestus #1813, 41-test automation-loop suite green after patch retargeting) |
 | **History** | [changelog](./automation-god-package-shim-first-decomposition.history) |
 
 ## When to Use
@@ -457,6 +457,65 @@ moved test files (`test_planner.py` / `test_implementer.py` / `test_review.py`) 
 failures that surfaced only on the first FULL-suite run.** Fix: repoint to
 `hephaestus.automation.state.planner.*`. This is the split-direction analogue of Step C3
 (which covers private-symbol / reload / caplog repoints in the MERGE direction).
+
+### Step 8c: Patch-Seam Corollary — Cross-Test Patching Strategy (v2.2.0, verified-local #1813)
+
+> **Context:** When a function F is moved from a flat module to a subpackage and is also
+> called transitively through another function G (which is also being moved), tests that
+> patch F must account for WHERE F is actually invoked. The patch target depends on whether
+> the call originates from within the subpackage (canonical patch target) or from the flat
+> shim's caller (flat-path patch target).
+
+**The Bug Scenario:**
+
+```python
+# Before move:
+# hephaestus/automation/admission.py
+def _fetch_planned_files(...): ...
+
+def _select_non_overlapping(...):
+    return _fetch_planned_files(...)  # internal call within same module
+
+# tests/unit/automation/test_loop_runner.py
+with patch.object(loop_runner, '_fetch_planned_files') as mock_fetch:  # ❌ BROKEN AFTER MOVE
+    # This test calls loop_runner._select_non_overlapping(), which internally
+    # calls _fetch_planned_files. After the move, the called version is the
+    # canonical import in the subpackage, NOT the shimmed path.
+```
+
+**The Fix:**
+
+When a function F is moved to a subpackage and tests patch F, determine the call context:
+
+1. **If F is called within subpackage context** (internal to the moved module or called
+   by another moved function in the subpackage), **patch at the canonical location**:
+   ```python
+   # After move: hephaestus/automation/admission.py → admission/seeding.py
+   with patch.object(admission.seeding, '_fetch_planned_files') as mock_fetch:
+       loop_runner.run(...)  # call the shim; it delegates to canonical
+   ```
+
+2. **If F is called from flat module context** (called by code in the flat shims),
+   **patch at the shim location**:
+   ```python
+   with patch.object(loop_runner, '_fetch_planned_files') as mock_fetch:
+       # Called from flat module context; use the shim path
+   ```
+
+**The Key Insight:**
+
+The patch target is not "where is the symbol defined now" but "where is the symbol
+looked up at call time." If a caller in the subpackage imports F and calls it, it
+uses the subpackage's binding of F (via the canonical import in `__init__.py` or a
+relative import), not the flat shim's re-export. Therefore, patching the shim path
+does NOT affect the subpackage caller.
+
+**Verification (ProjectHephaestus #1813):**
+
+Tests in `test_loop_runner.py` that patched `admission._fetch_planned_files` were
+updated to patch `admission.seeding._fetch_planned_files` because the call originates
+from within the moved `admission.seeding` module (called by `_select_non_overlapping`).
+Full 41-test automation-loop suite passed after patch retargeting.
 
 ### Step 9: Final Structural Verification
 
