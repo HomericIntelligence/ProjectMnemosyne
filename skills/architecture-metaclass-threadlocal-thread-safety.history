@@ -1,0 +1,154 @@
+# architecture-metaclass-threadlocal-thread-safety — History
+
+## v1.1.0 (2026-07-05)
+
+**Changed by:** ProjectHephaestus issue #1858 planning session — "Cross-repo unlocked module-level label cache corrupts durable journal writes under the multithreaded coordinator" (plan-only, no code applied)
+**Verification:** unverified (planning session; no code applied, no tests run, CI not confirmed)
+
+### What changed
+
+- Added a new **"Lock-Guarded Repo-Keyed Cache vs `threading.local()`"** sub-pattern
+  (as a `## Proposed Workflow` section) covering the *other* thread-safety shape:
+  a shared **module-level cache** (`set`/`dict`) that must survive concurrent access
+  from a `ThreadPoolExecutor` but whose entries are keyed per repo, not per thread.
+- Added a **"Risks & Load-Bearing Assumptions (plan-only)"** discussion capturing the
+  three deepest planning hazards found while planning the #1858 fix:
+  1. The per-repo cache **key may be a no-op under a shared-CWD `ThreadPoolExecutor`** —
+     if all worker threads share one process CWD, a CWD-derived repo key does NOT differ
+     per thread and the `threading.Lock` (not the key) is doing all the isolation work.
+  2. The repo-slug **resolver's cost/safety per call is unverified** — calling
+     `get_repo_info()` on every cache hit may shell out to git/gh, adding latency or its
+     own failure mode; a `try/except → None` fallback does not verify cost or that the
+     resolver never mutates shared state.
+  3. The **"GIL makes bare dict writes mostly safe" aside is a hazard** — read-modify-write
+     (`entry.add()`, get-then-set) is NOT atomic; the lock is load-bearing, not decorative.
+- Added 3 new **Failed Attempts** rows for the shared-cache class of bug.
+- Added a `## Proposed Workflow` section with the standard unverified warning banner and
+  kept the original verified `## Verified Workflow` intact (the metaclass pattern remains
+  `verified-local`).
+- Added `history:` frontmatter field; bumped `version` 1.0.0 → 1.1.0 (minor — new
+  sub-pattern + risks + failed attempts, no rewrite of the existing verified workflow).
+- Updated `date` 2026-03-25 → 2026-07-05 and extended `tags`.
+- Set top-level `verification: unverified` because the newly-added material is plan-only;
+  the Overview and the original workflow section explicitly note that the *original*
+  metaclass/`threading.local()` pattern remains `verified-local`.
+
+### Why
+
+The original skill (v1.0.0) covered ONE thread-safety shape: eliminating mutable
+*class-level* state with a metaclass + `threading.local()` so each thread gets isolated
+state. Issue #1858 surfaced the complementary shape: state that must be *shared* across
+threads (a label cache) but *partitioned by a key other than the thread* (the repo). Here
+`threading.local()` is wrong (it would give each thread its own empty cache and defeat
+caching); the correct tool is a `threading.Lock`-guarded, repo-keyed `dict`. Capturing
+both shapes — and the specific planning traps of the shared-cache one — in the same
+thread-safety skill keeps them on one search surface (thread-safety + shared mutable
+state). The planning traps are durable: the key-may-be-a-no-op-under-shared-CWD lesson and
+the "the lock, not the GIL, is load-bearing" lesson recur whenever a process-global cache
+is retrofitted for a thread pool.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: architecture-metaclass-threadlocal-thread-safety
+description: "Pattern for making class-level attribute access thread-safe using a metaclass with __getattr__ and threading.local(). Use when: (1) a class uses mutable class attributes shared across threads, (2) you need per-thread enable/disable state, (3) you want to preserve the Class.ATTR access pattern while eliminating shared mutable state."
+category: architecture
+date: 2026-03-25
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [thread-safety, metaclass, threading-local, python, immutable-state]
+---
+
+# Metaclass + threading.local() for Thread-Safe Class Attributes
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-25 |
+| **Objective** | Replace mutable class-level state with per-thread computed access while preserving the `Class.ATTR` API |
+| **Outcome** | Success — backward-compatible, thread-safe, 15 tests pass including concurrent access |
+| **Verification** | verified-local |
+
+## When to Use
+
+- A class stores configuration as **mutable class attributes** (e.g., ANSI color codes, feature flags)
+- Methods like `disable()` **mutate class attributes**, affecting all threads and modules simultaneously
+- You need **per-thread state isolation** (one thread disabling doesn't affect others)
+- You want to preserve the **`Class.ATTR` access pattern** (no API change for consumers)
+- Python 3.10+ (no `__class_getattr__` available until 3.12)
+
+## Verified Workflow
+
+### Quick Reference
+
+​```python
+import threading
+
+_state = threading.local()
+
+_CODES: dict[str, str] = {"OKGREEN": "\033[92m", "FAIL": "\033[91m"}
+
+class _Meta(type):
+    def __getattr__(cls, name: str) -> str:
+        if name in _CODES:
+            return _CODES[name] if getattr(_state, "enabled", True) else ""
+        raise AttributeError(f"type object {cls.__name__!r} has no attribute {name!r}")
+
+class Colors(metaclass=_Meta):
+    @staticmethod
+    def disable() -> None:
+        _state.enabled = False
+
+    @staticmethod
+    def enable() -> None:
+        _state.enabled = True
+​```
+
+### Detailed Steps
+
+1. **Extract values to an immutable dict**: Move all mutable class attributes into a module-level `dict[str, str]` that is never mutated.
+2. **Add `threading.local()` state**: Create a module-level `_state = threading.local()` to hold per-thread boolean flags.
+3. **Create a metaclass with `__getattr__`**: The metaclass intercepts attribute access on the class itself (not instances).
+4. **Compute on access**: In `__getattr__`, check the thread-local flag and return either the real value or an empty string.
+5. **Replace mutating methods**: `disable()` and `enable()` now just set `_state.enabled = False/True`.
+6. **Default to enabled**: Use `getattr(_state, "enabled", True)` so new threads get colors by default.
+
+### Why Metaclass (Not Other Approaches)
+
+| Approach | Problem |
+| ---------- | --------- |
+| `threading.Lock` around mutations | Still global state — all threads share one enable/disable flag |
+| Instance-based `Colors()` | Breaks the `Colors.ATTR` class-level access pattern used everywhere |
+| `__class_getattr__` (PEP 657) | Python 3.12+ only, not available in 3.10 |
+| Module-level `__getattr__` | Changes API from `Colors.ATTR` to `colors.ATTR` (module access) |
+| **Metaclass `__getattr__`** | Works on 3.10+, preserves `Colors.ATTR`, per-thread via `threading.local()` |
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| `typing.Dict` import | Used `from typing import Dict` for type annotation | Ruff UP035/UP006 flags it as deprecated in 3.10+ | Use builtin `dict[str, str]` directly |
+| Import ordering | Put `from hephaestus... import Colors, _CODES, _state` | Ruff I001 wants underscore-prefixed names sorted first | Ruff sorts `_CODES` before `Colors` |
+
+## Results & Parameters
+
+**Files changed**: 2 (`hephaestus/cli/colors.py`, `tests/unit/cli/test_colors.py`)
+**Test results**: 15/15 pass, 100% coverage on `colors.py`, full suite 394/394 pass
+**PR**: HomericIntelligence/ProjectHephaestus#68
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectHephaestus | Issue #30 — thread-safe Colors class | PR #68, all 394 tests pass |
+```
+
+---
+
+## v1.0.0 (2026-03-25)
+
+**Initial version.** Metaclass + `threading.local()` pattern for thread-safe class
+attributes (ProjectHephaestus issue #30, PR #68, verified-local).
