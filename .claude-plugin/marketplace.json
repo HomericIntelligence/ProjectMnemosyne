@@ -6,19 +6,19 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "2.1.0",
-  "total_plugins": 613,
+  "total_plugins": 616,
   "categories": {
-    "architecture": 122,
+    "architecture": 124,
     "ci-cd": 120,
     "debugging": 58,
     "documentation": 39,
     "evaluation": 12,
     "optimization": 6,
     "testing": 82,
-    "tooling": 167,
+    "tooling": 168,
     "training": 7
   },
-  "last_updated": "2026-07-06T19:26:26Z",
+  "last_updated": "2026-07-06T19:30:02Z",
   "plugins": [
     {
       "name": "agent-config-validation-and-integrity",
@@ -390,6 +390,42 @@
       "source": "./skills/architecture-ocp-dip-verify-before-planning.md",
       "category": "architecture",
       "tags": []
+    },
+    {
+      "name": "architecture-pipeline-durable-state-ac3",
+      "description": "Use when: (1) implementing durable state operations in pipeline stages (arming records, dedupe markers, state ledgers); (2) designing crash-safe state transitions where durable write failure must block stage advance; (3) managing idempotency: ensuring duplicate job completions don't re-arm/re-apply state changes; (4) handling exception scenarios where a durable write fails after some API calls succeed (e.g., auto-merge enabled but record write fails); (5) implementing acceptance criteria #3 (AC3) from Hephaestus pipeline epic #1809: 'durable records must exist before state advances'; (6) building retry-from-clean-state semantics when durable mutations fail.",
+      "version": "1.0.0",
+      "source": "./skills/architecture-pipeline-durable-state-ac3.md",
+      "category": "architecture",
+      "tags": [
+        "pipeline",
+        "durable-state",
+        "crash-safety",
+        "idempotency",
+        "acceptance-criteria",
+        "queue-automation",
+        "ledger",
+        "dedupe",
+        "arm-records"
+      ]
+    },
+    {
+      "name": "architecture-pipeline-stage-implementation",
+      "description": "Use when: (1) implementing queue-based pipeline stages with state machine semantics (Continue/JobRequest/StageOutcome); (2) delegating pure classifiers to pipeline stages via context accessors; (3) routing jobs via on_job_done payload flags while avoiding state mutations; (4) distinguishing timer-park (RETRY disposition) from job submission (JobRequest); (5) managing job completion routing that doesn't mutate item.state (coordinator clobber risk); (6) implementing durable mutations (e.g., arming records, dedupe markers) that must occur before state advances.",
+      "version": "1.0.0",
+      "source": "./skills/architecture-pipeline-stage-implementation.md",
+      "category": "architecture",
+      "tags": [
+        "pipeline",
+        "stage",
+        "state-machine",
+        "coordinator",
+        "job-routing",
+        "durable-mutations",
+        "timer-park",
+        "queue-automation",
+        "classifiers"
+      ]
     },
     {
       "name": "architecture-pre-discovery-worker-guard-pattern",
@@ -10969,6 +11005,22 @@
         "parallel",
         "wordlist",
         "gnupg"
+      ]
+    },
+    {
+      "name": "tooling-pipeline-invalid-jobrequest",
+      "description": "Use when: (1) encountering TypeErrors or coordinator crashes from JobRequest(None, ...); (2) trying to use JobRequest as a generic callback signal (not for job submission); (3) needing to distinguish timer-park (RETRY disposition) from job submission (JobRequest); (4) fixing legacy code that uses type: ignore to silence JobRequest(None) violations; (5) routing work without actually submitting a job to the queue.",
+      "version": "1.0.0",
+      "source": "./skills/tooling-pipeline-invalid-jobrequest.md",
+      "category": "tooling",
+      "tags": [
+        "pipeline",
+        "jobrequest",
+        "anti-pattern",
+        "coordinator",
+        "type-safety",
+        "job-routing",
+        "timer-park"
       ]
     },
     {
