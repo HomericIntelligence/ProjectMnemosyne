@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Tests for scripts/skill_utils.py shared utility functions.
+Tests for scripts/mnemosyne_skill_utils.py shared utility functions.
 
 Covers:
 - parse_frontmatter: valid content, missing opening delimiter, missing closing
@@ -11,7 +11,7 @@ Covers:
 
 from pathlib import Path
 
-from skill_utils import find_skill_files, parse_frontmatter
+from mnemosyne_skill_utils import find_skill_files, parse_frontmatter
 
 # ---------------------------------------------------------------------------
 # parse_frontmatter

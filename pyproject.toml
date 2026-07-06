@@ -18,12 +18,12 @@ dev = [
 ]
 
 # Flat repo layout (scripts/, skills/, tests/, ...) breaks setuptools
-# auto-discovery, so the distributable is declared explicitly: the shared
-# library module scripts/skill_utils.py ships as top-level `skill_utils`,
-# matching the flat `from skill_utils import ...` imports used repo-wide.
+# auto-discovery, so the distributable is declared explicitly. The shared
+# library module is namespaced to avoid colliding with unrelated top-level
+# modules in environments that install project-mnemosyne.
 [tool.setuptools]
 package-dir = {"" = "scripts"}
-py-modules = ["skill_utils"]
+py-modules = ["mnemosyne_skill_utils"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

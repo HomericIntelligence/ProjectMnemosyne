@@ -172,3 +172,12 @@ def test_real_repo_builds_clean(tmp_path: Path) -> None:
     tarball = build_package.build_package(REPO_ROOT, tmp_path)
 
     assert build_package.verify_package(tarball) == []
+
+
+def test_real_repo_packages_namespaced_skill_utils_module() -> None:
+    pyproject = (REPO_ROOT / "pyproject.toml").read_text()
+
+    assert 'py-modules = ["mnemosyne_skill_utils"]' in pyproject
+    assert 'py-modules = ["skill_utils"]' not in pyproject
+    assert (REPO_ROOT / "scripts" / "mnemosyne_skill_utils.py").is_file()
+    assert not (REPO_ROOT / "scripts" / "skill_utils.py").exists()

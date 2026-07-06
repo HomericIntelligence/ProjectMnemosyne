@@ -121,13 +121,13 @@ def parse_frontmatter(content: str) -> tuple[dict, str]:
     Parse YAML frontmatter from markdown content.
 
     Returns (frontmatter_dict, body_text). Delegates to the canonical
-    :mod:`skill_utils` implementation (which uses ``yaml.safe_load``) so that
+    :mod:`mnemosyne_skill_utils` implementation (which uses ``yaml.safe_load``) so that
     we no longer maintain a third hand-rolled parser (#1473).
     """
-    # Import lazily so that callers without skill_utils on sys.path (e.g.
+    # Import lazily so that callers without mnemosyne_skill_utils on sys.path (e.g.
     # ad-hoc invocations of this script with a stripped-down environment)
     # still get a helpful ImportError instead of a circular-import failure.
-    from skill_utils import parse_frontmatter as _shared_parse_frontmatter
+    from mnemosyne_skill_utils import parse_frontmatter as _shared_parse_frontmatter
 
     frontmatter, body, _errors = _shared_parse_frontmatter(content)
     return frontmatter, body

@@ -350,7 +350,7 @@ jobs:
       contents: read
     steps:
       # Deliberately NO checkout: the smoke test must import the installed
-      # wheel, and an absent repo tree guarantees `skill_utils` cannot be
+      # wheel, and an absent repo tree guarantees `mnemosyne_skill_utils` cannot be
       # satisfied from the checkout's scripts/ directory.
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
@@ -375,10 +375,10 @@ jobs:
           . "$RUNNER_TEMP/mnemosyne-venv/bin/activate"
           python - <<'PY'
           import inspect
-          import skill_utils
-          src = inspect.getsourcefile(skill_utils)
+          import mnemosyne_skill_utils
+          src = inspect.getsourcefile(mnemosyne_skill_utils)
           assert "site-packages" in src, f"imported from checkout, not wheel: {src}"
-          fm, body, errs = skill_utils.parse_frontmatter("---\nname: smoke\n---\nbody\n")
+          fm, body, errs = mnemosyne_skill_utils.parse_frontmatter("---\nname: smoke\n---\nbody\n")
           assert fm["name"] == "smoke" and not errs, (fm, errs)
           print("OK: installed wheel imports and parses frontmatter:", src)
           PY

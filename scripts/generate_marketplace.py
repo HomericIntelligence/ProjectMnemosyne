@@ -23,9 +23,9 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - Python 3.10 fallback
     import tomli as tomllib  # type: ignore[no-redef]
 
-# Use the canonical skill_utils helpers instead of duplicating logic here.
+# Use the canonical skill helpers instead of duplicating logic here.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from skill_utils import find_skill_files, parse_frontmatter  # noqa: E402
+from mnemosyne_skill_utils import find_skill_files, parse_frontmatter  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -48,7 +48,7 @@ def _load_project_version() -> str:
 def load_skill_metadata(skill_file: Path) -> Optional[Dict[str, Any]]:
     """Load metadata from a flat skill file's YAML frontmatter.
 
-    Thin wrapper around skill_utils.parse_frontmatter to keep call-sites
+    Thin wrapper around mnemosyne_skill_utils.parse_frontmatter to keep call-sites
     in this module unchanged while reusing the canonical implementation.
     """
     try:

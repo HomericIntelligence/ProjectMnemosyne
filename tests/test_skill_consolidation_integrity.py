@@ -8,7 +8,7 @@ from typing import TypedDict, cast
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
-from skill_utils import parse_frontmatter
+from mnemosyne_skill_utils import parse_frontmatter
 
 ROOT = Path(__file__).resolve().parent.parent
 SKILLS_DIR = ROOT / "skills"

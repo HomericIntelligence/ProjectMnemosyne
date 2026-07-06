@@ -18,7 +18,7 @@ import textwrap
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-from skill_utils import parse_frontmatter  # noqa: F401  (re-exported for tests)
+from mnemosyne_skill_utils import parse_frontmatter  # noqa: F401  (re-exported for tests)
 
 SKILLS_DIR = Path("skills")
 VALID_CATEGORIES = {
