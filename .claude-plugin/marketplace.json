@@ -6,11 +6,11 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "2.1.0",
-  "total_plugins": 632,
+  "total_plugins": 633,
   "categories": {
     "architecture": 129,
     "ci-cd": 122,
-    "debugging": 61,
+    "debugging": 62,
     "documentation": 40,
     "evaluation": 12,
     "optimization": 7,
@@ -18,7 +18,7 @@
     "tooling": 172,
     "training": 7
   },
-  "last_updated": "2026-07-06T21:13:26Z",
+  "last_updated": "2026-07-06T21:17:08Z",
   "plugins": [
     {
       "name": "agent-config-validation-and-integrity",
@@ -6359,6 +6359,22 @@
       ]
     },
     {
+      "name": "traefik-middleware-cross-provider-reference-suffix",
+      "description": "Diagnose and fix a Traefik router that fails to load with `middleware \"X@<provider>\" does not exist` because a middleware reference omitted its provider suffix and Traefik silently assumed it lived in the referencing router's own provider. Use when: (1) a Docker-labeled router references a middleware defined in the file provider (or vice versa) without an explicit `@file`/`@docker` suffix, (2) one router 404s or fails to route while a sibling router on the same host/different entrypoint works fine, (3) `docker logs` shows nothing useful for a Traefik routing failure.",
+      "version": "1.0.0",
+      "source": "./skills/traefik-middleware-cross-provider-reference-suffix.md",
+      "category": "debugging",
+      "tags": [
+        "traefik",
+        "middleware",
+        "docker-provider",
+        "file-provider",
+        "reverse-proxy",
+        "dynamic-configuration",
+        "cross-provider-reference"
+      ]
+    },
+    {
       "name": "ufw-firewalld-dual-manager-conflict",
       "description": "Diagnose and fix a Linux host running TWO firewall managers at once (ufw AND firewalld both active), which produces nondeterministic netfilter rule ordering and can silently break DNS/outbound connectivity. Also covers why firewalld is present on Debian/PureOS (pulled by the pureos-standard metapackage, so it cannot be apt-removed cleanly) and the correct disable-not-uninstall fix. Use when: (1) outbound/DNS breaks after adding ufw, (2) `systemctl is-active ufw firewalld` shows both active, (3) deciding ufw vs firewalld on a Debian-family host, (4) a firewall package can't be removed because a distro metapackage depends on it.",
       "version": "1.0.0",
@@ -11157,8 +11173,8 @@
     },
     {
       "name": "tooling-docker-headless-build-credential-helper",
-      "description": "Docker build/pull over SSH fails with 'Cannot autolaunch D-Bus without X11 $DISPLAY' because the credential helper needs a desktop keyring. Use when: (1) docker build fails getting credentials in a headless/SSH session, (2) error mentions D-Bus/X11/$DISPLAY during image pull, (3) a build works on a desktop but not over SSH/CI.",
-      "version": "1.0.0",
+      "description": "Docker build/pull over SSH, or 'docker compose pull'/'up' under sudo (or any headless/non-desktop shell), fails with 'Cannot autolaunch D-Bus without X11 $DISPLAY' because a credential helper needs a desktop keyring. Use when: (1) docker build fails getting credentials in a headless/SSH session, (2) docker compose pull/up fails with the same D-Bus/X11 error under sudo even though plain docker pull just worked in the same shell, (3) error mentions D-Bus/X11/$DISPLAY during an image pull, (4) a build or compose pull works on a desktop login but not over SSH/CI/sudo/cron.",
+      "version": "1.1.0",
       "source": "./skills/tooling-docker-headless-build-credential-helper.md",
       "category": "tooling",
       "tags": [
@@ -11166,7 +11182,11 @@
         "credentials",
         "headless",
         "ci",
-        "ssh"
+        "ssh",
+        "docker-compose",
+        "sudo",
+        "dbus",
+        "credsstore"
       ]
     },
     {
