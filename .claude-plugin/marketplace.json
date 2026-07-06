@@ -6,9 +6,9 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "2.1.0",
-  "total_plugins": 611,
+  "total_plugins": 612,
   "categories": {
-    "architecture": 121,
+    "architecture": 122,
     "ci-cd": 120,
     "debugging": 58,
     "documentation": 39,
@@ -18,7 +18,7 @@
     "tooling": 166,
     "training": 7
   },
-  "last_updated": "2026-07-06T19:20:35Z",
+  "last_updated": "2026-07-06T19:22:47Z",
   "plugins": [
     {
       "name": "agent-config-validation-and-integrity",
@@ -430,6 +430,30 @@
         "roofline",
         "dtype",
         "serving-estimates"
+      ]
+    },
+    {
+      "name": "architecture-shared-cache-repo-key-lock-vs-threadlocal",
+      "description": "Planning discipline for making a module-global cache thread-safe when the cache must be SHARED and COHERENT (not per-thread) under a newly-multithreaded coordinator. The R1 core lesson: before hand-rolling a dict + threading.Lock, GREP THE REPO for an existing thread-safe cache/lock primitive and for a sibling that already solved the same bug class \u2014 the codebase already had hephaestus/utils/cache.py::ThreadSafeCache (a lock-guarded, per-key, TTL cache built to replace ad-hoc dict caches with a TOCTOU race) and git_utils already reused it for the identical bug shape; the KISS fix reuses that primitive keyed by repo slug, not a hand-rolled lock. Also: a 'load-bearing unverified assumption' about a helper's return SHAPE is almost always cheaply verifiable by reading 3 lines of its signature (get_repo_info returns a (owner, repo) tuple accessed by unpack and RAISES on failure \u2014 NOT an object with .owner/.name), so resolve it in the plan rather than shipping it as a caveat; to mutate one cached entry without poking the primitive's privates, ADD a small public method to the primitive; a pre-selected thread-safety skill can prescribe the WRONG variant (per-thread threading.local) for genuinely shared state; an audit that names a line may point at an unreachable path while the real hazard sits one layer down in a shared library helper; and migrating a module-global's TYPE breaks every test reset/seed seam. Use when: (1) fixing a shared-mutable-state/TOCTOU bug and tempted to hand-roll dict+Lock \u2014 search for an existing primitive first, (2) a pre-selected skill prescribes threading.local for state that must be shared-coherent not per-thread, (3) an audit names a line but the shared-state hazard is a layer down in a library helper, (4) migrating a module-global's type (set|None -> a keyed cache) breaks the test reset seam, (5) you need to mutate one entry of a shared cache primitive without reaching into its internals.",
+      "version": "1.1.0",
+      "source": "./skills/architecture-shared-cache-repo-key-lock-vs-threadlocal.md",
+      "category": "architecture",
+      "tags": [
+        "planning-methodology",
+        "thread-safety",
+        "shared-cache",
+        "reuse-existing-primitive",
+        "threadsafecache",
+        "repo-keyed-cache",
+        "threading-lock",
+        "threading-local",
+        "module-global",
+        "call-graph-diagnosis",
+        "skill-mismatch",
+        "verify-return-shape",
+        "encapsulation",
+        "test-reset-seam",
+        "hephaestus"
       ]
     },
     {
