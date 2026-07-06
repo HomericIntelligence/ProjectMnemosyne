@@ -6,9 +6,9 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "2.1.0",
-  "total_plugins": 609,
+  "total_plugins": 610,
   "categories": {
-    "architecture": 120,
+    "architecture": 121,
     "ci-cd": 120,
     "debugging": 58,
     "documentation": 39,
@@ -18,7 +18,7 @@
     "tooling": 166,
     "training": 7
   },
-  "last_updated": "2026-07-06T05:53:56Z",
+  "last_updated": "2026-07-06T19:14:57Z",
   "plugins": [
     {
       "name": "agent-config-validation-and-integrity",
@@ -433,6 +433,21 @@
       ]
     },
     {
+      "name": "architecture-threadsafe-cache-per-key-locks",
+      "description": "Pattern for shared module-level caches with per-key locking and TTL. Use when: (1) a module caches expensive computations (subprocess, API calls, repo metadata), (2) multiple threads access the same cache, (3) you need per-key invalidation instead of global clear(), (4) cache entries should expire after a TTL to prevent stale data, (5) callers must get defensive copies to prevent accidental mutations of cached state.",
+      "version": "1.0.0",
+      "source": "./skills/architecture-threadsafe-cache-per-key-locks.md",
+      "category": "architecture",
+      "tags": [
+        "thread-safety",
+        "cache",
+        "per-key-locks",
+        "ttl",
+        "defensive-copies",
+        "python"
+      ]
+    },
+    {
       "name": "asymptotic-safety-quantum-gravity-refs",
       "description": "Key papers, formulas, and physical facts for asymptotic safety quantum gravity and spectral dimension flow in sci-fi mechanism design. Use when: (1) designing a fictional device based on Planck-scale RG-flow physics, (2) citing real quantum gravity results about dimensional reduction to d_s=2, (3) grounding a sci-fi simulation engine in asymptotic-safety or CDT results.",
       "version": "1.0.0",
@@ -488,8 +503,8 @@
     },
     {
       "name": "audit-remediation-verify-evidence-before-planning",
-      "description": "Before planning a fix for an audit/remediation issue, verify the audit's cited evidence (file:line) against the live tree \u2014 audit findings go stale once the target is independently remediated, and an audit that names SEVERAL targets can have a SUBSET already fixed. Re-read EVERY cited file:line before planning, fix ONLY the issue-named targets (a repo-wide survey will surface more non-compliant siblings \u2014 note them out-of-scope, do not expand the PR), and do not invent a unit test for a doc/UX field that has no test contract. When a doc-table column is genuinely UN-RECOVERABLE from the repo (e.g. a semantic-version 'Added' anchor), INFER it but LABEL the provenance honestly as best-effort, and design any drift-guard to validate ONLY the verifiable invariant (table membership vs live __all__), never the inferred value. CRITICAL: a predecessor issue's plan being captured in a skill does NOT mean it shipped \u2014 re-verify the artifact exists on disk (test -f) before assuming prior work is done. Use when: (1) planning a fix for an audit-filed issue with file:line evidence, (2) the issue spans multiple repos or submodules, (3) the issue recommends doc/field-name/frontmatter changes that may already be done, (4) the audit names multiple targets and any subset may already be remediated, (5) you must author a doc table that mixes a verifiable column (symbol membership) and an unverifiable column (which version first shipped it), (6) a prior/predecessor issue claims to have introduced an artifact (a guard, a doc table) that this issue builds on \u2014 confirm it actually landed before assuming it exists.",
-      "version": "1.10.0",
+      "description": "Before planning a fix for an audit/remediation issue, verify the audit's cited evidence (file:line) against the live tree \u2014 audit findings go stale once the target is independently remediated, and an audit that names SEVERAL targets can have a SUBSET already fixed. CRITICAL: the audit's cited file:line may be a STALE LINE-CITE (coordinates drifted by dozens of lines as unrelated sections were inserted above) even when the finding itself is still valid \u2014 search for the described SECTION/CONTENT, never navigate to the cited line number; and distinguish a stale LINE-CITE (finding valid, coordinates moved) from a stale FINDING (target already fixed). Re-read EVERY cited file:line before planning, fix ONLY the issue-named targets (a repo-wide survey will surface more non-compliant siblings \u2014 note them out-of-scope, do not expand the PR), and do not invent a unit test for a doc/UX field that has no test contract. When a doc-table column is genuinely UN-RECOVERABLE from the repo (e.g. a semantic-version 'Added' anchor), INFER it but LABEL the provenance honestly as best-effort, and design any drift-guard to validate ONLY the verifiable invariant (table membership vs live __all__), never the inferred value. A predecessor issue's plan being captured in a skill does NOT mean it shipped \u2014 re-verify the artifact exists on disk (test -f) before assuming prior work is done. Use when: (1) planning a fix for an audit-filed issue with file:line evidence, (2) the issue spans multiple repos or submodules, (3) the issue recommends doc/field-name/frontmatter changes that may already be done, (4) the audit names multiple targets and any subset may already be remediated, (5) you must author a doc table that mixes a verifiable column (symbol membership) and an unverifiable column (which version first shipped it), (6) a prior/predecessor issue claims to have introduced an artifact (a guard, a doc table) that this issue builds on \u2014 confirm it actually landed before assuming it exists, (7) the audit's cited file:line may be a stale LINE-CITE (coordinates drifted) even when the finding is still valid \u2014 search for the described section/content, never trust the coordinates.",
+      "version": "1.11.0",
       "source": "./skills/audit-remediation-verify-evidence-before-planning.md",
       "category": "architecture",
       "tags": []
@@ -4275,7 +4290,7 @@
     {
       "name": "multi-repo-pr-automation-loop-orchestration",
       "description": "Use when: (1) running an automation loop (drive-prs-green, hephaestus-automation-loop, loop_runner.py, ci_driver.py) across multiple repos and it skips PRs, reports success incorrectly, silently no-ops, or never arms auto-merge, (2) a multi-repo swarm is orchestrating PRs across 3+ HomericIntelligence repos with sequential-within-repo merge ordering, (3) an ecosystem-wide sweep implements every planned issue across all repos in parallel waves, (4) the automation driver logs success but live GitHub state shows open failing PRs \u2014 always cross-check live state per repo before reporting done, (5) a hephaestus automation loop deadlocks because the drive-green phase skips iterations or the implementer returns early before labeling with state:implementation-go, (6) an org-wide issue backlog across 10+ repos needs parallel implementation with one signed auto-merge PR per issue, (7) automated review-plan files (claude-review-fix-*.md) need to be bulk-processed across stale PR branches, (8) _wait_for_pr_terminal polls the full timeout on a BLOCKED PR \u2014 add early-exit guarded by both _failing_required_check_names and _pending_required_check_names, (9) PLANNING (not driving) against a STALE completed-sweep / status-report issue (a myrmidon sweep report listing 'flagged for human' PRs, dated weeks ago) \u2014 re-verify the LIVE state of every flagged item before trusting ANY action item, because most have already changed state (merged, fixed, or re-gated) and the report's stated root causes are stale, (10) classifying an open PR's mergeStateStatus=BLOCKED at PLAN time: BLOCKED with ZERO failing AND zero pending required checks \u21d2 branch-protection / review gate \u21d2 the action is approve+merge, NOT a CI fix; BLOCKED with failing/pending checks \u21d2 real CI work, (11) a stale status/sweep report names a ROOT CAUSE for a still-failing PR (a specific file/line, an empty-envvar, a missing config) and prescribes a fix \u2014 the report's CAUSAL diagnosis can be flat WRONG, not merely outdated; before writing any fix that targets a report-named file/line, READ that file at the PR's ref AND pull the latest failing CI log (gh run view --log-failed), because the prescribed fix may already be in place and the real cause something else entirely; also: NEVER assert a scope reduction (these N already merged) without a runnable per-PR gh pr view --json state loop, and NEVER infer a required-review gate from a commit title \u2014 query the repo's live required_pull_request_reviews",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "source": "./skills/multi-repo-pr-automation-loop-orchestration.md",
       "category": "ci-cd",
       "tags": [
@@ -4313,7 +4328,11 @@
         "read-file-at-ref",
         "read-failing-ci-log",
         "scope-reduction-lock",
-        "required-review-gate-check"
+        "required-review-gate-check",
+        "direct-pipeline-scopes",
+        "repo-scoped-github-accessors",
+        "ambient-helper-regression-tests",
+        "merge-wait-resumable-reclassification"
       ]
     },
     {
@@ -6316,17 +6335,22 @@
     },
     {
       "name": "documentation-github-issue-final-report-live-body",
-      "description": "Rewrite GitHub issues into coherent final reports without overwriting live edits. Use when: (1) an issue has accumulated investigation notes, follow-up phrasing, or stale detours, (2) the user asks for a final report-style issue body, (3) sensitive or model-specific details must be removed before publishing.",
-      "version": "1.0.0",
+      "description": "Rewrite GitHub issues, PR bodies, comments, and evidence mirrors into coherent public reports without overwriting live edits or leaking local operator details. Use when: (1) an issue has accumulated investigation notes, follow-up phrasing, or stale detours, (2) the user asks for a final report-style issue body, (3) sensitive or model-specific details must be removed before publishing, (4) automation evidence may contain local filesystem paths or usernames.",
+      "version": "1.1.0",
       "source": "./skills/documentation-github-issue-final-report-live-body.md",
       "category": "documentation",
       "tags": [
         "github",
         "issues",
+        "pull-requests",
+        "comments",
+        "evidence-mirrors",
         "final-report",
         "live-body",
         "redaction",
-        "documentation"
+        "documentation",
+        "public-artifact-hygiene",
+        "local-path-sanitization"
       ]
     },
     {
