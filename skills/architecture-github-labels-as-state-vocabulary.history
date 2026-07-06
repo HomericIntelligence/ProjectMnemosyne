@@ -1,12 +1,34 @@
+# Skill History: architecture-github-labels-as-state-vocabulary
+
+## Changelog
+
+### v1.1.0 — 2026-07-05
+**Type:** Minor (new finding added — re-plan / no-go→needs-plan unexecuted-edge deadlock)
+
+**Changes:**
+- Adds **Failed Attempt #9** — a labels-first plan gate that returns False under `state:plan-no-go` deadlocks when the documented `state:plan-no-go ──re-plan──▶ state:needs-plan` transition edge is drawn in the diagram but **never executed by any component**. This is a NEW facet of the shared-gate-divergence class (Failed Attempt #2): here the two components AGREE on the label signal, but the re-planning writer never performs the transition, so the shared gate is *stuck-closed* rather than divergent.
+- Adds Detailed Step #9 — the re-planning `on_enter` must atomically clear `state:plan-no-go` and restore `state:needs-plan`; keep the logic as a pure `replan_transition()` helper in the single state-vocabulary module (beside `apply_plan_verdict`); clear the no-go label BEFORE any fast-forward check; guard the write on the no-go label being present for idempotency; do NOT "fix" it by making VERIFY read the plan-comment marker directly (that recreates Attempt #2 divergence).
+- Adds a "When to Use" bullet for the non-converging re-plan/retry-budget cycle.
+- Annotates the Lifecycle Diagram with an explicit warning that the re-plan edge must be EXECUTED by a component, plus the audit rule "for every documented transition edge, name the component that executes it."
+- Adds Results & Parameters subsection "Re-Plan Transition (Executing the No-Go → Needs-Plan Edge)" with the pure `replan_transition()` helper, the ordered `on_enter` pattern, and a copy-paste deadlock-audit grep.
+- Adds tags: `replan-transition`, `unexecuted-edge`, `stuck-closed-gate`, `state-transition-audit`.
+- Adds `history` frontmatter field pointing to this `.history` file.
+- Adds a Verified On row for ProjectHephaestus issue #1857 clearly marked **design-stage / UNVERIFIED** for this specific learning (fix designed + unit-test-specified, not yet implemented or CI-verified).
+- Overall skill `verification` field left at `verified-local` (unchanged); the Overview Verification cell now flags the v1.1.0 addition as design-stage/unverified so the new learning is not misrepresented as CI- or test-verified.
+
+---
+
+## v1.0.0 Snapshot — 2026-05-29
+
+```markdown
 ---
 name: architecture-github-labels-as-state-vocabulary
 description: "Use mutually-exclusive `state:*` GitHub labels as the single source of truth for per-issue pipeline state instead of parsing free-text comment bodies. Use when: (1) an automated pipeline gates work on a verdict regex-parsed from the latest comment, (2) free-text comment-based state machine is fragile because pre-contract or off-format comments are unparseable and leave issues permanently stuck, (3) you need a gh issue label state vocabulary that the planner, reviewer, and implementer all read identically, (4) a plan-review GO/NOGO gate needs to short-circuit cheaply across 100s of issues without re-parsing every comment every loop iteration, (5) you need to self-heal stuck issues without manual cleanup — backfill a state label from an existing parseable comment on a one-time fallback, (6) two pipeline components share a gate but read it via different signals causing infinite-loop drift (planner skips because plan exists, implementer defers because review unparseable), (7) you want to harden the state-tagging GitHub Action against the Actions injection class while still tagging issues:opened with `state:needs-plan`, (8) you need to provision the 3 labels across an org without races against the first reviewer write."
 category: architecture
 date: 2026-05-29
-version: "1.1.0"
+version: "1.0.0"
 user-invocable: false
 verification: verified-local
-history: architecture-github-labels-as-state-vocabulary.history
 tags:
   - github-labels
   - state-vocabulary
@@ -22,10 +44,6 @@ tags:
   - mutually-exclusive-labels
   - source-of-truth
   - shared-gate-divergence
-  - replan-transition
-  - unexecuted-edge
-  - stuck-closed-gate
-  - state-transition-audit
 ---
 
 # Architecture: GitHub Labels as State Vocabulary (Not Free-Text Comments)
@@ -37,7 +55,7 @@ tags:
 | **Date** | 2026-05-29 |
 | **Objective** | Replace fragile regex-parsing of free-text comment bodies (e.g. `Verdict: GO/NOGO`) with mutually-exclusive `state:*` GitHub labels as the single source of truth for per-issue pipeline state — eliminates "comment unparseable → issue permanently stuck" and "planner and implementer disagree → infinite loop" failure modes |
 | **Outcome** | Pattern executed end-to-end on 2026-05-29 in HomericIntelligence/ProjectHephaestus PR #707; 911 automation tests pass locally, ruff + mypy clean. Three labels (`state:needs-plan`, `state:plan-no-go`, `state:plan-go`) defined, idempotent provisioner CLI shipped, `issues:opened` workflow auto-tags new issues, reviewer applies-and-removes opposites, implementer trusts the terminal label absolutely. One-time comment-scan backfill self-heals legacy issues. |
-| **Verification** | verified-local — full automation suite (911 tests) + ruff + mypy clean on the local worktree; CI validation pending on PR #707 ([ProjectHephaestus PR #707](https://github.com/HomericIntelligence/ProjectHephaestus/pull/707)). Updates to be backfilled here once CI is green. **v1.1.0 addition (Failed Attempt #9, the re-plan/no-go→needs-plan unexecuted-edge deadlock) is DESIGN-STAGE / UNVERIFIED**, pending implementation in ProjectHephaestus issue #1857 — not CI- or locally-test-verified for that specific learning. |
+| **Verification** | verified-local — full automation suite (911 tests) + ruff + mypy clean on the local worktree; CI validation pending on PR #707 ([ProjectHephaestus PR #707](https://github.com/HomericIntelligence/ProjectHephaestus/pull/707)). Updates to be backfilled here once CI is green. |
 | **Live observation that motivated this** | 320 "no parseable Verdict" WARNINGs across an org-wide automation run, plus wasteful re-planning of already-approved issues because the latest comment's verdict line had drifted from the regex contract |
 
 ## When to Use
@@ -51,7 +69,6 @@ tags:
 - You suspect a **shared-gate divergence bug** where two pipeline components read different signals: e.g. the planner sees "plan comment exists → skip" while the implementer sees "review unparseable → defer" → the issue cycles forever
 - You are wiring an `on: issues: opened` Action that tags new issues with `state:needs-plan` and need to harden it against the GitHub Actions script-injection class
 - You need to provision the labels across an org so the first reviewer write doesn't race against a missing label name
-- Your labels-first gate deliberately returns False under a rejection label (e.g. `state:plan-no-go`), and a re-plan / retry cycle **never converges** — it exhausts a per-cycle budget and fails instead of re-entering the fresh state. This is usually a **documented-but-unexecuted state-transition edge** (see Failed Attempt #9)
 
 **Don't use when:**
 
@@ -152,15 +169,6 @@ done
    - If a plan turns out wrong post-GO, the recovery path is a new issue, not a `state:plan-no-go` flip back.
    - This invariant is what unlocks the cheap short-circuit: one label read replaces 100+ comment fetches per loop iteration.
 
-9. **Execute every documented transition edge — the re-plan edge is the one that gets forgotten** *(design-stage, pending implementation in ProjectHephaestus issue #1857)*:
-   - A labels-first plan gate that returns False under `state:plan-no-go` (independent of any plan comment) has a hidden precondition: **something must eventually clear that rejection label**, or the gate is stuck-closed forever.
-   - The lifecycle diagram documents `state:plan-no-go ──re-plan──▶ state:needs-plan`, but a diagram edge is not code. Audit: *which component actually performs each documented transition edge?* The deadlock is almost always an edge that is drawn but never executed.
-   - The component that **re-plans** (the planning stage's `on_enter`) must be the one to execute this edge: on re-entry it must **atomically clear `state:plan-no-go` and restore `state:needs-plan`**. Otherwise the shared gate (`has_existing_plan` / `is_plan_review_go`) stays False, VERIFY never ADVANCEs, and the retry budget (`plan_cycles`) drains to a FINISH_FAIL — the intended second plan cycle is unreachable.
-   - Keep the transition in the **single state-vocabulary module** as a pure helper (`replan_transition() -> (STATE_NEEDS_PLAN, [STATE_PLAN_NO_GO])`) living beside the GO/NOGO `apply_plan_verdict` helper. Do **not** inline label-name literals at the `on_enter` call site.
-   - **Ordering matters:** clear the no-go label *before* any "plan already exists → fast-forward" check in the same `on_enter`, so the label state is coherent for the whole entry body. A stale plan comment plus a last-verdict-of-NOGO still reads as *not approved*, so this ordering also prevents a premature fast-forward.
-   - **Idempotency:** guard the transition write on *`state:plan-no-go` present* (mirror the existing `state:needs-plan` presence guard). Steady-state re-entry then produces **zero mutations**.
-   - **Do NOT "fix" this by making VERIFY scan the plan-comment marker directly** — that reintroduces two-signals-for-one-gate divergence (Failed Attempt #2). The fix is to execute the missing transition, not to add a second reader.
-
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -173,7 +181,6 @@ done
 | 6 | Building the state-tagging workflow to consume `github.event.issue.title` to derive the label | Opened a GitHub Actions injection vector — attacker-controlled title could break out of the shell command. Even with quoting it's fragile. | Only consume server-controlled integers (`issue.number`); validate numeric before use; call `gh api` against typed endpoints rather than shelling commands built from event data. |
 | 7 | Manual provisioning of labels per repo via the web UI | Race: the first reviewer write hits "label does not exist" → 404 → reviewer comment-only fallback → the very bug the labels were meant to fix. | Ship the labels via an idempotent `gh label create --force` CLI; provision before the first write. |
 | 8 | Skipping the backfill — "we'll just relabel old issues by hand" | Hand-relabeling 100+ org-wide issues is the kind of toil that never finishes; meanwhile the pipeline burns compute re-planning already-approved work. | A one-time, self-healing backfill is essential for migration. It deletes itself a release or two later. |
-| 9 *(design-stage, pending implementation in ProjectHephaestus issue #1857)* | Labels-first plan gate correct, but the **re-plan edge was documented in the diagram and never executed in code**: `plan_review` exhausts its per-cycle budget, applies `state:plan-no-go`, and FAIL_BACKs to `planning`; `planning` re-plans and upserts a fresh plan comment, but VERIFY calls `has_existing_plan()` → labels-first `is_plan_review_go`, which returns False while `state:plan-no-go` is present (independent of any plan comment). | VERIFY never ADVANCEs; it RETRYs until the `plan` budget (2) drains → FINISH_FAIL. The intended second plan cycle (`plan_cycles=2`) is unreachable. This is a **new facet of Failed Attempt #2**: here the two components *agree* on the label signal, but the re-planning writer never performs the documented `no-go → needs-plan` transition, so the shared gate is **stuck-closed**, not divergent. | When a labels-first gate deliberately returns False under a rejection label, **every edge leaving that rejection state must be executed by some component — not just drawn in a diagram**. Audit "which component performs each documented transition edge?"; the deadlock is the unexecuted edge. Fix: the re-planning `on_enter` atomically clears `state:plan-no-go` and restores `state:needs-plan` (pure helper in the state-vocabulary module, guarded on the label being present for idempotency). Do NOT make VERIFY read the plan-comment marker directly — that recreates Attempt #2's divergence. |
 
 ## Results & Parameters
 
@@ -217,14 +224,6 @@ done
         implementer
         proceeds
 ```
-
-> **⚠ The re-plan edge (`state:plan-no-go ──re-plan──▶ state:needs-plan`) must be
-> EXECUTED by a component, not just drawn here.** In ProjectHephaestus issue #1857
-> the planning stage's `on_enter` was the intended executor of this edge but never
-> performed the transition — so a labels-first gate that returns False under
-> `state:plan-no-go` stayed stuck-closed and the re-plan cycle deadlocked at budget
-> exhaustion. See Failed Attempt #9. Audit rule: *for every documented transition
-> edge, name the component that executes it.*
 
 ### Backfill Decision Logic (One-Time Self-Heal)
 
@@ -351,62 +350,6 @@ def should_implement(issue) -> bool:
     return get_plan_state(issue) == "go"
 ```
 
-### Re-Plan Transition (Executing the No-Go → Needs-Plan Edge)
-
-*Design-stage, pending implementation in ProjectHephaestus issue #1857 — not yet CI-verified.*
-
-Keep the transition as a **pure helper in the single state-vocabulary module**,
-right next to the GO/NOGO `apply_plan_verdict` helper. Never inline the label-name
-literals at the `on_enter` call site.
-
-```python
-# ── state_vocabulary.py (the single home for label literals) ──
-STATE_NEEDS_PLAN = "state:needs-plan"
-STATE_PLAN_NO_GO = "state:plan-no-go"
-STATE_PLAN_GO = "state:plan-go"
-
-
-def replan_transition() -> tuple[str, list[str]]:
-    """The documented `no-go → needs-plan` re-plan edge, as data.
-
-    Returns (label_to_add, labels_to_remove). Callers do an atomic
-    `gh issue edit --add-label ADD --remove-label REM...`.
-    """
-    return (STATE_NEEDS_PLAN, [STATE_PLAN_NO_GO])
-```
-
-```python
-# ── planning stage on_enter (the component that RE-PLANS executes the edge) ──
-def on_enter(issue) -> None:
-    labels = set(get_labels(issue))
-
-    # 1. Execute the re-plan edge FIRST, guarded on the no-go label being present.
-    #    Idempotent: steady-state re-entry (no no-go label) writes nothing.
-    if STATE_PLAN_NO_GO in labels:
-        add, remove = replan_transition()
-        gh_issue_edit(issue, add_label=add, remove_labels=remove)  # atomic
-        labels = (labels - set(remove)) | {add}
-
-    # 2. Only AFTER the label state is coherent, consider fast-forward.
-    #    A stale plan comment + last-verdict-NOGO still reads as not-approved,
-    #    so ordering the transition first prevents a premature fast-forward.
-    if has_existing_plan(issue):   # labels-first: False while no-go was set
-        fast_forward_to_verify(issue)
-        return
-
-    produce_plan(issue)
-```
-
-**Deadlock check (copy-paste audit):** for every edge in your state diagram, confirm a
-component executes it — not just that the diagram draws it.
-
-```bash
-# List the transition edges you believe exist, then grep for the writer of each.
-# Any edge with no add/remove-label writer is a stuck-closed candidate.
-grep -rn "add.label state:needs-plan\|--add-label state:needs-plan\|STATE_NEEDS_PLAN" \
-    hephaestus/ | grep -i "on_enter\|planning\|replan"
-```
-
 ### Why Labels Beat Comment-Text (Comparison Table)
 
 | Property | Free-Text Comment Gate | `state:*` Label Gate |
@@ -426,4 +369,4 @@ grep -rn "add.label state:needs-plan\|--add-label state:needs-plan\|STATE_NEEDS_
 |---------|---------|---------|
 | ProjectHephaestus | PR #707 — `architecture-github-labels-as-state-vocabulary` end-to-end pattern | 911 automation tests pass locally; ruff + mypy clean; auto-merge SQUASH armed. CI in flight at time of writing — flip `verification` to `verified-ci` once green. [PR link](https://github.com/HomericIntelligence/ProjectHephaestus/pull/707) |
 | ProjectHephaestus | Live observation that motivated the pattern | 320 "no parseable Verdict" WARNINGs across an org-wide automation run; multiple re-plans of already-approved issues because the latest comment had drifted from the regex contract |
-| ProjectHephaestus | Issue #1857 — re-plan cycle deadlock (Failed Attempt #9) — **design-stage, UNVERIFIED for this specific learning** | Planning→plan_review re-plan cycle could never converge: `plan_review` applies `state:plan-no-go` and FAIL_BACKs to `planning`; `planning` re-plans but the labels-first VERIFY gate (`has_existing_plan` → `is_plan_review_go`) stays False while `state:plan-no-go` is set, so VERIFY RETRYs until the `plan` budget (2) drains → FINISH_FAIL; the intended `plan_cycles=2` second cycle is unreachable. Root cause: the documented `no-go → needs-plan` re-plan edge is never executed by any component. Fix designed (pure `replan_transition()` helper + atomic add/remove in planning `on_enter`, guarded for idempotency) and unit-test-specified, but **NOT yet implemented or CI-verified in this session.** |
+```
