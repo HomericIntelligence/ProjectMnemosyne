@@ -97,7 +97,7 @@ subsection below carries the real semantics. Do NOT read this heading as a warra
 ```bash
 # ===== 1. PROVE the sub-issue is BLOCKED: dependency chain unmerged + destination absent =====
 REPO=HomericIntelligence/ProjectHephaestus
-DEPS="1810 1811 1812 1813 1814 1815 1816 1817 1818 1819"   # the whole Depends-on chain
+DEPS="$(seq 1810 1819)"   # the whole Depends-on chain
 for n in $DEPS; do gh issue view "$n" --repo "$REPO" --json number,state,title --jq \
   '"\(.number)\t\(.state)\t\(.title)"'; done   # expect ALL open/unmerged
 
