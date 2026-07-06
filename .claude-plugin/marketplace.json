@@ -6,7 +6,7 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "2.1.0",
-  "total_plugins": 612,
+  "total_plugins": 613,
   "categories": {
     "architecture": 122,
     "ci-cd": 120,
@@ -15,10 +15,10 @@
     "evaluation": 12,
     "optimization": 6,
     "testing": 82,
-    "tooling": 166,
+    "tooling": 167,
     "training": 7
   },
-  "last_updated": "2026-07-06T19:22:47Z",
+  "last_updated": "2026-07-06T19:26:26Z",
   "plugins": [
     {
       "name": "agent-config-validation-and-integrity",
@@ -8884,6 +8884,22 @@
         "pr-splitting",
         "git",
         "reproducibility"
+      ]
+    },
+    {
+      "name": "campaign-handoff-prompt-authoring",
+      "description": "Teaches the required anatomy of a single self-contained cross-machine resume prompt that hands a strictly-serial multi-PR epic campaign to a fresh session with no access to the prior transcript. Use when: (1) a long-running serial epic driven one PR at a time must move to another machine or operator, (2) context compaction is about to destroy the working memory that keeps a serial campaign safe and you need a compaction-survival brief, (3) you must restate a session Stop-hook completion condition, the in-flight PR's per-thread REAL/FALSE-POSITIVE classification, and the serial issue ordering so the receiving session neither redoes finished work nor picks up two dependent issues at once.",
+      "version": "1.0.0",
+      "source": "./skills/campaign-handoff-prompt-authoring.md",
+      "category": "tooling",
+      "tags": [
+        "handoff",
+        "resume-prompt",
+        "cross-machine",
+        "serial-campaign",
+        "epic",
+        "context-compaction",
+        "operator-continuity"
       ]
     },
     {
