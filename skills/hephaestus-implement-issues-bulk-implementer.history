@@ -1,0 +1,107 @@
+# hephaestus-implement-issues-bulk-implementer — History
+
+## v1.1.0 (2026-07-06)
+
+**Changed by:** ProjectHephaestus epic #1809 cleanup wave (issues #1819–#1823); bug #1940 filed
+**Verification:** verified-ci
+
+### What changed
+
+- Documented a NEW, high-severity failure mode of `hephaestus-implement-issues`: the `--issues N`
+  Depends-on scope leak (bug #1940). `--issues N` expands `N` through its `Depends on #M` chain and
+  re-implements already-CLOSED dependency issues, creating DUPLICATE PRs for merged work.
+- Added the verified per-issue workaround for serial `Depends on` chains: sub-agent implementation +
+  `hephaestus-review-prs` (which has NO dependency-resolver, so it does not leak scope), including the
+  pre-flight (close zombie issues, prune stale worktrees/branches, `--dry-run` and read the
+  `Loaded N issues` line).
+- Added a new "DO NOT use `--issues N` for a `Depends on` chain" subsection to the Verified Workflow,
+  with the root-cause pointer (`implementer.py:_load_issues` ~line 401 vs
+  `resolver._load_dependencies` ~line 427) and a copy-paste per-issue driver.
+- Added 4 Failed Attempts rows: `--issues N` on a Depends-on chain; re-run after closing deps (still
+  `Loaded 3 issues` — bug is in resolver expansion, not the input filter); trusting auto-close for a
+  ZOMBIE dep issue; reusing stale worktrees/branches for chained runs.
+- Extended Results & Parameters with the bug root cause and the full serial-chain workaround.
+- Bumped verification from `verified-local` to `verified-ci` — the workaround landed all 5 cleanup-wave
+  PRs (issues #1819–#1823) through CI to merge.
+- Extended description, `When to Use`, tags, and the Overview table; added the `history` frontmatter
+  field; updated date to 2026-07-06.
+
+### Why
+
+The original v1.0.0 skill documented three failure modes but not the scope leak. On epic #1809's
+`#1819→#1823` cleanup wave, `--issues 1819 --dry-run` logged `Loaded 3 issues` and processed CLOSED
+merged #1817/#1818 before #1819; a live run created duplicate PRs #1938/#1939 on stale `*-auto-impl`
+branches, hit rebase conflicts, and even ran `/learn` on merged #1817. The skip-closed filter in
+`_load_issues` is applied only to the INPUT issue numbers, not to the resolver-expanded `Depends on`
+targets from `_load_dependencies`. Closing/filtering the input deps does NOT help (verified: re-run
+still `Loaded 3 issues`) because the bug is in dependency-resolver expansion. The reliable path until
+#1940 lands is to drive the chain per-issue with a focused sub-agent for implementation and
+`hephaestus-review-prs` (no dependency-resolver) for review.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: hephaestus-implement-issues-bulk-implementer
+description: "How to use ProjectHephaestus's canonical bulk issue-implementer (hephaestus-implement-issues) to implement many GitHub issues per repo instead of hand-rolling agent prompts — flags, worker-cap math, and the three failure modes that actually bite (signal-not-main-thread, 429 session-quota, blocking-inside-a-schema'd-Workflow-subagent). Use when: (1) you need to implement N GitHub issues across one or more repos and are tempted to write your own agent loop, (2) you hit 'ValueError: signal only works in main thread', (3) you hit HTTP 429 'session limit' mid-batch, (4) a Workflow subagent wrapping the implementer fails with 'subagent completed without calling StructuredOutput', (5) you need to size --max-workers to a per-CPU-core cap, (6) cleaning up orphaned .worktrees/issue-N after an interrupted run."
+category: tooling
+date: 2026-05-29
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [hephaestus, implementer, bulk-issues, max-workers, worktree, claude-session-quota, signal-main-thread, workflow-subagent, automation, pixi]
+---
+
+# hephaestus-implement-issues Bulk Implementer — Usage and Failure Modes
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-29 |
+| **Objective** | Use ProjectHephaestus's purpose-built bulk issue-implementer to implement many GitHub issues per repo, rather than hand-rolling agent prompts, worktree isolation, and PR merge logic. |
+| **Outcome** | The console entry `hephaestus-implement-issues` does worktree isolation, signed commits, squash auto-merge, learn/follow-up, and per-issue state persistence out of the box. Three concrete failure modes were observed live and are documented below. |
+| **Verification** | verified-local — the tool was run and observed to fail live; the run mechanics and failure modes were directly observed, not confirmed in CI. |
+
+## When to Use
+
+- You need to implement a batch of GitHub issues (by number, by epic, or all open) in one or more repos and are about to write your own per-issue agent loop — don't; this tool already exists.
+- You hit `ValueError: signal only works in main thread of the main interpreter`.
+- You hit HTTP 429 `You've hit your session limit · resets <time>` partway through a batch.
+- A Workflow `agent({schema})` wrapping the implementer fails with `subagent completed without calling StructuredOutput`.
+- You need to size `--max-workers` to a "2 workers per CPU core" cap.
+- You need to clean up orphaned `.worktrees/issue-N` directories after an interrupted run.
+
+## Verified Workflow
+
+### Quick Reference
+
+(bash quick-reference and detailed steps — see git history at origin/main for the exact block)
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| ------- | -------------- | ------------- | -------------- |
+| Run via `python -m` inside an agent shell | ... | `ValueError: signal only works in main thread ...` | Use the pixi console entry from a main-thread shell |
+| Large worker batch against a single Claude account | `--max-workers 16` | HTTP 429 session limit | Size batches to session quota; `--resume` after reset |
+| Wrap implementer in a schema'd Workflow subagent, run FOREGROUND | `agent({schema})` blocking | `subagent completed without calling StructuredOutput` | Don't block a long implementer inside a schema'd subagent |
+| Background implementer from a subagent, return early | detach + return | repo overlap cap violation; orphaned worktrees | Run repos one at a time in the foreground |
+
+## Results & Parameters
+
+(Console entry, flags, built-in behavior, worker-cap math, orphan cleanup — see git history at
+origin/main for the exact block.)
+
+## Verified On
+
+| Project | Context | Details |
+| ------- | ------- | ------- |
+| ProjectHephaestus / HomericIntelligence repos | Bulk issue-implementer run observed live (run mechanics + three failure modes) during a multi-repo implementation session | Verified locally — tool ran and failed live; CI validation pending |
+```
+
+---
+
+## v1.0.0 (2026-05-29)
+
+**Initial version.** Documented usage of `hephaestus-implement-issues` and three live failure modes:
+signal-not-main-thread, 429 session-quota, and blocking-inside-a-schema'd-Workflow-subagent.
