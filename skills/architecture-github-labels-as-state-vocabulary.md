@@ -2,8 +2,8 @@
 name: architecture-github-labels-as-state-vocabulary
 description: "Use mutually-exclusive `state:*` GitHub labels as the single source of truth for per-issue pipeline state instead of parsing free-text comment bodies. Use when: (1) an automated pipeline gates work on a verdict regex-parsed from the latest comment, (2) free-text comment-based state machine is fragile because pre-contract or off-format comments are unparseable and leave issues permanently stuck, (3) you need a gh issue label state vocabulary that the planner, reviewer, and implementer all read identically, (4) a plan-review GO/NOGO gate needs to short-circuit cheaply across 100s of issues without re-parsing every comment every loop iteration, (5) you need to self-heal stuck issues without manual cleanup — backfill a state label from an existing parseable comment on a one-time fallback, (6) two pipeline components share a gate but read it via different signals causing infinite-loop drift (planner skips because plan exists, implementer defers because review unparseable), (7) you want to harden the state-tagging GitHub Action against the Actions injection class while still tagging issues:opened with `state:needs-plan`, (8) you need to provision the 3 labels across an org without races against the first reviewer write."
 category: architecture
-date: 2026-05-29
-version: "1.1.0"
+date: 2026-07-05
+version: "1.2.0"
 user-invocable: false
 verification: verified-local
 history: architecture-github-labels-as-state-vocabulary.history
@@ -26,6 +26,10 @@ tags:
   - unexecuted-edge
   - stuck-closed-gate
   - state-transition-audit
+  - atomic-label-swap
+  - swap-not-bare-add
+  - combined-edit-primitive
+  - mutually-exclusive-invariant
 ---
 
 # Architecture: GitHub Labels as State Vocabulary (Not Free-Text Comments)
@@ -37,7 +41,7 @@ tags:
 | **Date** | 2026-05-29 |
 | **Objective** | Replace fragile regex-parsing of free-text comment bodies (e.g. `Verdict: GO/NOGO`) with mutually-exclusive `state:*` GitHub labels as the single source of truth for per-issue pipeline state — eliminates "comment unparseable → issue permanently stuck" and "planner and implementer disagree → infinite loop" failure modes |
 | **Outcome** | Pattern executed end-to-end on 2026-05-29 in HomericIntelligence/ProjectHephaestus PR #707; 911 automation tests pass locally, ruff + mypy clean. Three labels (`state:needs-plan`, `state:plan-no-go`, `state:plan-go`) defined, idempotent provisioner CLI shipped, `issues:opened` workflow auto-tags new issues, reviewer applies-and-removes opposites, implementer trusts the terminal label absolutely. One-time comment-scan backfill self-heals legacy issues. |
-| **Verification** | verified-local — full automation suite (911 tests) + ruff + mypy clean on the local worktree; CI validation pending on PR #707 ([ProjectHephaestus PR #707](https://github.com/HomericIntelligence/ProjectHephaestus/pull/707)). Updates to be backfilled here once CI is green. **v1.1.0 addition (Failed Attempt #9, the re-plan/no-go→needs-plan unexecuted-edge deadlock) is DESIGN-STAGE / UNVERIFIED**, pending implementation in ProjectHephaestus issue #1857 — not CI- or locally-test-verified for that specific learning. |
+| **Verification** | verified-local — full automation suite (911 tests) + ruff + mypy clean on the local worktree; CI validation pending on PR #707 ([ProjectHephaestus PR #707](https://github.com/HomericIntelligence/ProjectHephaestus/pull/707)). Updates to be backfilled here once CI is green. **v1.1.0 addition (Failed Attempt #9, the re-plan/no-go→needs-plan unexecuted-edge deadlock) AND the v1.2.0 refinement (Failed Attempt #10, the swap-not-bare-add + one-atomic-write requirement) are DESIGN-STAGE / UNVERIFIED**, pending implementation in ProjectHephaestus issue #1857 — the fix is designed and unit-test-specified but NOT implemented or CI-/locally-test-verified for those specific learnings. Do not read them as CI- or test-verified. |
 | **Live observation that motivated this** | 320 "no parseable Verdict" WARNINGs across an org-wide automation run, plus wasteful re-planning of already-approved issues because the latest comment's verdict line had drifted from the regex contract |
 
 ## When to Use
@@ -52,6 +56,7 @@ tags:
 - You are wiring an `on: issues: opened` Action that tags new issues with `state:needs-plan` and need to harden it against the GitHub Actions script-injection class
 - You need to provision the labels across an org so the first reviewer write doesn't race against a missing label name
 - Your labels-first gate deliberately returns False under a rejection label (e.g. `state:plan-no-go`), and a re-plan / retry cycle **never converges** — it exhausts a per-cycle budget and fails instead of re-entering the fresh state. This is usually a **documented-but-unexecuted state-transition edge** (see Failed Attempt #9)
+- You are about to implement a `state:*` transition and your GitHub accessor only exposes **separate `add_labels` / `remove_labels`** methods — you need the transition to be a mutually-exclusive **swap** (add one, remove the siblings) done as **one atomic `gh issue edit`**, so add a combined `edit_labels(add=[...], remove=[...])` primitive rather than emitting two calls (see Failed Attempt #10). A naive "add the fresh label back" fix leaves the rejection label in place and transiently violates the one-label invariant.
 
 **Don't use when:**
 
@@ -156,7 +161,9 @@ done
    - A labels-first plan gate that returns False under `state:plan-no-go` (independent of any plan comment) has a hidden precondition: **something must eventually clear that rejection label**, or the gate is stuck-closed forever.
    - The lifecycle diagram documents `state:plan-no-go ──re-plan──▶ state:needs-plan`, but a diagram edge is not code. Audit: *which component actually performs each documented transition edge?* The deadlock is almost always an edge that is drawn but never executed.
    - The component that **re-plans** (the planning stage's `on_enter`) must be the one to execute this edge: on re-entry it must **atomically clear `state:plan-no-go` and restore `state:needs-plan`**. Otherwise the shared gate (`has_existing_plan` / `is_plan_review_go`) stays False, VERIFY never ADVANCEs, and the retry budget (`plan_cycles`) drains to a FINISH_FAIL — the intended second plan cycle is unreachable.
-   - Keep the transition in the **single state-vocabulary module** as a pure helper (`replan_transition() -> (STATE_NEEDS_PLAN, [STATE_PLAN_NO_GO])`) living beside the GO/NOGO `apply_plan_verdict` helper. Do **not** inline label-name literals at the `on_enter` call site.
+   - **The re-plan write is a SWAP, not a bare ADD** *(v1.2.0 refinement — a plan reviewer will NOGO the naive version)*: the failing verdict helper (`apply_plan_verdict` on NOGO) returns `(add=state:plan-no-go, remove=[state:plan-go, state:needs-plan])`, so on fail-back the issue carries `state:plan-no-go` and **neither sibling**. A naive fix that only ADDs `state:needs-plan` back (`if X not in labels: add([X])`) leaves `state:plan-no-go` in place — this **transiently violates the mutually-exclusive-label invariant** (both labels present) AND still leaves `has_existing_plan` stuck-False. The correct helper must **remove the sibling rejection/terminal labels**: `replan_transition() -> (add=[needs-plan], remove=[plan-no-go, plan-go])`.
+   - **The swap must be ONE atomic write, not paired add+remove calls** *(v1.2.0 refinement)*: Detailed Step #3 already mandates a single `gh issue edit --add-label X --remove-label Y --remove-label Z`. But a pipeline whose GitHub accessor exposes only SEPARATE `add_labels` / `remove_labels` methods (each its own `gh issue edit`) **cannot honor that rule** — a two-call sequence leaves a crash window where the issue has zero or two state labels. Lesson: **when the state-label accessor lacks a combined-edit primitive, ADD one** (`edit_labels(issue, add=[...], remove=[...])` mapped onto a single `gh issue edit`) and route ALL `state:*` transitions through it. A plan reviewer WILL (and did) NOGO a swap implemented as two separate mutator calls, flagging the residual atomicity gap.
+   - Keep the transition in the **single state-vocabulary module** as a pure helper (`replan_transition() -> (STATE_NEEDS_PLAN, [STATE_PLAN_NO_GO, STATE_PLAN_GO])`) living beside the GO/NOGO `apply_plan_verdict` helper. Do **not** inline label-name literals at the `on_enter` call site.
    - **Ordering matters:** clear the no-go label *before* any "plan already exists → fast-forward" check in the same `on_enter`, so the label state is coherent for the whole entry body. A stale plan comment plus a last-verdict-of-NOGO still reads as *not approved*, so this ordering also prevents a premature fast-forward.
    - **Idempotency:** guard the transition write on *`state:plan-no-go` present* (mirror the existing `state:needs-plan` presence guard). Steady-state re-entry then produces **zero mutations**.
    - **Do NOT "fix" this by making VERIFY scan the plan-comment marker directly** — that reintroduces two-signals-for-one-gate divergence (Failed Attempt #2). The fix is to execute the missing transition, not to add a second reader.
@@ -174,6 +181,7 @@ done
 | 7 | Manual provisioning of labels per repo via the web UI | Race: the first reviewer write hits "label does not exist" → 404 → reviewer comment-only fallback → the very bug the labels were meant to fix. | Ship the labels via an idempotent `gh label create --force` CLI; provision before the first write. |
 | 8 | Skipping the backfill — "we'll just relabel old issues by hand" | Hand-relabeling 100+ org-wide issues is the kind of toil that never finishes; meanwhile the pipeline burns compute re-planning already-approved work. | A one-time, self-healing backfill is essential for migration. It deletes itself a release or two later. |
 | 9 *(design-stage, pending implementation in ProjectHephaestus issue #1857)* | Labels-first plan gate correct, but the **re-plan edge was documented in the diagram and never executed in code**: `plan_review` exhausts its per-cycle budget, applies `state:plan-no-go`, and FAIL_BACKs to `planning`; `planning` re-plans and upserts a fresh plan comment, but VERIFY calls `has_existing_plan()` → labels-first `is_plan_review_go`, which returns False while `state:plan-no-go` is present (independent of any plan comment). | VERIFY never ADVANCEs; it RETRYs until the `plan` budget (2) drains → FINISH_FAIL. The intended second plan cycle (`plan_cycles=2`) is unreachable. This is a **new facet of Failed Attempt #2**: here the two components *agree* on the label signal, but the re-planning writer never performs the documented `no-go → needs-plan` transition, so the shared gate is **stuck-closed**, not divergent. | When a labels-first gate deliberately returns False under a rejection label, **every edge leaving that rejection state must be executed by some component — not just drawn in a diagram**. Audit "which component performs each documented transition edge?"; the deadlock is the unexecuted edge. Fix: the re-planning `on_enter` atomically clears `state:plan-no-go` and restores `state:needs-plan` (pure helper in the state-vocabulary module, guarded on the label being present for idempotency). Do NOT make VERIFY read the plan-comment marker directly — that recreates Attempt #2's divergence. |
+| 10 *(design-stage, pending implementation in ProjectHephaestus issue #1857 — UNVERIFIED; a plan-review NOGO forced this refinement)* | Two naive versions of the Attempt-#9 re-plan fix: **(a)** a bare ADD — `if STATE_NEEDS_PLAN not in labels: add_labels([STATE_NEEDS_PLAN])` — restoring `state:needs-plan` without removing the sibling; **(b)** implementing the swap as **two separate mutator calls** (`add_labels(...)` then `remove_labels(...)`) because the GitHub accessor only exposed separate `add_labels` / `remove_labels` methods, each its own `gh issue edit`. | **(a)** leaves `state:plan-no-go` still present → **both** state labels set at once, transiently violating the mutually-exclusive-label invariant, and `has_existing_plan` stays stuck-False (the no-go label still gates it) — the deadlock is NOT cleared. **(b)** leaves a crash/observation window between the two writes where the issue has zero or two state labels; a concurrent reader (or a crash) sees an incoherent state. A plan reviewer NOGO'd version (b) for exactly this residual atomicity gap. | The re-plan write is a **SWAP, not a bare ADD**: the helper must ADD the fresh label AND REMOVE both siblings — `replan_transition() -> (add=[needs-plan], remove=[plan-no-go, plan-go])` (mirrors `apply_plan_verdict`'s add-one/remove-two shape). And the swap must be **ONE atomic write**: when the state-label accessor lacks a combined-edit primitive, **ADD one** (`edit_labels(issue, add=[...], remove=[...])` → single `gh issue edit --add-label … --remove-label … --remove-label …`) and route every `state:*` transition through it; never emit a transition as paired add+remove calls. |
 
 ## Results & Parameters
 
@@ -225,6 +233,13 @@ done
 > `state:plan-no-go` stayed stuck-closed and the re-plan cycle deadlocked at budget
 > exhaustion. See Failed Attempt #9. Audit rule: *for every documented transition
 > edge, name the component that executes it.*
+>
+> **⚠ And execute the edge as an ATOMIC SWAP** (v1.2.0, Failed Attempt #10): add
+> `state:needs-plan` AND remove **both** siblings in ONE `gh issue edit`. A bare
+> add leaves `state:plan-no-go` present (two labels at once, gate still closed);
+> a two-call add-then-remove leaves a zero-or-two-label crash window. If the
+> state-label accessor only offers separate `add_labels`/`remove_labels`, add a
+> combined `edit_labels(add, remove)` primitive and route every transition through it.
 
 ### Backfill Decision Logic (One-Time Self-Heal)
 
@@ -351,13 +366,26 @@ def should_implement(issue) -> bool:
     return get_plan_state(issue) == "go"
 ```
 
-### Re-Plan Transition (Executing the No-Go → Needs-Plan Edge)
+### Re-Plan Transition (Executing the No-Go → Needs-Plan Edge — as an Atomic Swap)
 
 *Design-stage, pending implementation in ProjectHephaestus issue #1857 — not yet CI-verified.*
 
 Keep the transition as a **pure helper in the single state-vocabulary module**,
 right next to the GO/NOGO `apply_plan_verdict` helper. Never inline the label-name
 literals at the `on_enter` call site.
+
+Two v1.2.0 requirements, both forced by a plan-review NOGO on the naive fix:
+
+1. **SWAP, not bare ADD** — the helper adds the fresh label AND removes *both*
+   siblings (mirrors `apply_plan_verdict`'s add-one/remove-two shape). A bare
+   `add_labels([needs-plan])` leaves `state:plan-no-go` in place → two state
+   labels at once (mutually-exclusive-invariant violation) and the gate is still
+   stuck-False.
+2. **ONE atomic write** — if the GitHub accessor exposes only separate
+   `add_labels` / `remove_labels`, ADD a combined `edit_labels(add, remove)`
+   primitive mapped onto a single `gh issue edit`, and route ALL `state:*`
+   transitions through it. Never emit a swap as paired add+remove calls (that
+   leaves a zero-or-two-label crash window).
 
 ```python
 # ── state_vocabulary.py (the single home for label literals) ──
@@ -366,13 +394,33 @@ STATE_PLAN_NO_GO = "state:plan-no-go"
 STATE_PLAN_GO = "state:plan-go"
 
 
-def replan_transition() -> tuple[str, list[str]]:
-    """The documented `no-go → needs-plan` re-plan edge, as data.
+def replan_transition() -> tuple[list[str], list[str]]:
+    """The documented `no-go → needs-plan` re-plan edge, as an atomic SWAP.
 
-    Returns (label_to_add, labels_to_remove). Callers do an atomic
-    `gh issue edit --add-label ADD --remove-label REM...`.
+    Returns (labels_to_add, labels_to_remove). Removing BOTH siblings keeps
+    the mutually-exclusive-label invariant intact — a bare add of
+    STATE_NEEDS_PLAN would leave STATE_PLAN_NO_GO present (two labels at once)
+    and keep the labels-first gate stuck-closed.
+
+    Callers perform ONE atomic `gh issue edit --add-label … --remove-label …`.
     """
-    return (STATE_NEEDS_PLAN, [STATE_PLAN_NO_GO])
+    return ([STATE_NEEDS_PLAN], [STATE_PLAN_NO_GO, STATE_PLAN_GO])
+
+
+# ── The combined-edit primitive to ADD when the accessor lacks one ──
+def edit_labels(issue, *, add: list[str], remove: list[str]) -> None:
+    """Apply an atomic add+remove in a SINGLE `gh issue edit`.
+
+    Route every state:* transition through this. Do NOT implement a swap as
+    a separate add_labels(...) followed by remove_labels(...) — that two-call
+    sequence leaves a window where the issue has zero or two state labels.
+    """
+    args = ["gh", "issue", "edit", str(issue.number), "--repo", issue.repo]
+    for name in add:
+        args += ["--add-label", name]
+    for name in remove:
+        args += ["--remove-label", name]
+    run(args)  # one HTTP call
 ```
 
 ```python
@@ -382,10 +430,11 @@ def on_enter(issue) -> None:
 
     # 1. Execute the re-plan edge FIRST, guarded on the no-go label being present.
     #    Idempotent: steady-state re-entry (no no-go label) writes nothing.
+    #    ONE atomic swap — add needs-plan, remove BOTH siblings.
     if STATE_PLAN_NO_GO in labels:
         add, remove = replan_transition()
-        gh_issue_edit(issue, add_label=add, remove_labels=remove)  # atomic
-        labels = (labels - set(remove)) | {add}
+        edit_labels(issue, add=add, remove=remove)  # single gh issue edit
+        labels = (labels - set(remove)) | set(add)
 
     # 2. Only AFTER the label state is coherent, consider fast-forward.
     #    A stale plan comment + last-verdict-NOGO still reads as not-approved,
@@ -396,6 +445,14 @@ def on_enter(issue) -> None:
 
     produce_plan(issue)
 ```
+
+> **Plan-review discipline (meta-lesson, briefly):** the NOGO that forced this
+> refinement was itself caused by submitting reviewer-self-critique bullets
+> *instead of* a concrete plan (no named files/lines, no fenced code, two fix
+> options left unresolved). Resolve to a SINGLE approach with cited evidence
+> and concrete `file:line` + code + named tests before submitting. (This is a
+> general planning-discipline point already covered by the `*-before-planning`
+> skills — noted here only because it shaped this specific fix.)
 
 **Deadlock check (copy-paste audit):** for every edge in your state diagram, confirm a
 component executes it — not just that the diagram draws it.
@@ -427,3 +484,4 @@ grep -rn "add.label state:needs-plan\|--add-label state:needs-plan\|STATE_NEEDS_
 | ProjectHephaestus | PR #707 — `architecture-github-labels-as-state-vocabulary` end-to-end pattern | 911 automation tests pass locally; ruff + mypy clean; auto-merge SQUASH armed. CI in flight at time of writing — flip `verification` to `verified-ci` once green. [PR link](https://github.com/HomericIntelligence/ProjectHephaestus/pull/707) |
 | ProjectHephaestus | Live observation that motivated the pattern | 320 "no parseable Verdict" WARNINGs across an org-wide automation run; multiple re-plans of already-approved issues because the latest comment had drifted from the regex contract |
 | ProjectHephaestus | Issue #1857 — re-plan cycle deadlock (Failed Attempt #9) — **design-stage, UNVERIFIED for this specific learning** | Planning→plan_review re-plan cycle could never converge: `plan_review` applies `state:plan-no-go` and FAIL_BACKs to `planning`; `planning` re-plans but the labels-first VERIFY gate (`has_existing_plan` → `is_plan_review_go`) stays False while `state:plan-no-go` is set, so VERIFY RETRYs until the `plan` budget (2) drains → FINISH_FAIL; the intended `plan_cycles=2` second cycle is unreachable. Root cause: the documented `no-go → needs-plan` re-plan edge is never executed by any component. Fix designed (pure `replan_transition()` helper + atomic add/remove in planning `on_enter`, guarded for idempotency) and unit-test-specified, but **NOT yet implemented or CI-verified in this session.** |
+| ProjectHephaestus | Issue #1857 — atomic-swap refinement (Failed Attempt #10) — **design-stage, UNVERIFIED; a plan-review NOGO forced this** | A plan reviewer NOGO'd two naive versions of the Attempt-#9 fix: **(a)** a bare `add_labels([needs-plan])` that left `state:plan-no-go` present (two labels at once → mutually-exclusive-invariant violation, gate still stuck-False); **(b)** the swap emitted as two separate mutator calls because the GitHub accessor exposed only `add_labels` / `remove_labels`, leaving a zero-or-two-label crash window. Refined fix: `replan_transition() -> (add=[needs-plan], remove=[plan-no-go, plan-go])` (SWAP, remove BOTH siblings) applied via a NEW combined `edit_labels(add, remove)` primitive that maps onto a SINGLE `gh issue edit`, with all `state:*` transitions routed through it. Designed + unit-test-specified, **NOT implemented or CI-verified.** |

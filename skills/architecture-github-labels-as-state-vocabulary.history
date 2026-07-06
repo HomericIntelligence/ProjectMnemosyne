@@ -2,6 +2,24 @@
 
 ## Changelog
 
+### v1.2.0 — 2026-07-05
+**Type:** Minor (refinement of the v1.1.0 re-plan-edge fix — atomic-swap + combined-edit-primitive requirements)
+
+**Context:** This refinement was forced by a plan-review NOGO on the v1.1.0 Attempt-#9 fix design for ProjectHephaestus issue #1857. **Still DESIGN-STAGE / UNVERIFIED** — the fix is designed and unit-test-specified but NOT implemented or CI-/locally-test-verified.
+
+**Changes:**
+- Adds **Failed Attempt #10** — two naive versions of the Attempt-#9 re-plan fix that a plan reviewer NOGO'd: **(a)** a bare `add_labels([needs-plan])` that left `state:plan-no-go` present → both state labels set at once (mutually-exclusive-invariant violation) and the gate still stuck-False; **(b)** the swap emitted as two separate mutator calls (because the GitHub accessor exposed only `add_labels`/`remove_labels`), leaving a zero-or-two-label crash window.
+- Sharpens Detailed Step #9 into two concrete requirements: (1) the re-plan write is a **SWAP, not a bare ADD** — `replan_transition() -> (add=[needs-plan], remove=[plan-no-go, plan-go])` removes BOTH siblings (mirrors `apply_plan_verdict`'s add-one/remove-two shape); (2) the swap must be **ONE atomic write** — when the accessor lacks a combined-edit primitive, ADD one (`edit_labels(add, remove)` → single `gh issue edit`) and route ALL `state:*` transitions through it.
+- Updates the Results & Parameters "Re-Plan Transition" subsection: `replan_transition()` now returns `(list[str], list[str])` removing both siblings; adds the `edit_labels(add, remove)` combined-edit primitive; the `on_enter` example now calls `edit_labels` for a single atomic swap.
+- Adds a "When to Use" bullet for the separate-add/remove-accessor case (add a combined `edit_labels` primitive).
+- Annotates the Lifecycle Diagram with a second warning: execute the edge as an ATOMIC SWAP (add one, remove both siblings, one `gh issue edit`).
+- Adds a brief plan-review-discipline meta-note (resolve to a SINGLE concrete plan with cited `file:line` + code + named tests, not reviewer-self-critique bullets) — explicitly cross-referenced to the existing `*-before-planning` skills to avoid duplication; recorded only because it shaped this fix.
+- Adds a Verified On row for issue #1857 (Failed Attempt #10) clearly marked **design-stage / UNVERIFIED**.
+- Bumps `date` to 2026-07-05, `version` to 1.2.0; adds tags `atomic-label-swap`, `swap-not-bare-add`, `combined-edit-primitive`, `mutually-exclusive-invariant`.
+- Overall skill `verification` field left at `verified-local` (unchanged); the Overview Verification cell now flags BOTH the v1.1.0 and v1.2.0 additions as design-stage/unverified so neither new learning is misrepresented as CI- or test-verified.
+
+---
+
 ### v1.1.0 — 2026-07-05
 **Type:** Minor (new finding added — re-plan / no-go→needs-plan unexecuted-edge deadlock)
 
@@ -15,6 +33,45 @@
 - Adds `history` frontmatter field pointing to this `.history` file.
 - Adds a Verified On row for ProjectHephaestus issue #1857 clearly marked **design-stage / UNVERIFIED** for this specific learning (fix designed + unit-test-specified, not yet implemented or CI-verified).
 - Overall skill `verification` field left at `verified-local` (unchanged); the Overview Verification cell now flags the v1.1.0 addition as design-stage/unverified so the new learning is not misrepresented as CI- or test-verified.
+
+---
+
+## v1.1.0 Snapshot (frontmatter + Detailed Step #9) — 2026-07-05
+
+Snapshot of the parts superseded by v1.2.0 (frontmatter before the atomic-swap
+tags/version, and the Detailed Step #9 fix wording before it was sharpened into
+the SWAP-not-ADD + one-atomic-write requirements).
+
+```yaml
+category: architecture
+date: 2026-05-29
+version: "1.1.0"
+```
+
+Tags at v1.1.0 (before v1.2.0 additions) ended with:
+
+```yaml
+  - replan-transition
+  - unexecuted-edge
+  - stuck-closed-gate
+  - state-transition-audit
+```
+
+Detailed Step #9 fix wording at v1.1.0 (before the v1.2.0 SWAP/atomic sharpening):
+
+```markdown
+   - The component that **re-plans** (the planning stage's `on_enter`) must be the one to execute this edge: on re-entry it must **atomically clear `state:plan-no-go` and restore `state:needs-plan`**. Otherwise the shared gate (`has_existing_plan` / `is_plan_review_go`) stays False, VERIFY never ADVANCEs, and the retry budget (`plan_cycles`) drains to a FINISH_FAIL — the intended second plan cycle is unreachable.
+   - Keep the transition in the **single state-vocabulary module** as a pure helper (`replan_transition() -> (STATE_NEEDS_PLAN, [STATE_PLAN_NO_GO])`) living beside the GO/NOGO `apply_plan_verdict` helper. Do **not** inline label-name literals at the `on_enter` call site.
+```
+
+The `replan_transition()` helper at v1.1.0 returned a single add label and
+removed only `STATE_PLAN_NO_GO`:
+
+```python
+def replan_transition() -> tuple[str, list[str]]:
+    """The documented `no-go → needs-plan` re-plan edge, as data."""
+    return (STATE_NEEDS_PLAN, [STATE_PLAN_NO_GO])
+```
 
 ---
 
