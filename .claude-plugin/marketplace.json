@@ -6,10 +6,10 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "2.1.0",
-  "total_plugins": 607,
+  "total_plugins": 608,
   "categories": {
     "architecture": 119,
-    "ci-cd": 119,
+    "ci-cd": 120,
     "debugging": 58,
     "documentation": 39,
     "evaluation": 12,
@@ -18,7 +18,7 @@
     "tooling": 166,
     "training": 7
   },
-  "last_updated": "2026-07-05T22:41:25Z",
+  "last_updated": "2026-07-06T04:37:04Z",
   "plugins": [
     {
       "name": "agent-config-validation-and-integrity",
@@ -4007,6 +4007,24 @@
       "source": "./skills/haiku-batch-worktree-agents.md",
       "category": "ci-cd",
       "tags": []
+    },
+    {
+      "name": "inference360-pr-gates-restore-review-after-merge",
+      "description": "Finish Inference360 module-scope PR trains without leaving governance drift. Use when: (1) an Inference360 issue #346-style implementation sequence has sibling PRs and auto-merge gates, (2) a merged PR makes another PR BEHIND, (3) temporary review-count relaxation unblocks auto-merge, (4) branch protection must be restored before issue closure, (5) gh api PATCH booleans need typed -F fields.",
+      "version": "1.0.0",
+      "source": "./skills/inference360-pr-gates-restore-review-after-merge.md",
+      "category": "ci-cd",
+      "tags": [
+        "inference360",
+        "branch-protection",
+        "auto-merge",
+        "approval-requirement",
+        "rebase",
+        "gh-api",
+        "typed-booleans",
+        "issue-closure",
+        "pr-gates"
+      ]
     },
     {
       "name": "inference360-release-version-tag-pr-sync",
@@ -8942,8 +8960,8 @@
     },
     {
       "name": "code-quality-bot-ignores-noqa",
-      "description": "GitHub's `github-code-quality[bot]` static analyzer flags imports as 'unused' even when they have explicit `# noqa: F401` markers, blocking PR merge under org rulesets with `required_review_thread_resolution`. The fix isn't to fight the bot or rewrite the imports \u2014 it's to resolve the threads via `gh api graphql resolveReviewThread` with one explanatory PR comment. Use when: (1) bot review comments flag deliberate test-patch-seam re-exports as 'unused imports', (2) PR shows `MERGEABLE / BLOCKED` with all CI checks green, (3) `required_review_thread_resolution` is in the org ruleset.",
-      "version": "1.1.0",
+      "description": "GitHub's `github-code-quality[bot]` static analyzer posts diff-scoped findings that its own AST engine cannot reconcile with runtime dynamics \u2014 it flags `# noqa: F401` re-exports as 'unused imports', PEP 562 lazy `__all__` names as 'exported but not defined', and PEP 544 Protocol `...` bodies as 'statement has no effect'. Under org rulesets with `required_review_thread_resolution` these unresolved threads block merge. TRIAGE each finding: confirmed false positives are resolved via `gh api graphql resolveReviewThread` with one explanatory comment (no code change); genuine findings (an `__all__` name with no lazy backing, a real dead store) must be FIXED in code. Use when: (1) bot flags deliberate test-patch-seam re-exports as 'unused imports', (2) bot flags `__all__` exports as 'not defined' on a PEP-562 lazy-export package, (3) bot flags Protocol `...` bodies as 'statement has no effect', (4) PR shows `MERGEABLE / BLOCKED` with all CI checks green under `required_review_thread_resolution`.",
+      "version": "1.2.0",
       "source": "./skills/code-quality-bot-ignores-noqa.md",
       "category": "tooling",
       "tags": [
