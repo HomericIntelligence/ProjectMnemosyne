@@ -211,7 +211,12 @@ development dependencies are declared there, together with task definitions and 
 `pixi.lock` for reproducible environments.
 
 - Install everything: `pixi install`
-- Run tasks: `pixi run validate`, `pixi run test`, `pixi run check`
+- Run tasks: `pixi run validate`, `pixi run test`, `pixi run check`, `pixi run package`
+
+The canonical CI `package` check builds the marketplace bundle artifact — a versioned tarball
+of `.claude-plugin/`, `skills/`, `plugins/`, `schemas/`, and `templates/` produced by
+`scripts/build_package.py` — since ProjectMnemosyne distributes a skills marketplace, not a
+Python library.
 
 `requirements.txt` and `requirements-dev.txt` exist as **non-canonical mirrors** for pip-based
 CI jobs and `pip-audit`. Do not hand-edit them as the source of truth — update `pixi.toml`

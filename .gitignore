@@ -8,6 +8,9 @@ worktrees/
 # build artifacts
 build/
 
+# Package artifacts
+dist/
+
 # Temporary files
 tmp/
 

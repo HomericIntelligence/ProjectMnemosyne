@@ -242,6 +242,27 @@ jobs:
           done
           echo "All JSON files valid"
 
+  # Canonical package gate (ci-naming-convention.md). Mnemosyne's distributable
+  # is the marketplace bundle (.claude-plugin/ + skills/ + plugins/ + schemas/
+  # + templates/), not a PyPI wheel — see issue #2911.
+  package:
+    name: package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+        with:
+          python-version: '3.11'
+      - name: Build and verify marketplace bundle
+        run: python3 scripts/build_package.py --output-dir dist
+      - name: Upload package artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: project-mnemosyne-package
+          path: dist/*.tar.gz
+          retention-days: 90
+
   schema-validation:
     name: schema-validation
     runs-on: ubuntu-24.04

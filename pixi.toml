@@ -22,3 +22,4 @@ validate-release = "python3 scripts/validate_release_contract.py"
 test = "python3 -m pytest tests/"
 check = { depends-on = ["validate", "validate-release", "test"] }
 generate-marketplace = "python3 scripts/generate_marketplace.py"
+package = "python3 scripts/build_package.py"

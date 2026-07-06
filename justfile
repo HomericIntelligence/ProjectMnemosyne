@@ -26,6 +26,12 @@ validate:
 generate-marketplace:
     python3 scripts/generate_marketplace.py
 
+# === Packaging ===
+
+# Build and verify the marketplace bundle tarball into dist/
+package:
+    python3 scripts/build_package.py
+
 # === Testing ===
 
 # Run all tests

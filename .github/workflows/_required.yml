@@ -304,6 +304,10 @@ jobs:
           done
           echo "All JSON files valid"
 
+  # Canonical package gate (ci-naming-convention.md). Mnemosyne's distributable
+  # is the marketplace bundle (.claude-plugin/ + skills/ + plugins/ + schemas/
+  # + templates/); the Python wheel remains built here for the install smoke
+  # test below.
   package:
     name: package
     runs-on: ubuntu-24.04
@@ -321,11 +325,20 @@ jobs:
         run: python -m build
       - name: twine check
         run: twine check dist/*
+      - name: Build and verify marketplace bundle
+        run: python3 scripts/build_package.py --output-dir marketplace-dist
       - name: Upload dist artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: dist
           path: dist/
+          if-no-files-found: error
+      - name: Upload marketplace package artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: project-mnemosyne-package
+          path: marketplace-dist/*.tar.gz
+          retention-days: 90
           if-no-files-found: error
 
   install:
