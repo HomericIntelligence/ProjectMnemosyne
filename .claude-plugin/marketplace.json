@@ -6,10 +6,10 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "2.1.0",
-  "total_plugins": 620,
+  "total_plugins": 621,
   "categories": {
     "architecture": 124,
-    "ci-cd": 120,
+    "ci-cd": 121,
     "debugging": 60,
     "documentation": 39,
     "evaluation": 12,
@@ -18,7 +18,7 @@
     "tooling": 170,
     "training": 7
   },
-  "last_updated": "2026-07-06T19:53:32Z",
+  "last_updated": "2026-07-06T19:59:32Z",
   "plugins": [
     {
       "name": "agent-config-validation-and-integrity",
@@ -3960,6 +3960,14 @@
       "description": "The DCO Signed-off-by trailer (git commit -s) is a SEPARATE requirement from GPG/SSH cryptographic signing (git commit -S); a commit can be -S signed yet still fail the pr-policy DCO check because it lacks the trailer. Use when: (1) a PR is BLOCKED and the pr-policy / required-checks-gate CI gate fails with 'missing Signed-off-by: Name <email> trailer' even though git log --show-signature shows a valid GPG signature, (2) automation/agent-generated commits (auto-impl branches) lack the DCO trailer because the generator ran `git commit -S` without `-s`, (3) you need to retroactively add Signed-off-by to every commit on a branch WITHOUT losing GPG signatures, (4) lint passes but required-checks-gate still fails \u2014 check pr-policy sub-checks (Check 4 is DCO), (5) you fixed only one blocker (mypy/lint) but the gate is still red on a second independent DCO failure.",
       "version": "1.0.0",
       "source": "./skills/git-dco-signoff-distinct-from-gpg-sign.md",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "git-rebase-skip-duplicate-merged-commits",
+      "description": "Use when: (1) a PR branch has commits that duplicate work already merged upstream, (2) a rebase onto origin/main encounters conflicts from commits whose content is identical to already-merged work, (3) you want to land the branch cleanly on top of main with no duplicate commits, (4) a branch was created before upstream completed the same work and now both exist\u2014skip deduplicates automatically, (5) you have validated that the conflicts are solely from duplicate/superseded content, not new work. Use `git rebase --skip` to skip those duplicate commits during rebase instead of manually resolving conflicts that would delete/undo changes main already has.",
+      "version": "1.0.0",
+      "source": "./skills/git-rebase-skip-duplicate-merged-commits.md",
       "category": "ci-cd",
       "tags": []
     },
