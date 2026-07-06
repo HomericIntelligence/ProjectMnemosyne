@@ -6,10 +6,10 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "2.1.0",
-  "total_plugins": 628,
+  "total_plugins": 631,
   "categories": {
-    "architecture": 127,
-    "ci-cd": 121,
+    "architecture": 129,
+    "ci-cd": 122,
     "debugging": 60,
     "documentation": 40,
     "evaluation": 12,
@@ -18,7 +18,7 @@
     "tooling": 172,
     "training": 7
   },
-  "last_updated": "2026-07-06T20:08:32Z",
+  "last_updated": "2026-07-06T20:53:32Z",
   "plugins": [
     {
       "name": "agent-config-validation-and-integrity",
@@ -1819,6 +1819,28 @@
       ]
     },
     {
+      "name": "planning-audit-finding-premise-verification",
+      "description": "When planning a fix for an audit/lint/reviewer finding, verify the finding's stated PREMISE against the CURRENT repo state before designing the fix \u2014 the premise can be factually stale, and a stale premise redirects the entire fix. A finding that says a file is 'committed' / 'in source' / cites `path:line` is a CLAIM: prove the file is actually TRACKED with `git ls-files | grep <path>` and `git log --all -- <path>` (empty = never committed) before planning any edit to it \u2014 editing an untracked file produces an un-reviewable, non-recurrence-preventing diff. Separately, when a file 'appears ignored' locally, distinguish REPO-level ignore from the developer's GLOBAL ignore with `git -c core.excludesFile=/dev/null check-ignore -v <path>` (rc=1 => the repo `.gitignore` does NOT defend the file; it is protected only on machines whose `~/.config/git/ignore` happens to match). Worked example (ProjectHephaestus #1494): the audit claimed three permission fragments cluttered a 'committed config' at `.claude/settings.local.json:11-13`; `git ls-files` and `git log --all` proved the file was NEVER tracked, and `core.excludesFile=/dev/null check-ignore` proved the repo `.gitignore` did not ignore it \u2014 only the dev's global `~/.config/git/ignore:1` did. The fix PIVOTED from 'scrub three entries out of the file' (untracked, un-reviewable, recurrence-prone) to 'add an explicit repo-level `.gitignore` rule + a subprocess regression test asserting `git -c core.excludesFile=/dev/null check-ignore -v <path>` returns 0'. Use when: (1) planning a fix for an audit/lint/reviewer finding that cites a file path + line numbers, (2) a finding describes a file as 'committed' / 'in source' \u2014 verify tracking first, (3) a file appears ignored locally but you need repo-level defense that survives a contributor lacking your global ignore.",
+      "version": "1.0.0",
+      "source": "./skills/planning-audit-finding-premise-verification.md",
+      "category": "architecture",
+      "tags": [
+        "planning",
+        "audit-finding",
+        "premise-verification",
+        "git-ls-files",
+        "git-check-ignore",
+        "core-excludesfile",
+        "global-vs-repo-ignore",
+        "untracked-file",
+        "committed-config",
+        "gitignore",
+        "regression-test",
+        "stale-premise",
+        "verify-before-planning"
+      ]
+    },
+    {
       "name": "planning-backward-compat-config-primitive-extension",
       "description": "Reusable checklist for writing TRUSTWORTHY implementation plans that make a hardcoded constant configurable via an env var, or extend a config-driven auth/config primitive, in a C++ service WITHOUT breaking old behavior. Covers both the auth case (add comma-separated AGAMEMNON_API_KEYS unioned with single AGAMEMNON_API_KEY) and the general 'make constant env-configurable' case (e.g. a RouteLimits struct read from AGAMEMNON_* and threaded through register_routes()). Use when: (1) planning to add a new env var / config knob (single OR multi-value) that must coexist with existing behavior, (2) a plan adds a source file to a build target but did not READ the build file that DEFINES the target, (3) a plan claims a trailing defaulted-parameter signature change is non-breaking, (4) a plan cites exact file:line locations as ground truth, (5) a plan opportunistically fixes an adjacent bug or deprecates an existing env knob, (6) a plan consolidates two env knobs that use different units, (7) a plan changes a security-critical == compare into set membership or RELAXES a fail-secure startup invariant, (8) a plan proposes DELETING a file it calls dead code based on a source grep alone.",
       "version": "1.2.0",
@@ -2059,6 +2081,29 @@
       ]
     },
     {
+      "name": "planning-normalize-liveness-at-fetch-layer",
+      "description": "When a pure classifier / state-machine consumes a fact object assembled from an external API, derive the minimal orthogonal signals at the FETCH / normalization layer so no contradictory or ambiguous combination can reach the classifier \u2014 don't push a raw over-rich fact bag (e.g. `pr_number` + `pr_is_open` + `pr_is_merged` as three independent fields) into the classifier and then rely on it to guard every impossible combination. Use when: (1) designing a pure classifier that consumes a facts dataclass built from GitHub / a DB / any external API, (2) the fact object carries an identifier field PLUS separate boolean liveness flags that can combine into a state the classifier doesn't explicitly handle, (3) a plan reviewer flags a 'falls through / silently misclassifies' path for an edge combination (closed PR, draft PR, deleted-but-cached row), (4) you are tempted to add a guard clause inside a pure function to reject an 'impossible' input \u2014 normalize upstream instead, (5) reconstructing in-memory queues from a durable journal (GitHub-as-journal) where the fetch layer already exists and can collapse states cheaply, (6) any 'make illegal states unrepresentable' boundary-normalization decision. This is a plan-review NOGO finding on ProjectHephaestus #1813 (pipeline seeding + admission control), not a shipped fix.",
+      "version": "1.0.0",
+      "source": "./skills/planning-normalize-liveness-at-fetch-layer.md",
+      "category": "architecture",
+      "tags": [
+        "planning",
+        "pure-classifier",
+        "state-machine",
+        "fetch-layer-normalization",
+        "make-illegal-states-unrepresentable",
+        "producer-boundary",
+        "liveness-signal",
+        "github-pr-state",
+        "facts-dataclass",
+        "plan-review-nogo",
+        "silent-misclassification",
+        "total-function",
+        "pipeline-seeding",
+        "admission-control"
+      ]
+    },
+    {
       "name": "planning-pr-body-extract-sibling-artifact-at-runtime",
       "description": "When planning a PR-open task whose body must embed content produced by an UPSTREAM sibling issue (loss log, benchmark table, verification transcript, dataset checksum), the plan MUST specify a run-time extraction pipeline that pulls the artifact from `gh issue view <sibling> --comments` at execute time, via an explicit placeholder token (e.g. `<<LOSS_LOG>>`) that the create-PR step substitutes; the plan MUST NOT include an illustrative numeric example inline with a hedging note telling the executor to overwrite it. Illustrative values leak into shipped PRs when the hedging note is skimmed. The dependency guard is a TWO-part check: (a) `gh issue view <sibling> --json state -q .state == \"CLOSED\"` AND (b) the sibling's comments contain a well-defined sentinel section (e.g. `## Loss Log`, `## Verification Transcript`, `## Benchmark Results`) that carries the artifact; a CLOSED-as-duplicate or CLOSED-as-wontfix sibling passes (a) but fails (b), and the plan must abort with a specific verdict message on either failure. Use when: (1) planning a `Closes #N` PR-open task where the PR body must cite quantitative evidence produced by a sibling verification/validation task, (2) the PR body template has a section (loss log, benchmark table, checksum) whose CONTENT lives in a dependent issue's comments not in the branch, (3) any planning session where you catch yourself writing example numbers inline with a note saying 'the executor must replace these before creating the PR', (4) a dependent PR-open task where the sibling is `CLOSED` but you have not confirmed the required artifact section actually exists in its comments.",
       "version": "1.1.0",
@@ -2139,8 +2184,8 @@
     },
     {
       "name": "planning-pr-review-go-gate-severity-round-trip",
-      "description": "Planning discipline for making a blocking gate severity-aware when the severity attribute must survive a multi-stage pipeline round-trip (reviewer JSON -> coordinator seed -> item.payload -> GitHub post -> GraphQL read-back). Before designing around a per-item field, GREP THE FIELD NAME producer-to-consumer across the whole package: a field emitted in a prompt is NOT the same as a field present in the parsed/consumed data structure. Choose the fail-safe default so the field-absent case reproduces CURRENT (safe) behavior exactly, making the change a no-op until the enabling data is wired. Anchor severity readers on a marker-LINE prefix, not a free substring scan. Cite the DEFINITION site of any helper a plan says to reuse, not the call/import site. Use when: (1) planning a fix that filters a blocking gate (a GO/merge gate) by a per-item severity/attribute that must survive a GitHub review post->read-back round-trip, (2) planning a fix whose core mechanism depends on a data field flowing through several pipeline stages, (3) re-introducing a previously-fixed deadlock in a rewritten subsystem (the #1554 minor-thread deadlock re-appearing in the queue-based pipeline pr_review stage, ProjectHephaestus #1856 / epic #1809), (4) a plan reads `t.get(\"severity\")` off a thread dict \u2014 confirm severity is actually seeded there and not just present in the reviewer prompt, (5) a plan says 'reuse the local classifier/helper' \u2014 confirm the helper is defined locally versus imported from a sibling module, (6) weighing a single-int blocking-count gate against a by-severity tuple that also RESOLVES the waved threads (required_review_thread_resolution branch-protection can re-deadlock at merge if minor threads stay unresolved).",
-      "version": "1.0.0",
+      "description": "Planning discipline for making a blocking gate severity-aware when the severity attribute must survive a multi-stage pipeline round-trip (reviewer JSON -> coordinator seed -> item.payload -> GitHub post -> GraphQL read-back). Before designing around a per-item field, GREP THE FIELD NAME producer-to-consumer across the whole package: a field emitted in a prompt is NOT the same as a field present in the parsed/consumed data structure. Choose the fail-safe default so the field-absent case reproduces CURRENT (safe) behavior exactly, making the change a no-op until the enabling data is wired. Anchor severity readers on a marker-LINE prefix, not a free substring scan. Cite the DEFINITION site of any helper a plan says to reuse, not the call/import site. Use when: (1) planning a fix that filters a blocking gate (a GO/merge gate) by a per-item severity/attribute that must survive a GitHub review post->read-back round-trip, (2) planning a fix whose core mechanism depends on a data field flowing through several pipeline stages, (3) re-introducing a previously-fixed deadlock in a rewritten subsystem (the #1554 minor-thread deadlock re-appearing in the queue-based pipeline pr_review stage, ProjectHephaestus #1856 / epic #1809), (4) a plan reads `t.get(\"severity\")` off a thread dict \u2014 confirm severity is actually seeded there and not just present in the reviewer prompt, (5) a plan says 'reuse the local classifier/helper' \u2014 confirm the helper is defined locally versus imported from a sibling module, (6) weighing a single-int blocking-count gate against a by-severity tuple that also RESOLVES the waved threads (required_review_thread_resolution branch-protection can re-deadlock at merge if minor threads stay unresolved \u2014 CONFIRMED real via merge_wait.py:427-434 BLOCKED_ADDRESS_WAIT; resolve waved automation threads UPSTREAM via gh_pr_resolve_thread before arming), (7) a fix DEFERS a state to a later pipeline stage \u2014 read that downstream stage's handler to confirm the deferral drains or re-deadlocks; prefer resolving upstream, (8) a planning turn that ALSO ran /learn \u2014 the emitted FINAL message must BE the full implementation plan, not a /learn recap, or the plan reviewer grades an empty plan and NOGOs.",
+      "version": "1.1.0",
       "source": "./skills/planning-pr-review-go-gate-severity-round-trip.md",
       "category": "architecture",
       "tags": [
@@ -2157,7 +2202,12 @@
         "fail-safe-default",
         "marker-line-anchoring",
         "cite-definition-site",
-        "required-review-thread-resolution"
+        "required-review-thread-resolution",
+        "defer-to-downstream-stage",
+        "resolve-waved-threads-upstream",
+        "by-severity-tuple",
+        "plan-artifact-not-learn-recap",
+        "1809"
       ]
     },
     {
@@ -3451,6 +3501,28 @@
         "mcr-mirror",
         "digest-pinning",
         "uncertain-assumptions"
+      ]
+    },
+    {
+      "name": "ci-required-checks-gate-superseded-run-false-failure",
+      "description": "Use when: (1) a PR's `gh pr view --json statusCheckRollup` shows the SAME check name (e.g. `required-checks-gate`) as BOTH FAILURE and SUCCESS and you're about to conclude CI failed, (2) a docs-only / path-filtered PR shows heavy jobs (lint, unit-tests, build, pixi-check, schema-validation, shellcheck, license-scan) as SKIPPED or CANCELLED and you worry they're 'missing', (3) you see CANCELLED jobs paired with SKIPPED ones in the rollup and can't tell if the PR is red, (4) a path-filtering `changes-gate` feeds a `required-checks-gate` aggregator and you need to know the healthy shape, (5) you're tempted to 'fix' a non-existent CI failure on an otherwise-mergeable PR. The trap: the FAILURE/CANCELLED rollup entries belong to an EARLIER workflow run superseded and cancelled by concurrency; a cancelled run's gate reports FAILURE. Authoritative signal = the LATEST run for the head SHA, not the aggregated rollup.",
+      "version": "1.0.0",
+      "source": "./skills/ci-required-checks-gate-superseded-run-false-failure.md",
+      "category": "ci-cd",
+      "tags": [
+        "github-actions",
+        "required-checks-gate",
+        "changes-gate",
+        "path-filter",
+        "docs-only",
+        "concurrency",
+        "cancel-in-progress",
+        "superseded-run",
+        "status-check-rollup",
+        "false-failure",
+        "gh-run-list",
+        "branch-protection",
+        "verified-ci"
       ]
     },
     {
