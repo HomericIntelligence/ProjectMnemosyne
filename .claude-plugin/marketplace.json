@@ -6,19 +6,19 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "2.1.0",
-  "total_plugins": 621,
+  "total_plugins": 623,
   "categories": {
     "architecture": 124,
     "ci-cd": 121,
     "debugging": 60,
     "documentation": 39,
     "evaluation": 12,
-    "optimization": 6,
+    "optimization": 7,
     "testing": 82,
-    "tooling": 170,
+    "tooling": 171,
     "training": 7
   },
-  "last_updated": "2026-07-06T19:59:32Z",
+  "last_updated": "2026-07-06T20:01:31Z",
   "plugins": [
     {
       "name": "agent-config-validation-and-integrity",
@@ -7236,6 +7236,22 @@
       ]
     },
     {
+      "name": "batch-loss-averaging-with-partial-batches",
+      "description": "Use when: (1) computing average loss during model evaluation with uneven batch sizes, (2) handling the final partial batch when num_samples % batch_size != 0, (3) fixing over-weighted loss metrics from naive batch averaging, (4) implementing correct evaluation metrics for training frameworks. Proper batch loss averaging: track total_samples_processed, weight loss by batch_size during accumulation, divide by actual samples processed (not batch count).",
+      "version": "1.0.0",
+      "source": "./skills/batch-loss-averaging-with-partial-batches.md",
+      "category": "optimization",
+      "tags": [
+        "loss-computation",
+        "evaluation-metrics",
+        "batch-processing",
+        "numerical-correctness",
+        "partial-batches",
+        "training-loops",
+        "ResNet18"
+      ]
+    },
+    {
       "name": "github-graphql-batch-query-optimization",
       "description": "Replace N serial `gh api search/issues` REST calls with a single GraphQL query using aliased fields to fetch multiple issue counts (total/merged/open) in one round-trip. Use when: (1) a pipeline needs multiple GitHub issue statistics (count, merged count, open count), (2) currently implemented via N sequential REST search calls, (3) profiling shows API round-trips dominate wall-clock time, (4) need to reduce rate-limit consumption and latency.",
       "version": "1.0.0",
@@ -9821,6 +9837,22 @@
       "source": "./skills/model-config-explicit-model-id.md",
       "category": "tooling",
       "tags": []
+    },
+    {
+      "name": "mojo-example-script-execution-with-precompiled-packages",
+      "description": "Use when: (1) running example Mojo scripts that import from a shared library without errors, (2) debugging import resolution failures in Mojo example scripts, (3) optimizing example script execution to avoid long build times during local development, (4) configuring the `-I` flag to access precompiled package artifacts. Execute scripts with `-I build/debug` after `just build` completes to access precompiled projectodyssey package context.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-example-script-execution-with-precompiled-packages.md",
+      "category": "tooling",
+      "tags": [
+        "mojo-execution",
+        "example-scripts",
+        "package-imports",
+        "build-artifacts",
+        "mojo-run",
+        "import-resolution",
+        "dataset-loading"
+      ]
     },
     {
       "name": "mojo-package-build-and-distribution",
