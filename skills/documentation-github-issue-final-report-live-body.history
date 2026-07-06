@@ -1,13 +1,35 @@
+<!-- markdownlint-disable MD024 -->
+
+# History: documentation-github-issue-final-report-live-body
+
+## v1.1.0 (2026-07-06)
+
+**Changed by:** ProjectHephaestus PR #1854 / issue #1818 public automation evidence hygiene.
+**Verification:** verified-ci (PR #1854 final head `30287af`; Required Checks `28771968071` success, Test `28771968016` success, HOL Plugin Scanner `28771968083` success; local full automation tests 3237 passed; affected slice 190 passed).
+
+### What changed
+
+- Expanded the skill from issue-body final reports to PR bodies, comments, review comments, and automation evidence mirrors.
+- Added explicit forbidden public-artifact patterns for local paths and operator identifiers: `/mnt`, `/home`, `home/`, `/Users`, `Users/`, usernames, hostnames, and local evidence paths.
+- Added the rule to edit older public comments too, not just the latest PR body or issue comment.
+- Added public artifact hygiene scan commands, a failed-attempt row, a ProjectHephaestus verified-on row, `history` metadata, and version 1.1.0.
+
+### Why
+
+PR #1854 / issue #1818 showed that automation run evidence can accidentally copy local checkout paths, home-directory fragments, and operator usernames into durable GitHub artifacts. Cleaning only the most recent body or comment is insufficient because older comments and evidence mirrors remain public. The durable workflow is to scan every public surface before posting or updating, redact all local operator details, then fetch the live artifacts again and re-run absence checks.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
 ---
 name: documentation-github-issue-final-report-live-body
-description: "Rewrite GitHub issues, PR bodies, comments, and evidence mirrors into coherent public reports without overwriting live edits or leaking local operator details. Use when: (1) an issue has accumulated investigation notes, follow-up phrasing, or stale detours, (2) the user asks for a final report-style issue body, (3) sensitive or model-specific details must be removed before publishing, (4) automation evidence may contain local filesystem paths or usernames."
+description: "Rewrite GitHub issues into coherent final reports without overwriting live edits. Use when: (1) an issue has accumulated investigation notes, follow-up phrasing, or stale detours, (2) the user asks for a final report-style issue body, (3) sensitive or model-specific details must be removed before publishing."
 category: documentation
-date: 2026-07-06
-version: "1.1.0"
+date: 2026-06-24
+version: "1.0.0"
 user-invocable: false
-verification: verified-ci
-history: documentation-github-issue-final-report-live-body.history
-tags: [github, issues, pull-requests, comments, evidence-mirrors, final-report, live-body, redaction, documentation, public-artifact-hygiene, local-path-sanitization]
+verification: verified-local
+tags: [github, issues, final-report, live-body, redaction, documentation]
 ---
 
 # GitHub Issue Final Report Live Body
@@ -16,11 +38,10 @@ tags: [github, issues, pull-requests, comments, evidence-mirrors, final-report, 
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-07-06 |
-| **Objective** | Convert GitHub issue/PR public artifacts from incremental investigation transcripts into coherent final reports while preserving user edits and removing stale, sensitive, or local-operator details. |
-| **Outcome** | Successful. The safe workflow reads the current live issue/PR body and comments, checks for concurrent edits, sanitizes public evidence including older comments and mirrors, publishes once, then verifies required content and forbidden local identifiers are absent. |
-| **Verification** | verified-ci - public artifact hygiene for ProjectHephaestus PR #1854 / issue #1818 passed the PR gate; local full automation tests 3237 passed and affected slice 190 passed. |
-| **History** | [changelog](./documentation-github-issue-final-report-live-body.history) |
+| **Date** | 2026-06-24 |
+| **Objective** | Convert a GitHub issue body from an incremental investigation transcript into one coherent final report while preserving user edits and removing stale or sensitive detours. |
+| **Outcome** | Successful. The safe workflow reads the current live issue body, checks for concurrent edits, rewrites locally, publishes once, then verifies required content and removed phrasing. |
+| **Verification** | verified-local - workflow executed against a live GitHub issue; CI validation not applicable. |
 
 ## When to Use
 
@@ -29,8 +50,6 @@ tags: [github, issues, pull-requests, comments, evidence-mirrors, final-report, 
 - You need to avoid overwriting edits that may have happened since your last local draft.
 - The issue should preserve technical evidence while removing user-error detours, stale checklists, or unnecessary operational specifics.
 - The report must protect model-specific, endpoint-specific, host-specific, path-specific, or other internal identifiers.
-- A PR body, issue comment, automation evidence mirror, or final run report may have copied local paths, home-directory fragments, or operator usernames into a public artifact.
-- You need to clean older comments as well as the latest body because durable public evidence is spread across the issue/PR timeline.
 
 ## Verified Workflow
 
@@ -62,7 +81,6 @@ gh issue view <issue-number> --repo <owner>/<repo> \
 
 rg -n "## Summary|## Final Finding|## Evidence|## Acceptance Criteria" /tmp/issue-live-final.md
 rg -n "follow-up|previously unchecked|remaining|still untested|intermediate detour" /tmp/issue-live-final.md
-rg -n "/mnt|/home|home/|/Users|Users/|<operator-username>" /tmp/issue-live-final.md
 ```
 
 ### Detailed Steps
@@ -75,9 +93,7 @@ rg -n "/mnt|/home|home/|/Users|Users/|<operator-username>" /tmp/issue-live-final
 6. **Protect sensitive details.** Replace model IDs, endpoint addresses, hostnames, job IDs, absolute paths, internal repo names, usernames, and proprietary payloads with placeholders or generic descriptions unless the user explicitly asks to retain them.
 7. **Keep enough evidence to reproduce.** Preserve response shape, request shape, relevant flags, logs, control results, and acceptance criteria, but sanitize identifiers.
 8. **Re-check `updatedAt` before publishing.** If the timestamp changed, fetch the body again and merge the user edits before editing.
-9. **Sanitize every public surface, not only the latest body.** Search the PR body, issue body, issue comments, PR comments, review comments, and any evidence mirror that automation posts or links. Edit older comments too; leaving an old leaked path in the timeline defeats the cleanup.
-10. **Scan for local operator details before posting or updating.** Treat these as forbidden in public artifacts unless explicitly approved: `/mnt`, `/home`, `home/`, `/Users`, `Users/`, absolute checkout paths, local cache paths, usernames, hostnames, job scratch paths, and raw evidence paths.
-11. **Verify the live result, not the local file.** Fetch the GitHub body/comments after editing and check both required sections and forbidden stale phrasing plus forbidden local-identifier patterns.
+9. **Verify the live result, not the local file.** Fetch the GitHub body after editing and check both required sections and forbidden stale phrasing.
 
 ## Failed Attempts
 
@@ -86,8 +102,7 @@ rg -n "/mnt|/home|home/|/Users|Users/|<operator-username>" /tmp/issue-live-final
 | Editing from an old local draft | Reused a body file after additional live edits may have occurred | Risked overwriting user changes or resurrecting stale language | Always re-read the live issue body before a rewrite |
 | Leaving chronological investigation language | Kept phrases like "follow-up", "previously unchecked", or intermediate detours | The issue read like a work log instead of a final bug report | Rewrite in final-state language once the investigation is complete |
 | Over-preserving raw evidence | Included raw identifiers and detailed operational paths | Durable issue bodies can leak unnecessary internal information | Keep response shapes and conclusions; redact identifiers and proprietary payloads |
-| Cleaning only the latest artifact | Updated the current PR body or latest issue comment but left older automation comments and evidence mirrors untouched | Public timeline still exposed local filesystem paths or operator usernames even though the newest artifact looked clean | Scan and edit every durable public surface: PR body, issue body, comments, review comments, and evidence mirrors |
-| Publishing without absence checks | Verified only that new sections existed | Old misleading phrases or leaked local identifiers can remain and undermine the final report | Check both presence of required sections and absence of stale wording plus `/mnt`, `/home`, `home/`, `/Users`, `Users/`, and username patterns |
+| Publishing without absence checks | Verified only that new sections existed | Old misleading phrases can remain and undermine the final report | Check both presence of required sections and absence of stale wording |
 
 ## Results & Parameters
 
@@ -122,29 +137,12 @@ rg -n "/mnt|/home|home/|/Users|Users/|<operator-username>" /tmp/issue-live-final
 5. If changed, stop and merge live edits before publishing.
 ```
 
-### Public Artifact Hygiene Scan
-
-```bash
-# Fetch durable public artifacts into a temp directory, then scan them before posting/updating.
-rg -n "/mnt|/home|home/|/Users|Users/|<operator-username>|<local-hostname>" /tmp/public-artifacts
-# Expected: no output. If matches appear, redact and re-fetch live artifacts after editing.
-```
-
-Surfaces to check:
-
-- PR body and issue body.
-- Issue comments and PR comments, including older automation comments.
-- Review comments and resolved-thread summaries.
-- Evidence mirrors, status reports, and final-run comments produced by automation.
-- Any linked public gist, artifact summary, or markdown file copied from local run evidence.
-
 ### Redaction Checklist
 
 - No model IDs or model-family names unless explicitly approved.
 - No endpoint IPs, hostnames, ports, or internal URLs unless explicitly approved.
 - No job IDs, process IDs, usernames, cluster names, or allocation identifiers.
-- No absolute paths, checkpoint paths, local cache paths, or evidence mirror paths.
-- No home-directory fragments such as `/mnt`, `/home`, `home/`, `/Users`, or `Users/`.
+- No absolute paths or checkpoint paths.
 - No full raw reasoning output unless explicitly approved and clearly truncated.
 - No obsolete auth/user-error detours unless they are part of the final diagnosis.
 
@@ -156,7 +154,6 @@ rg -n "## Summary|## Final Finding|## Acceptance Criteria|## Validation" /tmp/is
 
 # Stale wording should be absent.
 rg -n "follow-up|previously unchecked|remaining|still untested|intermediate detour" /tmp/issue-live-final.md
-rg -n "/mnt|/home|home/|/Users|Users/|<operator-username>" /tmp/issue-live-final.md
 # Expected: no output, exit code 1.
 ```
 
@@ -165,4 +162,7 @@ rg -n "/mnt|/home|home/|/Users|Users/|<operator-username>" /tmp/issue-live-final
 | Project | Context | Details |
 |---------|---------|---------|
 | GitHub issue tracker | Final report rewrite after operational debugging | Sanitized workflow only; no issue number, model IDs, endpoints, paths, jobs, or raw proprietary payloads retained |
-| ProjectHephaestus | PR #1854 / issue #1818 public automation evidence cleanup | Scanned and removed absolute local filesystem paths and operator usernames from public PR/issue evidence, including older comments rather than only the latest artifact. Final head `30287af`; Required Checks `28771968071`, Test `28771968016`, and HOL Plugin Scanner `28771968083` succeeded; local full automation suite 3237 passed and affected slice 190 passed. |
+
+```
+
+---
