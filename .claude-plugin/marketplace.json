@@ -6,11 +6,11 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "2.1.0",
-  "total_plugins": 616,
+  "total_plugins": 617,
   "categories": {
     "architecture": 124,
     "ci-cd": 120,
-    "debugging": 58,
+    "debugging": 59,
     "documentation": 39,
     "evaluation": 12,
     "optimization": 6,
@@ -18,7 +18,7 @@
     "tooling": 168,
     "training": 7
   },
-  "last_updated": "2026-07-06T19:30:02Z",
+  "last_updated": "2026-07-06T19:44:58Z",
   "plugins": [
     {
       "name": "agent-config-validation-and-integrity",
@@ -5410,6 +5410,23 @@
         "jq",
         "gh",
         "json"
+      ]
+    },
+    {
+      "name": "btrfs-enospc-inheriting-props-metadata-pressure",
+      "description": "btrfs `error inheriting props ... -28` during file creation is a transient METADATA-reservation shortfall on old kernels, NOT a full disk or a failing drive \u2014 and `btrfs balance` usually cannot fix it. Use when: (1) rsync to a btrfs volume fails on a handful of files with `close failed ... Input/output error (5)` and exits rc=11, hitting different files each run, (2) the btrfs host's dmesg shows `BTRFS error (device mdX): error inheriting props for ino N (root R): -28` while `df` shows the volume far from full, (3) you are tempted to run `btrfs balance` to fix an ENOSPC that df says is not real, (4) you must decide between disk-full, disk-failure, and metadata-pressure before acting.",
+      "version": "1.0.0",
+      "source": "./skills/btrfs-enospc-inheriting-props-metadata-pressure.md",
+      "category": "debugging",
+      "tags": [
+        "btrfs",
+        "enospc",
+        "rsync",
+        "metadata",
+        "balance",
+        "homelab",
+        "nas",
+        "raid5"
       ]
     },
     {
