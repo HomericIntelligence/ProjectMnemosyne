@@ -1,5 +1,26 @@
 # audit-driven-remediation-workflow — History
 
+## v1.3.0 (2026-07-06)
+
+**Changed by:** ProjectHephaestus epic #1809 strict-review swarm (7 agents, 78 issues filed, all fixes later merged green).
+**Verification:** verified-ci (upgraded from verified-local)
+
+### What changed
+- Added "Read Merged Code From origin/main, Not the Local Checkout" section — a strict-review swarm auditing merged code MUST read each file via `git show origin/main:<path>` in Bash, NOT the Read tool on the (often stale) local working checkout.
+- Added a swarm-findings synthesis + independent-verification note (dedupe cross-agent duplicates, drop findings without a line reference, merge same-root-cause pairs, downgrade contingent MAJORs when the risky path is unreachable, then file one scripted `gh issue create` per surviving finding).
+- Added 1 new Failed Attempts row (find/Read on local working tree reported merged coordinator files as MISSING).
+- Added 1 new "When to Use" trigger (auditing just-merged code — read from origin/main).
+- Bumped `verification` frontmatter from verified-local to verified-ci.
+
+### Why
+In the epic #1809 strict review I dispatched 7 parallel review agents to audit the just-merged `hephaestus/automation/pipeline/` package. The local `main` checkout was 2 commits BEHIND `origin/main`: the most recent merge (coordinator PR #1851, ~9 files including `coordinator.py`, `summary.py`, `pipeline_github.py`, `stages/finished.py`, `stages/repo.py`) was NOT in the local tree at all. The first inventory pass used `find`/`Read` on the working tree and reported those coordinator files as MISSING — had the review agents used the Read tool they'd have reviewed nothing or stale code and produced garbage findings. The fix (verified end-to-end): `git fetch origin main`, confirm the gap with `git rev-parse HEAD origin/main` + `git diff --stat HEAD origin/main`, then have every agent read each file via `git show origin/main:<path>`, inventory via `git ls-tree -r --name-only origin/main`, and line-count via `git show origin/main:<f> | wc -l`. The swarm's 78 findings were then synthesized and independently verified (one "CompletionQueue.put blocks forever" MAJOR was dropped after checking `queues.py` builds an UNBOUNDED `queue.Queue`) before filing one issue per surviving finding via a scripted loop; all fixes later merged with green CI, upgrading this skill to verified-ci.
+
+### Previous version (v1.2.0) snapshot
+
+The v1.2.0 entry remains immediately below this entry (unchanged). The v1.2.0-rendered .md file content prior to v1.3.0 edits is preserved in git history at the parent commit of this amendment.
+
+---
+
 ## v1.2.0 (2026-05-25)
 
 **Changed by:** ProjectHephaestus PR #589 + post-completion strict-mode audit of epics #550, #576.
