@@ -6,9 +6,9 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "2.1.0",
-  "total_plugins": 634,
+  "total_plugins": 635,
   "categories": {
-    "architecture": 129,
+    "architecture": 130,
     "ci-cd": 122,
     "debugging": 62,
     "documentation": 40,
@@ -18,7 +18,7 @@
     "tooling": 173,
     "training": 7
   },
-  "last_updated": "2026-07-06T21:19:55Z",
+  "last_updated": "2026-07-07T21:29:48Z",
   "plugins": [
     {
       "name": "agent-config-validation-and-integrity",
@@ -1235,7 +1235,7 @@
     {
       "name": "inference360-warden-autoscaling-boundaries",
       "description": "Plan Inference360 Warden autoscaling without creating a second scheduler or lifecycle owner. Use when: (1) adding per-model endpoint scale-out/scale-in policy, (2) deciding Warden, Registry, gateway, and Slurm ownership for autoscaling, (3) writing tests for draining and job-class isolation.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "source": "./skills/inference360-warden-autoscaling-boundaries.md",
       "category": "architecture",
       "tags": [
@@ -1247,8 +1247,27 @@
         "registry",
         "gateway",
         "haproxy",
+        "stream-safe-reload",
+        "clock-boundary",
         "job-class-isolation",
         "lifecycle"
+      ]
+    },
+    {
+      "name": "inference360-warden-slurm-job-ownership",
+      "description": "Track Warden-launched user-owned Slurm jobs without classifying arbitrary user jobs as Inference360-owned. Use when: (1) implementing Inference360 Warden orphan or tracking-mismatch detection, (2) comparing Slurm queue state against Warden Registry state, (3) configuring periodic Warden Slurm scans from the runtime manifest.",
+      "version": "1.0.0",
+      "source": "./skills/inference360-warden-slurm-job-ownership.md",
+      "category": "architecture",
+      "tags": [
+        "inference360",
+        "warden",
+        "slurm",
+        "h200",
+        "orphan-detection",
+        "tracking-mismatch",
+        "registry",
+        "manifest-driven"
       ]
     },
     {
@@ -4913,8 +4932,8 @@
     },
     {
       "name": "pr-rebase-conflict-resolution-patterns",
-      "description": "Use when: (1) a PR branch is CONFLICTING or DIRTY after main advances and needs rebasing, (2) a mass rebase of 10+ PRs is needed after a major refactor causes conflicts across the queue, (3) a stacked PR goes DIRTY when its prerequisite merges and the base must be retargeted \u2014 later CI/lint fix commits on the dependent branch are orphaned and must be cherry-picked, (4) a Safety Net hook blocks git checkout --theirs / --ours during automated rebase conflict resolution, (5) a file was completely rewritten on one branch and small targeted edits exist on the other, (6) a parallel swarm produced overlapping PRs that conflict on the same paths and one must be rebased onto the other, (7) a feature PR conflicts after a sibling refactor merges and edits must be ported to the new file structure, (8) a TypeScript or other language-level shadowing bug appears only after a rebase because two branches independently added identically-named locals to the same scope, (9) numerical or optimizer PRs conflict when main merged its own version of a shared module and API signatures changed, (10) a PR's substantive change independently landed on main via a sibling PR so a rebase produces an add/add conflict on a duplicated new file and the PR becomes a near-no-op residual, (11) a PR is DIRTY with all CI checks green/passing \u2014 the merge conflict itself is the sole blocker (rebase, do not hunt for a failing job), (12) a rebase hits a modify/delete conflict on a file the PR intentionally deletes \u2014 confirm the base copy is still stale then git rm, (13) a PR is BLOCKED with mergeable=MERGEABLE but a required check shows SKIPPED \u2014 the required check is gated by needs: on a job that fails because the branch carries unpinned GitHub Actions rejected by an org-wide SHA-pin policy; fix is rebase to inherit main's pinned workflow files (not an empty re-trigger commit), (14) multiple rebased PRs \u2014 including ones unrelated to the failing test \u2014 all fail the SAME test after merging onto main; suspect a broken main from a SEMANTIC collision between two independently-merged PRs that never textually conflict (e.g. a return-tuple arity change + a stale test mock), prove it by running the failing test against bare origin/main, and fix main first, (15) two parallel cluster-extraction PRs both create the same new module file and the rebase produces an add/add conflict on BOTH the source module AND its test file \u2014 main's source is authoritative, test files must be semantically merged (keep main's richer base + append your branch's unique test classes), (16) a rebase hits AA (both-added) conflicts on new files \u2014 the conflicted file shows NO <<<<<<< markers and contains only one side's content; you must use git show HEAD:<path> and git show REBASE_HEAD:<path> to read both versions before resolving, (17) a CLUSTER of sibling refactor PRs all edit the SAME shared files and were run in parallel so all but one are CONFLICTING/DIRTY (and possibly hand-braked with state:skip) \u2014 land them as a SEQUENTIAL rebase chain SMALLEST-DIFF-FIRST, rebasing each onto trunk only AFTER the prior merges, resolving every conflict as the UNION of each refactor's extractions (keep both helpers; every duplicated method becomes a thin delegate; merge import lists and drop now-unused imports via lint), then re-sign all commits with `git rebase --exec '...-s -S' origin/main` for DCO+GPG, (18) after rebase, tests fail because test mocks expected the PR branch's refactored signatures but rebase brought in origin/main's different implementation \u2014 the git conflict resolved cleanly (no text-level conflicts), but the test mocks diverge from actual code. Test expects subprocess.check_output but code uses run_subprocess; mock returns 7-tuple but impl expects 9-tuple. After textual conflict resolution succeeds, run tests to surface semantic mismatches, then regenerate test mocks to match CURRENT implementation, not the PR's expected changes (see \u00a7 L), (19) an Inference360 H200 Slurm PR branch has stale/dirty local checkout work before rebase and master renamed control lifecycle to Warden; preserve unrelated staged work first, rebase onto origin/master, keep Warden env names while preserving nested srun --mem=0, and push with an explicit force-with-lease after local + remote head comparison (see \u00a7 O), (20) two branches each APPENDED a DIFFERENT `from <same-module> import <symbols>` line at the same position in the same file (UU both-modified import-line conflict) \u2014 UNION the imported symbols into ONE ruff-ordered import statement, NEVER pick --ours/--theirs (choosing a side silently DROPS the other branch's needed symbol \u2192 NameError at runtime or unused-import on the survivor); also: a PR can be DIRTY/CONFLICTING with a fully GREEN CI rollup \u2014 the conflict is the sole blocker, and `git merge-tree` is a safe non-mutating dry-run to count `<<<<<<<` markers before AND after resolving (see \u00a7 P)",
-      "version": "1.13.0",
+      "description": "Use when: (1) a PR branch is CONFLICTING or DIRTY after main advances and needs rebasing, (2) a mass rebase of 10+ PRs is needed after a major refactor causes conflicts across the queue, (3) a stacked PR goes DIRTY when its prerequisite merges and the base must be retargeted \u2014 later CI/lint fix commits on the dependent branch are orphaned and must be cherry-picked, (4) a Safety Net hook blocks git checkout --theirs / --ours during automated rebase conflict resolution, (5) a file was completely rewritten on one branch and small targeted edits exist on the other, (6) a parallel swarm produced overlapping PRs that conflict on the same paths and one must be rebased onto the other, (7) a feature PR conflicts after a sibling refactor merges and edits must be ported to the new file structure, (8) a TypeScript or other language-level shadowing bug appears only after a rebase because two branches independently added identically-named locals to the same scope, (9) numerical or optimizer PRs conflict when main merged its own version of a shared module and API signatures changed, (10) a PR's substantive change independently landed on main via a sibling PR so a rebase produces an add/add conflict on a duplicated new file and the PR becomes a near-no-op residual, (11) a PR is DIRTY with all CI checks green/passing \u2014 the merge conflict itself is the sole blocker (rebase, do not hunt for a failing job), (12) a rebase hits a modify/delete conflict on a file the PR intentionally deletes \u2014 confirm the base copy is still stale then git rm, (13) a PR is BLOCKED with mergeable=MERGEABLE but a required check shows SKIPPED \u2014 the required check is gated by needs: on a job that fails because the branch carries unpinned GitHub Actions rejected by an org-wide SHA-pin policy; fix is rebase to inherit main's pinned workflow files (not an empty re-trigger commit), (14) multiple rebased PRs \u2014 including ones unrelated to the failing test \u2014 all fail the SAME test after merging onto main; suspect a broken main from a SEMANTIC collision between two independently-merged PRs that never textually conflict (e.g. a return-tuple arity change + a stale test mock), prove it by running the failing test against bare origin/main, and fix main first, (15) two parallel cluster-extraction PRs both create the same new module file and the rebase produces an add/add conflict on BOTH the source module AND its test file \u2014 main's source is authoritative, test files must be semantically merged (keep main's richer base + append your branch's unique test classes), (16) a rebase hits AA (both-added) conflicts on new files \u2014 the conflicted file shows NO <<<<<<< markers and contains only one side's content; you must use git show HEAD:<path> and git show REBASE_HEAD:<path> to read both versions before resolving, (17) a CLUSTER of sibling refactor PRs all edit the SAME shared files and were run in parallel so all but one are CONFLICTING/DIRTY (and possibly hand-braked with state:skip) \u2014 land them as a SEQUENTIAL rebase chain SMALLEST-DIFF-FIRST, rebasing each onto trunk only AFTER the prior merges, resolving every conflict as the UNION of each refactor's extractions (keep both helpers; every duplicated method becomes a thin delegate; merge import lists and drop now-unused imports via lint), then re-sign all commits with `git rebase --exec '...-s -S' origin/main` for DCO+GPG, (18) after rebase, tests fail because test mocks expected the PR branch's refactored signatures but rebase brought in origin/main's different implementation \u2014 the git conflict resolved cleanly (no text-level conflicts), but the test mocks diverge from actual code. Test expects subprocess.check_output but code uses run_subprocess; mock returns 7-tuple but impl expects 9-tuple. After textual conflict resolution succeeds, run tests to surface semantic mismatches, then regenerate test mocks to match CURRENT implementation, not the PR's expected changes (see \u00a7 L), (19) an Inference360 H200 Slurm PR branch has stale/dirty local checkout work before rebase and master renamed control lifecycle to Warden; preserve unrelated staged work first, rebase onto origin/master, keep Warden env names while preserving nested srun --mem=0, and push with an explicit force-with-lease after local + remote head comparison (see \u00a7 O), (20) two branches each APPENDED a DIFFERENT `from <same-module> import <symbols>` line at the same position in the same file (UU both-modified import-line conflict) \u2014 UNION the imported symbols into ONE ruff-ordered import statement, NEVER pick --ours/--theirs (choosing a side silently DROPS the other branch's needed symbol \u2192 NameError at runtime or unused-import on the survivor); also: a PR can be DIRTY/CONFLICTING with a fully GREEN CI rollup \u2014 the conflict is the sole blocker, and `git merge-tree` is a safe non-mutating dry-run to count `<<<<<<<` markers before AND after resolving (see \u00a7 P), (21) an Inference360 Warden autoscaling branch rebases across competing HAProxy reload/statistics designs \u2014 keep the active runtime contract (process replacement with `-sf` plus master CLI worker stats), remove obsolete admin-socket `reload` assumptions, update docs/tests to fail closed on missing tracked stats, and verify before force-with-lease (see \u00a7 O2)",
+      "version": "1.14.0",
       "source": "./skills/pr-rebase-conflict-resolution-patterns.md",
       "category": "ci-cd",
       "tags": [
@@ -4998,7 +5017,12 @@
         "dirty-all-green",
         "runtime-import-verify",
         "ruff-import-order",
-        "no-pick-a-side"
+        "no-pick-a-side",
+        "haproxy",
+        "process-replacement",
+        "master-cli-stats",
+        "stats-fail-closed",
+        "autoscaling-rebase"
       ]
     },
     {
@@ -5987,8 +6011,8 @@
     },
     {
       "name": "docker-traefik-network-loss-on-recreation",
-      "description": "Diagnose and fix Traefik 504 Gateway Timeout after container recreation caused by Docker network isolation. Use when: (1) Traefik returns 504 for all backends after being recreated, (2) backends show UP in Traefik dashboard but are unreachable, (3) direct curl to container works but Traefik cannot reach it.",
-      "version": "1.0.0",
+      "description": "Diagnose and fix Traefik 504 Gateway Timeout after container recreation caused by Docker network isolation. Use when: (1) Traefik returns 504 for all backends after being recreated, (2) backends show UP in Traefik dashboard but are unreachable, (3) direct curl to container works but Traefik cannot reach it, (4) planning ANY Traefik container recreate (image bump, major upgrade) and want to check proactively whether it's at risk before touching anything.",
+      "version": "1.1.0",
       "source": "./skills/docker-traefik-network-loss-on-recreation.md",
       "category": "debugging",
       "tags": [
