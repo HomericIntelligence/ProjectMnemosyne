@@ -6,7 +6,7 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "2.1.0",
-  "total_plugins": 636,
+  "total_plugins": 637,
   "categories": {
     "architecture": 131,
     "ci-cd": 122,
@@ -14,11 +14,11 @@
     "documentation": 40,
     "evaluation": 12,
     "optimization": 7,
-    "testing": 82,
+    "testing": 83,
     "tooling": 173,
     "training": 7
   },
-  "last_updated": "2026-07-08T02:10:22Z",
+  "last_updated": "2026-07-08T05:14:58Z",
   "plugins": [
     {
       "name": "agent-config-validation-and-integrity",
@@ -7869,6 +7869,23 @@
         "pixi",
         "pyproject",
         "dual-manifest"
+      ]
+    },
+    {
+      "name": "inference360-haproxy-stream-reload-validation",
+      "description": "Validate Inference360 HAProxy graceful reloads with a loopback in-flight stream harness. Use when: (1) proving stream-safe route reload behavior, (2) adding Warden/gateway reload integration coverage, (3) fixing HAProxy validation cleanup, timeout, or review-gate issues.",
+      "version": "1.0.0",
+      "source": "./skills/inference360-haproxy-stream-reload-validation.md",
+      "category": "testing",
+      "tags": [
+        "inference360",
+        "haproxy",
+        "stream-safe-reload",
+        "warden",
+        "gateway",
+        "validation",
+        "pytest",
+        "strict-review"
       ]
     },
     {
