@@ -6,9 +6,9 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "2.1.0",
-  "total_plugins": 635,
+  "total_plugins": 636,
   "categories": {
-    "architecture": 130,
+    "architecture": 131,
     "ci-cd": 122,
     "debugging": 62,
     "documentation": 40,
@@ -18,7 +18,7 @@
     "tooling": 173,
     "training": 7
   },
-  "last_updated": "2026-07-07T21:29:48Z",
+  "last_updated": "2026-07-08T02:10:22Z",
   "plugins": [
     {
       "name": "agent-config-validation-and-integrity",
@@ -1268,6 +1268,32 @@
         "tracking-mismatch",
         "registry",
         "manifest-driven"
+      ]
+    },
+    {
+      "name": "linux-workstation-harden-preserve-bambu-avahi-mdns",
+      "description": "When hardening a Linux workstation that has Bambu Lab 3D printers on the LAN, keep avahi-daemon in the service-enable set (Bambu Studio / OrcaSlicer discover printers over mDNS/Bonjour via avahi). CUPS is safe to disable \u2014 Bambu uses its own MQTT+HTTP protocol, not CUPS/IPP. Use when: (1) applying an aeolus/epimetheus-style workstation service-disable list to a box that hosts 3D printers, (2) Bambu Studio / OrcaSlicer stops auto-discovering LAN printers after a hardening pass, (3) deciding which of avahi vs CUPS is safe to disable on a printer-adjacent workstation.",
+      "version": "1.0.0",
+      "source": "./skills/linux-workstation-harden-preserve-bambu-avahi-mdns.md",
+      "category": "architecture",
+      "tags": [
+        "hardening",
+        "workstation",
+        "systemd",
+        "service-disable",
+        "avahi",
+        "avahi-daemon",
+        "mdns",
+        "bonjour",
+        "bambu",
+        "bambu-lab",
+        "bambu-studio",
+        "orcaslicer",
+        "3d-printer",
+        "cups",
+        "ipp",
+        "linux-mint",
+        "ubuntu"
       ]
     },
     {
