@@ -6,11 +6,11 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "2.1.0",
-  "total_plugins": 639,
+  "total_plugins": 641,
   "categories": {
     "architecture": 132,
     "ci-cd": 122,
-    "debugging": 62,
+    "debugging": 64,
     "documentation": 40,
     "evaluation": 12,
     "optimization": 7,
@@ -18,7 +18,7 @@
     "tooling": 174,
     "training": 7
   },
-  "last_updated": "2026-07-09T04:58:32Z",
+  "last_updated": "2026-07-09T17:24:55Z",
   "plugins": [
     {
       "name": "agent-config-validation-and-integrity",
@@ -6235,6 +6235,23 @@
       ]
     },
     {
+      "name": "llm-corruption-repro-artifact-review",
+      "description": "Durable repro artifact layout and manual-review tooling for long-running LLM corruption investigations. Use when: (1) a corruption sweep must be rerunnable outside the chat or agent session, (2) raw tokens/logits should support later prefix and intervention analysis, (3) manual labels must produce seed-level rates without leaking private operational artifacts.",
+      "version": "1.0.0",
+      "source": "./skills/llm-corruption-repro-artifact-review.md",
+      "category": "debugging",
+      "tags": [
+        "llm",
+        "corruption",
+        "reproducibility",
+        "artifacts",
+        "manual-review",
+        "logits",
+        "tokens",
+        "redaction"
+      ]
+    },
+    {
       "name": "logging-subprocess-context-tracking",
       "description": "Add diagnostic context (working directory, command, cwd) to subprocess execution logging. Use when: (1) run_git_cmd or similar subprocess runners log execution without showing which directory the command ran in, (2) debugging multi-directory workflows where cwd context is critical for tracing, (3) writing tests for subprocess execution and caplog fixture fails with custom logger handlers (propagate=False).",
       "version": "1.0.0",
@@ -6358,6 +6375,24 @@
         "fail-open",
         "argparse",
         "repr-truncation"
+      ]
+    },
+    {
+      "name": "sampling-degeneration-seed-token-debugging",
+      "description": "Debug seed-driven LLM sampling degeneration by stopping at the first bad token and inspecting the next-token distribution. Use when: (1) the same prompt, weights, backend, and generation config differ only by seed, (2) top-k/top-p/temperature changes alter garbled-output rates, (3) a logging top-N limit may have been confused with sampler support.",
+      "version": "1.0.0",
+      "source": "./skills/sampling-degeneration-seed-token-debugging.md",
+      "category": "debugging",
+      "tags": [
+        "llm",
+        "sampling",
+        "seed",
+        "logits",
+        "top-k",
+        "top-p",
+        "degeneration",
+        "xllm",
+        "issue-257"
       ]
     },
     {
