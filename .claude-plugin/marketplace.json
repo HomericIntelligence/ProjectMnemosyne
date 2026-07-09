@@ -6,9 +6,9 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "2.1.0",
-  "total_plugins": 638,
+  "total_plugins": 639,
   "categories": {
-    "architecture": 131,
+    "architecture": 132,
     "ci-cd": 122,
     "debugging": 62,
     "documentation": 40,
@@ -18,7 +18,7 @@
     "tooling": 174,
     "training": 7
   },
-  "last_updated": "2026-07-09T01:41:39Z",
+  "last_updated": "2026-07-09T04:58:32Z",
   "plugins": [
     {
       "name": "agent-config-validation-and-integrity",
@@ -2438,6 +2438,22 @@
         "json-validation",
         "importlib",
         "planning"
+      ]
+    },
+    {
+      "name": "projecthephaestus-queue-pipeline-strict-review-remediation",
+      "description": "Review and repair ProjectHephaestus queue-pipeline PRs after strict review. Use when: (1) review-pr-strict reports sandbox coverage gaps, (2) queue-only automation docs drift from code, (3) worker attribution must prove different workers claim different queue entries, (4) logging basicConfig migrations need direct CLI-main delegation tests.",
+      "version": "1.0.0",
+      "source": "./skills/projecthephaestus-queue-pipeline-strict-review-remediation.md",
+      "category": "architecture",
+      "tags": [
+        "projecthephaestus",
+        "queue-pipeline",
+        "strict-pr-review",
+        "documentation-drift",
+        "worker-attribution",
+        "logging",
+        "testing"
       ]
     },
     {
