@@ -6,19 +6,19 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "2.1.0",
-  "total_plugins": 640,
+  "total_plugins": 644,
   "categories": {
-    "architecture": 132,
+    "architecture": 133,
     "ci-cd": 122,
-    "debugging": 62,
+    "debugging": 63,
     "documentation": 41,
     "evaluation": 12,
-    "optimization": 7,
-    "testing": 83,
+    "optimization": 8,
+    "testing": 84,
     "tooling": 174,
     "training": 7
   },
-  "last_updated": "2026-07-09T21:53:21Z",
+  "last_updated": "2026-07-10T01:24:41Z",
   "plugins": [
     {
       "name": "agent-config-validation-and-integrity",
@@ -892,6 +892,21 @@
         "competing-mechanism",
         "triage",
         "refactor-hazard"
+      ]
+    },
+    {
+      "name": "depthwise-separable-forward-backward",
+      "description": "Use when: (1) implementing depthwise separable convolution blocks (MobileNetV1-style: depthwise + pointwise), (2) you hit gradient mismatches between forward and backward passes in per-channel convolution, (3) building efficient architectures and need forward/backward shape+math consistency across the separable block.",
+      "version": "1.0.0",
+      "source": "./skills/depthwise-separable-forward-backward.md",
+      "category": "architecture",
+      "tags": [
+        "depthwise-separable",
+        "convolution",
+        "mobilenetv1",
+        "backward-pass",
+        "gradients",
+        "mojo"
       ]
     },
     {
@@ -6253,6 +6268,21 @@
       ]
     },
     {
+      "name": "mojo-tensor-ownership-training-loops",
+      "description": "Use when: (1) implementing Mojo training loops where functions take AnyTensor by value (moving ownership), (2) you hit 'use after move' compile errors across compute_gradients()/model.forward() calls in an iteration, (3) you must reuse tensor data between training and a post-training forward pass and need separate batch objects / borrow-vs-transfer discipline.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-tensor-ownership-training-loops.md",
+      "category": "debugging",
+      "tags": [
+        "mojo",
+        "ownership",
+        "value-semantics",
+        "use-after-move",
+        "training-loop",
+        "anytensor"
+      ]
+    },
+    {
       "name": "nas-nfs-write-throughput-diagnosis",
       "description": "Diagnose slow NFS write throughput to a NAS by separating the bottleneck by LAYER (network / CPU / disk-array), because 'slow NFS writes' is ambiguous and may have multiple independent root causes. Use when: (1) NFS writes to a NAS are far slower than the link can carry (e.g. ~8 MB/s on 1GbE), (2) you see intermittent 'nfs: server not responding, timed out' errors mixed in with slowness, (3) you must decide whether the floor is network, CPU (parity/checksum), or disk before recommending any tuning.",
       "version": "1.0.0",
@@ -7682,6 +7712,21 @@
       ]
     },
     {
+      "name": "sgd-momentum-initialization-convergence",
+      "description": "Use when: (1) implementing SGD-with-momentum and setting up per-parameter velocity buffers, (2) training loss diverges or oscillates and you suspect momentum/init, (3) you must initialize the velocity buffer count/order to exactly match the parameter-update order for stable monotone convergence.",
+      "version": "1.0.0",
+      "source": "./skills/sgd-momentum-initialization-convergence.md",
+      "category": "optimization",
+      "tags": [
+        "sgd",
+        "momentum",
+        "velocity-buffers",
+        "convergence",
+        "optimizer",
+        "training"
+      ]
+    },
+    {
       "name": "audit-orphan-source-sweep-to-find-omissions",
       "description": "Audit a structured dataset built from a larger source corpus for OMISSIONS by sweeping every uncited (orphan) source file and classifying it against an included-item index. Use when: (1) a curated index/schedule/inventory is derived from many underlying source documents and an item could be silently dropped, (2) prior validation only re-checked already-cited sources and so cannot detect a missing item, (3) you need defensible 100% source coverage rather than a sampled spot-check.",
       "version": "1.0.0",
@@ -7789,6 +7834,21 @@
         "docker-entrypoint",
         "pixi",
         "ci"
+      ]
+    },
+    {
+      "name": "cifar10-one-hot-label-encoding",
+      "description": "Use when: (1) loading CIFAR-10 and preparing integer labels (0-9) for cross-entropy that expects one-hot (B,10) float32 targets, (2) debugging NaN losses or shape mismatches in loss computation from raw-index labels, (3) implementing training loops where cross_entropy multiplies logits by targets and raw indices silently produce a meaningless loss.",
+      "version": "1.0.0",
+      "source": "./skills/cifar10-one-hot-label-encoding.md",
+      "category": "testing",
+      "tags": [
+        "cifar10",
+        "one-hot",
+        "cross-entropy",
+        "labels",
+        "training",
+        "mojo"
       ]
     },
     {
