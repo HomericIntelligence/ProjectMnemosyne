@@ -97,9 +97,9 @@ merged #1817.
 3. **`--dry-run` and read the `Loaded N issues` line.** For a truly-scoped single-issue run it should be
    `1`. It currently isn't (that's the bug) — which is your signal to fall back to the workaround below.
 
-**The verified workaround — sub-agent impl + `hephaestus-review-prs`, PER ISSUE:** (drove epic #1809's
-#1819→#1823 cleanup wave to a clean merge). `hephaestus-review-prs` has NO dependency-resolver, so it
-does not leak scope.
+**The verified workaround — sub-agent impl + `hephaestus-review-prs`, PER ISSUE:** (this drove the
+epic #1809 `#1819`→`#1823` cleanup wave to a clean merge). `hephaestus-review-prs` has NO
+dependency-resolver, so it does not leak scope.
 
 ```bash
 N=1819   # per issue, in dependency order, prev already merged into main
