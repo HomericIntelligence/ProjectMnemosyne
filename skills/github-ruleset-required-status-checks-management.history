@@ -3,6 +3,88 @@
 
 This file preserves the version history and prior content snapshots for the canonical skill.
 
+## v1.3.0 (2026-07-11)
+
+**Changed by:** HomericIntelligence/Hephaestus — unblocking GO'd auto-merge-armed PRs stuck
+BEHIND/MERGEABLE after flipping classic branch protection to `strict:false` (swarm PRs #2041,
+#2044, #2049, #2050, #2052).
+
+**Verification:** verified-ci.
+
+**What changed:** Added a NEW, distinct failure mode — **disabling strict mode (require branch
+up-to-date) requires patching BOTH policy layers**, not just one:
+
+- New callout block (v1.3.0 addition) after the v1.2.0 emit-before-require callout.
+- Extended `description` and added tags (`strict-mode`, `require-up-to-date`,
+  `dual-layer-strict`, `behind-blocked`).
+- New "When to Use" trigger: GO'd/auto-merge-armed PRs stuck BEHIND/MERGEABLE after
+  flipping classic protection `strict:false`.
+- New Quick Reference step #6 (detect strict on BOTH layers; flip the ruleset layer via
+  GET→jq-set-strict-false→PUT preserving the required_status_checks array).
+- New Detailed Steps 14–16: detect both layers; flip the ruleset layer without dropping checks;
+  and why strict:false is the right call on a fast-moving main.
+- Three new Failed Attempts rows (flip classic only; assume one layer; re-rebase stuck PRs).
+- New Verified-On row (Hephaestus; homeric-main-baseline ruleset id 15556494; 5 GO'd PRs
+  unblocked and merged).
+
+**Why:** On HomericIntelligence/Hephaestus, GO'd PRs with auto-merge armed stayed stuck as
+BEHIND/MERGEABLE and could not merge even after flipping CLASSIC branch protection to
+`strict:false`. Root cause: GitHub enforces required-status-checks strictness on TWO INDEPENDENT
+layers — classic branch protection (`branches/{branch}/protection/required_status_checks.strict`)
+AND a repository ruleset's `required_status_checks` rule
+(`parameters.strict_required_status_checks_policy`). Both default to true (require up-to-date);
+flipping only the classic layer leaves the ruleset still requiring up-to-date → PRs remain
+BEHIND-blocked. You must flip BOTH. This is the strict-mode sibling of the required-checks
+mechanics the skill already covers (same ruleset, same GET→modify→PUT-full-array discipline —
+here mutating `strict_required_status_checks_policy` instead of appending a context), so it is an
+extension, not a rewrite; hence a MINOR bump. Fixing the policy (strict:false on both layers) is
+the right call on a fast-moving main where the automation loop merges PRs continuously: strict:true
+causes perpetual rebase churn (mergeable PRs stall as BEHIND and must re-rebase faster than CI
+finishes), and the semantic-conflict protection strict buys is rare and caught post-merge by CI on
+main. Verified-ci: the fix unblocked 5 GO'd swarm PRs (#2041/#2044/#2049/#2050/#2052) which then
+merged.
+
+### v1.2.0 content snapshot (frontmatter as read before this amendment)
+
+```yaml
+name: github-ruleset-required-status-checks-management
+category: ci-cd
+date: 2026-07-02
+version: "1.2.0"
+history: github-ruleset-required-status-checks-management.history
+user-invocable: false
+verification: verified-ci
+tags:
+  - github
+  - rulesets
+  - branch-protection
+  - required-status-checks
+  - integration_id
+  - ordering-hazard
+  - get-append-put
+  - issue-premise-verification
+  - default-branch
+  - emitted-name-vs-required-name
+  - blocked-all-green
+  - keystone-rename-pr
+  - emit-before-require
+  - emit-on-pr-branch
+  - safest-superset-scope
+  - deferred-mutation-authorization
+  - ci-cd
+```
+
+v1.2.0 body summary (unchanged content preserved here): the full emit-before-require lifecycle
+(after the CI-naming rollout PRs merge so every repo EMITS canonical names on main, the deferred
+ruleset pass adds those names to `required_status_checks` via GET→append→PUT the full array across
+13 HI repos), on top of v1.1.0's emitted-name-vs-required-name deadlock + keystone rename-PR and
+v1.0.0's add-a-check mechanics + require-before-it-exists ordering hazard. Confirm emit on PR
+BRANCHES not just main (merged-PR head sha) before requiring; safest-superset scope (add canonical,
+remove nothing); re-verify ruleset structural integrity after each PUT (all 6 rule types +
+enforcement:active + refs/heads/main condition + strict_required_status_checks_policy preserved); a
+broad "finish it" does NOT override a standing "defer ruleset updates" boundary (timed-out
+AskUserQuestion ≠ consent).
+
 ## v1.2.0 (2026-07-02)
 
 **Changed by:** 2026-07 ecosystem CI-naming rollout + ruleset pass across 13 HI repos.

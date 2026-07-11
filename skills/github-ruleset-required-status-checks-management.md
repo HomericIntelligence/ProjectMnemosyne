@@ -1,9 +1,9 @@
 ---
 name: github-ruleset-required-status-checks-management
-description: "Add a required status check to a GitHub repo branch-protection RULESET (rulesets API, not the legacy branch-protection API) and avoid the TWO sibling deadlock hazards: 'require-before-it-exists' (the job is absent on main) AND 'emitted-name-vs-required-name mismatch' (the job EXISTS, RUNS, and is GREEN on main but emits its check-run under a DIFFERENT name than the required context, so the required name never posts and every PR is BLOCKED-all-green forever). The rulesets PUT REPLACES the rule wholesale, so you must GET->append->PUT the full required_status_checks array (deriving integration_id from an existing Actions check, here 15368) or you DROP the existing checks. THE LOAD-BEARING HAZARD: a required context that never reports permanently BLOCKS every open PR — diagnose by diffing the ruleset's required_status_checks[].context against the check-run NAMES actually emitted on main (gh api repos/<o>/<r>/commits/$sha/check-runs --jq '[.check_runs[].name]|unique'); any required name NOT in the emitted set is a deadlock. THE FIX: a 'keystone' rename-PR that makes the workflow jobs emit the canonical required names (its own branch emits the corrected names so it is itself mergeable — merge it FIRST, then main posts the names and the other PRs unblock after re-rebase). SEPARATELY, a follow-up issue can assert a FALSE premise (e.g. #282 said the SAST job 'was added in PR #264' but `gh pr view 264` showed PR #264 was still OPEN, not merged) — verify 'already done' premises against live state. FULL LIFECYCLE (v1.2.0, verified across 13 repos): EMIT BEFORE REQUIRE — run the ruleset pass only AFTER the CI-naming rollout PRs merge so every repo emits the canonical names (build/test/lint/package/install/release/security) on main; per repo compute add = canonical ∩ emitted − already_required and GET->append->PUT, adding ONLY names CONFIRMED emitting; confirm emission on PR BRANCHES not just main (check a merged PR's head sha: commits/<pr_head_sha>/check-runs) so a push:main-only required check does not deadlock every PR (expected-but-missing); adopt SAFEST-SUPERSET scope (add canonical names, REMOVE nothing — keep old unit-tests/integration-tests alongside the new aggregate test); after PUT re-VERIFY integrity (all 6 rule types + enforcement:active + refs/heads/main condition survived, strict_required_status_checks_policy preserved) because the PUT replaces wholesale and silently drops rules; and a broad 'finish it' does NOT override a standing 'defer ruleset updates' boundary (a timed-out AskUserQuestion is NOT consent — get explicit re-authorization before mutating shared branch-protection across repos). Use when: (1) adding a new CI job's check context to a GitHub ruleset as a required status check; (2) a required context is BLOCKED-all-green and you suspect the job emits under a different name than the required context; (3) a follow-up issue says 'add X to required checks' and you must verify the job exists on the default branch first; (4) diagnosing why adding/keeping a required status check could permanently block all PRs; (5) needing the correct integration_id for a GitHub Actions check context in a ruleset; (6) running a batch emit-before-require ruleset pass across many repos after an ecosystem CI-naming rollout. Cross-link: gha-required-checks-branch-protection (the YAML/aggregator + legacy branch-protection PUT mechanics), github-ruleset-enforcement-drift (bare-name + integration_id context form), planning-verify-issue-premise-before-implementing (runs-vs-gates + grep-the-claim discipline), github-auto-merge-ci-gating-merge-method (auto-merge gating + merge method), multi-repo-pr-automation-loop-orchestration (the multi-repo rebase sweep that surfaced this)."
+description: "Add a required status check to a GitHub repo branch-protection RULESET (rulesets API, not the legacy branch-protection API) and avoid the TWO sibling deadlock hazards: 'require-before-it-exists' (the job is absent on main) AND 'emitted-name-vs-required-name mismatch' (the job EXISTS, RUNS, and is GREEN on main but emits its check-run under a DIFFERENT name than the required context, so the required name never posts and every PR is BLOCKED-all-green forever). ALSO (v1.3.0) the DUAL-LAYER STRICT-MODE hazard: disabling 'require branch up-to-date' (strict mode) requires patching BOTH policy layers — GitHub enforces required-status-checks strictness on TWO INDEPENDENT layers, classic branch protection (branches/{branch}/protection/required_status_checks.strict) AND a repository ruleset's required_status_checks rule (parameters.strict_required_status_checks_policy) — both default to true; flipping ONLY classic leaves the ruleset still requiring up-to-date so GO'd/auto-merge-armed PRs stay stuck BEHIND/MERGEABLE and never merge. Detect BOTH (gh api .../protection/required_status_checks|.strict AND enumerate rules/branches/{branch} for strict_required_status_checks_policy) and flip BOTH; fix the ruleset layer via GET→jq-set-.strict_required_status_checks_policy=false→PUT, PRESERVING the required_status_checks array (never hand-reconstruct the checks — a wrong name silently drops a gate). On a fast-moving main (automation loop merging continuously) strict:true causes perpetual rebase churn; strict:false still gates merges on the required checks, PRs just aren't forced up-to-date. The rulesets PUT REPLACES the rule wholesale, so you must GET->append->PUT the full required_status_checks array (deriving integration_id from an existing Actions check, here 15368) or you DROP the existing checks. THE LOAD-BEARING HAZARD: a required context that never reports permanently BLOCKS every open PR — diagnose by diffing the ruleset's required_status_checks[].context against the check-run NAMES actually emitted on main (gh api repos/<o>/<r>/commits/$sha/check-runs --jq '[.check_runs[].name]|unique'); any required name NOT in the emitted set is a deadlock. THE FIX: a 'keystone' rename-PR that makes the workflow jobs emit the canonical required names (its own branch emits the corrected names so it is itself mergeable — merge it FIRST, then main posts the names and the other PRs unblock after re-rebase). SEPARATELY, a follow-up issue can assert a FALSE premise (e.g. #282 said the SAST job 'was added in PR #264' but `gh pr view 264` showed PR #264 was still OPEN, not merged) — verify 'already done' premises against live state. FULL LIFECYCLE (v1.2.0, verified across 13 repos): EMIT BEFORE REQUIRE — run the ruleset pass only AFTER the CI-naming rollout PRs merge so every repo emits the canonical names (build/test/lint/package/install/release/security) on main; per repo compute add = canonical ∩ emitted − already_required and GET->append->PUT, adding ONLY names CONFIRMED emitting; confirm emission on PR BRANCHES not just main (check a merged PR's head sha: commits/<pr_head_sha>/check-runs) so a push:main-only required check does not deadlock every PR (expected-but-missing); adopt SAFEST-SUPERSET scope (add canonical names, REMOVE nothing — keep old unit-tests/integration-tests alongside the new aggregate test); after PUT re-VERIFY integrity (all 6 rule types + enforcement:active + refs/heads/main condition survived, strict_required_status_checks_policy preserved) because the PUT replaces wholesale and silently drops rules; and a broad 'finish it' does NOT override a standing 'defer ruleset updates' boundary (a timed-out AskUserQuestion is NOT consent — get explicit re-authorization before mutating shared branch-protection across repos). Use when: (1) adding a new CI job's check context to a GitHub ruleset as a required status check; (2) a required context is BLOCKED-all-green and you suspect the job emits under a different name than the required context; (3) a follow-up issue says 'add X to required checks' and you must verify the job exists on the default branch first; (4) diagnosing why adding/keeping a required status check could permanently block all PRs; (5) needing the correct integration_id for a GitHub Actions check context in a ruleset; (6) running a batch emit-before-require ruleset pass across many repos after an ecosystem CI-naming rollout. Cross-link: gha-required-checks-branch-protection (the YAML/aggregator + legacy branch-protection PUT mechanics), github-ruleset-enforcement-drift (bare-name + integration_id context form), planning-verify-issue-premise-before-implementing (runs-vs-gates + grep-the-claim discipline), github-auto-merge-ci-gating-merge-method (auto-merge gating + merge method), multi-repo-pr-automation-loop-orchestration (the multi-repo rebase sweep that surfaced this)."
 category: ci-cd
-date: 2026-07-02
-version: "1.2.0"
+date: 2026-07-11
+version: "1.3.0"
 history: github-ruleset-required-status-checks-management.history
 user-invocable: false
 verification: verified-ci
@@ -24,6 +24,10 @@ tags:
   - emit-on-pr-branch
   - safest-superset-scope
   - deferred-mutation-authorization
+  - strict-mode
+  - require-up-to-date
+  - dual-layer-strict
+  - behind-blocked
   - ci-cd
 ---
 
@@ -33,7 +37,7 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-07-02 (v1.2.0); 2026-06-28 (v1.1.0); 2026-06-20 (v1.0.0) |
+| **Date** | 2026-07-11 (v1.3.0); 2026-07-02 (v1.2.0); 2026-06-28 (v1.1.0); 2026-06-20 (v1.0.0) |
 | **Objective** | Capture how to add a new CI job's check context to a GitHub branch-protection RULESET (rulesets API) as a required status check — the GET->append->PUT mechanics that avoid dropping existing checks, the correct integration_id derivation — and the load-bearing ORDERING HAZARD: requiring a check whose job does not yet exist on the default branch permanently blocks every open PR. Plus the planning lesson that a follow-up issue's "already done" premise can be FALSE and must be verified against live state. |
 | **Outcome** | Plan written for ProjectTelemachy issue #282 (follow-up from #157). The issue claimed the `security/sast-scan` SAST job "was added in PR #264", but `gh pr view 264` showed PR #264 was OPEN (not merged) and the job existed only on the unmerged branch `157-auto-impl` (commit `39a509a`), NOT on `main`. Conclusion: the required check must NOT be added until the job-adding PR lands on `main`; the GET->append->PUT mechanics were drafted from the live ruleset (8 existing checks, all `integration_id: 15368`). |
 | **Verification** | **verified-ci (v1.2.0 full emit-before-require lifecycle across 13 repos + v1.1.0 name-mismatch deadlock)** / **verified-local (v1.0.0 add-a-check mechanics)** — v1.2.0: the deferred ruleset pass completed the FULL emit-before-require lifecycle — after the CI-naming rollout PRs merged so every repo emits canonical names on main, the follow-up pass added canonical `test`/`package`/`install`/`release` to `homeric-main-baseline` required_status_checks across 13 HI repos via GET→append→PUT the full array; emit-on-PR-branch was confirmed first (merged-PR head-sha check-runs), and post-PUT structural integrity was re-verified live (all 6 rule types + `enforcement:active` survived). v1.1.0: the emitted-name-vs-required-name deadlock was diagnosed and FIXED live on HomericIntelligence/ProjectScylla; the keystone rename-PR merged as Scylla #2017 and the previously BLOCKED-all-green PRs unblocked after re-rebase onto the post-keystone main. v1.0.0: the live ruleset state was read directly via `gh api repos/HomericIntelligence/ProjectTelemachy/rulesets/15556487` and PR #264's merge state via `gh pr view 264 --json state,mergedAt`; the v1.0.0 PUT mutation was NOT executed (admin-only) — but the v1.2.0 pass now provides an end-to-end verified GET→append→PUT execution. |
@@ -71,6 +75,32 @@ tags:
 > updates" is NOT overridden by a later broad "finish it"; a timed-out AskUserQuestion is NOT consent;
 > the safety classifier correctly BLOCKED the PUT batch until the user explicitly said "yes, apply".
 
+> **v1.3.0 addition — disabling strict mode (require branch up-to-date) requires patching BOTH policy layers.**
+> On HomericIntelligence/Hephaestus, GO'd PRs with auto-merge armed stayed stuck as
+> **BEHIND/MERGEABLE** and could not merge — even after flipping CLASSIC branch protection to
+> `strict:false`. Root cause: GitHub enforces required-status-checks strictness on **TWO INDEPENDENT
+> layers**, and BOTH default to strict (require branch up-to-date with main):
+> **(1) Classic branch protection** —
+> `PATCH repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks -F strict=false`;
+> **(2) Repository ruleset** — a `required_status_checks` rule inside a ruleset (here the
+> `homeric-main-baseline` ruleset, id `15556494`) carries `parameters.strict_required_status_checks_policy: true`
+> INDEPENDENTLY. Flipping only the classic layer leaves the ruleset still requiring up-to-date → PRs
+> remain BEHIND-blocked. **You must flip BOTH.** Detect both:
+> `gh api repos/$repo/branches/$branch/protection/required_status_checks | jq .strict` AND enumerate
+> the rulesets applying to the branch
+> (`gh api --paginate --slurp "repos/$repo/rules/branches/$branch?per_page=100" | jq add`) and inspect
+> the `required_status_checks` rule's `parameters.strict_required_status_checks_policy` — both must
+> read `false`. **Fix the ruleset layer WITHOUT dropping the checks:** GET the full ruleset, jq-set
+> ONLY `.rules[] | select(.type=="required_status_checks").parameters.strict_required_status_checks_policy = false`
+> (preserving every required_status_checks entry + all other rules), then PUT
+> `repos/$repo/rulesets/{id}` — NEVER hand-reconstruct the checks array (a wrong check name silently
+> DROPS a gate). **Why strict:false is the right call here:** on a fast-moving main (the automation
+> loop merges PRs continuously) strict:true causes perpetual rebase churn — mergeable PRs stall as
+> BEHIND and must re-rebase faster than CI finishes; the semantic-conflict protection strict buys is
+> rare and caught post-merge by CI on main. The required checks still gate merges; PRs just aren't
+> forced up-to-date. **verified-ci:** the fix unblocked 5 GO'd swarm PRs (#2041/#2044/#2049/#2050/#2052)
+> which then merged.
+
 This skill is the **rulesets-API "add a required check"** counterpart to three related skills:
 
 - `gha-required-checks-branch-protection` — fixing the *YAML/aggregator* wiring and the *legacy
@@ -98,6 +128,10 @@ This skill is the **rulesets-API "add a required check"** counterpart to three r
 - Running a **batch emit-before-require ruleset pass across many repos** after an ecosystem-wide
   CI-naming rollout — add canonical emitted names, confirm emit-on-PR-branch first, and re-verify
   ruleset structural integrity after each PUT.
+- GO'd / auto-merge-armed PRs stay stuck **BEHIND/MERGEABLE** and never merge **even after** flipping
+  CLASSIC branch protection to `strict:false` — the **repository ruleset's**
+  `strict_required_status_checks_policy` is enforcing require-up-to-date on a SECOND independent layer
+  that must ALSO be flipped (v1.3.0 dual-layer strict-mode hazard).
 
 ## Verified Workflow
 
@@ -162,6 +196,29 @@ gh api repos/$ORG/$REPO/rulesets/$RS_ID --jq \
 # expect enforcement:"active", ref includes "refs/heads/main", rules == [deletion, non_fast_forward,
 # pull_request, required_linear_history, required_signatures, required_status_checks].
 # Also confirm strict_required_status_checks_policy (strict=false) is preserved.
+
+# 6. (v1.3.0, VERIFIED) DISABLE STRICT MODE on BOTH layers so BEHIND PRs stop stalling.
+#    GitHub enforces "require branch up-to-date" on TWO independent layers; flip BOTH.
+repo=HomericIntelligence/Hephaestus; branch=main
+# 6a. DETECT layer 1 (classic branch protection):
+gh api repos/$repo/branches/$branch/protection/required_status_checks | jq '.strict'
+# 6b. DETECT layer 2 (repository ruleset) — enumerate rulesets applying to the branch and inspect the rule:
+gh api --paginate --slurp "repos/$repo/rules/branches/$branch?per_page=100" | jq 'add' \
+  | jq '[.[] | select(.type=="required_status_checks")] | map(.parameters.strict_required_status_checks_policy)'
+# BOTH must read false. If either is true, GO'd/auto-merge-armed PRs stay BEHIND-blocked.
+# 6c. FLIP layer 1 (classic):
+gh api -X PATCH repos/$repo/branches/$branch/protection/required_status_checks -F strict=false
+# 6d. FLIP layer 2 (ruleset) — GET->jq-set strict false->PUT, PRESERVING the checks array.
+#     Find the ruleset id carrying the required_status_checks rule (here homeric-main-baseline = 15556494):
+RS_ID=15556494
+gh api repos/$repo/rulesets/$RS_ID > /tmp/rs.json
+jq '{name, target, enforcement, conditions, bypass_actors,
+  rules: (.rules | map(if .type=="required_status_checks"
+    then .parameters.strict_required_status_checks_policy = false   # flip ONLY this; keep the checks
+    else . end))}' /tmp/rs.json > /tmp/rs-strict-off.json
+gh api -X PUT repos/$repo/rulesets/$RS_ID --input /tmp/rs-strict-off.json   # admin-only
+# NEVER hand-reconstruct required_status_checks[] — a wrong check name silently DROPS a gate.
+# 6e. RE-VERIFY both layers now read false (repeat 6a/6b) and confirm the required checks survived.
 ```
 
 ### Detailed Steps
@@ -269,6 +326,39 @@ gh api repos/$ORG/$REPO/rulesets/$RS_ID --jq \
     re-authorization before mutating shared branch-protection across repos. (After the user explicitly
     said "yes, apply", the PUTs ran with sandbox override and all 13 verified.)
 
+14. **Detect strict mode on BOTH policy layers before concluding it is disabled (v1.3.0).** GitHub
+    enforces "require branch up-to-date" (strict mode) on TWO INDEPENDENT layers, and both default to
+    strict: (a) CLASSIC branch protection — `repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks`
+    field `.strict`; and (b) a REPOSITORY RULESET — the `required_status_checks` rule's
+    `parameters.strict_required_status_checks_policy`. Reading only the classic `.strict` and seeing
+    `false` is a FALSE all-clear: the ruleset can still enforce strict on the second layer. Enumerate
+    the rulesets that apply to the branch too — `gh api --paginate --slurp
+    "repos/$repo/rules/branches/$branch?per_page=100" | jq add` — and inspect
+    `[.[] | select(.type=="required_status_checks")] | map(.parameters.strict_required_status_checks_policy)`.
+    Rulesets can be inherited from the org, so this enumeration (not just the repo's own rulesets list)
+    is what catches an org-level ruleset. BOTH layers must read `false`, or GO'd/auto-merge-armed PRs
+    stay stuck BEHIND/MERGEABLE and never merge (Quick Reference #6a/#6b).
+
+15. **Flip the ruleset strict layer via GET→jq-set→PUT WITHOUT dropping the checks (v1.3.0).** To
+    disable strict on the ruleset layer, GET the full ruleset, then map over `.rules` and mutate ONLY
+    the `required_status_checks` rule's `.parameters.strict_required_status_checks_policy = false`,
+    passing every other rule (and every existing required_status_checks entry) through UNTOUCHED, then
+    PUT `repos/$repo/rulesets/{id}` (Quick Reference #6d). The PUT replaces the rule wholesale — NEVER
+    hand-reconstruct the required_status_checks array, because a single wrong/misspelled check name
+    silently DROPS that gate. On Hephaestus the ruleset was `homeric-main-baseline`, id `15556494`.
+    After the PUT, re-GET and confirm both layers now read `false` AND that all the required
+    check contexts survived (same integrity discipline as step 12). Also PATCH the classic layer
+    (`-F strict=false`) — flipping one without the other is the exact trap this step exists to avoid.
+
+16. **On a fast-moving main, strict:false is the RIGHT call — fix the policy, don't fight the symptom
+    (v1.3.0).** When an automation loop merges PRs into `main` continuously, strict:true (require
+    up-to-date) causes perpetual rebase churn: a mergeable PR goes BEHIND the moment another PR merges,
+    must re-rebase, and can never catch up to a main that moves faster than CI finishes — so GO'd PRs
+    stall indefinitely. The semantic-conflict protection strict:true buys is rare and is caught
+    post-merge by CI running on `main`. Disabling strict on both layers keeps the required checks
+    gating every merge (PRs still cannot merge red); it only stops FORCING them up-to-date. Re-rebasing
+    the stuck BEHIND PRs repeatedly is fighting the symptom — they just go BEHIND again before merging.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -282,6 +372,9 @@ gh api repos/$ORG/$REPO/rulesets/$RS_ID --jq \
 | Keystone rename-PR blocked by a stale extras ruleset | Tried to merge the keystone, but the per-repo "extras" ruleset still required the OLD names the keystone removes (`pre-commit`, `test (unit, tests/unit)`) | The extras ruleset required check names the rename-PR deletes, so it blocked the very PR that fixes the baseline | Remove/empty the stale extras ruleset once the renamed baseline jobs cover the same tests under canonical names; disabling/deleting a ruleset to force a merge is correctly blocked by safety classifiers — get explicit human approval first |
 | Read "push everything to completion" as authorization to run the ruleset PUTs (v1.2.0) | Treated a broad "finish it" as consent to mutate shared branch-protection across 13 repos | The user's STANDING boundary was "defer all ruleset updates"; an AskUserQuestion that TIMED OUT is NOT consent; the auto-mode safety classifier correctly BLOCKED the PUT batch ([Modify Shared Resources]) | A broad "finish it" does not override a specific standing deferral; a question timeout ≠ approval — get EXPLICIT re-authorization before mutating shared branch-protection across repos (after the user explicitly said "yes, apply", the PUTs ran with sandbox override and all 13 verified) |
 | Assume the follow-up ruleset pass could run immediately after rollout PRs merged (v1.2.0) | Planned to add the canonical required contexts as soon as the rename/rollout PRs landed on main | Had to confirm PR-branch emission first (not just main) to avoid an expected-but-missing deadlock | Emit-before-require means emit on the PR's own head, verified via the merged-PR head sha (`commits/<pr_head_sha>/check-runs`), before adding the required context |
+| Flip classic branch protection only (v1.3.0) | `PATCH .../branches/main/protection/required_status_checks -F strict=false` and expected BEHIND PRs to unblock | PRs stayed BEHIND-blocked — a repository RULESET (`homeric-main-baseline`, id 15556494) enforces `strict_required_status_checks_policy` INDEPENDENTLY on a second layer | Disabling strict mode requires patching BOTH layers: classic branch protection AND the ruleset's `strict_required_status_checks_policy` |
+| Assume "require up-to-date" lives on one layer (v1.3.0) | Checked only `.../protection/required_status_checks .strict` and read it as the whole answer | Missed the ruleset's `parameters.strict_required_status_checks_policy` still set to true | Enumerate the branch's rulesets too (`gh api rules/branches/{branch}`) — rulesets can be inherited from the org and enforce strict on a second, independent layer |
+| Re-rebase the stuck BEHIND PRs repeatedly (v1.3.0) | Re-rebased the GO'd BEHIND PRs onto the moving main hoping one would land | On a fast-moving main (automation loop merging continuously) they go BEHIND again before merging = perpetual churn | Fix the policy (strict:false on BOTH layers), do not fight the symptom; required checks still gate merges, PRs just aren't forced up-to-date |
 
 ## Results & Parameters
 
@@ -322,3 +415,4 @@ gh api repos/$ORG/$REPO/rulesets/$RS_ID --jq \
 | ProjectTelemachy | Issue #282 (follow-up from #157) — plan only | verified-local; ruleset `homeric-main-baseline` (id `15556487`) read via `gh api`, 8 existing checks confirmed (all `integration_id: 15368`), `security/sast-scan` absent; PR #264 confirmed OPEN/unmerged via `gh pr view 264 --json state,mergedAt` (branch `157-auto-impl`). PUT mutation NOT executed (admin-only) — WRITE step proposed. |
 | ProjectScylla | Emitted-name-vs-required-name deadlock — keystone rename-PR (#2017) | **verified-ci**; the `homeric-main-baseline` ruleset required `lint`, `unit-tests`, `integration-tests`, `security/dependency-scan`, `security/secrets-scan` but the workflows emitted `Analyze (python)`, `test (unit, tests/unit)`, `test (integration, tests/integration)`, `Dependency vulnerability scan`, `Secrets scan (gitleaks)` — all 5 required names never posted -> PRs BLOCKED-all-green. Fixed by a keystone rename-PR (Scylla #2017) that renamed the jobs to emit the canonical required names; it was itself mergeable (its branch emitted the corrected names), merged FIRST, then the other PRs unblocked after re-rebase onto the post-keystone main. Also surfaced: a stale extras ruleset requiring the OLD names blocked the keystone — resolved by emptying it (with human approval, since safety classifiers block ruleset disable/delete). |
 | Odysseus + 13 HI submodules | 2026-07 ecosystem CI-naming rollout → ruleset pass | **verified-ci**; added canonical `test`/`package`/`install`/`release` to `homeric-main-baseline` `required_status_checks` across 13 repos via GET→append→PUT the full array; verified emit-on-PR-branch first (merged-PR head-sha check-runs); integrity re-checked after each PUT (all 6 rule types + `enforcement:active` + `refs/heads/main` condition survived, `strict_required_status_checks_policy` preserved); safest-superset scope (added canonical names, removed none); Hephaestus excluded, Myrmidons no-op. The PUT batch was correctly blocked until the user explicitly re-authorized ("yes, apply"). |
+| Hephaestus | 2026-07 dual-layer strict-mode disable (v1.3.0) | **verified-ci**; GO'd auto-merge-armed PRs stuck BEHIND/MERGEABLE did not unblock after flipping CLASSIC branch protection `strict:false` — the `homeric-main-baseline` ruleset (id `15556494`) still enforced `strict_required_status_checks_policy: true` on a second independent layer. Detected both layers (`.../protection/required_status_checks.strict` AND `rules/branches/main` → `strict_required_status_checks_policy`), flipped BOTH (classic PATCH + ruleset GET→jq-set-false→PUT preserving the required_status_checks array), which unblocked 5 GO'd swarm PRs (#2041/#2044/#2049/#2050/#2052) that then merged. strict:false chosen because a fast-moving main (continuous automation-loop merges) makes strict:true cause perpetual rebase churn; required checks still gate merges. |
