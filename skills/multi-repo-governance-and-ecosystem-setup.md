@@ -40,7 +40,7 @@ tags:
 - Onboarding a new Tailnet host for the HomericIntelligence mesh (Go, NATS, cmake, templ, pixi, gh CLI)
 - Completing a scaffolded repo that is missing a justfile, pixi.toml, README, or build scripts
 - Centralizing external repo clones to avoid duplicated 8 MB+ clones across parallel experiments
-- Setting up an hourly cron to auto-update a Claude Code plugin marketplace (ProjectMnemosyne)
+- Setting up an hourly cron to auto-update a Claude Code plugin marketplace (Mnemosyne)
 - Migrating `enabledPlugins` in `~/.claude/settings.json` from one marketplace to another
 - Integrating SessionEnd hooks or a CI/CD pipeline phase to automatically trigger `/learn`
 
@@ -86,7 +86,7 @@ for host in aeolus apollo artemis athena hephaestus hermes titan; do
 done; wait
 
 # --- Plugin marketplace cron ---
-(crontab -l 2>/dev/null; echo "0 * * * * /home/<user>/.local/bin/claude plugin marketplace update ProjectMnemosyne >> /tmp/claude-plugin-update.log 2>&1 && /home/<user>/.local/bin/claude plugin update mnemosyne@ProjectMnemosyne >> /tmp/claude-plugin-update.log 2>&1") | crontab -
+(crontab -l 2>/dev/null; echo "0 * * * * /home/<user>/.local/bin/claude plugin marketplace update Mnemosyne >> /tmp/claude-plugin-update.log 2>&1 && /home/<user>/.local/bin/claude plugin update mnemosyne@Mnemosyne >> /tmp/claude-plugin-update.log 2>&1") | crontab -
 ```
 
 ### Governance File Rollout (Detailed)
@@ -206,7 +206,7 @@ Use full (non-shallow) clones for centralized repos so arbitrary commits can be 
 
 ```bash
 # Install hourly cron (both commands required)
-(crontab -l 2>/dev/null; echo "0 * * * * /home/<user>/.local/bin/claude plugin marketplace update ProjectMnemosyne >> /tmp/claude-plugin-update.log 2>&1 && /home/<user>/.local/bin/claude plugin update mnemosyne@ProjectMnemosyne >> /tmp/claude-plugin-update.log 2>&1") | crontab -
+(crontab -l 2>/dev/null; echo "0 * * * * /home/<user>/.local/bin/claude plugin marketplace update Mnemosyne >> /tmp/claude-plugin-update.log 2>&1 && /home/<user>/.local/bin/claude plugin update mnemosyne@Mnemosyne >> /tmp/claude-plugin-update.log 2>&1") | crontab -
 crontab -l  # verify
 ```
 
@@ -228,7 +228,7 @@ crontab -l  # verify
 }
 ```
 
-ProjectMnemosyne can be removed from `extraKnownMarketplaces` because ProjectHephaestus commands (`/advise`, `/learn`) clone it independently to `$HOME/.agent-brain/ProjectMnemosyne/`.
+Mnemosyne can be removed from `extraKnownMarketplaces` because ProjectHephaestus commands (`/advise`, `/learn`) clone it independently to `$HOME/.agent-brain/Mnemosyne/`.
 
 ### Retrospective Hook Integration
 

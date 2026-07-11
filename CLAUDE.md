@@ -1,10 +1,10 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code when working with ProjectMnemosyne.
+This file provides guidance to Claude Code when working with Mnemosyne.
 
 ## Project Overview
 
-ProjectMnemosyne is a skills marketplace for the HomericIntelligence agentic ecosystem. It stores,
+Mnemosyne is a skills marketplace for the HomericIntelligence agentic ecosystem. It stores,
 organizes, and shares learnings from experiments, debugging sessions, and development work.
 
 **Purpose**: Capture team knowledge so Claude can `/advise` before starting work and prevent
@@ -215,7 +215,7 @@ development dependencies are declared there, together with task definitions and 
 
 The canonical CI `package` check builds the marketplace bundle artifact — a versioned tarball
 of `.claude-plugin/`, `skills/`, `plugins/`, `schemas/`, and `templates/` produced by
-`scripts/build_package.py` — since ProjectMnemosyne distributes a skills marketplace, not a
+`scripts/build_package.py` — since Mnemosyne distributes a skills marketplace, not a
 Python library.
 
 `requirements.txt` and `requirements-dev.txt` exist as **non-canonical mirrors** for pip-based

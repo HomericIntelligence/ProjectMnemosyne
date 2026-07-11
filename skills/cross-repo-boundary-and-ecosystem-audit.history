@@ -102,7 +102,7 @@ important:
   I6: Keystone MaestroClient persistent httpx.AsyncClient
   I7: Hephaestus "imported by all" → "not yet imported"
   I8: Hermes + Telemachy config migrated to pydantic-settings
-  I9: .gitignore cleanup for ProjectMnemosyne/ and build/ artifacts
+  I9: .gitignore cleanup for Mnemosyne/ and build/ artifacts
 
 minor:
   M1: 8 new NATSListener tests
@@ -157,7 +157,7 @@ The HomericIntelligence ecosystem has 12 repositories organized around ai-maestr
 6. ProjectTelemachy — workflow engine
 7. ProjectKeystone — DAG executor (most bugs found here)
 8. ProjectProteus — CI/CD
-9. ProjectMnemosyne — skills marketplace
+9. Mnemosyne — skills marketplace
 10. ProjectHephaestus — shared utilities
 11. ProjectOdyssey — research/training
 12. ProjectScylla — testing/chaos

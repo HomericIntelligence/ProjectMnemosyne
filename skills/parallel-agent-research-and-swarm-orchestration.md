@@ -326,7 +326,7 @@ done
 | Conflict pre-check (closed PRs) | Haiku | Binary output |
 | Pre-commit/lint CI fix | Haiku | Pattern-based fix |
 | Complex CI fix (logic errors) | Sonnet | Requires code understanding |
-| Skill creation in ProjectMnemosyne | Sonnet | Synthesis of learnings into structured docs |
+| Skill creation in Mnemosyne | Sonnet | Synthesis of learnings into structured docs |
 | Issue filing (40+ issues) | Sonnet | Rate-limit resilience over Haiku |
 | L0 orchestration | Sonnet/Opus | Session architecture, wave sequencing, user interaction |
 
@@ -416,7 +416,7 @@ GateSkip (with calibration):
 | ProjectTelemachy 2026-04-25 | Issues → remaining | 57 → 6 (89% closure) |
 | ProjectTelemachy 2026-04-25 | Total wall clock | ~2.5 hours |
 | HomericIntelligence/Odysseus 2026-04-28 | Repos audited / findings | 15 repos / 680 findings |
-| ProjectMnemosyne 2026-05-18 | Skill-corpus consolidation | 1,100→690 skills, 17 clusters |
+| Mnemosyne 2026-05-18 | Skill-corpus consolidation | 1,100→690 skills, 17 clusters |
 
 ## Verified On
 
@@ -436,6 +436,6 @@ GateSkip (with calibration):
 | ProjectProteus | 43-issue classification + 20 EASY implementations, 2026-04-25 | TypeScript/Bash/YAML; auto-merge disabled; npm install fix required |
 | ProjectTelemachy | 57 → 6 issues (89% closure), 17 PRs, 2026-04-25 | Per-file Sonnet mega-agents; deterministic classification from contention counts |
 | HomericIntelligence/Odysseus | Ecosystem-wide strict audit, 15 repos, 680 findings, 2026-04-28 | 15 Epics + child issues; Haiku rate-limit failure at 40+ issues |
-| ProjectMnemosyne | 2026-05-18 skill-corpus consolidation (17 clusters) | Mojo mega-cluster sub-PRs \#1808-\#1811 sequential dispatch |
+| Mnemosyne | 2026-05-18 skill-corpus consolidation (17 clusters) | Mojo mega-cluster sub-PRs \#1808-\#1811 sequential dispatch |
 | ProjectHephaestus | 6-phase pipeline design + implementation, 2026-04-24 | 251 tests pass, ruff + mypy clean |
 | ProjectScylla | State machine refactor chief architect review implementation, 2026-02-23 | 3 doc/test tasks completed, branch rebased, 72/72 tests passing |

@@ -105,7 +105,7 @@ def generate_marketplace() -> Dict[str, Any]:
     # Official marketplace format. Version is sourced from pyproject.toml
     # so the marketplace tracks the project's semver instead of a literal.
     marketplace = {
-        "name": "ProjectMnemosyne",
+        "name": "Mnemosyne",
         "owner": {"name": "HomericIntelligence", "url": "https://github.com/HomericIntelligence"},
         "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
         "version": _load_project_version(),

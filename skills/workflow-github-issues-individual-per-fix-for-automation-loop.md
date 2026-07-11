@@ -190,7 +190,7 @@ All HomericIntelligence repos with the `pr-policy` required CI gate, which curre
 - ProjectOdyssey
 - ProjectKeystone
 - ProjectScylla
-- ProjectMnemosyne
+- Mnemosyne
 - ProjectHermes
 - ProjectArgus
 - ProjectProteus

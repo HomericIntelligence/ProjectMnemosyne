@@ -188,4 +188,4 @@ def validate_tensor(tensor, expected_dtype=DType.float32):
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | Epic #1828 M23 cluster (14 Tier-2 sub-skills) | Absorbed from batch-generated 2026-03-19 release |
+| Mnemosyne | Epic #1828 M23 cluster (14 Tier-2 sub-skills) | Absorbed from batch-generated 2026-03-19 release |

@@ -2,7 +2,7 @@
 
 ## v1.11.0 (2026-07-04)
 
-**Changed by:** Rebased ProjectMnemosyne PR #2926, carrying the ProjectHephaestus issue #1502 stale-line-citation lesson onto the post-v1.10.0 skill.
+**Changed by:** Rebased Mnemosyne PR #2926, carrying the ProjectHephaestus issue #1502 stale-line-citation lesson onto the post-v1.10.0 skill.
 **Verification:** verified-local for the captured #1502 evidence and local doc verification described in the skill; this rebase resolution preserved main's v1.10.0 content and renumbered the incoming v1.5.0 amendment as v1.11.0.
 
 ### What changed
@@ -68,7 +68,7 @@ The v1.8.0 baseline entry below preserves the prior framing and its v1.7.0/v1.6.
 - Recorded the live coverage-gate caveat: the scoped run printed `FAIL Required test coverage of 83.0% not reached. Total coverage: 8.63%` — the GLOBAL coverage gate on a single-file run, NOT a test failure; real result `1 passed`. Reinforces the skill's existing "read the pytest summary line, not the word FAIL" lesson, now hit live.
 
 ### Why
-The v1.7.0 #1465 note recorded the evidence verification as `verified-local` but EXPLICITLY flagged the hoist edit, the existing-test run, and CI as NOT executed, leaving two assumptions as open reviewer risks. This session actually ran the plan locally end-to-end, confirming both assumptions and resolving both risks. The durable meta-lesson: a plan-only skill note's flagged-uncertain assumption should be UPGRADED to confirmed — with the verification level bumped (plan-only → verified-local) — the moment a session executes it; don't leave a now-confirmed assumption sitting at the old uncertainty level. Still NOT `verified-ci`: the #1465 PR had not merged at capture time, and the orchestrator owns its commit/push/PR separately from this ProjectMnemosyne skill PR.
+The v1.7.0 #1465 note recorded the evidence verification as `verified-local` but EXPLICITLY flagged the hoist edit, the existing-test run, and CI as NOT executed, leaving two assumptions as open reviewer risks. This session actually ran the plan locally end-to-end, confirming both assumptions and resolving both risks. The durable meta-lesson: a plan-only skill note's flagged-uncertain assumption should be UPGRADED to confirmed — with the verification level bumped (plan-only → verified-local) — the moment a session executes it; don't leave a now-confirmed assumption sitting at the old uncertainty level. Still NOT `verified-ci`: the #1465 PR had not merged at capture time, and the orchestrator owns its commit/push/PR separately from this Mnemosyne skill PR.
 
 ### Snapshot pointer
 The v1.7.0 baseline entry below preserves the prior plan-only framing and its v1.6.0 fenced snapshot; the live skill file at this version (1.8.0) carries the upgraded #1465 note as the leading note in the Overview block.

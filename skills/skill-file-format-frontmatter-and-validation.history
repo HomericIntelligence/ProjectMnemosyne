@@ -320,7 +320,7 @@ python3 scripts/generate_marketplace.py
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | PR #74, #73, #72, #69, #68 | Fixed 4 failing PRs by adding frontmatter and renaming plugins. See [notes.md](../references/notes.md) for CI logs and commands. |
+| Mnemosyne | PR #74, #73, #72, #69, #68 | Fixed 4 failing PRs by adding frontmatter and renaming plugins. See [notes.md](../references/notes.md) for CI logs and commands. |
 
 ## References
 
@@ -414,14 +414,14 @@ except yaml.YAMLError:
    - Multiple colons in a single value
 
 6. **Handle test file discovery** — when the script lives in an external repo
-   (e.g., `ProjectMnemosyne`), use `importlib.util.spec_from_file_location()` with
+   (e.g., `Mnemosyne`), use `importlib.util.spec_from_file_location()` with
    multiple candidate paths and `pytest.mark.skipif` if none exist:
 
    ```python
    _CANDIDATES = [
-       Path.home() / "ProjectMnemosyne" / "scripts" / "migrate_to_skills.py",
+       Path.home() / "Mnemosyne" / "scripts" / "migrate_to_skills.py",
        Path(__file__).parent.parent.parent / "build" / str(os.getpid())
-           / "ProjectMnemosyne" / "scripts" / "migrate_to_skills.py",
+           / "Mnemosyne" / "scripts" / "migrate_to_skills.py",
    ]
    _SCRIPT_PATH = next((p for p in _CANDIDATES if p.exists()), None)
 
@@ -446,7 +446,7 @@ except yaml.YAMLError:
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 | --------- | ---------------- | --------------- | ---------------- |
-| Search for file in worktree | `find` in `.worktrees/issue-3929/` for `migrate_to_skills.py` | File lives in `ProjectMnemosyne` repo, not in the ProjectOdyssey worktree | Check `build/*/ProjectMnemosyne/` and `~/ProjectMnemosyne/` for sibling repo scripts |
+| Search for file in worktree | `find` in `.worktrees/issue-3929/` for `migrate_to_skills.py` | File lives in `Mnemosyne` repo, not in the ProjectOdyssey worktree | Check `build/*/Mnemosyne/` and `~/Mnemosyne/` for sibling repo scripts |
 | Look for tracked file in git | `git ls-files \| grep migrate_to_skills` | Script is in a separate cloned repo, never committed to ProjectOdyssey | For cross-repo fixes, always look for the local checkout of the target repo first |
 | Assume `build/` in worktree | Looked for `build/` under `.worktrees/issue-3929/` | `build/` is under the main repo root, not under worktree paths | PID-scoped builds live at `<repo_root>/build/<PID>/`, not under worktree subdirectories |
 
@@ -772,7 +772,7 @@ tags: [markdownlint, md033, inline-html, failed-attempts, skill-format, validate
 | Field | Value |
 |-------|-------|
 | **Date** | 2026-05-02 |
-| **Objective** | Fix CI failures in PRs #1498 and #1516 in ProjectMnemosyne caused by wrong Failed Attempts column names and an MD033 inline-HTML false positive |
+| **Objective** | Fix CI failures in PRs #1498 and #1516 in Mnemosyne caused by wrong Failed Attempts column names and an MD033 inline-HTML false positive |
 | **Outcome** | Both issues resolved; pre-commit hooks passed after fixes |
 
 ## When to Use
@@ -912,7 +912,7 @@ skills/your-skill.md: 0 error(s), 0 warning(s)
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectMnemosyne | PR #1498 and PR #1516 — `oss-contribution-issue-filing-pattern.md` | Two branches, same file, both fixes applied independently |
+| Mnemosyne | PR #1498 and PR #1516 — `oss-contribution-issue-filing-pattern.md` | Two branches, same file, both fixes applied independently |
 
 ## References
 
@@ -945,7 +945,7 @@ Official format requirements for Claude Code plugins based on debugging a market
 | Item | Details |
 | ------ | --------- |
 | Date | 2025-12-29 |
-| Objective | Fix ProjectMnemosyne marketplace to use official Claude Code plugin format |
+| Objective | Fix Mnemosyne marketplace to use official Claude Code plugin format |
 | Outcome | All plugins validated and working after schema compliance fixes |
 | Source | https://github.com/anthropics/claude-plugins-official |
 
@@ -977,7 +977,7 @@ plugins/marketplace.json            # Wrong directory
 **Marketplace format**:
 ```json
 {
-  "name": "ProjectMnemosyne",
+  "name": "Mnemosyne",
   "owner": {
     "name": "HomericIntelligence",
     "url": "https://github.com/HomericIntelligence"
@@ -1418,7 +1418,7 @@ tags: ["code-review", "quality", "standards"]
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | Template updates and documentation | [notes.md](../references/notes.md) |
+| Mnemosyne | Template updates and documentation | [notes.md](../references/notes.md) |
 
 ## References
 

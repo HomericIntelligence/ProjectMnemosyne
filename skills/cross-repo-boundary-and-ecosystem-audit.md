@@ -245,7 +245,7 @@ important:
   I6: Keystone MaestroClient → persistent httpx.AsyncClient
   I7: Hephaestus "imported by all" → "not yet imported"
   I8: Hermes + Telemachy config migrated to pydantic-settings
-  I9: .gitignore cleanup for ProjectMnemosyne/ and build/ artifacts
+  I9: .gitignore cleanup for Mnemosyne/ and build/ artifacts
 ```
 
 ### Code Quality Remediation Metrics (multi-domain session, 2026-03-14)

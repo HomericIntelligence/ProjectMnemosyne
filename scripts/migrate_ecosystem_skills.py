@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Migrate skills from ProjectOdyssey, ProjectScylla, and ProjectKeystone
-into ProjectMnemosyne's flat skills/<name>.md format.
+into Mnemosyne's flat skills/<name>.md format.
 
 Usage:
     python3 scripts/migrate_ecosystem_skills.py [options]
@@ -647,7 +647,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Migrate skills from ProjectOdyssey, ProjectScylla, and ProjectKeystone "
-            "into ProjectMnemosyne's flat skills/<name>.md format."
+            "into Mnemosyne's flat skills/<name>.md format."
         )
     )
     parser.add_argument(

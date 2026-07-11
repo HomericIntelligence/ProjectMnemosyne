@@ -591,8 +591,8 @@ grep -rnE "^## (Changelog|Corrections Applied|Revision history|Change notes)" co
 | ProjectScylla | Backward-compat removal 2026-02-13 — 135 lines removed, 65 tests passing | backward-compat-removal source |
 | ProjectScylla | Implementation alignment 2026-06-27 — 14 items aligned, 5 gaps fixed, 892 tests passing | implementation-alignment-validation source |
 | ProjectOdyssey | Count reconciliation 2026-03-07 — 42→31 agents, 82→58 skills corrected | repo-audit-count-reconciliation source |
-| ProjectMnemosyne | Quality audit workflow 2026-03-29 — 24 issues created, HIGH fixes implemented | quality-audit-workflow source |
-| ProjectMnemosyne | Strict audit + doc remediation 2026-03-22 — B+ (87%) score | documentation-strict-audit-remediation-workflow source |
+| Mnemosyne | Quality audit workflow 2026-03-29 — 24 issues created, HIGH fixes implemented | quality-audit-workflow source |
+| Mnemosyne | Strict audit + doc remediation 2026-03-22 — B+ (87%) score | documentation-strict-audit-remediation-workflow source |
 | ArchIdeas corpus | 39-file research corpus parallel remediation, 6 repair classes, Apr 2026 | documentation-corpus-myrmidon-parallel-remediation source |
 | ArchIdeas corpus | 6-dimension quality rubric applied to 39 documents; all passed after remediation | documentation-architecture-research-quality-rubric source |
 

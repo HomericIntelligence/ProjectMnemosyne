@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build the canonical `package` artifact: the marketplace bundle tarball.
 
-ProjectMnemosyne distributes a skills/plugins marketplace, not a Python
+Mnemosyne distributes a skills/plugins marketplace, not a Python
 library. The canonical CI `package` check builds and verifies this bundle.
 """
 

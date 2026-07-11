@@ -43,7 +43,7 @@ tags: [audit, triage, remediation, github-issues, dead-code, ci, requirements, p
 | ------- | ------- |
 | **Date** | 2026-04-29 |
 | **Objective** | Run a strict repo audit, triage findings by complexity, batch-fix scoped items, and reconcile complex work against the existing GitHub issue backlog before creating focused gaps. |
-| **Outcome** | Successful across ProjectMnemosyne and Radiance: one audit cleanup PR pattern, existing issues updated/commented/labeled first, and only missing focused gaps filed as new issues. |
+| **Outcome** | Successful across Mnemosyne and Radiance: one audit cleanup PR pattern, existing issues updated/commented/labeled first, and only missing focused gaps filed as new issues. |
 | **Verification** | verified-local |
 | **History** | [changelog](./repo-audit-triage-fix-and-issue-workflow.history) |
 
@@ -282,7 +282,7 @@ git commit -m "fix: apply audit remediation (dead code, CI, docs, requirements)"
 
 ## Results & Parameters
 
-### Audit Score Baseline (ProjectMnemosyne, 2026-03-28)
+### Audit Score Baseline (Mnemosyne, 2026-03-28)
 
 | Section | Grade | Key Findings |
 | --------- | ------- | -------------- |
@@ -345,7 +345,7 @@ This produced four new focused issues instead of duplicating the entire audit as
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | Strict audit + triage + 10-item cleanup PR (March 2026) | 9/9 tests passing, 6 issues filed (#1105–#1110) |
+| Mnemosyne | Strict audit + triage + 10-item cleanup PR (March 2026) | 9/9 tests passing, 6 issues filed (#1105–#1110) |
 | Radiance | Strict audit issue-backlog reconciliation (April 2026) | Existing open issues were updated/commented/labeled first; only four missing focused issues were created (#181–#184) |
 
 ## References
@@ -394,7 +394,7 @@ tags: [audit, triage, remediation, github-issues, dead-code, ci, requirements, p
 | Field | Value |
 |-------|-------|
 | **Date** | 2026-03-28 |
-| **Objective** | Run a strict repo audit on ProjectMnemosyne, triage all findings by complexity, fix simple/medium items directly, and file GitHub issues for complex work |
+| **Objective** | Run a strict repo audit on Mnemosyne, triage all findings by complexity, fix simple/medium items directly, and file GitHub issues for complex work |
 | **Outcome** | Successful. Audit scored C+ (77%). 10 simple fixes applied in one PR (14 files changed, -1,280 net lines). 6 GitHub issues filed (#1105–#1110). 9/9 tests passing after fixes. |
 
 ## When to Use
@@ -579,7 +579,7 @@ git commit -m "fix: apply audit remediation (dead code, CI, docs, requirements)"
 
 ## Results & Parameters
 
-### Audit Score Baseline (ProjectMnemosyne, 2026-03-28)
+### Audit Score Baseline (Mnemosyne, 2026-03-28)
 
 | Section | Grade | Key Findings |
 |---------|-------|--------------|
@@ -623,7 +623,7 @@ git commit -m "fix: apply audit remediation (dead code, CI, docs, requirements)"
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectMnemosyne | Strict audit + triage + 10-item cleanup PR (March 2026) | 9/9 tests passing, 6 issues filed (#1105–#1110) |
+| Mnemosyne | Strict audit + triage + 10-item cleanup PR (March 2026) | 9/9 tests passing, 6 issues filed (#1105–#1110) |
 
 ## References
 

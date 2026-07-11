@@ -449,6 +449,6 @@ See also: `gha-workflow-concurrency-controls` skill for the full decision framew
 | HomericIntelligence/ProjectOdyssey | PR #5445 (commit `702a5a2e`) — `.github/workflows/docs.yml` env-var lift | `validate-readme-commands` check went FAILURE → SUCCESS after lifting `steps.validation-level.outputs.level` into `env:` |
 | ProjectHephaestus | Issue #794 / PR #977 — `.github/workflows/test.yml` platform-scope header | 14-line header comment block added; pre-commit passed; workflow executed successfully (verified-local) |
 | HomericIntelligence/ProjectScylla | PR #1455 / Issue #1429 — Edit-tool path block | Workarounds documented in `.claude/shared/error-handling.md` |
-| ProjectMnemosyne | 2026-06-07: `update-marketplace.yml` create-PR step 403, diagnosed org block, validated org-toggle fix by live dispatch | PR #2261 |
+| Mnemosyne | 2026-06-07: `update-marketplace.yml` create-PR step 403, diagnosed org block, validated org-toggle fix by live dispatch | PR #2261 |
 | ProjectHephaestus | PR #1108 (2026-06-08) — `_required.yml` label-event re-ran all 18 jobs; added a `changes-gate` job and gated the 16 heavy jobs on `needs: changes-gate` + `if: …code_event == 'true'`, left `pr-policy`/`auto-merge-policy` ungated | SELF-TESTED live: adding then removing a label re-ran only the gate + 2 policy jobs; the 16 heavy jobs showed `skipped`; PR stayed CLEAN/MERGEABLE |
 | ProjectHephaestus | Issue #1548 — added concurrency blocks to auto-label-needs-plan.yml, auto-tag.yml, release.yml, security.yml | verified-local (YAML parse + structural assertions; CI pending) |

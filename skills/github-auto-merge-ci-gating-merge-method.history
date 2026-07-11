@@ -124,8 +124,8 @@ choose_merge_flag() {
     (if .allow_merge_commit then "--merge"  else empty end)
   ] | .[0] // ""'
 }
-MERGE_FLAG=$(choose_merge_flag "HomericIntelligence/ProjectMnemosyne")   # -> --squash here
-gh pr merge "$PR" --auto "$MERGE_FLAG" --repo HomericIntelligence/ProjectMnemosyne
+MERGE_FLAG=$(choose_merge_flag "HomericIntelligence/Mnemosyne")   # -> --squash here
+gh pr merge "$PR" --auto "$MERGE_FLAG" --repo HomericIntelligence/Mnemosyne
 ```
 
 Audit for the bug in all forms, and add a source-inspection unit test as a durable guard:
@@ -455,7 +455,7 @@ auto-merge armed but not merged
 Prefer **sourcing the helper** over re-defining `choose_merge_flag` inline. The helper exists as
 a real, sourceable file in ProjectHephaestus: `scripts/choose_merge_flag.sh`. A sub-agent running
 a Hephaestus skill from inside *another* repo (e.g. running `/finish-branch` against a
-ProjectMnemosyne worktree) cannot see that file via the current worktree's
+Mnemosyne worktree) cannot see that file via the current worktree's
 `git rev-parse --show-toplevel`. Use a three-candidate tiered lookup with `--squash` as the
 org-wide-correct fallback (every HomericIntelligence repo is squash-only):
 
@@ -797,8 +797,8 @@ choose_merge_flag() {
     (if .allow_merge_commit then "--merge"  else empty end)
   ] | .[0] // ""'
 }
-MERGE_FLAG=$(choose_merge_flag "HomericIntelligence/ProjectMnemosyne")   # -> --squash here
-gh pr merge "$PR" --auto "$MERGE_FLAG" --repo HomericIntelligence/ProjectMnemosyne
+MERGE_FLAG=$(choose_merge_flag "HomericIntelligence/Mnemosyne")   # -> --squash here
+gh pr merge "$PR" --auto "$MERGE_FLAG" --repo HomericIntelligence/Mnemosyne
 ```
 
 Audit for the bug in all forms, and add a source-inspection unit test as a durable guard:
@@ -1721,8 +1721,8 @@ choose_merge_flag() {
   printf '%s\n' "$flag"
 }
 
-MERGE_FLAG=$(choose_merge_flag "HomericIntelligence/ProjectMnemosyne")   # -> --squash here
-gh pr merge "$PR_NUMBER" --auto "$MERGE_FLAG" --repo HomericIntelligence/ProjectMnemosyne
+MERGE_FLAG=$(choose_merge_flag "HomericIntelligence/Mnemosyne")   # -> --squash here
+gh pr merge "$PR_NUMBER" --auto "$MERGE_FLAG" --repo HomericIntelligence/Mnemosyne
 ```
 
 ### Detailed Steps
@@ -1766,7 +1766,7 @@ gh pr merge "$PR_NUMBER" --auto "$MERGE_FLAG" --repo HomericIntelligence/Project
 | Relying on stale docs | CLAUDE.md documented `--rebase` because it was originally correct | Repo settings changed (or were always squash-only) without corresponding doc update | Docs about merge flags rot silently; audit CLAUDE.md against `gh api` before issuing PRs |
 | Hardcoded `pr.merge(merge_method="rebase")` in PyGithub code | `hephaestus/github/pr_merge.py` hardcoded `merge_method="rebase"` while a sibling path (`github_api.py:gh_pr_create`) already used `--auto --squash` | Failed at runtime (not silently) with `GraphQL: Rebase merges are not allowed on this repository. (mergePullRequest)` / `...(enablePullRequestAutoMerge)` — ~27 such errors in one automation run | The wrong method hides in CODE too, not just docs; grep for `merge_method="rebase"` as well as the CLI `--rebase` form, and watch for inconsistency between sibling callsites. Durable guard: a unit test that uses `inspect.getsource` on the module and asserts the source contains no `merge_method="rebase"` and does contain `merge_method="squash"` |
 | Swapped a hardcoded `--rebase` to a hardcoded `--squash` (e.g. learn skill #867) | Reactive fix: replaced the fixed `--rebase` flag with a fixed `--squash` flag | Still wrong for a rebase-only or merge-only target repo; just trades one fixed assumption for another | Detect the target repo's allowed methods via `gh api repos/<repo>` and pick dynamically (rebase->squash->merge) — see `choose_merge_flag` |
-| `/learn` skill plugin instruction ran `gh pr merge --auto --rebase` against ProjectMnemosyne (squash-only) | The shipped `/learn` `SKILL.md` (stale plugin cache line 420) hardcoded `--auto --rebase --repo HomericIntelligence/ProjectMnemosyne` | Rejected: `Merge method rebase merging is not allowed on this repository`; three sub-agents each hit it and independently fell back to `--squash` | A tooling skill's OWN instructions are a place the wrong-merge-method bug hides; fixed via settings-aware detection (ProjectHephaestus #911) |
+| `/learn` skill plugin instruction ran `gh pr merge --auto --rebase` against Mnemosyne (squash-only) | The shipped `/learn` `SKILL.md` (stale plugin cache line 420) hardcoded `--auto --rebase --repo HomericIntelligence/Mnemosyne` | Rejected: `Merge method rebase merging is not allowed on this repository`; three sub-agents each hit it and independently fell back to `--squash` | A tooling skill's OWN instructions are a place the wrong-merge-method bug hides; fixed via settings-aware detection (ProjectHephaestus #911) |
 
 ## Results & Parameters
 
@@ -1811,8 +1811,8 @@ choose_merge_flag() {
   printf '%s\n' "$flag"
 }
 
-MERGE_FLAG=$(choose_merge_flag "HomericIntelligence/ProjectMnemosyne")   # -> --squash here
-gh pr merge "$PR_NUMBER" --auto "$MERGE_FLAG" --repo HomericIntelligence/ProjectMnemosyne
+MERGE_FLAG=$(choose_merge_flag "HomericIntelligence/Mnemosyne")   # -> --squash here
+gh pr merge "$PR_NUMBER" --auto "$MERGE_FLAG" --repo HomericIntelligence/Mnemosyne
 ```
 
 The preference order is configurable, but rebase->squash->merge is the documented default. A repo
@@ -1859,7 +1859,7 @@ This was shipped in ProjectHephaestus PR #904 (Closes #718, merged 2026-06-03, v
 |---------|---------|---------|
 | ProjectHephaestus | 2026-05-28: CLAUDE.md had stale `--rebase` instruction; PR #668 corrected it | `gh pr view 668 --json autoMergeRequest` confirmed `mergeMethod=SQUASH`; issue #666 |
 | ProjectHephaestus | 2026-06-03: `hephaestus/github/pr_merge.py` hardcoded `pr.merge(merge_method="rebase")` — code form of the same bug, ~27 runtime GraphQL errors in one automation run; PR #904 changed it to `merge_method="squash"` | Closes #718; durable guard = `inspect.getsource` unit test asserting no `merge_method="rebase"`; verified-ci |
-| ProjectHephaestus | 2026-06-03: `/learn` plugin instruction (`skills/learn/SKILL.md`, stale plugin cache line 420) hardcoded `--auto --rebase` vs squash-only ProjectMnemosyne; three sub-agents each hit `Merge method rebase merging is not allowed on this repository`; filed issue #911 for settings-aware selection (supersedes #721, #867) | `choose_merge_flag` pattern documented; verified-ci |
+| ProjectHephaestus | 2026-06-03: `/learn` plugin instruction (`skills/learn/SKILL.md`, stale plugin cache line 420) hardcoded `--auto --rebase` vs squash-only Mnemosyne; three sub-agents each hit `Merge method rebase merging is not allowed on this repository`; filed issue #911 for settings-aware selection (supersedes #721, #867) | `choose_merge_flag` pattern documented; verified-ci |
 
 ---
 
@@ -2508,7 +2508,7 @@ PY
 
 # (c) ADD A VALID RULE TYPE TO ALL RULESETS (fetch → dedup → append → PUT)
 # PUT is a FULL REPLACE of .rules — never PUT only the new rule.
-for R in ProjectAgamemnon ProjectNestor ProjectMnemosyne ProjectHermes ProjectProteus \
+for R in ProjectAgamemnon ProjectNestor Mnemosyne ProjectHermes ProjectProteus \
          ProjectArgus AchaeanFleet Myrmidons ProjectTelemachy ProjectKeystone \
          ProjectOdyssey ProjectScylla ProjectHephaestus ProjectCharybdis Odysseus; do
   RID=$(gh api repos/$O/$R/rulesets --jq '.[0].id')
@@ -2682,7 +2682,7 @@ LAYER 2 — CLASSIC branch protection (repo-specific ADDITIONS only)
   EXTRAS per repo (examples):
     ProjectAgamemnon : ubuntu-24.04-{gcc,clang}-{debug,release},
                        "All Build/Test Checks", "All Static Analysis Checks"
-    ProjectMnemosyne : validate, markdownlint
+    Mnemosyne : validate, markdownlint
     ProjectHermes    : "Secret Scanning (gitleaks)", justfile-check
     ProjectProteus   : "Lint Shell Scripts"
     AchaeanFleet, Myrmidons, ProjectTelemachy, Odysseus : (empty — no extras)

@@ -52,7 +52,7 @@ tags:
 | Field | Value |
 |-------|-------|
 | **Date** | 2026-03-26 |
-| **Objective** | Fix a conflicting rename PR in ProjectMnemosyne and coordinate a skill definition update in ProjectHephaestus |
+| **Objective** | Fix a conflicting rename PR in Mnemosyne and coordinate a skill definition update in ProjectHephaestus |
 | **Outcome** | PR #1061 rebased and MERGEABLE, skill definition PR #203 created in ProjectHephaestus |
 | **Verification** | verified-local |
 
@@ -60,7 +60,7 @@ tags:
 
 - A rename/refactor PR that touches many files shows CONFLICTING merge state after main advances
 - All conflicts follow the same pattern (e.g., both sides changed the same text references being renamed)
-- A skill definition in one repo (e.g., ProjectHephaestus) needs a coordinated update because of changes in another repo (e.g., ProjectMnemosyne)
+- A skill definition in one repo (e.g., ProjectHephaestus) needs a coordinated update because of changes in another repo (e.g., Mnemosyne)
 - You need to validate a plugin repository after resolving conflicts to ensure no structural corruption
 
 ## Verified Workflow
@@ -142,7 +142,7 @@ gh pr view <number> --json mergeStateStatus --jq '.mergeStateStatus'
    git commit -m "feat(skills): update <skill> definition for <change>"
    git push -u origin update-skill-definition
    gh pr create --title "Update <skill> definition" \
-     --body "Coordinates with HomericIntelligence/ProjectMnemosyne#<number>"
+     --body "Coordinates with HomericIntelligence/Mnemosyne#<number>"
    gh pr merge --auto --rebase
    ```
 
@@ -174,7 +174,7 @@ Is the PR a rename/refactor where the intent is to change text references?
 
 ```yaml
 pr_number: 1061
-repo: HomericIntelligence/ProjectMnemosyne
+repo: HomericIntelligence/Mnemosyne
 branch: refactor/rename-to-mnemosyne-v2
 conflicts_found: 8
 resolution_strategy: "--theirs for all (homogeneous rename conflicts)"
@@ -186,7 +186,7 @@ final_merge_state: MERGEABLE
 
 ```yaml
 primary_pr:
-  repo: ProjectMnemosyne
+  repo: Mnemosyne
   number: 1061
   change: "Rename retrospective -> learn across 41 files"
 
@@ -213,7 +213,7 @@ coordination: "Secondary PR references primary for context"
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectMnemosyne | PR #1061, rename retrospective to learn (8 conflicts resolved) | 2026-03-26 session |
+| Mnemosyne | PR #1061, rename retrospective to learn (8 conflicts resolved) | 2026-03-26 session |
 | ProjectHephaestus | PR #203, add Execution Model section to /learn skill | 2026-03-26 session |
 
 ## References

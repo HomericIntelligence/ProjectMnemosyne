@@ -78,7 +78,7 @@ clean:
 | Override CMake binaryDir in CMakePresets.json | Set `binaryDir` in submodule's CMakePresets.json to `${sourceDir}/../../build/${sourceDirName}` | CMake presets `binaryDir` is relative to sourceDir; path traversal with `../..` is unreliable and not portable | Use `cmake -S <srcdir> -B <external_builddir>` at the call site. The `-B` CLI flag always overrides presets. |
 | Pass BUILD_ROOT through just -d delegation | Called `just -d <submodule_path> build BUILD_ROOT=<root>/build/<Name>` hoping sub-repo justfile would use it | Sub-repo justfiles don't declare a BUILD_ROOT variable; the override is silently ignored | Call cmake directly from the meta-repo justfile rather than delegating through the submodule's own build recipe. |
 | Re-adding recipes verbatim from the issue snippet (#154 planning, unverified) | The issue #154 body listed `atlas-review-dispatch`/`atlas-review-aggregate` in the justfile snippet to show the full target set | Those recipes ALREADY existed at justfile:704-709 — adding them again is a hard `just` duplicate-recipe parse error | An issue's code snippet is a desired END STATE, not a literal diff. grep each recipe/env key for prior existence before adding; treat the snippet as illustrative. |
-| Assuming `dashboard/` build context exists (#154 planning, unverified) | Plan references `build: ./dashboard`, volume `../../shared/ProjectMnemosyne/skills`, and `scripts/atlas-review-*.sh` | The `dashboard/` dir does NOT exist yet — it is created by the dependency issue #153 (still OPEN) | `docker compose config` validates structure but cannot build until the dependency merges; scope verification to structure-only and state the dependency explicitly. |
+| Assuming `dashboard/` build context exists (#154 planning, unverified) | Plan references `build: ./dashboard`, volume `../../shared/Mnemosyne/skills`, and `scripts/atlas-review-*.sh` | The `dashboard/` dir does NOT exist yet — it is created by the dependency issue #153 (still OPEN) | `docker compose config` validates structure but cannot build until the dependency merges; scope verification to structure-only and state the dependency explicitly. |
 | Re-declaring `NATS_URL`/`AGAMEMNON_URL` in `.env.example` (#154 planning, unverified) | Added the issue's 15-entry Atlas block which re-lists keys already present (lines 21,25) with different (cross-host Tailscale) values | Not a build failure, but a SILENT-OVERRIDE risk: dotenv last-assignment-wins means the later Atlas block (service-name defaults) overrides the earlier cross-host values for any consumer that loads the whole file | When an env block duplicates existing keys with different values, call out the override explicitly; don't assume "harmless". |
 
 ## Reviewer-risk / planning learnings (unverified)
@@ -88,7 +88,7 @@ clean:
 When wiring a new Compose service + justfile targets into the Odysseus meta-repo from an issue snippet, catalogue these most-uncertain assumptions:
 
 1. **`.env.example` key collision.** A new env block re-declaring `NATS_URL`/`AGAMEMNON_URL` with compose-service-name values overrides the existing cross-host Tailscale values via dotenv last-wins. Confirm no consumer (e.g. `e2e/start-crosshost.sh`) sources the whole file and breaks.
-2. **Sibling-issue dependency contract.** Build context `./dashboard`, volume source `../../shared/ProjectMnemosyne/skills`, the `tests/e2e` Go layout, `templ`/`golangci-lint` tooling, and `scripts/atlas-review-*.sh` are ALL assumed delivered by the OPEN dependency #153 — none verified to exist. If #153's actual layout differs, the compose block, `dashboard-test`, `dashboard-gen`, and the existing `atlas-review-*` recipes break.
+2. **Sibling-issue dependency contract.** Build context `./dashboard`, volume source `../../shared/Mnemosyne/skills`, the `tests/e2e` Go layout, `templ`/`golangci-lint` tooling, and `scripts/atlas-review-*.sh` are ALL assumed delivered by the OPEN dependency #153 — none verified to exist. If #153's actual layout differs, the compose block, `dashboard-test`, `dashboard-gen`, and the existing `atlas-review-*` recipes break.
 3. **Line-number drift.** Cited line numbers (justfile:289-290 argus-start, :704-709 atlas-review, docker-compose.yml:179, argus justfile:80, .env.example:48) were read once and may drift — re-grep before editing.
 4. **Distroless + wget healthcheck.** A healthcheck array form like `["CMD","wget","-qO-",...]` is structurally safe (single binary, matches existing services), but a **distroless** runtime image (per the #153 "distroless runtime" title) may LACK `wget`, making the healthcheck always fail. Confirm `wget`/busybox exists in the runtime image — a REAL unverified risk.
 5. **`depends_on: { condition: service_healthy }`.** Requires the dependency services to define healthchecks (verified for prometheus/argus-exporter) AND the compose runtime to support condition syntax — podman-compose support is version-dependent.
@@ -127,7 +127,7 @@ build_coverage:
     - provisioning/Myrmidons
     - ci-cd/ProjectProteus
     # Markdown only
-    - shared/ProjectMnemosyne
+    - shared/Mnemosyne
 
 root_pixi_toml_deps: [just]  # only just — no cmake, ninja, compilers
 ```

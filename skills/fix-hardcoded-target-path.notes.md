@@ -3,7 +3,7 @@
 ## Issue
 
 GitHub issue #3311: `migrate_odyssey_skills.py` had a hardcoded path that doesn't exist on other machines.
-Anyone running the script got `ERROR: ProjectMnemosyne directory not found`.
+Anyone running the script got `ERROR: Mnemosyne directory not found`.
 
 ## Root Cause
 
@@ -13,7 +13,7 @@ the bad path at import time.
 
 ## Fix Applied
 
-- `resolve_mnemosyne_dir(target)` with priority: CLI → env → `/tmp/ProjectMnemosyne`
+- `resolve_mnemosyne_dir(target)` with priority: CLI → env → `/tmp/Mnemosyne`
 - `--target-dir` default changed from `str(MNEMOSYNE_DIR)` to `None`
 - `skill_already_exists()` accepts optional `mnemosyne_skills_dir` param
 - Error message now prints hint: "Use --target-dir PATH or set MNEMOSYNE_DIR env var."

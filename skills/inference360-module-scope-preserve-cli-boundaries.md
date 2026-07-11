@@ -27,7 +27,7 @@ tags:
 | --- | --- |
 | **Date** | 2026-07-05 |
 | **Objective** | Implement and review the Inference360 issue #346 module-scope plan so the project becomes properly module-scoped without changing operator-facing behavior. |
-| **Outcome** | Successful locally. The package root stayed a small facade, domain ownership moved to focused modules, wizard/tools surfaces were included, and operator CLI behavior stayed stable. Related PRs #348 and #353-#359 were observed merged with green checks; this skill PR still needs its own ProjectMnemosyne CI. |
+| **Outcome** | Successful locally. The package root stayed a small facade, domain ownership moved to focused modules, wizard/tools surfaces were included, and operator CLI behavior stayed stable. Related PRs #348 and #353-#359 were observed merged with green checks; this skill PR still needs its own Mnemosyne CI. |
 | **Verification** | verified-local. Local host/container validation passed in the Inference360 checkout; related Inference360 PR CI was observed green, but do not overclaim CI for future changes until the current PR's checks pass. |
 
 Inference360 is a manifest-driven internal H200 Slurm inference platform. Slurm

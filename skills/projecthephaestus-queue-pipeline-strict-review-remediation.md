@@ -25,7 +25,7 @@ tags:
 | **Date** | 2026-07-09 |
 | **Objective** | Preserve the ProjectHephaestus queue-only automation pipeline contract while fixing strict PR review findings for issue #1404 / PR #2029. |
 | **Outcome** | Successful locally: queue worker attribution, queue-only docs, and missing logging-delegation tests were repaired and verified in the ProjectHephaestus PR branch. |
-| **Verification** | verified-local. ProjectHephaestus local tests, ruff, format, mypy, and targeted pre-commit passed; ProjectMnemosyne CI validation for this skill PR is pending. |
+| **Verification** | verified-local. ProjectHephaestus local tests, ruff, format, mypy, and targeted pre-commit passed; Mnemosyne CI validation for this skill PR is pending. |
 
 ## When to Use
 
@@ -79,7 +79,7 @@ pixi run python -m mypy hephaestus/
 
 7. **Cover changed CLI mains directly.** When a CLI `main()` changes from `logging.basicConfig(...)` to `configure_cli_logging(...)`, add a direct test that patches the module-local `configure_cli_logging`, invokes the main function with a safe mode such as `["--dry-run", "--verbose"]`, and asserts `configure_cli_logging(verbose=True)`.
 
-8. **Keep verification scoped but broad enough.** Run the targeted docs/CLI tests first, then the full unit suite and static checks. Use full PR CI as the current-state hygiene gate, but do not claim ProjectMnemosyne skill CI until that separate PR's CI passes.
+8. **Keep verification scoped but broad enough.** Run the targeted docs/CLI tests first, then the full unit suite and static checks. Use full PR CI as the current-state hygiene gate, but do not claim Mnemosyne skill CI until that separate PR's CI passes.
 
 ## Failed Attempts
 

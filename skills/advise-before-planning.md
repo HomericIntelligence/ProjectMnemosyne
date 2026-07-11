@@ -13,7 +13,7 @@ user-invocable: false
 | **Date** | 2026-02-13 |
 | **Objective** | Integrate team knowledge base search into automated planning workflows |
 | **Outcome** | ✅ Two-step workflow implemented with graceful degradation |
-| **Context** | Enhancing `plan_issues.py` to leverage ProjectMnemosyne skills registry |
+| **Context** | Enhancing `plan_issues.py` to leverage Mnemosyne skills registry |
 
 ## Overview
 
@@ -94,12 +94,12 @@ def _call_claude(
 def _run_advise(self, issue_number: int, issue_title: str, issue_body: str) -> str:
     """Search team knowledge base for relevant prior learnings."""
     try:
-        # Locate ProjectMnemosyne at standardized location
-        mnemosyne_root = Path.home() / ".agent-brain" / "ProjectMnemosyne"
+        # Locate Mnemosyne at standardized location
+        mnemosyne_root = Path.home() / ".agent-brain" / "Mnemosyne"
 
         if not mnemosyne_root.exists():
             logger.warning(
-                "ProjectMnemosyne not found, skipping advise step"
+                "Mnemosyne not found, skipping advise step"
             )
             return ""
 
@@ -132,7 +132,7 @@ def _run_advise(self, issue_number: int, issue_title: str, issue_body: str) -> s
 - Return `""` (empty string) on any failure
 - Log warnings but don't raise exceptions
 - Check for both directory and marketplace.json existence
-- Use standardized path: `$HOME/.agent-brain/ProjectMnemosyne`
+- Use standardized path: `$HOME/.agent-brain/Mnemosyne`
 
 ### 3. Inject Findings into Main Context
 
@@ -360,7 +360,7 @@ plan-issues = "python scripts/plan_issues.py"
   - `TestRunAdvise`: 3 tests
     - Returns findings on success
     - Graceful failure on error
-    - Skips when ProjectMnemosyne missing
+    - Skips when Mnemosyne missing
   - `TestGeneratePlan`: 2 tests
     - Plan with advise findings injected
     - Plan without advise (disabled)

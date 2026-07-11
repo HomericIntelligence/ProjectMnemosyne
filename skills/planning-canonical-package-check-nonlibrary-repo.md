@@ -31,7 +31,7 @@ tags:
 | Field | Value |
 | ------- | ------- |
 | **Date** | 2026-07-03 (v1.1.0; original 2026-07-02) |
-| **Objective** | Plan the canonical `package` check-run (Odysseus CI-naming convention) for non-library repos: ProjectMnemosyne #2911 (skills marketplace, v1.0.0) and Myrmidons #749 (agent-manifest/dataset repo, v1.1.0) |
+| **Objective** | Plan the canonical `package` check-run (Odysseus CI-naming convention) for non-library repos: Mnemosyne #2911 (skills marketplace, v1.0.0) and Myrmidons #749 (agent-manifest/dataset repo, v1.1.0) |
 | **Outcome** | Plans produced: `package` defined as the repo's REAL bundle/release archive (tarball of content dirs + SHA256SUMS), built and round-trip verified; PyPI-style build and "document as N/A" both rejected with evidence |
 | **Verification** | unverified — plan-only, implementation and CI validation pending |
 
@@ -204,5 +204,5 @@ tar --sort=name --owner=0 --group=0 --numeric-owner --mtime='2026-01-01 00:00:00
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | Issue #2911 planning (plan-only, not yet implemented) | Plan posted to the issue; implementation PR pending |
+| Mnemosyne | Issue #2911 planning (plan-only, not yet implemented) | Plan posted to the issue; implementation PR pending |
 | HomericIntelligence/Myrmidons | Issue #749 planning — canonical `package` check via deterministic release archive in `_required.yml` (plan-only, nothing executed) | unverified — Odysseus convention doc + ProjectHermes precedent fetched live 2026-07-03; branch-protection registration sequenced post-merge |

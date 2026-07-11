@@ -1820,14 +1820,14 @@ This skill applies to any project with:
 
 ## Port to Other Projects
 
-This skill is already in ProjectMnemosyne (team knowledge base). To apply to specific projects:
+This skill is already in Mnemosyne (team knowledge base). To apply to specific projects:
 
 ```bash
 # Reference in project CLAUDE.md
-echo "See ProjectMnemosyne/skills/ci-cd/comprehensive-pr-review-orchestration" >> CLAUDE.md
+echo "See Mnemosyne/skills/ci-cd/comprehensive-pr-review-orchestration" >> CLAUDE.md
 
 # Or create project-specific adaptation
-cp -r ProjectMnemosyne/skills/ci-cd/comprehensive-pr-review-orchestration \
+cp -r Mnemosyne/skills/ci-cd/comprehensive-pr-review-orchestration \
   YourProject/.claude/skills/
 ```
 

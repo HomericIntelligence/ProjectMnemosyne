@@ -832,9 +832,9 @@ git push -u origin "$FOLLOWUP_BRANCH"
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | Branch `feature/myrmidon-merge-triage` (32 ahead, 730 behind, remote gone) — three-way count diff: merge-base=1661 skills, branch=1849 (grew), main=333 (shrank via consolidation). 970 branch-only files were pre-consolidation originals. Hard-reset to origin/main confirmed correct after stash. 107 PRs subsequently merged on main. | State A — large-scale corpus consolidation |
-| ProjectMnemosyne | Branch `feature/myrmidon-merge-triage` (32 ahead, 525 behind, remote gone) — confirmed fully superseded; no PRs opened | State A |
-| ProjectMnemosyne | Branch `skill/debugging/fixme-todo-cleanup-v2` pushed from ProjectOdyssey's history — no merge-base; content already on main; deleted | State B |
+| Mnemosyne | Branch `feature/myrmidon-merge-triage` (32 ahead, 730 behind, remote gone) — three-way count diff: merge-base=1661 skills, branch=1849 (grew), main=333 (shrank via consolidation). 970 branch-only files were pre-consolidation originals. Hard-reset to origin/main confirmed correct after stash. 107 PRs subsequently merged on main. | State A — large-scale corpus consolidation |
+| Mnemosyne | Branch `feature/myrmidon-merge-triage` (32 ahead, 525 behind, remote gone) — confirmed fully superseded; no PRs opened | State A |
+| Mnemosyne | Branch `skill/debugging/fixme-todo-cleanup-v2` pushed from ProjectOdyssey's history — no merge-base; content already on main; deleted | State B |
 | ProjectOdyssey | PR #3197, issue #3088 — BF16 test skip; reset to remote (13 remote-only commits) + cherry-pick fix | State C |
 | ProjectHephaestus | 7 local branches all failed auto-rebase with conflicts; `git cherry` showed every commit `+`. Message-search proved all subsumed: `999-fix-pr-thread-reply-mutation`→`187720a … (#1041)`, `fix-1282-work`→`22fc435 … (#1282)`, `rc2-conflict-gate`→`d3701b8 … (#1335)`. Reported subsumed; no swarm, no delete | State A — squash-merge false positive |
 | ProjectHephaestus | Worktree `agent-a7fe2df2b7f6e658b` — 3 "uncommitted modified" files all 0 unique lines vs main (`log_on_error` changes already merged via PR #1372); safe to discard | State A — worktree 0-unique-lines |

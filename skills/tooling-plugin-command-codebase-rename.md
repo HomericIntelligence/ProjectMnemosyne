@@ -135,4 +135,4 @@ replacements:
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | PR #1061, full plugin+command rename | 2026-03-26 session |
+| Mnemosyne | PR #1061, full plugin+command rename | 2026-03-26 session |

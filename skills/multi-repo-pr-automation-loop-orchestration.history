@@ -5,7 +5,7 @@
 ## v1.6.0 (2026-07-08)
 
 **Changed by:** ProjectHephaestus PR #2024 / issue #2023 automation-loop direct PR terminalization.
-**Verification:** verified-local (source repo verification: targeted regressions 4 passed; touched pipeline suite 155 passed; direct loop rerun for PRs #2010/#2017 exited 0 with both PASS; full unit suite 5826 passed, 21 skipped, coverage 84.06%; direct mypy, ruff check, ruff format --check, and pre-commit passed. PR CI was green in ProjectHephaestus, but this skill amendment is validated locally in ProjectMnemosyne.)
+**Verification:** verified-local (source repo verification: targeted regressions 4 passed; touched pipeline suite 155 passed; direct loop rerun for PRs #2010/#2017 exited 0 with both PASS; full unit suite 5826 passed, 21 skipped, coverage 84.06%; direct mypy, ruff check, ruff format --check, and pre-commit passed. PR CI was green in ProjectHephaestus, but this skill amendment is validated locally in Mnemosyne.)
 
 ### What changed
 
@@ -1937,7 +1937,7 @@ real `gh`/`sleep`.
 | Bare `git push origin HEAD` after Claude returns | Driver did `subprocess.run(["git", "push", "origin", "HEAD"])` and logged "pushed CI fixes for PR #N" on `returncode == 0`. Worked in dev where Claude stayed on the PR head branch. | Claude often followed `CLAUDE.md`'s general "git checkout -b `<issue>`-description" workflow and switched to a new branch locally; the bare push then landed on a stray `<issue>-fix-ci` remote ref while the PR's actual head branch sat unchanged. Driver still logged success. Remote PR tip unchanged hours after the run "succeeded". | Never push `HEAD` bare from a driver when the agent's working state is untrusted. Always pass an explicit refspec `HEAD:<intended-remote-branch>` and preserve it through the force-with-lease retry. |
 | Trust `WorktreeManager.create_worktree` to land on the PR's actual head | The manager checked `git rev-parse --verify <branch>` for the LOCAL branch. On a clean clone the local branch didn't exist; it fell through to `git worktree add -b <branch> <path> main`. | Created a NEW branch off `main` with the same name, **ignoring `origin/<branch>`**. Even when the push later targeted the right name (after fix #1), the content was main-tip + Claude's noise — destroying the PR's actual history. Lost commits. | Worktree-setup local-branch-only checks are unsafe for driver use. The driver MUST explicitly `fetch origin <branch>` and `reset --hard origin/<branch>` before the agent runs. Throwaway worktree makes the hard reset safe. |
 | Skip the no-commit guard and just push whatever HEAD points to | Assumed "agent returned ⇒ agent did work ⇒ push is safe". | Claude resumed an OLD session transcript and decided nothing was needed (correctly!), returning in seconds with no commit. `git push --force-with-lease HEAD:<pr-head>` then exited 0 because the local HEAD == remote tip already. Driver logged "pushed CI fixes for PR #N" with no fix in flight. | Agent return is NOT proof of work. Snapshot HEAD pre/post and treat `pre_sha == post_sha` as a hard failure for the iteration — log it, skip the push, and let the run script's exit code reflect reality. |
-| Capture `/learn` on auto-merge-armed PRs (not on merged) | Considered firing the skill-capture pipeline when `gh pr merge --auto --squash` returned 0 (auto-merge armed). | PRs auto-merge-arm but later get blocked by CI flake, branch-protection veto, or manual cancellation. Capturing learnings on the optimistic point polluted ProjectMnemosyne with lessons from PRs that never shipped. | Lessons must come from MERGED state, not auto-merge-armed state. Poll `mergedAt != null` (or wait on the merge webhook) before capturing. Same principle applies to the driver: don't claim success at any intermediate optimistic point. |
+| Capture `/learn` on auto-merge-armed PRs (not on merged) | Considered firing the skill-capture pipeline when `gh pr merge --auto --squash` returned 0 (auto-merge armed). | PRs auto-merge-arm but later get blocked by CI flake, branch-protection veto, or manual cancellation. Capturing learnings on the optimistic point polluted Mnemosyne with lessons from PRs that never shipped. | Lessons must come from MERGED state, not auto-merge-armed state. Poll `mergedAt != null` (or wait on the merge webhook) before capturing. Same principle applies to the driver: don't claim success at any intermediate optimistic point. |
 | Treat per-issue success as "repo done" | Multi-repo run script collected return values from each `drive_one_pr` call; printed "Driven: ProjectX" if every input issue returned success. | Per-issue success ≠ repo cleanliness. PRs from outside the input list (dependency bumps, auto-merge-waiting-on-CI, PRs from other actors) sat open while the script reported "Driven". Operators trusted the green output and moved on. | Repo done-state MUST be evaluated independently against `gh api --paginate /repos/{owner}/{name}/pulls?state=open` — not `gh pr list --limit 100` which silently caps. Non-empty list ⇒ `rc=1` with each open PR logged. |
 | (v1.1.0) Exit `rc=1` on ANY open PR, including armed-and-merging ones | Guard 4's blunt "any open PR ⇒ rc=1". An ecosystem run marked 7/15 repos FAILED while every PR was `auto-merge=armed (waiting on CI / branch protection)` — i.e. merging on its own. Fast ~8s exits, `Successful: N, Failed: 0`. | Driver OBSERVED-AND-RETURNED instead of waiting for the real outcome. Operators chased 7 "failures" that were all merging on their own. The fix is NOT to exit 0 on armed PRs (rejected by the user) — it is to **actually WAIT** until the PR finishes (merge or fail) so the driver can react to failures/conflicts. | The exit gate MUST partition open PRs: truthy `autoMergeRequest` ⇒ `armed_pending` ⇒ WARNING not failure; falsy ⇒ `needs_action` ⇒ `rc=1`. And add a real wait loop (`_wait_for_pr_terminal`) so the terminal state is observed, not guessed. |
 | (v1.1.0) "Just exit 0 on any armed PR" as the fix | Proposed early-exit: treat `autoMergeRequest != null` as success and return rc=0 immediately. | User rejected it: an armed PR can still go red (CI flake, post-arm failure) or hit a merge conflict. Exiting 0 abandons the driver's ability to react. | WAIT for the terminal state with a bounded backoff loop; only then decide. Early-exit on the optimistic point is the same class of bug as v1.0.0's "claim success at an intermediate optimistic point". |
@@ -2454,7 +2454,7 @@ the underlying script today):
 
 ```bash
 ORG=HomericIntelligence
-REPOS=(ProjectHephaestus ProjectMnemosyne ProjectKeystone)
+REPOS=(ProjectHephaestus Mnemosyne ProjectKeystone)
 HEPH_REPO=/home/<you>/Projects/ProjectHephaestus
 
 for repo in "${REPOS[@]}"; do
@@ -2595,8 +2595,8 @@ Predecessor combined issue #817 closed as superseded - DO NOT REOPEN.
 
 ```text
 $ pixi run hephaestus-automation-loop --phases drive-green \
-    --repos ProjectHephaestus,ProjectMnemosyne --loops 1
-[ProjectMnemosyne] phase drive-green SKIP (no open issues)
+    --repos ProjectHephaestus,Mnemosyne --loops 1
+[Mnemosyne] phase drive-green SKIP (no open issues)
 [ProjectHephaestus] phase drive-green SKIP (no open issues)
 Completed 1 of 1 loop(s) across 2 repo(s).
 # 7 open PRs across the two repos, untouched.
@@ -2654,7 +2654,7 @@ These phrases SHOULD route to this skill; if they don't, file a marketplace tag:
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectHephaestus | Live session 2026-05-30: ran `pixi run hephaestus-automation-loop --phases drive-green --repos ProjectHephaestus,ProjectMnemosyne --loops 1` against 7 open PRs; observed `SKIP (no open issues)` from both repos and 0 PRs touched. | Issues #818, #819, #820, #821 (predecessor #817 closed superseded). |
+| ProjectHephaestus | Live session 2026-05-30: ran `pixi run hephaestus-automation-loop --phases drive-green --repos ProjectHephaestus,Mnemosyne --loops 1` against 7 open PRs; observed `SKIP (no open issues)` from both repos and 0 PRs touched. | Issues #818, #819, #820, #821 (predecessor #817 closed superseded). |
 | ProjectHephaestus | Same session: verified bypass `pixi run python scripts/drive_prs_green.py --issues <N> --force-run` works by reading argparse + `HEPH_CI_DRIVER_FORCE` handling at `hephaestus/automation/ci_driver.py:983-990`. | Bypass is the only working path until #818-#821 land. |
 | ProjectHephaestus | Session 2026-06-06 (verified-ci): root-caused the existing-PR review->label deadlock (9 green PRs blocked solely on the missing `state:implementation-go` label, added only in `mark_pr_implementation_go` after a review loop the early-return at `implementer_phase_runner.py:263-279` skipped). Shipped the fix as four CI-green PRs. | PRs #1073/#1075/#1077/#1079 closing issues #1072/#1074/#1076/#1078. drive-green label gates confirmed at `ci_driver.py:330/627/965`. |
 
@@ -2725,7 +2725,7 @@ history: multi-repo-pr-orchestration-swarm-pattern.history
 
 ```bash
 # Phase 1: Scan all repos for open PRs
-REPOS="ProjectAgamemnon ProjectNestor ProjectKeystone ProjectCharybdis ProjectArgus ProjectHermes ProjectHephaestus ProjectOdyssey ProjectScylla ProjectMnemosyne ProjectProteus ProjectTelemachy Myrmidons AchaeanFleet"
+REPOS="ProjectAgamemnon ProjectNestor ProjectKeystone ProjectCharybdis ProjectArgus ProjectHermes ProjectHephaestus ProjectOdyssey ProjectScylla Mnemosyne ProjectProteus ProjectTelemachy Myrmidons AchaeanFleet"
 for repo in $REPOS; do
   echo "=== $repo ==="
   gh pr list --repo HomericIntelligence/$repo --state open --limit 20
@@ -3302,7 +3302,7 @@ gh pr checks $PR_NUM --repo HomericIntelligence/$REPO
 | HomericIntelligence ecosystem | 8 repos (AchaeanFleet 50, Myrmidons 45, + 6 others), 87 PRs total, myrmidon swarm orchestration, 2026-04-19 | Wave 1 cap-5 rule critical; ~15% subsumed PRs; Safety Net Python workaround for conflict resolution; auto-merge disabled on AchaeanFleet + Myrmidons |
 | ProjectHephaestus | PR #271 — automation loop dry run across 14 HomericIntelligence repos | Planner dry run confirmed `[DRY RUN] Would plan issue #N` for all repos; implementer dry run blocked by rate limit during second run; pixi Python resolution and PYTHONPATH export patterns validated |
 | ProjectOdyssey | 5 open PRs (alias→comptime, ruff, workflow fixes), CI triage session 2026-03-15 | alias→comptime migration, ruff formatting, workflow inventory fixes, just install step, pre-commit grandfathering |
-| ProjectMnemosyne | Marketplace workflow broken by org policy, CI triage session 2026-03-15 | org-level `can_approve_pull_request_reviews: false` → switched to direct-commit pattern |
+| Mnemosyne | Marketplace workflow broken by org policy, CI triage session 2026-03-15 | org-level `can_approve_pull_request_reviews: false` → switched to direct-commit pattern |
 | ProjectScylla | Missing CI container image, CI triage session 2026-03-15 | Removed container blocks from workflows; added README.md to Containerfile COPY |
 | ProjectKeystone | clang-format violations + Dockerfile issues on Dependabot PR, CI triage session 2026-03-15 | Docker clang-format-18 run to format 30 files; removed 3 stale COPY lines; supply-chain-scanning flagged as manual action |
 | HomericIntelligence ecosystem | 12 repos (excl. ProjectOdyssey + ProjectHephaestus), 18 sweep PRs (8 CI fix + 10 easy-issue), Wave 1 + Wave 2 + Wave 3 (Odysseus pin bump), 2026-05-10 | 17/18 PRs auto-squash-merged within ~30min; ProjectCharybdis #219 escalated (Conan/gcc-14 chain) and manually merged by user. ALREADY-DONE preflight closed 16 of 49 candidate issues (~33%) before agents started writing code. AchaeanFleet auto-merge confirmed ENABLED (skill v2.0.0 said disabled — now corrected). Mnemosyne marketplace direct-commit pattern landed but UNTESTED in CI as of session end (no `skills/**` push triggered yet) |
@@ -3673,8 +3673,8 @@ After rebase, detect subsumed branches: `git log origin/<trunk>..HEAD --oneline`
 | ------- | ---- | ------- |
 | ProjectArgus + ProjectAgamemnon + Myrmidons + ProjectHermes + ProjectCharybdis | 2026-05-12 → 2026-05-13 | v1 PR-per-issue sweep; 717 issues classified, 51 PRs merged, 78 issues retired; 0 broken-main events |
 | 11 HomericIntelligence repos (Agamemnon, Argus, Hermes, Mnemosyne, Nestor, Telemachy, Proteus, Charybdis, Keystone, AchaeanFleet, Odysseus) | 2026-05-16 | v2 bundle-per-repo sweep; 11 bundle PRs, 7 merged; 32 issues required manual close post-merge |
-| ProjectMnemosyne | 2026-05-18 | Sequential rebase loop: 12 skill PRs cleared after markdownlint fix; sequential admin-merge: 17 PRs, 13/17 failed parallel, 13/13 succeeded sequential retry |
-| ProjectMnemosyne | 2026-05-03 | gh-tidy + Myrmidon swarm: rate\_limit\_event bug observed; parallel Agent() workaround resolved 5 conflicts |
+| Mnemosyne | 2026-05-18 | Sequential rebase loop: 12 skill PRs cleared after markdownlint fix; sequential admin-merge: 17 PRs, 13/17 failed parallel, 13/13 succeeded sequential retry |
+| Mnemosyne | 2026-05-03 | gh-tidy + Myrmidon swarm: rate\_limit\_event bug observed; parallel Agent() workaround resolved 5 conflicts |
 | ProjectHephaestus | 2026-05-06 → 2026-05-17 | Parallel-merged branch rebase (Cause A): 30+ branches; Cause B (stacked-PR squash absorption): Myrmidons PR #731 closed as superseded |
 
 ---

@@ -160,7 +160,7 @@ def test_jitter_capped(self, _u, mock_sleep):
   planning, so they are verified-local — but they drift as the file changes.
   Re-locate by code shape (the `min(... , max_delay)` clamp and the
   `random.uniform` jitter term), not by line number.
-- The two ProjectMnemosyne skills surfaced via `/advise`
+- The two Mnemosyne skills surfaced via `/advise`
   (`homeric-crosshost-deployment-and-mesh-topology:265`,
   `github-api-secondary-rate-limit-backoff`) were NOT re-opened during
   planning — their exact snippet contents are unverified second-hand.

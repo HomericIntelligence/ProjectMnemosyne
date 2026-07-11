@@ -405,7 +405,7 @@ The disclosure is cheap (one sentence); the NOGO cycle it prevents is expensive.
 #### J. Place a merge-blocking guard in a PINNED required context (planning learning — partly unverified)
 
 > **Verification:** the required-context ENUMERATION technique below is **verified-local** — the
-> `jq … required_status_checks[].context` query WAS run during R1 re-planning of ProjectMnemosyne
+> `jq … required_status_checks[].context` query WAS run during R1 re-planning of Mnemosyne
 > issue #309 and returned exactly the eight contexts listed. The proposed guard PLACEMENT (moving
 > the assertion into `_required.yml`'s `schema-validation` job) is **UNVERIFIED** — designed at
 > planning time only, never implemented and never run in CI. Treat the placement as a proposal,
@@ -531,7 +531,7 @@ done | grep -qxE 'schema-validation|Required Checks / schema-validation' && echo
 #### K. Verify the issue's prerequisite-PR premise before ordering the runbook (planning learning — verified-local technique, unverified runbook)
 
 > **Verification:** the premise-FALSIFICATION technique below is **verified-local** — during
-> planning of ProjectMnemosyne issue #284 I actually ran `gh pr view 264 --json state,mergedAt`
+> planning of Mnemosyne issue #284 I actually ran `gh pr view 264 --json state,mergedAt`
 > (returned `state: OPEN, mergedAt: null`) and `grep -n "sast" .github/workflows/_required.yml` on
 > `main` (returned nothing), observing those results this session. The proposed runbook itself —
 > the ruleset PUT that adds `security/sast-scan` to the `homeric-main-baseline` ruleset (id
@@ -596,7 +596,7 @@ turns "verify the issue premise" into explicit pre-work).
 #### L. Destructive full-replacement writes need an explicit ROLLBACK, not just a read-back; and derive sibling foreign keys (integration_id) dynamically (planning learning — unverified runbook, verified-local NOGO origin)
 
 > **Verification:** the reviewer NOGO that motivated this section is **verified-local** — during R1
-> re-planning of ProjectMnemosyne issue #284 (add `security/sast-scan` to ruleset 15556487 as a
+> re-planning of Mnemosyne issue #284 (add `security/sast-scan` to ruleset 15556487 as a
 > required status check) the R0 plan actually RECEIVED a NOGO (Grade B) for the concrete gap below,
 > and R1 fixed it; that NOGO and its gap are real and were observed this session. The proposed
 > rollback runbook and the dynamic-`integration_id` `jq` merge are **UNVERIFIED** / planning-only —
@@ -995,14 +995,14 @@ planning-only.
 | ProjectNestor | Issue #54, PR #108 | Branch-protection API read-back + synthetic tests; verified-ci |
 | ProjectOdyssey | PR #4838, issue #3948 | Extended `workflow-smoke-test.yml` to cover 3 more workflows; 26 tests pass |
 | ProjectOdyssey | `fix/pixi-env-isolation-signed` branch | Coverage-validator sequential-steps fallback; verified-precommit |
-| ProjectMnemosyne | Local branch, yamllint passed | Reusable-workflow `_required.yml`/`_checks.yml` split; verified-precommit |
+| Mnemosyne | Local branch, yamllint passed | Reusable-workflow `_required.yml`/`_checks.yml` split; verified-precommit |
 | ProjectHephaestus | Issue #1315 planning phase | RESULTS-loop aggregator + guard test pattern; **unverified** — not yet implemented or CI-verified |
 | ProjectHephaestus | Issue #1315 NOGO review cycle (2026-06-13) | Guard-test negative-path (`_unwired_jobs` helper + 3-test pattern), job-key vs context-name disambiguation, GET-before-PUT mitigation, requirements-deviation disclosure pattern; **unverified** — planning phase captures |
 | ProjectHephaestus | Issue #1338 / PR #1343 — extract _unwired_jobs helper | 6/6 tests pass locally; CI pending |
-| ProjectMnemosyne | Issue #309 R1 re-planning (2026-06-20) | Section J — required-context PLACEMENT: enumeration `jq` query WAS run (verified-local), returned the 8 pinned contexts; guard placement into `_required.yml`'s `schema-validation` job is **unverified** (planning only) |
-| ProjectMnemosyne | Issue #284 planning (2026-06-20) | Section K — prerequisite-PR premise check: `gh pr view 264` returned OPEN/`mergedAt:null` and the `main` grep for `sast` was empty (verified-local); the proposed ruleset PUT adding `security/sast-scan` to ruleset 15556487 is **unverified** (planning only — must be gated on PR #264 merging) |
-| ProjectMnemosyne | Issue #284 R1 re-planning (2026-06-20) | Section L — destructive full-replacement write needs explicit ROLLBACK (re-PUT the snapshot on read-back failure), not just a read-back; derive `integration_id` from a live sibling via `jq` instead of hardcoding `15368`. The R0 NOGO (Grade B) that motivated it is real and **verified-local**; the proposed rollback runbook + dynamic-`integration_id` merge are **unverified** (planning only — the ruleset PUT/rollback was NOT executed) |
-| ProjectMnemosyne | Issue #309 R2 re-planning (2026-06-20) | Sub-finding J2 — a required-context check must span BOTH org and repo rulesets AND normalize the org `Required Checks / <job>` prefix vs the bare repo form. Repo-ruleset enumeration WAS run (8 bare contexts incl. `schema-validation`) → **verified-local**; the org-ruleset `Required Checks / <job>` prefix parity is **unverified** (documentation-derived from `canonical-checks.md:58-62`; `org-ruleset.json` not opened/grepped this iteration); guard implementation planning-only |
+| Mnemosyne | Issue #309 R1 re-planning (2026-06-20) | Section J — required-context PLACEMENT: enumeration `jq` query WAS run (verified-local), returned the 8 pinned contexts; guard placement into `_required.yml`'s `schema-validation` job is **unverified** (planning only) |
+| Mnemosyne | Issue #284 planning (2026-06-20) | Section K — prerequisite-PR premise check: `gh pr view 264` returned OPEN/`mergedAt:null` and the `main` grep for `sast` was empty (verified-local); the proposed ruleset PUT adding `security/sast-scan` to ruleset 15556487 is **unverified** (planning only — must be gated on PR #264 merging) |
+| Mnemosyne | Issue #284 R1 re-planning (2026-06-20) | Section L — destructive full-replacement write needs explicit ROLLBACK (re-PUT the snapshot on read-back failure), not just a read-back; derive `integration_id` from a live sibling via `jq` instead of hardcoding `15368`. The R0 NOGO (Grade B) that motivated it is real and **verified-local**; the proposed rollback runbook + dynamic-`integration_id` merge are **unverified** (planning only — the ruleset PUT/rollback was NOT executed) |
+| Mnemosyne | Issue #309 R2 re-planning (2026-06-20) | Sub-finding J2 — a required-context check must span BOTH org and repo rulesets AND normalize the org `Required Checks / <job>` prefix vs the bare repo form. Repo-ruleset enumeration WAS run (8 bare contexts incl. `schema-validation`) → **verified-local**; the org-ruleset `Required Checks / <job>` prefix parity is **unverified** (documentation-derived from `canonical-checks.md:58-62`; `org-ruleset.json` not opened/grepped this iteration); guard implementation planning-only |
 | ProjectHephaestus | Issue #1514 (2026-06-24) | Section M — 5-step job-promotion pattern: `license-scan` promoted from advisory `security.yml`-only to merge-blocking via `_required.yml` + `required-checks-gate.needs`. All 7 gate tests pass locally, yamllint clean. Pattern: (1) add job to `_required.yml` with `changes-gate` guard + `env:` for context vars, (2) add to gate `needs:`, (3) add `if: github.event_name != 'pull_request'` to advisory copy, (4) add named test, (5) validate locally. No branch-protection PUT needed. **verified-local** |
 
 ## References

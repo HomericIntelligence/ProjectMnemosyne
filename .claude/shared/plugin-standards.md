@@ -1,8 +1,8 @@
 # Plugin Standards
 
-Standards for creating and validating skills in the ProjectMnemosyne marketplace.
+Standards for creating and validating skills in the Mnemosyne marketplace.
 
-> **Format:** ProjectMnemosyne uses the **flat-file skill format** introduced in v2.0.0.
+> **Format:** Mnemosyne uses the **flat-file skill format** introduced in v2.0.0.
 > Each skill is a single markdown file at `skills/<name>.md`. There is no
 > nested `<name>/SKILL.md`, no per-skill `plugin.json`, and no `.claude-plugin/`
 > directory inside each skill. The only documented exception is

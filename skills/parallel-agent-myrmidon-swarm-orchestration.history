@@ -509,7 +509,7 @@ tags:
 - Building a Claude Code custom command that spawns sub-agents at different model tiers
 - Porting ProjectOdyssey's 6-level agent hierarchy (L0-L5) into a portable, repo-agnostic command
 - Implementing wave-based parallel agent execution with mandatory user approval gates
-- Integrating ProjectMnemosyne `/advise` auto-invocation into a workflow command
+- Integrating Mnemosyne `/advise` auto-invocation into a workflow command
 - Creating commands that follow the XML-structured prompt pattern from `repo-analyze.md`
 
 
@@ -742,7 +742,7 @@ user-invocable: false
 - Failures span: ruff format, mojo format parity, deprecated Mojo syntax, missing CI matrix entries,
   `just` not in PATH, transient JIT crashes
 - Need cost-efficient parallel remediation without burning Sonnet/Opus tokens on mechanical fixes
-- Repos involved: ProjectOdyssey (Mojo), ProjectScylla (Python), ProjectMnemosyne (skill plugins),
+- Repos involved: ProjectOdyssey (Mojo), ProjectScylla (Python), Mnemosyne (skill plugins),
   ProjectKeystone (infrastructure)
 
 

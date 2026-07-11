@@ -108,7 +108,7 @@ bullets, and 1 Verified On row).
 
 A real ProjectHephaestus `/worktree-cleanup` session surfaced three pitfalls the prior skill did
 not cover. (1) A directory under the host repo's `build/.worktrees/` was actually a worktree of a
-DIFFERENT repository (ProjectMnemosyne, via a stray `build/ProjectMnemosyne` clone-within-a-repo);
+DIFFERENT repository (Mnemosyne, via a stray `build/Mnemosyne` clone-within-a-repo);
 it never appeared in the host repo's `git worktree list`, so a blind cleanup would have
 force-deleted genuine uncommitted work from another project. (2) Worktrees on already-merged PRs
 showed huge dirty diffs full of `D`/`M` lines that LOOKED like real work but were stale-checkout
@@ -334,7 +334,7 @@ agent-B reports: "please run `git restore CLAUDE.md` — I see stat-cache differ
 | MEDIUM/HARD issues, 1 agent at a time | YES (1 at a time) | Wait for completion before launching next |
 | Mass rebase (N agents × M PRs each, agent owns branches) | YES | Each agent's branches are owned end-to-end inside its worktree |
 | Single multi-part issue, hot-file ownership | YES (2 agents max) | Phase 0 v1.1.0 pattern still holds |
-| Mnemosyne `/learn` parallel skill amendments | **NO — serialize** | Recurring contamination on shared `~/.agent-brain/ProjectMnemosyne` clone |
+| Mnemosyne `/learn` parallel skill amendments | **NO — serialize** | Recurring contamination on shared `~/.agent-brain/Mnemosyne` clone |
 
 **Recovery workflow when contamination has already occurred (PR #5363 pattern):**
 
@@ -962,7 +962,7 @@ pixi run mypy <package>/
 | Both agents append to same docs file end-of-file | Each appended new H2 section at EOF — different lines, "no conflict" | Agent A's PR removed a "still out of scope" bullet that B's work was making in-scope; B's rebase produced stale-bullet conflict | "Append-only to shared docs" is necessary but NOT sufficient — also forbid editing "still TODO"/"out of scope" lists; the other agent may obsolete those lines |
 | Trusting local pre-commit pass after manual rebase conflict resolution | Resolved markdownlint conflict, force-pushed without rerunning hooks | Manual edit during conflict resolution introduced missing-blank-line; CI markdownlint failed | Always run `pre-commit run --files <changed>` AFTER manually resolving rebase conflicts, BEFORE force-push |
 | Parallel `Task isolation=worktree` on 8 EASY-tier branches (ProjectOdyssey #5363) | Dispatched 8 haiku/sonnet agents simultaneously, each assigned a distinct issue branch | Multiple agents committed to whichever branch the parent repo's working tree had checked out; sibling agents reported `please run git restore CLAUDE.md` from stat-cache deltas | `Task isolation=worktree` is path-isolated but NOT branch/index-isolated when N agents target N distinct branches sharing parent `.git/`. For EASY-tier batches, serialize OR consolidate via cherry-pick into ONE branch (see Phase 0a) |
-| Parallel Mnemosyne `/learn` skill amendments | Launched 5 parallel sub-agents to amend 5 different skills on shared `~/.agent-brain/ProjectMnemosyne` clone | Same branch-namespace contamination pattern as ProjectOdyssey #5363; agents wrote to wrong skill files / wrong branches | Serialize `/learn` invocations OR ensure each agent uses a TRULY independent clone (not just a worktree off the shared clone) |
+| Parallel Mnemosyne `/learn` skill amendments | Launched 5 parallel sub-agents to amend 5 different skills on shared `~/.agent-brain/Mnemosyne` clone | Same branch-namespace contamination pattern as ProjectOdyssey #5363; agents wrote to wrong skill files / wrong branches | Serialize `/learn` invocations OR ensure each agent uses a TRULY independent clone (not just a worktree off the shared clone) |
 | Parallel Haiku bundle agents (4-7) with `isolation: "worktree"`, no branch-name uniqueness guarantee | Four agents used `isolation: "worktree"` correctly; each pushed its own local worktree branch named `bundle/simple-sweep-N-2026-05-16` | 26 commits from 4 distinct branches collapsed onto a single remote branch `bundle/simple-sweep-7-2026-05-16` under one PR (#386); PR body listed only one bundle's issues, leaving 16 silently fixed-but-unclosed | Worktree isolation guarantees no LOCAL state contamination but does NOT guarantee REMOTE branch uniqueness. Always use issue-number-suffixed names + `git ls-remote --exit-code --heads origin <branch>` collision check before push. |
 | Parallel Haiku bundle agents (PR #398 + #401) — PARTIAL contamination variant | Two `isolation: "worktree"` agents; PR #398's branch acquired one extra commit from #401's branch (likely stray `git pull` or branch-pointer race during near-simultaneous push) | PR #398's diff showed unrelated `nats_client.cpp` changes alongside its intended markdownlint fixes; `git log origin/<branch> ^origin/main --oneline` returned N+1 commits | Recovery: `git reset --hard origin/main && cherry-pick <own-shas> && push --force-with-lease`. Do NOT try `git revert` (noisy, leaves stray in history) or `git rebase --onto` (fragile). Prevent by forbidding `git pull` in agent worktrees and validating diff scope against an expected-files list before push. See "Partial contamination variant (v1.4.0)" section. |
 | 3 parallel Sonnet `general-purpose` impl agents with "work directly here, NO worktree" (ProjectAgamemnon F-phase, 2026-05-18) | Dispatch prompt told all three agents to operate in the main workdir on the assumption that disjoint FILES = safe parallelism | All 3 agents reported workdir HEAD-flipping contamination from sibling `git checkout` operations; one agent's commits leaked into another's branch and had to be recovered via `git reflog`; agents spent ~15 min each in stash/checkout/cherry-pick recovery cycles | Disjoint files do NOT protect shared `.git/HEAD` and `.git/index`. Every parallel impl agent MUST work in its own worktree. Prompt template MUST say "Use isolated worktree at `/tmp/<project>-<phase>`. NEVER work in the main workdir." See v1.5.0 "No-worktree-at-all anti-pattern" section. |
@@ -976,7 +976,7 @@ pixi run mypy <package>/
 | --------- | ----------- | -------- | ------ | --------- |
 | ProjectScylla PR sprint | 10 issues, 9 PRs merged | 6-8 agents | 15-20 min | 6-8x |
 | ProjectScylla test/refactor | 3 issues, 4 PRs | 3 agents | 5 min | 3x |
-| ProjectMnemosyne LOW issues | 12 issues, 12 PRs | 12 agents | 6 min | ~5x |
+| Mnemosyne LOW issues | 12 issues, 12 PRs | 12 agents | 6 min | ~5x |
 | ProjectHephaestus batch | 19 issues, 16 implemented | 10 agents | ~3 min | ~6x |
 | ProjectOdyssey rebase v1.0 | 70 PRs rebased | 3 agents | 45 min | — |
 | ProjectOdyssey rebase v1.1 | 13 PRs rebased | 4 agents | 7 min | — |
@@ -1019,7 +1019,7 @@ This ensures agents cannot push directly to main.
 | --------- | --------- | --------- |
 | ProjectScylla | 10 issues resolved, 9 PRs merged, ~1,335 lines eliminated | parallel-issue-resolution-with-worktrees 2026-02-13 |
 | ProjectScylla | 3 issues, 193 new tests, 4 PRs | parallel-worktree-workflow 2025-02-09 |
-| ProjectMnemosyne | 35 issues triaged, 12 LOW executed in parallel, PRs #959-#971 | tooling-parallel-worktree-bulk-issue-execution 2026-03-24 |
+| Mnemosyne | 35 issues triaged, 12 LOW executed in parallel, PRs #959-#971 | tooling-parallel-worktree-bulk-issue-execution 2026-03-24 |
 | ProjectHephaestus | 34 issues triaged, 19 resolved in parallel batch | tooling-parallel-worktree-issue-batch 2026-03-24 |
 | ProjectOdyssey | 70 PRs rebased (v1.0) and 13 PRs (v1.1) | parallel-rebase-agent-worktree-isolation 2026-03-15/27 |
 | ProjectScylla | Issue #1887 (JSON-logging/tracing/metrics) split into PRs #1932 (squash-merged green, 22 checks) and #1933 (~24 checks after markdownlint fix) | 2026-05-07 — verified-ci foundation for v1.1.0 split-issue pattern |
@@ -1476,7 +1476,7 @@ git worktree prune
 
 ```
 __pycache__/  *.pyc  *.pyo  build/  dist/  *.egg-info/
-.claude-prompt-*.md  ProjectMnemosyne/  .issue_implementer
+.claude-prompt-*.md  Mnemosyne/  .issue_implementer
 .pytest_cache/  .mypy_cache/  .ruff_cache/  .coverage.*  htmlcov/
 ```
 
@@ -1620,7 +1620,7 @@ done
 while IFS= read -r wt; do
   [ "$wt" = "$REPO" ] && continue
   rm -f  "$wt"/.claude-prompt-*.md 2>/dev/null || true
-  rm -rf "$wt/ProjectMnemosyne"    2>/dev/null || true
+  rm -rf "$wt/Mnemosyne"    2>/dev/null || true
   rm -f  "$wt/.issue_implementer"  2>/dev/null || true
 done < <(git worktree list --porcelain | awk '/^worktree /{print $2}')
 
@@ -1681,7 +1681,7 @@ bash -n /tmp/<repo>-worktree-cleanup.sh && echo "Syntax OK"
 ```python
 ARTIFACT_PATTERNS = {
     "__pycache__", ".pyc", ".pyo", "build/", "dist/", ".egg-info/",
-    ".claude-prompt-", "ProjectMnemosyne", ".issue_implementer",
+    ".claude-prompt-", "Mnemosyne", ".issue_implementer",
     ".pytest_cache", ".mypy_cache", ".ruff_cache", ".coverage.", "htmlcov/",
 }
 
@@ -1708,11 +1708,11 @@ def is_artifact(path: str) -> bool:
 | Project | Context | Details |
 | --------- | --------- | --------- |
 | ProjectScylla | 36 worktrees, 6 dirty, 26 `[gone]` branches | Script at `/tmp/scylla-worktree-cleanup.sh`; execution pending |
-| ProjectMnemosyne | 14 agent worktrees (`.claude/worktrees/agent-*`), all PRs #1221–1255 merged, 4 with `.coverage` only | Script at `/tmp/mnemosyne-worktree-cleanup.sh`; syntax-checked (bash -n); user kept branches, generate-only mode |
+| Mnemosyne | 14 agent worktrees (`.claude/worktrees/agent-*`), all PRs #1221–1255 merged, 4 with `.coverage` only | Script at `/tmp/mnemosyne-worktree-cleanup.sh`; syntax-checked (bash -n); user kept branches, generate-only mode |
 | ProjectScylla | 11 stale myrmidon swarm worktrees, staged-addition failures caught on cleanup, all 11 removed cleanly | 2026-04-13; `reset HEAD -- .` + `checkout -- .` + `clean -fd` sequence verified effective |
 | ProjectOdyssey | 17 worktrees (1 main + 16 feature), all clean (0 dirty), 15 agent-* in `.claude/worktrees/`, cherry=1 on MERGED PRs = rebase artifacts | 2026-04-21; direct execution (no script); 1 CLOSED PR branch kept; all 17 worktrees removed, 0 `--force` needed |
 | AchaeanFleet | 13 worktrees accumulated, `.worktrees/`, `.claude/worktrees/`, `.coverage`, `.claude/scheduled_tasks.lock` untracked in main | 2026-04-25; Phase 0.5 gitignore hygiene added first (commit dcf3d43); `git status --short` clean after cleanup; verified-ci |
-| ProjectMnemosyne | 13 locked `worktree-agent-<hash>` worktrees from dead myrmidon swarm sessions, all `dirty=0` | 2026-05-04; all 13 unlocked and removed without `--force`; `git worktree prune` cleaned up; verified-local |
+| Mnemosyne | 13 locked `worktree-agent-<hash>` worktrees from dead myrmidon swarm sessions, all `dirty=0` | 2026-05-04; all 13 unlocked and removed without `--force`; `git worktree prune` cleaned up; verified-local |
 ```
 
 ### Prior history for worktree-cleanup-user-constraints
@@ -1721,7 +1721,7 @@ def is_artifact(path: str) -> bool:
 
 ## v1.6.0 — 2026-05-04
 
-**Amendment**: ProjectMnemosyne session — locked worktrees from dead myrmidon swarm sessions; unlock+remove without --force when clean.
+**Amendment**: Mnemosyne session — locked worktrees from dead myrmidon swarm sessions; unlock+remove without --force when clean.
 **Verification**: verified-local (executed on 13 worktrees, all `dirty=0`, 2026-05-04)
 
 ### What changed
@@ -1732,11 +1732,11 @@ def is_artifact(path: str) -> bool:
 - Updated Quick Reference with locked worktree detection and unlock steps
 - Added new Failed Attempts row: classifying all locked worktrees as KEEP regardless of cleanliness
 - Updated Scale reference table with 13-locked-clean pattern
-- Added ProjectMnemosyne row to Verified On table (13 locked agent worktrees, all dirty=0)
+- Added Mnemosyne row to Verified On table (13 locked agent worktrees, all dirty=0)
 - Also synced version from 1.4.0 to 1.6.0 in frontmatter (v1.5.0 entry existed in history but frontmatter was not updated)
 
 ### Why
-During ProjectMnemosyne cleanup session (2026-05-04), 13 `worktree-agent-<hash>` worktrees
+During Mnemosyne cleanup session (2026-05-04), 13 `worktree-agent-<hash>` worktrees
 from dead myrmidon swarm sessions were found in `locked` state (PIDs dead). The previous skill
 recommended classifying locked worktrees as KEEP and printing manual unlock+`--force` commands.
 This was wrong on two counts: (1) clean locked worktrees need no `--force` after unlock;
@@ -1854,24 +1854,24 @@ Key sections at v1.2.0:
 - Failed Attempts: 7 rows (large dirty count, branch deletion, direct exec, merged noise,
   gone status, force remove, staged-addition checkout)
 - Scale reference: 14-worktree and 36-worktree rows (no Time column, no direct-exec row)
-- Verified On: 3 rows (ProjectScylla x2, ProjectMnemosyne x1)
+- Verified On: 3 rows (ProjectScylla x2, Mnemosyne x1)
 
 ---
 
 ## v1.2.0 — 2026-04-19
 
-**Amendment**: Added ProjectMnemosyne direct-execution verification data.
+**Amendment**: Added Mnemosyne direct-execution verification data.
 
 - Added "Direct execution (no script) is valid when" guidance block to When to Use
 - Expanded Scale reference table with Time column and direct-execution row:
   - 14 worktrees, 4 dirty (`.coverage` only), ~2 min, 41 branches preserved
   - `git remote prune origin` cleaned 28+ stale remote tracking refs in the same pass
-- Expanded Verified On table: added second ProjectMnemosyne row for direct-execution session
+- Expanded Verified On table: added second Mnemosyne row for direct-execution session
   (PRs #1221–#1255 all merged, no `--force` needed after removing `.coverage` artifacts)
 
 ## v1.1.0 — 2026-04-12
 
-**Amendment**: Added ProjectMnemosyne generate-only verification row.
+**Amendment**: Added Mnemosyne generate-only verification row.
 
 - Added Verified On row: 14 worktrees, generate-only mode, bash -n syntax checked
 - Expanded Scale reference table with 14-worktree entry
@@ -2058,7 +2058,7 @@ git worktree list   # must show only the main working tree
 Cleanup sequence:
 ```bash
 # 1. Remove each non-main worktree (deepest-nested first)
-rm -rf "<path>/ProjectMnemosyne"   # clean untracked dirs first if present
+rm -rf "<path>/Mnemosyne"   # clean untracked dirs first if present
 git worktree remove "<path>"
 
 # 2. Prune stale metadata
@@ -2193,8 +2193,8 @@ git worktree remove ".claude/worktrees/agent-A/.claude/worktrees/agent-B/.claude
 git worktree remove ".claude/worktrees/agent-A/.claude/worktrees/agent-B"
 git worktree remove ".claude/worktrees/agent-A"
 
-# For issue worktrees with untracked ProjectMnemosyne dirs
-rm -rf ".worktrees/issue-N/ProjectMnemosyne"  # clean first, avoids --force
+# For issue worktrees with untracked Mnemosyne dirs
+rm -rf ".worktrees/issue-N/Mnemosyne"  # clean first, avoids --force
 git worktree remove ".worktrees/issue-N"
 
 # Prune stale metadata
@@ -2219,7 +2219,7 @@ git branch -v  # [gone] = remote deleted = merged
 # Phase 2: Remove stale worktrees (merged PRs) — branch deletion deferred to user
 STALE="3033 3061 3062 3063"
 for issue in $STALE; do
-  rm -rf ".worktrees/issue-$issue/ProjectMnemosyne" \
+  rm -rf ".worktrees/issue-$issue/Mnemosyne" \
          ".worktrees/issue-$issue/.issue_implementer"
   git worktree remove ".worktrees/issue-$issue" 2>/dev/null || true
   # Do NOT delete branches here — report to user after cleanup
@@ -2239,7 +2239,7 @@ done
 # Phase 4: Remove active worktrees
 for issue in $ACTIVE; do
   wt=".worktrees/issue-$issue"
-  rm -rf "$wt/ProjectMnemosyne"
+  rm -rf "$wt/Mnemosyne"
   git worktree remove "$wt" 2>/dev/null || \
     git worktree remove --force "$wt"
 done
@@ -2316,7 +2316,7 @@ If conflicts arise on a branch with a **closed PR**: the fixes were likely super
 ```bash
 wt="/path/to/worktree"
 rm -f "$wt"/.claude-prompt-*.md     # Claude Code session files
-rm -rf "$wt/ProjectMnemosyne"        # Cloned knowledge base
+rm -rf "$wt/Mnemosyne"        # Cloned knowledge base
 rm -f "$wt/.issue_implementer"       # Agent state files
 git worktree remove "$wt"            # now succeeds without --force
 ```
@@ -2329,7 +2329,7 @@ Dispatch Haiku sub-agents in parallel. Each agent handles one or a small batch o
 # Per Haiku agent: remove stale worktree + clean up
 wt="<path>"
 rm -f "$wt"/.claude-prompt-*.md
-rm -rf "$wt/ProjectMnemosyne"
+rm -rf "$wt/Mnemosyne"
 rm -f "$wt/.issue_implementer"
 git worktree remove "$wt"
 
@@ -2849,7 +2849,7 @@ _setup_workspace(..., experiment_id=self.config.experiment_id)
 | Push feature branch after editing wrong location | Ran `git push` without copying changes to correct worktree | Push rejected: remote had commits the local branch lacked | Check `git diff --stat` in worktree before pushing |
 | Force-push to fix diverged branch | Considered `git push --force` | Would overwrite legitimate remote commits | Fetch remote, inspect, then `reset --hard` + `pull --rebase` |
 | `git branch -d` on rebase-merged branches | Used safe delete flag | "not fully merged" error — rebase leaves no merge commit | Always use `git branch -D` when remote branch is confirmed deleted |
-| `git worktree remove` without cleaning untracked dirs | Tried removing worktrees containing `ProjectMnemosyne/` | "contains modified or untracked files" error | Pre-clean `rm -rf $wt/ProjectMnemosyne` before `git worktree remove` |
+| `git worktree remove` without cleaning untracked dirs | Tried removing worktrees containing `Mnemosyne/` | "contains modified or untracked files" error | Pre-clean `rm -rf $wt/Mnemosyne` before `git worktree remove` |
 | grep + awk on branch line of porcelain output | `grep "branch.*/$BRANCH$" \| awk '{print $2}'` | Extracts the git ref, not the filesystem path | Path is on the preceding `worktree` line; use awk to track it |
 | `git branch -D` in stale cleanup automation | Force-delete in cleanup script | Too aggressive — deletes unmerged branches silently | Use `git branch -d` (safe delete) in automation to preserve unmerged branches |
 | Repeated `git -C <worktree>` for add/commit/push | Drove day-to-day git operations from a parent harness instead of the worktree itself | Permission-gated harnesses kept asking for approvals and Git wrote locks through shared worktree metadata | Once the worktree exists, use that directory as `cwd`/`workdir` and run plain `git ...` commands there |
@@ -2915,7 +2915,7 @@ When spawning multiple parallel sub-agents for `/hephaestus:learn`, each sub-age
 ```bash
 # Clean all stale mnemosyne skill worktrees before launching /learn sub-agents
 rm -rf /tmp/mnemosyne-skill-* 2>/dev/null || true
-git -C "$HOME/.agent-brain/ProjectMnemosyne" worktree prune
+git -C "$HOME/.agent-brain/Mnemosyne" worktree prune
 ```
 
 **Alternative — unique paths per invocation (eliminates collisions, harder to target for cleanup):**
@@ -2974,7 +2974,7 @@ WORKTREE_DIR="/tmp/mnemosyne-$(date +%s)-e2e-homeric"
 ### Artifact patterns to clean
 
 ```bash
-ARTIFACT_PATTERNS="__pycache__ .pyc build/ dist/ *.egg-info .claude-prompt-*.md ProjectMnemosyne/ .issue_implementer"
+ARTIFACT_PATTERNS="__pycache__ .pyc build/ dist/ *.egg-info .claude-prompt-*.md Mnemosyne/ .issue_implementer"
 ```
 
 ### Harness-aware git operation split
@@ -3020,7 +3020,7 @@ git worktree list --porcelain | awk '/^worktree /{path=$2} /^branch / {print pat
 | ProjectKeystone | No (only master) | No |
 | AchaeanFleet | Yes | No |
 | ProjectHephaestus | Yes | Yes |
-| ProjectMnemosyne | Yes | Yes |
+| Mnemosyne | Yes | Yes |
 | ProjectOdyssey | Yes | Yes |
 | ProjectScylla | Yes | Yes |
 
@@ -3211,7 +3211,7 @@ No stale-lock-from-dead-PID section existed. Safety Net table had 4 rows (no mer
 - Added new Results & Parameters section "Stale /tmp/mnemosyne-skill-* cleanup before parallel /learn sub-agents" with orchestrator pre-cleanup snippet and timestamp-suffix alternative
 
 ### Why
-During a `/hephaestus:learn` session that spawned 3 parallel sub-agents to amend ProjectMnemosyne
+During a `/hephaestus:learn` session that spawned 3 parallel sub-agents to amend Mnemosyne
 skills, 2 of the 3 agents immediately failed with a worktree creation error because
 `/tmp/mnemosyne-skill-<name>` directories from prior `/learn` invocations still existed on disk.
 The shared clone's worktree registry still referenced these paths, so `git worktree add` refused
@@ -3316,7 +3316,7 @@ git -C .worktrees/issue-<N> push --force-with-lease origin <branch>
 
 ## v2.1.0 (2026-04-03)
 
-**Changed by:** Session — policy update for branch deletion across all cleanup skills in ProjectMnemosyne
+**Changed by:** Session — policy update for branch deletion across all cleanup skills in Mnemosyne
 **Verification:** unverified
 
 ### What changed
@@ -3332,7 +3332,7 @@ git -C .worktrees/issue-<N> push --force-with-lease origin <branch>
 - Bumped version from 2.0.0 → 2.1.0, updated date
 
 ### Why
-Multiple cleanup skill files in ProjectMnemosyne were instructing agents to autonomously delete branches
+Multiple cleanup skill files in Mnemosyne were instructing agents to autonomously delete branches
 (both local and remote) without user confirmation. This is a destructive action — a branch deleted with
 `-D` cannot be recovered without `git reflog` and is easy to lose. The user (Micah) wants agents to
 always present the list of branches that are safe to delete and defer the deletion decision to the user.

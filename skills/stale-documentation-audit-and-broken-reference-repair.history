@@ -174,7 +174,7 @@ tags: [merged, doc-drift, stale-doc, doc-sync, doc-audit, citation-drift]
 | **Date** | 2026-05-18 |
 | **Objective** | Canonical workflow for auditing, detecting, and remediating stale documentation across a project corpus |
 | **Outcome** | Consolidated from 12 skills covering Future Improvements audits, count reconciliation, metric discrepancy fixes, ecosystem role drift, multi-file sync, workflow README audits, cross-doc citation drift, and contradiction resolution |
-| **Verification** | verified-local — validated across ProjectScylla, ProjectOdyssey, ProjectMnemosyne |
+| **Verification** | verified-local — validated across ProjectScylla, ProjectOdyssey, Mnemosyne |
 
 ## When to Use
 

@@ -231,7 +231,7 @@ plan-reviewer self-review non-convergence bug (issue #671).
 
 See "Superseded from tooling-myrmidon-swarm-prompt-guardrails-reduce-stall-rate" section below
 for v1.0.0 content. The v1.0.0 consolidated skill had 9 parts (Part 1–9), 27 Failed Attempts rows,
-and was verified across ProjectScylla, ProjectArgus, ProjectAgamemnon, Myrmidons, and ProjectMnemosyne.
+and was verified across ProjectScylla, ProjectArgus, ProjectAgamemnon, Myrmidons, and Mnemosyne.
 
 ---
 
@@ -508,7 +508,7 @@ tags:
 | **Date** | 2026-05-13 |
 | **Objective** | Prevent parallel sub-agents from independently converging on the same target file by stating each agent's owned file as the FIRST line of its prompt, before any task description. |
 | **Outcome** | One of three parallel sub-agents whose prompt led with explicit filename ownership produced the intended unique PR (#1698). The two whose prompts buried the filename in a long task description collided on the same existing skill file, producing duplicate PRs #1696 and #1697 — #1697 had to be closed DIRTY. |
-| **Verification** | verified-ci — direct evidence from ProjectMnemosyne PR set #1696/#1697/#1698 (2026-05-13). |
+| **Verification** | verified-ci — direct evidence from Mnemosyne PR set #1696/#1697/#1698 (2026-05-13). |
 
 ## When to Use
 
@@ -572,13 +572,13 @@ Do NOT touch any other file [list any files you specifically must avoid].
 
 ## Results & Parameters
 
-Reference incident: ProjectMnemosyne PRs #1696, #1697, #1698 on 2026-05-13.
+Reference incident: Mnemosyne PRs #1696, #1697, #1698 on 2026-05-13.
 
 ## Verified On
 
 | Project | Context | Details |
 | ------- | ------- | ------- |
-| ProjectMnemosyne | 2026-05-13 parallel `/learn` dispatch from ProjectOdyssey session | PRs #1696/#1697 (collision) vs PR #1698 (success). |
+| Mnemosyne | 2026-05-13 parallel `/learn` dispatch from ProjectOdyssey session | PRs #1696/#1697 (collision) vs PR #1698 (success). |
 ```
 
 ---
@@ -654,7 +654,7 @@ tags:
 ```markdown
 # tooling-swarm-subagent-needs-write-tools — History
 
-## v1.1.0 (2026-05-18) — Added Explore-agent hallucinated-success failure mode; made artifact verification mandatory; added ProjectMnemosyne 2026-05-18 verification row.
+## v1.1.0 (2026-05-18) — Added Explore-agent hallucinated-success failure mode; made artifact verification mandatory; added Mnemosyne 2026-05-18 verification row.
 ## v1.0.0 (2026-05-16) — Initial: misdispatch of feature-dev:code-architect for MEDIUM C++ implementation; re-dispatch with general-purpose fixed (PRs #387-#390).
 ```
 
@@ -785,6 +785,6 @@ tags: [planning, stop-gate, re-grade, survivor-queue, phase-boundary, bulk-trans
 ```markdown
 # stop-reassess-gate-bulk-transformation — History
 
-## v1.1.0 (2026-05-18) — Added multi-wave variant; post-deletion re-grade recipe; 25% threshold heuristic; second Verified On row (ProjectMnemosyne 2026-05-18 consolidation).
+## v1.1.0 (2026-05-18) — Added multi-wave variant; post-deletion re-grade recipe; 25% threshold heuristic; second Verified On row (Mnemosyne 2026-05-18 consolidation).
 ## v1.0.0 (2026-05-17) — Initial: Myrmidons charter-cleanup session; TLS env-var doc issues identified as MOOT-NOW after charter cleanup PRs landed.
 ```

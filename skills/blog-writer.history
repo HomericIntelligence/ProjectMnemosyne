@@ -44,8 +44,8 @@ verification: unverified
 (Content prior to v2.0.0 amendment is preserved in the git history at the commit prior to this amendment on branch `main`. To recover:
 
 ```bash
-git -C ~/.agent-brain/ProjectMnemosyne log --oneline -- skills/blog-writer.md
-git -C ~/.agent-brain/ProjectMnemosyne show <pre-v2-commit>:skills/blog-writer.md > /tmp/blog-writer-v1.0.0.md
+git -C ~/.agent-brain/Mnemosyne log --oneline -- skills/blog-writer.md
+git -C ~/.agent-brain/Mnemosyne show <pre-v2-commit>:skills/blog-writer.md > /tmp/blog-writer-v1.0.0.md
 ```
 
 Pre-amendment footprint: 172 lines, template-only with generic Plan/Challenges/Solutions/Learnings structure.)

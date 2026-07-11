@@ -400,13 +400,13 @@ user input handling, auth logic, cryptographic operations, or other attack surfa
 | ------- | ------- | ------- |
 | ProjectOdyssey | PR \#3308 (issue \#3142) — deleted 17 placeholder docs, fixed `mkdocs.yml` nav + broken relative link | mkdocs nav cleanup |
 | ProjectOdyssey | PR \#5381 (`63b9db7f9`) — mkdocs `--strict` out-of-tree links fixed in `docs/dev/mojo-jit-crash-capture-core.md` | Replaced `../../scripts/` / `../../.github/` links with absolute GitHub URLs |
-| ProjectMnemosyne | PR \#1756 — same MD056 root cause across 17 PRs; two-track recovery in ~2 minutes | `gh run view --log-failed \| grep MD056` |
-| ProjectMnemosyne | PRs \#1937/\#1959/\#1960/\#1965/\#1978 — MD033/MD059/MD018/MD056 false-positive catalog | 5-PR parallel swarm fix wave |
-| ProjectMnemosyne | PRs \#2046/\#2049/\#2030 — MD056 fixes for shell + jq pipe filters in tables | 10-PR queue triage 2026-05-29 |
+| Mnemosyne | PR \#1756 — same MD056 root cause across 17 PRs; two-track recovery in ~2 minutes | `gh run view --log-failed \| grep MD056` |
+| Mnemosyne | PRs \#1937/\#1959/\#1960/\#1965/\#1978 — MD033/MD059/MD018/MD056 false-positive catalog | 5-PR parallel swarm fix wave |
+| Mnemosyne | PRs \#2046/\#2049/\#2030 — MD056 fixes for shell + jq pipe filters in tables | 10-PR queue triage 2026-05-29 |
 | ProjectOdyssey | PR \#5457 — `docs/dev/autograd-phase2-design.md`, 26 MD060 errors at separator rows fixed via regex | CI markdownlint job passed |
-| ProjectMnemosyne | PRs \#2001/\#2002/\#2003/\#2004 — MD012 EOF trailing-blank one-liner (4 of 9 failures shared this root cause) | commits 6600e6a / 6ff96f5 / 9e3fb70 / 5611cdc |
+| Mnemosyne | PRs \#2001/\#2002/\#2003/\#2004 — MD012 EOF trailing-blank one-liner (4 of 9 failures shared this root cause) | commits 6600e6a / 6ff96f5 / 9e3fb70 / 5611cdc |
 | ProjectOdyssey | PR \#3319 (issue \#3144) — `agents/hierarchy.md` malformed closing fences, stale 13→5 agent counts, MD013/MD032 | grep `.claude/agents/` to verify counts |
 | ProjectScylla | Issue \#1151, PR \#1225 / Issue \#1226, PR \#1315 — doc/config drift script (coverage + cov path, then test count) | 53 tests; exits 0 against real repo |
 | ProjectOdyssey | Issues \#3087/\#3089/\#3150/\#3253 — auto-impl, preflight, review-fix, hook-doc workflows | Documentation PR meta-patterns |
-| ProjectMnemosyne | Docs-only security reviews + skill-cleanup issues | Documentation PR meta-patterns |
+| Mnemosyne | Docs-only security reviews + skill-cleanup issues | Documentation PR meta-patterns |
 | (generic) | Routine pre-commit markdown validation (MD040/MD031/MD013/MD022) on any `.md` | Absorbed `doc-validate-markdown` |

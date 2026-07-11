@@ -13,8 +13,8 @@ Both `/advise` and `/learn` commands have been updated to work with the new flat
 
 #### Key Updates
 1. **Clone Location**
-   - Before: `<ProjectRoot>/build/<PID>/ProjectMnemosyne/` (isolated per session)
-   - After: `$HOME/.agent-brain/ProjectMnemosyne/` (shared, single clone)
+   - Before: `<ProjectRoot>/build/<PID>/Mnemosyne/` (isolated per session)
+   - After: `$HOME/.agent-brain/Mnemosyne/` (shared, single clone)
 
 2. **Repository Setup**
    - Simpler logic: create once, then fetch+pull before each search
@@ -41,9 +41,9 @@ Both `/advise` and `/learn` commands have been updated to work with the new flat
    - Auto-detect category from conversation context
 
 2. **Work Isolation**
-   - Before: `<ProjectRoot>/build/<PID>/ProjectMnemosyne/` (isolated clone per session)
+   - Before: `<ProjectRoot>/build/<PID>/Mnemosyne/` (isolated clone per session)
    - After: Git worktrees from base repo (isolated per branch, cleaned up after PR)
-   - Base repo: current directory if in ProjectMnemosyne, else persistent cache at `$HOME/.agent-brain/ProjectMnemosyne/`
+   - Base repo: current directory if in Mnemosyne, else persistent cache at `$HOME/.agent-brain/Mnemosyne/`
 
 3. **File Structure**
    - Before:

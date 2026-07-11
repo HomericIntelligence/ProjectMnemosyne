@@ -445,7 +445,7 @@ generate a 7-section script (`/tmp/<repo>-worktree-cleanup.sh`):
 - **§1 PRE-FLIGHT** — `git worktree list | wc -l`; `git branch | wc -l`
 - **§2 COMMIT real work** — `git add <specific-files>` (NEVER `-A`); one block per dirty worktree
 - **§3 CLEAN artifacts** — staged additions → 3-step (`reset HEAD -- . && checkout -- . && clean -fd`); otherwise 2-pass (`checkout -- . && clean -fd`)
-- **§4 REMOVE stray agent files** — `rm -f .claude-prompt-*.md`, `rm -rf ProjectMnemosyne`, `rm -f .issue_implementer`
+- **§4 REMOVE stray agent files** — `rm -f .claude-prompt-*.md`, `rm -rf Mnemosyne`, `rm -f .issue_implementer`
 - **§5 REMOVE worktrees** — explicit list, no wildcards, no `--force`
 - **§6 PRUNE** — `git worktree prune && git remote prune origin`
 - **§7 VERIFY** — `git worktree list` (expect 1); `git branch | wc -l` (unchanged)
@@ -457,7 +457,7 @@ Three traps surfaced during a real `/worktree-cleanup` session. Run these BEFORE
 **(a) Cross-repo check — a worktree-looking dir may belong to ANOTHER repo.** A directory under
 the host repo's `build/.worktrees/` (e.g. `build/.worktrees/mnemo-skill-911`) was actually a
 worktree of a DIFFERENT repository, spawned from a stray clone-within-a-repo at
-`build/ProjectMnemosyne`. It did NOT appear in the host repo's `git worktree list` (different
+`build/Mnemosyne`. It did NOT appear in the host repo's `git worktree list` (different
 `.git`), yet showed up in a `git status` loop. A blind cleanup would have force-deleted genuine
 uncommitted work from another project.
 
@@ -703,7 +703,7 @@ gh api --method DELETE "repos/$REPO/git/refs/heads/<branch-name>"
 | Rebase of stale-PR branches without conflict pre-check | Attempted `git rebase origin/main` on closed-PR branches | All had conflicts — work was superseded | Run conflict pre-check before any rebase; conflicts on closed-PR = superseded, keep closed |
 | Haiku for Category B rebase+PR | Used Haiku for rebase+PR wave | Haiku wrote generic/inaccurate PR descriptions without analyzing the diff | Sonnet required for Category B: needs to read diff and write meaningful PR title/body |
 | Sequential Wave 2 myrmidon | Ran rebase+PR and conflict-check sequentially | Doubled time when both subtasks are fully independent | Run Wave 2a (Sonnet) and Wave 2b (Haiku) in parallel |
-| Treat a dir under `build/.worktrees/` as one of THIS repo's worktrees | About to clean `build/.worktrees/mnemo-skill-911`, which sat under the host repo's build dir | It was a worktree of a DIFFERENT repo (ProjectMnemosyne), spawned from a stray clone-within-a-repo at `build/ProjectMnemosyne`; it never appeared in the host repo's `git worktree list` (different `.git`); a blind cleanup would have force-deleted genuine uncommitted work from another project | Before touching any worktree-looking dir, run `git -C <dir> remote get-url origin` and confirm it matches THIS repo's remote; a dir in a `git status` loop but ABSENT from `git worktree list` belongs to another clone — OUT OF SCOPE, never remove |
+| Treat a dir under `build/.worktrees/` as one of THIS repo's worktrees | About to clean `build/.worktrees/mnemo-skill-911`, which sat under the host repo's build dir | It was a worktree of a DIFFERENT repo (Mnemosyne), spawned from a stray clone-within-a-repo at `build/Mnemosyne`; it never appeared in the host repo's `git worktree list` (different `.git`); a blind cleanup would have force-deleted genuine uncommitted work from another project | Before touching any worktree-looking dir, run `git -C <dir> remote get-url origin` and confirm it matches THIS repo's remote; a dir in a `git status` loop but ABSENT from `git worktree list` belongs to another clone — OUT OF SCOPE, never remove |
 | Assume a big `D`/`M` dirty diff in a merged worktree is real work to preserve | Worktrees on already-MERGED PRs showed huge diffs full of `D hephaestus/automation/_implement_phase.py`-style deletions | The deletions were stale-checkout drift — the tree was edited toward a state main long since passed; the "deleted" files still exist on main, so the diff is redundant, not new work | Prove redundancy with `git cat-file -e main:<file>` for each "deleted" path (success = drift) + `gh pr list --head <branch> --state all` (MERGED = safe) + confirm untracked files are only `.claude-address-review-*.md`/`.claude-followup-*.json`/`followup-*.json` artifacts BEFORE discarding |
 | Auto-loop `git reset --hard HEAD` + `git clean -fd` across 14 unilaterally-judged-redundant worktrees | Tried to bulk-discard dirty-but-redundant trees in auto mode | Claude Code safety classifier BLOCKED it as "Irreversible Local Destruction not cleared by the general cleanup request"; `git worktree remove` also refuses dirty trees without `--force`, and `--force` is blocked too | Auto-remove only CLEAN worktrees (incl. locked-by-dead-PID: `git worktree unlock <p> && git worktree remove <p>`, no `--force`); for force-discard of dirty-but-redundant trees, STOP and print the exact per-worktree reset/clean/remove block for the USER to run via the `!` prefix |
 | In-process `threading.Lock` to guard worktree creation across `subprocess.run` workers | `WorktreeManager.create_worktree` guarded only with a `threading.Lock` + in-memory `self.worktrees` dict; two `hephaestus-ci-driver` SUBPROCESSES ran `_sweep_orphaned_arming_records` near-simultaneously | A `threading.Lock` coordinates only THREADS of one interpreter; each subprocess has its OWN lock/dict but shares the filesystem path, so both called `create_worktree(issue-1547)` → `fatal: '.../build/.worktrees/issue-1547' already exists` (git exit 128) | Check whether your parallel unit is THREADS or PROCESSES before choosing a lock; for subprocess workers sharing an on-disk path use a cross-process advisory `fcntl.flock(LOCK_EX)` on a sentinel file, NOT a `threading.Lock` |
@@ -718,7 +718,7 @@ gh api --method DELETE "repos/$REPO/git/refs/heads/<branch-name>"
 | Session | Notes | Time | Speedup |
 | ------- | ----- | ---- | ------- |
 | ProjectScylla PR sprint — 10 issues, 9 PRs | 6–8 agents | 15–20 min | 6–8x |
-| ProjectMnemosyne LOW — 12 issues, 12 PRs | 12 agents | 6 min | ~5x |
+| Mnemosyne LOW — 12 issues, 12 PRs | 12 agents | 6 min | ~5x |
 | ProjectOdyssey rebase — 70 PRs | 3 agents | 45 min | — |
 | ProjectScylla #1887 split — 1 issue → 2 PRs | 2 agents | ~30 min | ~1.7x |
 | ProjectHephaestus myrmidon — 32 → 4 worktrees | 3-wave swarm | 45 min | — |
@@ -736,7 +736,7 @@ gh api --method DELETE "repos/$REPO/git/refs/heads/<branch-name>"
 
 **Artifact patterns (always discard):**
 `__pycache__` `.pyc` `.pyo` `build/` `dist/` `.egg-info/` `.claude-prompt-*.md`
-`ProjectMnemosyne/` `.issue_implementer` `.pytest_cache` `.mypy_cache` `.ruff_cache`
+`Mnemosyne/` `.issue_implementer` `.pytest_cache` `.mypy_cache` `.ruff_cache`
 `.coverage.*` `htmlcov/`
 
 **Safety Net interaction:**
@@ -753,7 +753,7 @@ gh api --method DELETE "repos/$REPO/git/refs/heads/<branch-name>"
 
 ```bash
 rm -rf /tmp/mnemosyne-skill-* 2>/dev/null || true
-git -C "$HOME/.agent-brain/ProjectMnemosyne" worktree prune
+git -C "$HOME/.agent-brain/Mnemosyne" worktree prune
 # Prefer timestamp-suffixed paths to eliminate future collisions:
 WORKTREE_DIR="/tmp/mnemosyne-$(date +%s)-<name>"
 ```
@@ -788,10 +788,10 @@ WORKTREE_PATH=$(git worktree list --porcelain 2>/dev/null | \
 | ProjectAgamemnon | 2026-05-17 PR #398 partial contamination recovery (force-pushed, CI clean, auto-squash merged) | — |
 | ProjectAgamemnon | 2026-05-18 F-phase (PRs #407, #409, #410): no-worktree anti-pattern; all 3 PRs merged after recovery | — |
 | ProjectScylla | 36 worktrees, 6 dirty, 26 `[gone]` branches; reviewable script | cleanup session 2026-04-12 |
-| ProjectMnemosyne | 13 locked `worktree-agent-<hash>` from dead myrmidon sessions, all dirty=0; unlocked+removed without `--force` | 2026-05-04 |
+| Mnemosyne | 13 locked `worktree-agent-<hash>` from dead myrmidon sessions, all dirty=0; unlocked+removed without `--force` | 2026-05-04 |
 | ProjectHephaestus | Myrmidon wave parallelization — 32 → 4 worktrees; 3 PRs from unreleased work | myrmidon-wave 2026-04-05 |
 | ProjectHephaestus | CLOSED+cherry=+1 superseded-branch refinement: `fix/strict-simplify-pr-site4-581-v2` (PR #586 CLOSED) looked keepable but its strict-rubric work was on main via #583/#585/#587 and it edited the since-split `prompts.py` — read-only branch-safety audit, recommendation to user (verified-local, NOT CI) | worktree-cleanup/tidy audit 2026-05-28 |
 | AchaeanFleet | Phase 0.5 gitignore hygiene (commit dcf3d43); `git status --short` clean after cleanup | 2026-04-25 |
 | ProjectOdyssey | `scripts/rebase-all-branches.sh` inline cleanup refactor (PR #5408) | 2026-05-14 |
-| ProjectHephaestus | Worktree-cleanup safety session: cross-repo hiding under `build/.worktrees/mnemo-skill-911` (belonged to ProjectMnemosyne via stray `build/ProjectMnemosyne` clone); stale-checkout drift on merged worktrees proven redundant via `git cat-file -e main:<file>`; bulk `reset --hard`/`clean -fd`/`remove --force` across 14 trees safety-net-blocked → handed per-worktree commands to user (verified-local, read-only audit + recommendation) | worktree-cleanup safety 2026-06-15 |
+| ProjectHephaestus | Worktree-cleanup safety session: cross-repo hiding under `build/.worktrees/mnemo-skill-911` (belonged to Mnemosyne via stray `build/Mnemosyne` clone); stale-checkout drift on merged worktrees proven redundant via `git cat-file -e main:<file>`; bulk `reset --hard`/`clean -fd`/`remove --force` across 14 trees safety-net-blocked → handed per-worktree commands to user (verified-local, read-only audit + recommendation) | worktree-cleanup safety 2026-06-15 |
 | ProjectHephaestus | Cross-PROCESS worktree-creation race in the issue-major automation loop (issues 1553/1547): two `hephaestus-ci-driver` subprocesses ran `_sweep_orphaned_arming_records` simultaneously → `create_worktree(issue-1547)` collision (`fatal: ... already exists`); fixed with new reusable `hephaestus/utils/file_lock.py` (`fcntl.flock`) wrapping the sweep, extracted from two pre-existing inline flock copies. PR #1568 / issue #1567. Verified-local: 2017 unit tests pass, mypy clean (411 files), ruff clean, TDD RED→GREEN for both `file_lock` and the sweep regression; PR CI still PENDING (unit-test matrix) at capture time | cross-process-orphan-sweep-race 2026-06-21 |

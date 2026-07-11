@@ -27,7 +27,7 @@ tags:
 | **Date** | 2026-07-09 |
 | **Objective** | Strictly review Inference360 PR #393, which added `docs/h200-slurm-model-inventory.md` and renamed IFM BBQ 8B / IFM_8B / bbq-8b terminology to 7B across manifests, generated asset mirrors, scripts, tests, docs, examples, and provider configs. |
 | **Outcome** | The review workflow produced a strict NO-GO even though CI was green, because issue scope, source-vs-asset parity, inventory acceptance rows, compatibility, traceability, and redaction risks were not proven. |
-| **Verification** | verified-local. The review workflow was exercised locally against PR #393, issue #392, and related issue #391. This ProjectMnemosyne skill file was validated locally with `python3 scripts/validate_plugins.py`; ProjectMnemosyne CI and auto-merge are separate and may still be pending. |
+| **Verification** | verified-local. The review workflow was exercised locally against PR #393, issue #392, and related issue #391. This Mnemosyne skill file was validated locally with `python3 scripts/validate_plugins.py`; Mnemosyne CI and auto-merge are separate and may still be pending. |
 
 ## When to Use
 
@@ -116,7 +116,7 @@ rg -n "(/mnt|/lustrefs|<user>|\.internal|checkpoint|prompt_mix|cookie|token)" do
 | CI state | Green at review time |
 | Strict review verdict | NO-GO |
 | Main blockers | Issue-scope mismatch, missing required inventory rows, source/asset promotion gate mismatch not caught by existing test, compatibility risk, redaction risk |
-| Verification level | verified-local for the review workflow and this skill-file validation; ProjectMnemosyne CI and auto-merge are separate |
+| Verification level | verified-local for the review workflow and this skill-file validation; Mnemosyne CI and auto-merge are separate |
 
 ### Review Checklist
 
@@ -190,4 +190,4 @@ Fail closed when a removed input cannot be mapped safely:
 | Project | Context | Details |
 |---------|---------|---------|
 | LLM360/Inference360 | Strict review of PR #393 against issue #392 and related issue #391 | The review workflow was exercised locally and produced CI-green but strict NO-GO findings for scope, acceptance criteria, asset parity, compatibility, and redaction risks. |
-| HomericIntelligence/ProjectMnemosyne | Skill capture in isolated worktree | The skill file was validated locally with `python3 scripts/validate_plugins.py`; ProjectMnemosyne PR CI and auto-merge should be checked separately. |
+| HomericIntelligence/Mnemosyne | Skill capture in isolated worktree | The skill file was validated locally with `python3 scripts/validate_plugins.py`; Mnemosyne PR CI and auto-merge should be checked separately. |

@@ -747,7 +747,7 @@ This does NOT prevent `--hook-stage` invocation: `pre-commit run --hook-stage co
 bypasses the git hook installation entirely and invokes the framework directly. Use it for
 verification even when `install` is blocked.
 
-Verified by closed PR #2353 (HomericIntelligence/ProjectMnemosyne).
+Verified by closed PR #2353 (HomericIntelligence/Mnemosyne).
 
 ## Hook-Specific Patterns
 
@@ -1537,7 +1537,7 @@ indent_style = tab                 # Make syntax requires tabs
 | ProjectHephaestus | PRs #707, #913 (ruff-format trap), #1019 closes #1017 (review-rubric toolchain-churn carve-out) | [history file](pre-commit-hooks-and-linting-config.history) |
 | ProjectOdyssey | PR #5453 (full-PR-diff pre-commit scope fixed CI mojo-format on sub-agent files) | [history file](pre-commit-hooks-and-linting-config.history) |
 | ProjectScylla | PR #1556, audit finding S13 (.editorconfig cross-editor consistency) | [history file](pre-commit-hooks-and-linting-config.history) |
-| ProjectMnemosyne | Closed PR #2353 (commit-msg-stage hooks + `default_install_hook_types` learning) | [history file](pre-commit-hooks-and-linting-config.history) |
+| Mnemosyne | Closed PR #2353 (commit-msg-stage hooks + `default_install_hook_types` learning) | [history file](pre-commit-hooks-and-linting-config.history) |
 
 ## References
 
@@ -1552,7 +1552,7 @@ indent_style = tab                 # Make syntax requires tabs
 
 ## v2.2.0 (2026-06-13) -- Salvage commit-msg-stage hooks learning (closed PR #2353)
 
-**Source:** Closed PR #2353 (HomericIntelligence/ProjectMnemosyne) — commit-msg-stage hooks
+**Source:** Closed PR #2353 (HomericIntelligence/Mnemosyne) — commit-msg-stage hooks
 and `default_install_hook_types` learning that was dropped when the PR was closed without merge.
 
 **What changed:**
@@ -1579,7 +1579,7 @@ and `default_install_hook_types` learning that was dropped when the PR was close
   4. "Pre-commit configuration is unstaged" abort during `--hook-stage` run
   5. Assumed `core.hooksPath`-blocked install also blocks `--hook-stage` verification
 - Added `commit-msg` and `default-install-hook-types` to `tags`.
-- Added ProjectMnemosyne row to Verified On table.
+- Added Mnemosyne row to Verified On table.
 
 **Key new verified facts (from closed PR #2353):**
 
@@ -2776,7 +2776,7 @@ One PR per repo, dispatched in parallel via a Myrmidon swarm. Each agent:
 | HomericIntelligence/ProjectOdyssey | #5385 | 41 + 4 continue-on-error |
 | HomericIntelligence/ProjectScylla | #1968 | 32 + 3 continue-on-error |
 | HomericIntelligence/ProjectHephaestus | #403 | 13 + 1 continue-on-error |
-| HomericIntelligence/ProjectMnemosyne | #1652 (merged) | 1 + 1 continue-on-error |
+| HomericIntelligence/Mnemosyne | #1652 (merged) | 1 + 1 continue-on-error |
 | HomericIntelligence/ProjectCharybdis | #221 | 4 |
 
 ### Phase 2 — Bucket F sweep (2026-05-11)
@@ -5899,7 +5899,7 @@ git push origin <branch>
 - Shows professionalism and respect for team resources
 
 **Note on filtering pre-commit output**: When working in a monorepo or workspace that includes
-unrelated subprojects (e.g., ProjectMnemosyne subdirectory), filter output with
+unrelated subprojects (e.g., Mnemosyne subdirectory), filter output with
 `grep -E "^(Ruff|Failed|Passed)"` to see only relevant ruff checks and ignore pre-existing failures
 in unrelated parts of the repo.
 
@@ -5989,7 +5989,7 @@ non-fast-forward error because the remote branch had 1 commit not in local.
 ### ❌ Attempt 6: Reading all pre-commit output without filtering
 
 **What happened**: Pre-commit output included many tier-label check failures from a
-`ProjectMnemosyne/` subdirectory in a monorepo, making it hard to see whether ruff itself passed.
+`Mnemosyne/` subdirectory in a monorepo, making it hard to see whether ruff itself passed.
 
 **Why it failed**: Pre-existing unrelated failures obscured ruff results.
 
@@ -6368,12 +6368,12 @@ python3 scripts/validate_plugins.py plugins/
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectMnemosyne | Bulk fix — PR #108 (2026-02-13) | 198 plugins, 151 warnings resolved |
-| ProjectMnemosyne | Single-skill fix — PRs #1498, #1516 (2026-05-02) | Wrong Failed Attempts columns + MD033 inline HTML in `skills/oss-contribution-issue-filing-pattern.md` |
+| Mnemosyne | Bulk fix — PR #108 (2026-02-13) | 198 plugins, 151 warnings resolved |
+| Mnemosyne | Single-skill fix — PRs #1498, #1516 (2026-05-02) | Wrong Failed Attempts columns + MD033 inline HTML in `skills/oss-contribution-issue-filing-pattern.md` |
 
 ## References
 
-- PR #108: <https://github.com/HomericIntelligence/ProjectMnemosyne/pull/108>
+- PR #108: <https://github.com/HomericIntelligence/Mnemosyne/pull/108>
 - CI validation script: `scripts/validate_plugins.py`
 - Related skill: `mnemosyne:validation-workflow`
 - Related skill: `mnemosyne:documentation-patterns`
@@ -7070,7 +7070,7 @@ python3 scripts/fix_md_tables.py skills/some-skill.md
 
 ### Expected Output
 
-- Bulk normalizer: `Fixed N files` (ProjectMnemosyne: 1,176 files)
+- Bulk normalizer: `Fixed N files` (Mnemosyne: 1,176 files)
 - Pre-commit markdownlint: `Passed` with no file modifications
 - Total errors eliminated: 20,131 across 1,189 files (Scenario A)
 - Total errors eliminated: ~1,079 across 165 files (Scenario B — ProjectOdyssey v0.40.0 upgrade)
@@ -7079,14 +7079,14 @@ python3 scripts/fix_md_tables.py skills/some-skill.md
 
 | Project | Scenario | Errors Before | Files Affected | Fix Method |
 | ------- | -------- | ------------- | -------------- | ---------- |
-| ProjectMnemosyne | A (missing config) | 20,131 | 1,189 | `fix_md_tables.py --all` + `style: consistent` |
+| Mnemosyne | A (missing config) | 20,131 | 1,189 | `fix_md_tables.py --all` + `style: consistent` |
 | ProjectOdyssey | B (v0.40.0 upgrade) | ~1,079 | ~165 | Two-pass Python script + `style: compact` |
 
 ## Verified On
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | 2026-05-01 — mass fix of missing .markdownlint.yaml | CI markdownlint job passes with 0 errors after fix |
+| Mnemosyne | 2026-05-01 — mass fix of missing .markdownlint.yaml | CI markdownlint job passes with 0 errors after fix |
 | ProjectOdyssey | 2026-05-03 — PR #5347/#5348, markdownlint-cli2 v0.40.0 upgrade added MD060 | Two-pass Python script + `style: compact`; CI markdownlint job passed with 0 violations |
 | ProjectOdyssey | 2026-05-11 — PR #5381, single-file MD060 aligned-style fix on `docs/dev/mojo-jit-crash-capture-core.md` | 3 MD060 errors on lines 105–106 caused by 62 vs 63 dash mismatch in one column. Fixed by recomputing per-column max width and padding separator + every row to that width. Local `pixi run npx markdownlint-cli2 docs/dev/mojo-jit-crash-capture-core.md` → `Summary: 0 error(s)`. Pushed as commit 8de12aa6d. |
 
@@ -9393,7 +9393,7 @@ disable_error_code = [
 SKIP=audit-doc-policy git commit ...
 ```
 
-Pre-existing violations in `.claude/worktrees/` and `ProjectMnemosyne/` trigger `audit-doc-policy`. Always skip this hook -- the violations are in archived/external content, not new code.
+Pre-existing violations in `.claude/worktrees/` and `Mnemosyne/` trigger `audit-doc-policy`. Always skip this hook -- the violations are in archived/external content, not new code.
 
 ---
 
@@ -10218,7 +10218,7 @@ gh run view <run-id> --log-failed
 | --------- | --------- | --------- |
 | Myrmidons | shellcheck-warnings swarm; 332 unit tests pass, CI green; REPO_ROOT_HOOK pattern, SKIP_TESTS guard, Justfile guard, `\|\| true` fix (2026-04-24) | verified-ci |
 | ProjectScylla | gitleaks v8.30.1 Go build failure; converted from `language: golang` to pre-built binary download in `.pre-commit-config.yaml` (2026-04-27) | verified-local |
-| Ecosystem swarm rollout (2026-05-16) | Pre-push signed-commit enforcement + YAML doc-marker patcher fix. Pilot: ProjectMnemosyne #1718. Follow-ups: AchaeanFleet #660 (fixup `3569a29` for `---` marker), ProjectArgus #521, ProjectHermes #641, ProjectAgamemnon #383, ProjectNestor #79, ProjectTelemachy #242, ProjectKeystone #556, ProjectProteus #140, ProjectCharybdis #251, Odysseus #285 | verified-ci |
+| Ecosystem swarm rollout (2026-05-16) | Pre-push signed-commit enforcement + YAML doc-marker patcher fix. Pilot: Mnemosyne #1718. Follow-ups: AchaeanFleet #660 (fixup `3569a29` for `---` marker), ProjectArgus #521, ProjectHermes #641, ProjectAgamemnon #383, ProjectNestor #79, ProjectTelemachy #242, ProjectKeystone #556, ProjectProteus #140, ProjectCharybdis #251, Odysseus #285 | verified-ci |
 
 ## Superseded from precommit-linter-stale-branch-revert
 

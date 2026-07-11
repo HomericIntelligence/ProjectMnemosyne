@@ -32,7 +32,7 @@ tags:
 | Field | Value |
 | ------- | ------- |
 | **Date** | 2026-07-02 |
-| **Objective** | Plan the canonical `install` check-run (ProjectMnemosyne issue #2912, Odysseus ecosystem CI-naming unification) for a repo whose `package` prerequisite is unmerged and whose `pyproject.toml` has no `[build-system]` — i.e. the artifact the check must install-smoke cannot be built yet. |
+| **Objective** | Plan the canonical `install` check-run (Mnemosyne issue #2912, Odysseus ecosystem CI-naming unification) for a repo whose `package` prerequisite is unmerged and whose `pyproject.toml` has no `[build-system]` — i.e. the artifact the check must install-smoke cannot be built yet. |
 | **Outcome** | Plan produced (R0). Key design: self-contained `install` job that builds the wheel inline, clean-venv installs it, and import-smokes modules derived from the wheel's own `top_level.txt`. NOT executed — plan only. |
 | **Verification** | unverified |
 
@@ -115,7 +115,7 @@ python -m build --outdir /tmp/dist-check
 ## Results & Parameters
 
 - **Job shape:** see Quick Reference. Substitute the repo's exact SHA-pinned `actions/checkout` / `actions/setup-python` (copy from a sibling job) and the real distribution name from `pyproject.toml [project].name`.
-- **Insertion points (ProjectMnemosyne, at plan time — line numbers WILL drift):** after the `build` job in `.github/workflows/_required.yml` (~line 305) and `.github/workflows/_checks.yml` (~line 243).
+- **Insertion points (Mnemosyne, at plan time — line numbers WILL drift):** after the `build` job in `.github/workflows/_required.yml` (~line 305) and `.github/workflows/_checks.yml` (~line 243).
 - **Local simulation of the job body:**
 
 ```bash
@@ -136,4 +136,4 @@ python -m venv /tmp/install-venv
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectMnemosyne | Issue #2912 planning session (plan only, not executed) | Canonical `install` check plan for the Odysseus CI-naming unification |
+| Mnemosyne | Issue #2912 planning session (plan only, not executed) | Canonical `install` check plan for the Odysseus CI-naming unification |

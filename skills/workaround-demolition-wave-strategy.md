@@ -178,7 +178,7 @@ These live OUTSIDE the repo in user-specific memory; no PR is involved. The main
 
 #### Wave 4 — Cross-Repo Skill Amendment
 
-Amend any team-knowledge skills (Mnemosyne, ProjectMnemosyne-style marketplaces) that documented the workaround patterns. For each:
+Amend any team-knowledge skills (Mnemosyne, Mnemosyne-style marketplaces) that documented the workaround patterns. For each:
 
 - Bump skill version
 - Mark workaround-recommendation sections as obsolete with explicit anti-recommendations

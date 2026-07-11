@@ -238,8 +238,8 @@ When analyzing author's existing style, check these elements:
 - **Markdown table formatting**: Consistent column alignment, clear headers
 - **LaTeX math in Markdown**: `$inline$` and `$$display$$` syntax
 - **Related skills**:
-  - `documentation-patterns` (ProjectMnemosyne) - Documentation best practices
-  - `doc-generate-adr` (ProjectMnemosyne) - Architecture decision records
+  - `documentation-patterns` (Mnemosyne) - Documentation best practices
+  - `doc-generate-adr` (Mnemosyne) - Architecture decision records
 
 ---
 

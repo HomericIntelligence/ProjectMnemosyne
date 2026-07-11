@@ -451,4 +451,4 @@ class SimulatedCluster {
 | ProjectAgamemnon | clang-tidy CI FAILURE to SUCCESS | Anchored HeaderFilterRegex + added -llvmlibc-* suppressor |
 | ProjectNestor | CI coverage fix | Same main() conflict pattern applied |
 | ProjectNestor | clang-tidy CI | Same HeaderFilterRegex fix, same FetchContent nats.c dependency |
-| ProjectMnemosyne | TSan fixes: NUMA node data race, ConcurrentQueue false positives, ThreadPool hang | verified-ci: all three failure modes resolved |
+| Mnemosyne | TSan fixes: NUMA node data race, ConcurrentQueue false positives, ThreadPool hang | verified-ci: all three failure modes resolved |

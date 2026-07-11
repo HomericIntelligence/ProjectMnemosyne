@@ -1,9 +1,9 @@
-# ProjectMnemosyne
+# Mnemosyne
 
-[![Validate Plugins](https://github.com/HomericIntelligence/ProjectMnemosyne/actions/workflows/validate-plugins.yml/badge.svg)](https://github.com/HomericIntelligence/ProjectMnemosyne/actions/workflows/validate-plugins.yml)
-[![Update Marketplace](https://github.com/HomericIntelligence/ProjectMnemosyne/actions/workflows/update-marketplace.yml/badge.svg)](https://github.com/HomericIntelligence/ProjectMnemosyne/actions/workflows/update-marketplace.yml)
+[![Validate Plugins](https://github.com/HomericIntelligence/Mnemosyne/actions/workflows/validate-plugins.yml/badge.svg)](https://github.com/HomericIntelligence/Mnemosyne/actions/workflows/validate-plugins.yml)
+[![Update Marketplace](https://github.com/HomericIntelligence/Mnemosyne/actions/workflows/update-marketplace.yml/badge.svg)](https://github.com/HomericIntelligence/Mnemosyne/actions/workflows/update-marketplace.yml)
 
-ProjectMnemosyne is a skills marketplace for the HomericIntelligence agentic ecosystem.
+Mnemosyne is a skills marketplace for the HomericIntelligence agentic ecosystem.
 Named after Mnemosyne, the Greek goddess of memory, this repository serves as the
 collective memory where team learnings are preserved and made searchable.
 
@@ -12,7 +12,7 @@ collective memory where team learnings are preserved and made searchable.
 ### Prerequisites
 
 - Claude Code CLI installed
-- Access to HomericIntelligence/ProjectMnemosyne (private repository)
+- Access to HomericIntelligence/Mnemosyne (private repository)
 
 ### Option A: From GitHub (Recommended)
 
@@ -21,13 +21,13 @@ Register the private repository directly.
 **From terminal:**
 
 ```bash
-claude plugin marketplace add https://github.com/HomericIntelligence/ProjectMnemosyne
+claude plugin marketplace add https://github.com/HomericIntelligence/Mnemosyne
 ```
 
 **Or inside a Claude Code session:**
 
 ```text
-/plugin marketplace add https://github.com/HomericIntelligence/ProjectMnemosyne
+/plugin marketplace add https://github.com/HomericIntelligence/Mnemosyne
 ```
 
 ### Option B: From Local Directory
@@ -35,19 +35,19 @@ claude plugin marketplace add https://github.com/HomericIntelligence/ProjectMnem
 If you have the repository cloned locally:
 
 ```bash
-git clone https://github.com/HomericIntelligence/ProjectMnemosyne.git
+git clone https://github.com/HomericIntelligence/Mnemosyne.git
 ```
 
 **From terminal:**
 
 ```bash
-claude plugin marketplace add /path/to/ProjectMnemosyne
+claude plugin marketplace add /path/to/Mnemosyne
 ```
 
 **Or inside a Claude Code session:**
 
 ```text
-/plugin marketplace add /path/to/ProjectMnemosyne
+/plugin marketplace add /path/to/Mnemosyne
 ```
 
 ### Verify Installation
@@ -168,7 +168,7 @@ python3 scripts/validate_plugins.py
 | Project | Purpose |
 | --------- | --------- |
 | [Odysseus](https://github.com/HomericIntelligence/Odysseus) | Ecosystem orchestrator and architecture documentation |
-| **ProjectMnemosyne** | Knowledge, skills, and memory (this repo) |
+| **Mnemosyne** | Knowledge, skills, and memory (this repo) |
 | [ProjectHephaestus](https://github.com/HomericIntelligence/ProjectHephaestus) | Shared utilities and foundational tools used across the ecosystem |
 
 ### Agent Mesh Infrastructure
@@ -195,7 +195,7 @@ python3 scripts/validate_plugins.py
 | [ProjectOdyssey](https://github.com/HomericIntelligence/ProjectOdyssey) | Training framework written in Mojo |
 | [ProjectScylla](https://github.com/HomericIntelligence/ProjectScylla) | Testing, optimization, and resilience evaluation |
 
-> **Note**: Skills produced by any of the above repositories can be contributed to ProjectMnemosyne via `/learn` so that learnings are shared across the ecosystem.
+> **Note**: Skills produced by any of the above repositories can be contributed to Mnemosyne via `/learn` so that learnings are shared across the ecosystem.
 
 ## Why Mnemosyne?
 
@@ -208,14 +208,14 @@ work saves more time than knowing what did.
 
 ## Citation
 
-If you use ProjectMnemosyne in your research or work, please cite:
+If you use Mnemosyne in your research or work, please cite:
 
 ```bibtex
-@misc{projectmnemosyne2026,
-  title={ProjectMnemosyne: A Skills Marketplace for HomericIntelligence},
+@misc{mnemosyne2026,
+  title={Mnemosyne: A Skills Marketplace for HomericIntelligence},
   author={{HomericIntelligence Team}},
   year={2026},
   note={Skills marketplace and collective memory system},
-  url={https://github.com/HomericIntelligence/ProjectMnemosyne}
+  url={https://github.com/HomericIntelligence/Mnemosyne}
 }
 ```
