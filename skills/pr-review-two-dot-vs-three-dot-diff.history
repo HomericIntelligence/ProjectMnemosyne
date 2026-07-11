@@ -1,0 +1,99 @@
+# pr-review-two-dot-vs-three-dot-diff — History
+
+## v1.1.0 (2026-07-10)
+
+**Changed by:** ProjectHephaestus session — reviewing a stale auto-impl branch's OWN delta (verified-local)
+**Verification:** verified-local
+
+### What changed
+
+- Added an ADDITIVE companion caveat: two questions, two diffs. The existing v1.0.0
+  advice (use TWO-DOT for merge-readiness / revert-footprint / GO-NO-GO on a hand-merge)
+  is CORRECT and unchanged. The caveat covers a DIFFERENT question — "what is THIS
+  BRANCH'S OWN contribution, ignoring main's advance?" — for which you must use a
+  MERGE-BASE-ISOLATED diff (`git diff $(git merge-base origin/main REF)..REF`,
+  equivalent to three-dot `origin/main...REF`).
+- Added a "Rule of Thumb" decision matrix keyed on the behind-count
+  (`git rev-list --count REF..origin/main`): behind==0 → identical, either works;
+  behind>0 + want branch's own delta → merge-base-isolated (three-dot);
+  behind>0 + want true re-merge effect → two-dot (the existing case).
+- Added a Failed Attempts row: two-dot to review a stale branch's OWN changes yields
+  ~68k lines of phantom deletions (main's advance inverted), drowning the ~100-line
+  real change.
+- Cross-linked the SQUASH-MERGE TRAP and the `git-branch-state-triage-and-recovery`
+  skill: on a squash-only repo, ahead/behind, `git cherry`, `git merge-base
+  --is-ancestor`, and `gh pr view` mergedAt/mergeCommit all lie about what landed;
+  verify with TWO oracles (commit-subject grep on `git log origin/main` AND
+  distinctive-symbol grep via `git grep -lI <sym> origin/main`) because some work
+  lands under REWORDED subjects.
+
+### Why
+
+v1.0.0 correctly warned that three-dot produces false MERGE-READINESS verdicts on a
+stale branch (sibling work already on main shows as phantom additions). But the inverse
+failure exists for the OPPOSITE question: when you want to review the branch's OWN work,
+a naive two-dot `origin/main..REF` INVERTS main's advance — every commit main gained
+since the merge-base appears as a DELETION. In a real ProjectHephaestus case this
+produced ~68,000 lines of phantom deletion noise that drowned the branch's own ~100-line
+change. So the deciding factor is WHICH QUESTION you are asking; the behind-count tells
+you whether the two diffs will even differ. This caveat is ADDITIVE and does not
+contradict v1.0.0.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: pr-review-two-dot-vs-three-dot-diff
+description: "When reviewing OPEN auto-impl / long-lived feature PRs for MERGE-READINESS, diff with two-dot (git diff origin/main..branch) NOT three-dot (origin/main...branch). Use when: (1) reviewing a stale *-auto-impl or long-lived feature branch that is N commits behind origin/main, (2) a three-dot diff shows a scary regression (e.g. a timeout 7200s->300s) that turns out to already be on main via a sibling PR, (3) deciding whether re-merging a stale branch is safe or would REVERT sibling work already landed on trunk, (4) you suspect a PR is a zombie whose feature already merged, (5) verifying a PR's true revert footprint before issuing a GO/NO-GO verdict."
+category: tooling
+date: 2026-06-27
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [pr-review, git-diff, two-dot, three-dot, merge-base, stale-branch, merge-readiness, zombie-pr, auto-impl, revert-footprint]
+---
+
+# PR Review: Two-Dot vs Three-Dot Diff for Merge-Readiness
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-27 |
+| **Objective** | Review OPEN auto-impl / long-lived feature PRs for merge-readiness without being fooled by phantom changes that already landed on main |
+| **Outcome** | Verified: two-dot diff reveals the true effect of re-merging a stale branch; three-dot produces false verdicts |
+| **Verification** | verified-local |
+
+## When to Use
+
+- Reviewing a stale `*-auto-impl` or long-lived feature branch that is N commits behind `origin/main`.
+- A three-dot diff (`origin/main...branch`) shows a scary regression (e.g. a timeout `7200s -> 300s`) that turns out to already be on main via a sibling PR.
+- Deciding whether re-merging a stale branch is safe or would REVERT sibling work already landed on trunk.
+- You suspect a PR is a zombie whose feature already merged.
+- Verifying a PR's true revert footprint before issuing a GO/NO-GO verdict.
+
+## Verified Workflow
+
+When reviewing an OPEN auto-impl / long-lived feature PR for MERGE-READINESS, diff with
+**two-dot** (`git diff origin/main..branch`) NOT **three-dot** (`origin/main...branch`).
+
+**Why:** The loop's `*-auto-impl` branches in ProjectHephaestus are frequently STALE
+(4–27 commits behind `origin/main`) because sibling refactor PRs keep landing on trunk.
+The three-dot diff (`A...B`) shows everything changed on the branch SINCE THE MERGE-BASE —
+including code that has SINCE been merged to main by OTHER PRs. A reviewer reading the
+three-dot diff sees "phantom" additions/changes that are already on main, producing FALSE
+verdicts. The two-dot diff (`A..B`) shows the literal current delta between the two refs:
+files it reports as DELETED are sibling work on main that the stale branch would REVERT.
+
+> **Note:** GitHub's own squash-merge rebases the stale PR onto current main at merge time,
+> so it does NOT blindly apply the two-dot diff. The danger is a MANUAL hand-merge of the
+> stale diff, which WOULD revert trunk. Let the loop's `tidy`/rebase step or GitHub's
+> squash-rebase handle stale branches; a manual merge-readiness pass must replicate that
+> (rebase onto current main, re-run CI) before any verdict is actionable.
+
+### Quick Reference
+
+(bash quick-reference block, detailed steps, failed attempts, and results as in v1.0.0)
+```
+
+---
