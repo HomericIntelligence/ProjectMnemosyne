@@ -1,12 +1,33 @@
+# hephaestus-automation-loop-branch-sync-drive-green — History
+
+## v1.1.0 (2026-07-11)
+
+**Changed by:** Session driving all open PRs to green on a ProjectHephaestus repo — a `--dry-run` of `--phases drive-green` surfaced a `KeyError` before any live invocation; `--drive-green-all` then confirmed working on a live ~3-minute run over 14 open PRs.
+**Verification:** verified-local
+
+### What changed
+- Added a new "When to Use" trigger for the standalone drive-green invocation crash.
+- Added a dedicated "Standalone drive-green" note to the Verified Workflow: `--phases drive-green` CRASHES (`KeyError: <StageName.REPO: 'repo'>`, item "poisoned at repo"); use `--drive-green-all` instead, which runs the full loop bootstrap first so the REPO StageQueue is seeded before drive-green executes.
+- Added the correct copy-paste invocation for driving existing open PRs to green without planning/implementing new issues.
+- Documented the expected fast, short runtime and exit_code=1-from-non-GO semantics of a correct `--drive-green-all` run.
+- Added 2 new Failed Attempts rows (standalone `--phases drive-green`; assuming `--phases` composes freely).
+- Noted the low-priority upstream improvement (`--phases drive-green` should error clearly or auto-include the repo bootstrap rather than KeyError-poisoning the item).
+- Bumped version 1.0.0 → 1.1.0; date 2026-06-26 → 2026-07-11; added `history` frontmatter field.
+
+### Why
+The v1.0.0 skill covered scoping drive-green to an owned issue/PR and running a final catch-all pass, but did not cover HOW to invoke a repo-wide "drive all open PRs to green" run. The intuitive attempt — `--phases drive-green` to run ONLY the drive-green stage — crashes with `KeyError: <StageName.REPO: 'repo'>` because the drive-green stage dereferences the REPO StageQueue, which is only initialized by the repo-stage bootstrap that `--phases drive-green` skips. The purpose-built `--drive-green-all` flag runs the full bootstrap first (seeding the REPO stage) and then drives all open PRs, so it works reliably. Caught by dry-running the novel flag combination before any live run.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
 ---
 name: hephaestus-automation-loop-branch-sync-drive-green
-description: "Diagnose and fix ProjectHephaestus automation-loop completion failures by enforcing fresh branch/worktree sync before implementation, limiting each worker's drive-green scope to its owned issue/PR, and running a final catch-all drive-green pass. Also: how to drive all existing open PRs to green — use --drive-green-all, NOT --phases drive-green (which crashes with KeyError on the uninitialized REPO stage). Use when: (1) automation loops leave planned issues or PRs unfinished, (2) existing issue worktrees or branches are reused across runs, (3) drive-green acts on unrelated PRs, (4) Codex-authored commits must satisfy signed and Signed-off-by policy gates, (5) you want to drive existing open PRs to green without planning/implementing new issues."
+description: "Diagnose and fix ProjectHephaestus automation-loop completion failures by enforcing fresh branch/worktree sync before implementation, limiting each worker's drive-green scope to its owned issue/PR, and running a final catch-all drive-green pass. Use when: (1) automation loops leave planned issues or PRs unfinished, (2) existing issue worktrees or branches are reused across runs, (3) drive-green acts on unrelated PRs, (4) Codex-authored commits must satisfy signed and Signed-off-by policy gates."
 category: tooling
-date: 2026-07-11
-version: "1.1.0"
+date: 2026-06-26
+version: "1.0.0"
 user-invocable: false
-verification: verified-local
-history: hephaestus-automation-loop-branch-sync-drive-green.history
+verification: verified-ci
 tags:
   - projecthephaestus
   - automation-loop
@@ -25,11 +46,10 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-07-11 |
-| **Objective** | Make automation-loop workers finish their owned issue/PR reliably instead of reusing stale branches, ignoring review/comment state, or letting broad drive-green phases act on unrelated PRs — and invoke a repo-wide "drive all open PRs to green" run correctly. |
-| **Outcome** | Core fix landed in ProjectHephaestus PR #1646 for issue #1645 (merged 2026-06-26, verified-ci). v1.1.0 adds the `--drive-green-all` vs `--phases drive-green` invocation finding (verified-local: dry-run caught the crash; `--drive-green-all` confirmed on a live ~3-minute run driving 14 open PRs). |
-| **Verification** | verified-ci (core); verified-local (v1.1.0 drive-green-all invocation finding) |
-| **History** | [changelog](./hephaestus-automation-loop-branch-sync-drive-green.history) |
+| **Date** | 2026-06-26 |
+| **Objective** | Make automation-loop workers finish their owned issue/PR reliably instead of reusing stale branches, ignoring review/comment state, or letting broad drive-green phases act on unrelated PRs. |
+| **Outcome** | Fixed in ProjectHephaestus PR #1646 for issue #1645. The PR merged on 2026-06-26 after required CI passed. |
+| **Verification** | verified-ci |
 
 ## When to Use
 
@@ -39,8 +59,6 @@ tags:
 - A drive-green phase is scoped by intent to one issue/PR but logs or touches unrelated open PRs.
 - A final status sweep shows green-but-unarmed, stale, or review-blocked PRs after per-worker phases finish.
 - Codex is the selected agent and commits must satisfy both signed-commit and `Signed-off-by` policy checks.
-- You want to drive all **existing open PRs** to green (rebase + fix CI on PRs that already exist) without planning or implementing new issues from scratch.
-- An attempt to run only the drive-green stage via `--phases drive-green` crashes with `KeyError: <StageName.REPO: 'repo'>` and reports the item "poisoned at repo".
 
 ## Verified Workflow
 
@@ -67,17 +85,6 @@ hephaestus-merge-prs --agent <agent>
 # 5. Verify commit policy before pushing or arming auto-merge:
 git log origin/main..HEAD --pretty=format:'%h %G? %s'
 git log origin/main..HEAD --format=%B | grep -q '^Signed-off-by: '
-
-# 6. To drive ALL existing open PRs to green (rebase + fix CI on PRs that already
-#    exist) WITHOUT planning/implementing new issues — use --drive-green-all,
-#    which runs the full loop bootstrap first so the REPO stage is seeded:
-pixi run hephaestus-automation-loop \
-  --repos <Repo> --drive-green-all --max-workers 4 --parallel-repos 1 --model <model>
-
-# DO NOT use `--phases drive-green` standalone — it CRASHES because the drive-green
-# stage dereferences the REPO StageQueue, which --phases drive-green never seeds:
-#   KeyError: <StageName.REPO: 'repo'>   (item "poisoned at repo")
-# Always --dry-run a novel flag combination first to surface this before a live run.
 ```
 
 ### Detailed Steps
@@ -96,19 +103,6 @@ pixi run hephaestus-automation-loop \
 
 7. **Use live GitHub state as the completion gate.** Before reporting the loop complete, check the issue state, PR state, required checks, review/thread state, and auto-merge state live from GitHub. Local success logs are not enough.
 
-8. **To drive all existing open PRs to green, use `--drive-green-all` — never `--phases drive-green` standalone.** When the goal is to shepherd already-open PRs (rebase + fix CI on PRs that exist) rather than plan/implement new issues from scratch, use `--drive-green-all` with no `--phases`:
-
-   ```bash
-   pixi run hephaestus-automation-loop \
-     --repos <Repo> --drive-green-all --max-workers 4 --parallel-repos 1 --model <model>
-   ```
-
-   `--drive-green-all` runs the full loop bootstrap first, which initializes the `StageName.REPO` StageQueue, and only then executes the drive-green stage. In contrast, `--phases drive-green` attempts to run ONLY the drive-green stage and skips the repo-stage bootstrap; the drive-green stage then dereferences the uninitialized REPO stage key and crashes with `KeyError: <StageName.REPO: 'repo'>`, reporting the item "poisoned at repo". The REPO stage is a **prerequisite**, not an independently runnable phase — `--phases` does not compose freely across all subsets. Prefer the purpose-built flag over hand-composing phases.
-
-9. **Expect a correct `--drive-green-all` run to be FAST, and read a non-zero exit code carefully.** A correct run shepherds existing PRs (review + route to CI) rather than planning/implementing from scratch, so short runtime is normal (observed: ~3 minutes over 14 open PRs — 7 reviews requested, 5 already-GO'd PRs adopted → CI, 0 new GO verdicts). A short run is EXPECTED, not a sign of a no-op. An `exit_code=1` in this mode typically reflects item-level review non-GOs, not a crash — distinguish it from the `--phases drive-green` KeyError crash above.
-
-10. **Dry-run any novel flag combination first.** A `--dry-run` of `--phases drive-green` surfaces the `KeyError` before any live invocation. Always dry-run an unfamiliar flag combination to catch stage-seeding crashes before they poison a live run.
-
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -118,8 +112,6 @@ pixi run hephaestus-automation-loop \
 | Preserving stale local commits instead of rebasing | Existing local branch commits were treated as work to preserve because their subjects looked relevant. | Stale branches can be based on old main, miss required files or comments, or carry partial/revert-shaped changes. | Rebase onto `origin/main` before implementation; inspect the post-rebase diff and live PR state before deciding what to keep. |
 | Fake or local-only substitutes for externally required tools | Local stand-ins were used for checks that the real external workflow or policy gate would enforce. | The local result did not prove the automation path would pass required CI, signing, review, or GitHub policy gates. | Use the real tool path for required external gates, or mark the result unverified. For this workflow, rely on required CI and live PR evidence. |
 | Codex commits without explicit policy verification | Codex-generated commits were allowed to proceed without checking both cryptographic signature state and `Signed-off-by` trailers. | Required policy checks can reject commits even when the code and tests are correct. | Verify `git log origin/main..HEAD --pretty=format:'%h %G? %s'` and scan commit bodies for `Signed-off-by:` before push/auto-merge. |
-| Running only the drive-green stage via `--phases drive-green` | Ran `hephaestus-automation-loop --phases drive-green` to shepherd existing open PRs without planning/implementing new issues. | Crashed with `KeyError: <StageName.REPO: 'repo'>`; the item was "poisoned at repo". The drive-green stage dereferences the REPO StageQueue, which `--phases drive-green` never seeds because it skips the repo-stage bootstrap. | Use `--drive-green-all` (no `--phases`) to drive existing PRs to green; it runs the full bootstrap first so the REPO stage is seeded. Dry-run novel flag combos to surface this before a live run. |
-| Assuming `--phases` composes freely across any subset | Expected any subset of phases (e.g. just `drive-green`) to run standalone. | The repo stage is a required prerequisite for later stages, not an independently runnable phase; skipping it leaves a downstream stage referencing an uninitialized key. | Some phases are prerequisites, not independently runnable. Prefer the purpose-built flag (`--drive-green-all`) over hand-composing `--phases` subsets. |
 
 ## Results & Parameters
 
@@ -131,37 +123,6 @@ pixi run hephaestus-automation-loop \
 - Required Checks run: 28256238895 succeeded.
 - Test workflow run: 28256151963 succeeded.
 - Squash merge commit: `2a0cd2adc2570264c1bd2c45df96c75246bac433`.
-
-### Driving All Open PRs to Green (v1.1.0, verified-local)
-
-Correct invocation — drives existing open PRs to green (rebase + fix CI on PRs that
-already exist) without planning/implementing new issues:
-
-```bash
-pixi run hephaestus-automation-loop \
-  --repos <Repo> --drive-green-all --max-workers 4 --parallel-repos 1 --model <model>
-```
-
-Broken invocation — crashes before doing any work:
-
-```bash
-# --phases drive-green skips the repo-stage bootstrap; the drive-green stage then
-# dereferences the uninitialized REPO StageQueue:
-#   KeyError: <StageName.REPO: 'repo'>   (item reported "poisoned at repo")
-pixi run hephaestus-automation-loop --repos <Repo> --phases drive-green   # DO NOT USE
-```
-
-Observed behavior of a correct `--drive-green-all` run:
-
-- FAST: a ~3-minute run over 14 open PRs.
-- Of those 14: 7 reviews requested, 5 already-GO'd PRs adopted → routed to CI, 0 new GO verdicts granted.
-- Short runtime is EXPECTED — drive-green shepherds existing PRs (review + route to CI) rather than planning/implementing from scratch.
-- `exit_code=1` reflects item-level review non-GOs, not a crash. Distinguish it from the `--phases drive-green` KeyError crash.
-
-Upstream improvement (low priority): `--phases drive-green` should either error
-clearly ("drive-green requires the repo stage; use --drive-green-all") or
-auto-include the repo bootstrap, rather than KeyError-poisoning the item. The
-`--drive-green-all` workaround is reliable, so this is low priority.
 
 ### Completion Checklist
 
@@ -200,4 +161,10 @@ git log origin/main..HEAD --format=%B | grep -q '^Signed-off-by: '
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | Issue #1645 / PR #1646 | verified-ci; Required Checks run 28256238895 succeeded; Test workflow run 28256151963 succeeded; merged 2026-06-26 as `2a0cd2adc2570264c1bd2c45df96c75246bac433` |
-| ProjectHephaestus | `--drive-green-all` vs `--phases drive-green` (2026-07-11) | verified-local; `--dry-run` of `--phases drive-green` surfaced `KeyError: <StageName.REPO: 'repo'>` (item "poisoned at repo"); `--drive-green-all` confirmed working on a live ~3-minute run driving 14 open PRs (7 reviews requested, 5 already-GO'd PRs → CI, 0 new GO). |
+```
+
+---
+
+## v1.0.0 (2026-06-26)
+
+**Initial version.** Fixed in ProjectHephaestus PR #1646 for issue #1645. Documents fresh branch/worktree sync before implementation, per-worker drive-green scoping to the owned issue/PR, a final catch-all drive-green pass, and Codex signed + Signed-off-by commit policy handling. verified-ci.
