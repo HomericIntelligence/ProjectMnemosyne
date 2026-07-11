@@ -6,21 +6,29 @@ This file preserves the changelog and full superseded content of the
 
 ## v1.1.0 (2026-07-11)
 
-- **Changed by:** mvillmow/Random predictive-coding-mojo session (gh tidy no-dry-run destructive behavior observed)
+- **Changed by:** mvillmow/Random predictive-coding-mojo session (confirmed `gh tidy` has no `--dry-run` flag; documented manual-preview + env-var-config awareness)
 - **Verification:** verified-local
 
 ### What changed
 
-added 2 Failed Attempts rows (--dry-run silently ignored; AUTO_DELETE_MERGED no-prompt),
-added "No-dry-run safe-usage workflow" subsection, added worktree-cleanup pairing note,
-added Verified On entry for mvillmow/Random, bumped version 1.0.0→1.1.0, added history
-frontmatter field.
+Added a Failed Attempts row (`--dry-run` is silently ignored — a no-op, not a preview),
+added the "Preview without a dry-run flag (there isn't one)" subsection framing `gh tidy`
+as a safe-by-design cleanup tool (merged-only deletion, worktree-checked-out branches
+skipped, manual-preview via `git branch --merged main`, env-var-config awareness for
+`GH_TIDY_AUTO_DELETE_MERGED`), added the `/hephaestus:worktree-cleanup` companion-pairing
+note, added a Verified On entry for mvillmow/Random, bumped version 1.0.0→1.1.0, added the
+history frontmatter field.
 
 ### Why
 
-This session ran `gh tidy --dry-run` expecting a preview; the flag was silently ignored
-and `gh tidy` deleted 11 local branches and pruned 14 remote-tracking refs for real.
-Documenting that no dry-run exists prevents future operators from trusting the flag.
+In this session `gh tidy` correctly cleaned merged branches per the operator's configured
+env vars (`AUTO_DELETE_MERGED` was deliberately enabled) and protected the live
+parity-training worktree — behaving exactly as designed. The one new, generally useful
+fact is that `gh tidy` has no `--dry-run` flag: `gh tidy --help` shows only `Usage: gh tidy`,
+and passing `--dry-run` is a silent no-op rather than a preview. Documenting this — plus how
+to preview manually via `git branch --merged main` and how to check your own
+`GH_TIDY_AUTO_DELETE_MERGED` config — lets operators run `gh tidy` confidently instead of
+reaching for a flag that does not exist.
 
 ### Previous version (v1.0.0) snapshot
 
