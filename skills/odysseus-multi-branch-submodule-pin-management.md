@@ -174,7 +174,7 @@ git checkout -b chore/refresh-pins-partial-<date> origin/main
 git submodule update --init --recursive
 
 # 2. Run --remote ONLY on the submodules you intend to bump.
-for sub in infrastructure/ProjectHermes control/ProjectNestor provisioning/ProjectKeystone provisioning/ProjectTelemachy shared/ProjectMnemosyne; do
+for sub in infrastructure/ProjectHermes control/ProjectNestor provisioning/ProjectKeystone provisioning/ProjectTelemachy shared/Mnemosyne; do
   git submodule update --remote "$sub"
 done
 
@@ -194,7 +194,7 @@ for sub in infrastructure/ProjectHermes control/ProjectNestor ...; do
 done
 
 # 6. Stage + commit ONLY the intended paths — never `git add .`.
-git add control/ProjectNestor infrastructure/ProjectHermes provisioning/ProjectKeystone provisioning/ProjectTelemachy shared/ProjectMnemosyne
+git add control/ProjectNestor infrastructure/ProjectHermes provisioning/ProjectKeystone provisioning/ProjectTelemachy shared/Mnemosyne
 git status --short  # confirm only those are staged
 git commit -m "chore(submodules): refresh pins ..."
 ```

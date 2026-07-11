@@ -231,7 +231,7 @@ def build_parser() -> argparse.ArgumentParser:
               python3 scripts/validate_plugins.py
 
               # Run from any directory (skills/ resolved relative to cwd)
-              cd /path/to/ProjectMnemosyne && python3 scripts/validate_plugins.py
+              cd /path/to/Mnemosyne && python3 scripts/validate_plugins.py
 
               # Pipe through grep to show only failing files
               python3 scripts/validate_plugins.py 2>&1 | grep '^✗'

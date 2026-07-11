@@ -1,5 +1,5 @@
 {
-  "name": "ProjectMnemosyne",
+  "name": "Mnemosyne",
   "owner": {
     "name": "HomericIntelligence",
     "url": "https://github.com/HomericIntelligence"
@@ -10197,7 +10197,7 @@
     },
     {
       "name": "mnemosyne-skill-pr-ci-gate-first-pass-green",
-      "description": "Use when authoring a ProjectMnemosyne /learn skill PR and you want it to pass CI on the FIRST push instead of bouncing on a red gate: (1) before committing a new or amended skills/*.md so you run the SAME two checks the Mnemosyne branch-protection requires \u2014 validate (ruff + scripts/validate_plugins.py over the WHOLE skills/ dir + mypy + pytest) and markdownlint (markdownlint-cli2 with .markdownlint.yaml); (2) when a markdown table in your skill has an inline pipe (regex, shell pipe, a|b) that markdownlint MD056/table-column-count rejects but validate_plugins.py silently passes; (3) when /learn emits a skill missing one of the five required ## sections and validate fails on your own new file; (4) when parallel /learn runs fork fresh origin/main against the SAME skill and become mutually DIRTY, so you need the open-PR amend-lock; (5) when a pre-existing broken file already on main reddens validate for files you never touched; (6) before claiming verified-ci, to confirm the gate is actually green and not just your local run.",
+      "description": "Use when authoring a Mnemosyne /learn skill PR and you want it to pass CI on the FIRST push instead of bouncing on a red gate: (1) before committing a new or amended skills/*.md so you run the SAME two checks the Mnemosyne branch-protection requires \u2014 validate (ruff + scripts/validate_plugins.py over the WHOLE skills/ dir + mypy + pytest) and markdownlint (markdownlint-cli2 with .markdownlint.yaml); (2) when a markdown table in your skill has an inline pipe (regex, shell pipe, a|b) that markdownlint MD056/table-column-count rejects but validate_plugins.py silently passes; (3) when /learn emits a skill missing one of the five required ## sections and validate fails on your own new file; (4) when parallel /learn runs fork fresh origin/main against the SAME skill and become mutually DIRTY, so you need the open-PR amend-lock; (5) when a pre-existing broken file already on main reddens validate for files you never touched; (6) before claiming verified-ci, to confirm the gate is actually green and not just your local run.",
       "version": "1.0.0",
       "source": "./skills/mnemosyne-skill-pr-ci-gate-first-pass-green.md",
       "category": "tooling",
@@ -11544,7 +11544,7 @@
     },
     {
       "name": "tooling-portable-shared-repo-fork-resolution",
-      "description": "Make a hardcoded shared-knowledge-base repo reference (e.g. HomericIntelligence/ProjectMnemosyne) org-aware/portable via a clone-or-fork resolution ladder, so any GitHub user can read and contribute to it instead of only the canonical org. Use when: (1) a script/skill hardcodes an `owner/repo` slug everywhere and only that org can use it, (2) /learn or /advise-style automation always targets the canonical upstream and you want it to target the caller's own fork, (3) you need a single resolver returning the correct owner/slug across env-override > gh-login-fork > upstream-fallback, (4) you must mirror the same resolution logic across a Python source-of-truth and a bash SKILL.md (cannot import Python), (5) you are about to call `gh repo fork` programmatically and need to handle the can't-fork-into-own-org case.",
+      "description": "Make a hardcoded shared-knowledge-base repo reference (e.g. HomericIntelligence/Mnemosyne) org-aware/portable via a clone-or-fork resolution ladder, so any GitHub user can read and contribute to it instead of only the canonical org. Use when: (1) a script/skill hardcodes an `owner/repo` slug everywhere and only that org can use it, (2) /learn or /advise-style automation always targets the canonical upstream and you want it to target the caller's own fork, (3) you need a single resolver returning the correct owner/slug across env-override > gh-login-fork > upstream-fallback, (4) you must mirror the same resolution logic across a Python source-of-truth and a bash SKILL.md (cannot import Python), (5) you are about to call `gh repo fork` programmatically and need to handle the can't-fork-into-own-org case.",
       "version": "1.0.0",
       "source": "./skills/tooling-portable-shared-repo-fork-resolution.md",
       "category": "tooling",

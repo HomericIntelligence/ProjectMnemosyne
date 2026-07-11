@@ -18,7 +18,7 @@ tags: [audit, triage, remediation, github-issues, dead-code, ci, requirements, p
 | ------- | ------- |
 | **Date** | 2026-05-19 |
 | **Objective** | Run a strict repo audit, triage findings by complexity, batch-fix scoped items, and reconcile complex work against the existing GitHub issue backlog before creating focused gaps. |
-| **Outcome** | Successful across ProjectMnemosyne and Radiance: one audit cleanup PR pattern, existing issues updated/commented/labeled first, and only missing focused gaps filed as new issues. The skill now includes a finding-verification gate (Phase 1.5) that confirms each CRITICAL/MAJOR finding is true before triage — catching swarm-audit false positives. |
+| **Outcome** | Successful across Mnemosyne and Radiance: one audit cleanup PR pattern, existing issues updated/commented/labeled first, and only missing focused gaps filed as new issues. The skill now includes a finding-verification gate (Phase 1.5) that confirms each CRITICAL/MAJOR finding is true before triage — catching swarm-audit false positives. |
 | **Verification** | verified-local |
 | **History** | [changelog](./repo-audit-triage-fix-and-issue-workflow.history) |
 
@@ -311,7 +311,7 @@ Both false positives were caught by a **single read-only command** in the Phase 
 verification gate, before any triage. The lesson: at least 1-in-8 swarm-audit sections
 can carry a finding that would have caused wasted or misleading work if acted on naively.
 
-### Audit Score Baseline (ProjectMnemosyne, 2026-03-28)
+### Audit Score Baseline (Mnemosyne, 2026-03-28)
 
 | Section | Grade | Key Findings |
 | --------- | ------- | -------------- |
@@ -374,7 +374,7 @@ This produced four new focused issues instead of duplicating the entire audit as
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | Strict audit + triage + 10-item cleanup PR (March 2026) | 9/9 tests passing, 6 issues filed (#1105–#1110) |
+| Mnemosyne | Strict audit + triage + 10-item cleanup PR (March 2026) | 9/9 tests passing, 6 issues filed (#1105–#1110) |
 | Radiance | Strict audit issue-backlog reconciliation (April 2026) | Existing open issues were updated/commented/labeled first; only four missing focused issues were created (#181–#184) |
 | A predictive-coding research project | `/repo-analyze-strict-full` 15-section swarm audit, 2026-05-19 — 2 section false positives caught by finding-verification gate before triage | A phantom committed `__pycache__` (refuted by `git ls-files`) and a phantom "no CI" (refuted by `ls` of the monorepo root) were both caught before triage; one section grade corrected D+ → C- |
 

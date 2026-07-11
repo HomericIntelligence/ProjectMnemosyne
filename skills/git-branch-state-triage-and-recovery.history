@@ -775,9 +775,9 @@ git push -u origin "$FOLLOWUP_BRANCH"
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | Branch `feature/myrmidon-merge-triage` (32 ahead, 730 behind, remote gone) — three-way count diff: merge-base=1661 skills, branch=1849 (grew), main=333 (shrank via consolidation). 970 branch-only files were pre-consolidation originals. Hard-reset to origin/main confirmed correct after stash. 107 PRs subsequently merged on main. | State A — large-scale corpus consolidation |
-| ProjectMnemosyne | Branch `feature/myrmidon-merge-triage` (32 ahead, 525 behind, remote gone) — confirmed fully superseded; no PRs opened | State A |
-| ProjectMnemosyne | Branch `skill/debugging/fixme-todo-cleanup-v2` pushed from ProjectOdyssey's history — no merge-base; content already on main; deleted | State B |
+| Mnemosyne | Branch `feature/myrmidon-merge-triage` (32 ahead, 730 behind, remote gone) — three-way count diff: merge-base=1661 skills, branch=1849 (grew), main=333 (shrank via consolidation). 970 branch-only files were pre-consolidation originals. Hard-reset to origin/main confirmed correct after stash. 107 PRs subsequently merged on main. | State A — large-scale corpus consolidation |
+| Mnemosyne | Branch `feature/myrmidon-merge-triage` (32 ahead, 525 behind, remote gone) — confirmed fully superseded; no PRs opened | State A |
+| Mnemosyne | Branch `skill/debugging/fixme-todo-cleanup-v2` pushed from ProjectOdyssey's history — no merge-base; content already on main; deleted | State B |
 | ProjectOdyssey | PR #3197, issue #3088 — BF16 test skip; reset to remote (13 remote-only commits) + cherry-pick fix | State C |
 | ProjectHephaestus | 7 local branches all failed auto-rebase with conflicts; `git cherry` showed every commit `+`. Message-search proved all subsumed: `999-fix-pr-thread-reply-mutation`→`187720a … (#1041)`, `fix-1282-work`→`22fc435 … (#1282)`, `rc2-conflict-gate`→`d3701b8 … (#1335)`. Reported subsumed; no swarm, no delete | State A — squash-merge false positive |
 | ProjectHephaestus | Worktree `agent-a7fe2df2b7f6e658b` — 3 "uncommitted modified" files all 0 unique lines vs main (`log_on_error` changes already merged via PR #1372); safe to discard | State A — worktree 0-unique-lines |
@@ -1435,9 +1435,9 @@ git push -u origin "$FOLLOWUP_BRANCH"
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | Branch `feature/myrmidon-merge-triage` (32 ahead, 730 behind, remote gone) — three-way count diff: merge-base=1661 skills, branch=1849 (grew), main=333 (shrank via consolidation). 970 branch-only files were pre-consolidation originals. Hard-reset to origin/main confirmed correct after stash. 107 PRs subsequently merged on main. | State A — large-scale corpus consolidation |
-| ProjectMnemosyne | Branch `feature/myrmidon-merge-triage` (32 ahead, 525 behind, remote gone) — confirmed fully superseded; no PRs opened | State A |
-| ProjectMnemosyne | Branch `skill/debugging/fixme-todo-cleanup-v2` pushed from ProjectOdyssey's history — no merge-base; content already on main; deleted | State B |
+| Mnemosyne | Branch `feature/myrmidon-merge-triage` (32 ahead, 730 behind, remote gone) — three-way count diff: merge-base=1661 skills, branch=1849 (grew), main=333 (shrank via consolidation). 970 branch-only files were pre-consolidation originals. Hard-reset to origin/main confirmed correct after stash. 107 PRs subsequently merged on main. | State A — large-scale corpus consolidation |
+| Mnemosyne | Branch `feature/myrmidon-merge-triage` (32 ahead, 525 behind, remote gone) — confirmed fully superseded; no PRs opened | State A |
+| Mnemosyne | Branch `skill/debugging/fixme-todo-cleanup-v2` pushed from ProjectOdyssey's history — no merge-base; content already on main; deleted | State B |
 | ProjectOdyssey | PR #3197, issue #3088 — BF16 test skip; reset to remote (13 remote-only commits) + cherry-pick fix | State C |
 | ProjectHephaestus | 7 local branches all failed auto-rebase with conflicts; `git cherry` showed every commit `+`. Message-search proved all subsumed: `999-fix-pr-thread-reply-mutation`→`187720a … (#1041)`, `fix-1282-work`→`22fc435 … (#1282)`, `rc2-conflict-gate`→`d3701b8 … (#1335)`. Reported subsumed; no swarm, no delete | State A — squash-merge false positive |
 | ProjectHephaestus | Worktree `agent-a7fe2df2b7f6e658b` — 3 "uncommitted modified" files all 0 unique lines vs main (`log_on_error` changes already merged via PR #1372); safe to discard | State A — worktree 0-unique-lines |
@@ -1994,9 +1994,9 @@ git push -u origin "$FOLLOWUP_BRANCH"
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | Branch `feature/myrmidon-merge-triage` (32 ahead, 730 behind, remote gone) — three-way count diff: merge-base=1661 skills, branch=1849 (grew), main=333 (shrank via consolidation). 970 branch-only files were pre-consolidation originals. Hard-reset to origin/main confirmed correct after stash. 107 PRs subsequently merged on main. | State A — large-scale corpus consolidation |
-| ProjectMnemosyne | Branch `feature/myrmidon-merge-triage` (32 ahead, 525 behind, remote gone) — confirmed fully superseded; no PRs opened | State A |
-| ProjectMnemosyne | Branch `skill/debugging/fixme-todo-cleanup-v2` pushed from ProjectOdyssey's history — no merge-base; content already on main; deleted | State B |
+| Mnemosyne | Branch `feature/myrmidon-merge-triage` (32 ahead, 730 behind, remote gone) — three-way count diff: merge-base=1661 skills, branch=1849 (grew), main=333 (shrank via consolidation). 970 branch-only files were pre-consolidation originals. Hard-reset to origin/main confirmed correct after stash. 107 PRs subsequently merged on main. | State A — large-scale corpus consolidation |
+| Mnemosyne | Branch `feature/myrmidon-merge-triage` (32 ahead, 525 behind, remote gone) — confirmed fully superseded; no PRs opened | State A |
+| Mnemosyne | Branch `skill/debugging/fixme-todo-cleanup-v2` pushed from ProjectOdyssey's history — no merge-base; content already on main; deleted | State B |
 | ProjectOdyssey | PR #3197, issue #3088 — BF16 test skip; reset to remote (13 remote-only commits) + cherry-pick fix | State C |
 | ProjectHephaestus | 7 local branches all failed auto-rebase with conflicts; `git cherry` showed every commit `+`. Message-search proved all subsumed: `999-fix-pr-thread-reply-mutation`→`187720a … (#1041)`, `fix-1282-work`→`22fc435 … (#1282)`, `rc2-conflict-gate`→`d3701b8 … (#1335)`. Reported subsumed; no swarm, no delete | State A — squash-merge false positive |
 | ProjectHephaestus | Worktree `agent-a7fe2df2b7f6e658b` — 3 "uncommitted modified" files all 0 unique lines vs main (`log_on_error` changes already merged via PR #1372); safe to discard | State A — worktree 0-unique-lines |
@@ -2019,7 +2019,7 @@ git push -u origin "$FOLLOWUP_BRANCH"
 - Kept the source-project verification level without preserving project-specific model-family identifiers in the learning.
 
 ### Why
-The reusable lesson is the git recovery shape, not the specific model-family rename that happened to trigger it. ProjectMnemosyne should make this searchable as an already-merged PR follow-up workflow without retaining product-specific terminology.
+The reusable lesson is the git recovery shape, not the specific model-family rename that happened to trigger it. Mnemosyne should make this searchable as an already-merged PR follow-up workflow without retaining product-specific terminology.
 
 ## v1.3.0 (2026-06-18)
 
@@ -2445,9 +2445,9 @@ branches, because they touch a narrow region the remote version differs in only 
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | Branch `feature/myrmidon-merge-triage` (32 ahead, 730 behind, remote gone) — three-way count diff: merge-base=1661 skills, branch=1849 (grew), main=333 (shrank via consolidation). 970 branch-only files were pre-consolidation originals. Hard-reset to origin/main confirmed correct after stash. 107 PRs subsequently merged on main. | State A — large-scale corpus consolidation |
-| ProjectMnemosyne | Branch `feature/myrmidon-merge-triage` (32 ahead, 525 behind, remote gone) — confirmed fully superseded; no PRs opened | State A |
-| ProjectMnemosyne | Branch `skill/debugging/fixme-todo-cleanup-v2` pushed from ProjectOdyssey's history — no merge-base; content already on main; deleted | State B |
+| Mnemosyne | Branch `feature/myrmidon-merge-triage` (32 ahead, 730 behind, remote gone) — three-way count diff: merge-base=1661 skills, branch=1849 (grew), main=333 (shrank via consolidation). 970 branch-only files were pre-consolidation originals. Hard-reset to origin/main confirmed correct after stash. 107 PRs subsequently merged on main. | State A — large-scale corpus consolidation |
+| Mnemosyne | Branch `feature/myrmidon-merge-triage` (32 ahead, 525 behind, remote gone) — confirmed fully superseded; no PRs opened | State A |
+| Mnemosyne | Branch `skill/debugging/fixme-todo-cleanup-v2` pushed from ProjectOdyssey's history — no merge-base; content already on main; deleted | State B |
 | ProjectOdyssey | PR #3197, issue #3088 — BF16 test skip; reset to remote (13 remote-only commits) + cherry-pick fix | State C |
 | ProjectHephaestus | 7 local branches all failed auto-rebase with conflicts; `git cherry` showed every commit `+`. Message-search proved all subsumed: `999-fix-pr-thread-reply-mutation`→`187720a … (#1041)`, `fix-1282-work`→`22fc435 … (#1282)`, `rc2-conflict-gate`→`d3701b8 … (#1335)`. Reported subsumed; no swarm, no delete | State A — squash-merge false positive |
 | ProjectHephaestus | Worktree `agent-a7fe2df2b7f6e658b` — 3 "uncommitted modified" files all 0 unique lines vs main (`log_on_error` changes already merged via PR #1372); safe to discard | State A — worktree 0-unique-lines |
@@ -2688,7 +2688,7 @@ a3f2b1c feat(skill-merge): consolidate 12 skills into automation-bundle (C086)
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | Branch `feature/myrmidon-merge-triage` (32 ahead, 525 behind, remote gone) | Confirmed fully superseded; no PRs opened |
+| Mnemosyne | Branch `feature/myrmidon-merge-triage` (32 ahead, 525 behind, remote gone) | Confirmed fully superseded; no PRs opened |
 
 ## References
 
@@ -2837,7 +2837,7 @@ git diff --stat origin/main...origin/<branch> | tail -5
 
 ### Session Notes (orphan-branch-recovery.notes.md)
 
-Branch `skill/debugging/fixme-todo-cleanup-v2` in ProjectMnemosyne-marketplace was reported as
+Branch `skill/debugging/fixme-todo-cleanup-v2` in Mnemosyne-marketplace was reported as
 "completely diverged from main". Investigation revealed it was pushed from a different
 repository entirely (ProjectOdyssey).
 
@@ -2859,7 +2859,7 @@ git push origin --delete skill/debugging/fixme-todo-cleanup-v2  # no recreation 
 ```
 
 Root cause: someone ran `/learn` from within ProjectOdyssey's working directory but pushed to
-ProjectMnemosyne-marketplace's remote, creating a branch with ProjectOdyssey's entire history.
+Mnemosyne-marketplace's remote, creating a branch with ProjectOdyssey's entire history.
 Prevention: verify `git remote -v` matches the expected repo; the `/learn` command now clones
 the target repo to a build directory to avoid this issue.
 

@@ -905,7 +905,7 @@ Group changes by repo and commit each separately. Include:
 | --------- | ---------------- | --------------- | ---------------- |
 | Using `replace_all: true` on compose file for agent-server-mount anchor | Tried to replace all occurrences of the hardcoded path at once | The YAML anchor line and the individual service volume lines had different surrounding context | Use `replace_all: true` only when all occurrences have identical surrounding context; otherwise use targeted edits |
 | Delegating file reads to a subagent | Asked Explore agent to read files and return exact contents | Agent returned summaries and paraphrases, not exact file content | For files that will be edited, always use the Read tool directly — never rely on an agent's description of content |
-| Assuming the `python-repo-modernization` skill in ProjectMnemosyne represented the current validation format | Copied its flat `plugin.json` structure (no `.claude-plugin/` directory) | The validator (`validate_plugins.py`) requires `.claude-plugin/plugin.json` — the flat format would fail CI | Always read `scripts/validate_plugins.py` to understand the exact expected structure before creating skill files |
+| Assuming the `python-repo-modernization` skill in Mnemosyne represented the current validation format | Copied its flat `plugin.json` structure (no `.claude-plugin/` directory) | The validator (`validate_plugins.py`) requires `.claude-plugin/plugin.json` — the flat format would fail CI | Always read `scripts/validate_plugins.py` to understand the exact expected structure before creating skill files |
 
 ## Results & Parameters
 
@@ -1603,7 +1603,7 @@ Where:
 ---
 name: tooling-plugin-marketplace-hourly-cron
 description: "Set up a cron job to auto-update Claude Code plugin marketplaces hourly.
-  Use when: (1) a custom marketplace (e.g., ProjectMnemosyne) needs to stay current
+  Use when: (1) a custom marketplace (e.g., Mnemosyne) needs to stay current
   without manual /plugin update, (2) ensuring new skills are available on next Claude
   Code session start."
 category: tooling
@@ -1626,14 +1626,14 @@ tags:
 | Field | Value |
 | ------- | ------- |
 | **Date** | 2026-03-25 |
-| **Objective** | Auto-update a Claude Code plugin marketplace (ProjectMnemosyne) every hour via cron so new skills are available on next session start |
+| **Objective** | Auto-update a Claude Code plugin marketplace (Mnemosyne) every hour via cron so new skills are available on next session start |
 | **Outcome** | Success - cron job installed, marketplace updates hourly, no manual intervention needed |
 | **Verification** | verified-local |
 
 ## When to Use
 
 - A custom plugin marketplace (git-based) needs to stay current without running `/plugin` manually
-- New skills are merged to ProjectMnemosyne frequently and should be available on next Claude Code session
+- New skills are merged to Mnemosyne frequently and should be available on next Claude Code session
 - Multiple developers share a marketplace and need consistent, up-to-date skill registries
 - You want zero-touch marketplace freshness between Claude Code sessions
 
@@ -1644,13 +1644,13 @@ tags:
 \`\`\`bash
 # Two commands needed:
 # 1. Update the marketplace index (git pull on the marketplace repo)
-claude plugin marketplace update ProjectMnemosyne
+claude plugin marketplace update Mnemosyne
 
 # 2. Update the installed plugin to pick up new versions
-claude plugin update mnemosyne@ProjectMnemosyne
+claude plugin update mnemosyne@Mnemosyne
 
 # Install as hourly cron (runs at minute 0 of every hour):
-(crontab -l 2>/dev/null; echo "0 * * * * /home/<user>/.local/bin/claude plugin marketplace update ProjectMnemosyne >> /tmp/claude-plugin-update.log 2>&1 && /home/<user>/.local/bin/claude plugin update mnemosyne@ProjectMnemosyne >> /tmp/claude-plugin-update.log 2>&1") | crontab -
+(crontab -l 2>/dev/null; echo "0 * * * * /home/<user>/.local/bin/claude plugin marketplace update Mnemosyne >> /tmp/claude-plugin-update.log 2>&1 && /home/<user>/.local/bin/claude plugin update mnemosyne@Mnemosyne >> /tmp/claude-plugin-update.log 2>&1") | crontab -
 \`\`\`
 
 ### Detailed Steps
@@ -1667,8 +1667,8 @@ claude plugin update mnemosyne@ProjectMnemosyne
 
 5. **Install the cron job**:
    \`\`\`bash
-   (crontab -l 2>/dev/null; echo "# Update ProjectMnemosyne plugin marketplace hourly
-   0 * * * * /home/<user>/.local/bin/claude plugin marketplace update ProjectMnemosyne >> /tmp/claude-plugin-update.log 2>&1 && /home/<user>/.local/bin/claude plugin update mnemosyne@ProjectMnemosyne >> /tmp/claude-plugin-update.log 2>&1") | crontab -
+   (crontab -l 2>/dev/null; echo "# Update Mnemosyne plugin marketplace hourly
+   0 * * * * /home/<user>/.local/bin/claude plugin marketplace update Mnemosyne >> /tmp/claude-plugin-update.log 2>&1 && /home/<user>/.local/bin/claude plugin update mnemosyne@Mnemosyne >> /tmp/claude-plugin-update.log 2>&1") | crontab -
    \`\`\`
 
 6. **Verify installation**: `crontab -l`
@@ -1678,7 +1678,7 @@ claude plugin update mnemosyne@ProjectMnemosyne
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 | --------- | ---------------- | --------------- | ---------------- |
 | Using just `claude` without full path | `0 * * * * claude plugin marketplace update ...` | cron does not source `.bashrc`/`.profile`, so `claude` is not on PATH | Always use absolute path to binary in cron jobs (e.g., `/home/<user>/.local/bin/claude`) |
-| Updating only the marketplace | `claude plugin marketplace update ProjectMnemosyne` alone | Marketplace index updates but installed plugin version doesn't change | Must also run `claude plugin update <plugin>@<marketplace>` to pick up new plugin versions |
+| Updating only the marketplace | `claude plugin marketplace update Mnemosyne` alone | Marketplace index updates but installed plugin version doesn't change | Must also run `claude plugin update <plugin>@<marketplace>` to pick up new plugin versions |
 
 ## Results & Parameters
 
@@ -1706,12 +1706,12 @@ claude plugin update mnemosyne@ProjectMnemosyne
 # Schedule: every hour at minute 0
 # Log file: /tmp/claude-plugin-update.log
 # Binary: absolute path to claude CLI
-0 * * * * /home/<user>/.local/bin/claude plugin marketplace update ProjectMnemosyne >> /tmp/claude-plugin-update.log 2>&1 && /home/<user>/.local/bin/claude plugin update mnemosyne@ProjectMnemosyne >> /tmp/claude-plugin-update.log 2>&1
+0 * * * * /home/<user>/.local/bin/claude plugin marketplace update Mnemosyne >> /tmp/claude-plugin-update.log 2>&1 && /home/<user>/.local/bin/claude plugin update mnemosyne@Mnemosyne >> /tmp/claude-plugin-update.log 2>&1
 \`\`\`
 
 ### Adapting for Other Marketplaces
 
-Replace `ProjectMnemosyne` and `mnemosyne@ProjectMnemosyne` with your marketplace and plugin names:
+Replace `Mnemosyne` and `mnemosyne@Mnemosyne` with your marketplace and plugin names:
 
 \`\`\`bash
 # List your marketplaces
@@ -1725,7 +1725,7 @@ claude plugin list
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| HomericIntelligence ecosystem | Session setting up hourly auto-update for ProjectMnemosyne marketplace | Cron job installed, both commands tested manually, log output confirmed |
+| HomericIntelligence ecosystem | Session setting up hourly auto-update for Mnemosyne marketplace | Cron job installed, both commands tested manually, log output confirmed |
 ```
 
 ## Superseded from hephaestus-plugin-migration
@@ -1733,7 +1733,7 @@ claude plugin list
 ```markdown
 ---
 name: hephaestus-plugin-migration
-description: "Migrate Claude Code plugin from ProjectMnemosyne to ProjectHephaestus. Use when: (1) switching enabled plugins between marketplaces, (2) updating ~/.claude/settings.json enabledPlugins or extraKnownMarketplaces, (3) separating command plugins from data-store marketplaces"
+description: "Migrate Claude Code plugin from Mnemosyne to ProjectHephaestus. Use when: (1) switching enabled plugins between marketplaces, (2) updating ~/.claude/settings.json enabledPlugins or extraKnownMarketplaces, (3) separating command plugins from data-store marketplaces"
 category: tooling
 date: 2026-03-27
 version: "1.0.0"
@@ -1748,13 +1748,13 @@ tags: [claude-code, plugin, marketplace, migration, hephaestus, mnemosyne, setti
 | Field | Value |
 | ------- | ------- |
 | **Date** | 2026-03-27 |
-| **Objective** | Replace ProjectMnemosyne plugin with ProjectHephaestus plugin in Claude Code global settings |
+| **Objective** | Replace Mnemosyne plugin with ProjectHephaestus plugin in Claude Code global settings |
 | **Outcome** | Successful - plugins reloaded and all commands available |
 
 ## When to Use
 
 - Migrating enabled plugins from one marketplace to another in `~/.claude/settings.json`
-- Switching from `skills-registry-commands@ProjectMnemosyne` to `hephaestus@ProjectHephaestus`
+- Switching from `skills-registry-commands@Mnemosyne` to `hephaestus@ProjectHephaestus`
 - Needing to understand the `enabledPlugins` and `extraKnownMarketplaces` format in Claude Code settings
 - Separating command-providing plugins from data-store marketplaces (commands in one repo, data in another)
 
@@ -1775,11 +1775,11 @@ cat ~/.claude/settings.json | python3 -m json.tool
 ### Detailed Steps
 
 1. **Identify current plugin configuration** in `~/.claude/settings.json`:
-   - Check `enabledPlugins` for the old entry (e.g., `"skills-registry-commands@ProjectMnemosyne": true`)
+   - Check `enabledPlugins` for the old entry (e.g., `"skills-registry-commands@Mnemosyne": true`)
    - Check `extraKnownMarketplaces` for registered marketplaces
 
 2. **Update `enabledPlugins`**:
-   - Remove: `"skills-registry-commands@ProjectMnemosyne": true`
+   - Remove: `"skills-registry-commands@Mnemosyne": true`
    - Add: `"hephaestus@ProjectHephaestus": true`
 
 3. **Update `extraKnownMarketplaces`**:
@@ -1792,7 +1792,7 @@ cat ~/.claude/settings.json | python3 -m json.tool
        }
      }
      \`\`\`
-   - ProjectMnemosyne can be removed from `extraKnownMarketplaces` because ProjectHephaestus commands (`/advise`, `/learn`) clone ProjectMnemosyne independently to `$HOME/.agent-brain/ProjectMnemosyne/`
+   - Mnemosyne can be removed from `extraKnownMarketplaces` because ProjectHephaestus commands (`/advise`, `/learn`) clone Mnemosyne independently to `$HOME/.agent-brain/Mnemosyne/`
 
 4. **Reload plugins** in the Claude Code session (or restart the session)
 
@@ -1833,12 +1833,12 @@ Format rules:
 ### Expected Output
 
 - All ProjectHephaestus commands appear in `/` slash-command list
-- `/advise` and `/learn` still query ProjectMnemosyne data (cloned to `$HOME/.agent-brain/ProjectMnemosyne/`)
+- `/advise` and `/learn` still query Mnemosyne data (cloned to `$HOME/.agent-brain/Mnemosyne/`)
 - No errors on plugin reload
 
 ### Key Insight
 
-When migrating plugins between marketplaces, the old marketplace may still serve as a data backend. ProjectMnemosyne stores skills data while ProjectHephaestus provides the commands that query it. However, ProjectHephaestus commands handle cloning ProjectMnemosyne independently, so the old marketplace does not need to remain in `extraKnownMarketplaces`.
+When migrating plugins between marketplaces, the old marketplace may still serve as a data backend. Mnemosyne stores skills data while ProjectHephaestus provides the commands that query it. However, ProjectHephaestus commands handle cloning Mnemosyne independently, so the old marketplace does not need to remain in `extraKnownMarketplaces`.
 
 ## Verified On
 
@@ -1851,7 +1851,7 @@ When migrating plugins between marketplaces, the old marketplace may still serve
 - [claude-plugin-marketplace](claude-plugin-marketplace.md) - Marketplace setup and schema details
 - [claude-code-settings-config](claude-code-settings-config.md) - Claude Code settings.json configuration
 - [ProjectHephaestus](https://github.com/HomericIntelligence/ProjectHephaestus) - New plugin provider
-- [ProjectMnemosyne](https://github.com/HomericIntelligence/ProjectMnemosyne) - Skills data store
+- [Mnemosyne](https://github.com/HomericIntelligence/Mnemosyne) - Skills data store
 ```
 
 ## Superseded from retrospective-hook-integration
@@ -1860,7 +1860,7 @@ When migrating plugins between marketplaces, the old marketplace may still serve
 ---
 name: retrospective-hook-integration
 description: Setup SessionEnd hooks for automatic retrospective prompts in Claude
-  Code. Use when integrating ProjectMnemosyne marketplace.
+  Code. Use when integrating Mnemosyne marketplace.
 category: tooling
 date: 2025-12-29
 version: 1.0.0
@@ -1874,13 +1874,13 @@ Setup SessionEnd hooks to automatically prompt for `/learn` when ending Claude C
 | Field | Value |
 | ------- | ------- |
 | **Date** | 2025-12-29 |
-| **Objective** | Integrate ProjectMnemosyne marketplace with ProjectOdyssey for automatic knowledge capture |
+| **Objective** | Integrate Mnemosyne marketplace with ProjectOdyssey for automatic knowledge capture |
 | **Outcome** | Successfully configured SessionEnd hooks and marketplace registration with worktree workflow |
 | **Source** | ProjectOdyssey integration |
 
 ## When to Use
 
-- Integrating ProjectMnemosyne skills marketplace with another repository
+- Integrating Mnemosyne skills marketplace with another repository
 - Setting up `/advise` and `/learn` commands in a new project
 - Configuring automatic session-end knowledge capture prompts
 - Implementing worktree-based workflow to avoid conflicts with other Claude instances
@@ -1894,25 +1894,25 @@ Setup SessionEnd hooks to automatically prompt for `/learn` when ending Claude C
 Inside Claude Code session:
 
 \`\`\`text
-/plugin marketplace add https://github.com/HomericIntelligence/ProjectMnemosyne
+/plugin marketplace add https://github.com/HomericIntelligence/Mnemosyne
 \`\`\`
 
 Or from terminal:
 
 \`\`\`bash
-claude plugin marketplace add https://github.com/HomericIntelligence/ProjectMnemosyne
+claude plugin marketplace add https://github.com/HomericIntelligence/Mnemosyne
 \`\`\`
 
 **Option B: From Local Directory**
 
 \`\`\`bash
-git clone git@github.com:HomericIntelligence/ProjectMnemosyne.git
+git clone git@github.com:HomericIntelligence/Mnemosyne.git
 \`\`\`
 
 Then:
 
 \`\`\`text
-/plugin marketplace add /path/to/ProjectMnemosyne
+/plugin marketplace add /path/to/Mnemosyne
 \`\`\`
 
 ### 2. Configure SessionEnd Hook
@@ -1960,7 +1960,7 @@ Update `.claude/settings.json`:
 ### 3. Copy Hook Script
 
 \`\`\`bash
-cp /path/to/ProjectMnemosyne/.claude/hooks/learn-trigger.py .claude/hooks/
+cp /path/to/Mnemosyne/.claude/hooks/learn-trigger.py .claude/hooks/
 \`\`\`
 
 ### 4. Commit and Create PR
@@ -1978,11 +1978,11 @@ gh pr merge --auto --rebase
 After marketplace registration:
 
 \`\`\`text
-/plugin install grpo-external-vllm@ProjectMnemosyne
-/plugin install mojo-simd-errors@ProjectMnemosyne
-/plugin install github-actions-mojo@ProjectMnemosyne
-/plugin install layerwise-gradient-check@ProjectMnemosyne
-/plugin install skill-marketplace-design@ProjectMnemosyne
+/plugin install grpo-external-vllm@Mnemosyne
+/plugin install mojo-simd-errors@Mnemosyne
+/plugin install github-actions-mojo@Mnemosyne
+/plugin install layerwise-gradient-check@Mnemosyne
+/plugin install skill-marketplace-design@Mnemosyne
 \`\`\`
 
 ## Failed Attempts
@@ -2025,10 +2025,10 @@ After marketplace registration:
 
 \`\`\`bash
 # GitHub URL (private repo)
-/plugin marketplace add https://github.com/HomericIntelligence/ProjectMnemosyne
+/plugin marketplace add https://github.com/HomericIntelligence/Mnemosyne
 
 # Local directory
-/plugin marketplace add /home/user/ProjectMnemosyne-marketplace
+/plugin marketplace add /home/user/Mnemosyne-marketplace
 \`\`\`
 
 ### Worktree Pattern
@@ -2046,7 +2046,7 @@ git worktree remove worktrees/<branch-name>
 
 ## References
 
-- ProjectMnemosyne: https://github.com/HomericIntelligence/ProjectMnemosyne
+- Mnemosyne: https://github.com/HomericIntelligence/Mnemosyne
 - Blog post: https://huggingface.co/blog/sionic-ai/claude-code-skills-training
 - Claude Code plugin docs: https://code.claude.com/docs/en/discover-plugins
 - Claude Code skills docs: https://code.claude.com/docs/en/skills
@@ -2121,7 +2121,7 @@ run([
 - `--tools "Bash"` enables Bash tool
 - `--allowedTools "Bash(git:*)"` permits all git commands
 - `--allowedTools "Bash(gh:*)"` permits all gh CLI commands
-- Without these permissions, retrospective cannot commit to ProjectMnemosyne
+- Without these permissions, retrospective cannot commit to Mnemosyne
 
 **Wrong approach** (will fail to commit):
 \`\`\`python

@@ -211,10 +211,10 @@ JSON RESPONSE SHAPE (cite a confirmed source)
 
 ## References
 
-- ProjectMnemosyne skill: `checkpoint-recovery` (incremental save vs save-at-end failure mode)
-- ProjectMnemosyne skill: `cpp-http-client-wrapper-lifetime-equals-object-not-per-call` (member-held native handle lifetime)
-- ProjectMnemosyne skill: `cpp-cmake-ci-build-and-test-fixes` (FetchContent C lib + -Werror, clang-tidy vendor floods, lib-with-main vs gtest_main)
+- Mnemosyne skill: `checkpoint-recovery` (incremental save vs save-at-end failure mode)
+- Mnemosyne skill: `cpp-http-client-wrapper-lifetime-equals-object-not-per-call` (member-held native handle lifetime)
+- Mnemosyne skill: `cpp-cmake-ci-build-and-test-fixes` (FetchContent C lib + -Werror, clang-tidy vendor floods, lib-with-main vs gtest_main)
 - Team skill: `homeric-crosshost-deployment-and-mesh-topology` (`.team.id` / `.task.id` JSON shape; JetStream `js_FileStorage` persists the event stream)
-- ProjectMnemosyne skill: `state-machine-and-resource-lifecycle-patterns` / `checkpoint-state-machine-resume` (in-flight status reloaded, not forced FAILED)
+- Mnemosyne skill: `state-machine-and-resource-lifecycle-patterns` / `checkpoint-state-machine-resume` (in-flight status reloaded, not forced FAILED)
 - [SQLite WAL mode](https://www.sqlite.org/wal.html)
 - [Conan sqlite3 recipe](https://conan.io/center/recipes/sqlite3)

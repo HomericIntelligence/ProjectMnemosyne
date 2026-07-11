@@ -12,7 +12,7 @@
   - A grep pattern for detecting mandating language in the issue body.
   - A decision matrix (mandate × repo-allows → verdict).
   - A `BLOCKED` verdict template naming the specific repo setting to enable.
-  - A scope caveat (rule applies to the mandated task's PR, not to unrelated PRs opened by the same session in a different repo — e.g. a /learn PR in ProjectMnemosyne is bound by ProjectMnemosyne's merge-method settings, not by ProjectOdyssey's issue text).
+  - A scope caveat (rule applies to the mandated task's PR, not to unrelated PRs opened by the same session in a different repo — e.g. a /learn PR in Mnemosyne is bound by Mnemosyne's merge-method settings, not by ProjectOdyssey's issue text).
 - Added Failed Attempt 3 documenting the silent-substitution observation from a prior /learn session.
 - Extended the "Configuration" YAML with `task-mandated-merge-method` block.
 - Added a second "Verified On" row.
@@ -22,7 +22,7 @@
 
 ### Why
 
-The v1.0.0 skill recommended probing `autoMergeAllowed` / `rebaseMergeAllowed` before writing the plan step, but did NOT specify what to do when the probe returns `false` for a method the task's issue body mandated. A prior /learn session hit exactly this case: ProjectMnemosyne disallows `--rebase`, and the sub-agent silently substituted `--squash` because the target repo allowed it. That was wrong: the originating task's text mandated `--rebase`, and the sub-agent does not have the authority to unilaterally reinterpret a merge-method mandate.
+The v1.0.0 skill recommended probing `autoMergeAllowed` / `rebaseMergeAllowed` before writing the plan step, but did NOT specify what to do when the probe returns `false` for a method the task's issue body mandated. A prior /learn session hit exactly this case: Mnemosyne disallows `--rebase`, and the sub-agent silently substituted `--squash` because the target repo allowed it. That was wrong: the originating task's text mandated `--rebase`, and the sub-agent does not have the authority to unilaterally reinterpret a merge-method mandate.
 
 v1.1.0 closes the gap with a hard rule: on task-mandated method + repo-disallow, plan verdict is `BLOCKED | Reason: repo does not allow the merge method the issue mandates`. Human decides whether to enable the method in repo settings or amend the issue text. The scope caveat ensures the rule applies to the mandated task's PR, not to /learn PRs opened in unrelated repos.
 
@@ -34,7 +34,7 @@ The v1.0.0 skill body remains as the base of `planning-pr-open-load-bearing-assu
 
 ## v1.0.0 (2026-07-02) — Initial skill
 
-**Changed by:** ProjectMnemosyne PR #2944 — /learn pass 1 on ProjectOdyssey #5527 R0 planning session.
+**Changed by:** Mnemosyne PR #2944 — /learn pass 1 on ProjectOdyssey #5527 R0 planning session.
 **Verification:** unverified
 
 Initial extraction: PR-open plans routinely depend on unverified load-bearing external assumptions (`gh pr merge --auto` requires repo autoMergeAllowed + method-Allowed settings; a compat wrapper's GLIBC-detection is only true if the wrapper is present AND correct AND the referenced doc is current). Planner MUST either probe or hedge with a documented fallback.

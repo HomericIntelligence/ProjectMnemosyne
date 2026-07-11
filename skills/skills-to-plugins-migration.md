@@ -225,4 +225,4 @@ For each PR:
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | PRs #155, #158, #160, #165, #167 — all 5 migrated and merged | [notes.md](../../references/notes.md) |
+| Mnemosyne | PRs #155, #158, #160, #165, #167 — all 5 migrated and merged | [notes.md](../../references/notes.md) |

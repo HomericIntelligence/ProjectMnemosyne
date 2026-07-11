@@ -300,4 +300,4 @@ steps:
 
 ## v1.0.0 (2026-06-20)
 
-**Initial version.** Created in R0 of planning Odysseus issue #201 via PR https://github.com/HomericIntelligence/ProjectMnemosyne/pull/2706. Captured the SIX image-publish planning risks as open/unverified assumptions (docker/* action SHAs, ghcr.io namespace casing, multi-arch Dockerfile buildability, required-check wiring, ADR status convention, meta-repo build altitude). Verification: unverified.
+**Initial version.** Created in R0 of planning Odysseus issue #201 via PR https://github.com/HomericIntelligence/Mnemosyne/pull/2706. Captured the SIX image-publish planning risks as open/unverified assumptions (docker/* action SHAs, ghcr.io namespace casing, multi-arch Dockerfile buildability, required-check wiring, ADR status convention, meta-repo build altitude). Verification: unverified.

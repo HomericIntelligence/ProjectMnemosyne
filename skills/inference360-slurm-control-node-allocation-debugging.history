@@ -2,7 +2,7 @@
 
 ## v1.0.1 (2026-06-26)
 
-**Changed by:** Follow-up after ProjectMnemosyne PR #2844 markdownlint failure.
+**Changed by:** Follow-up after Mnemosyne PR #2844 markdownlint failure.
 **Verification:** verified-ci
 
 ### What changed
@@ -13,7 +13,7 @@
 
 ### Why
 
-ProjectMnemosyne PR #2844 auto-merged, but the later `markdownlint` job reported
+Mnemosyne PR #2844 auto-merged, but the later `markdownlint` job reported
 `MD033/no-inline-html` on the inline `<job>` placeholder inside a table cell.
 The learning was correct; only the placeholder spelling needed to match the repo
 markdownlint rules.

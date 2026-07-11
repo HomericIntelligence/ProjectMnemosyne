@@ -3,7 +3,7 @@
 
 ## v1.0.0 (2026-06-19)
 
-Initial skill created in ProjectMnemosyne PR #2573 from the ProjectOdyssey epic #5191
+Initial skill created in Mnemosyne PR #2573 from the ProjectOdyssey epic #5191
 planning session (R0): re-verify the LIVE state of every child issue with `gh`
 (`state`, `stateReason`, merged PRs, `state:plan-go` labels) before planning an
 epic/tracking/umbrella issue, because the epic body is a snapshot that drifts.

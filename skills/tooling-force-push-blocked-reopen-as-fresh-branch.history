@@ -189,7 +189,7 @@ PR_NUM=$(basename "$PR_URL")
 gh pr merge "$PR_NUM" --auto --squash --repo OWNER/REPO
 ```
 
-Squash-only is the project default for ProjectHephaestus and ProjectMnemosyne (rebase merge is disabled). Check the repo's allowed merge methods if unsure:
+Squash-only is the project default for ProjectHephaestus and Mnemosyne (rebase merge is disabled). Check the repo's allowed merge methods if unsure:
 
 ```bash
 gh api repos/OWNER/REPO --jq '.allow_squash_merge,.allow_rebase_merge,.allow_merge_commit'

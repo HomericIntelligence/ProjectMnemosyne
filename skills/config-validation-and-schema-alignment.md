@@ -438,6 +438,6 @@ HEPHAESTUS_A___B                    → a._b                    (triple ___ = ne
 | --------- | --------- | --------- |
 | ProjectScylla | Multiple PRs (schema, filename, validation) | PRs #795, #821, #837, #941, #974, #1376, #1424, #1462, #1465; issues #682, #732, #733, #775, #776, #792, #806, #851, #1357, #1380, #1436, #1438 |
 | ProjectHephaestus | Issues #29, #44, #58, #64; PRs #67, #75, #112, #130, #417 | Config env nesting, YAML linter fix, Python CI matrix, Safety Net git reset |
-| ProjectMnemosyne | `/hephaestus:worktree-cleanup` stale after PR #308 | 2026-05-04; cache sync pattern verified |
+| Mnemosyne | `/hephaestus:worktree-cleanup` stale after PR #308 | 2026-05-04; cache sync pattern verified |
 | ProjectHermes | Safety Net session — stash drop, worktree remove, rm -rf blocked | Observed live |
 | ProjectHephaestus | issue #1213 / PR #1248 | `hephaestus/validation/cli_tier_docs.py` collect-then-detect + duplicate-section removal; full suite 4298 passed; verified-local |

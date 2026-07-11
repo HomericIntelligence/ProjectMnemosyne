@@ -142,7 +142,7 @@ git diff pixi.lock | grep -E '^\+' | grep -vE '^\+\+\+' | grep -oE '/(noarch|lin
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | Issue #2950 (follow-up to #2913): add pytest-cov to pixi dev deps so `pixi run test`/`check` work with pyproject coverage addopts | Re-locked with CI-pinned pixi 0.67.2 → +43-line diff (pytest-cov-7.1.0, coverage-7.15.0), format stayed v6; `pixi install --locked`, `pixi lock --check`, and 237-test suite green locally; CI run pending at time of writing |
+| Mnemosyne | Issue #2950 (follow-up to #2913): add pytest-cov to pixi dev deps so `pixi run test`/`check` work with pyproject coverage addopts | Re-locked with CI-pinned pixi 0.67.2 → +43-line diff (pytest-cov-7.1.0, coverage-7.15.0), format stayed v6; `pixi install --locked`, `pixi lock --check`, and 237-test suite green locally; CI run pending at time of writing |
 
 ## References
 

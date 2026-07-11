@@ -227,7 +227,7 @@ The `autouse=True` fixture in `tests/unit/analysis/conftest.py` mocks `mann_whit
 
 ## References
 
-- Prerequisite skill: `add-analysis-metric` (HomericIntelligence/ProjectMnemosyne)
+- Prerequisite skill: `add-analysis-metric` (HomericIntelligence/Mnemosyne)
 - Production file: `scylla/analysis/tables/comparison.py`
 - Test file: `tests/unit/analysis/test_tables.py`
 - Fixture file: `tests/unit/analysis/conftest.py`

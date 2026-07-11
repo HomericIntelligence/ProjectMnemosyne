@@ -465,7 +465,7 @@ These are unverified at plan time — flagged so a reviewer reuses the TRIAGE di
 | ProjectOdyssey | PRs #5363, #5364, #5378, #5380, #5382, #5399, #5406, #5407, #5411; modular/modular#6413 JIT crash investigation | Coredump capture, symbolication, cross-CPU survey, workflow_dispatch gate, required-context triage; verified-ci on multiple CI runs |
 | ProjectScylla | PR #1515 — E2E runner hang and signal handling | 6 signal/hang bugs fixed, 4924 tests pass, 77.74% coverage; verified-ci |
 | AchaeanFleet | Batch investigation of 13 open PRs, 2026-04-24 | Rate limit exhaustion observed; bulk endpoint patterns verified |
-| HomericIntelligence ecosystem | All 14 repos triaged, 2026-05-01; ProjectMnemosyne 5 unrelated PRs with identical lint failure, 2026-05-18 | Broken-main pattern, transient-vs-reproducible triage, fix-at-root vs per-PR suppression |
+| HomericIntelligence ecosystem | All 14 repos triaged, 2026-05-01; Mnemosyne 5 unrelated PRs with identical lint failure, 2026-05-18 | Broken-main pattern, transient-vs-reproducible triage, fix-at-root vs per-PR suppression |
 | Odysseus | Issue #252 ("validate-configs fails in CI, passes locally"), run 25217481782, 2026-06-20 | Step 0 triage discipline (verified-local): `--log-failed` surfaced `just: command not found`/exit 127; `git log -S "Install just"` + `gh run list --branch main` confirmed PR #254 had already fixed it. Downstream pixi-yamllint hardening is a proposal, not yet CI-verified. |
 
 ## References

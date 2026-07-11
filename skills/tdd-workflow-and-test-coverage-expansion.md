@@ -479,6 +479,6 @@ def _run(code: str) -> subprocess.CompletedProcess[str]:
 | ProjectHephaestus | Issue #51, PR #94 — readme_commands.py 99% coverage | testing-package-module-mock-coverage |
 | ProjectHephaestus | PR #308 — `hephaestus.github` → `hephaestus.automation` circular import | testing-ast-import-layer-enforcement |
 | ProjectHephaestus | Issue #1362, PR #1363 — `PostMergeProcessor.run_drive_green_learnings` + `run_drive_green_compact` (11 tests, verified-ci) | srp-collaborator-session-driver-coverage |
-| ProjectMnemosyne | Issue #3309, PR #3927 — migrate_odyssey_skills.py | add-unit-tests-for-existing-script |
+| Mnemosyne | Issue #3309, PR #3927 — migrate_odyssey_skills.py | add-unit-tests-for-existing-script |
 | ProjectOdyssey | Issue #4051, PR #4859 — hash coverage audit | test-coverage-audit |
 | Eval360-V2 | PRs #290-#296 — coverage swarm (518+ tests) | coverage-swarm |

@@ -11,7 +11,7 @@
 - Added the block-aligned cold replay rule using `aligned_m = (m // block_size) * block_size`, `tail_m = m % block_size`, and `[m]` fallback cases.
 - Added the red-herring lesson that bit-exact cache-shape replay proved drift but did not fix garbled output, which still reproduced under direct XLLM/HF sampling.
 - Added failed attempts for over-trusting `--no-enable-prefix-caching`, over-claiming bit-exact cache replay, and generalizing from a model with non-comparable prefix-cache hit rate.
-- Downgraded the current skill verification to `verified-local` for this amendment until the ProjectMnemosyne PR checks prove the documentation change in CI.
+- Downgraded the current skill verification to `verified-local` for this amendment until the Mnemosyne PR checks prove the documentation change in CI.
 
 ### Why
 

@@ -47,6 +47,6 @@ jobs:
         run: |
           version="${GITHUB_REF_NAME#v}"
           gh release create "${GITHUB_REF_NAME}" \
-            --title "ProjectMnemosyne ${GITHUB_REF_NAME}" \
+            --title "Mnemosyne ${GITHUB_REF_NAME}" \
             --notes-file release-notes.md \
             "mnemosyne-marketplace-${version}.tar.gz"

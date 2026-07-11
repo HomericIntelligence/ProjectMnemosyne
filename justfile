@@ -1,4 +1,4 @@
-# ProjectMnemosyne command runner — wraps Python scripts for consistent developer experience.
+# Mnemosyne command runner — wraps Python scripts for consistent developer experience.
 # All path variables are configurable at the top of the file.
 # Note: equivalent tasks are also defined in pixi.toml for pixi users.
 

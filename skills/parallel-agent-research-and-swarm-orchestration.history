@@ -1511,7 +1511,7 @@ tags: [research, audit, corpus, tpot, citation, parallel-agents, myrmidon]
 | ------- | ------- |
 | **Date** | 2026-04-12 |
 | **Objective** | L0 commander pattern for complex multi-phase myrmidon sessions: cleanup → rebase → PR creation → CI fix → merge → knowledge capture |
-| **Outcome** | Successful — 32→1 worktrees, 6 PRs merged with CI passing, 3 skills created in ProjectMnemosyne |
+| **Outcome** | Successful — 32→1 worktrees, 6 PRs merged with CI passing, 3 skills created in Mnemosyne |
 | **Verification** | verified-ci |
 
 Covers the **orchestration meta-pattern** — how the L0 orchestrator structures a multi-hour session involving heterogeneous sub-tasks, multiple agent tiers, feedback loops, and CI integration. Companion to `myrmidon-waves-worktree-cleanup-rebase-pr-merge` (tactical wave execution) and `batch-pr-rebase-myrmidon-wave-execution` (PR rebase + conflict strategy). This skill is about **session architecture**, not individual wave tactics.
@@ -1522,7 +1522,7 @@ Covers the **orchestration meta-pattern** — how the L0 orchestrator structures
 - Mix of destructive operations (worktree removal, force-push) and creative operations (PR creation, knowledge capture)
 - Task scope is not fully known at start — requires exploration sub-agents before planning
 - CI failures are plausible and require a fix workflow, not just auto-merge and hope
-- Session involves cross-repo work (e.g., learn → ProjectMnemosyne skill creation)
+- Session involves cross-repo work (e.g., learn → Mnemosyne skill creation)
 - Risk of mid-execution pivots if plan is not explicitly approved before agent deployment
 - Running a `repo-analyze-strict` audit across all repos in an ecosystem (meta-repo + all submodules)
 - Filing a per-repo Epic + per-finding child issues across 10+ repos simultaneously
@@ -1643,7 +1643,7 @@ Also run `/advise` as a sub-agent call at this phase to pull relevant prior lear
 - Exact count of worktrees (total, main, stale, active)
 - Each branch: commits ahead of main, PR state (open/closed/merged/NONE), CI state
 - Any existing open PRs: CI status, merge readiness
-- Relevant ProjectMnemosyne skills found via /advise
+- Relevant Mnemosyne skills found via /advise
 - Per-issue file paths (if the issue inventory includes "files-likely-touched")
 
 **Classifier swarm decision rule**: If Explore agents return file-path evidence per issue (e.g. from an issue inventory that includes "files-likely-touched"), skip the Phase 4 classifier swarm — classify LOW/MEDIUM/HIGH deterministically from contention counts instead. Dispatch classifier agents only when issues lack file-mapping evidence.
@@ -1824,7 +1824,7 @@ git worktree prune
 
 ### Phase 6: Knowledge Capture
 
-After all PRs are merged, capture learnings in ProjectMnemosyne using `/learn` sub-agents.
+After all PRs are merged, capture learnings in Mnemosyne using `/learn` sub-agents.
 
 **Sub-agent delegation pattern for knowledge capture:**
 
@@ -1832,7 +1832,7 @@ Dispatch one sub-agent per skill being captured. This keeps the main conversatio
 
 ```
 Sub-agent task:
-"You are a Sonnet specialist agent creating a skill in ProjectMnemosyne.
+"You are a Sonnet specialist agent creating a skill in Mnemosyne.
 Topic: <skill topic>
 Learnings: <paste learnings>
 Instructions:
@@ -1854,14 +1854,14 @@ python3 scripts/validate_plugins.py 2>&1 | tail -20
 
 ### Phase 7: Session Record (Tracking Issue)
 
-After all skill PRs are merged in ProjectMnemosyne, create a permanent tracking issue on the
+After all skill PRs are merged in Mnemosyne, create a permanent tracking issue on the
 **target repo** (the repo the session worked on). This makes the session discoverable in future
 work via `gh issue list --search "chore(triage)"`.
 
 **Why this matters**: Without a tracking issue, session results exist only in `results.md`
 artifact files and the agent's memory. A tracking issue is indexed by GitHub search, visible
 in the issue list, and provides a durable cross-reference from the repo to the session artifacts
-and ProjectMnemosyne skill PRs.
+and Mnemosyne skill PRs.
 
 **Tracking issue creation:**
 
@@ -1875,7 +1875,7 @@ TITLE="chore(triage): $(date +%Y-%m-%d) issue classification pass"
 # - Table of batch-fix PRs: issue → PR mapping
 # - Lists of remaining MEDIUM and HIGH issues (not yet addressed)
 # - Artifact file paths (e.g. analysis/issue-triage/results.md)
-# - Links to ProjectMnemosyne skill PRs created this session
+# - Links to Mnemosyne skill PRs created this session
 
 gh issue create \
   --repo <owner>/<repo> \
@@ -1921,7 +1921,7 @@ gh issue create \
 
 - `analysis/issue-triage/results.md`
 
-### ProjectMnemosyne Skills
+### Mnemosyne Skills
 
 - PR #N: skill/... (amended/created)
 ```
@@ -1957,7 +1957,7 @@ Total session (typical):                                         ~1.5-3 hours
 | Over-broad Wave 1 agent scope | Agent prompt said "remove stale worktrees" without explicit list | Agent removed too many worktrees before rebase analysis, discarding branches that had unreleased work | Be extremely specific in agent prompts: provide the exact list of worktree paths to remove, not a general instruction |
 | Auto-merge assumption | Enabled auto-merge on all 6 PRs and moved on to Phase 6 | 2 PRs failed pre-commit hooks; auto-merge was blocked and they stayed open | Always monitor CI after PR creation; never assume auto-merge will complete; have Phase 5 fix workflow ready |
 | Forcing PRs for superseded branches | When Wave 2a reported 7/10 branches superseded, considered creating "stub" PRs anyway to match the plan | Would create unnecessary noise PRs that add no value to main | When agents report superseded work, accept the decision and do NOT create PRs; update plan in real time |
-| Skipping /advise before planning | Jumped from exploration to plan design without consulting ProjectMnemosyne | Re-discovered known failure modes (pixi.lock conflict strategy, caplog propagation issue) mid-execution | Always run /advise as a sub-agent call after exploration, before designing the plan |
+| Skipping /advise before planning | Jumped from exploration to plan design without consulting Mnemosyne | Re-discovered known failure modes (pixi.lock conflict strategy, caplog propagation issue) mid-execution | Always run /advise as a sub-agent call after exploration, before designing the plan |
 | Parallel skill capture in main conversation | Tried to create all 3 skills in the main L0 conversation thread | Each skill creation involves worktree creation, file writing, validation, commit, push — sequential in main thread takes 45+ minutes | Delegate skill capture to parallel sub-agents: one per skill, run concurrently |
 | Not re-enabling auto-merge after CI fix | Fix agent pushed commit to fix pre-commit failure, declared "done" | GitHub silently cleared auto-merge on the force-push; PR sat open indefinitely | After every push to a PR branch, explicitly re-run `gh pr merge --auto --rebase <N>` and verify the response |
 | Skipping tracking issue creation | Session ended after Phase 6 skill PRs merged; no tracking issue created on target repo | Session results were only in `results.md` artifact file and agent memory — not searchable via `gh issue list` in future sessions | Always create a `chore(triage): YYYY-MM-DD issue classification pass` tracking issue on the target repo as Phase 7 (final step) |
@@ -1986,7 +1986,7 @@ Total session (typical):                                         ~1.5-3 hours
 | Ending worktrees | 1 (main only) |
 | PRs created | 6 (Wave 2a) |
 | PRs merged with CI passing | 6 |
-| Skills created in ProjectMnemosyne | 3 |
+| Skills created in Mnemosyne | 3 |
 | Total session time | ~3 hours |
 | Agents used | 1 Sonnet (exploration), 2 Haiku (Wave 1 + Wave 3), 1 Sonnet (conflict resolution), 1 Haiku (CI fix), 3 Sonnet (skill capture) |
 | Data loss incidents | 0 |
@@ -2037,7 +2037,7 @@ Total session (typical):                                         ~1.5-3 hours
 | Pre-commit/lint CI fix | Haiku | Pattern-based fix: run pre-commit, commit, push |
 | Complex CI fix (logic errors) | Sonnet | Requires understanding of code to fix meaningfully |
 | Final prune + verify | Haiku | Mechanical: git worktree prune + git fetch --prune |
-| Skill creation in ProjectMnemosyne | Sonnet | Requires synthesis of learnings into structured documentation |
+| Skill creation in Mnemosyne | Sonnet | Requires synthesis of learnings into structured documentation |
 | L0 orchestration | Sonnet/Opus | Session architecture, wave sequencing, user interaction |
 
 ### Decision Gates
@@ -2048,7 +2048,7 @@ Total session (typical):                                         ~1.5-3 hours
 | Wave 2a output | Some branches superseded | Do NOT create PRs for them; update PR count expectation |
 | CI post-creation | Any PR has failing required checks | Dispatch Haiku fix agent before proceeding to Phase 6 |
 | Pre-Phase 6 | All PRs in MERGED state | Proceed to knowledge capture |
-| Pre-Phase 7 | All skill PRs merged in ProjectMnemosyne | Create tracking issue on target repo |
+| Pre-Phase 7 | All skill PRs merged in Mnemosyne | Create tracking issue on target repo |
 
 ### L0 Orchestration Checklist
 
@@ -2069,7 +2069,7 @@ Total session (typical):                                         ~1.5-3 hours
 [ ] Phase 5: Any failing PRs fixed; auto-merge re-enabled after fix push
 [ ] Phase 5: All PRs confirmed MERGED
 [ ] Phase 6: /learn sub-agents dispatched (one per skill)
-[ ] Phase 6: All skill PRs merged in ProjectMnemosyne
+[ ] Phase 6: All skill PRs merged in Mnemosyne
 [ ] Phase 7: Tracking issue created on target repo (chore(triage): YYYY-MM-DD)
 [ ] Phase 7: Tracking issue body includes metrics, closures, PRs, remaining issues, artifacts, skill PR links
 [ ] Phase 7: Confirmed via gh issue list --search "chore(triage)"
@@ -2086,7 +2086,7 @@ Total session (typical):                                         ~1.5-3 hours
 | ProjectTelemachy | 57 issues → 6 remaining (89% closure), 17 PRs, ~2.5h wall clock, 2026-04-25 | Python/pixi repo; deterministic classification from file-contention counts; per-file Sonnet mega-agents (Wave D+E); Waves 0+A+B dispatched simultaneously (12 agents in one message) |
 | HomericIntelligence/Odysseus | Atlas Epic issue #152 scaffold, PR #173, 2026-04-27 | Direct worktree approach (not myrmidon-multi) for precision scaffold; branch forked from wrong base; cherry-pick fix onto clean main fork |
 | HomericIntelligence/Odysseus | 2026-04-28 ecosystem-wide strict audit (15 repos, 680 findings, 15 Epics + child issues) | verified-local |
-| HomericIntelligence/ProjectMnemosyne | 2026-05-18 skill-corpus consolidation (17 clusters, 1,100→690 skills) | tracking issue \#1813; Mojo mega-cluster sub-PRs \#1808-\#1811 |
+| HomericIntelligence/Mnemosyne | 2026-05-18 skill-corpus consolidation (17 clusters, 1,100→690 skills) | tracking issue \#1813; Mojo mega-cluster sub-PRs \#1808-\#1811 |
 
 ## References
 
@@ -2107,7 +2107,7 @@ Total session (typical):                                         ~1.5-3 hours
 ### What changed
 - Added new subsection `### Variant: per-namespace sequential dispatch (intra-cluster split)` under Verified Workflow
 - Added 1 new Failed Attempts row: parallel dispatch on shared `mojo-*` namespace (sub-PRs #1808-#1811)
-- Added Verified On row: HomericIntelligence/ProjectMnemosyne 2026-05-18 consolidation, tracking issue #1813
+- Added Verified On row: HomericIntelligence/Mnemosyne 2026-05-18 consolidation, tracking issue #1813
 - Bumped version 1.6.0 → 1.7.0; updated date to 2026-05-18
 
 ### Why
@@ -2244,9 +2244,9 @@ CI Monitoring + Fix Loop → Knowledge Capture. Session Timeline reference total
 for a typical session. Verified on ProjectHephaestus (32 worktrees → 1, 6 PRs created and
 merged, 3 skills captured, 2026-04-05).
 
-Phase 6 ended at "All skill PRs merged in ProjectMnemosyne" with no post-merge tracking issue
+Phase 6 ended at "All skill PRs merged in Mnemosyne" with no post-merge tracking issue
 step. The L0 Orchestration Checklist ended at `[ ] Phase 6: All skill PRs merged in
-ProjectMnemosyne`.
+Mnemosyne`.
 
 ---
 

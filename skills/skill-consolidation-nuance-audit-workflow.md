@@ -315,8 +315,8 @@ git commit -m "chore: reset marketplace.json to main"
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | PRs #1791–#1925 second-wave consolidation audit, June 2026 — 25 audit agents, 18 amendment PRs (#2176–#2193), all CI green | verified-ci |
-| ProjectMnemosyne | 2026-06-07 two-pass audit of the 50-bundle consolidation: pass 2 covered 36 bundles, found 22 with material losses, all restored via amend swarm | nuance audit pass 2 |
+| Mnemosyne | PRs #1791–#1925 second-wave consolidation audit, June 2026 — 25 audit agents, 18 amendment PRs (#2176–#2193), all CI green | verified-ci |
+| Mnemosyne | 2026-06-07 two-pass audit of the 50-bundle consolidation: pass 2 covered 36 bundles, found 22 with material losses, all restored via amend swarm | nuance audit pass 2 |
 
 ## References
 

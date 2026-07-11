@@ -2,14 +2,14 @@
 
 ## v1.3.0 (2026-07-02)
 
-**Changed by:** ProjectMnemosyne issue #2913 planning session (canonical `release` CI check bootstrap)
+**Changed by:** Mnemosyne issue #2913 planning session (canonical `release` CI check bootstrap)
 **Verification:** unverified (plan-only)
 
 ### What changed
 - New sub-pattern: bootstrapping a canonical `release` check in a repo with no release model (contract + validator + gate in one PR; dry-run in _required.yml, publish in tag-triggered release.yml)
 - New trigger (8) in description; new tags
 - New lessons: orphan `workflow_call` workflows (grep for callers), JSON first-match version-regex ordering hazard, tomllib-vs-py-floor decision, dry-run vs publish-mode scope split
-- 3 new Failed Attempts rows; Verified On row for ProjectMnemosyne #2913
+- 3 new Failed Attempts rows; Verified On row for Mnemosyne #2913
 
 ### Why
 Second real application of the checklist surfaced repo-archetype-specific traps (never-tagged marketplace repo, orphan reusable workflow) plus a reviewer-focus list of assumptions the plan deliberately left unverified.

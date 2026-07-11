@@ -908,7 +908,7 @@ strategy:
 | --------- | --------- | --------- |
 | HomericIntelligence/ProjectKeystone | PR #146 — fix CI failures on main and 2 open PRs | C++20 HMAS, GCC/Clang, GitHub Actions, Google Benchmark |
 | HomericIntelligence/ProjectKeystone | Repo audit + quick wins | PR #147, Issues #148-#158 |
-| HomericIntelligence/ProjectMnemosyne | TSan fixes: NUMA node data race, ConcurrentQueue false positives, ThreadPool hang | verified-ci: all three failure modes resolved |
+| HomericIntelligence/Mnemosyne | TSan fixes: NUMA node data race, ConcurrentQueue false positives, ThreadPool hang | verified-ci: all three failure modes resolved |
 
 ---
 
@@ -918,7 +918,7 @@ strategy:
 
 ## v1.2.0 (2026-04-18)
 
-**Changed by:** ProjectMnemosyne TSan session — three distinct TSan failure modes in a C++ project
+**Changed by:** Mnemosyne TSan session — three distinct TSan failure modes in a C++ project
 **Verification:** verified-ci
 
 ### What changed

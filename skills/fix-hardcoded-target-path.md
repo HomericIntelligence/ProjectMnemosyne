@@ -31,7 +31,7 @@ user-invocable: false
 
 ```python
 # Before — hardcoded, breaks on other machines
-MNEMOSYNE_DIR = Path("/tmp/ProjectMnemosyne")  # nosec B108
+MNEMOSYNE_DIR = Path("/tmp/Mnemosyne")  # nosec B108
 MNEMOSYNE_SKILLS_DIR = MNEMOSYNE_DIR / "skills"
 ```
 
@@ -40,19 +40,19 @@ MNEMOSYNE_SKILLS_DIR = MNEMOSYNE_DIR / "skills"
 ```python
 import os
 
-DEFAULT_MNEMOSYNE_DIR = Path("/tmp/ProjectMnemosyne")  # nosec B108
+DEFAULT_MNEMOSYNE_DIR = Path("/tmp/Mnemosyne")  # nosec B108
 
 
 def resolve_mnemosyne_dir(target: Optional[str]) -> Path:
-    """Resolve the ProjectMnemosyne directory path.
+    """Resolve the Mnemosyne directory path.
 
-    Priority: --target-dir CLI arg > MNEMOSYNE_DIR env var > /tmp/ProjectMnemosyne default.
+    Priority: --target-dir CLI arg > MNEMOSYNE_DIR env var > /tmp/Mnemosyne default.
 
     Args:
         target: Value of the --target-dir CLI argument, or None if not provided.
 
     Returns:
-        Resolved Path to the ProjectMnemosyne root directory.
+        Resolved Path to the Mnemosyne root directory.
     """
     if target is not None:
         return Path(target)
@@ -74,7 +74,7 @@ parser.add_argument(
     "--target-dir",
     metavar="DIR",
     default=None,  # IMPORTANT: None, not str(MNEMOSYNE_DIR)
-    help="Path to ProjectMnemosyne clone (default: $MNEMOSYNE_DIR env var or /tmp/ProjectMnemosyne)",
+    help="Path to Mnemosyne clone (default: $MNEMOSYNE_DIR env var or /tmp/Mnemosyne)",
 )
 ```
 
@@ -85,7 +85,7 @@ target_dir = resolve_mnemosyne_dir(args.target_dir)
 
 if not target_dir.exists():
     print(
-        f"ERROR: ProjectMnemosyne directory not found: {target_dir}\n"
+        f"ERROR: Mnemosyne directory not found: {target_dir}\n"
         f"Use --target-dir PATH or set MNEMOSYNE_DIR env var.",
         file=sys.stderr,
     )
@@ -114,7 +114,7 @@ if not args.force and skill_already_exists(skill_name, target_skills_dir):
 Bandit flags hardcoded `/tmp/` paths as B108. Suppress with inline comment:
 
 ```python
-DEFAULT_MNEMOSYNE_DIR = Path("/tmp/ProjectMnemosyne")  # nosec B108
+DEFAULT_MNEMOSYNE_DIR = Path("/tmp/Mnemosyne")  # nosec B108
 ```
 
 ### 7. Write tests for the resolver
@@ -138,7 +138,7 @@ class TestResolveMnemosyneDir:
         env = {k: v for k, v in os.environ.items() if k != "MNEMOSYNE_DIR"}
         with patch.dict("os.environ", env, clear=True):
             result = module.resolve_mnemosyne_dir(None)
-        assert result == Path("/tmp/ProjectMnemosyne")  # nosec B108
+        assert result == Path("/tmp/Mnemosyne")  # nosec B108
 ```
 
 ### 8. Document in README
@@ -153,7 +153,7 @@ Add a section to `scripts/README.md` with:
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 | --------- | ---------------- | --------------- | ---------------- |
 | Set `default=str(MNEMOSYNE_DIR)` in argparse | Used the hardcoded constant as the CLI default | Still evaluates the hardcoded path at import time; users get the wrong default path | Set `default=None` and resolve in `main()` via `resolve_mnemosyne_dir()` |
-| Used `/tmp/` default without `# nosec B108` | Added default path `/tmp/ProjectMnemosyne` | Bandit B108 flagged it as a security issue, blocking commit | Add `# nosec B108` inline comment on the line with the `/tmp/` path |
+| Used `/tmp/` default without `# nosec B108` | Added default path `/tmp/Mnemosyne` | Bandit B108 flagged it as a security issue, blocking commit | Add `# nosec B108` inline comment on the line with the `/tmp/` path |
 | Removed unused variable without re-staging | Fixed ruff F841 but didn't re-stage the file | Ruff Format hook auto-reformatted the file, causing the second commit to also fail | After any hook auto-fix, `git add` the modified files before re-running commit |
 | Patched module-level constant in tests | Tests used `patch.object(module, "MNEMOSYNE_SKILLS_DIR", ...)` for `skill_already_exists` | Works for `migrate_skill()` but `skill_already_exists()` still used the global | Accept `mnemosyne_skills_dir` as an explicit parameter with `None` default |
 

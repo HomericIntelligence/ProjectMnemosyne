@@ -207,7 +207,7 @@ Observed sanitized results:
 - Local full validation: 1051 passed, 9 skipped.
 - Pre-push hook: 1059 passed, 1 skipped.
 - GitHub checks: `validate`, `pre-commit`, `sast`, `secrets`, `python-sca`, CodeQL, and action/python analysis passed.
-- 2026-07-09 local issue #257 follow-up: cache-shape replay made the tested cold/cache-hit path bit-exact; direct XLLM/HF sampling still showed the same output class, so the current amendment is verified-local pending this ProjectMnemosyne PR's checks.
+- 2026-07-09 local issue #257 follow-up: cache-shape replay made the tested cold/cache-hit path bit-exact; direct XLLM/HF sampling still showed the same output class, so the current amendment is verified-local pending this Mnemosyne PR's checks.
 
 ## Verified On
 

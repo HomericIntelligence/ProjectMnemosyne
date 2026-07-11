@@ -836,7 +836,7 @@ This does NOT prevent `--hook-stage` invocation: `pre-commit run --hook-stage co
 bypasses the git hook installation entirely and invokes the framework directly. Use it for
 verification even when `install` is blocked.
 
-Verified by closed PR #2353 (HomericIntelligence/ProjectMnemosyne).
+Verified by closed PR #2353 (HomericIntelligence/Mnemosyne).
 
 ## Hook-Specific Patterns
 
@@ -1671,7 +1671,7 @@ indent_style = tab                 # Make syntax requires tabs
 | Inference360 | PR #157 (TOML duplicate-key guard, Ruff hook lockfile parity, hook install docs; checks passed and PR merged) | [history file](pre-commit-hooks-and-linting-config.history) |
 | ProjectOdyssey | PR #5453 (full-PR-diff pre-commit scope fixed CI mojo-format on sub-agent files) | [history file](pre-commit-hooks-and-linting-config.history) |
 | ProjectScylla | PR #1556, audit finding S13 (.editorconfig cross-editor consistency) | [history file](pre-commit-hooks-and-linting-config.history) |
-| ProjectMnemosyne | Closed PR #2353 (commit-msg-stage hooks + `default_install_hook_types` learning) | [history file](pre-commit-hooks-and-linting-config.history) |
+| Mnemosyne | Closed PR #2353 (commit-msg-stage hooks + `default_install_hook_types` learning) | [history file](pre-commit-hooks-and-linting-config.history) |
 | ProjectTelemachy | Issue #157 (Bandit SAST hook `pass_filenames: false` — directory-scanning tools must never receive per-file args from pre-commit) | verified-local |
 | ProjectHephaestus | Issue #1550 / PR #1586 (pip-audit ledger checker: pixi.toml-scoped local hook pattern, `PIP_AUDIT_TASK_RE` value-group anchoring, non-comment-line scoping for `IGNORE_VULN_RE`, POLA note on enforcement claims) | verified-precommit |
 | ProjectHephaestus | Session where a failed pre-commit hook aborted `git commit` (rc=1) so HEAD never moved; `git log --show-signature -1` showed main's tip (`%G? = E`, `No public key`) and several turns were wasted re-signing / restarting gpg-agent before the reflog revealed no commit existed; pixi ruff/mypy passed but the real hooks failed on D103/E501/ruff-format/var-annotated | verified-precommit |

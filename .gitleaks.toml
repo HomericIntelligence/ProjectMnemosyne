@@ -1,6 +1,6 @@
-# Gitleaks configuration for ProjectMnemosyne
+# Gitleaks configuration for Mnemosyne
 #
-# ProjectMnemosyne is a skills knowledge-base repository. Skill documentation
+# Mnemosyne is a skills knowledge-base repository. Skill documentation
 # files include illustrative example tokens (e.g. `sk_live_1234567890`,
 # `msk_test_123456789`) inside fenced code blocks to teach engineers what a
 # leaked secret looks like. These are NOT real credentials.

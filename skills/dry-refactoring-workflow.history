@@ -15597,7 +15597,7 @@ Use this workflow when:
 ```
 
 **What this does**:
-- Searches ProjectMnemosyne skills marketplace
+- Searches Mnemosyne skills marketplace
 - Returns prior learnings about consolidation patterns
 - Provides verified approaches and known failures
 - Saves time by building on team knowledge
@@ -16002,9 +16002,9 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 
 ## Related Skills
 
-- `codebase-consolidation` - Systematic consolidation patterns (ProjectMnemosyne)
-- `centralized-path-constants` - Path centralization specifics (ProjectMnemosyne)
-- `shared-fixture-migration` - Config deduplication patterns (ProjectMnemosyne)
+- `codebase-consolidation` - Systematic consolidation patterns (Mnemosyne)
+- `centralized-path-constants` - Path centralization specifics (Mnemosyne)
+- `shared-fixture-migration` - Config deduplication patterns (Mnemosyne)
 
 ## Verified On
 
@@ -16420,7 +16420,7 @@ gh pr merge --auto --squash
 | Deleting CLI directory before moving shared modules | `rmdir cli/` before copying `progress.py` out | Directory not empty | Copy shared modules out first, then delete the directory |
 | Mojo tuple destructuring `var (x, y) = ...` | Python-style unpacking in `var` declaration | Mojo v0.26.x does not support tuple destructuring in `var` | Use indexed access: `tensors[0]`, `tensors[1]` |
 | Placing Mojo helper after its consumers | Inserted helper at end of file | Mojo requires definition-before-use | Always insert private helpers immediately before their first caller |
-| Direct copy of ported script without adapting paths | Copied verbatim from ProjectMnemosyne to ProjectOdyssey | Default `--skills-dir` path pointed to wrong location | Always check target repo's default paths, test import patterns, and directory structure |
+| Direct copy of ported script without adapting paths | Copied verbatim from Mnemosyne to ProjectOdyssey | Default `--skills-dir` path pointed to wrong location | Always check target repo's default paths, test import patterns, and directory structure |
 | Using `gh pr list --state merged` only | Filtered to merged state | Misses CLOSED PRs and branches with no PR | Always use `--state all` to catch all terminal states |
 | Building same dict structure in multiple call sites | Left identical dict construction in format_stats_json() and main() | Shape can drift independently if new fields added in future refactors | Extract to `_serializable_stats()` helper; add regression test pinning shape parity |
 

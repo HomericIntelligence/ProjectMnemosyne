@@ -118,8 +118,8 @@ choose_merge_flag() {
     (if .allow_merge_commit then "--merge"  else empty end)
   ] | .[0] // ""'
 }
-MERGE_FLAG=$(choose_merge_flag "HomericIntelligence/ProjectMnemosyne")   # -> --squash here
-gh pr merge "$PR" --auto "$MERGE_FLAG" --repo HomericIntelligence/ProjectMnemosyne
+MERGE_FLAG=$(choose_merge_flag "HomericIntelligence/Mnemosyne")   # -> --squash here
+gh pr merge "$PR" --auto "$MERGE_FLAG" --repo HomericIntelligence/Mnemosyne
 ```
 
 Audit for the bug in all forms, and add a source-inspection unit test as a durable guard:
@@ -481,7 +481,7 @@ auto-merge armed but not merged
 Prefer **sourcing the helper** over re-defining `choose_merge_flag` inline. The helper exists as
 a real, sourceable file in ProjectHephaestus: `scripts/choose_merge_flag.sh`. A sub-agent running
 a Hephaestus skill from inside *another* repo (e.g. running `/finish-branch` against a
-ProjectMnemosyne worktree) cannot see that file via the current worktree's
+Mnemosyne worktree) cannot see that file via the current worktree's
 `git rev-parse --show-toplevel`. Use a three-candidate tiered lookup with `--squash` as the
 org-wide-correct fallback (every HomericIntelligence repo is squash-only):
 

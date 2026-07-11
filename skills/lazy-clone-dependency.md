@@ -24,7 +24,7 @@ tags:
 | Attribute | Value |
 | ----------- | ------- |
 | **Date** | 2026-03-03 |
-| **Objective** | Fix planner silently skipping the advise step when ProjectMnemosyne was not present locally |
+| **Objective** | Fix planner silently skipping the advise step when Mnemosyne was not present locally |
 | **Outcome** | ✅ `_ensure_mnemosyne()` clones the repo on first use; advise step proceeds normally |
 | **Project** | ProjectScylla |
 | **Issue** | [#1324](https://github.com/HomericIntelligence/ProjectScylla/issues/1324) |
@@ -39,7 +39,7 @@ Use this skill when:
 - Multiple parallel workers may trigger the missing-resource check simultaneously (race-condition risk)
 - You want the first invocation to transparently clone the repo and subsequent invocations to be no-ops
 
-Concrete trigger: `ProjectMnemosyne not found at build/ProjectMnemosyne, skipping advise step`
+Concrete trigger: `Mnemosyne not found at build/Mnemosyne, skipping advise step`
 
 ## Root Cause
 
@@ -47,7 +47,7 @@ The original `_run_advise()` checked `mnemosyne_root.exists()` and immediately r
 
 ```python
 if not mnemosyne_root.exists():
-    logger.warning("ProjectMnemosyne not found at build/ProjectMnemosyne, skipping advise step")
+    logger.warning("Mnemosyne not found at build/Mnemosyne, skipping advise step")
     return ""
 ```
 
@@ -72,7 +72,7 @@ Add a method to the class that:
 2. Re-checks existence inside the lock (TOCTOU guard)
 3. Acquires an **`fcntl` file lock** (prevents double-clone across parallel processes on the same machine)
 4. Re-checks existence again inside the file lock
-5. Runs `gh repo clone <org>/<repo> <dest>` via `subprocess.run(check=True)` to standardized location `$HOME/.agent-brain/ProjectMnemosyne`
+5. Runs `gh repo clone <org>/<repo> <dest>` via `subprocess.run(check=True)` to standardized location `$HOME/.agent-brain/Mnemosyne`
 6. Returns `True` on success, `False` on `CalledProcessError` (with a warning log)
 
 ```python
@@ -80,7 +80,7 @@ class Planner:
     _mnemosyne_lock: threading.Lock = threading.Lock()
 
     def _ensure_mnemosyne(self, mnemosyne_root: Path) -> bool:
-        """Clone ProjectMnemosyne if it does not exist locally."""
+        """Clone Mnemosyne if it does not exist locally."""
         with Planner._mnemosyne_lock:
             if mnemosyne_root.exists():
                 return True
@@ -94,17 +94,17 @@ class Planner:
                     if mnemosyne_root.exists():
                         return True
 
-                    logger.info(f"Cloning ProjectMnemosyne to {mnemosyne_root}...")
+                    logger.info(f"Cloning Mnemosyne to {mnemosyne_root}...")
                     subprocess.run(
                         ["gh", "repo", "clone",
-                         "HomericIntelligence/ProjectMnemosyne", str(mnemosyne_root)],
+                         "HomericIntelligence/Mnemosyne", str(mnemosyne_root)],
                         check=True, capture_output=True, text=True,
                     )
-                    logger.info("ProjectMnemosyne cloned successfully")
+                    logger.info("Mnemosyne cloned successfully")
                     return True
 
                 except subprocess.CalledProcessError as e:
-                    logger.warning(f"Failed to clone ProjectMnemosyne: {e.stderr or e}")
+                    logger.warning(f"Failed to clone Mnemosyne: {e.stderr or e}")
                     return False
 
                 finally:
@@ -162,7 +162,7 @@ from pathlib import Path
 ### Clone Command Used
 
 ```bash
-gh repo clone HomericIntelligence/ProjectMnemosyne <dest_path>
+gh repo clone HomericIntelligence/Mnemosyne <dest_path>
 ```
 
 Requires `gh` CLI authenticated with repo access.

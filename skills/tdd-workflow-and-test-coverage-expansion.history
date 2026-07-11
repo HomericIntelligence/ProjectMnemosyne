@@ -876,7 +876,7 @@ def test_signal_rate_limit_sets_pause(self) -> None:
 | ProjectScylla | Issue #1358, PR #1383 — 12 additional scripts | script-unit-test-coverage |
 | ProjectScylla | Issue #850, PR #975 — source modules 74.93% | unit-tests-untested-modules |
 | ProjectScylla | Issue #1113 — cmd\_run/cmd\_repair gap | close-script-test-gap-cmd-run-repair |
-| ProjectMnemosyne | Issue #3309, PR #3927 — migrate\_odyssey\_skills.py | add-unit-tests-for-existing-script |
+| Mnemosyne | Issue #3309, PR #3927 — migrate\_odyssey\_skills.py | add-unit-tests-for-existing-script |
 | ProjectOdyssey | Issue #4051, PR #4859 — hash coverage audit | test-coverage-audit |
 
 ---
@@ -2234,7 +2234,7 @@ def test_signal_rate_limit_sets_pause(self) -> None:
 | ProjectScylla | Issue #1358, PR #1383 — 12 additional scripts | script-unit-test-coverage |
 | ProjectScylla | Issue #850, PR #975 — source modules 74.93% | unit-tests-untested-modules |
 | ProjectScylla | Issue #1113 — cmd\_run/cmd\_repair gap | close-script-test-gap-cmd-run-repair |
-| ProjectMnemosyne | Issue #3309, PR #3927 — migrate\_odyssey\_skills.py | add-unit-tests-for-existing-script |
+| Mnemosyne | Issue #3309, PR #3927 — migrate\_odyssey\_skills.py | add-unit-tests-for-existing-script |
 | ProjectOdyssey | Issue #4051, PR #4859 — hash coverage audit | test-coverage-audit |
 
 ```

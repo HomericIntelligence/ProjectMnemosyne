@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/HomericIntelligence/ProjectMnemosyne/schemas/marketplace.schema.json",
-  "title": "ProjectMnemosyne Marketplace",
-  "description": "Schema for the ProjectMnemosyne skills marketplace registry.",
+  "$id": "https://github.com/HomericIntelligence/Mnemosyne/schemas/marketplace.schema.json",
+  "title": "Mnemosyne Marketplace",
+  "description": "Schema for the Mnemosyne skills marketplace registry.",
   "type": "object",
   "required": ["name", "owner", "description", "version", "total_plugins", "categories", "last_updated", "plugins"],
   "additionalProperties": false,

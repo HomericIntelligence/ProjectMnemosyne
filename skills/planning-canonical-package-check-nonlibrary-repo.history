@@ -68,7 +68,7 @@ tags:
 | Field | Value |
 | ------- | ------- |
 | **Date** | 2026-07-02 |
-| **Objective** | Plan ProjectMnemosyne issue #2911: emit a canonical `package` check-run (Odysseus CI-naming convention) in a skills-marketplace repo with no buildable Python package |
+| **Objective** | Plan Mnemosyne issue #2911: emit a canonical `package` check-run (Odysseus CI-naming convention) in a skills-marketplace repo with no buildable Python package |
 | **Outcome** | Plan produced: `package` defined as the marketplace bundle tarball built+verified by a tested `scripts/build_package.py`; PyPI-style build rejected with evidence |
 | **Verification** | unverified — plan-only, implementation and CI validation pending |
 
@@ -168,6 +168,6 @@ python3 -c "import re,pathlib; print(re.search(r'^version\s*=\s*\"([^\"]+)\"', p
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | Issue #2911 planning (plan-only, not yet implemented) | Plan posted to the issue; implementation PR pending |
+| Mnemosyne | Issue #2911 planning (plan-only, not yet implemented) | Plan posted to the issue; implementation PR pending |
 
 ---

@@ -102,4 +102,4 @@ gh pr merge --auto --rebase
 ## Links
 
 - [Claude Code CHANGELOG](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md)
-- [ProjectMnemosyne PRs](https://github.com/HomericIntelligence/ProjectMnemosyne/pulls)
+- [Mnemosyne PRs](https://github.com/HomericIntelligence/Mnemosyne/pulls)

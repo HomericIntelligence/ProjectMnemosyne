@@ -1,7 +1,7 @@
 # Markdownlint configuration
 # https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
 #
-# ProjectMnemosyne is a skills knowledge-base repository. Skill files and
+# Mnemosyne is a skills knowledge-base repository. Skill files and
 # prompt templates use their own document conventions that differ from standard
 # markdown style guides. Rules that generate false positives on well-formed
 # skill/prompt documents are disabled here.

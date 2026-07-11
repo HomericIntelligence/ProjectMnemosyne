@@ -225,7 +225,7 @@ uniform reword conflicts; hash-compare residual diffs to cluster duplicates. Che
 no-PR branches: check file existence on main before deleting. Orphaned conflict markers
 in committed files: both halves may contain real content. v1.2.0 (2026-05-03): added
 file-existence decision tree, orphaned marker scan, per-branch worktree for manual
-resolution. Verified: ProjectMnemosyne sessions 2026-04-25 and 2026-05-03.
+resolution. Verified: Mnemosyne sessions 2026-04-25 and 2026-05-03.
 
 ---
 
@@ -283,5 +283,5 @@ Two related patterns: (1) migrate clone-based workflows (rm -rf teardown) to git
 lifecycle; (2) write integration tests against real committed SKILL.md files. Worktree
 pattern: `git worktree add /tmp/... -b <branch> origin/main` → work → `git worktree remove`
 + `git worktree prune`. Integration test: 6-test checklist (fixture exists, before-condition,
-modified=True, condition removed, round-trip, idempotent). Verified: ProjectMnemosyne PR
+modified=True, condition removed, round-trip, idempotent). Verified: Mnemosyne PR
 #991, integration tests for fix_remaining_warnings.py.

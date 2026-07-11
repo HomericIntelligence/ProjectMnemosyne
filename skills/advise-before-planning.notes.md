@@ -23,7 +23,7 @@ Implement the following plan:
 
 1. **ModuleNotFoundError** when running `python scripts/plan_issues.py` directly (must use pixi env)
 2. **Wrong CLI binary name** — code references `claude-code` but the actual binary is `claude`
-3. **No team knowledge integration** — the planner doesn't leverage the ProjectMnemosyne skills registry before planning
+3. **No team knowledge integration** — the planner doesn't leverage the Mnemosyne skills registry before planning
 
 The goal is a two-step planning workflow: Step 1 calls Claude to search the skills registry for relevant prior learnings (/advise), Step 2 feeds those findings into the plan generation prompt.
 ```
@@ -82,10 +82,10 @@ result = subprocess.run(
 def _run_advise(self, issue_number: int, issue_title: str, issue_body: str) -> str:
     try:
         # Try to run advise
-        mnemosyne_root = repo_root / "build" / "ProjectMnemosyne"
+        mnemosyne_root = repo_root / "build" / "Mnemosyne"
 
         if not mnemosyne_root.exists():
-            logger.warning("ProjectMnemosyne not found, skipping advise step")
+            logger.warning("Mnemosyne not found, skipping advise step")
             return ""
 
         # ... do advise work ...
@@ -97,7 +97,7 @@ def _run_advise(self, issue_number: int, issue_title: str, issue_body: str) -> s
 
 **Why:** The planning workflow should work even if:
 
-- ProjectMnemosyne repository is not cloned
+- Mnemosyne repository is not cloned
 - marketplace.json is missing
 - Advise step times out or errors
 
@@ -194,7 +194,7 @@ options:
 **Alternatives considered:**
 
 - ❌ Default OFF with `--enable-advise` flag - Requires users to remember to enable it
-- ❌ Auto-detect ProjectMnemosyne - Too implicit, hard to debug
+- ❌ Auto-detect Mnemosyne - Too implicit, hard to debug
 
 ### Decision 2: Direct File Reading vs Slash Command
 
@@ -211,7 +211,7 @@ options:
 
 **Alternatives considered:**
 
-- ❌ Fail hard if ProjectMnemosyne missing - Breaks workflow unnecessarily
+- ❌ Fail hard if Mnemosyne missing - Breaks workflow unnecessarily
 - ❌ Silent fallback - Users won't know advise step was skipped
 
 ### Decision 4: Extract _call_claude() Helper
@@ -228,7 +228,7 @@ options:
 ### What Worked Well
 
 1. **Comprehensive test coverage** - 10 tests for new functionality caught edge cases
-2. **Graceful degradation pattern** - Feature works with or without ProjectMnemosyne
+2. **Graceful degradation pattern** - Feature works with or without Mnemosyne
 3. **DRY helper extraction** - `_call_claude()` reused cleanly in both steps
 4. **Clear section headers** - "Prior Learnings from Team Knowledge Base" makes context obvious
 
@@ -250,14 +250,14 @@ Potential follow-up work:
 
 1. **Advise metrics dashboard** - Track which skills are found most often
 2. **Skill relevance scoring** - Weight skills by how closely they match the issue
-3. **Multi-repository support** - Search multiple knowledge bases (ProjectMnemosyne, ProjectOdyssey, etc.)
+3. **Multi-repository support** - Search multiple knowledge bases (Mnemosyne, ProjectOdyssey, etc.)
 4. **Advise caching** - Cache marketplace reads for batch operations
 5. **Skill templates** - Generate skill scaffolding from advise findings
 
 ## Related Issues/PRs
 
 - PR #606: feat(automation): Integrate /advise skill into plan_issues.py
-- Related to ProjectMnemosyne skills marketplace design
+- Related to Mnemosyne skills marketplace design
 - Builds on existing `plan_issues.py` bulk planning infrastructure
 
 ## Session Artifacts

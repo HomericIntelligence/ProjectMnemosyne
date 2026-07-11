@@ -139,7 +139,7 @@ Common errors and fixes:
 | `E501 Line too long` | Extract part of the boolean condition to a named variable |
 | `RUF059` | Prefix unused unpacked variable with `_` |
 | `B905` | Add explicit `strict=False` or `strict=True` to `zip()` |
-| `audit-doc-policy Failed` | Harmless if caused by untracked `ProjectMnemosyne/` dir — ignore locally |
+| `audit-doc-policy Failed` | Harmless if caused by untracked `Mnemosyne/` dir — ignore locally |
 
 #### A3. Fix pre-commit hook scanners to exclude worktrees
 
@@ -581,7 +581,7 @@ import sys
 from pathlib import Path
 
 def _find_scripts_dir() -> Path:
-    standard = Path.home() / ".agent-brain" / "ProjectMnemosyne" / "scripts"
+    standard = Path.home() / ".agent-brain" / "Mnemosyne" / "scripts"
     if standard.exists():
         return standard
     result = subprocess.run(
@@ -637,14 +637,14 @@ Six-test checklist for any SKILL.md transformer: fixture exists, initial conditi
 | `#595` | Failed on first `git push` | Succeeded after 2 retries |
 | `#649` | Failed on first `git fetch` | Succeeded after 4 retries |
 
-### Stale agent branch cleanup (ProjectMnemosyne, 2026-05-03)
+### Stale agent branch cleanup (Mnemosyne, 2026-05-03)
 
 - 10 orphaned `worktree-agent-*` branches after `gh tidy` post-pull
 - 5 deleted (target file DELETED on main — consolidation already absorbed)
 - 5 rebased successfully (target file EXISTS on main)
 - 2 additional files with orphaned conflict markers fixed before rebase
 
-### Integration test migration results (ProjectMnemosyne)
+### Integration test migration results (Mnemosyne)
 
 ```yaml
 total_prs: 14
@@ -662,12 +662,12 @@ rebase_time: ~2 minutes
 | HomericIntelligence/ProjectCharybdis | 14 sibling auto-impl branches rebased in parallel via 5 sub-agents | Batch worktree isolation pattern |
 | HomericIntelligence/Myrmidons | Cascade-rebase session 2026-05-17 — stale local branch pickup; corrected with `origin/<branch> --detach` | Stale worktree ref pitfall |
 | Odysseus → Myrmidons | 2026-05-07 swarm — 3 sub-agents recovered via retry-5x prompt | Submodule worktree permission retry |
-| ProjectMnemosyne | 57-branch squash-merge cleanup; pre-flight gate pattern | Stale agent branch rebase |
-| ProjectMnemosyne | 10 orphaned branches after `gh tidy` post-pull; file-existence decision tree | Orphaned no-PR branch handling |
+| Mnemosyne | 57-branch squash-merge cleanup; pre-flight gate pattern | Stale agent branch rebase |
+| Mnemosyne | 10 orphaned branches after `gh tidy` post-pull; file-existence decision tree | Orphaned no-PR branch handling |
 | ProjectHephaestus | 6 automation pipeline commits on local main; recovered via `git checkout -b` | Commits-on-main recovery |
 | ProjectHermes | Stale worktrees + stashes + branches, preservation-biased audit | Squash-merge detection + stash audit |
 | ProjectScylla | Multiple blocked PRs sharing root cause; worktree hook exclusions | Rebase conflict + pre-commit hook fix |
 | ProjectOdyssey | Rejected PR `#5382`; cherry-pick decision saved PR `#5407` | Cherry-pick no-op detection |
-| ProjectMnemosyne | 14 PRs auto-merged + worktree migration PR `#991` | Clone-to-worktree migration |
+| Mnemosyne | 14 PRs auto-merged + worktree migration PR `#991` | Clone-to-worktree migration |
 | ProjectOdyssey | Wave D/E bulk issue fixing — 26 PRs, 2026-04-12 | Plan-mode avoidance; Haiku model |
 | ProjectHephaestus | Issue #1182 / PR #1259 — plan cited `license-scan` at `security.yml:97-137` but branch (`5e8fb2ee`, one commit behind `dd2552e4`/#1252) had a 96-line file with no such job; rebased onto origin/main, then implemented | Stale-base implementation branch detection (section D4) |

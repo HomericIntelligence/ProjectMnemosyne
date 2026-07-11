@@ -40,7 +40,7 @@ The v1.0.0 skill body remains as the base of `planning-pr-body-extract-sibling-a
 
 ## v1.0.0 (2026-07-02) — Initial skill
 
-**Changed by:** ProjectMnemosyne PR #2944 — /learn pass 1 on ProjectOdyssey #5527 R0 planning session.
+**Changed by:** Mnemosyne PR #2944 — /learn pass 1 on ProjectOdyssey #5527 R0 planning session.
 **Verification:** unverified
 
 Initial extraction of the pattern: PR-body content that must come from an upstream sibling issue's comments (loss log, benchmark table, verification transcript) MUST be pulled at execute time via a placeholder-substitution pipeline. Never write illustrative values inline with a hedging note.

@@ -279,7 +279,7 @@ supply something wrong?" Automatic-fallback -> `DEBUG`. Human-supplied-wrong ->
 PR #1557 — `hephaestus/automation/prompts/_shared.py::_relativize_path` logged
 "Path ... is not under repo_root ...; injecting absolute path" at `WARNING`
 **once per issue** (N times per loop). Cross-repo paths (e.g. the
-ProjectMnemosyne `marketplace.json` referenced from a Hephaestus run) are
+Mnemosyne `marketplace.json` referenced from a Hephaestus run) are
 EXPECTED and the absolute path works -> `DEBUG`. A benign message that fires
 once per loop iteration is the loudest kind of noise and the clearest
 downgrade candidate.

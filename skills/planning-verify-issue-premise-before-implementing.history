@@ -2,7 +2,7 @@
 
 ## v3.0.0 (2026-07-04)
 
-**Changed by:** ProjectMnemosyne memory consolidation pass.
+**Changed by:** Mnemosyne memory consolidation pass.
 **Verification:** unverified - repository validation and markdown checks were run for the consolidated files; the preserved source examples remain historical snapshots.
 
 ### What changed
@@ -1039,7 +1039,7 @@ tags: []
 | **Date** | 2026-06-19 |
 | **Objective** | When an issue scopes work to an entire population ("standardize the default branch across the ecosystem") but names only a subset (5 of 15 repos), scope the verification loop to the WHOLE population so residue in unnamed members is actually found before declaring the work complete |
 | **Outcome** | Successful: re-planning issue #24 after a NOGO, extending the live-state check from the 5 named repos to all 15 surfaced `ProjectKeystone` (NOT one of the named 5) still carrying a stale unprotected orphan `refs/heads/master` — the one real migration residue. The 5-repo scan structurally could not find it. |
-| **Verification** | verified-local (all gh/grep commands below were run this session and produced the cited outputs; not validated in ProjectMnemosyne CI) |
+| **Verification** | verified-local (all gh/grep commands below were run this session and produced the cited outputs; not validated in Mnemosyne CI) |
 | **History** | (initial version) |
 
 ## When to Use
@@ -2610,7 +2610,7 @@ tags: []
 | **Date** | 2026-06-19 |
 | **Objective** | When planning an issue that asserts work needs doing (e.g. "5 repos still on master, CI broken"), determine whether that work is already complete BEFORE writing edits — and if it is, produce a verify-and-close plan with zero source changes instead of a rename plan |
 | **Outcome** | Successful: live-state verification of GitHub issue #24 ("Standardize default branch name across ecosystem") revealed the migration was ALREADY COMPLETE — all 15 repos default to `main`, no `master` refs exist, all workflows target `main`, all open PRs are based on `main`, all 4 linked tracking issues were already CLOSED. The plan correctly became "verify-and-close, zero source edits." |
-| **Verification** | verified-local for the core branch-migration workflow (the gh/grep commands below were run this session and produced the cited outputs; not validated in ProjectMnemosyne CI). The issue #177 ruleset-enforcement findings are now VERIFIED-AGAINST-LIVE (v1.3.0): the re-plan ran `gh api .../rulesets` and confirmed the live ruleset (id 15556483) is already `active`, has exactly 8 bare-name contexts + `integration_id: 15368`, and the org endpoint 404s — replacing the v1.2.0 "unverified assumption" framing for those points. The #177 *implementation plan itself* remains proposed (NOT executed/merged); only the live-state findings are confirmed. |
+| **Verification** | verified-local for the core branch-migration workflow (the gh/grep commands below were run this session and produced the cited outputs; not validated in Mnemosyne CI). The issue #177 ruleset-enforcement findings are now VERIFIED-AGAINST-LIVE (v1.3.0): the re-plan ran `gh api .../rulesets` and confirmed the live ruleset (id 15556483) is already `active`, has exactly 8 bare-name contexts + `integration_id: 15368`, and the org endpoint 404s — replacing the v1.2.0 "unverified assumption" framing for those points. The #177 *implementation plan itself* remains proposed (NOT executed/merged); only the live-state findings are confirmed. |
 | **History** | [changelog](./planning-verify-live-state-before-assuming-work-remains.history) |
 
 ## When to Use
@@ -2641,7 +2641,7 @@ verify-and-close plan (confirm state, close the issue) — not a rename/edit pla
 
 ```bash
 ORG=HomericIntelligence
-REPO=ProjectMnemosyne
+REPO=Mnemosyne
 
 # 1. Authoritative default branch (NOT the issue's table)
 gh repo view "$ORG/$REPO" --json defaultBranchRef --jq .defaultBranchRef.name
