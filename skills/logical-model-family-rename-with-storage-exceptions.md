@@ -1,12 +1,12 @@
 ---
 name: logical-model-family-rename-with-storage-exceptions
-description: "Rename repository logical model-family surfaces without breaking physical checkpoint or benchmark storage paths. Use when: (1) replacing old model-family names in manifests, docs, tests, scripts, and routes, (2) preserving real external paths that still contain the old name, (3) adding a guard that blocks old logical names while allowing storage references."
+description: "Rename logical reference surfaces (model-family names, or org/repo names when dropping a prefix) without breaking physical storage paths or package identity. Use when: (1) replacing old names in manifests, docs, tests, scripts, routes, and repo/URL references, (2) preserving real external paths or package names that still contain the old name, (3) splitting a safe reference-only sweep now from a breaking package/source rename deferred to a tracked issue, (4) adding a guard that blocks old logical names while allowing storage references."
 category: tooling
-date: 2026-06-18
-version: "1.0.1"
+date: 2026-07-11
+version: "1.1.0"
 user-invocable: false
 verification: verified-ci
-tags: [model-family, rename, manifests, h200-slurm, storage-exceptions, ruff]
+tags: [model-family, rename, manifests, h200-slurm, storage-exceptions, ruff, repo-rename, url-sweep, package-rename, deferred-breaking-change]
 ---
 
 # Logical Model Family Rename With Storage Exceptions
@@ -15,17 +15,19 @@ tags: [model-family, rename, manifests, h200-slurm, storage-exceptions, ruff]
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-18 |
-| **Objective** | Rename repository logical model-family surfaces from an old family name to a new family name while preserving real physical storage paths that still contain the old name. |
-| **Outcome** | Successful. Tracked filenames and logical identifiers moved to the new name, stale logical names were guarded by tests, physical checkpoint and benchmark storage paths were intentionally preserved, and source-repository CI passed. |
+| **Date** | 2026-07-11 |
+| **Objective** | Rename logical reference surfaces (a model-family name, or an org/repo name when dropping a prefix) from an old name to a new name while preserving real physical storage paths and package identity that still contain the old name. |
+| **Outcome** | Successful. Logical identifiers, reference/URL surfaces, and tracked filenames moved to the new name; stale logical names were guarded by tests; physical storage paths and package/source identity were intentionally preserved or deferred to a tracked breaking-change issue; source-repository CI passed. |
 | **Verification** | verified-ci |
+| **Also verified on** | HomericIntelligence/Odyssey (formerly ProjectOdyssey) org/repo rename: safe URL sweep PR #5580 (docs-only, 105 files) passed CI; breaking package rename deferred to issue #5579. |
 
 ## When to Use
 
 - A user asks to rename all logical naming for a model family, product family, or serving surface.
-- The change spans H200 Slurm service manifests, docs/runbooks, docs/evaluations, generation scripts, launch scripts, default registries, benchmark examples, and tests.
-- Old logical names must disappear, but real external storage still uses old-name path segments.
-- A bulk rename has started to mutate protected paths or generated placeholder tokens.
+- **An org/repo is renamed (e.g. dropping a `Project` prefix, `HomericIntelligence/ProjectOdyssey` -> `HomericIntelligence/Odyssey`) and you must update references without breaking the package.** The repo-name change and the package/source change are two different classes: sweep the references now, defer the package rename.
+- The change spans H200 Slurm service manifests, docs/runbooks, docs/evaluations, generation scripts, launch scripts, default registries, benchmark examples, tests, and repo/URL references.
+- Old logical names must disappear, but real external storage or a published package name still uses old-name segments.
+- A bulk rename has started to mutate protected paths, package-identity fields, workflow files, or generated placeholder tokens.
 - Ruff reformats a stale-token guard in a way that defeats the guard.
 
 ## Verified Workflow
@@ -80,6 +82,38 @@ just validate
 
 7. **Verify filenames, content, and CI.** Require `git diff --check` to be clean, tracked filenames to have no old logical names, repo-wide search to show only physical storage exceptions, full local validation to pass, and PR CI to pass before calling the rename done.
 
+### Org/Repo Rename: Split Safe-Now From Deferred-Breaking
+
+When an org renames a repo by dropping a prefix (`HomericIntelligence/ProjectOdyssey` -> `HomericIntelligence/Odyssey`), the same logical-vs-physical discipline applies, but here "physical" means **package/source identity**. Do NOT conflate renaming a repo with renaming its package.
+
+1. **Point your local remote at the canonical URL.** The GitHub rename is usually already live and old URLs redirect, so existing git remotes and `gh` commands keep working through the redirect — but still update to canonical:
+
+   ```bash
+   git remote set-url origin git@github.com:HomericIntelligence/Odyssey.git
+   ```
+
+2. **SAFE-NOW — one mechanical docs-only PR: repo/URL references and repo-name prose.** These are pure references; sweeping them is non-breaking.
+
+   ```bash
+   # Inventory URL refs and repo-name prose.
+   grep -rlE "HomericIntelligence/ProjectOdyssey" --include="*.md" --include="*.toml" --include="*.cfg" --include="*.yaml" --include="*.yml" . \
+     | grep -v '^\./\.github/workflows/'
+   # Substitute the URL form + repo-name prose ("ProjectOdyssey is one of...", "ProjectOdyssey (this repo)").
+   # NEVER touch the package `name = "..."` field.
+   ```
+
+   A clean run is a fixed count substitution (this session: 105 files, 445-for-445). This is the layer that ships now and passes CI.
+
+3. **DEFERRED-BREAKING — file a tracked issue, own atomic PR: the package/source rename.** Renaming the repo does NOT rename the package. The Mojo package `projectodyssey` (~546 imports), the pip/pixi/pyproject `name = "ProjectOdyssey"` fields, and `version('ProjectOdyssey')` refs in workflows all encode package identity. Rewriting them inline creates a massive half-renamed breaking change. File a `state:needs-plan` issue that scopes the package rename separately (`git mv` + scripted import rewrite + lockstep downstream update).
+
+4. **EXCLUSIONS when running the URL sweep (keeps blast radius safe):**
+   - Exclude `.github/workflows/` — workflow edits are human-review-gated per repo AGENTS.md, and they often carry the *package* name `version('ProjectOdyssey')` (belongs to the deferred package rename).
+   - Exclude `.mojo` source and `mojo.toml` / `pixi.toml` `name=` fields (package identity → deferred issue).
+   - Distinguish URL refs (`github.com/Org/ProjectRepo`) from the project `name` field: sed the URL form + repo-name prose only; NEVER the `name = "..."` package field.
+   - **Verify after:** `git diff --name-only | grep '\.mojo$'` must be EMPTY, and `git diff --name-only | grep '\.github/workflows'` must be EMPTY.
+
+5. **Companion repos:** for package-producing siblings (e.g. Hephaestus) whose rename affects a published package or plugin, file a parallel package-rename issue on each rather than sweeping their source inline.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -88,6 +122,9 @@ just validate
 | Placeholder tokens containing the old name | Protected strings used placeholders that included the replacement target before a bulk rewrite | The placeholder itself contained the target token and was transformed, making restoration fail | Use neutral placeholder tokens with no old or new name in them, or restore from `HEAD` before continuing. |
 | Adjacent string literal stale-token guard | A test tried to avoid embedding the stale token by writing adjacent string literals | Ruff can collapse adjacent string literals back into the exact old token, defeating the guard's intent | Use explicit concatenation, for example `"old" + "family"` and `"old" + "_family"`. |
 | Filename audit skipped | Content was updated but old filenames were not checked separately | A repo-wide content grep does not prove tracked filenames were renamed | Run the tracked-filename stale-name audit from Quick Reference and require no matches. |
+| Assumed repo rename == package rename | Planned to rewrite the `projectodyssey` Mojo package and all ~546 imports inline in the repo-rename PR | Renaming a repo does not rename its package; conflating them makes a massive breaking change that leaves the tree half-renamed | Defer the package/source rename to its own atomic PR tracked by a `state:needs-plan` issue; the reference sweep and the package rename are different classes of change. |
+| Global `\bProjectOdyssey\b` sweep | Substituted the bare word everywhere | Risked hitting `pixi.toml`/`pyproject.toml` `name = "ProjectOdyssey"` and workflow `version('ProjectOdyssey')` — package identity, not references | Scope sed to the URL form (`github.com/Org/ProjectRepo`) plus repo-name prose; exclude `name=` fields, `.github/workflows`, and `.mojo`. |
+| Edited workflow files in the sweep | Included `.github/workflows/` in the URL substitution | Workflow edits are human-review-gated per repo AGENTS.md, and they often carry the deferred package name anyway | Exclude `.github/workflows` from the sweep; verify `git diff --name-only \| grep '.github/workflows'` is empty. |
 
 ## Results & Parameters
 
@@ -121,6 +158,30 @@ repo_surfaces:
 
 These are storage facts, not logical product names. Change them only after storage is moved or a new verified path exists.
 
+### Org/Repo Rename — Sweep vs Defer Checklist
+
+```yaml
+safe_now_reference_sweep:        # one mechanical docs-only PR
+  - github.com/Org/OldRepo URL references (.md, configs)
+  - repo-name prose in docs ("OldRepo is one of...", "OldRepo (this repo)")
+  - git remote set-url origin <canonical-url>
+deferred_breaking_package_rename:  # own atomic PR, tracked via state:needs-plan issue
+  - Mojo/source package name (e.g. projectodyssey, ~546 imports)
+  - pip/pixi/pyproject  name = "OldRepo"  fields
+  - version('OldRepo') refs in workflows
+exclude_from_url_sweep:
+  - .github/workflows/            # human-review-gated per AGENTS.md
+  - .mojo source files            # package identity
+  - mojo.toml / pixi.toml name= fields  # package identity
+verify_after_sweep:
+  - git diff --name-only | grep '\.mojo$'          # must be EMPTY
+  - git diff --name-only | grep '\.github/workflows' # must be EMPTY
+companion_repos:
+  - file a parallel package-rename issue per package-producing sibling (e.g. Hephaestus)
+```
+
+The GitHub repo rename usually goes live before the sweep, so old URLs redirect and existing remotes / `gh` commands keep resolving — the sweep is about canonicalizing references, not unblocking access.
+
 ### Guard Test Pattern
 
 ```python
@@ -151,3 +212,4 @@ verification: verified-ci
 | Project | Context | Details |
 |---------|---------|---------|
 | LLM360/Inference360 | Logical model-family rename across H200 Slurm manifests, docs, scripts, examples, and tests | Verified with clean diff whitespace check, no stale tracked filenames, stale logical-name grep guard, full local validation, and passing CI. |
+| HomericIntelligence/Odyssey (formerly ProjectOdyssey) | Org/repo rename dropping the `Project` prefix: safe URL/reference sweep separated from the breaking package rename | URL sweep PR #5580 (docs-only, 105 files, 445-for-445 substitution) passed CI; `.mojo`/`.github/workflows`/`name=` fields excluded and verified empty; breaking Mojo-package (`projectodyssey`, ~546 imports) + `name`/`version` rename deferred to `state:needs-plan` issue #5579; companion package-repo (Hephaestus) got its own parallel package-rename issue. |
