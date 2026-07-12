@@ -1,0 +1,125 @@
+# git-rebase-signing-ci — History
+
+## v1.1.0 (2026-07-12)
+
+**Changed by:** Hephaestus PR #2099 (branch `2053-auto-impl`) — rebasing a
+1-commit PR branch onto ~38 new commits of `origin/main`, hit one real
+content conflict in `docs/AUTOMATION_LOOP_ARCHITECTURE.md`, then hand-invoked
+the queued `--exec` command after resolving the conflict instead of running
+`git rebase --continue`.
+
+**Verification:** verified-local
+
+### What changed
+
+- Added a critical warning to the Verified Workflow: never hand-invoke the
+  `--exec` command after resolving a conflict — always run
+  `git rebase --continue` first, since the conflicted commit has not yet been
+  finalized as a real commit object at that pause point.
+- Added a new Failed Attempts row documenting the corrupted-commit failure
+  mode (amend lands on the rebase's "onto" checkout instead of the picked
+  commit, silently merging in an unrelated upstream commit's diff and
+  message).
+- Added a recovery procedure using `git reset --keep <pre-rebase-sha>` +
+  `git rebase --quit` for repos where `git rebase --abort` is blocked by a
+  safety-net policy.
+- Added a "redo without `--exec`" pattern: plain `git rebase origin/main`,
+  resolve conflicts, `git rebase --continue` to completion, THEN a single
+  standalone `git commit --amend --no-edit -s -S` pass over the final HEAD —
+  decoupling conflict-resolution-continuation from the signing amend.
+
+### Why
+
+The v1.0.0 Quick Reference recommended
+`git rebase --exec 'git commit --amend --no-edit -S' origin/main` without
+warning about what happens if a pick in the middle of that rebase conflicts.
+A conflict forces the operator to intervene, and the natural (but wrong)
+instinct is to manually replicate the queued `--exec` command since the
+rebase reports "Next command to do: exec ...". At that point, though,
+`git rebase` is still mid-`pick` — the conflicted commit doesn't exist yet as
+a commit object, and running `git commit --amend` amends whatever HEAD
+currently is (the "onto" checkout, i.e. the base branch tip), not the
+in-progress pick. This produced a corrupted commit whose diff was the union
+of an unrelated upstream commit's changes plus the PR's own changes, under
+the wrong commit message/title. Diagnosed via `git reflog` showing no
+intervening pick entry between the rebase-start checkout and the amend.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: git-rebase-signing-ci
+description: "Rebase and sign commits to pass CI pr-policy checks. Use when: (1) CI pr-policy fails on unsigned commits, (2) need to re-sign all PR commits after rebase, (3) force push signed commits to update a PR."
+category: tooling
+date: 2026-06-11
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [git, signing, rebase, ci, gpg]
+---
+
+# Git Rebase Signing for CI
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-11 |
+| **Objective** | Sign all PR commits to pass CI pr-policy checks that require GPG signatures |
+| **Outcome** | Successful — all commits show 'G' (good signature) after rebase |
+| **Verification** | verified-ci |
+
+## When to Use
+
+- CI `pr-policy` check fails with "every commit is signed" requirement
+- Commits were created without `-S` flag and need to be retroactively signed
+- After rebasing, need to verify all commits are signed
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Rebase all PR commits onto latest base with signing
+git rebase --exec 'git commit --amend --no-edit -S' origin/main
+
+# Verify all commits are signed (G = good)
+git log --format='%h %G? %s' origin/main..HEAD
+
+# Force push to update PR
+git push --force-with-lease origin <branch>
+```
+
+### Detailed Steps
+
+1. **Identify unsigned commits**: `git log --format='%h %G? %s' origin/main..HEAD` — look for `N` (no signature) or `U` (unknown validity).
+2. **Rebase with signing**: `git rebase --exec 'git commit --amend --no-edit -S' origin/main` — this replays each commit and re-signs it with your GPG key.
+3. **Verify**: Re-run `git log --format='%h %G? %s' origin/main..HEAD` — all should show `G`.
+4. **Force push**: `git push --force-with-lease origin <branch>` — the `--force-with-lease` is safer than `--force` as it rejects if the remote has changes you haven't fetched.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| `git commit --amend -S` per commit | Manual signing of each commit | Tedious and error-prone with multiple commits | Use `--exec` flag to sign all commits in one rebase |
+| `git push --force` | Force push without lease check | Could overwrite remote changes from other collaborators | Use `--force-with-lease` for safety |
+
+## Results & Parameters
+
+- **Signing key**: GPG key configured in git (`git config user.signingkey`)
+- **Base branch**: `origin/main` (or `origin/master` depending on repo)
+- **Verification output**: `G` = good signature, `N` = no signature, `U` = unknown validity
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|-------|
+| HomericIntelligence/ProjectHephaestus | PR #1171 — show-prompt CLI | 4 commits rebased and signed, pr-policy passes |
+| LLM360/Inference360 | PR #82 — Move inference360 module | Commits signed for pr-policy compliance |
+```
+
+---
+
+## v1.0.0 (2026-06-11)
+
+**Initial version.**
