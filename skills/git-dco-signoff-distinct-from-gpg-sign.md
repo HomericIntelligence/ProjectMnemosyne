@@ -91,8 +91,8 @@ differs between the two passes. Instead of one trailer, the commit ends up
 with two:
 
 ```text
-Signed-off-by: Micah Villmow <email@example.com>
-Signed-off-by: mvillmow <email@example.com>
+Signed-off-by: Micah Villmow <noreply@users.noreply.github.com>
+Signed-off-by: mvillmow <noreply@users.noreply.github.com>
 ```
 
 **Root cause.** `-s`/`--signoff` dedups by a LITERAL STRING match on the whole
