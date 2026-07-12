@@ -2,6 +2,42 @@
 
 # Changelog: mojo-ci-runtime-crash-diagnosis-and-mitigation
 
+## v1.2.0 (2026-07-10)
+
+**Changed by:** predictive-coding-mojo CI session (Mojo 1.0.0b1 pin, ~10 CI runs, 3 JIT-crash
+flakes rescued).
+**Verification:** verified-ci
+
+### What changed
+
+- Added section G ("Pinned-Toolchain JIT-Crash Flake — Bounded Retry + Rerun Discipline"):
+  nondeterministic `mojo: error: execution crashed` + `libKGENCompilerRTShared.so` frames on
+  `ubuntu-latest` when the project is pinned to a pre-fix Mojo (1.0.0b1, nightly GC'd) that
+  cannot be bumped. Two mitigation layers: per-file retry-once loop in the workflow step
+  (genuine failures still fail twice → cannot mask regressions) + verified
+  `gh run rerun --failed` at the orchestration level after confirming the crash signature in
+  the job log. Plus flake-vs-real diagnostic discriminator table and mandatory known-issues
+  ledger discipline (observation dates, affected SHAs, revisit trigger on pin movement).
+- Added the crash class to the Crash Classification table and When to Use (trigger 7).
+- Added an Exception note to section B's anti-retry posture: bounded retry with ledger
+  discipline is correct when the pin cannot move past the upstream fix.
+- Added 2 Failed Attempts rows: "deleting the release-test job entirely" (upstream projects'
+  approach — removes all signal, worse cure) and "single job-level retry as sufficient"
+  (double-crash observed: attempt + retry both crashed while the twin run at the same SHA
+  passed).
+- Added Results & Parameters subsection "Pinned-Toolchain Flake Profile" and a
+  predictive-coding-mojo row to Verified On.
+
+### Why
+
+The v1.1.0 posture ("retry is the wrong answer; bump past the upstream fix") assumes the pin
+can move. predictive-coding-mojo is pinned to Mojo 1.0.0b1 because the original nightly was
+garbage-collected from the channel — the fix cannot be reached by bumping. Observed across
+~10 CI runs: the flake fails in seconds with the JIT crash signature while the sibling run at
+the SAME SHA is green and the file passes locally (WSL2). A bounded, signature-verified retry
+plus a ledger with a revisit trigger preserves fail-fast discipline (real assertion failures
+fail twice) without deleting test signal the way upstream projects did.
+
 ## v1.1.0 (2026-06-07)
 
 Restore source-code-bug-knowledge block (nuance audit pass 2). Added section F
