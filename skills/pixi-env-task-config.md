@@ -285,15 +285,15 @@ fleet-build:
 fleet-test:
     cd infrastructure/AchaeanFleet && just test
 
-# === ProjectMnemosyne (shared/ProjectMnemosyne) ===
+# === Mnemosyne (shared/Mnemosyne) ===
 
 # Validate Mnemosyne skill files
 mnemosyne-validate:
-    cd shared/ProjectMnemosyne && just validate
+    cd shared/Mnemosyne && just validate
 
 # Run Mnemosyne tests
 mnemosyne-test:
-    cd shared/ProjectMnemosyne && just test
+    cd shared/Mnemosyne && just test
 ```
 
 Conventions for meta-repo delegation:

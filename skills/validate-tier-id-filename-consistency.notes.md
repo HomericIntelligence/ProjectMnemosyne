@@ -79,7 +79,7 @@ PR #945 created, auto-merge enabled.
 
 ## Team Knowledge Used
 
-The issue plan referenced these ProjectMnemosyne skills as prior learnings:
+The issue plan referenced these Mnemosyne skills as prior learnings:
 - `fix-resource-prompt-consistency`
 - `fix-yaml-config-propagation`
 - `resume-crash-debugging`

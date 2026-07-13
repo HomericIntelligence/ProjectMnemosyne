@@ -1,0 +1,38 @@
+<!-- markdownlint-disable MD024 -->
+<!-- version archive — newest first -->
+
+# History: logical-model-family-rename-with-storage-exceptions
+
+## v1.1.0 (2026-07-11)
+
+- **Changed by:** HomericIntelligence/Odyssey repo rename — URL sweep PR #5580 + package-rename issue #5579
+- **Verification:** verified-ci
+- **What changed:**
+  - Bumped `version` 1.0.1 -> 1.1.0 and `date` 2026-06-18 -> 2026-07-11.
+  - Generalized the skill from "logical model-family rename" to also cover **org/repo renames that drop a prefix** (e.g. `HomericIntelligence/ProjectOdyssey` -> `HomericIntelligence/Odyssey`), where the same logical-vs-physical split applies: rename the *reference/URL/doc-prose* surfaces now, defer the breaking *package/source* rename.
+  - Extended the description and tags to cover repo/URL renames and deferred package renames.
+  - Added an Overview row and a When-to-Use trigger for "an org/repo is renamed (drop a prefix) and you must update references without breaking the package."
+  - Added a Verified Workflow subsection: the **SAFE-now vs DEFERRED-breaking split**, the **exclusion checklist** (`.github/workflows/`, `.mojo`, `mojo.toml`/`pixi.toml` `name=` fields), `git remote set-url` to the canonical URL, and the note that the GitHub rename redirects so old URLs/`gh` commands keep resolving.
+  - Added 3 Failed Attempts rows: repo-rename==package-rename (would rewrite 546 imports inline); global `\bProjectOdyssey\b` sweep (would hit `name=` / `version('ProjectOdyssey')` package identity); editing workflow files in the sweep (human-review-gated per AGENTS.md).
+  - Added a Results & Parameters block for the URL-sweep exclusion checklist and companion-repo (Hephaestus) parallel package-rename issue guidance.
+  - Added a Verified On row for HomericIntelligence/Odyssey URL sweep PR #5580 (docs-only, 105 files, 445-for-445 substitution) with deferred package-rename issue #5579.
+- **Why:** A real session renamed `HomericIntelligence/ProjectOdyssey` -> `HomericIntelligence/Odyssey`. The safe layer (repo/URL references + doc prose, 105 files) shipped as one mechanical docs-only PR that passed CI; the breaking layer (the Mojo package `projectodyssey`, ~546 imports, and pip/pixi/pyproject `name`/`version` fields) was deferred to its own atomic PR tracked by a `state:needs-plan` issue. This is the same class of change as the model-family rename: split logical reference surfaces (rename now) from physical/package identity (preserve or defer), and guard the exclusions so the sweep's blast radius stays safe.
+
+### Previous version snapshot (v1.0.1, 2026-06-18)
+
+~~~yaml
+name: logical-model-family-rename-with-storage-exceptions
+description: "Rename repository logical model-family surfaces without breaking physical checkpoint or benchmark storage paths. Use when: (1) replacing old model-family names in manifests, docs, tests, scripts, and routes, (2) preserving real external paths that still contain the old name, (3) adding a guard that blocks old logical names while allowing storage references."
+category: tooling
+date: 2026-06-18
+version: "1.0.1"
+user-invocable: false
+verification: verified-ci
+tags: [model-family, rename, manifests, h200-slurm, storage-exceptions, ruff]
+~~~
+
+The v1.0.1 skill covered renaming logical model-family surfaces (manifests, docs, scripts, routes, tests) to a new family name while preserving physical checkpoint/benchmark storage paths that still contained the old name, plus a Ruff-proof stale-token guard test. Verified on LLM360/Inference360.
+
+## v1.0.1 (2026-06-18)
+
+Initial captured version (patch of 1.0.0). Logical model-family rename across H200 Slurm manifests, docs, scripts, examples, and tests while preserving physical checkpoint/benchmark storage paths; git-mv tracked files, separate logical identifiers from physical storage, Ruff-proof stale-token guard, neutral placeholder tokens. Verified on LLM360/Inference360 with clean diff, no stale tracked filenames, stale-name grep guard, and passing CI.

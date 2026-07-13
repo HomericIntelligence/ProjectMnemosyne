@@ -46,7 +46,7 @@ What changed:
 ## v1.0.0 (2026-06-12)
 
 Original skill from the first /learn pass for HomericIntelligence/ProjectHephaestus
-issue #1181 (PR #2390 in ProjectMnemosyne). Captured the initial implementation
+issue #1181 (PR #2390 in Mnemosyne). Captured the initial implementation
 plan: fix the no-op `deps/version-sync` required check by delegating enforcement
 to the existing tested `scripts/check_version_single_source.py` instead of
 re-encoding the invariant in workflow bash (DRY). Flagged five durable insights

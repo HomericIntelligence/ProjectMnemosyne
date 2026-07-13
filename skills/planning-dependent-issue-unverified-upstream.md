@@ -30,7 +30,7 @@ tags:
 | **Outcome** | PLAN ONLY — never executed. The durable learning is a CORRECTION of prior advice: do NOT write conditional fallbacks; READ the merged dependency code (it is almost always already merged) and replace every fork with one verified path. |
 | **Verification** | unverified (plan only — no docker build or CI ran; the gh/git inspection commands below WERE run and are real) |
 
-> **Correction of prior guidance.** v1.0.0 of this skill (and the related `atlas-dashboard-dockerfile-embed-distroless` skill, ProjectMnemosyne PR #2685) advised "front-load dependency verification AND provide inline fallbacks." This session proved the *second half is a trap*: conditional fallbacks look concrete to a reviewer but encode WRONG assumptions (wrong module path, wrong base image, illegal embed location) that pass review and then fail at implementation time. The dependency is almost always already merged and readable — read it and DELETE the forks.
+> **Correction of prior guidance.** v1.0.0 of this skill (and the related `atlas-dashboard-dockerfile-embed-distroless` skill, Mnemosyne PR #2685) advised "front-load dependency verification AND provide inline fallbacks." This session proved the *second half is a trap*: conditional fallbacks look concrete to a reviewer but encode WRONG assumptions (wrong module path, wrong base image, illegal embed location) that pass review and then fail at implementation time. The dependency is almost always already merged and readable — read it and DELETE the forks.
 
 ## When to Use
 

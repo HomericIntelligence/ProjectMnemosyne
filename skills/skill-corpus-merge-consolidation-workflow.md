@@ -31,7 +31,7 @@ tags: [skill-merge, deduplication, semver, consolidation, history, manifest, enu
 - `find skills/ -type d -mindepth 1` returns results — legacy nested format still present
 - Skills have `source: ProjectName` in frontmatter or hardcoded repo-specific paths
 - A dual `plugins/` + `skills/` directory structure is causing contributor confusion
-- Porting skills from a source repo to ProjectMnemosyne for the first time (bulk migration)
+- Porting skills from a source repo to Mnemosyne for the first time (bulk migration)
 - A skill topic is OBSOLETE (underlying bug/workaround fixed) and needs a prominent notice
 - You found skill work stranded in a stray or misplaced clone-within-a-repo (e.g. a worktree
   living inside ANOTHER repo's tree) and need to salvage it safely
@@ -634,14 +634,14 @@ Do this as a final reconcile step of every consolidation pass — do not rely on
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | PR #1040, merged 16 test-splitting skills + added semver | 2026-03-25 |
-| ProjectMnemosyne | PR #1075–#1097, six deduplication rounds | 2026-03-27 to 2026-03-28 |
-| ProjectMnemosyne | Large-scale algorithmic pass: 975 → 933 skills (-42) | 2026-04-07 |
-| ProjectMnemosyne | PR #183, dual plugins/+skills/ → single skills/ (971 files changed) | 2026-02-23 |
-| ProjectMnemosyne | PR #326, bulk migration of 4 worktree skills from ProjectOdyssey2 | 2026-03-04 |
-| ProjectMnemosyne | PR #1017, migrated last 4 hierarchical skills to flat format | 2026-03-25 |
-| ProjectMnemosyne | 20 merge PRs using history-as-superseded-snapshot pattern | 2026-05-18 |
-| ProjectMnemosyne | 17-cluster 1100-skill consolidation with manifest-first enumeration | 2026-05-19 |
-| ProjectMnemosyne | 2026-06-07 full-corpus pass: 50 clusters, 273 skills -> 50 canonicals, 10 waves of <=5 worktree swarm agents | corpus 518 -> 291 (-227, -44%) |
-| ProjectMnemosyne | 2026-06-14 post-drain closure audit: 38 closed PRs audited via 4-agent swarm partitioned by skill-family; 10 had dropped content (26%); salvaged via 5 amendment PRs (#2514-#2518, all merged) | verified-ci |
-| ProjectMnemosyne | 2026-06-15 stranded-skill salvage + accidental de-consolidation reconcile: recovered uncommitted v1.3.0 work from a misplaced clone, but recreating standalone `squash-only-repo-merge-method-docs` (PR #2546) de-consolidated it from bundle `github-auto-merge-ci-gating-merge-method`; fixed forward in PR #2553 (bundle → v1.4.0, standalone re-deleted, validate_plugins.py 396/396) | verified-ci |
+| Mnemosyne | PR #1040, merged 16 test-splitting skills + added semver | 2026-03-25 |
+| Mnemosyne | PR #1075–#1097, six deduplication rounds | 2026-03-27 to 2026-03-28 |
+| Mnemosyne | Large-scale algorithmic pass: 975 → 933 skills (-42) | 2026-04-07 |
+| Mnemosyne | PR #183, dual plugins/+skills/ → single skills/ (971 files changed) | 2026-02-23 |
+| Mnemosyne | PR #326, bulk migration of 4 worktree skills from ProjectOdyssey2 | 2026-03-04 |
+| Mnemosyne | PR #1017, migrated last 4 hierarchical skills to flat format | 2026-03-25 |
+| Mnemosyne | 20 merge PRs using history-as-superseded-snapshot pattern | 2026-05-18 |
+| Mnemosyne | 17-cluster 1100-skill consolidation with manifest-first enumeration | 2026-05-19 |
+| Mnemosyne | 2026-06-07 full-corpus pass: 50 clusters, 273 skills -> 50 canonicals, 10 waves of <=5 worktree swarm agents | corpus 518 -> 291 (-227, -44%) |
+| Mnemosyne | 2026-06-14 post-drain closure audit: 38 closed PRs audited via 4-agent swarm partitioned by skill-family; 10 had dropped content (26%); salvaged via 5 amendment PRs (#2514-#2518, all merged) | verified-ci |
+| Mnemosyne | 2026-06-15 stranded-skill salvage + accidental de-consolidation reconcile: recovered uncommitted v1.3.0 work from a misplaced clone, but recreating standalone `squash-only-repo-merge-method-docs` (PR #2546) de-consolidated it from bundle `github-auto-merge-ci-gating-merge-method`; fixed forward in PR #2553 (bundle → v1.4.0, standalone re-deleted, validate_plugins.py 396/396) | verified-ci |

@@ -12,10 +12,13 @@ description: "Debugging and fixing concurrency bugs and process-level reliabilit
   OOM-hangs a WSL host because concurrent Claude agent sessions are unthrottled, (12) a
   ThreadPoolExecutor max_workers cap fails to limit concurrent agent sessions and you need an
   asyncio.Semaphore agent cap, (13) you need a ulimit -v wrapper around pixi/cmake/podman so an
-  over-budget process dies as a recoverable MemoryError instead of an uncatchable OOM-SIGKILL."
+  over-budget process dies as a recoverable MemoryError instead of an uncatchable OOM-SIGKILL,
+  (14) a worker pool leaks a runaway child subprocess after shutdown because
+  ThreadPoolExecutor.shutdown(cancel_futures=True) does NOT kill an already-running subprocess and
+  you need a process-group registry + os.killpg to reap it."
 category: debugging
-date: 2026-06-29
-version: "1.1.0"
+date: 2026-07-12
+version: "1.2.0"
 user-invocable: false
 verification: verified-local
 history: concurrency-and-process-reliability-patterns.history
@@ -40,6 +43,12 @@ tags:
   - wsl
   - host-exhaustion
   - swap
+  - threadpoolexecutor
+  - killpg
+  - start-new-session
+  - process-group-registry
+  - subprocess-leak
+  - worker-pool-shutdown
 ---
 
 # Concurrency and Process Reliability Patterns
@@ -72,6 +81,10 @@ tags:
 - per-agent `cmake --build -j$(nproc)` × N agents oversubscribes all cores N times
 - you want pixi/cmake/podman to die as a recoverable `MemoryError` (via `ulimit -v`) instead of
   an uncatchable OOM-SIGKILL that hangs the host
+- a worker pool's `shutdown()` returns but a child subprocess (e.g. a `claude` CLI reviewer) keeps
+  running for minutes afterward and holds the interpreter open — because
+  `ThreadPoolExecutor.shutdown(wait=False, cancel_futures=True)` only cancels UN-started futures and
+  never signals a subprocess already blocked inside `subprocess.run` on a non-daemon worker thread
 
 ## Verified Workflow
 
@@ -399,6 +412,124 @@ red herring for host-exhaustion.
    a concurrency-capped Workflow/wave over fire-and-forget parallel agent spawns, and check `free -h`
    *before* launching a swarm.
 
+### Pattern 11 — ThreadPoolExecutor.shutdown(cancel_futures=True) Does NOT Kill Running Subprocesses
+
+**Symptom**: A worker pool's `shutdown()` returns, but a child subprocess (e.g. a `claude` CLI
+reviewer) keeps running for many minutes afterward — one leaked ~19 minutes past shutdown — holding
+the Python interpreter open so the whole program cannot exit.
+
+**Root Cause**: `concurrent.futures.ThreadPoolExecutor.shutdown(wait=False, cancel_futures=True)`
+cancels only **un-started** futures. A job already blocked inside `subprocess.run(...)` /
+`Popen.communicate()` on a non-daemon worker thread keeps running to completion or timeout. Because
+executor workers are **non-daemon** and `concurrent.futures` registers an `atexit` join, the
+interpreter blocks on exit until the runaway child finishes. `cancel_futures` ≠ terminate running
+work — there is no built-in way to reap an in-flight subprocess through the executor API.
+
+**Fix** — spawn each child as its own process-group leader, track live groups in a thread-safe
+registry, and `os.killpg` them on teardown. Four independent ingredients, all needed:
+
+1. **Spawn each child in its own session** so it leads its own process group. Replace
+   `subprocess.run(cmd, ...)` with `Popen(cmd, ..., start_new_session=True)` + `communicate(...)`.
+   With `start_new_session=True`, `pid == pgid`, so signaling the group hits the whole tree (the
+   child AND its grandchildren like `gh`/`git`).
+
+2. **Track the live process group for the duration of the blocking call** via a thread-safe registry
+   — a module-level `set[int]` guarded by a `threading.Lock`, populated by a context manager that
+   registers `os.getpgid(pid)` on enter and discards it on exit. A normally-finishing child never
+   leaves a stale pgid behind.
+
+3. **On teardown, `os.killpg(pgid, SIGTERM)` every tracked group**, then clear the set. This frees
+   the wedged worker thread promptly so the interpreter can exit.
+
+4. **Gate everything on `hasattr(os, "killpg") and hasattr(os, "getpgid")`** so Windows / no-killpg
+   platforms no-op and fall back to prior behavior.
+
+**Preserve the `subprocess.run(check=True, timeout=...)` exception contract** in the Popen wrapper:
+raise `subprocess.CalledProcessError(returncode, cmd, output, stderr)` on nonzero exit; re-raise
+`subprocess.TimeoutExpired` on timeout (kill + reap the child first to avoid a zombie).
+
+```python
+import os
+import signal
+import subprocess
+import threading
+from contextlib import contextmanager
+
+_HAS_PGID = hasattr(os, "killpg") and hasattr(os, "getpgid")
+
+
+class ProcessGroupRegistry:
+    """Thread-safe set of live process-group ids so teardown can killpg them."""
+
+    def __init__(self) -> None:
+        self._pgids: set[int] = set()
+        self._lock = threading.Lock()
+
+    @contextmanager
+    def track_process_group(self, pid: int):
+        """Register the child's pgid for the life of a blocking call; discard on exit."""
+        pgid = None
+        if _HAS_PGID:
+            try:
+                pgid = os.getpgid(pid)
+            except ProcessLookupError:
+                pgid = None
+            if pgid is not None:
+                with self._lock:
+                    self._pgids.add(pgid)
+        try:
+            yield
+        finally:
+            if pgid is not None:
+                with self._lock:
+                    self._pgids.discard(pgid)
+
+    def terminate_all(self) -> None:
+        """SIGTERM every tracked process group, then clear. Call from shutdown()."""
+        if not _HAS_PGID:
+            return
+        with self._lock:
+            pgids = list(self._pgids)
+            self._pgids.clear()
+        for pgid in pgids:
+            try:
+                os.killpg(pgid, signal.SIGTERM)
+            except (ProcessLookupError, PermissionError):
+                pass
+
+
+def run_tracked(cmd, registry, *, input=None, timeout=None, check=True):
+    """Popen(start_new_session=True) wrapper preserving subprocess.run's exception contract."""
+    kwargs = {"start_new_session": True} if _HAS_PGID else {}
+    proc = subprocess.Popen(
+        cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        text=True, **kwargs,
+    )
+    with registry.track_process_group(proc.pid):
+        try:
+            out, err = proc.communicate(input=input, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.communicate()  # reap — avoid a zombie
+            raise
+    if check and proc.returncode != 0:
+        raise subprocess.CalledProcessError(proc.returncode, cmd, out, err)
+    return subprocess.CompletedProcess(cmd, proc.returncode, out, err)
+
+
+# In WorkerPool.shutdown(): reap in-flight children BEFORE joining the executor.
+#   registry.terminate_all()
+#   executor.shutdown(wait=False, cancel_futures=True)
+```
+
+**Critical test-design lesson** (itself a key learning): a test using an inline/fake worker pool
+CANNOT prove the leak is fixed — asserting `shutdown_calls == 1` proves the CALL happens, not that a
+subprocess dies. The regression test MUST spawn a **real OS subprocess** (swap the target binary for
+`sys.executable -c "import time; time.sleep(60)"` through the real spawn path), call the **real**
+`shutdown()`, and assert completion arrives well under the sleep (e.g. `< 15 s`). Verify the test
+**FAILS** (queue-timeout / hang) when the `terminate_all()` call is removed — that proves it actually
+exercises the kill path.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -423,6 +554,8 @@ red herring for host-exhaustion.
 | Construct the Semaphore at import time | `_agent_sem = asyncio.Semaphore(3)` at module top level | No running event loop exists at import; the semaphore binds the wrong/absent loop and fails or silently mis-throttles | Lazy-create the Semaphore on first use so it binds the running loop |
 | Leave `-j$(nproc)` per agent | Each agent built with `cmake --build -j$(nproc)` | N agents × all cores = N×core oversubscription → scheduler starvation, "Time jumped backwards", VM lockup | Cap build parallelism per agent (`-j2` / `CMAKE_BUILD_PARALLEL_LEVEL=2`) so N agents fit the core budget |
 | Let pixi/cmake run uncapped and rely on the OOM-killer | Ran heavy ops with no `ulimit -v`, assuming the OOM-killer would reap just the offender | The uncatchable OOM-SIGKILL fired only after swap hit 0 kB and the whole WSL VM had already hung; recovery required the kernel to reap agents | Wrap each heavy op in `( ulimit -v <N>GiB; exec "$@" )` so it dies as a recoverable `MemoryError` first; the shell/host survive (generalizes pytest Pattern 5 to pixi/cmake/podman) |
+| `executor.shutdown(wait=False, cancel_futures=True)` alone to stop a runaway child | Called shutdown expecting `cancel_futures=True` to terminate an in-flight `subprocess.run` on a worker | It only cancels UN-started futures; a subprocess already blocked in `communicate()` is never signaled and keeps the non-daemon worker (and the `atexit` join) alive — a `claude` child ran ~19 min past shutdown | `cancel_futures` ≠ terminate running work; to reap an in-flight subprocess you must signal its process group yourself (`start_new_session=True` + registry + `os.killpg`) |
+| Assert `pool.shutdown()` was called via a fake-pool counter | Regression test used an inline fake worker pool with a `shutdown_calls` counter and asserted `== 1` | Proved the CALL, not the EFFECT; the fake ran jobs inline with no real thread/subprocess to leak, so it stayed green even when the kill path was broken | A leak-fix test must spawn a REAL OS subprocess (`sys.executable -c "time.sleep(60)"`) through the real spawn path and assert completion `< 15 s`; confirm it FAILS/hangs when `terminate_all()` is removed |
 
 ## Results & Parameters
 
@@ -466,6 +599,17 @@ def _get_agent_sem():
 async def bounded_invoke_claude(*a, **k):
     async with _get_agent_sem():
         return await asyncio.to_thread(invoke_claude, *a, **k)   # to_thread -> real concurrency
+
+# Reap in-flight subprocesses on worker-pool shutdown (cancel_futures does NOT do this):
+# 1) spawn each child as its own pgroup leader; 2) track pgid for the blocking call;
+# 3) killpg all tracked groups in shutdown() BEFORE joining the executor.
+_HAS_PGID = hasattr(os, "killpg") and hasattr(os, "getpgid")
+proc = subprocess.Popen(cmd, start_new_session=True, ...)   # pid == pgid
+with registry.track_process_group(proc.pid):               # set[int] + threading.Lock
+    proc.communicate(input=..., timeout=...)
+# WorkerPool.shutdown():
+registry.terminate_all()                                    # os.killpg(pgid, SIGTERM) for each
+executor.shutdown(wait=False, cancel_futures=True)
 ```
 
 ```bash
@@ -515,3 +659,4 @@ TRANSIENT_PATTERNS = [
 | ProjectHephaestus | PR #412 — ulimit bisection pinpointed OOM test | 2026-05-15 |
 | ProjectScylla | PR #146 — git clone transient retry logic | 2026-01-04 |
 | Odysseus | `e2e/claude-myrmidon-multi.py` 16-repo fan-out hung WSL host `hermes` (16 GB/8-core, `Free swap = 0kB`); fixed with `asyncio.Semaphore(3)` agent cap + `-j2` builds + `ulimit -v` wrapper — verified 10 fired, peak in-flight capped at 3 | verified-local 2026-06-29 |
+| ProjectHephaestus | PR #2061 — a `claude` CLI reviewer child leaked ~19 min past `WorkerPool.shutdown()` because `ThreadPoolExecutor.shutdown(cancel_futures=True)` never reaps an in-flight subprocess; fixed with `start_new_session=True` + thread-safe pgid registry + `os.killpg` in `terminate_all()`. Regression test spawns a REAL `sys.executable -c "time.sleep(60)"` child and asserts completion `< 15 s` (fails/hangs if `terminate_all()` removed). | verified-ci 2026-07-12 — GO strict review, all 137 affected tests pass |

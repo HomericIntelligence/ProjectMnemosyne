@@ -44,7 +44,7 @@ Sections A–L or J2 themselves.
 
 ## v1.8.0 (2026-06-20)
 
-**Changed by:** ProjectMnemosyne issue #309 R2 re-planning — capturing ONE incremental learning not
+**Changed by:** Mnemosyne issue #309 R2 re-planning — capturing ONE incremental learning not
 covered by the two prior /learn runs for the same issue (PR #2719 amended
 `config-governance-fix-scope-all-variant-files` → premise-verification; PR #2721 added Section J —
 required-context PLACEMENT). R2 adds the inverse DETAIL of Section J: when you VERIFY that a guard's
@@ -100,7 +100,7 @@ gained sub-finding J2 and the cross-cutting trigger/table/row/tags above.
 
 ## v1.7.0 (2026-06-20)
 
-**Changed by:** ProjectMnemosyne issue #284 R1 re-planning (add `security/sast-scan` to the
+**Changed by:** Mnemosyne issue #284 R1 re-planning (add `security/sast-scan` to the
 `homeric-main-baseline` ruleset id 15556487 as a required status check) — driven by a reviewer
 NOGO (Grade B) on the R0 plan.
 **Verification:** verified-local for the reviewer-NOGO ORIGIN (the R0 plan really received a Grade-B
@@ -146,7 +146,7 @@ The version was bumped straight to 1.7.0 (not 1.6.x) to avoid colliding with #27
 - Added tags: `rollback`, `destructive-put`.
 - Updated the Overview Verification cell to record Section L's mixed level (NOGO origin
   verified-local; rollback runbook + dynamic-`integration_id` merge unverified / planning-only).
-- Added a Verified On row for ProjectMnemosyne issue #284 R1 re-planning.
+- Added a Verified On row for Mnemosyne issue #284 R1 re-planning.
 
 ### Why
 
@@ -173,7 +173,7 @@ prior bodies. Sections touched in v1.7.0: frontmatter (`description`, `version`�
 
 ## v1.6.0 (2026-06-20)
 
-**Changed by:** ProjectMnemosyne issue #284 planning (add `security/sast-scan` to the
+**Changed by:** Mnemosyne issue #284 planning (add `security/sast-scan` to the
 `homeric-main-baseline` ruleset as a required status check)
 **Verification:** verified-local for the prerequisite-PR premise-check technique (I ran
 `gh pr view 264 --json state,mergedAt` and grepped `_required.yml` on `main`, observing the
@@ -197,7 +197,7 @@ PR is OPEN and the `sast` job is absent from `main`); **unverified** for the pro
 - Added tags: premise-verification, prerequisite-pr.
 - Bumped Overview Date/Verification cell to record the mixed level for Section K (premise-check
   verified-local; runbook unverified), mirroring how Section J already records its mixed level.
-- Added a Verified On row for ProjectMnemosyne issue #284 planning.
+- Added a Verified On row for Mnemosyne issue #284 planning.
 
 ### Why
 
@@ -610,7 +610,7 @@ The disclosure is cheap (one sentence); the NOGO cycle it prevents is expensive.
 #### J. Place a merge-blocking guard in a PINNED required context (planning learning — partly unverified)
 
 > **Verification:** the required-context ENUMERATION technique below is **verified-local** — the
-> `jq … required_status_checks[].context` query WAS run during R1 re-planning of ProjectMnemosyne
+> `jq … required_status_checks[].context` query WAS run during R1 re-planning of Mnemosyne
 > issue #309 and returned exactly the eight contexts listed. The proposed guard PLACEMENT (moving
 > the assertion into `_required.yml`'s `schema-validation` job) is **UNVERIFIED** — designed at
 > planning time only, never implemented and never run in CI. Treat the placement as a proposal,
@@ -823,11 +823,11 @@ jq -r '.rules[]|select(.type=="required_status_checks")
 | ProjectNestor | Issue #54, PR #108 | Branch-protection API read-back + synthetic tests; verified-ci |
 | ProjectOdyssey | PR #4838, issue #3948 | Extended `workflow-smoke-test.yml` to cover 3 more workflows; 26 tests pass |
 | ProjectOdyssey | `fix/pixi-env-isolation-signed` branch | Coverage-validator sequential-steps fallback; verified-precommit |
-| ProjectMnemosyne | Local branch, yamllint passed | Reusable-workflow `_required.yml`/`_checks.yml` split; verified-precommit |
+| Mnemosyne | Local branch, yamllint passed | Reusable-workflow `_required.yml`/`_checks.yml` split; verified-precommit |
 | ProjectHephaestus | Issue #1315 planning phase | RESULTS-loop aggregator + guard test pattern; **unverified** — not yet implemented or CI-verified |
 | ProjectHephaestus | Issue #1315 NOGO review cycle (2026-06-13) | Guard-test negative-path (`_unwired_jobs` helper + 3-test pattern), job-key vs context-name disambiguation, GET-before-PUT mitigation, requirements-deviation disclosure pattern; **unverified** — planning phase captures |
 | ProjectHephaestus | Issue #1338 / PR #1343 — extract _unwired_jobs helper | 6/6 tests pass locally; CI pending |
-| ProjectMnemosyne | Issue #309 R1 re-planning (2026-06-20) | Section J — required-context PLACEMENT: enumeration `jq` query WAS run (verified-local), returned the 8 pinned contexts; guard placement into `_required.yml`'s `schema-validation` job is **unverified** (planning only) |
+| Mnemosyne | Issue #309 R1 re-planning (2026-06-20) | Section J — required-context PLACEMENT: enumeration `jq` query WAS run (verified-local), returned the 8 pinned contexts; guard placement into `_required.yml`'s `schema-validation` job is **unverified** (planning only) |
 
 ## References
 
@@ -841,7 +841,7 @@ jq -r '.rules[]|select(.type=="required_status_checks")
 
 ## v1.5.0 (2026-06-20)
 
-**Changed by:** ProjectMnemosyne issue #309 R1 re-planning (iteration 2 of the planning issue)
+**Changed by:** Mnemosyne issue #309 R1 re-planning (iteration 2 of the planning issue)
 **Verification:** verified-local for the required-context ENUMERATION technique (the
 `jq … required_status_checks[].context` query WAS run and returned the eight pinned contexts);
 **unverified** for the proposed guard placement (planning only — never implemented or CI-run).
@@ -862,7 +862,7 @@ jq -r '.rules[]|select(.type=="required_status_checks")
   (pinned) job.
 - Added a Results & Parameters subsection (the enumerated 8 contexts; R0 NOGO → R1 fixed placement;
   unverified reliances recorded as risks).
-- Added a Verified On row for ProjectMnemosyne issue #309 R1.
+- Added a Verified On row for Mnemosyne issue #309 R1.
 - Added tags: pinned-context, merge-blocking, green-but-non-blocking.
 - Bumped Overview Date/Objective/Outcome/Verification to reflect ten concerns and the partly-
   unverified Section J.
@@ -1164,7 +1164,7 @@ jobs:
 
 | Project | Context | Details |
 | ------- | ------- | ------- |
-| ProjectMnemosyne | Local branch — yamllint passed, awaiting CI | Pre-commit verification only |
+| Mnemosyne | Local branch — yamllint passed, awaiting CI | Pre-commit verification only |
 
 ## References
 

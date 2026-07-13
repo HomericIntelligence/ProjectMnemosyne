@@ -528,10 +528,10 @@ Before beginning any substantive task, invoke /skill-advisor with a brief task d
 
    ```bash
    mkdir -p ~/.agent-brain
-   if [ ! -d ~/.agent-brain/ProjectMnemosyne/.git ]; then
-     git clone --depth 1 https://github.com/HomericIntelligence/ProjectMnemosyne ~/.agent-brain/ProjectMnemosyne
+   if [ ! -d ~/.agent-brain/Mnemosyne/.git ]; then
+     git clone --depth 1 https://github.com/HomericIntelligence/Mnemosyne ~/.agent-brain/Mnemosyne
    else
-     git -C ~/.agent-brain/ProjectMnemosyne pull --ff-only origin main
+     git -C ~/.agent-brain/Mnemosyne pull --ff-only origin main
    fi
    ```
 
@@ -655,7 +655,7 @@ PR 5 (Source Cleanup):   remove old library from origin repo — only after PR 1
 - [ ] agents/openai.yaml generated with --name flag
 - [ ] policy.allow_implicit_invocation: true added
 - [ ] Claude-specific assumptions patched ($ARGUMENTS, mandatory sub-agents, hardcoded paths)
-- [ ] ~/.agent-brain/ProjectMnemosyne seeded or updated
+- [ ] ~/.agent-brain/Mnemosyne seeded or updated
 - [ ] Repo-local AGENTS.md updated to advertise new skills
 ```
 
@@ -690,6 +690,6 @@ PR 5 (Source Cleanup):   remove old library from origin repo — only after PR 1
 | ProjectHephaestus | Port 7 validation/resilience scripts + 2 library modules from Scylla (PRs #213–218, Scylla PR #1743) | 2026-03-30 session |
 | ProjectHephaestus | Port hephaestus/automation/ 15-file module from Odysseus staging copy (PR #268) — 596 tests pass, 80.63% coverage | 2026-04-10 session |
 | ProjectHephaestus | CircuitBreaker.success_threshold ported from Scylla orphaned worktree — 29/29 tests | 2026-04-12 session |
-| ProjectMnemosyne | Modular skills integration (Apache 2.0), PR #1213 — 4 skills ported (3 new, 1 merged) | 2026-04-09 session |
+| Mnemosyne | Modular skills integration (Apache 2.0), PR #1213 — 4 skills ported (3 new, 1 merged) | 2026-04-09 session |
 | ProjectHephaestus | obra/superpowers integration (MIT), PR #206 — 8 skills ported | 2026-03-28 session |
 | Radiance | Codex local setup — 5 skills installed, metadata generated, AGENTS.md updated | 2026-04-02 session |

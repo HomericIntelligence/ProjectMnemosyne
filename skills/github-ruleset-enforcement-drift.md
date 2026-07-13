@@ -18,7 +18,7 @@ tags: [github, rulesets, branch-protection, enforcement, drift, rollback, evalua
 | **Date** | 2026-06-19 |
 | **Objective** | Fix `enforcement: evaluate` in canonical GitHub ruleset JSON files that should be `active`, without downgrading the live deployed state or breaking the rollback/shadow-test path |
 | **Outcome** | Successful — on-disk config aligned with live enforcing ruleset; rollback path preserved via dedicated evaluate file and explicit `--evaluate` flag; stale prefixed contexts in variant files corrected |
-| **Verification** | verified-local — pre-commit and jq assertions passed; PR #307 merged to HomericIntelligence/Odysseus; ProjectMnemosyne CI gate not observed |
+| **Verification** | verified-local — pre-commit and jq assertions passed; PR #307 merged to HomericIntelligence/Odysseus; Mnemosyne CI gate not observed |
 
 ## When to Use
 

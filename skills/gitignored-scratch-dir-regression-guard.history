@@ -112,7 +112,7 @@ tags:
   tracked and rides an **already-required** pre-commit CI gate, with **no new
   GitHub workflow** and no full test run.
 - A nested checkout lives *inside* the scratch dir (e.g.
-  `build/ProjectMnemosyne`, a live clone read by an `/advise` pipeline). You
+  `build/Mnemosyne`, a live clone read by an `/advise` pipeline). You
   must confirm it is **not stray** before any cleanup — the guard targets
   TRACKED state, so a gitignored live clone is irrelevant to it and must NOT be
   deleted.
@@ -234,7 +234,7 @@ pre-commit run check-build-dir-untracked --all-files
    is required.
 
 6. **Leave the nested live clone alone.** If a real checkout lives under the dir
-   (e.g. `build/ProjectMnemosyne`, read by the `/advise` pipeline), confirm it is
+   (e.g. `build/Mnemosyne`, read by the `/advise` pipeline), confirm it is
    active, then leave it. The guard only sees *tracked* paths, so a gitignored
    nested clone is invisible to it and is correctly ignored.
 
@@ -251,7 +251,7 @@ pre-commit run check-build-dir-untracked --all-files
 | Edit `.gitignore` to "fix" the flagged dir | Reached for the `.gitignore` to add/strengthen the `build/` rule | `git check-ignore -v build/` already returned `.gitignore:5:build/` — the dir was already ignored; editing it is a no-op that wastes a commit and risks breaking the existing rule | Always run `git check-ignore -v <dir>/` FIRST. If it already matches, the gitignore is correct and the residual risk is purely *future tracked-state*, which needs a guard, not a gitignore edit |
 | Treat the gitignore entry as sufficient protection | Assumed "it's gitignored, so it can never enter a distribution" | A gitignore entry does not prevent `git add -f`, nor does it prevent the sdist `only-include` allowlist from later widening to include the dir; the realized risk is TRACKED state, which gitignore alone does not block | Add a regression guard that asserts `git ls-files build/` stays EMPTY — that is the invariant the packaging risk actually depends on |
 | Write the guard with `language: pygrep` | Wanted a zero-script one-line pre-commit pattern | The check must shell out to `git ls-files build/`; pygrep can only match file contents/lines, not query the git index | Use a `repo: local` `language: system` (or `language: python`) Python script that runs `git ls-files`; pygrep cannot express an index query |
-| Delete the nested `build/ProjectMnemosyne` checkout as "stray junk" | Saw a whole repo clone inside the flagged scratch dir and assumed it was leftover junk | It is a LIVE clone the `/advise` pipeline reads on demand; deleting it breaks that pipeline. It is gitignored, so it is irrelevant to the tracked-state guard anyway | Confirm a nested checkout is active before any cleanup; the regression guard targets only tracked paths, so live gitignored clones are correctly invisible to it |
+| Delete the nested `build/Mnemosyne` checkout as "stray junk" | Saw a whole repo clone inside the flagged scratch dir and assumed it was leftover junk | It is a LIVE clone the `/advise` pipeline reads on demand; deleting it breaks that pipeline. It is gitignored, so it is irrelevant to the tracked-state guard anyway | Confirm a nested checkout is active before any cleanup; the regression guard targets only tracked paths, so live gitignored clones are correctly invisible to it |
 | Trust the cited line numbers verbatim | Plan referenced `pyproject.toml:158-165`, `loop_runner.py:351`, `CLAUDE.md:455`, `.gitignore:5`, and a `.pre-commit-config.yaml` insertion "~line 207" | Line numbers were read once and drift as files change; anchoring on them makes the workflow brittle | Anchor on CONTENT (the hook `id:`, the `only-include` key, the section heading), never on line numbers |
 
 ## Results & Parameters
@@ -298,7 +298,7 @@ sdist. Do not mistake it for a denylist where absence would mean "included."
 - `language: system` assumes `python3` is on PATH in the hook env (true for this
   repo). Repos preferring isolated envs should use `language: python` with
   declared deps.
-- The nested `build/ProjectMnemosyne` checkout is a **live** clone the `/advise`
+- The nested `build/Mnemosyne` checkout is a **live** clone the `/advise`
   pipeline reads — confirmed not-stray; must NOT be deleted.
 
 **Related skills (complementary, not duplicates):**

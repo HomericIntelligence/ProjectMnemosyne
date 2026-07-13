@@ -54,7 +54,7 @@ license-scan and the `on:` block untouched.
 ## v1.0.0 (2026-06-12)
 
 Original skill created from scoping ProjectHephaestus issue #1182 (planning
-artifact, verification unverified) via ProjectMnemosyne PR #2384.
+artifact, verification unverified) via Mnemosyne PR #2384.
 
 Full snapshot of prior v1.0.0 content:
 

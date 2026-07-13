@@ -206,7 +206,7 @@ verification: verified-local
 Plugin cache keyed by semver version string, not git SHA. When skills merge without
 version bump: (1) `git show origin/main:<path>` into cache dir, (2) sync `marketplace.json`,
 (3) update `gitCommitSha` in `installed_plugins.json`, (4) `/reload-plugins`.
-Verified: ProjectMnemosyne 2026-05-04, cache `3.0.0/`, PR #308.
+Verified: Mnemosyne 2026-05-04, cache `3.0.0/`, PR #308.
 
 ---
 

@@ -1688,7 +1688,7 @@ gh pr merge --auto --squash <PR#>
    - This regenerates `pixi.lock`, pulling pytest-watcher and removing pytest-watch + docopt
 
 5. **Restore editable install (mitigation for known pixi issue)**
-   - Per [pixi-env-resolve-drops-editable-install](https://github.com/HomericIntelligence/ProjectMnemosyne/blob/main/skills/pixi-env-resolve-drops-editable-install.md), pixi may wipe `pip install -e .`
+   - Per [pixi-env-resolve-drops-editable-install](https://github.com/HomericIntelligence/Mnemosyne/blob/main/skills/pixi-env-resolve-drops-editable-install.md), pixi may wipe `pip install -e .`
    - Run: `pixi run dev-install`
    - This re-applies the editable install in O(seconds)
 

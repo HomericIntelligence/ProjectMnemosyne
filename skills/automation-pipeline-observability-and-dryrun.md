@@ -461,7 +461,7 @@ LOG_PREFIXES    = {"error": "ERROR", "warning": "WARN", "info": ""}
 | State save | Saves `session_id=None` to checkpoint | Saves real `session_id` |
 | Early return guard | Returns `WorkerResult(success=True)` | Continues to next phase |
 | `_ensure_pr_created()` | SKIPPED | Creates/updates PR |
-| `_run_learn()` | SKIPPED | Commits skill to ProjectMnemosyne |
+| `_run_learn()` | SKIPPED | Commits skill to Mnemosyne |
 | `_file_follow_up_issues()` | SKIPPED | Files follow-up GitHub issues |
 
 ### Atlas Wiring Matrix (Example)

@@ -146,7 +146,7 @@ Regression tests should cover: plain value, URL, URL with port (multi-colon), nu
 quoted colon, no frontmatter (`{}`), unclosed frontmatter (`{}`), invalid YAML (`{}` no raise).
 
 **Cross-repo test discovery.** When the target script lives in a *sibling* repo (e.g., the
-parser being fixed is in `ProjectMnemosyne` but the regression tests are committed in
+parser being fixed is in `Mnemosyne` but the regression tests are committed in
 `ProjectOdyssey`), do not `import` it by package path — it is not installed. Load it directly
 with `importlib.util.spec_from_file_location()`, probing multiple candidate locations, and
 `pytest.mark.skipif` the whole module when none exist so the suite stays green on machines
@@ -159,9 +159,9 @@ from pathlib import Path
 import pytest
 
 _CANDIDATES = [
-    Path.home() / "ProjectMnemosyne" / "scripts" / "migrate_to_skills.py",
+    Path.home() / "Mnemosyne" / "scripts" / "migrate_to_skills.py",
     Path(__file__).parent.parent.parent / "build" / str(os.getpid())
-        / "ProjectMnemosyne" / "scripts" / "migrate_to_skills.py",
+        / "Mnemosyne" / "scripts" / "migrate_to_skills.py",
 ]
 _SCRIPT_PATH = next((p for p in _CANDIDATES if p.exists()), None)
 
@@ -177,8 +177,8 @@ if _SCRIPT_PATH is not None:
 ```
 
 PID-scoped builds live at `<repo_root>/build/<PID>/`, not under worktree subdirectories — so
-when searching for a sibling script check `~/ProjectMnemosyne/` and
-`<repo_root>/build/<PID>/ProjectMnemosyne/`, not `.worktrees/issue-XXXX/`.
+when searching for a sibling script check `~/Mnemosyne/` and
+`<repo_root>/build/<PID>/Mnemosyne/`, not `.worktrees/issue-XXXX/`.
 
 #### 3. CI validation failure patterns
 
@@ -313,7 +313,7 @@ repos with different agent architectures.
 | Bare angle-bracket placeholder in prose | Left `#<existing-issue-number>` unescaped in a sentence | markdownlint MD033 parses `<existing-issue-number>` as an HTML element tag and flags it | Wrap every `<placeholder>` in backticks when it appears in prose |
 | Test with bare `to: parse` colon | Wrote `description: Use when you need to: parse, validate files` as a regression test | PyYAML raises `ScannerError` — bare colon+space is genuinely invalid YAML (looks like a mapping key) | Only test valid YAML forms; quote mid-sentence colons or use URL/ratio forms |
 | Keep `Dict[str, str]` after switching parser | Left return type as `Dict[str, str]` after moving to `yaml.safe_load()` | `yaml.safe_load()` returns `Any` values (int, bool, list), not only strings | Update annotations to `Dict[str, Any]` when migrating from manual parsing to PyYAML |
-| Search worktree for sibling repo script | `find` in `.worktrees/issue-XXXX/` for `migrate_to_skills.py` | The script lives in the sibling repo (`ProjectMnemosyne`), not the worktree | For cross-repo fixes check `~/ProjectMnemosyne/` and `<repo_root>/build/<PID>/ProjectMnemosyne/`; load it with `importlib.util.spec_from_file_location()` + `pytest.mark.skipif` |
+| Search worktree for sibling repo script | `find` in `.worktrees/issue-XXXX/` for `migrate_to_skills.py` | The script lives in the sibling repo (`Mnemosyne`), not the worktree | For cross-repo fixes check `~/Mnemosyne/` and `<repo_root>/build/<PID>/Mnemosyne/`; load it with `importlib.util.spec_from_file_location()` + `pytest.mark.skipif` |
 | Plain `git push --force` after rebase | Used `git push --force` to update a rebased skill PR branch | `--force` overwrites the remote unconditionally and can clobber a teammate's concurrent push | Always `git push --force-with-lease` — it aborts if the remote moved since the last fetch |
 | Resolve template conflict by picking one side | On rebase, kept only the current branch's new optional field, dropping `main`'s field | Both PRs were *adding* different optional fields to the same template; choosing one side lost the other's field | For optional-field additions in template files, keep both changes (union), then `git add` + `git rebase --continue` |
 
@@ -372,10 +372,10 @@ grep -rn 'split.*":"\|split.*'\'':'\''\|partition.*":"\|partition.*'\'':'\''' sc
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectMnemosyne | PRs #74, #73, #72, #69, #68 — missing-frontmatter + plugin-name fixes | See history block `yaml-frontmatter-validation` |
-| ProjectMnemosyne | PRs #1498, #1516 — Failed Attempts columns + MD033 inline-HTML | See history block `ci-cd-skill-validation-failed-attempts-inline-html` |
-| ProjectMnemosyne | Marketplace schema compliance (official plugin format) | See history block `claude-plugin-format` |
-| ProjectMnemosyne | Template updates for the `agent` field (Claude Code v2.1.0) | See history block `skills-agent-field` |
+| Mnemosyne | PRs #74, #73, #72, #69, #68 — missing-frontmatter + plugin-name fixes | See history block `yaml-frontmatter-validation` |
+| Mnemosyne | PRs #1498, #1516 — Failed Attempts columns + MD033 inline-HTML | See history block `ci-cd-skill-validation-failed-attempts-inline-html` |
+| Mnemosyne | Marketplace schema compliance (official plugin format) | See history block `claude-plugin-format` |
+| Mnemosyne | Template updates for the `agent` field (Claude Code v2.1.0) | See history block `skills-agent-field` |
 | ProjectOdyssey | `validate_configs.py` colon-split fix, 86 tests passing | See history block `frontmatter-colon-split-fix` |
 
 ## References

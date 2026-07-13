@@ -1,0 +1,180 @@
+# inference360-warden-autoscaling-boundaries - History
+
+## v1.1.0 (2026-07-07)
+
+**Changed by:** PR #365 strict review and follow-up issue filing session.
+**Verification:** unverified
+
+### What changed
+
+- Added autoscaling review gates for separate monotonic and wall-clock timing.
+- Added gateway publication fail-closed guidance for initial HAProxy start failures.
+- Added stream-safe reload integration coverage as a required validation layer beyond unit command-shape checks.
+- Recorded follow-up GitHub issues #370, #372, and #373 as concrete examples.
+
+### Why
+
+The original v1.0.0 skill captured the high-level Warden autoscaling boundary plan.
+PR #365 implementation review exposed implementation-specific risks that future
+autoscaling work should check before merge: persisted release times cannot reuse
+a monotonic test clock, gateway READY state cannot overwrite an unavailable
+HAProxy startup result, and stream-safe reload claims need real in-flight stream
+coverage.
+
+### Previous version (v1.0.0) snapshot
+
+---
+name: inference360-warden-autoscaling-boundaries
+description: "Plan Inference360 Warden autoscaling without creating a second scheduler or lifecycle owner. Use when: (1) adding per-model endpoint scale-out/scale-in policy, (2) deciding Warden, Registry, gateway, and Slurm ownership for autoscaling, (3) writing tests for draining and job-class isolation."
+category: architecture
+date: 2026-07-06
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags:
+  - inference360
+  - warden
+  - autoscaling
+  - slurm
+  - h200
+  - registry
+  - gateway
+  - haproxy
+  - job-class-isolation
+  - lifecycle
+---
+
+# Inference360 Warden Autoscaling Boundaries
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-07-06 |
+| **Objective** | Preserve Inference360's H200 Slurm lifecycle boundaries while planning Warden autoscaling for model endpoints: scale out when a model's endpoints stay at or above 80% usage for a sustained period, default 30 seconds; scale in when removing one endpoint would keep remaining endpoints below 50% usage. |
+| **Outcome** | Architecture and test-planning guidance only. The autoscaling workflow has not been implemented or tested end-to-end. |
+| **Verification** | unverified |
+| **Related skills** | `inference360-warden-lifecycle-gpt2-cleanup.md`, `inference360-module-scope-preserve-cli-boundaries.md`, `documentation-architecture-registry-gateway-warden-contracts.md` |
+
+Inference360 is a manifest-driven internal H200 Slurm inference platform. Slurm remains the scheduler of record. Warden remains the lifecycle owner for Slurm-backed endpoints and route publication. Autoscaling should extend those contracts, not introduce Kubernetes, a separate autoscaler authority, or a second control plane.
+
+## When to Use
+
+- You are planning or implementing Warden autoscaling for model endpoints in Inference360.
+- A design proposes scale-out or scale-in behavior based on endpoint utilization thresholds.
+- Ownership between Warden, Registry, HAProxy/gateway, Scheduler/Slurm, manifests, and job classes is unclear.
+- Tests need to prove sustained threshold timing, draining, route publication, and job-class isolation without depending on live Slurm.
+- A review needs to reject designs where HAProxy owns lifecycle, Scheduler mutates routes, or autoscaling state crosses model/job-class boundaries.
+
+<!-- Validator compatibility: ## Verified Workflow -->
+## Proposed Workflow
+
+> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until implementation and CI confirm it.
+
+### Quick Reference
+
+```text
+Default scale-out:
+- Per model/job class, if all routeable ready endpoints for that model are at >=80% usage
+  for a sustained 30 seconds, Warden starts one more endpoint through existing
+  allocate/start/register lifecycle paths and publishes routeable state when ready.
+
+Default scale-in:
+- Per model/job class, if removing one endpoint would keep the remaining routeable ready
+  endpoints below 50% usage, Warden marks one endpoint non-routeable/draining, publishes
+  updated routes, waits for active work to finish naturally, then stops and deallocates it
+  through existing lifecycle paths.
+
+Ownership:
+- Warden decides lifecycle and publishes route state.
+- Registry stores observed endpoint/runtime state.
+- HAProxy/gateway consumes routeable backend state and load-balances ready endpoints.
+- Slurm remains scheduler of record.
+- Scheduler/Slurm must not mutate routes.
+```
+
+### Detailed Steps
+
+1. Start from the Inference360 repo contract. Read `README.md`, `AGENTS.md`, and `docs/inference360-design.md`; for module-boundary planning also read `docs/issue-346-module-scope-plan.md`.
+
+2. Model autoscaling as a Warden lifecycle extension. Warden should allocate, start, stop, and deallocate Slurm-backed endpoints using existing lifecycle paths. Do not add Kubernetes, a sidecar control plane, or an independent autoscaler authority.
+
+3. Keep policy manifest/config driven. Define thresholds and windows through checked-in manifests, config files, or explicit CLI/config inputs. Do not add new repository-behavior environment variables for autoscaling policy.
+
+4. Preserve component boundaries:
+
+   | Component | Autoscaling responsibility |
+   |-----------|----------------------------|
+   | Warden | Owns lifecycle decisions, starts/stops endpoints, marks endpoints draining, publishes route state |
+   | Registry | Stores observed endpoint readiness, lifecycle state, usage observations, and routeable/draining state |
+   | HAProxy/gateway | Consumes routeable ready backend state and load-balances user traffic |
+   | Slurm/Scheduler | Schedules and manages jobs as the scheduler of record |
+   | Manifests/config | Define desired service shape and autoscaling policy |
+
+5. Enforce job-class isolation before coding policy. Autoscaling decisions, endpoints, routes, ports, labels, metrics, dashboards, benchmark configuration, promotion gates, and runtime state must remain scoped per model/job class. A busy model must not cause another model or job class to scale.
+
+6. Implement scale-out against sustained observations, not a single spike. For the default policy, only start one more endpoint when the model's current routeable ready endpoints have been at or above 80% usage for 30 seconds. Add cooldown or in-flight scaling guards only if the current lifecycle needs them to avoid duplicate starts.
+
+7. Implement scale-in as drain-first lifecycle. Pick one endpoint for removal only when the remaining routeable ready endpoints would stay below 50% usage. Mark the chosen endpoint non-routeable/draining, publish updated routes so it receives no new work, preserve its lifecycle state while active work drains, then stop and deallocate it through Warden.
+
+8. Write tests first with fakes. Use fake Warden/Registry/runner observations rather than live Slurm. Key tests:
+
+   - sustained scale-out threshold with the default 30 second window;
+   - no early scale-out before the sustained window completes;
+   - scale-in only when remaining endpoints would stay below 50%;
+   - draining endpoints are excluded from new routes while lifecycle state is preserved;
+   - job-class isolation for observations, endpoints, routes, metrics, and policy state;
+   - no cross-module boundary violations, especially HAProxy owning lifecycle or Scheduler mutating routes.
+
+9. Keep verification honest. Until implementation and CI exist, describe this as architecture/planning guidance and keep verification `unverified`.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Separate autoscaler authority | Treating autoscaling as a new scheduler/control-plane concept | It would split lifecycle ownership away from Warden and compete with Slurm as scheduler of record | Autoscaling belongs inside Warden lifecycle orchestration |
+| HAProxy-owned lifecycle | Letting the gateway decide when to start or stop endpoints | HAProxy should consume routeable ready backend state; it must not allocate Slurm jobs or own lifecycle | Warden decides lifecycle and publishes route state; HAProxy load-balances ready endpoints |
+| Scheduler mutates routes | Having Scheduler/Slurm update gateway route state directly | Scheduler is the job scheduler of record, not the route-policy owner | Warden publishes route state based on lifecycle and Registry observations |
+| Environment-driven policy | Adding new repository-behavior environment variables for thresholds and timing | Repo guidance requires manifest/config driven lifecycle behavior with explicit inputs | Use manifests, config files, or explicit CLI/config inputs |
+| Immediate scale-in shutdown | Stopping an endpoint as soon as policy says capacity can shrink | Active work could be interrupted and route state could point at a terminating backend | Mark draining/non-routeable first, publish routes, wait for natural drain, then stop |
+| Cross-job-class pooling | Sharing endpoint, route, metric, or policy state across job classes | Inference360 requires strict job-class isolation | Keep decisions and runtime state scoped per model/job class |
+
+## Results & Parameters
+
+### Default Policy Values
+
+| Parameter | Proposed default | Notes |
+|-----------|------------------|-------|
+| Scale-out usage threshold | `>=80%` | Applies per model/job class to routeable ready endpoints |
+| Scale-out sustained window | `30 seconds` | Must be sustained; a single spike is insufficient |
+| Scale-in capacity threshold | `<50%` after removing one endpoint | Remove only when remaining endpoints would stay below threshold |
+| Scale-in behavior | drain first, then stop | Exclude from new routes before lifecycle teardown |
+| Policy source | manifest/config or explicit CLI/config input | Do not introduce repository-behavior environment variables |
+| Test substrate | faked Warden/Registry/runner observations | Do not require live Slurm for unit behavior |
+
+### Boundary Checklist
+
+```text
+- Slurm remains scheduler of record.
+- Warden owns lifecycle: allocate/start/stop/deallocate and route publication.
+- Registry stores observed lifecycle/readiness/usage/routeable state.
+- HAProxy/gateway consumes routeable ready backend state only.
+- Scheduler/Slurm does not mutate routes.
+- No Kubernetes v1 requirement.
+- No shared jobs, routes, ports, labels, metrics, dashboards, benchmark config,
+  promotion gates, or runtime state across job classes.
+- Scale-in marks non-routeable/draining before shutdown.
+- Verification remains unverified until implementation and CI exist.
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| LLM360/Inference360 | Warden autoscaling planning session on 2026-07-06 | Architecture/planning guidance only; not implemented or tested end-to-end. |
+
+---
+
+## v1.0.0 (2026-07-06)
+
+**Initial version.**

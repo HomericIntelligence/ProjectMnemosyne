@@ -94,7 +94,7 @@ default, with the 409 "Write permissions disabled by org" being a red herring), 
 (org toggle / scoped PAT-or-App token / direct commit to main), and the definitive validation
 method (force a real artifact change so the create-PR step fires, then confirm a PR was actually
 created — a green run alone is not proof). Added a Quick Reference row, three Failed Attempts rows,
-a Results & Parameters bullet, an extended `description` trigger (6), and a ProjectMnemosyne
+a Results & Parameters bullet, an extended `description` trigger (6), and a Mnemosyne
 Verified On row (PR #2261). Bumped version 1.0.0 → 1.1.0; added `verification: verified-ci`.
 
 ## v1.0.0 (2026-06-07)

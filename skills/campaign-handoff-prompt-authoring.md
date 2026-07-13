@@ -66,7 +66,7 @@ A good cross-machine handoff prompt for a serial multi-PR campaign MUST contain,
 5. STANDING CONSTRAINTS that must survive the machine switch
    signed -S + DCO -s commits; squash-only; literal `Closes #N`;
    never --no-verify; auto-merge only after state:implementation-go;
-   temp files in build/; never delete ProjectMnemosyne; run /learn after work.
+   temp files in build/; never delete Mnemosyne; run /learn after work.
 
 6. POINTER to the execution-playbook memory (do NOT inline every recovery
    pattern) — the memory travels with the account; name it + summarize
@@ -133,7 +133,7 @@ NEXT STEPS (strictly serial):
 STANDING CONSTRAINTS: git commit -S -s (signed + DCO); squash-only;
 literal `Closes #N`; never --no-verify; auto-merge only after
 state:implementation-go; temp files in build/; never delete
-ProjectMnemosyne; run /learn after work.
+Mnemosyne; run /learn after work.
 
 PLAYBOOK: see memory project_epic1809_execution_playbook.md — covers
 loop-commit-fails recovery, DCO commit-tree v2 branch-swap,

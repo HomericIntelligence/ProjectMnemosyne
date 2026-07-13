@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/HomericIntelligence/ProjectMnemosyne/schemas/skill-frontmatter.schema.json",
+  "$id": "https://github.com/HomericIntelligence/Mnemosyne/schemas/skill-frontmatter.schema.json",
   "title": "Skill Frontmatter",
-  "description": "Schema for YAML frontmatter in ProjectMnemosyne skill files.",
+  "description": "Schema for YAML frontmatter in Mnemosyne skill files.",
   "type": "object",
   "required": ["name", "description", "category", "date", "version"],
   "additionalProperties": true,

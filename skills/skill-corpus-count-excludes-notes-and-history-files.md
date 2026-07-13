@@ -102,9 +102,9 @@ done | sort | uniq -c | sort -rn
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | 2026-05-19 second-pass consolidation session (epic #1823) | Real corpus = 693 skills vs naive count of 1,089; .notes.md = 396, .history = 96 |
+| Mnemosyne | 2026-05-19 second-pass consolidation session (epic #1823) | Real corpus = 693 skills vs naive count of 1,089; .notes.md = 396, .history = 96 |
 
 ## References
 
-- [Epic #1823 — second-pass consolidation](https://github.com/HomericIntelligence/ProjectMnemosyne/issues/1823)
+- [Epic #1823 — second-pass consolidation](https://github.com/HomericIntelligence/Mnemosyne/issues/1823)
 - [CLAUDE.md — Plugin Standards](../CLAUDE.md)

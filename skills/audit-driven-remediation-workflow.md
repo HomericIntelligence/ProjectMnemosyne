@@ -2,12 +2,12 @@
 name: audit-driven-remediation-workflow
 description: "Canonical end-to-end audit-driven remediation workflow: audit pass → severity classification → batch fix planning → PR generation → verification. Use when: (1) running a strict audit across a repo or ecosystem, (2) reconciling audit-finding issue counts against open issues, (3) generating remediation PRs from audit findings, (4) coordinating audit + fix + verification across multiple repos, (5) deciding fix vs accept/suppress for findings, (6) you added a new producer-side signal and must verify every downstream consumer reads it, (7) after landing a bug-pattern fix, grep sibling modules for the same pattern, (8) before declaring an epic complete, run a strict-audit by an independent reviewer agent."
 category: tooling
-date: 2026-05-25
-version: "1.2.0"
+date: 2026-07-06
+version: "1.3.0"
 user-invocable: false
-verification: verified-local
+verification: verified-ci
 history: audit-driven-remediation-workflow.history
-tags: [merged, audit, remediation, ecosystem-audit, strict-audit, repo-hygiene, downstream-consumer-drift, strict-audit-self-review, producer-consumer-pattern, cross-module-duplication, copy-paste-bugs, test-mask, fixture-contract-violation, post-completion-audit, strict-mode-review-discovers-bug]
+tags: [merged, audit, remediation, ecosystem-audit, strict-audit, repo-hygiene, downstream-consumer-drift, strict-audit-self-review, producer-consumer-pattern, cross-module-duplication, copy-paste-bugs, test-mask, fixture-contract-violation, post-completion-audit, strict-mode-review-discovers-bug, stale-checkout, git-show-origin-main, review-swarm-source-of-truth]
 ---
 
 # Audit-Driven Remediation Workflow
@@ -35,6 +35,7 @@ tags: [merged, audit, remediation, ecosystem-audit, strict-audit, repo-hygiene, 
 - You added a new producer-side signal (verdict marker, state flag, dispatch event) — audit MUST trace every downstream consumer and confirm the signal is read, not just emitted.
 - After landing a bug-pattern fix in one module — grep every sibling module for the same pattern. Bundle-style swarms that touch related code via copy-paste are especially prone to this missed-copy class of bugs.
 - After declaring an epic complete — run `/hephaestus:repo-analyze-strict-full` scoped to the session's deliverables. Independent reviewer agents (separate from the implementing model) catch bugs that the implementers and downstream-consumer-drift section both miss.
+- You are dispatching a strict-review swarm to audit code that was **just merged** — the local checkout is frequently STALE (behind `origin/main`); read every file from `origin/main` via `git show`, not the Read tool on the working tree, or you will review the wrong or missing files.
 
 ## Verified Workflow
 
@@ -453,6 +454,46 @@ After ALL swarm PRs in an audit-driven remediation epic have landed and the epic
 4. If a CRITICAL finding emerges, file a follow-up issue + PR before declaring the epic complete.
 5. Update the audit-driven-remediation workflow itself (this skill) with the lesson if a new failure mode is discovered.
 
+## Read Merged Code From origin/main, Not the Local Checkout (added v1.3.0)
+
+When a strict-review swarm audits **merged** code, `origin/main` is the source of truth — NOT the local working checkout. The local checkout is frequently STALE (behind `origin/main`) because the most recent merge landed after your last pull. A `find`/`Read` on the working tree then returns stale content, or reports just-merged files as MISSING, and the review agents produce garbage findings against a surface that does not match main.
+
+### Detection workflow
+
+1. **Confirm the gap first** — before dispatching any review agent:
+   ```bash
+   git fetch origin main
+   git rev-parse HEAD origin/main          # different SHAs → local is behind/ahead
+   git diff --stat HEAD origin/main        # shows exactly which files differ
+   ```
+
+2. **Get the true file inventory from origin/main**, not the working tree:
+   ```bash
+   git ls-tree -r --name-only origin/main -- <dir>        # authoritative file list
+   git show origin/main:<f> | wc -l                       # accurate line count
+   ```
+
+3. **Instruct EVERY review agent explicitly** to read from origin/main via Bash, never the Read tool:
+   > "The local checkout is N commits STALE — read every file from origin/main via
+   > `git show origin/main:<path>` in Bash; do NOT use the Read tool on these files."
+
+### Real example (2026-07-06, ProjectHephaestus epic #1809 strict review)
+
+- Dispatched 7 parallel review agents to audit the just-merged `hephaestus/automation/pipeline/` package.
+- Local `main` was **2 commits behind** `origin/main`. Coordinator PR #1851 (~9 files including `coordinator.py`, `summary.py`, `pipeline_github.py`, `stages/finished.py`, `stages/repo.py`) was NOT in the local tree at all.
+- The first inventory pass used `find`/`Read` on the working tree and reported those coordinator files as MISSING. Had the review agents used the Read tool, they would have reviewed nothing / stale code.
+- Fix: `git fetch origin main` + gap-confirm, then every agent read via `git show origin/main:<path>`. The swarm filed 78 issues; all fixes later merged with green CI.
+
+### Synthesize and independently verify swarm findings before filing
+
+The swarm's raw findings must be SYNTHESIZED and independently VERIFIED (re-read the cited lines) before filing:
+
+- **Dedupe** cross-agent duplicates (multiple agents flag the same line).
+- **Drop** any finding that cannot be substantiated with a concrete file:line reference. In this run a "`CompletionQueue.put` blocks forever" MAJOR was dropped after checking `queues.py` builds an UNBOUNDED `queue.Queue` — `put` never blocks.
+- **Merge** same-root-cause pairs into a single issue.
+- **Downgrade** contingent "MAJOR" findings to MINOR when the risky path is unreachable.
+- **File one GitHub issue per surviving finding** via a scripted `gh issue create` loop (build a JSON/TSV of findings → loop), labeled by severity, each linked to a tracking sub-epic.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -486,6 +527,7 @@ After ALL swarm PRs in an audit-driven remediation epic have landed and the epic
 | Add a producer-side signal (`**Verdict: APPROVED**` marker in plan-reviewer) and verify only the producer's tests pass | Plan-reviewer's `_latest_review_is_final` gate was tested in isolation. 10 new unit tests, all green. PR opened. | The implementer.py phase that runs AFTER plan-reviewer never read the verdict. `_has_plan(issue_number)` only checks for substring `"Implementation Plan"`. A BLOCK plan got implemented. The user's stated workflow was silently broken. | When adding a producer-side signal, grep for EVERY downstream consumer and add an integration test that exercises the full pipeline. Use `grep -rn "<consumer-marker-pattern>" --include='*.py'` to find them. |
 | Fix the bug only in the originally-reported file | PR #575 replaced `get_repo_slug(...).split("/", 1)` with `get_repo_info(get_repo_root())` in `plan_reviewer.py:295-296`. Closed #574. | An identical bug pattern in `review_state.py:87-88` (a sibling module created by Bundle B in the same swarm) was not touched. Production crashed on every implementer gate check. The session declared both epics CLOSED while the user's stated workflow was silently broken. | When fixing a bug pattern, grep the WHOLE codebase for the same signature — especially in modules created by sibling agents in the same swarm. The originating fix is necessary but not sufficient. |
 | Trust that the swarm's own tests verify end-to-end correctness | The Part 2 swarm ran 5 sub-agent PRs; each agent independently asserted `pixi run pytest tests/unit -q -x` passed. Both epics were marked complete after 2362+ passing tests across all PRs. | The test for `review_state.py` patched `get_repo_slug` to return `"owner/name"` (slash-bearing, splits cleanly) — a contract violation that masked the production crash. Per-PR test passes do not establish system-level correctness when fixtures lie. | Test fixtures must satisfy the documented CONTRACT of the function they mock, not the buggy code's incidental expectations. Audit fixtures for "did this mock return a realistic value?" as part of every PR review. |
+| Inventory merged code with `find`/`Read` on the local working tree before dispatching review agents | In epic #1809's strict review, the first pass ran `find`/`Read` over the local checkout to build the file inventory for the just-merged `hephaestus/automation/pipeline/` package. | The local `main` was 2 commits behind `origin/main`; coordinator PR #1851's ~9 files (`coordinator.py`, `summary.py`, `pipeline_github.py`, `stages/finished.py`, `stages/repo.py`) were absent locally. `find`/`Read` reported them MISSING — the swarm nearly reviewed a stale/incomplete surface and would have produced garbage findings. | For any review/audit of MERGED code, treat `origin/main` (not the local checkout) as the source of truth. `git fetch origin main`, confirm the gap with `git rev-parse HEAD origin/main` + `git diff --stat`, then read every file via `git show origin/main:<path>` — never the Read tool on the working tree. |
 
 ## Results & Parameters
 
@@ -591,10 +633,11 @@ grep -rnE "^## (Changelog|Corrections Applied|Revision history|Change notes)" co
 | ProjectScylla | Backward-compat removal 2026-02-13 — 135 lines removed, 65 tests passing | backward-compat-removal source |
 | ProjectScylla | Implementation alignment 2026-06-27 — 14 items aligned, 5 gaps fixed, 892 tests passing | implementation-alignment-validation source |
 | ProjectOdyssey | Count reconciliation 2026-03-07 — 42→31 agents, 82→58 skills corrected | repo-audit-count-reconciliation source |
-| ProjectMnemosyne | Quality audit workflow 2026-03-29 — 24 issues created, HIGH fixes implemented | quality-audit-workflow source |
-| ProjectMnemosyne | Strict audit + doc remediation 2026-03-22 — B+ (87%) score | documentation-strict-audit-remediation-workflow source |
+| Mnemosyne | Quality audit workflow 2026-03-29 — 24 issues created, HIGH fixes implemented | quality-audit-workflow source |
+| Mnemosyne | Strict audit + doc remediation 2026-03-22 — B+ (87%) score | documentation-strict-audit-remediation-workflow source |
 | ArchIdeas corpus | 39-file research corpus parallel remediation, 6 repair classes, Apr 2026 | documentation-corpus-myrmidon-parallel-remediation source |
 | ArchIdeas corpus | 6-dimension quality rubric applied to 39 documents; all passed after remediation | documentation-architecture-research-quality-rubric source |
+| ProjectHephaestus | Epic #1809 strict-review swarm 2026-07-06 — 7 agents read `pipeline/` via `git show origin/main`, 78 issues filed, all fixes merged green (verified-ci) | strict-review-stale-checkout source |
 
 ## References
 

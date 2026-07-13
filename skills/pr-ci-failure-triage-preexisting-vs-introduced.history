@@ -1979,8 +1979,8 @@ Failure conditions:
 | ProjectOdyssey | PR #5097 flaky CI triage | Infrastructure 504, deterministic parse errors, and genuine JIT flake classified separately |
 | ProjectOdyssey | Org-wide required checks enforcement | Enforced `min-runs=3`, excluded path-filtered and automated jobs |
 | ProjectOdyssey | Branch rename master→main (org-wide) | CI fixed across multiple repos; self-hosted runner issues resolved |
-| ProjectMnemosyne | 6 Dependabot PRs (pytest, PyYAML, certifi, etc.), Issues #909/#916/#924, 2026-04-14 | PRs #1278/#1279 merged with CI passing; PR #1238 (pytest 9.0.3) applied to main directly |
-| ProjectMnemosyne | CodeQL alert #2 on `validate-plugins.yml` | Added `permissions: contents: read` between `on:` and `jobs:` blocks |
+| Mnemosyne | 6 Dependabot PRs (pytest, PyYAML, certifi, etc.), Issues #909/#916/#924, 2026-04-14 | PRs #1278/#1279 merged with CI passing; PR #1238 (pytest 9.0.3) applied to main directly |
+| Mnemosyne | CodeQL alert #2 on `validate-plugins.yml` | Added `permissions: contents: read` between `on:` and `jobs:` blocks |
 | Radiance | PR #110 rebase + frontend CI browser change | Rebased against `origin/master`, resolved workflow conflict in favor of Playwright Chromium, and updated the CI contract to match |
 | Radiance | PR #110 CI remediation | Replaced the packaged frontend `git diff` gate with a runtime asset validator and confirmed it locally before pushing |
 

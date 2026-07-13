@@ -220,7 +220,7 @@ gh issue create \
 ```
 ---
 name: tooling-modular-upstream-skill-selective-porting
-description: "Port skills from Modular's official skills repo (Agent Skills Standard format) into ProjectMnemosyne with Apache 2.0 attribution. Use when: (1) integrating skills from modular/skills or similar Agent Skills Standard repos, (2) adapting directory-per-skill format to Mnemosyne flat-file format, (3) merging upstream content with existing overlapping skills, (4) handling Apache 2.0 attribution requirements for ported skills."
+description: "Port skills from Modular's official skills repo (Agent Skills Standard format) into Mnemosyne with Apache 2.0 attribution. Use when: (1) integrating skills from modular/skills or similar Agent Skills Standard repos, (2) adapting directory-per-skill format to Mnemosyne flat-file format, (3) merging upstream content with existing overlapping skills, (4) handling Apache 2.0 attribution requirements for ported skills."
 category: tooling
 date: 2026-04-09
 version: "1.0.0"
@@ -236,7 +236,7 @@ tags: [modular, mojo, skills, porting, apache-2.0, agent-skills-standard, modula
 | Field | Value |
 | ------- | ------- |
 | **Date** | 2026-04-09 |
-| **Objective** | Port 4 skills from Modular's official skills repo (Agent Skills Standard format) into ProjectMnemosyne with Apache 2.0 attribution, adapting to flat-file format |
+| **Objective** | Port 4 skills from Modular's official skills repo (Agent Skills Standard format) into Mnemosyne with Apache 2.0 attribution, adapting to flat-file format |
 | **Outcome** | Successful — 3 new skills created, 1 merged into existing skill (v2.0.0 to v3.0.0), all 948 skills pass validation, PR #1213 created |
 | **Verification** | verified-precommit — validation passes, PR created, CI pending |
 | **Source** | https://github.com/modular/skills (Apache 2.0), PR #1213 |
@@ -318,7 +318,7 @@ Create THIRD_PARTY_LICENSES.md at repo root (NOT in skills/).
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | Modular skills integration, PR #1213 | 4 skills ported (3 new, 1 merged) from Apache 2.0 repo, all 948 pass validation |
+| Mnemosyne | Modular skills integration, PR #1213 | 4 skills ported (3 new, 1 merged) from Apache 2.0 repo, all 948 pass validation |
 ```
 
 ---
@@ -382,7 +382,7 @@ python3 scripts/validate_plugins.py
 | --- | --- | --- |
 | subagent-driven-development | SKIP | myrmidon-swarm is superior |
 | dispatching-parallel-agents | SKIP | Covered by myrmidon-swarm |
-| writing-skills | SKIP | Covered by learn + ProjectMnemosyne |
+| writing-skills | SKIP | Covered by learn + Mnemosyne |
 | test-driven-development | PORT | Additive |
 | systematic-debugging | PORT | Additive |
 | verification-before-completion | PORT | Additive |
@@ -466,7 +466,7 @@ tags: [codex, skills, projecthephaestus, install, openai-yaml, agents-md, advise
 | ------- | ------- |
 | **Date** | 2026-04-02 |
 | **Objective** | Import repo-analyze*, advise, and learn from HomericIntelligence/ProjectHephaestus into Codex and make them discoverable in both global skill storage and repo-local instructions |
-| **Outcome** | Successful locally — 5 skills installed into ~/.codex/skills, Codex UI metadata added, advise/learn adapted for Codex, ProjectMnemosyne cache seeded, and repo AGENTS.md updated |
+| **Outcome** | Successful locally — 5 skills installed into ~/.codex/skills, Codex UI metadata added, advise/learn adapted for Codex, Mnemosyne cache seeded, and repo AGENTS.md updated |
 | **Verification** | verified-local |
 
 ## When to Use
@@ -493,7 +493,7 @@ python3 ~/.codex/skills/.system/skill-creator/scripts/generate_openai_yaml.py \
   --interface default_prompt='Perform a comprehensive repository audit'
 
 mkdir -p ~/.agent-brain
-git clone --depth 1 https://github.com/HomericIntelligence/ProjectMnemosyne ~/.agent-brain/ProjectMnemosyne
+git clone --depth 1 https://github.com/HomericIntelligence/Mnemosyne ~/.agent-brain/Mnemosyne
 ```
 
 ### Detailed Steps
@@ -502,7 +502,7 @@ git clone --depth 1 https://github.com/HomericIntelligence/ProjectMnemosyne ~/.a
 2. Install upstream skill directories into ~/.codex/skills using skill-installer
 3. Add agents/openai.yaml metadata — pass --name to avoid frontmatter parsing dependencies
 4. Patch Claude-centric skills for Codex ($ARGUMENTS, mandatory sub-agents, hardcoded paths)
-5. Seed supporting repos and caches (~/.agent-brain/ProjectMnemosyne)
+5. Seed supporting repos and caches (~/.agent-brain/Mnemosyne)
 6. Advertise the skills in the target repo's AGENTS.md
 7. Verify local readiness (restart Codex to pick up new skills)
 
@@ -530,5 +530,5 @@ git clone --depth 1 https://github.com/HomericIntelligence/ProjectMnemosyne ~/.a
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| Radiance | Local Codex setup using ProjectHephaestus skills | Installed 5 skills, added Codex metadata, patched advise/learn, seeded ProjectMnemosyne, updated AGENTS.md |
+| Radiance | Local Codex setup using ProjectHephaestus skills | Installed 5 skills, added Codex metadata, patched advise/learn, seeded Mnemosyne, updated AGENTS.md |
 ```

@@ -2636,7 +2636,7 @@ done
 | Location | Files Updated |
 | ---------- | --------------- |
 | ProjectScylla local files | 4 files |
-| ProjectMnemosyne skills | 17 files |
+| Mnemosyne skills | 17 files |
 
 **Pattern**: Removed `-e analysis` from all pixi command examples
 
@@ -3958,7 +3958,7 @@ RATE_LIMIT_KEYWORDS = [
 ### Initial Symptoms
 
 User reported three issues:
-1. PR #51 failing CI/CD in ProjectMnemosyne (SKILL.md missing YAML frontmatter)
+1. PR #51 failing CI/CD in Mnemosyne (SKILL.md missing YAML frontmatter)
 2. Files being copied instead of symlinked in runner.py
 3. LLM Judge failures with message: "Invalid: Agent error - You've hit your limit · resets 4pm (America/Los_Angeles)"
 
@@ -4052,7 +4052,7 @@ retry_after = parse_retry_after(error_msg) or parse_retry_after(stderr)
 
 ## Fixes Applied
 
-### Fix 1: PR #51 YAML Frontmatter (ProjectMnemosyne)
+### Fix 1: PR #51 YAML Frontmatter (Mnemosyne)
 
 **File**: `plugins/evaluation/e2e-checkpoint-resume/skills/e2e-checkpoint-resume/SKILL.md`
 
@@ -4352,7 +4352,7 @@ git push
 - `src/scylla/adapters/claude_code.py` - Agent adapter with rate limit detection
 - `tests/unit/e2e/test_rate_limit.py` - Comprehensive test suite
 
-### ProjectMnemosyne
+### Mnemosyne
 
 - `plugins/evaluation/e2e-checkpoint-resume/` - Related skill on checkpoint/resume
 - This skill: `plugins/debugging/e2e-rate-limit-detection/`
@@ -4360,7 +4360,7 @@ git push
 ## References
 
 - ProjectScylla PR #126: https://github.com/HomericIntelligence/ProjectScylla/pull/126
-- ProjectMnemosyne PR #51: https://github.com/HomericIntelligence/ProjectMnemosyne/pull/51 (merged)
+- Mnemosyne PR #51: https://github.com/HomericIntelligence/Mnemosyne/pull/51 (merged)
 - Claude CLI JSON output format documentation
 - HTTP Retry-After header specification
 
@@ -6611,7 +6611,7 @@ user-invocable: false
 | PR | #906 |
 | Category | tooling |
 | Objective | Fix skill documentation that used relative `bash scripts/...` invocations that only work when the caller's CWD is the skill directory |
-| Outcome | Success — path-independent invocations in SKILL.md, self-location idiom in shell script, synced to ProjectMnemosyne |
+| Outcome | Success — path-independent invocations in SKILL.md, self-location idiom in shell script, synced to Mnemosyne |
 
 ## When to Use
 
@@ -6621,7 +6621,7 @@ Trigger this skill when:
 - A shell script inside a skill's `scripts/` subdirectory uses relative paths internally
 - A skill was added to `tests/claude-code/shared/skills/` but the docs only work from inside that directory
 - You get errors like `bash: scripts/preflight_check.sh: No such file or directory` when running from a different CWD
-- Syncing a skill between ProjectScylla and ProjectMnemosyne where invocation patterns differ
+- Syncing a skill between ProjectScylla and Mnemosyne where invocation patterns differ
 
 ## Verified Workflow
 
@@ -6630,7 +6630,7 @@ Trigger this skill when:
 ```bash
 # Find all relative script invocations in SKILL.md files
 grep -rn "bash scripts/" tests/claude-code/shared/skills/
-grep -rn "bash scripts/" build/ProjectMnemosyne/plugins/
+grep -rn "bash scripts/" build/Mnemosyne/plugins/
 ```
 
 Look for:
@@ -6704,13 +6704,13 @@ grep -n "bash scripts/" tests/claude-code/shared/skills/github/gh-implement-issu
 # Should return nothing
 ```
 
-### 5. Sync to ProjectMnemosyne
+### 5. Sync to Mnemosyne
 
 Apply the same Quick Reference fix to the Mnemosyne SKILL.md:
 
 ```bash
 # Check what's in Mnemosyne
-cat $HOME/.agent-brain/ProjectMnemosyne/plugins/tooling/gh-implement-issue/skills/gh-implement-issue/SKILL.md
+cat $HOME/.agent-brain/Mnemosyne/plugins/tooling/gh-implement-issue/skills/gh-implement-issue/SKILL.md
 
 # Apply the same Note callout and <skill-dir> pattern
 # Add Pre-Flight Check Results table, updated Error Handling rows, references
@@ -6724,11 +6724,11 @@ Update `references/notes.md` with:
 Commit Mnemosyne on its own branch:
 
 ```bash
-git -C $HOME/.agent-brain/ProjectMnemosyne checkout -b skill/tooling/gh-implement-issue-preflight-sync
-git -C $HOME/.agent-brain/ProjectMnemosyne add plugins/tooling/gh-implement-issue/
-git -C $HOME/.agent-brain/ProjectMnemosyne commit -m "fix(skills): Sync preflight_check.sh sections into gh-implement-issue skill"
-git -C $HOME/.agent-brain/ProjectMnemosyne push -u origin skill/tooling/gh-implement-issue-preflight-sync
-cd $HOME/.agent-brain/ProjectMnemosyne && gh pr create --title "..." --body "..."
+git -C $HOME/.agent-brain/Mnemosyne checkout -b skill/tooling/gh-implement-issue-preflight-sync
+git -C $HOME/.agent-brain/Mnemosyne add plugins/tooling/gh-implement-issue/
+git -C $HOME/.agent-brain/Mnemosyne commit -m "fix(skills): Sync preflight_check.sh sections into gh-implement-issue skill"
+git -C $HOME/.agent-brain/Mnemosyne push -u origin skill/tooling/gh-implement-issue-preflight-sync
+cd $HOME/.agent-brain/Mnemosyne && gh pr create --title "..." --body "..."
 ```
 
 ### 6. Commit and PR (ProjectScylla)

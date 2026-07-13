@@ -759,20 +759,20 @@ backslashes: `MD056 Expected: 4; Actual: 6`.
 
 | Project | Context | Details |
 | ------- | ------- | ------- |
-| ProjectMnemosyne | PR \#1755 — `fix/markdownlint-table-pipe-escape` unblocks 5 PRs | File: `skills/ci-cd-gated-debug-instrumentation-workflow-dispatch.md` line 107 |
-| ProjectMnemosyne | PR \#1756 — same root cause across 17 PRs; two-track recovery in ~2 minutes | Diagnostic: `gh run view --log-failed \| grep MD056` |
-| ProjectMnemosyne | 2026-05-18 skill-corpus consolidation (\#1813); Wave 2 hit CI 100% clean after pre-flight discipline added | self |
+| Mnemosyne | PR \#1755 — `fix/markdownlint-table-pipe-escape` unblocks 5 PRs | File: `skills/ci-cd-gated-debug-instrumentation-workflow-dispatch.md` line 107 |
+| Mnemosyne | PR \#1756 — same root cause across 17 PRs; two-track recovery in ~2 minutes | Diagnostic: `gh run view --log-failed \| grep MD056` |
+| Mnemosyne | 2026-05-18 skill-corpus consolidation (\#1813); Wave 2 hit CI 100% clean after pre-flight discipline added | self |
 | ProjectOdyssey | PR \#5381 (commit 63b9db7f9) — mkdocs --strict out-of-tree links fixed in `docs/dev/mojo-jit-crash-capture-core.md` | Replaced `../../scripts/` and `../../.github/` style links with absolute GitHub URLs |
 | ProjectOdyssey | PR \#4763 — CLAUDE.md trim from 1,257 to 1,012 lines; MD060 fixed in 3 tables | Issue \#3158: reduce token consumption |
 | ProjectOdyssey | PR \#4024 — shared-link audit script + pre-commit hook | Issue \#3366: 3 missing `.claude/shared/` entries; 20 pytest tests all passed |
-| ProjectMnemosyne | PR \#1937 (`65fa3558`) — MD033 placeholder backtick-wrap | 5-PR parallel swarm false-positive fix wave |
-| ProjectMnemosyne | PR \#1959 (`3fa354e1`) — MD059 descriptive link text rewrite | 5-PR parallel swarm false-positive fix wave |
-| ProjectMnemosyne | PR \#1960 (`f2aa0aaa`) — MD018 line-start `\#NNN` reflow | 5-PR parallel swarm false-positive fix wave |
-| ProjectMnemosyne | PR \#1965 — MD056 non-GHA pipe escape in cells | 5-PR parallel swarm false-positive fix wave |
-| ProjectMnemosyne | PR \#1978 (`b2a3150d`) — combined false-positive catalog fixes | 5-PR parallel swarm false-positive fix wave |
-| ProjectMnemosyne | PR \#2046 (`821a217`) — MD056 fix for `` `pip list \| grep hephaestus` `` in 2-col table line 217 | 10-PR queue triage 2026-05-29 |
-| ProjectMnemosyne | PR \#2049 (`0bb8e69`) — MD056 fix for jq `` `[.comments[]\|select(.body\|test(...))]` `` in 4-col table line 133 | 10-PR queue triage 2026-05-29 |
-| ProjectMnemosyne | PR \#2030 (`99b8026`) — MD056 fix for jq pipe filters in 4-col table lines 153-154 | 10-PR queue triage 2026-05-29 |
+| Mnemosyne | PR \#1937 (`65fa3558`) — MD033 placeholder backtick-wrap | 5-PR parallel swarm false-positive fix wave |
+| Mnemosyne | PR \#1959 (`3fa354e1`) — MD059 descriptive link text rewrite | 5-PR parallel swarm false-positive fix wave |
+| Mnemosyne | PR \#1960 (`f2aa0aaa`) — MD018 line-start `\#NNN` reflow | 5-PR parallel swarm false-positive fix wave |
+| Mnemosyne | PR \#1965 — MD056 non-GHA pipe escape in cells | 5-PR parallel swarm false-positive fix wave |
+| Mnemosyne | PR \#1978 (`b2a3150d`) — combined false-positive catalog fixes | 5-PR parallel swarm false-positive fix wave |
+| Mnemosyne | PR \#2046 (`821a217`) — MD056 fix for `` `pip list \| grep hephaestus` `` in 2-col table line 217 | 10-PR queue triage 2026-05-29 |
+| Mnemosyne | PR \#2049 (`0bb8e69`) — MD056 fix for jq `` `[.comments[]\|select(.body\|test(...))]` `` in 4-col table line 133 | 10-PR queue triage 2026-05-29 |
+| Mnemosyne | PR \#2030 (`99b8026`) — MD056 fix for jq pipe filters in 4-col table lines 153-154 | 10-PR queue triage 2026-05-29 |
 
 ---
 ## Superseded from doc-config-drift-check
@@ -1595,7 +1595,7 @@ PR changed files → all .md / static .json?
 | Project | Context | Details |
 | ------- | ------- | ------- |
 | ProjectOdyssey | Issues #3087, #3089, #3150, #3253 (auto-impl, preflight, review-fix, hook-doc) | Member skills |
-| ProjectMnemosyne | PR security reviews, skill cleanup issues | Member skills |
+| Mnemosyne | PR security reviews, skill cleanup issues | Member skills |
 
 ---
 
@@ -1803,7 +1803,7 @@ tags:
 |-------|-------|
 | **Date** | 2026-05-29 |
 | **Objective** | Correctly diagnose MD012/no-multiple-blanks failures whose true root cause is a `\n\n` sequence at end-of-file, not visible double blank lines at the reported line number |
-| **Outcome** | Applied as one-line fix across 4 separate ProjectMnemosyne PRs (#2001, #2002, #2003, #2004); all PRs pushed with auto-merge armed; CI MD012 violations resolved |
+| **Outcome** | Applied as one-line fix across 4 separate Mnemosyne PRs (#2001, #2002, #2003, #2004); all PRs pushed with auto-merge armed; CI MD012 violations resolved |
 | **Verification** | verified-ci — fix landed across 4 PRs with passing markdownlint check |
 
 ## When to Use
@@ -1846,7 +1846,7 @@ npx --yes markdownlint-cli2 <file>
 
 4. **Apply the fix**. `printf '%s\n' "$(cat file.md)" > file.md.tmp && mv file.md.tmp file.md` is POSIX-correct: command substitution strips *all* trailing newlines, then `printf '%s\n'` re-adds exactly one. Equivalent `sed` form: `sed -i -e :a -e '/^$/{$d;N;ba' -e '}' file.md`.
 
-5. **Verify with the same tool CI uses**. ProjectMnemosyne CI runs markdownlint v0.40.0 via markdownlint-cli2 v0.22.1. `npx --yes markdownlint-cli2 <file>` reproduces the CI error exactly.
+5. **Verify with the same tool CI uses**. Mnemosyne CI runs markdownlint v0.40.0 via markdownlint-cli2 v0.22.1. `npx --yes markdownlint-cli2 <file>` reproduces the CI error exactly.
 
 6. **Prophylaxis** — if the same pattern shows up in 2+ PRs, install the `end-of-file-fixer` pre-commit hook from `pre-commit/pre-commit-hooks`. Every future fix becomes a one-line auto-commit, and the class of bug disappears.
 
@@ -1867,7 +1867,7 @@ npx --yes markdownlint-cli2 <file>
 
 | Tool | Version | Source |
 |------|---------|--------|
-| markdownlint | 0.40.0 | invoked by markdownlint-cli2 in ProjectMnemosyne CI |
+| markdownlint | 0.40.0 | invoked by markdownlint-cli2 in Mnemosyne CI |
 | markdownlint-cli2 | 0.22.1 | `npx --yes markdownlint-cli2 <file>` |
 
 **MD012 rule behavior (defaults):**
@@ -1901,7 +1901,7 @@ repos:
         files: \.md$
 ```
 
-**Observed hit rate during ProjectMnemosyne PR batch (2026-05-29):**
+**Observed hit rate during Mnemosyne PR batch (2026-05-29):**
 
 | Metric | Value |
 |--------|-------|
@@ -1915,7 +1915,7 @@ repos:
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectMnemosyne | Batch fix of 10 failing PRs on 2026-05-29; 4 of 9 markdownlint failures shared this exact root cause | PRs #2001, #2002, #2003, #2004 — all pushed with auto-merge armed; commits 6600e6a / 6ff96f5 / 9e3fb70 / 5611cdc |
+| Mnemosyne | Batch fix of 10 failing PRs on 2026-05-29; 4 of 9 markdownlint failures shared this exact root cause | PRs #2001, #2002, #2003, #2004 — all pushed with auto-merge armed; commits 6600e6a / 6ff96f5 / 9e3fb70 / 5611cdc |
 
 ---
 

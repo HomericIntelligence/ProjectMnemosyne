@@ -3,8 +3,8 @@
 ## Session Context
 
 **Date**: 2026-02-22
-**Project**: ProjectMnemosyne
-**Trigger**: 10 PRs in ProjectMnemosyne added skills to flat `skills/` directory. CI only triggers on `plugins/**` paths. Branch protection requires the `validate` status check, so these PRs could never merge.
+**Project**: Mnemosyne
+**Trigger**: 10 PRs in Mnemosyne added skills to flat `skills/` directory. CI only triggers on `plugins/**` paths. Branch protection requires the `validate` status check, so these PRs could never merge.
 
 **Prior session** had already completed: PRs #131 (duplicate), #137, #138 (stacked into #139), #139 (3 skills), #152.
 

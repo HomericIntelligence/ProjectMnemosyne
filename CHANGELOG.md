@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the ProjectMnemosyne skills marketplace are documented here.
+All notable changes to the Mnemosyne skills marketplace are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: semver,
 sourced from `pyproject.toml` `[project].version`.
 

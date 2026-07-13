@@ -1,9 +1,9 @@
 ---
 name: mojo-ci-runtime-crash-diagnosis-and-mitigation
-description: "Use when: (1) CI fails non-deterministically with 'JIT session error: Cannot allocate memory' or SIGSEGV in libKGENCompilerRTShared.so on GHA free-tier runners (VMA exhaustion from ~3.6 GB per mojo invocation), (2) auditing GHA workflows for unprotected bare 'pixi run mojo' calls and applying retry logic for JIT crash resilience, (3) validating that an upstream Mojo fix (runtime crash, codegen flag, compiler-driver bug) actually landed in a bumped nightly before removing downstream workarounds, (4) diagnosing a 'SIGILL on this host but works on others' crash using 4-layer CPU feature detection (kernel /proc/cpuinfo, raw cpuid, compiler-rt __builtin_cpu_supports, compiler driver target resolution), (5) fixing a deterministic Mojo runtime crash (exit 134) when container image UID differs from host runner UID causing Permission denied on ~/.modular, (6) understanding historically documented JIT retry patterns that are now obsolete after modular/modular#6413."
+description: "Use when: (1) CI fails non-deterministically with 'JIT session error: Cannot allocate memory' or SIGSEGV in libKGENCompilerRTShared.so on GHA free-tier runners (VMA exhaustion from ~3.6 GB per mojo invocation), (2) auditing GHA workflows for unprotected bare 'pixi run mojo' calls and applying retry logic for JIT crash resilience, (3) validating that an upstream Mojo fix (runtime crash, codegen flag, compiler-driver bug) actually landed in a bumped nightly before removing downstream workarounds, (4) diagnosing a 'SIGILL on this host but works on others' crash using 4-layer CPU feature detection (kernel /proc/cpuinfo, raw cpuid, compiler-rt __builtin_cpu_supports, compiler driver target resolution), (5) fixing a deterministic Mojo runtime crash (exit 134) when container image UID differs from host runner UID causing Permission denied on ~/.modular, (6) understanding historically documented JIT retry patterns that are now obsolete after modular/modular#6413, (7) mitigating nondeterministic 'mojo: error: execution crashed' JIT segfaults when the project is PINNED to a pre-fix Mojo (e.g. 1.0.0b1, nightly GC'd from channel) that cannot be bumped — per-file retry-once loop + verified 'gh run rerun --failed' + known-issues ledger with a revisit trigger."
 category: ci-cd
-date: 2026-06-07
-version: "1.1.0"
+date: 2026-07-10
+version: "1.2.0"
 user-invocable: false
 history: mojo-ci-runtime-crash-diagnosis-and-mitigation.history
 tags:
@@ -25,6 +25,9 @@ tags:
   - retry
   - avx512
   - modular-6413
+  - rerun
+  - pinned-toolchain
+  - flake
 ---
 
 # Mojo CI Runtime Crash Diagnosis and Mitigation
@@ -33,9 +36,9 @@ tags:
 
 | Field | Value |
 | --- | --- |
-| **Date** | 2026-06-07 |
-| **Objective** | One canonical reference for diagnosing and mitigating Mojo JIT/runtime crashes in CI: VMA (virtual address space) exhaustion on GHA free-tier runners, workflow retry auditing, upstream-fix validation before removing workarounds, multi-layer CPU feature-detection (SIGILL) probing, and container UID-mismatch crashes. |
-| **Outcome** | Consolidated from 6 overlapping skills. Live root-cause and mitigation patterns retained; obsolete retry posture is documented as historical context only (see modular/modular#6413). |
+| **Date** | 2026-07-10 |
+| **Objective** | One canonical reference for diagnosing and mitigating Mojo JIT/runtime crashes in CI: VMA (virtual address space) exhaustion on GHA free-tier runners, workflow retry auditing, upstream-fix validation before removing workarounds, multi-layer CPU feature-detection (SIGILL) probing, container UID-mismatch crashes, and bounded retry discipline for projects pinned to a pre-fix Mojo. |
+| **Outcome** | Consolidated from 6 overlapping skills. Live root-cause and mitigation patterns retained; obsolete retry posture is documented as historical context only (see modular/modular#6413). v1.2.0 adds the pinned-toolchain exception (section G): when the Mojo pin cannot move past the fix, bounded per-file retry + verified rerun + ledger is the correct posture. |
 | **Verification** | verified-ci |
 
 ## When to Use
@@ -46,6 +49,7 @@ tags:
 4. Diagnosing a "SIGILL on this host but works on others" crash using 4-layer CPU feature detection.
 5. Fixing a deterministic Mojo runtime crash (exit 134) when container image UID differs from host runner UID, causing `Permission denied [/home/.../.modular]`.
 6. Understanding historically documented JIT retry patterns that are now obsolete after modular/modular#6413.
+7. `mojo run` intermittently dies with `mojo: error: execution crashed` + a stack trace into `libKGENCompilerRTShared.so` on `ubuntu-latest`, the SAME commit passes on a sibling runner simultaneously, and the project is pinned to a pre-fix Mojo (e.g. `1.0.0b1`) that cannot be bumped (nightly GC'd from the channel, registry constraint) — see section G.
 
 ### Crash Classification — Start Here
 
@@ -57,6 +61,7 @@ Misidentifying the crash type wastes investigation time. Check the stack offsets
 | `execution crashed` + `filesystem error: Permission denied [.../.modular]`, exit 134, 100% reproducible at CI UID | UID mismatch (modular#6412) | Dockerfile `chmod 755 $HOME` + cache key UID + entrypoint HOME-fixup |
 | SIGILL at JIT execution on some CPUs but not others; driver emits AVX-512 on masked-AVX-512 host | CPU feature mismatch (modular#6413) | Upstream-fixed; validate via 4-layer probe + `--print-effective-target` |
 | `execution crashed` before output, variable offsets | JIT volume / VMA — see above | Sequential job; import audit is a red herring for pure VMA |
+| `execution crashed` + `libKGENCompilerRTShared.so` frames, fails in ~seconds, sibling run at SAME SHA green, never reproduces locally, Mojo pin is pre-fix and immovable | JIT compiler-runtime segfault flake on pinned toolchain (section G) | Per-file retry-once loop + verified `gh run rerun --failed` + known-issues ledger with revisit trigger |
 
 ## Verified Workflow
 
@@ -80,6 +85,16 @@ pixi run mojo build --print-effective-target some.mojo   # compare against /proc
 
 # --- Upstream fix validation: Gate 0 (verify the premise) ---
 grep '^mojo' pixi.toml && git log --oneline -- pixi.toml | head -5
+
+# --- Pinned-toolchain JIT-crash flake: per-file retry-once loop (section G) ---
+for t in tests/**/test_*.mojo; do
+  echo "== $t =="
+  mojo run -I src "$t" || { echo "== retry (JIT crash flake?) $t =="; mojo run -I src "$t"; } || exit 1
+done
+
+# --- Pinned-toolchain flake at job level: verify the signature, then rerun failed jobs ---
+gh run view <run-id> --log-failed | grep -A5 "execution crashed"   # confirm libKGENCompilerRTShared frames
+gh run rerun <run-id> --failed
 ```
 
 ### Detailed Steps
@@ -129,6 +144,8 @@ python3 -c "import yaml; yaml.safe_load(open('.github/workflows/comprehensive-te
 > reproducibility and blocks upstream filing (see Failed Attempts and the historical context
 > in the history file). The audit below remains useful for finding *unprotected* calls; for the
 > dominant pre-#6413 crash class, the correct fix is the upstream bump, not retry.
+> **Exception:** when the pin CANNOT move past the fix (nightly GC'd, registry constraint),
+> bounded retry with ledger discipline is correct — see section G.
 
 Find every bare call, then classify it:
 
@@ -384,6 +401,52 @@ for f in $(find . -name "test_*_part*.mojo"); do
 done
 ```
 
+#### G. Pinned-Toolchain JIT-Crash Flake — Bounded Retry + Rerun Discipline (Mojo 1.0.0b1)
+
+Observed on Mojo `1.0.0b1` (predates the #6413-era fixes; the project could not bump because
+the original nightly was garbage-collected from the channel). `mojo run` intermittently dies
+with `mojo: error: execution crashed` and a stack trace into `libKGENCompilerRTShared.so`
+(JIT compiler-runtime segfault) on `ubuntu-latest` runners. Nondeterministic: the SAME commit
+passes on a sibling runner simultaneously; never reproduced locally (WSL2); observed repeatedly
+on the same innocuous test file. Crucially, observed TWICE in a row on one runner (attempt +
+retry both crashed) while the twin run at the same SHA passed — a single retry is not always
+enough at the job level, so the mitigation is layered.
+
+**Diagnostic discriminators — verify it IS the flake before retrying/rerunning:**
+
+| Signal | Flake | Real failure |
+| --- | --- | --- |
+| Timing | Fails in ~seconds (crash during JIT, before test output) | Runs the test, produces output |
+| Log content | `execution crashed` + `libKGENCompilerRTShared.so` frames, no assertion text | Test output + assertion text |
+| Sibling event (push vs pull_request) at the SAME SHA | Green | Also fails |
+| Same file locally | Passes | Fails |
+
+**Mitigation layer 1 — workflow step: per-file retry-once loop.** A genuine assertion failure
+still fails twice and exits nonzero, so the retry cannot mask real regressions:
+
+```bash
+for t in tests/**/test_*.mojo; do
+  echo "== $t =="
+  mojo run -I src "$t" || { echo "== retry (JIT crash flake?) $t =="; mojo run -I src "$t"; } || exit 1
+done
+```
+
+**Mitigation layer 2 — orchestration: verified rerun.** When a job still fails with the
+signature (fast fail ~30s, crash trace, sibling run green at same SHA), first read the job log
+and confirm `execution crashed` + the `libKGENCompilerRTShared` frames, then:
+
+```bash
+gh run rerun <run-id> --failed
+```
+
+In the observed sessions the rerun always passed.
+
+**Ledger discipline (mandatory):** track the flake in a repo followups/known-issues doc with
+observation dates, affected SHAs, and a revisit trigger (e.g., "revisit when the Mojo pin
+moves past 1.0.0b1"); cite the upstream precedent issue if any. This preserves the
+upstream-filing trail that blanket retries would otherwise erase, keeping this exception
+compatible with the fail-fast posture above.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -402,6 +465,8 @@ done
 | Assumed crash = JIT flake (closed/retried) | Closed/retried 16 crashing test files without investigating | The 16 files had 3 concrete source bugs: double-free from a synthesized shallow `__copyinit__`, a broken `fetch_add` spinlock, and a bitcast UAF — non-determinism came from timing/allocation layout, not the compiler | Check for double-free, broken locks, and bitcast UAF (section F) before concluding JIT instability |
 | `@always_inline` to fix bitcast/heap crashes | Applied `@always_inline` to a 15+ line, 5+ branch method | All six test groups failed or worsened — inlining increased JIT compilation volume at every call site (ProjectOdyssey PR #5099) | `@always_inline` is an anti-pattern for large branching bodies; if CI crashes worsen, `git diff` for `@always_inline` additions |
 | `fn main() raises:` in new ADR-009 split files | Wrote all new part files with `fn main()` | Mojo 0.26.3 deprecated `fn main()`; CI failed with a parse error on every new file | After any split on Mojo 0.26.3+, globally replace `fn main() raises:` with `def main() raises:` |
+| Deleting the release-test job entirely (upstream projects' approach to the same crash class) | Removed the CI job that hit the JIT-crash flake | Removes all signal from the tests, not just the flake — real regressions ship undetected; worse cure than the disease | Keep the job; add bounded per-file retry + verified rerun instead (section G) |
+| Single job-level retry as sufficient mitigation for the pinned-toolchain flake | Assumed one retry of the failed job always rescues the flake | Observed a double-crash: attempt + retry both crashed on one runner while the twin run at the same SHA passed — the flake can hit the same runner twice in a row | Layer the mitigation: per-file retry-once inside the step, PLUS verified `gh run rerun --failed` at the orchestration level |
 
 ## Results & Parameters
 
@@ -446,6 +511,20 @@ Aborted (core dumped)          # exit code 134
 libKGENCompilerRTShared.so+0x6d4ab / +0x6a686 / +0x6e157 ; libc.so.6+0x45330 (__fortify_fail_abort)
 ```
 
+### Pinned-Toolchain Flake Profile (Mojo 1.0.0b1, section G)
+
+| Parameter | Value |
+| --- | --- |
+| Mojo pin | `1.0.0b1` (immovable — original nightly GC'd from channel) |
+| Crash signature | `mojo: error: execution crashed` + `libKGENCompilerRTShared.so` frames |
+| Failure timing | ~seconds (during JIT, before any test output); flake-failed jobs die ~30s in |
+| Observation window | ~10 CI runs on GHA `ubuntu-latest` |
+| Flakes rescued | 3 (retry loop or verified rerun; rerun passed every time) |
+| Double-crash observed | Yes, once (attempt + retry both crashed; twin run at same SHA green) |
+| Local reproduction | Never (WSL2) |
+| Retry budget | 1 retry per test file in-step; then `gh run rerun --failed` after signature verification |
+| Revisit trigger | Mojo pin moves past `1.0.0b1` |
+
 ### Upstream References
 
 - VMA / VmPeak reservation: [modular/modular#6433](https://github.com/modular/modular/issues/6433)
@@ -462,3 +541,4 @@ libKGENCompilerRTShared.so+0x6d4ab / +0x6a686 / +0x6e157 ; libc.so.6+0x45330 (__
 | ProjectOdyssey | modular/modular#6413 root-cause | 4-layer CPU feature probe on GHA EPYC 9V74; CI runs 25778579617 + 25778580407 |
 | ProjectOdyssey | PRs #5217, #5252, #5351 — UID mismatch crash | Dockerfile `chmod 755 $HOME`, UID cache key, entrypoint `_ensure_writable` (recursive, `sudo -n`) |
 | ProjectOdyssey | Historical retry/forensics context (modular#6413 demolition PRs #5458–#5460) | Retry/coredump/gdb infra removed after upstream fix landed; see history file |
+| predictive-coding-mojo | CI on Mojo 1.0.0b1 pin, ~10 runs, 3 flakes rescued | Section G: per-file retry-once loop + verified `gh run rerun --failed` + known-issues ledger; double-crash observed once; verified-ci |

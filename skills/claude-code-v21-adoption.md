@@ -16,7 +16,7 @@ Systematic workflow for analyzing Claude Code CHANGELOG and adopting new feature
 | Item | Details |
 | ------ | --------- |
 | Date | 2026-01-08 |
-| Objective | Adopt 5 new features from Claude Code v2.1.0 in ProjectMnemosyne |
+| Objective | Adopt 5 new features from Claude Code v2.1.0 in Mnemosyne |
 | Outcome | Successfully created 5 PRs with comprehensive documentation |
 | Source | Claude Code v2.1.0 CHANGELOG |
 
@@ -255,7 +255,7 @@ plugins/tooling/<feature-name>/
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | v2.1.0 upgrade | [notes.md](../references/notes.md) |
+| Mnemosyne | v2.1.0 upgrade | [notes.md](../references/notes.md) |
 
 ## Key Insights
 

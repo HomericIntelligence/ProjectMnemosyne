@@ -199,7 +199,7 @@ Hooks proven safe to run in isolation: `trailing-whitespace`, `end-of-file-fixer
 
 #### Step 5 — Re-sign an already-pushed unsigned commit
 
-A Wave-A run pushed an unsigned commit on `ProjectMnemosyne#2071`. The repo's branch protection requires `Verified` signatures, so the PR was blocked despite green tests. Recovery:
+A Wave-A run pushed an unsigned commit on `Mnemosyne#2071`. The repo's branch protection requires `Verified` signatures, so the PR was blocked despite green tests. Recovery:
 
 ```bash
 git fetch && git checkout -B local "origin/$BR"
@@ -259,7 +259,7 @@ block recording the targeted check as resolved.
 |---------|----------------|---------------|----------------|
 | Initial shallow clone | `gh repo clone REPO -- --depth=50` then `git checkout -B prN origin/BRANCH` | Default refspec only fetches `refs/heads/main`; `origin/BRANCH` did not exist. `fatal: 'origin/BRANCH' is not a commit`. | Widen refspec to `+refs/heads/*:refs/remotes/origin/*` and re-fetch BEFORE checking out any PR branch on a shallow clone. |
 | Markdownlint autofix-only | Ran `markdownlint-cli2 --fix` expecting it to green MD013 (line-length) violations | `--fix` does not rewrap long lines; the check stayed red on every long-line offense. | Treat `--fix` as a partial preprocessor. Always re-lint and hand-rewrap MD013/MD007/MD034 residue. |
-| Wave-A unsigned push | Wave-A predecessor pushed a normal (unsigned) commit to `ProjectMnemosyne#2071` | Repo branch protection requires `Verified` signatures; PR blocked from auto-merge despite green CI. | Always pass `-S` on commit. Recovery: `git commit --amend -S --no-edit && git push --force-with-lease`, then confirm via `gh api …/commits/$sha --jq .commit.verification.verified` returns `true`. |
+| Wave-A unsigned push | Wave-A predecessor pushed a normal (unsigned) commit to `Mnemosyne#2071` | Repo branch protection requires `Verified` signatures; PR blocked from auto-merge despite green CI. | Always pass `-S` on commit. Recovery: `git commit --amend -S --no-edit && git push --force-with-lease`, then confirm via `gh api …/commits/$sha --jq .commit.verification.verified` returns `true`. |
 | Trust swarm "pass" log | Took the Wave-B run log lines `#NN pass` as done | Live `gh pr checks` showed several still failing after CI settled — the executor's headless verification window `TIMEOUT_PENDING`'d before CI finished and recorded optimistic results. | Always re-verify the targeted check against live `gh pr checks` / `gh run view --log-failed`; never trust the swarm's own pass/fail log. |
 | Narrow markdownlint fix | Fixed only the one shared file (`branch-protection.md`) the analysis named | The same MD013 rule also failed in `CONTRIBUTING.md`, so the check stayed red. | Re-run the linter on ALL flagged files from the live log, not just the headline one. |
 | pre-commit markdownlint for MD060 | Relied on the original `pre-commit` run output | A different rule (`MD060` table-column-style) wasn't covered by that run. | Read the live `--log-failed` for the actual rule and fix it specifically — MD060 IS `--fix`-able (normalize table pipe spacing); MD013 is not. |

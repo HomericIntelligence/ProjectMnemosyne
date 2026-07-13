@@ -102,7 +102,7 @@ else:
 
 # ── Marketplace path relativization ───────────────────────────────────────────
 # get_advise_prompt(repo_root=...) internally calls _relativize_path(marketplace_path, repo_root).
-# If repo_root == str(worktree_path), paths OUTSIDE the worktree (e.g. build/ProjectMnemosyne/...)
+# If repo_root == str(worktree_path), paths OUTSIDE the worktree (e.g. build/Mnemosyne/...)
 # cannot be relativized and fall back to absolute paths → correct.
 # If repo_root == str(actual_repo_root), paths ARE relativized → resolve incorrectly
 # when Claude runs with cwd=worktree_path (worktree is at <repo_root>/build/.worktrees/issue-N).
@@ -160,9 +160,9 @@ advise_prompt = get_advise_prompt(
 
 #### Fix 3: Correct `repo_root` for path-relativization helpers
 
-1. **Understand the relativization logic.** `get_advise_prompt` calls `_relativize_path(marketplace_path, repo_root)` to make the marketplace path relative (so Claude can navigate to it). If `repo_root=worktree_path` and the marketplace is at `<repo_root>/build/ProjectMnemosyne/.claude-plugin/marketplace.json`, the marketplace is NOT under `worktree_path` (worktrees are at `<repo_root>/build/.worktrees/issue-N`), so `_relativize_path` fails to relativize and returns the absolute path — which is correct.
+1. **Understand the relativization logic.** `get_advise_prompt` calls `_relativize_path(marketplace_path, repo_root)` to make the marketplace path relative (so Claude can navigate to it). If `repo_root=worktree_path` and the marketplace is at `<repo_root>/build/Mnemosyne/.claude-plugin/marketplace.json`, the marketplace is NOT under `worktree_path` (worktrees are at `<repo_root>/build/.worktrees/issue-N`), so `_relativize_path` fails to relativize and returns the absolute path — which is correct.
 
-2. **The bug**: if you pass `repo_root=str(actual_repo_root)`, the marketplace IS under `repo_root`, so it relativizes to `build/ProjectMnemosyne/...` — a relative path that only resolves from `repo_root`, not from `worktree_path`. Since Claude runs with `cwd=worktree_path`, this path breaks.
+2. **The bug**: if you pass `repo_root=str(actual_repo_root)`, the marketplace IS under `repo_root`, so it relativizes to `build/Mnemosyne/...` — a relative path that only resolves from `repo_root`, not from `worktree_path`. Since Claude runs with `cwd=worktree_path`, this path breaks.
 
 3. **Fix**: always pass `repo_root=str(worktree_path)` (not `str(repo_root)`) when calling `get_advise_prompt` in a worktree context.
 
@@ -181,7 +181,7 @@ Long-lived sessions can carry stale assumptions across rebases. Three guards kee
 | 1 | Derived the deterministic session id from the live trunk SHA: `session_name(repo, issue, agent, githash)` | Every `_drive_issue` call on a freshly-bumped main produced a new UUID. `invoke_claude_with_session` fell back to `--session-id` (create). Agents acted amnesiac. | Scope the session id to the lifetime of the **artifact** (issue + PR). Drop `githash` from the tuple and update **every** caller in one PR. |
 | 2 | Pinned the regression with `session_uuid("R", 1, AGENT_PLANNER, githash="abc1234")` in a `pytest.raises` block with `# type: ignore[call-arg]` | github-code-quality's static analyzer resolved the name back to the new signature and reported "Wrong name for an argument in a call" on every PR that touched the file. | Use `bad_kwargs = {"githash": "abc1234"}; session_uuid(**bad_kwargs)` — runtime behavior identical, static analyzer cannot resolve the key. |
 | 3 | Used `cwd=repo_root` for turn 2 (implementation) while turn 1 (advise) used `cwd=worktree_path` | `session_jsonl_path(sid, repo_root)` resolved to a different on-disk path than `session_jsonl_path(sid, worktree_path)`. The transcript from turn 1 did not exist at the turn 2 path → `should_resume=False` → new session created, advise context lost. | All turns of the same multi-turn session MUST use the same `cwd`. Use `cwd=worktree_path` for both advise and implementation turns when the session runs in a worktree context. |
-| 4 | Passed `repo_root=str(actual_repo_root)` to `get_advise_prompt` when `cwd=worktree_path` | `_relativize_path(marketplace_path, actual_repo_root)` relativized the marketplace path to `build/ProjectMnemosyne/...`. With `cwd=worktree_path`, this relative path resolves to `<worktree>/build/ProjectMnemosyne/...` which does not exist. | Pass `repo_root=str(worktree_path)` so the marketplace path (which lives under actual repo_root, not the worktree) cannot be relativized and falls back to its absolute path. |
+| 4 | Passed `repo_root=str(actual_repo_root)` to `get_advise_prompt` when `cwd=worktree_path` | `_relativize_path(marketplace_path, actual_repo_root)` relativized the marketplace path to `build/Mnemosyne/...`. With `cwd=worktree_path`, this relative path resolves to `<worktree>/build/Mnemosyne/...` which does not exist. | Pass `repo_root=str(worktree_path)` so the marketplace path (which lives under actual repo_root, not the worktree) cannot be relativized and falls back to its absolute path. |
 
 ## Results & Parameters
 

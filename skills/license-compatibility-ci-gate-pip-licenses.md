@@ -427,9 +427,9 @@ default pixi env: pygithub/jsonschema/defusedxml INSTALLED; nats-py (nats extra)
 - pre-commit launcher pattern — `pixi run --environment default python3 ...` (check_python_version_consistency, .pre-commit-config.yaml:182)
 - hatch-vcs dynamic versioning — needs `fetch-depth: 0` on actions/checkout
 - ProjectHephaestus issue #1219 — license-compatibility CI gate (planning)
-- ProjectMnemosyne PR #2355 — v1 pip-licenses planning skill (superseded)
-- ProjectMnemosyne PR #2361 — v2 stdlib metadata planning skill (superseded)
-- ProjectMnemosyne PR #2370 — R2 pixi-wiring/loud-failure/coverage planning skill (superseded by this R3)
+- Mnemosyne PR #2355 — v1 pip-licenses planning skill (superseded)
+- Mnemosyne PR #2361 — v2 stdlib metadata planning skill (superseded)
+- Mnemosyne PR #2370 — R2 pixi-wiring/loud-failure/coverage planning skill (superseded by this R3)
 - [SPDX License List](https://spdx.org/licenses/)
 - [PyPA core metadata spec](https://packaging.python.org/en/latest/specifications/core-metadata/)
 ```

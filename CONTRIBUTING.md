@@ -1,6 +1,6 @@
-# Contributing to ProjectMnemosyne
+# Contributing to Mnemosyne
 
-Thank you for your interest in contributing to ProjectMnemosyne! This guide covers everything
+Thank you for your interest in contributing to Mnemosyne! This guide covers everything
 you need to know about contributing skills, maintaining quality standards, and navigating the
 PR process.
 

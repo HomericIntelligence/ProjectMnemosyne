@@ -60,7 +60,7 @@ tags:
 # --- Default-branch check (all repos in the fleet) ---
 ORG=HomericIntelligence
 REPOS=(AchaeanFleet ProjectAgamemnon ProjectArgus ProjectCharybdis ProjectHephaestus \
-        ProjectHermes ProjectKeystone ProjectMnemosyne ProjectNestor ProjectOdyssey \
+        ProjectHermes ProjectKeystone Mnemosyne ProjectNestor ProjectOdyssey \
         ProjectOdyssey ProjectProteus ProjectScylla ProjectTelemachy Myrmidons)
 
 for repo in "${REPOS[@]}"; do
@@ -270,7 +270,7 @@ ProjectCharybdis: main
 ProjectHephaestus: main
 ProjectHermes: main
 ProjectKeystone: main        ← stale master REF existed but defaultBranchRef was already main
-ProjectMnemosyne: main
+Mnemosyne: main
 ProjectNestor: main
 ProjectOdyssey: main
 ProjectProteus: main
@@ -296,7 +296,7 @@ gh api "repos/HomericIntelligence/ProjectKeystone/git/refs/heads" \
 ### Ruleset verification — active enforcement
 
 ```bash
-gh api "repos/HomericIntelligence/ProjectMnemosyne/rulesets" \
+gh api "repos/HomericIntelligence/Mnemosyne/rulesets" \
   --jq '.[] | select(.name=="homeric-main-baseline") | {name, enforcement}'
 # -> {"name":"homeric-main-baseline","enforcement":"active"}
 ```

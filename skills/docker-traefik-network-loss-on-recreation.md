@@ -1,11 +1,12 @@
 ---
 name: docker-traefik-network-loss-on-recreation
-description: "Diagnose and fix Traefik 504 Gateway Timeout after container recreation caused by Docker network isolation. Use when: (1) Traefik returns 504 for all backends after being recreated, (2) backends show UP in Traefik dashboard but are unreachable, (3) direct curl to container works but Traefik cannot reach it."
+description: "Diagnose and fix Traefik 504 Gateway Timeout after container recreation caused by Docker network isolation. Use when: (1) Traefik returns 504 for all backends after being recreated, (2) backends show UP in Traefik dashboard but are unreachable, (3) direct curl to container works but Traefik cannot reach it, (4) planning ANY Traefik container recreate (image bump, major upgrade) and want to check proactively whether it's at risk before touching anything."
 category: debugging
-date: 2026-06-23
-version: "1.0.0"
+date: 2026-07-06
+version: "1.1.0"
 user-invocable: false
 verification: verified-local
+history: docker-traefik-network-loss-on-recreation.history
 tags: [traefik, docker, networking, "504", gateway-timeout, network-isolation]
 ---
 
@@ -15,10 +16,11 @@ tags: [traefik, docker, networking, "504", gateway-timeout, network-isolation]
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-23 |
-| **Objective** | Diagnose and fix Traefik 504 Gateway Timeout for all backends after Traefik container recreation |
-| **Outcome** | Successful — immediate hotfix and permanent compose fix identified |
+| **Date** | 2026-07-06 |
+| **Objective** | Diagnose and fix Traefik 504 Gateway Timeout for all backends after Traefik container recreation; catch the risk proactively before recreating |
+| **Outcome** | Successful — immediate hotfix and permanent compose fix identified (v1.0.0); reconfirmed working through a real Traefik v2->v3 major upgrade, plus a proactive pre-recreate detection method added (v1.1.0) |
 | **Verification** | verified-local |
+| **History** | [changelog](./docker-traefik-network-loss-on-recreation.history) |
 
 ## When to Use
 
@@ -28,13 +30,22 @@ tags: [traefik, docker, networking, "504", gateway-timeout, network-isolation]
 - Timeout is exactly 30 seconds (matching Traefik's default DialTimeout)
 - Traefik was recently stopped + removed + recreated via `docker compose up -d`
 - Backends live on an external Docker network not declared in Traefik's own compose file
+- **Planning ANY Traefik container recreate** (a routine image bump, or a major-version
+  upgrade like v2->v3) and want to check proactively whether this failure mode will hit,
+  rather than discovering it reactively via a 504 outage after the fact
 
 ## Verified Workflow
 
 ### Quick Reference
 
 ```bash
-# Instant fix (no restart needed):
+# PROACTIVE: run this BEFORE any planned recreate to know if you're at risk
+docker inspect <traefik-container> --format '{{json .NetworkSettings.Networks}}' | python3 -m json.tool
+grep -A5 "^networks:" /path/to/traefik/docker-compose.yml
+# If a network name appears in the inspect output but NOT in the compose file's
+# networks: block, that attachment is out-of-band and WILL be dropped on recreate.
+
+# REACTIVE: instant fix if you're already seeing 504s (no restart needed):
 docker network connect <external-network> <traefik-container>
 # Example:
 docker network connect homelabos_traefik homelabos
@@ -46,7 +57,21 @@ docker inspect <traefik-container> --format '{{json .NetworkSettings.Networks}}'
 
 ### Detailed Steps
 
-1. **Confirm dial timeout signature**: 504s that take exactly 30 seconds to return = Traefik DialTimeout, NOT a backend issue.
+0. **Proactive detection, before touching anything.** Before recreating Traefik for
+   ANY reason (routine image bump, major-version upgrade), compare its ACTUAL live
+   network attachments against what the compose file declares:
+   ```bash
+   docker inspect <traefik-container> --format '{{json .NetworkSettings.Networks}}' | python3 -m json.tool
+   grep -A5 "^networks:" /path/to/docker-compose.yml
+   ```
+   If the live inspect output shows a network that does not appear in the compose
+   file's own `networks:` block at all, that attachment came from an out-of-band
+   `docker network connect` (run once, manually, possibly years ago by a setup script)
+   and is invisible to compose — it WILL be silently dropped on the next recreate.
+   Apply the permanent fix (step 7 below) BEFORE recreating, not after backends go dark.
+
+1. **Confirm dial timeout signature** (if you're already reacting to an outage): 504s
+   that take exactly 30 seconds to return = Traefik DialTimeout, NOT a backend issue.
 
 2. **Check backend health independently**:
    ```bash
@@ -93,6 +118,8 @@ docker inspect <traefik-container> --format '{{json .NetworkSettings.Networks}}'
          - traefik
          - homelabos_traefik    # <-- must be listed here too
    ```
+   After recreating, re-run the proactive check from step 0 to confirm the same
+   networks with the same IP addresses are still attached post-recreate.
 
 ## Failed Attempts
 
@@ -138,10 +165,23 @@ services:
       - homelabos_traefik   # joins Traefik to the backend network on every recreation
 ```
 
-**Root cause summary:** `docker compose up -d` only connects a container to networks declared in its own compose file. If backends joined an external network that is NOT declared in Traefik's compose, Traefik loses connectivity on every recreation even though it can still discover backends via the Docker socket.
+**Root cause summary:** `docker compose up -d` only connects a container to networks
+declared in its own compose file. If backends joined an external network that is NOT
+declared in Traefik's compose, Traefik loses connectivity on every recreation even
+though it can still discover backends via the Docker socket.
+
+**Post-fix verification (v1.1.0, Traefik v2.2 -> v3.7.6 upgrade):** after applying the
+permanent fix and recreating Traefik on a real major-version bump (not just a patch),
+`docker inspect <traefik-container> --format '{{json .NetworkSettings.Networks}}'`
+showed the identical two networks with the identical IP addresses as before the
+recreate — confirming the fix is recreate-safe across a major-version upgrade, not just
+a same-version restart. All dependent backends (a web app, a git server, a
+push-notification sidecar) stayed reachable through the recreate with zero downtime
+attributable to this failure mode.
 
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
 | HomeLab (apollo) | Traefik v2.2 with Nextcloud and Gitea backends on separate Docker network | Immediate fix + permanent compose fix both verified locally |
+| HomeLab (apollo) | Traefik v2.2 -> v3.7.6 major upgrade; same external-network attachment | Proactive detection (step 0) run before recreating; permanent fix confirmed to survive a major-version recreate, not just a same-version restart |

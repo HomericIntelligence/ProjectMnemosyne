@@ -1,0 +1,172 @@
+<!-- markdownlint-disable MD024 -->
+# History: inference360-gh-tidy-branch-preservation
+
+This file preserves the changelog and full superseded content of the
+`inference360-gh-tidy-branch-preservation` skill.
+
+## v1.1.0 (2026-07-11)
+
+- **Changed by:** mvillmow/Random predictive-coding-mojo session (confirmed `gh tidy` has no `--dry-run` flag; documented manual-preview + env-var-config awareness)
+- **Verification:** verified-local
+
+### What changed
+
+Added a Failed Attempts row (`--dry-run` is silently ignored — a no-op, not a preview),
+added the "Preview without a dry-run flag (there isn't one)" subsection framing `gh tidy`
+as a safe-by-design cleanup tool (merged-only deletion, worktree-checked-out branches
+skipped, manual-preview via `git branch --merged main`, env-var-config awareness for
+`GH_TIDY_AUTO_DELETE_MERGED`), added the `/hephaestus:worktree-cleanup` companion-pairing
+note, added a Verified On entry for mvillmow/Random, bumped version 1.0.0→1.1.0, added the
+history frontmatter field.
+
+### Why
+
+In this session `gh tidy` correctly cleaned merged branches per the operator's configured
+env vars (`AUTO_DELETE_MERGED` was deliberately enabled) and protected the live
+parity-training worktree — behaving exactly as designed. The one new, generally useful
+fact is that `gh tidy` has no `--dry-run` flag: `gh tidy --help` shows only `Usage: gh tidy`,
+and passing `--dry-run` is a silent no-op rather than a preview. Documenting this — plus how
+to preview manually via `git branch --merged main` and how to check your own
+`GH_TIDY_AUTO_DELETE_MERGED` config — lets operators run `gh tidy` confidently instead of
+reaching for a flag that does not exist.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: inference360-gh-tidy-branch-preservation
+description: "Run branch-preserving `gh tidy` cleanup in Inference360 after merged PRs. Use when: (1) `$tidy` or `hephaestus-tidy` is unavailable and you need the direct `gh tidy --rebase-all` fallback, (2) Inference360 uses `master` as trunk, (3) branch preservation matters and `GH_TIDY_AUTO_DELETE_MERGED` may silently override the expected default, (4) a branch was auto-deleted and you need to prove its patches are already on trunk before deciding whether to restore it."
+category: tooling
+date: 2026-06-29
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [inference360, gh-tidy, tidy, branch-preservation, worktree, rebase-all, auto-delete-merged, master, h200-slurm]
+---
+
+# Inference360 gh-tidy Branch Preservation
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-06-29 |
+| **Objective** | Run `$tidy`-equivalent branch cleanup in the Inference360 H200 Slurm repo after PR #291 merged, while preserving branch safety and avoiding unnecessary branch resurrection. |
+| **Outcome** | Successful local cleanup. The direct `gh tidy --rebase-all` fallback fast-forwarded local `master` to `origin/master` at `4292e87`, no rebase failures occurred, and the final local branch inventory was only `master` with a clean working tree. |
+| **Verification** | verified-local. This was executed locally in the Inference360 repo on 2026-06-29; CI validation is not applicable to the branch-cleanup operation. |
+
+## When to Use
+
+- You are running `$tidy` or equivalent branch cleanup in Inference360 after one or more PRs merged.
+- The `hephaestus-tidy` wrapper is not on `PATH`, but the `gh tidy` extension is available.
+- You need to preserve branches unless the user explicitly asked to prune them.
+- The environment may contain `GH_TIDY_*` variables that alter deletion behavior.
+- A merged local branch disappeared during tidy and you need to decide whether to recreate it.
+
+## Verified Workflow
+
+> Verification note: This workflow is verified locally only. It records a successful
+> Inference360 branch-cleanup run from 2026-06-29, not a CI-validated code path.
+
+### Quick Reference
+
+\`\`\`bash
+cd <INFERENCE360_REPO>
+
+# Preflight: do not start tidy from a dirty or surprising checkout.
+git status --short --branch
+git worktree list --porcelain
+git remote show origin | sed -n '/HEAD branch/s/.*: //p'
+env | rg '^GH_TIDY_' || true
+
+# Inference360 uses master as trunk. Neutralize auto-delete explicitly when
+# branch preservation is the expected behavior.
+env GH_TIDY_AUTO_DELETE_MERGED=false \
+  gh tidy --rebase-all --trunk master --skip-gc --skip-update-check
+
+# If a branch was already auto-deleted, prove whether it is subsumed before
+# restoring it.
+git cherry master <old-tip>
+git diff --stat <old-tip> master
+git branch --list
+git status --short --branch
+\`\`\`
+
+### Detailed Steps
+
+1. Confirm the current Inference360 working tree is clean with `git status --short --branch`. Stop and resolve unrelated dirty state before running tidy.
+2. Inspect all worktrees with `git worktree list --porcelain`. Branches checked out elsewhere can block rebases or make cleanup decisions ambiguous.
+3. Verify the repo trunk instead of assuming the ecosystem default. Inference360 used `master` in the verified run.
+4. Inspect `GH_TIDY_*` variables before invoking tidy. If branch preservation matters, run tidy with `GH_TIDY_AUTO_DELETE_MERGED=false` in the command environment.
+5. If `hephaestus-tidy` is not installed, use the direct fallback:
+
+   \`\`\`bash
+   env GH_TIDY_AUTO_DELETE_MERGED=false \
+     gh tidy --rebase-all --trunk master --skip-gc --skip-update-check
+   \`\`\`
+
+6. Read the `gh tidy` output for fast-forwards, failed rebases, and branch deletions. In the verified run, local `master` fast-forwarded to `origin/master` at `4292e87`, and there were no rebase failures.
+7. If `gh tidy` deleted a local merged branch because auto-delete was enabled, do not immediately recreate it. First compare the old branch tip against trunk:
+
+   \`\`\`bash
+   git cherry master <old-tip>
+   git diff --stat <old-tip> master
+   \`\`\`
+
+   In the verified run, `git cherry master <old-tip>` showed patch-equivalent `-` lines and `git diff --stat <old-tip> master` was empty, so leaving the branch absent was safe.
+8. Finish by confirming the final branch inventory and working tree:
+
+   \`\`\`bash
+   git branch --list
+   git status --short --branch
+   \`\`\`
+
+   The verified final state was only local `master`, aligned with `origin/master`, with a clean working tree.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| ------- | -------------- | ------------- | -------------- |
+| Expected wrapper availability | Tried to rely on `hephaestus-tidy` for the repo-local `$tidy` flow | The wrapper was not on `PATH` in the session environment | Fall back directly to `gh tidy --rebase-all --trunk master --skip-gc --skip-update-check` after the same clean-tree and worktree preflights |
+| Assumed branch preservation default | Ran `gh tidy` without passing `--auto-delete-merged` and expected local branches to be preserved unless prompted | The environment had `GH_TIDY_AUTO_DELETE_MERGED` enabled, so `gh tidy` printed `AUTO_DELETE_MERGED is enabled` and auto-deleted local branch `bbqdif-8b-bm` | For branch-preserving runs, inspect `env \| rg '^GH_TIDY_'` or neutralize the environment with `env GH_TIDY_AUTO_DELETE_MERGED=false gh tidy ...` |
+| Recreate deleted branch reflexively | Considered restoring the auto-deleted merged branch immediately | The branch commits were already patch-equivalent to trunk and the diff stat was empty | Use `git cherry master <old-tip>` and `git diff --stat <old-tip> master` first; recreating a subsumed branch adds noise to future tidy runs |
+
+## Results & Parameters
+
+Verified local parameters:
+
+\`\`\`text
+Project: Inference360
+Context: branch cleanup after PR #291 merged
+Date: 2026-06-29
+Trunk: master
+Fallback command: gh tidy --rebase-all --trunk master --skip-gc --skip-update-check
+Observed trunk update: local master fast-forwarded to origin/master at 4292e87
+Rebase failures: none
+Final local branches: master only
+Final working tree: clean
+Verification level: verified-local
+\`\`\`
+
+Branch auto-delete trap:
+
+\`\`\`text
+Observed message: AUTO_DELETE_MERGED is enabled
+Cause: GH_TIDY_AUTO_DELETE_MERGED was enabled in the environment
+Deleted local branch: bbqdif-8b-bm
+Patch-equivalence check: git cherry master <old-tip> produced "-" lines
+Tree-delta check: git diff --stat <old-tip> master was empty
+Decision: leave the deleted branch absent
+\`\`\`
+
+Branch-preserving command shape:
+
+\`\`\`bash
+env GH_TIDY_AUTO_DELETE_MERGED=false \
+  gh tidy --rebase-all --trunk master --skip-gc --skip-update-check
+\`\`\`
+```
+
+## v1.0.0 (2026-06-29)
+
+**Initial version.**

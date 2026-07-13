@@ -6,7 +6,7 @@ ecosystem.
 
 ## Why it lives in `plugins/`, not `skills/`
 
-ProjectMnemosyne v2.0.0 migrated all *skills* to flat `.md` files under `skills/`.
+Mnemosyne v2.0.0 migrated all *skills* to flat `.md` files under `skills/`.
 However, this directory predates and is exempt from that migration because it contains:
 
 | Sub-directory | Purpose |

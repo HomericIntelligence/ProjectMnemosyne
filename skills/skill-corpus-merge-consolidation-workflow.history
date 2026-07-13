@@ -468,13 +468,13 @@ Note: `mojo-test-*` cluster (was 8) resolved in PR #1075 (10->1). `deprecated-fi
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | PR #1040, merged 16 test-splitting skills + added semver | 2026-03-25 session |
-| ProjectMnemosyne | PR #1075, merged 10 mojo-test-\* skills into 1 | 2026-03-27 session |
-| ProjectMnemosyne | PR #1077, merged 6 deprecated-file-cleanup-\* skills into 1 | 2026-03-28 session |
-| ProjectMnemosyne | PR #1080, merged 9 conv2d-gradient-\* skills into 3 | 2026-03-28 session |
-| ProjectMnemosyne | PR #1086, re-consolidated 12 test-splitting skills into 3 (cluster re-duplicated after prior merge) | 2026-03-28 session |
-| ProjectMnemosyne | PR #1097, consolidated 4 test-splitting skills to 1 with prominent OBSOLETE notice (heap corruption fixed at compiler level) | 2026-03-28 session |
-| ProjectMnemosyne | PR pending, algorithmic dedup of 975 skills → 933 (-42 net) via marketplace.json + SequenceMatcher + 22 merge groups | 2026-04-07 session |
+| Mnemosyne | PR #1040, merged 16 test-splitting skills + added semver | 2026-03-25 session |
+| Mnemosyne | PR #1075, merged 10 mojo-test-\* skills into 1 | 2026-03-27 session |
+| Mnemosyne | PR #1077, merged 6 deprecated-file-cleanup-\* skills into 1 | 2026-03-28 session |
+| Mnemosyne | PR #1080, merged 9 conv2d-gradient-\* skills into 3 | 2026-03-28 session |
+| Mnemosyne | PR #1086, re-consolidated 12 test-splitting skills into 3 (cluster re-duplicated after prior merge) | 2026-03-28 session |
+| Mnemosyne | PR #1097, consolidated 4 test-splitting skills to 1 with prominent OBSOLETE notice (heap corruption fixed at compiler level) | 2026-03-28 session |
+| Mnemosyne | PR pending, algorithmic dedup of 975 skills → 933 (-42 net) via marketplace.json + SequenceMatcher + 22 merge groups | 2026-04-07 session |
 
 ### Prior history (tooling-skill-deduplication-semver-versioning.history)
 
@@ -691,7 +691,7 @@ grep -h "### Superseded from" skills/*.history | sort
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | 20 merge PRs, all auto-merged on green CI | Session 2026-05-18 |
+| Mnemosyne | 20 merge PRs, all auto-merged on green CI | Session 2026-05-18 |
 
 ---
 
@@ -930,7 +930,7 @@ cat /tmp/skill-merge-manifests/duplicates.txt
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectMnemosyne | 17-cluster, 1100-skill consolidation session | Manifest-first enumeration decoupled from merge phase |
+| Mnemosyne | 17-cluster, 1100-skill consolidation session | Manifest-first enumeration decoupled from merge phase |
 
 ### Prior history (skill-merge-manifest-enumeration-from-cluster-examples.history)
 
@@ -946,7 +946,7 @@ v2.0.0 (2026-05-19): Extended to support second-pass consolidation with existing
 
 ```yaml
 name: bulk-skill-migration-script
-description: Write an idempotent Python script to bulk-migrate skills from a source Claude project to a ProjectMnemosyne marketplace. Handles discovery, SKILL.md transformation, category mapping, and skips already-migrated skills.
+description: Write an idempotent Python script to bulk-migrate skills from a source Claude project to a Mnemosyne marketplace. Handles discovery, SKILL.md transformation, category mapping, and skips already-migrated skills.
 category: tooling
 date: 2026-03-04
 version: 1.0.0
@@ -956,7 +956,7 @@ user-invocable: false
 # Bulk Skill Migration Script
 
 Automate bulk migration of skills from a source repo (e.g. ProjectOdyssey2 `.claude/skills/`)
-to ProjectMnemosyne's `skills/<category>/<name>/` plugin structure.
+to Mnemosyne's `skills/<category>/<name>/` plugin structure.
 
 ## Overview
 
@@ -968,7 +968,7 @@ to ProjectMnemosyne's `skills/<category>/<name>/` plugin structure.
 
 ## When to Use
 
-- Porting skills from a source project to ProjectMnemosyne for the first time
+- Porting skills from a source project to Mnemosyne for the first time
 - Running incremental migrations when new skills are added to a source project
 - Auditing which source skills are missing from Mnemosyne
 - Automating the repetitive SKILL.md transformation (frontmatter cleanup, section renames, path generalization)
@@ -979,7 +979,7 @@ to ProjectMnemosyne's `skills/<category>/<name>/` plugin structure.
 
    ```bash
    ls /path/to/source/.claude/skills/ | sort > /tmp/source_skills.txt
-   ls /path/to/ProjectMnemosyne/skills/ | sort > /tmp/mnemosyne_skills.txt
+   ls /path/to/Mnemosyne/skills/ | sort > /tmp/mnemosyne_skills.txt
    comm -23 /tmp/source_skills.txt /tmp/mnemosyne_skills.txt
    ```
 
@@ -1020,7 +1020,7 @@ to ProjectMnemosyne's `skills/<category>/<name>/` plugin structure.
 5. **Validate all plugins** in Mnemosyne:
 
    ```bash
-   cd /path/to/ProjectMnemosyne
+   cd /path/to/Mnemosyne
    python3 scripts/validate_plugins.py skills/
    ```
 
@@ -1030,7 +1030,7 @@ to ProjectMnemosyne's `skills/<category>/<name>/` plugin structure.
    python3 scripts/generate_marketplace.py
    ```
 
-7. **Commit and PR** in ProjectMnemosyne, then commit the script in source repo.
+7. **Commit and PR** in Mnemosyne, then commit the script in source repo.
 
 ## Category Mapping Table
 
@@ -1112,7 +1112,7 @@ python3 scripts/validate_plugins.py skills/
 ## References
 
 - Source script: `scripts/migrate_odyssey_skills.py` in ProjectOdyssey2
-- ProjectMnemosyne validator: `scripts/validate_plugins.py`
+- Mnemosyne validator: `scripts/validate_plugins.py`
 - Marketplace generator: `scripts/generate_marketplace.py`
 - Related skills: `port-reusable-scripts`, `plugin-generalization`, `fix-skill-validation-warnings`
 
@@ -1277,7 +1277,7 @@ Key parameters:
 
 ```yaml
 name: consolidate-skills-directory
-description: 'Consolidate a dual plugins/+skills/ structure into a single skills/<category>/<name>/ directory. Use when: (1) ProjectMnemosyne has both plugins/ and skills/ directories causing confusion, (2) migrating flat legacy skills to plugin format, (3) updating all tooling and CI to reference the new canonical location.'
+description: 'Consolidate a dual plugins/+skills/ structure into a single skills/<category>/<name>/ directory. Use when: (1) Mnemosyne has both plugins/ and skills/ directories causing confusion, (2) migrating flat legacy skills to plugin format, (3) updating all tooling and CI to reference the new canonical location.'
 category: tooling
 date: 2026-02-23
 version: 1.0.0
@@ -1298,7 +1298,7 @@ Migrate from a dual `plugins/` + `skills/` structure to a single canonical `skil
 
 ## When to Use
 
-- ProjectMnemosyne has both `plugins/<category>/<name>/` and `skills/<name>/` directories
+- Mnemosyne has both `plugins/<category>/<name>/` and `skills/<name>/` directories
 - New contributors are confused about where to put skills
 - Tooling (CI, scripts) needs to scan a single directory
 - Legacy flat skills need migration to the standard plugin format (`<category>/<name>/.claude-plugin/plugin.json + skills/<name>/SKILL.md`)
@@ -1429,7 +1429,7 @@ category_map:
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | PR #183 — 971 files changed | [notes.md](../references/notes.md) |
+| Mnemosyne | PR #183 — 971 files changed | [notes.md](../references/notes.md) |
 
 ---
 
@@ -1547,7 +1547,7 @@ echo "Legacy dirs: $(find skills/ -type d -mindepth 1 | wc -l)"
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | PR #1017, migrated last 4 hierarchical skills | 2026-03-25 session |
+| Mnemosyne | PR #1017, migrated last 4 hierarchical skills | 2026-03-25 session |
 
 ---
 
@@ -1693,7 +1693,7 @@ python scripts/generate_marketplace.py
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
-| ProjectMnemosyne | Generalized 33 plugins across 8 categories | [notes.md](../../references/notes.md) |
+| Mnemosyne | Generalized 33 plugins across 8 categories | [notes.md](../../references/notes.md) |
 
 ## References
 

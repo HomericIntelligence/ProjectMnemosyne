@@ -90,7 +90,7 @@ Agent(
 ```
 
 **Skills that compose with this:**
-- /learn — delegates to a sub-agent that MUST write to ProjectMnemosyne
+- /learn — delegates to a sub-agent that MUST write to Mnemosyne
 - /finish-branch — sub-agent does git push + PR open
 - Any "implement plan X" follow-up dispatch
 

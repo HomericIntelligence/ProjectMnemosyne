@@ -1,3 +1,54 @@
+## Amended v1.1.0 -> v1.2.0 (2026-07-12)
+
+**What changed**: Added a NEW pattern — **Pattern 11: ThreadPoolExecutor.shutdown(cancel_futures=True)
+does NOT kill running subprocesses** — distinct from the existing hang/OOM/agent-throttle patterns.
+Added a full "Pattern 11" section under Verified Workflow (process-group registry + `os.killpg`
+teardown, with a copy-paste `ProcessGroupRegistry` + `run_tracked` implementation and the
+critical real-subprocess test-design lesson), 2 Failed Attempts rows, a Quick-Reference copy-paste
+block, 6 new tags (`threadpoolexecutor`, `killpg`, `start-new-session`, `process-group-registry`,
+`subprocess-leak`, `worker-pool-shutdown`), a new `description` trigger (14), a new "When to Use"
+bullet, a verified-ci Verified-On row (PR #2061), and bumped `version` 1.1.0 -> 1.2.0 /
+`date` -> 2026-07-12. `verification` frontmatter stays `verified-local` (aggregate across mixed rows;
+the new row is verified-ci).
+
+**Why**: In ProjectHephaestus (PR #2061) a `claude` CLI reviewer child subprocess ran ~19 minutes
+past `WorkerPool.shutdown()`, holding the interpreter open. Root cause: `ThreadPoolExecutor
+.shutdown(wait=False, cancel_futures=True)` cancels only UN-started futures; a job already blocked in
+`subprocess.run`/`Popen.communicate()` on a non-daemon worker thread keeps running, and the
+`concurrent.futures` `atexit` join blocks exit until it finishes. Fix: spawn each child with
+`start_new_session=True` (so `pid == pgid`), track live pgids in a thread-safe registry via a
+`track_process_group` context manager, and `os.killpg(pgid, SIGTERM)` every tracked group in
+`terminate_all()` on shutdown — gated on `hasattr(os, "killpg"/"getpgid")` so Windows no-ops. The
+Popen wrapper preserves the `subprocess.run(check=True, timeout=...)` exception contract
+(`CalledProcessError` on nonzero exit; re-raise `TimeoutExpired` after kill+reap). A second key
+learning: a leak-fix regression test must spawn a REAL OS subprocess (`sys.executable -c
+"time.sleep(60)"`) through the real spawn path and assert completion `< 15 s`; asserting a fake
+pool's `shutdown_calls == 1` proves only the call, not the kill — verify the test FAILS/hangs when
+`terminate_all()` is removed. Reached a GO strict review; all 137 affected tests pass.
+
+### Previous version snapshot (v1.1.0 frontmatter, 2026-06-29)
+
+```yaml
+name: concurrency-and-process-reliability-patterns
+category: debugging
+date: 2026-06-29
+version: "1.1.0"
+verification: verified-local
+history: concurrency-and-process-reliability-patterns.history
+# tags: subprocess, signal, process-group, semaphore, multiprocessing, pytest, oom, ulimit,
+#       monte-carlo, mock, nats, asyncio, retry, transient-errors, threading, agent, fan-out,
+#       wsl, host-exhaustion, swap
+# description triggers (1)-(13); Patterns 1-10 documented.
+```
+
+v1.1.0 documented Patterns 1-10 (subprocess stdin blocking, os.setpgrp Ctrl+C break,
+stty-from-worker hang, `Manager().Semaphore()` global parallelism, ulimit-v pytest OOM bisection,
+mock expensive simulations, nats optional-import-guard enum pitfall, nats-py connection resilience,
+retry transient errors, multi-agent WSL host exhaustion). v1.2.0 keeps all of these unchanged and
+appends Pattern 11 (worker-pool subprocess-leak reaping via pgid registry + killpg).
+
+---
+
 ## Amended v1.0.0 -> v1.1.0 (2026-06-29)
 
 **What changed**: Added a NEW dimension — **multi-AGENT host exhaustion on WSL** — distinct from the

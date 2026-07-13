@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the ProjectMnemosyne release contract (issue #2913).
+"""Validate the Mnemosyne release contract (issue #2913).
 
 Contract (single source of truth: pyproject.toml [project].version):
   1. pyproject version is strict semver (X.Y.Z).
@@ -131,7 +131,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     """CLI entry point. Exit 0 if the contract holds, 1 on any violation."""
     parser = argparse.ArgumentParser(
         prog="validate_release_contract.py",
-        description="Validate the ProjectMnemosyne release contract (version sync + changelog anchor).",
+        description="Validate the Mnemosyne release contract (version sync + changelog anchor).",
     )
     parser.add_argument(
         "--repo-root",
