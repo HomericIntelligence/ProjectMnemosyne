@@ -34,15 +34,17 @@ description: "Use when: (1) creating isolated git worktrees for parallel agent e
   copies (e.g. `github/rate_limit.py`, `automation/advise_runner.py`) and no generic helper — extract
   one `file_lock` contextmanager, don't add a third copy, (21) an in-process `threading.Lock` appears
   'not working' / fails to serialize because the contention is actually ACROSS PROCESSES, so the
-  guard must be an advisory `fcntl.flock(LOCK_EX)` on a sentinel file."
+  guard must be an advisory `fcntl.flock(LOCK_EX)` on a sentinel file, (22) auditing temporary
+  worktrees before cleanup where a clean worktree's local branch name differs from an OPEN PR's
+  head branch but its HEAD SHA is exactly the PR head."
 category: tooling
-date: 2026-06-22
-version: "1.4.0"
+date: 2026-07-13
+version: "1.5.0"
 verification: verified-local
 user-invocable: false
 history: git-worktree-parallel-execution-lifecycle.history
 tags: [worktree, git, parallel-agents, wave-execution, cleanup, branch-collision, contamination,
-  locked-worktree, staged-files, rebase-merge, myrmidon, safety-net, lifecycle]
+  locked-worktree, staged-files, rebase-merge, myrmidon, safety-net, lifecycle, pr-preservation]
 ---
 # Git Worktree Parallel Execution Lifecycle
 
@@ -50,10 +52,10 @@ tags: [worktree, git, parallel-agents, wave-execution, cleanup, branch-collision
 
 | Field | Value |
 | ------ | ----- |
-| **Date** | 2026-05-19 |
+| **Date** | 2026-07-13 |
 | **Objective** | Complete lifecycle of git worktrees for parallel agent execution: creation, switching, syncing, parallel dispatch, contamination recovery, and constraint-aware cleanup |
 | **Outcome** | Canonical consolidation of 4 skills: worktree-parallel-agent-execution (v1.5.0), worktree-cleanup-user-constraints (v1.6.0), git-worktree-management-patterns (v2.8.0), worktree-lifecycle-create-switch-sync (v1.0.0) |
-| **Verification** | verified-ci |
+| **Verification** | verified-local |
 | **History** | [changelog](./git-worktree-parallel-execution-lifecycle.history) |
 
 Covers the full git worktree lifecycle for parallel agent work: creation, navigation, syncing
@@ -89,6 +91,9 @@ mass cleanup. Includes the critical "no-worktree-at-all" anti-pattern warning.
   clone-within-a-repo (e.g. `build/.worktrees/...`, `build/<OtherProject>`)
 - Distinguishing stale-checkout drift (redundant-with-main dirty diff) from real uncommitted work
 - A bulk `git reset --hard` / `git clean -fd` / `git worktree remove --force` got safety-net-blocked
+- Auditing clean temporary worktrees before cleanup when an OPEN PR's head branch differs from
+  the local worktree branch name
+- Preserving all physical worktrees while pruning only stale Git worktree metadata
 
 **Cross-process subprocess contention:**
 
@@ -358,6 +363,79 @@ FILE="$WORKTREE_ROOT/tests/shared/training/test_file.mojo"
 **Detect already-done work:** `git log --oneline -3` and `gh pr list --head <branch>` before planning.
 
 ### Phase 6: Constraint-Aware Worktree Cleanup
+
+#### Preservation-First Audit for Open PR Worktrees (verified-local, Inference360 2026-07-13)
+
+Start with a read-only inventory. A worktree can be on a locally renamed branch while its HEAD
+commit is exactly the head of an OPEN PR. Treat the commit SHA as the identity, not the local
+branch name. Such a worktree is **KEEP**, even when `gh pr list --head <local-branch>` returns no
+PR. Never remove a physical worktree or a branch during this audit; `git worktree prune` is the
+only mutation and removes stale metadata for paths that no longer exist.
+
+```bash
+set -euo pipefail
+
+# Run from the primary checkout. The first porcelain entry is the primary worktree and is never touched.
+MAIN_WT=$(git worktree list --porcelain | awk '/^worktree / {print substr($0, 10); exit}')
+BASE_REF=origin/main
+PR_CACHE=$(mktemp)
+trap 'rm -f "$PR_CACHE"' EXIT
+
+git -C "$MAIN_WT" fetch origin
+git -C "$MAIN_WT" worktree list --porcelain
+git -C "$MAIN_WT" stash list  # Shared repository state: record it; never drop or pop it here.
+
+# Cache all OPEN PR heads once. A failed GitHub query is ambiguous, so fail closed without pruning.
+gh pr list --state open --limit 1000 --json number,headRefName,headRefOid,url \
+  --jq '.[] | [.number, .headRefOid, .headRefName, .url] | @tsv' >"$PR_CACHE"
+
+git -C "$MAIN_WT" worktree list --porcelain | \
+  awk '/^worktree / {print substr($0, 10)}' | while IFS= read -r wt; do
+    head=$(git -C "$wt" rev-parse HEAD)
+    branch=$(git -C "$wt" branch --show-current || true)
+    status=$(git -C "$wt" status --short)
+    upstream=$(git -C "$wt" rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null || true)
+
+    printf '\nworktree=%s\nbranch=%s\nhead=%s\nstatus=%s\n' \
+      "$wt" "${branch:-DETACHED}" "$head" "${status:-CLEAN}"
+    if [ -n "$upstream" ]; then
+      printf 'remote_divergence(behind ahead)=' \
+        && git -C "$wt" rev-list --left-right --count "$upstream...HEAD"
+    else
+      printf 'remote_divergence=NO_UPSTREAM\n'
+    fi
+
+    # git cherry performs the patch-id equivalence comparison against the base.
+    git -C "$wt" cherry "$BASE_REF" "$head" || true
+    git -C "$wt" diff --stat "$BASE_REF...$head"
+
+    if [ "$wt" = "$MAIN_WT" ]; then
+      printf 'decision=KEEP reason=primary worktree remains untouched\n'
+      continue
+    fi
+
+    # Match the SHA, not only the local branch name. This catches renamed local branches.
+    open_pr=$(awk -F '\t' -v sha="$head" '$2 == sha {print; exit}' "$PR_CACHE")
+    if [ -n "$open_pr" ]; then
+      printf 'decision=KEEP reason=OPEN_PR_EXACT_HEAD %s\n' "$open_pr"
+      continue
+    fi
+
+    if [ -n "$status" ]; then
+      printf 'decision=KEEP reason=uncommitted state requires separate classification\n'
+    else
+      printf 'decision=KEEP reason=no exact OPEN PR match; classify before any removal\n'
+    fi
+  done
+
+# This removes only stale registration metadata. It does not delete existing worktrees or branches.
+git -C "$MAIN_WT" worktree prune
+```
+
+The audit has six independent signals: porcelain inventory, per-worktree status, repository stash
+inventory, remote divergence, OPEN PR state matched by `headRefOid`, and patch/tree comparison
+(`git cherry` plus `git diff --stat`). Any missing signal is a **KEEP** result. `git worktree
+remove`, `git branch -d`, `git branch -D`, and `git stash drop` are deliberately absent.
 
 #### All-Clean Shortcut
 
@@ -710,6 +788,7 @@ gh api --method DELETE "repos/$REPO/git/refs/heads/<branch-name>"
 | `worktree_path.exists()`-then-`git worktree add` guard | Checked path existence, then created the worktree if absent | Across processes this is a TOCTOU race — the second process passes the `.exists()` check before the first's `git worktree add` completes, then collides | Serialize the WHOLE create (and its enclosing sweep) under a cross-process `file_lock`; the second holder re-globs/re-loads and finds the records already terminal → no-ops |
 | Add a third inline `fcntl.flock` copy for the new lock site | Was about to inline another flock block in `ci_driver.py` like the two existing ones | Two inline flock copies already existed (`github/rate_limit.py`, `automation/advise_runner.py`) with no generic helper — a third copy is a DRY violation | Extract ONE reusable `hephaestus/utils/file_lock.py` `@contextmanager file_lock(path, *, blocking=True)` (secure `O_NOFOLLOW` open, `LockUnavailableError` on `LOCK_NB`, Windows no-op) and route all sites through it |
 | Fix the visible `/compact` "No conversation found with session ID" warning | Investigated the `/compact` session-id warning as the primary bug | It was a CASCADED downstream symptom: the worktree-creation race self-recovered via a repo-root fallback whose fresh /learn session had a deterministic session_uuid that never existed | Trace cascading warnings back to the ORIGINAL masked failure; fixing the cross-process race at the source eliminated both the collision and the `/compact` warning |
+| Match an OPEN PR only by local worktree branch name | A cleanup audit initially relied on `gh pr list --head <local-branch>` for each temporary worktree | Clean temporary worktrees for Inference360 PRs #399 and #400 were valid OPEN PR worktrees, but a local branch can be renamed or differ from the PR's head branch | Cache OPEN PR `headRefOid` values and compare each worktree's HEAD SHA. An exact match is **KEEP** regardless of local branch name; do not remove the worktree or its branch |
 
 ## Results & Parameters
 
@@ -795,3 +874,4 @@ WORKTREE_PATH=$(git worktree list --porcelain 2>/dev/null | \
 | ProjectOdyssey | `scripts/rebase-all-branches.sh` inline cleanup refactor (PR #5408) | 2026-05-14 |
 | ProjectHephaestus | Worktree-cleanup safety session: cross-repo hiding under `build/.worktrees/mnemo-skill-911` (belonged to ProjectMnemosyne via stray `build/ProjectMnemosyne` clone); stale-checkout drift on merged worktrees proven redundant via `git cat-file -e main:<file>`; bulk `reset --hard`/`clean -fd`/`remove --force` across 14 trees safety-net-blocked → handed per-worktree commands to user (verified-local, read-only audit + recommendation) | worktree-cleanup safety 2026-06-15 |
 | ProjectHephaestus | Cross-PROCESS worktree-creation race in the issue-major automation loop (issues 1553/1547): two `hephaestus-ci-driver` subprocesses ran `_sweep_orphaned_arming_records` simultaneously → `create_worktree(issue-1547)` collision (`fatal: ... already exists`); fixed with new reusable `hephaestus/utils/file_lock.py` (`fcntl.flock`) wrapping the sweep, extracted from two pre-existing inline flock copies. PR #1568 / issue #1567. Verified-local: 2017 unit tests pass, mypy clean (411 files), ruff clean, TDD RED→GREEN for both `file_lock` and the sweep regression; PR CI still PENDING (unit-test matrix) at capture time | cross-process-orphan-sweep-race 2026-06-21 |
+| Inference360 | Preservation-first cleanup audit found two clean temporary worktrees matching OPEN PRs #399 and #400 by exact head SHA. Both were retained even where local branch naming could not be used as the identity; only stale metadata was pruned. | 2026-07-13 — verified-local, read-only audit plus `git worktree prune` |

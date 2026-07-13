@@ -1,6 +1,44 @@
 <!-- markdownlint-disable MD024 -->
 # git-worktree-parallel-execution-lifecycle — History
 
+## v1.5.0 (2026-07-13)
+
+**Changed by:** Inference360 PR #399/#400 worktree-cleanup preservation audit
+**Verification:** verified-local
+
+### What changed
+
+- Added the "Preservation-First Audit for Open PR Worktrees" workflow. It inventories porcelain
+  worktrees, status, stash state, upstream divergence, OPEN PR heads, patch-id equivalence, and
+  tree diffs before any cleanup decision.
+- Added the critical identity rule: a clean temporary worktree is **KEEP** when its HEAD SHA
+  exactly equals an OPEN PR `headRefOid`, even if its local branch name differs from the PR head
+  branch. Matching only `gh pr list --head <local-branch>` is insufficient.
+- Made the audit fail closed: the primary worktree remains untouched; every ambiguous result is
+  **KEEP**; no worktree, branch, or stash is removed. The sole mutation is `git worktree prune`,
+  which removes only stale Git worktree metadata.
+- Added the failed-attempt and Verified On evidence from an Inference360 audit that retained two
+  clean temporary worktrees backing OPEN PRs #399 and #400.
+- Bumped version 1.4.0 → 1.5.0 (minor: new verified-local workflow and failure mode).
+
+### Why
+
+Open PRs are authoritative work in progress even when a local worktree was created from a
+differently named branch. Branch-name-only PR lookup can misclassify that clean worktree as
+orphaned and make it eligible for removal. Comparing commit identity (`HEAD` to `headRefOid`)
+preserves the actual PR checkout. The Inference360 audit showed this rule in practice: two clean
+temporary worktrees exactly matched OPEN PRs #399 and #400, so both were retained and only stale
+metadata was pruned.
+
+### Previous version (v1.4.0) snapshot
+
+The exact prior skill is preserved in the immutable parent revision
+`272851f6:skills/git-worktree-parallel-execution-lifecycle.md`. This amendment is additive: it
+adds the preservation-first Phase 6 subsection, one failed-attempt row, one Verified On row, and
+the matching frontmatter/When-to-Use updates.
+
+---
+
 ## v1.4.0 (2026-06-22)
 
 **Changed by:** ProjectHephaestus issue-major automation-loop cross-process worktree race (real 2026-06-21 output.log, issues 1553/1547) → fix PR #1568 / issue #1567 (new `hephaestus/utils/file_lock.py`)
