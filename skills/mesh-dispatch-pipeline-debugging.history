@@ -1,3 +1,42 @@
+# mesh-dispatch-pipeline-debugging — History
+
+## v1.1.0 (2026-07-12)
+
+**Changed by:** Session context — live detection + drain of a concurrent Agamemnon/NATS
+agent mesh force-pushing its own (failing) rebase over the operator's manual PR fix on
+Hephaestus PR #2056.
+**Verification:** verified-local
+
+### What changed
+- Added a new subsection "Concurrent Mesh Overwrites Your Manual PR Fix (Detect → Drain,
+  Don't Decapitate)" to the Verified Workflow: how a long-running org-wide mesh (Agamemnon
+  dispatcher on :8080 + NATS on :4222 + hephaestus-mesh-worker) from a SECOND checkout can
+  drive the SAME PRs you are manually fixing and force-push a wrong rebase over yours.
+- Detection recipe (ps for hephaestus-mesh-worker, git worktree list in the other checkout,
+  branch-tip drift via git rev-parse origin/<branch>, lsof +D, worker-flicker sampling).
+- The DRAIN-don't-decapitate call: query the dispatcher /v1/tasks for total:0 rather than
+  SIGKILLing the org-wide Agamemnon control plane; SIGTERM'd workers respawn if the queue is
+  non-empty.
+- Added 3 new "When to Use" triggers and 3 new Failed Attempts rows.
+- Added a "Concurrent-mesh contention" block to Results & Parameters.
+- Added the single-writer-per-repo prevention note.
+
+### Why
+The v1.0.0 skill covered operating the mesh as the DRIVER (dispatching issues, fixing
+container/pipeline defects). It did not cover the operator being a VICTIM of the mesh: when
+you manually fix a PR while the mesh is also assigned that repo, its ci_fix_orchestrator can
+force-push a rebase (often CI-failing, because it doesn't re-run the guard suite before
+pushing) over your correct fix and then loop on the failure. Symptoms observed: run_end exit
+code 130 on the operator's own drive-green loop, and a rejected `git push` ("tip behind
+remote") because a concurrent writer advanced the branch. Killing the workers alone did not
+hold (they respawn); killing Agamemnon would take down unrelated ecosystem work
+(PredictiveCoding sweeps). Draining the offending repo's task queue (verify /v1/tasks
+total:0) is what actually stops it. The operator's #2056 fix held at sha 79f9ebb3 after
+draining.
+
+### Previous version (v1.0.0) snapshot
+
+`````markdown
 ---
 name: mesh-dispatch-pipeline-debugging
 description: "Debug and fix the live HomericIntelligence agent mesh dispatch pipeline
@@ -7,16 +46,12 @@ description: "Debug and fix the live HomericIntelligence agent mesh dispatch pip
   fails with 'No conversation found' across ephemeral containers, (5) IMPLEMENT stage
   gets permission denied writing to bind-mounted workspace, (6) pipeline loops on
   NOGO due to empty REVIEW output, (7) git push blocked by GitHub email privacy, (8)
-  PR stuck in CONFLICTING state blocking CI auto-merge, (9) a concurrent mesh worker
-  force-pushes its own rebase over YOUR manual PR fix (git push rejected 'tip behind
-  remote'; run_end exit 130), (10) you need to STOP the mesh touching one repo without
-  killing the org-wide Agamemnon control plane."
+  PR stuck in CONFLICTING state blocking CI auto-merge."
 category: ci-cd
-date: "2026-07-12"
-version: "1.1.0"
+date: "2026-04-25"
+version: "1.0.0"
 user-invocable: false
-verification: verified-local
-history: mesh-dispatch-pipeline-debugging.history
+verification: verified-ci
 tags:
   - agamemnon
   - nats
@@ -39,11 +74,11 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-07-12 |
-| **Objective** | Dispatch GitHub issues through the live HomericIntelligence agent mesh (Agamemnon → NATS → claude-myrmidon Python workers → GitHub PRs) AND, when the mesh contends with your own manual PR work, detect it and drain the offending repo's tasks without decapitating the org-wide control plane |
-| **Outcome** | SUCCESS — original dispatch (v1.0.0) closed issues #22/#69 via PR #147; v1.1.0 detected + drained a concurrent mesh that force-pushed a failing rebase over the operator's Hephaestus PR #2056 fix; the operator's fix held at sha 79f9ebb3 after draining |
-| **Verification** | verified-local (v1.1.0 detection + drain performed live; not a CI-gated claim) |
-| **History** | [changelog](./mesh-dispatch-pipeline-debugging.history) |
+| **Date** | 2026-04-25 |
+| **Objective** | Dispatch GitHub issues #22 (CI hardening) and #69 (Claude read-permissions) through the live HomericIntelligence agent mesh (Agamemnon → NATS → claude-myrmidon Python workers → GitHub PRs), running the full PLAN→TEST→IMPLEMENT→REVIEW→SHIP pipeline |
+| **Outcome** | SUCCESS — both issues closed by mesh PRs; PR #147 merged to main; `e2e/claude-myrmidon.py` committed with all container fixes |
+| **Verification** | verified-ci — PRs merged, CI passed end-to-end |
+| **History** | N/A (initial version) |
 
 ## When to Use
 
@@ -57,14 +92,6 @@ tags:
 - PR stuck in CONFLICTING state; GitHub CI won't run and auto-merge stalls
 - `.markdownlint.yaml` on main causes lint failures for new PRs
 - Auto-merge dropped silently after a force-push or new commit
-- A `git push` to your PR branch is rejected `tip behind remote`, or your own drive-green
-  loop reports `run_end` exit code 130 (interrupted) — a concurrent mesh writer advanced the
-  branch underneath you
-- A `hephaestus-mesh-worker` from a SECOND checkout is force-pushing its own (often
-  CI-failing) rebase over your manual PR fix and looping on the failure
-- You need to STOP the mesh touching ONE repo without taking down the shared org-wide
-  Agamemnon control plane (which also runs unrelated ecosystem work, e.g. PredictiveCoding
-  sweeps)
 
 ## Verified Workflow
 
@@ -231,61 +258,6 @@ gh pr merge --auto --rebase <N> --repo <OWNER/REPO>
 If still stuck after a retrigger commit, create a fresh branch from main tip and
 cherry-pick only the needed diff (see PR Conflict Resolution Pattern above).
 
-### Concurrent Mesh Overwrites Your Manual PR Fix (Detect → Drain, Don't Decapitate)
-
-A long-running org-wide agent mesh (Agamemnon dispatcher on `localhost:8080` + NATS on
-`localhost:4222` + `hephaestus-mesh-worker` processes) can be assigned the SAME repo you are
-manually fixing — often from a SECOND checkout on the box (e.g. `/home/mvillmow/Hephaestus`
-distinct from your `/home/mvillmow/ProjectHephaestus`). Its `ci_fix_orchestrator` will
-force-push its OWN rebase over your correct one; that rebase frequently FAILS CI (it computes
-doc/line refs wrong and does not re-run the guard suite before pushing) and then LOOPS on the
-failure — never merging, going backwards.
-
-Observed live on Hephaestus PR #2056: the mesh force-pushed `40086268` → `64e28415` over the
-operator's correct fix; CI went red; it looped. Flagging symptoms: `run_end` exit code 130
-(interrupted) on the operator's own drive-green loop, plus a rejected `git push`
-(`tip behind remote`) because a concurrent writer advanced the branch.
-
-**Detect** (take 3-5 samples 1-2s apart — mesh workers FLICKER spawn→exit fast when the
-dispatcher has no work, so one `ps` sample cannot distinguish flicker from a persistent
-worker):
-
-```bash
-# Multiple long-uptime workers?
-ps -eo pid,etime,cmd | grep hephaestus-mesh-worker
-# The SECOND checkout has worktrees on the SAME issue-N branches you're on:
-git -C /path/to/OTHER/checkout worktree list
-# Did the branch tip change underneath you? (your pushed sha != remote)
-git rev-parse origin/<branch>          # compare to the sha YOU pushed
-# Is a mesh process holding repo files open?
-lsof +D /path/to/repo
-```
-
-**Drain, don't decapitate** — the mesh is org-wide (also runs PredictiveCoding sweeps, etc.),
-so `SIGKILL` on `ProjectAgamemnon_server` takes down unrelated work. Instead, drain just the
-offending repo's tasks and confirm the dispatcher queue is empty:
-
-```bash
-# Query the dispatcher: total:0 means nothing is queued — the mesh will stop touching the
-# repo on its own once any in-flight task finishes.
-curl -s -H "Authorization: Bearer $(cat ~/Agents/mesh/.agamemnon_key)" \
-  http://localhost:8080/v1/tasks           # → {"total":0,...} = drained
-curl -s -H "Authorization: Bearer $(cat ~/Agents/mesh/.agamemnon_key)" \
-  http://localhost:8080/v1/agents          # registered workers
-
-# SIGTERM stops CURRENT execution but workers RESPAWN if the dispatcher re-dispatches.
-# So killing workers alone does NOT hold — the empty queue (total:0) is what stops it.
-kill -TERM <hephaestus-mesh-worker-pids>
-
-# Verify your fix HELD after draining:
-git rev-parse origin/<branch>            # still equals YOUR pushed sha
-lsof +D /path/to/repo                    # no mesh process holding files
-```
-
-**Prevention:** enforce a single-writer-per-repo rule — a merge queue (see the merge-queue
-proposal) or a per-repo advisory lock. The mesh's `ci_fix_orchestrator` MUST run the guard /
-pre-commit suite before force-pushing a CI-fix rebase, so it never pushes a red rebase.
-
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -303,9 +275,6 @@ pre-commit suite before force-pushing a CI-fix rebase, so it never pushes a red 
 | 11 | `.markdownlint.yaml` with 200-char line limit on main | New PRs fail lint because docs exceed 80-char limit | Replace with `.markdownlint.json` using 80-char limit with table/code/heading exemptions |
 | 12 | Auto-merge after force-push or new commits | GitHub silently drops auto-merge on every push | Always run `gh pr merge --auto --rebase <N>` after every push to a PR branch |
 | 13 | Container network name `homeric-mesh` | Network created by compose uses project-prefix: `odysseus_homeric-mesh` | Set `CONTAINER_NETWORK=odysseus_homeric-mesh` or default to it in `_build_container_cmd` |
-| 14 | `kill -TERM` the `hephaestus-mesh-worker` pids to stop the mesh clobbering PR #2056 | Workers RESPAWNED — the Agamemnon dispatcher re-dispatched queued tasks to fresh workers | Killing workers alone doesn't hold; DRAIN the dispatcher's task queue and confirm `/v1/tasks` `total:0` — that is what actually stops it |
-| 15 | Considered `SIGKILL` on `ProjectAgamemnon_server` as "stop the mesh" | Agamemnon is the org-wide control plane (PredictiveCoding sweeps, all ecosystem automation); killing it takes down unrelated work | Drain the SPECIFIC repo's tasks; leave the shared control plane running |
-| 16 | Re-launched the operator's own drive-green loop into the contention | Interrupted (`run_end` exit 130) + rejected `git push` — the mesh had advanced the branch concurrently | Don't run a competing automation into an active mesh; enforce single-writer-per-repo (merge queue or advisory lock) |
 
 ## Results & Parameters
 
@@ -326,22 +295,10 @@ pre-commit suite before force-pushing a CI-fix rebase, so it never pushes a red 
 | markdownlint line length | 80 (tables/code_blocks/headings exempt) |
 | Auto-merge command | `gh pr merge --auto --rebase <N> --repo <OWNER/REPO>` |
 | Auto-merge re-arm | Required after every push/force-push to PR branch |
+`````
 
-### Concurrent-mesh contention (v1.1.0)
+---
 
-| Parameter | Verified Value |
-| ----------- | ---------------- |
-| Agamemnon control-plane process | `ProjectAgamemnon_server` on `localhost:8080` |
-| NATS bus | `localhost:4222` |
-| Mesh worker process name | `hephaestus-mesh-worker` |
-| Dispatcher auth | `Authorization: Bearer $(cat ~/Agents/mesh/.agamemnon_key)` |
-| Drain-confirmed signal | `GET /v1/tasks` → `{"total":0,...}` |
-| Registered-workers query | `GET /v1/agents` |
-| Kill semantics | `kill -TERM <worker-pids>` stops CURRENT run only; workers RESPAWN unless queue is drained |
-| DO NOT | `SIGKILL ProjectAgamemnon_server` — it is the org-wide control plane |
-| Branch-drift check | `git rev-parse origin/<branch>` != your pushed sha ⇒ concurrent writer |
-| File-hold check | `lsof +D <repo>` shows a mesh process ⇒ still active |
-| Flicker sampling | 3-5 `ps` samples 1-2s apart (workers spawn→exit fast when idle) |
-| Contention symptoms | `run_end` exit 130; `git push` rejected `tip behind remote` |
-| Verified outcome | Operator's Hephaestus PR #2056 fix held at sha `79f9ebb3` after draining |
-| Prevention | Single-writer-per-repo (merge queue / advisory lock); mesh `ci_fix_orchestrator` must run guard suite before force-pushing a CI-fix rebase |
+## v1.0.0 (2026-04-25)
+
+**Initial version.**
