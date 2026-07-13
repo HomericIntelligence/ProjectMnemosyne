@@ -6,7 +6,7 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "2.1.0",
-  "total_plugins": 644,
+  "total_plugins": 645,
   "categories": {
     "architecture": 133,
     "ci-cd": 122,
@@ -15,10 +15,10 @@
     "evaluation": 12,
     "optimization": 8,
     "testing": 84,
-    "tooling": 174,
+    "tooling": 175,
     "training": 7
   },
-  "last_updated": "2026-07-10T01:24:41Z",
+  "last_updated": "2026-07-13T21:46:32Z",
   "plugins": [
     {
       "name": "agent-config-validation-and-integrity",
@@ -11164,6 +11164,21 @@
         "duplicate-pr",
         "branch-collision",
         "myrmidon"
+      ]
+    },
+    {
+      "name": "systemd-docker-compose-restart-storm-fix",
+      "description": "Fix systemd units supervising docker-compose-managed stacks that get stuck in activating (auto-restart) restart-storm loops, caused by combining systemd Restart=always with an attached (foreground) `docker compose up` on services that already carry their own container-level restart: policy. Use when: (1) `systemctl status` shows `Active: activating (auto-restart)` indefinitely for a docker compose unit even though `docker ps` shows the container running fine, (2) unit logs show `Error response from daemon: Conflict. The container name ... is already in use by container ...`, (3) after switching a unit to detached `docker compose up -d` you instead see `Error response from daemon: endpoint with name ... already exists in network ...` with zero matching containers in `docker ps -a`, (4) designing a systemd unit to supervise a docker-compose project and deciding who should own restart responsibility.",
+      "version": "1.0.0",
+      "source": "./skills/systemd-docker-compose-restart-storm-fix.md",
+      "category": "tooling",
+      "tags": [
+        "systemd",
+        "docker-compose",
+        "docker",
+        "restart-storm",
+        "RemainAfterExit",
+        "libnetwork"
       ]
     },
     {
