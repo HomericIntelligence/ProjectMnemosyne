@@ -6,7 +6,7 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "2.1.0",
-  "total_plugins": 641,
+  "total_plugins": 642,
   "categories": {
     "architecture": 132,
     "ci-cd": 122,
@@ -14,11 +14,11 @@
     "documentation": 40,
     "evaluation": 12,
     "optimization": 7,
-    "testing": 83,
+    "testing": 84,
     "tooling": 174,
     "training": 7
   },
-  "last_updated": "2026-07-09T17:24:55Z",
+  "last_updated": "2026-07-13T04:49:09Z",
   "plugins": [
     {
       "name": "agent-config-validation-and-integrity",
@@ -985,8 +985,8 @@
     },
     {
       "name": "git-unmerged-branch-file-access",
-      "description": "Access and plan fixes for files that exist only on non-main git branches, and never declare a cited file 'phantom' until you have searched all branches. Use when: (1) Read/Glob/Grep return not-found for a file an issue references, so you are tempted to call it non-actionable / phantom code, (2) planning a 'follow-up from #NNN' bug whose cited file/symbol is absent from the default branch (it likely came from a parent PR that has not merged), (3) a PR fix must target a feature branch rather than main, (4) an issue cites a raw line number that no longer matches the branch tip (line drift).",
-      "version": "2.0.0",
+      "description": "Access and plan fixes for files that are absent from your checkout \u2014 they may live on an unmerged feature branch, OR on origin/main when your checked-out branch simply predates them \u2014 and never declare a cited file 'phantom' until you have searched all branches. Also covers git-archaeology for changelog maintenance: attributing lines of a collapsed CHANGELOG/doc entry to the commits that introduced them. Use when: (1) Read/Glob/Grep return not-found for a file an issue references, so you are tempted to call it non-actionable / phantom code, (2) planning a 'follow-up from #NNN' bug whose cited file/symbol is absent from the default branch (it likely came from a parent PR that has not merged), (3) a PR fix must target a feature branch rather than main, (4) an issue cites a raw line number or literal entry text that no longer matches the branch tip (drift \u2014 issue text goes stale relative to main), (5) you must attribute lines of a collapsed CHANGELOG/doc entry to the commits that introduced them.",
+      "version": "2.1.0",
       "source": "./skills/git-unmerged-branch-file-access.md",
       "category": "architecture",
       "tags": [
@@ -999,7 +999,11 @@
         "planning",
         "feature-branch",
         "pr-base",
-        "carrier-branch"
+        "carrier-branch",
+        "changelog",
+        "pickaxe",
+        "plan-grounding",
+        "stale-issue-text"
       ]
     },
     {
@@ -4206,8 +4210,8 @@
     },
     {
       "name": "git-dco-signoff-distinct-from-gpg-sign",
-      "description": "The DCO Signed-off-by trailer (git commit -s) is a SEPARATE requirement from GPG/SSH cryptographic signing (git commit -S); a commit can be -S signed yet still fail the pr-policy DCO check because it lacks the trailer. Use when: (1) a PR is BLOCKED and the pr-policy / required-checks-gate CI gate fails with 'missing Signed-off-by: Name <email> trailer' even though git log --show-signature shows a valid GPG signature, (2) automation/agent-generated commits (auto-impl branches) lack the DCO trailer because the generator ran `git commit -S` without `-s`, (3) you need to retroactively add Signed-off-by to every commit on a branch WITHOUT losing GPG signatures, (4) lint passes but required-checks-gate still fails \u2014 check pr-policy sub-checks (Check 4 is DCO), (5) you fixed only one blocker (mypy/lint) but the gate is still red on a second independent DCO failure.",
-      "version": "1.0.0",
+      "description": "The DCO Signed-off-by trailer (git commit -s) is a SEPARATE requirement from GPG/SSH cryptographic signing (git commit -S); a commit can be -S signed yet still fail the pr-policy DCO check because it lacks the trailer. Use when: (1) a PR is BLOCKED and the pr-policy / required-checks-gate CI gate fails with 'missing Signed-off-by: Name <email> trailer' even though git log --show-signature shows a valid GPG signature, (2) automation/agent-generated commits (auto-impl branches) lack the DCO trailer because the generator ran `git commit -S` without `-s`, (3) you need to retroactively add Signed-off-by to every commit on a branch WITHOUT losing GPG signatures, (4) lint passes but required-checks-gate still fails \u2014 check pr-policy sub-checks (Check 4 is DCO), (5) you fixed only one blocker (mypy/lint) but the gate is still red on a second independent DCO failure, (6) `git log` shows TWO (or more) `Signed-off-by` trailers on the same commit after the retroactive fix-all recipe was run more than once \u2014 this is a DUPLICATE trailer, not a missing one, caused by `--exec ... -s -S` being run twice with different `user.name` config values, since `-s` dedups by literal string match on the whole trailer line, not by email, (7) you are about to run `git rebase --exec \"git commit --amend --no-edit -s -S\" origin/main` on a branch that may ALREADY carry a Signed-off-by trailer (e.g. a resumed/interrupted rebase session) \u2014 reconcile `git config user.name` first to avoid producing a duplicate trailer.",
+      "version": "1.1.0",
       "source": "./skills/git-dco-signoff-distinct-from-gpg-sign.md",
       "category": "ci-cd",
       "tags": []
@@ -4307,8 +4311,8 @@
     },
     {
       "name": "github-ruleset-review-count-governance",
-      "description": "Use when: (1) auditing GitHub org or repo branch-protection ruleset JSON files for a zero-review governance gap (`required_approving_review_count: 0`), (2) fixing `required_approving_review_count` in canonical ruleset JSON files and the issue only names a subset of the files, (3) adding a CI regression guard to assert the review count cannot regress silently, (4) checking whether existing `bypass_actors` already mitigate the self-merge deadlock that requiring >=1 review creates, (5) leaving `enforcement` untouched and treating activation as a separate operational step.",
-      "version": "1.0.0",
+      "description": "Use when: (1) auditing GitHub org or repo branch-protection ruleset JSON files for a zero-review governance gap (`required_approving_review_count: 0`), (2) fixing `required_approving_review_count` in canonical ruleset JSON files and the issue only names a subset of the files, (3) adding a CI regression guard to assert the review count cannot regress silently, (4) checking whether existing `bypass_actors` already mitigate the self-merge deadlock that requiring >=1 review creates, (5) leaving `enforcement` untouched and treating activation as a separate operational step, (6) green auto-merge-armed PRs will not merge because an automation authors PRs AS the operator and self-approval is forbidden \u2014 the count MUST be 0 on BOTH the classic branch protection and the repository ruleset layer.",
+      "version": "1.1.0",
       "source": "./skills/github-ruleset-review-count-governance.md",
       "category": "ci-cd",
       "tags": [
@@ -4534,8 +4538,8 @@
     },
     {
       "name": "mesh-dispatch-pipeline-debugging",
-      "description": "Debug and fix the live HomericIntelligence agent mesh dispatch pipeline (Agamemnon \u2192 NATS \u2192 claude-myrmidon Python workers \u2192 GitHub PRs). Use when: (1) Agamemnon POST /v1/tasks returns 404, (2) Claude CLI in container produces zero API traffic, (3) container agent gets EACCES on .credentials.json, (4) --resume fails with 'No conversation found' across ephemeral containers, (5) IMPLEMENT stage gets permission denied writing to bind-mounted workspace, (6) pipeline loops on NOGO due to empty REVIEW output, (7) git push blocked by GitHub email privacy, (8) PR stuck in CONFLICTING state blocking CI auto-merge.",
-      "version": "1.0.0",
+      "description": "Debug and fix the live HomericIntelligence agent mesh dispatch pipeline (Agamemnon \u2192 NATS \u2192 claude-myrmidon Python workers \u2192 GitHub PRs). Use when: (1) Agamemnon POST /v1/tasks returns 404, (2) Claude CLI in container produces zero API traffic, (3) container agent gets EACCES on .credentials.json, (4) --resume fails with 'No conversation found' across ephemeral containers, (5) IMPLEMENT stage gets permission denied writing to bind-mounted workspace, (6) pipeline loops on NOGO due to empty REVIEW output, (7) git push blocked by GitHub email privacy, (8) PR stuck in CONFLICTING state blocking CI auto-merge, (9) a concurrent mesh worker force-pushes its own rebase over YOUR manual PR fix (git push rejected 'tip behind remote'; run_end exit 130), (10) you need to STOP the mesh touching one repo without killing the org-wide Agamemnon control plane.",
+      "version": "1.1.0",
       "source": "./skills/mesh-dispatch-pipeline-debugging.md",
       "category": "ci-cd",
       "tags": [
@@ -4978,8 +4982,8 @@
     },
     {
       "name": "pr-rebase-conflict-resolution-patterns",
-      "description": "Use when: (1) a PR branch is CONFLICTING or DIRTY after main advances and needs rebasing, (2) a mass rebase of 10+ PRs is needed after a major refactor causes conflicts across the queue, (3) a stacked PR goes DIRTY when its prerequisite merges and the base must be retargeted \u2014 later CI/lint fix commits on the dependent branch are orphaned and must be cherry-picked, (4) a Safety Net hook blocks git checkout --theirs / --ours during automated rebase conflict resolution, (5) a file was completely rewritten on one branch and small targeted edits exist on the other, (6) a parallel swarm produced overlapping PRs that conflict on the same paths and one must be rebased onto the other, (7) a feature PR conflicts after a sibling refactor merges and edits must be ported to the new file structure, (8) a TypeScript or other language-level shadowing bug appears only after a rebase because two branches independently added identically-named locals to the same scope, (9) numerical or optimizer PRs conflict when main merged its own version of a shared module and API signatures changed, (10) a PR's substantive change independently landed on main via a sibling PR so a rebase produces an add/add conflict on a duplicated new file and the PR becomes a near-no-op residual, (11) a PR is DIRTY with all CI checks green/passing \u2014 the merge conflict itself is the sole blocker (rebase, do not hunt for a failing job), (12) a rebase hits a modify/delete conflict on a file the PR intentionally deletes \u2014 confirm the base copy is still stale then git rm, (13) a PR is BLOCKED with mergeable=MERGEABLE but a required check shows SKIPPED \u2014 the required check is gated by needs: on a job that fails because the branch carries unpinned GitHub Actions rejected by an org-wide SHA-pin policy; fix is rebase to inherit main's pinned workflow files (not an empty re-trigger commit), (14) multiple rebased PRs \u2014 including ones unrelated to the failing test \u2014 all fail the SAME test after merging onto main; suspect a broken main from a SEMANTIC collision between two independently-merged PRs that never textually conflict (e.g. a return-tuple arity change + a stale test mock), prove it by running the failing test against bare origin/main, and fix main first, (15) two parallel cluster-extraction PRs both create the same new module file and the rebase produces an add/add conflict on BOTH the source module AND its test file \u2014 main's source is authoritative, test files must be semantically merged (keep main's richer base + append your branch's unique test classes), (16) a rebase hits AA (both-added) conflicts on new files \u2014 the conflicted file shows NO <<<<<<< markers and contains only one side's content; you must use git show HEAD:<path> and git show REBASE_HEAD:<path> to read both versions before resolving, (17) a CLUSTER of sibling refactor PRs all edit the SAME shared files and were run in parallel so all but one are CONFLICTING/DIRTY (and possibly hand-braked with state:skip) \u2014 land them as a SEQUENTIAL rebase chain SMALLEST-DIFF-FIRST, rebasing each onto trunk only AFTER the prior merges, resolving every conflict as the UNION of each refactor's extractions (keep both helpers; every duplicated method becomes a thin delegate; merge import lists and drop now-unused imports via lint), then re-sign all commits with `git rebase --exec '...-s -S' origin/main` for DCO+GPG, (18) after rebase, tests fail because test mocks expected the PR branch's refactored signatures but rebase brought in origin/main's different implementation \u2014 the git conflict resolved cleanly (no text-level conflicts), but the test mocks diverge from actual code. Test expects subprocess.check_output but code uses run_subprocess; mock returns 7-tuple but impl expects 9-tuple. After textual conflict resolution succeeds, run tests to surface semantic mismatches, then regenerate test mocks to match CURRENT implementation, not the PR's expected changes (see \u00a7 L), (19) an Inference360 H200 Slurm PR branch has stale/dirty local checkout work before rebase and master renamed control lifecycle to Warden; preserve unrelated staged work first, rebase onto origin/master, keep Warden env names while preserving nested srun --mem=0, and push with an explicit force-with-lease after local + remote head comparison (see \u00a7 O), (20) two branches each APPENDED a DIFFERENT `from <same-module> import <symbols>` line at the same position in the same file (UU both-modified import-line conflict) \u2014 UNION the imported symbols into ONE ruff-ordered import statement, NEVER pick --ours/--theirs (choosing a side silently DROPS the other branch's needed symbol \u2192 NameError at runtime or unused-import on the survivor); also: a PR can be DIRTY/CONFLICTING with a fully GREEN CI rollup \u2014 the conflict is the sole blocker, and `git merge-tree` is a safe non-mutating dry-run to count `<<<<<<<` markers before AND after resolving (see \u00a7 P), (21) an Inference360 Warden autoscaling branch rebases across competing HAProxy reload/statistics designs \u2014 keep the active runtime contract (process replacement with `-sf` plus master CLI worker stats), remove obsolete admin-socket `reload` assumptions, update docs/tests to fail closed on missing tracked stats, and verify before force-with-lease (see \u00a7 O2)",
-      "version": "1.14.0",
+      "description": "Use when: (1) a PR branch is CONFLICTING or DIRTY after main advances and needs rebasing, (2) a mass rebase of 10+ PRs is needed after a major refactor causes conflicts across the queue, (3) a stacked PR goes DIRTY when its prerequisite merges and the base must be retargeted \u2014 later CI/lint fix commits on the dependent branch are orphaned and must be cherry-picked, (4) a Safety Net hook blocks git checkout --theirs / --ours during automated rebase conflict resolution, (5) a file was completely rewritten on one branch and small targeted edits exist on the other, (6) a parallel swarm produced overlapping PRs that conflict on the same paths and one must be rebased onto the other, (7) a feature PR conflicts after a sibling refactor merges and edits must be ported to the new file structure, (8) a TypeScript or other language-level shadowing bug appears only after a rebase because two branches independently added identically-named locals to the same scope, (9) numerical or optimizer PRs conflict when main merged its own version of a shared module and API signatures changed, (10) a PR's substantive change independently landed on main via a sibling PR so a rebase produces an add/add conflict on a duplicated new file and the PR becomes a near-no-op residual, (11) a PR is DIRTY with all CI checks green/passing \u2014 the merge conflict itself is the sole blocker (rebase, do not hunt for a failing job), (12) a rebase hits a modify/delete conflict on a file the PR intentionally deletes \u2014 confirm the base copy is still stale then git rm, (13) a PR is BLOCKED with mergeable=MERGEABLE but a required check shows SKIPPED \u2014 the required check is gated by needs: on a job that fails because the branch carries unpinned GitHub Actions rejected by an org-wide SHA-pin policy; fix is rebase to inherit main's pinned workflow files (not an empty re-trigger commit), (14) multiple rebased PRs \u2014 including ones unrelated to the failing test \u2014 all fail the SAME test after merging onto main; suspect a broken main from a SEMANTIC collision between two independently-merged PRs that never textually conflict (e.g. a return-tuple arity change + a stale test mock), prove it by running the failing test against bare origin/main, and fix main first, (15) two parallel cluster-extraction PRs both create the same new module file and the rebase produces an add/add conflict on BOTH the source module AND its test file \u2014 main's source is authoritative, test files must be semantically merged (keep main's richer base + append your branch's unique test classes), (16) a rebase hits AA (both-added) conflicts on new files \u2014 the conflicted file shows NO <<<<<<< markers and contains only one side's content; you must use git show HEAD:<path> and git show REBASE_HEAD:<path> to read both versions before resolving, (17) a CLUSTER of sibling refactor PRs all edit the SAME shared files and were run in parallel so all but one are CONFLICTING/DIRTY (and possibly hand-braked with state:skip) \u2014 land them as a SEQUENTIAL rebase chain SMALLEST-DIFF-FIRST, rebasing each onto trunk only AFTER the prior merges, resolving every conflict as the UNION of each refactor's extractions (keep both helpers; every duplicated method becomes a thin delegate; merge import lists and drop now-unused imports via lint), then re-sign all commits with `git rebase --exec '...-s -S' origin/main` for DCO+GPG, (18) after rebase, tests fail because test mocks expected the PR branch's refactored signatures but rebase brought in origin/main's different implementation \u2014 the git conflict resolved cleanly (no text-level conflicts), but the test mocks diverge from actual code. Test expects subprocess.check_output but code uses run_subprocess; mock returns 7-tuple but impl expects 9-tuple. After textual conflict resolution succeeds, run tests to surface semantic mismatches, then regenerate test mocks to match CURRENT implementation, not the PR's expected changes (see \u00a7 L), (19) an Inference360 H200 Slurm PR branch has stale/dirty local checkout work before rebase and master renamed control lifecycle to Warden; preserve unrelated staged work first, rebase onto origin/master, keep Warden env names while preserving nested srun --mem=0, and push with an explicit force-with-lease after local + remote head comparison (see \u00a7 O), (20) two branches each APPENDED a DIFFERENT `from <same-module> import <symbols>` line at the same position in the same file (UU both-modified import-line conflict) \u2014 UNION the imported symbols into ONE ruff-ordered import statement, NEVER pick --ours/--theirs (choosing a side silently DROPS the other branch's needed symbol \u2192 NameError at runtime or unused-import on the survivor); also: a PR can be DIRTY/CONFLICTING with a fully GREEN CI rollup \u2014 the conflict is the sole blocker, and `git merge-tree` is a safe non-mutating dry-run to count `<<<<<<<` markers before AND after resolving (see \u00a7 P), (21) an Inference360 Warden autoscaling branch rebases across competing HAProxy reload/statistics designs \u2014 keep the active runtime contract (process replacement with `-sf` plus master CLI worker stats), remove obsolete admin-socket `reload` assumptions, update docs/tests to fail closed on missing tracked stats, and verify before force-with-lease (see \u00a7 O2), (22) a large multi-commit rebase (10+ commits, wide file surface) leaves ZERO conflict markers on a source file yet combining two independently-clean changes from the two sides pushes a McCabe complexity gate from passing to failing (e.g. C901 N > threshold) \u2014 neither side was wrong alone; extract the newly-combined conditional block into its own helper, mirroring an already-established sibling decomposition on the same class (see \u00a7 Q), (23) a test file is BYTE-IDENTICAL on both sides of a rebase (never inside conflict markers, never touched by conflict resolution) yet a full pytest run fails it post-rebase \u2014 an unrelated commit in the SAME PR changed a shared helper's return/disposition contract elsewhere in the same source file, and the untouched test still asserts the old contract; search sibling tests in the same class/file for the already-updated expected-value pattern before hand-deriving a new one (see \u00a7 L), (24) a doc or policy file has a FEW explicit conflict hunks but the same fact/value is restated MANY more times throughout the file, and only the conflict-marked occurrences get resolved \u2014 resolving hunk-by-hunk without a whole-file grep for the same keyword/value produces an internally self-contradictory document (prose says one value, a script or assertion elsewhere still encodes the other); determine the chronologically-current side from the commit log and any backing regression test, then apply it to EVERY occurrence in the file, not just the conflicted ones (see \u00a7 C), (25) a rebase auto-merges a file DELETION with zero conflicts, but a companion inventory/index/table-of-contents file (e.g. a workflows README's summary table) still lists the deleted file \u2014 this survives a plain `pre-commit run --files <changed>` unless a dedicated consistency hook diffs the inventory against what's actually on disk; run the FULL pre-commit hook suite (not scoped to changed files) after any rebase that deletes a file (see \u00a7 C2)",
+      "version": "1.15.0",
       "source": "./skills/pr-rebase-conflict-resolution-patterns.md",
       "category": "ci-cd",
       "tags": [
@@ -5068,7 +5072,24 @@
         "process-replacement",
         "master-cli-stats",
         "stats-fail-closed",
-        "autoscaling-rebase"
+        "autoscaling-rebase",
+        "complexity-after-rebase",
+        "c901-from-clean-merge",
+        "extract-method-mirror-sibling",
+        "stale-test-assertion-unmodified-file",
+        "byte-identical-test-file",
+        "shared-contract-change",
+        "sibling-test-pattern-reuse",
+        "doc-policy-chronology-conflict",
+        "whole-file-grep",
+        "restated-value-consistency",
+        "self-contradictory-doc",
+        "stale-inventory-table-row",
+        "deleted-file-orphan-reference",
+        "workflow-inventory-hook",
+        "full-pre-commit-suite",
+        "whole-tree-lint",
+        "silent-auto-merge-defect"
       ]
     },
     {
@@ -8954,6 +8975,26 @@
       "tags": []
     },
     {
+      "name": "testing-source-line-number-assertions-are-churn-engines",
+      "description": "A test that asserts an exact SOURCE LINE NUMBER (`inspect.getsourcelines(fn)[1] == <literal>`, `fn.__code__.co_firstlineno == N`, or a doc `path:LINE function` reference pinned against the current source line) is a churn engine \u2014 REMOVE it and assert symbol presence/resolution instead. Any edit above the function shifts its line number and fails the test with zero behavior change; under concurrent merging the correct line is only knowable at the merge instant, so no PR author (human or agent) can pin it ahead of time. Use when: (1) a doc/regression test fails only because a line number drifted, (2) a PR keeps re-conflicting on a doc that hardcodes `file.py:NNN`, (3) you see `getsourcelines(...)[1]` or `co_firstlineno` compared to a constant in tests, (4) an automation loop keeps force-pushing a wrong-line-number CI fix.",
+      "version": "1.0.0",
+      "source": "./skills/testing-source-line-number-assertions-are-churn-engines.md",
+      "category": "testing",
+      "tags": [
+        "line-number-assertion",
+        "getsourcelines",
+        "co-firstlineno",
+        "churn-engine",
+        "doc-guard",
+        "regression-test",
+        "merge-conflict",
+        "concurrency",
+        "symbol-presence",
+        "lint-guard",
+        "hephaestus"
+      ]
+    },
+    {
       "name": "testing-stale-issue-dedup-inline-pattern",
       "description": "When consolidating duplicate test helpers, inline direct calls rather than adding wrapper fixtures. Use when: (1) an issue asks to move a helper to conftest.py, (2) the helper is already importable from a shared module, (3) the helper is a pure function (not setup/teardown).",
       "version": "1.0.0",
@@ -9853,8 +9894,8 @@
     },
     {
       "name": "git-rebase-signing-ci",
-      "description": "Rebase and sign commits to pass CI pr-policy checks. Use when: (1) CI pr-policy fails on unsigned commits, (2) need to re-sign all PR commits after rebase, (3) force push signed commits to update a PR.",
-      "version": "1.0.0",
+      "description": "Rebase and sign commits to pass CI pr-policy checks. Use when: (1) CI pr-policy fails on unsigned commits, (2) need to re-sign all PR commits after rebase, (3) force push signed commits to update a PR, (4) a rebase using --exec stops on a real conflict and you need to resume it correctly instead of hand-invoking the exec command.",
+      "version": "1.1.0",
       "source": "./skills/git-rebase-signing-ci.md",
       "category": "tooling",
       "tags": [
@@ -9862,7 +9903,9 @@
         "signing",
         "rebase",
         "ci",
-        "gpg"
+        "gpg",
+        "exec",
+        "conflict-resolution"
       ]
     },
     {
