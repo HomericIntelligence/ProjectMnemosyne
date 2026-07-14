@@ -1,0 +1,174 @@
+# git-dco-signoff-distinct-from-gpg-sign — History
+
+## v1.1.0 (2026-07-12)
+
+**Changed by:** ProjectHephaestus PR #2056 (branch `2054-auto-impl`, "[Critical] Fail
+closed autonomous auto-merge paths"), 17 commits.
+**Verification:** verified-local for the new finding (observed via `git log
+--format='%(trailers:key=Signed-off-by)'` showing exactly one trailer per commit
+after applying the recovery script); the original finding remains verified-ci
+(already shipped in Hephaestus).
+
+### What changed
+
+Added a new finding distinct from the original "trailer missing entirely" case:
+running the skill's own recommended re-signing recipe
+(`git rebase --exec "git commit --amend --no-edit -s -S" origin/main`) TWICE with
+different `user.name` git config values produces a DUPLICATED `Signed-off-by`
+trailer rather than a deduplicated one. Documented:
+
+- Root cause: `-s`/`--signoff`'s dedup check is a literal string match on the
+  whole trailer line, not an email-only match.
+- Prevention: reconcile `user.name` (local vs global) to one canonical value
+  before the first `--exec ... -s -S` pass.
+- Recovery: a second `--exec` pass running a small Python script that keeps only
+  the first `Signed-off-by` line (rewritten to a canonical form) and re-commits
+  with `git commit --amend -S -m "<rewritten message>"` (no `-s` on the recovery
+  pass, to avoid re-triggering the same literal-string dedup mismatch).
+
+Bumped `version` 1.0.0 → 1.1.0, added `history` frontmatter field (first
+amendment), extended `description` with two new "Use when" clauses, added a new
+`### Duplicate trailers from re-signing with different user.name` subsection
+under Verified Workflow, a new row in Failed Attempts, and a dedup-mechanism note
+plus recovery recipe in Results & Parameters.
+
+### Why
+
+Encountered during a large rebase (~38 commits forward onto `origin/main`) on
+ProjectHephaestus PR #2056, which required two separate `--exec ... -s -S`
+re-signing passes because of an interrupted/resumed session with different
+`user.name` config between passes (`mvillmow` vs `Micah Villmow`). The resulting
+duplicate trailers didn't fail CI (the DCO check script matches ANY well-formed
+`Signed-off-by` line anywhere in the body) but produced a confusing diff for
+human reviewers. This is a narrower, distinct git-mechanics finding from the
+original skill's scope (missing trailer), so it amends rather than replaces.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: git-dco-signoff-distinct-from-gpg-sign
+description: "The DCO Signed-off-by trailer (git commit -s) is a SEPARATE requirement from GPG/SSH cryptographic signing (git commit -S); a commit can be -S signed yet still fail the pr-policy DCO check because it lacks the trailer. Use when: (1) a PR is BLOCKED and the pr-policy / required-checks-gate CI gate fails with 'missing Signed-off-by: Name <email> trailer' even though git log --show-signature shows a valid GPG signature, (2) automation/agent-generated commits (auto-impl branches) lack the DCO trailer because the generator ran `git commit -S` without `-s`, (3) you need to retroactively add Signed-off-by to every commit on a branch WITHOUT losing GPG signatures, (4) lint passes but required-checks-gate still fails — check pr-policy sub-checks (Check 4 is DCO), (5) you fixed only one blocker (mypy/lint) but the gate is still red on a second independent DCO failure."
+category: ci-cd
+date: 2026-06-26
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: []
+---
+
+# Git DCO Signed-off-by Is Distinct from GPG Signing
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-26 |
+| **Objective** | Land 5 stranded auto-impl refactor PRs whose `required-checks-gate` was red because `pr-policy` Check 4 (DCO Signed-off-by trailer) failed independently of GPG signing |
+| **Outcome** | Successful — added the `Signed-off-by` trailer to every commit (including bot-authored ones) while preserving GPG signatures; pr-policy and required-checks-gate went green |
+| **Verification** | verified-ci — these commits actually merged in ProjectHephaestus on 2026-06-26 via this fix |
+
+## When to Use
+
+- A PR is BLOCKED and the `pr-policy` / `required-checks-gate` CI gate fails with `missing Signed-off-by: Name <email> trailer` even though `git log --show-signature` shows a valid GPG signature.
+- Automation/agent-generated commits (auto-impl branches like #1385, #1392) lack the DCO trailer because the generator ran `git commit -S` without `-s`.
+- You need to retroactively add `Signed-off-by` to every commit on a branch WITHOUT losing GPG signatures.
+- Lint passes but `required-checks-gate` still fails — inspect the `pr-policy` sub-checks (Check 4 is DCO).
+- You fixed only one blocker (mypy/lint) but the gate is still red on a second, independent DCO failure.
+
+## Verified Workflow
+
+The key fact: `git commit -S` (GPG/SSH cryptographic signature, satisfies
+`required_signatures` / `verified=true`) is ORTHOGONAL to `git commit -s`
+(appends a `Signed-off-by: Name <email>` text trailer, the Developer Certificate
+of Origin). `pr-policy` Check 4 requires the TRAILER on every commit; it does
+not inspect the GPG signature. A commit can be `%G?`=`G`/`U` (cryptographically
+signed) and still fail Check 4 for lack of the trailer.
+
+### Quick Reference
+
+```bash
+# 1. ALWAYS commit with BOTH the DCO trailer (-s) and the GPG signature (-S):
+git commit -s -S -m "feat(scope): message"
+
+# 2. Retroactively add the DCO trailer to EVERY commit on a branch while
+#    PRESERVING GPG signing (works because commit.gpgsign=true):
+git rebase --exec "git commit --amend --no-edit -s -S" origin/main
+git push --force-with-lease
+
+# 3. Verify per-commit — every commit MUST show a non-empty signoff:
+git log origin/main..HEAD \
+  --format="%h %s | signoff:[%(trailers:key=Signed-off-by,valueonly)] gpg:%G?"
+
+# 4. Find WHICH pr-policy sub-check failed (the gate aggregates):
+gh run view --job <id> --log   # grep for "Check 4: DCO Signed-off-by"
+```
+
+### Detailed Steps
+
+1. **Diagnose the real blocker.** `required-checks-gate` aggregates several
+   checks; a red gate is often a downstream consequence of `pr-policy`. Open the
+   gate's job log with `gh run view --job <id> --log` and find the named
+   sub-checks ("Check 3: Conventional Commits", "Check 4: DCO Signed-off-by").
+   Enumerate ALL failing sub-checks before re-pushing — do not assume a single
+   cause.
+2. **Confirm it is DCO, not GPG.** Run `git log --show-signature -1` — if it
+   shows a valid signature but the gate still fails on `missing Signed-off-by`,
+   the problem is the missing text trailer, a separate requirement.
+3. **Add the trailer to every commit.** Run
+   `git rebase --exec "git commit --amend --no-edit -s -S" origin/main`. The
+   `-s` appends the trailer; `-S` re-applies the GPG signature so the rebase
+   does not strip it. This covers EVERY commit on the branch, including
+   bot/automation-authored ones — Check 4 validates all of them, not just HEAD.
+4. **Verify.** Run the per-commit verify command above; every line must show a
+   non-empty `signoff:[...]`. A `gpg:U` (signed but locally-untrusted key) is
+   FINE — GitHub verifies server-side, and both `U` and `G` satisfy
+   crypto-signing.
+5. **Push.** `git push --force-with-lease` (safer than `--force`).
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Committed with `git commit -S` only (no -s) | Assumed GPG signing satisfied the policy | pr-policy Check 4 failed: missing Signed-off-by trailer; required-checks-gate then failed downstream | DCO trailer is a separate text requirement from crypto signing — always pass both -s and -S |
+| Fixed the mypy/lint error and assumed the gate would pass | Treated required-checks-gate as a single-cause failure | Gate still red — a second independent DCO failure remained | A required-checks-gate failure can aggregate multiple independent causes; enumerate ALL failing pr-policy sub-checks before re-pushing |
+| Re-signed only the new commit, left the original auto-impl commit untouched | Thought only my own commit needed the trailer | Check 4 validates EVERY commit on the PR, including bot/automation-authored ones | Use `git rebase --exec ... -s -S origin/main` to cover every commit, not just HEAD |
+
+## Results & Parameters
+
+- **Repo**: `HomericIntelligence/ProjectHephaestus`
+- **Gate**: `pr-policy` (required), with sub-check script `check_dco_signoff.py`
+  (Check 4). `required-checks-gate` aggregates it and shows red downstream.
+- **Context**: Landing 5 stranded auto-impl refactor PRs; PR #1615's
+  required-checks-gate failed on both lint(mypy) AND DCO. Multiple auto-impl
+  branches (#1385, #1392) had the same DCO gap.
+- **Always-commit recipe** (copy-paste):
+
+  ```bash
+  git commit -s -S -m "feat(scope): message"
+  ```
+
+- **Retroactive fix-all recipe** (copy-paste):
+
+  ```bash
+  git rebase --exec "git commit --amend --no-edit -s -S" origin/main
+  git push --force-with-lease
+  ```
+
+- **Verify recipe** (copy-paste):
+
+  ```bash
+  git log origin/main..HEAD \
+    --format="%h %s | signoff:[%(trailers:key=Signed-off-by,valueonly)] gpg:%G?"
+  ```
+
+- **Interpreting `%G?`**: `G` = good signature, `U` = signed but
+  locally-untrusted key (FINE — GitHub verifies server-side). Both satisfy
+  crypto-signing; neither implies the DCO trailer is present.
+```
+
+---
+
+## v1.0.0 (2026-06-26)
+
+**Initial version.**

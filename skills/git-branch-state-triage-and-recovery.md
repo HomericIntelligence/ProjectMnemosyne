@@ -9,14 +9,14 @@ description: >-
   (5) a squash-merged branch looks unmerged because git cherry/ahead counts lie,
   (6) an auto-merge PR already merged, its remote head ref is gone or stale, and a
   validated local amended commit must be converted into a clean follow-up branch from
-  current trunk using git diff --binary plus git apply --index, (7) the current branch has an already-merged PR but contains uncommitted follow-up work, so stash it, create a fresh branch from current trunk, pop the stash, re-verify, sign, push, and open a new linked PR, (8) an issue has a closed unmerged PR whose branch can be rebased and force-with-lease updated, but GitHub refuses `gh pr reopen`, so you need a replacement PR from the same recovered branch, or (9) a user asks you to create a PR from the current branch but that branch's existing PR is already MERGED and a squash/rebase-style merge rewrote SHAs, making triple-dot diff look noisy even though the work is already on trunk.
+  current trunk using git diff --binary plus git apply --index, (7) the current branch has an already-merged PR but contains uncommitted follow-up work, so stash it, create a fresh branch from current trunk, pop the stash, re-verify, sign, push, and open a new linked PR, (8) an issue has a closed unmerged PR whose branch can be rebased and force-with-lease updated, but GitHub refuses `gh pr reopen`, so you need a replacement PR from the same recovered branch, or (9) a user asks you to create a PR from the current branch but that branch's existing PR is already MERGED and a squash/rebase-style merge rewrote SHAs, making triple-dot diff look noisy even though the work is already on trunk, or (10) a stacked child PR is contaminated by unrelated commits and must be rebuilt from its rebased parent while preserving the intended dependency.
 category: tooling
-date: 2026-07-02
-version: "1.6.0"
+date: 2026-07-13
+version: "1.7.0"
 user-invocable: false
 verification: verified-local
 history: git-branch-state-triage-and-recovery.history
-tags: [git, branch, triage, recovery, stale, superseded, orphan, diverged, merge-base, cherry-pick, fork-point, diff-filter, unrelated-histories, non-fast-forward, consolidation, three-way-diff, count-diff, hard-reset, stash, auto-merge, follow-up-branch, force-with-lease, git-apply, current-branch, merged-pr, closed-pr, replacement-pr, duplicate-pr, rewritten-sha, two-dot, triple-dot, uncommitted-follow-up, signed-commit]
+tags: [git, branch, triage, recovery, stale, superseded, orphan, diverged, merge-base, cherry-pick, fork-point, diff-filter, unrelated-histories, non-fast-forward, consolidation, three-way-diff, count-diff, hard-reset, stash, auto-merge, follow-up-branch, force-with-lease, git-apply, current-branch, merged-pr, closed-pr, replacement-pr, duplicate-pr, rewritten-sha, two-dot, triple-dot, uncommitted-follow-up, signed-commit, stacked-pr, child-branch, backup-ref]
 ---
 
 # Git Branch State Triage and Recovery
@@ -25,15 +25,15 @@ tags: [git, branch, triage, recovery, stale, superseded, orphan, diverged, merge
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-07-02 |
-| **Objective** | Diagnose what state a branch is in (stale/superseded, orphaned/unrelated history, or diverged from remote) and recover it cleanly |
-| **Outcome** | Success — unified triage tree: confirm-and-discard superseded branches, extract+recreate orphan branches, reset+cherry-pick diverged branches, convert validated local amended commits from already-merged PRs into clean follow-up branches, move uncommitted follow-up work off a branch whose prior PR is already merged, recover closed unmerged PR branches into replacement PRs when GitHub refuses reopen, and avoid duplicate PRs from already-merged branches whose SHAs were rewritten by merge strategy |
+| **Date** | 2026-07-13 |
+| **Objective** | Diagnose what state a branch is in and recover it cleanly, including contaminated stacked child PR branches |
+| **Outcome** | Success — unified triage tree: confirm-and-discard superseded branches, extract+recreate orphan branches, reset+cherry-pick diverged branches, convert validated local amended commits from already-merged PRs into clean follow-up branches, move uncommitted follow-up work off a branch whose prior PR is already merged, recover closed unmerged PR branches into replacement PRs when GitHub refuses reopen, avoid duplicate PRs from already-merged branches whose SHAs were rewritten by merge strategy, and rebuild contaminated child PRs from their rebased parents |
 | **Verification** | verified-local |
 
 ## When to Use
 
 Use this skill whenever a branch is in an unexpected or unmergeable state. The root question
-is always: **what state is this branch in, and how do I recover it?** Seven distinct states:
+is always: **what state is this branch in, and how do I recover it?** Eight distinct states:
 
 **State A — Stale / superseded by main:**
 - A branch is many commits behind main **and** its remote tracking ref is gone (`[gone]` in `git branch -vv`)
@@ -81,6 +81,16 @@ is always: **what state is this branch in, and how do I recover it?** Seven dist
   diff, but the PR was merged through a squash/rebase-style strategy that rewrote commit SHAs.
 - The branch is stale historical state. Do not create a duplicate PR from it. Advise branching
   from fresh `origin/<trunk>` for any follow-up.
+
+**State H — Stacked child PR contaminated by unrelated commits:**
+- A child PR intentionally includes its parent PR, but also contains commits or files from an
+  unrelated workstream.
+- The parent has already been rebased, so rebasing the child would retain the contamination.
+- The child must remain based on the parent branch rather than being silently retargeted to trunk.
+- Preserve the old remote child head under a dated backup ref and publish the clean replay with an
+  explicit force-with-lease.
+- Resolve review threads only after the replacement code is visible at the matching child PR head,
+  then wait for every expected CI status, including CodeQL where configured.
 
 ## Verified Workflow
 
@@ -212,6 +222,28 @@ git log --oneline HEAD.."$TRUNK"                    # trunk-only commits; branch
 git log --oneline "$TRUNK"..HEAD                    # branch-only commits; may be stale pre-merge SHAs
 # If gh reports MERGED and two-dot diff is empty/trivial, do not open a duplicate PR.
 # If follow-up work is needed, create a fresh branch from "$TRUNK" and carry only the new delta.
+
+# === State H: contaminated stacked child PR; rebuild from rebased parent ===
+REPO=OWNER/REPO
+PARENT_PR=<parent-pr>
+CHILD_PR=<child-pr>
+PARENT_BRANCH=$(gh pr view "$PARENT_PR" --repo "$REPO" --json headRefName --jq .headRefName)
+CHILD_BRANCH=$(gh pr view "$CHILD_PR" --repo "$REPO" --json headRefName --jq .headRefName)
+TRUNK=$(gh repo view "$REPO" --json defaultBranchRef --jq .defaultBranchRef.name)
+git fetch origin "$TRUNK" "$PARENT_BRANCH" "$CHILD_BRANCH"  # never assume main/master
+OLD_HEAD=$(git rev-parse "origin/$CHILD_BRANCH")
+PARENT_HEAD=$(git rev-parse "origin/$PARENT_BRANCH")
+git log --reverse --oneline "$PARENT_HEAD..$OLD_HEAD"           # identify intended commits by scope
+git diff --stat "$PARENT_HEAD..$OLD_HEAD"                       # reject unrelated files before replay
+BACKUP="backup/${CHILD_BRANCH//\//-}-before-clean-rebuild-$(date +%Y%m%d)"
+git push origin "$OLD_HEAD:refs/heads/$BACKUP"                  # preserve the remote head first
+git worktree add -b "${CHILD_BRANCH//\//-}-rebuild" /tmp/<child>-rebuild "$PARENT_HEAD"
+git -C /tmp/<child>-rebuild cherry-pick <intended-child-commit> [<next-intended-commit>]
+git -C /tmp/<child>-rebuild diff --check
+git -C /tmp/<child>-rebuild push --force-with-lease="refs/heads/$CHILD_BRANCH:$OLD_HEAD" \\
+  origin "HEAD:refs/heads/$CHILD_BRANCH"
+gh pr edit "$CHILD_PR" --repo "$REPO" --base "$PARENT_BRANCH"  # preserve intentional stacking
+gh pr checks "$CHILD_PR" --repo "$REPO" --watch --interval 10   # wait for validate, CodeQL, etc.
 ```
 
 ### Detailed Steps
@@ -596,6 +628,82 @@ look unmerged.
 5. **Report the outcome clearly.** For a stale merged branch, say no new PR was created because the
    branch's PR already merged; tell the user to branch from fresh trunk for follow-up work.
 
+#### State H — Contaminated stacked child PR; clean replay on rebased parent
+
+Use this state when the child is intentionally stacked on a parent, but its branch also contains
+unrelated commits. A regular child rebase is insufficient because it preserves every old child-only
+commit, including the contamination. Rebuild the child from the current parent head and replay only
+the commits that belong to the child PR.
+
+1. **Discover the repository's actual default branch and live PR relationship.** Do not assume
+   `origin/main`; some repositories use `master`, and a child PR's base must remain its parent.
+   ```bash
+   REPO=OWNER/REPO
+   PARENT_PR=<parent-pr>
+   CHILD_PR=<child-pr>
+   TRUNK=$(gh repo view "$REPO" --json defaultBranchRef --jq .defaultBranchRef.name)
+   PARENT_BRANCH=$(gh pr view "$PARENT_PR" --repo "$REPO" --json headRefName --jq .headRefName)
+   CHILD_BRANCH=$(gh pr view "$CHILD_PR" --repo "$REPO" --json headRefName --jq .headRefName)
+   gh pr view "$PARENT_PR" --repo "$REPO" --json headRefName,headRefOid,baseRefName,state,url
+   gh pr view "$CHILD_PR" --repo "$REPO" --json headRefName,headRefOid,baseRefName,state,url
+   ```
+2. **Capture the remote heads and identify the intended child range before changing anything.**
+   Fetch the default branch, parent, and child. Compare the child against the *current rebased parent*
+   and inspect commit/file scope. Select commit SHAs based on the child PR's intended behavior and
+   tests, not merely every commit after the parent.
+   ```bash
+   git fetch origin "$TRUNK" "$PARENT_BRANCH" "$CHILD_BRANCH"
+   OLD_HEAD=$(git rev-parse "origin/$CHILD_BRANCH")
+   PARENT_HEAD=$(git rev-parse "origin/$PARENT_BRANCH")
+   git log --reverse --oneline "$PARENT_HEAD..$OLD_HEAD"
+   git diff --stat "$PARENT_HEAD..$OLD_HEAD"
+   git show --stat <candidate-commit>
+   ```
+   If the current parent is not the desired rebased parent, repair the parent first. Do not use an old
+   merge-base range as a substitute for confirming which commits implement the child scope.
+3. **Preserve the remote child head with a dated backup ref.** This makes the recovery reversible and
+   retains evidence of the discarded contamination without keeping it in the review diff.
+   ```bash
+   BACKUP="backup/${CHILD_BRANCH//\//-}-before-clean-rebuild-$(date +%Y%m%d)"
+   git push origin "$OLD_HEAD:refs/heads/$BACKUP"
+   ```
+4. **Create an isolated worktree at the rebased parent and replay only intended commits.**
+   ```bash
+   WORKTREE=/tmp/<child>-clean-rebuild
+   git worktree add -b "${CHILD_BRANCH//\//-}-rebuild" "$WORKTREE" "$PARENT_HEAD"
+   git -C "$WORKTREE" cherry-pick <intended-child-commit> [<next-intended-commit>]
+   git -C "$WORKTREE" diff --check
+   git -C "$WORKTREE" status --short
+   ```
+   Run the focused tests for the child behavior in this worktree. Compare the resulting diff to the
+   intended PR scope before publishing; a clean cherry-pick alone does not prove the result is correct.
+5. **Publish with a lease against the exact old child head and retain the stack.** The explicit lease
+   prevents overwriting a concurrent update. Do not retarget the child to trunk unless its dependency
+   has intentionally been removed.
+   ```bash
+   git -C "$WORKTREE" push --force-with-lease="refs/heads/$CHILD_BRANCH:$OLD_HEAD" \\
+     origin "HEAD:refs/heads/$CHILD_BRANCH"
+   gh pr edit "$CHILD_PR" --repo "$REPO" --base "$PARENT_BRANCH"
+   ```
+6. **Resolve review threads only after the matching replacement code is pushed.** Inspect unresolved
+   threads at the new child head, verify each request against the actual replacement diff, then resolve
+   only satisfied threads. Do not resolve comments merely because the old contaminated diff disappeared.
+   ```bash
+   PR_ID=$(gh pr view "$CHILD_PR" --repo "$REPO" --json id --jq .id)
+   gh api graphql -F id="$PR_ID" -f query='query($id: ID!) { node(id: $id) { ... on PullRequest { reviewThreads(first: 100) { nodes { id isResolved comments(first: 20) { nodes { body path line } } } } } } }'
+   gh api graphql -F thread=<thread-id> -f query='mutation($thread: ID!) { resolveReviewThread(input: {threadId: $thread}) { thread { isResolved } } }'
+   ```
+7. **Wait for current-head CI and review the full status rollup before declaring completion.**
+   The PR is not ready while a required status is pending, absent, or failed. This includes CodeQL when
+   the repository enables it.
+   ```bash
+   gh pr checks "$CHILD_PR" --repo "$REPO" --watch --interval 10
+   gh pr view "$CHILD_PR" --repo "$REPO" \\
+     --json headRefOid,mergeable,mergeStateStatus,statusCheckRollup,url
+   ```
+   Confirm the shown check commits match the new child head. If a check was not triggered, diagnose the
+   workflow configuration or mergeability instead of treating a stale green status as current evidence.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -625,8 +733,29 @@ look unmerged.
 | Added unrelated CI workflow fixes to recovered feature PRs | Considered stacking the pydantic CI install fix into replacement PRs whose code was otherwise locally verified | That would mix independent concerns and make the recovered feature PRs depend on unrelated workflow churn | Keep replacement feature PRs scoped; let the dedicated CI workflow PR merge first unless the user explicitly wants stacking |
 | Created or considered creating a PR from a branch before checking its PR mapping | User asked for a PR while current branch was `codex/issue257-repro-case`; the correct first check was `gh pr view --json number,title,state,url,headRefName,baseRefName,statusCheckRollup` | GitHub already mapped the branch to PR #326 with `state: MERGED`; opening another PR from the same stale branch would duplicate completed work | Always check branch ownership and PR state before `gh pr create`; a merged branch's PR identity is spent |
 | Trusted triple-dot diff after fetching trunk | `git diff origin/master...HEAD` showed a large apparent delta after PR #326 had merged | The PR had merged with rewritten SHAs, so the old branch commits were not reachable from trunk even though their content had landed; triple-dot was merge-base noise | Use two-dot/tree comparison (`git diff --stat origin/master..HEAD`, `git diff --quiet origin/master..HEAD`) plus both log directions before deciding work remains |
+| Rebasing a contaminated child branch in place | Rebased the child branch after its parent was updated | Rebase preserved unrelated child-only commits, so the PR remained contaminated despite a clean ancestry | Rebuild from the rebased parent and cherry-pick only the commits proven to implement the child scope |
+| Assuming the default branch was `main` | Used generic `origin/main` commands for a repository whose default branch differs | Commands inspected or rebased against the wrong reference, obscuring the actual PR base | Read `defaultBranchRef.name` with `gh repo view` before composing the recovery commands |
+| Resolving review threads before the replacement branch was published | Marked comments resolved based on a planned replay | The visible PR head still contained the old code, so resolution could hide an unresolved request | Push the matching code first, then verify each thread against the current diff before resolving it |
+| Declaring success after the first green check | Treated a passing test job as PR completion | CodeQL or another required status was still pending or had not run on the rebuilt head | Wait for the complete current-head status rollup and verify the check SHA before reporting completion |
 
 ## Results & Parameters
+
+### State H — Clean rebuild of a contaminated stacked child PR
+
+| Parameter | Value |
+| --------- | ----- |
+| Default branch | Discovered with `gh repo view <repo> --json defaultBranchRef --jq .defaultBranchRef.name` |
+| Parent base | Current head of the intentionally stacked parent PR |
+| Child recovery base | The rebased parent head, not the old child merge-base |
+| Intended replay | Only commits whose diff and tests match the child PR scope |
+| Preservation | Dated remote `backup/<child>-before-clean-rebuild-YYYYMMDD` ref created before rewrite |
+| Publication | Explicit `--force-with-lease=refs/heads/<child>:<old-head>` push |
+| Review-thread timing | Inspect and resolve only after the replacement child head is visible on GitHub |
+| Completion gate | All current-head CI statuses, including CodeQL where configured, are successful or intentionally skipped |
+| Verification level | `verified-local` for this skill record; the procedure was exercised locally and through GitHub CI on Inference360 PRs #399 and #400 |
+
+The dependency remains intentional: the child base is the parent branch. Rebuilding the child avoids
+turning a review-scoping failure into an accidental change of merge order.
 
 ### State G — Already-merged branch with rewritten SHAs; no duplicate PR
 
@@ -840,6 +969,7 @@ git push -u origin "$FOLLOWUP_BRANCH"
 | ProjectHephaestus | Worktree `agent-a7fe2df2b7f6e658b` — 3 "uncommitted modified" files all 0 unique lines vs main (`log_on_error` changes already merged via PR #1372); safe to discard | State A — worktree 0-unique-lines |
 | LLM360/Inference360 | An auto-merged PR merged before follow-up changes could be force-pushed; the old remote branch was gone, and a validated local amended commit was converted into a clean follow-up branch from current trunk; the follow-up PR auto-merged after CI passed | State D — already-merged PR follow-up branch |
 | LLM360/Radiance | Current branch `codex/test-architecture-layout` had merged PR #906 but contained uncommitted duplicate-code cleanup work. Stashed, fetched `origin/master`, created `codex/reduce-duplicate-code`, popped, re-verified locally, signed commit `e772d982`, pushed, created issue #907 and PR #908. GitHub checks were pending at capture time. | State E — merged current branch with uncommitted follow-up work, verified-local |
+| LLM360/Inference360 | PR #399 was rebuilt from the current default branch to remove unrelated stacked commits; PR #400 was rebuilt on the rebased #399 parent. Old remote heads were preserved under dated backup refs, both rewritten branches used explicit leases, review threads were resolved after matching code was pushed, and local suites plus GitHub CI/CodeQL passed. | State H — contaminated stacked child rebuild, verified by local checks and GitHub CI |
 
 ## References
 

@@ -1,11 +1,12 @@
 ---
 name: git-dco-signoff-distinct-from-gpg-sign
-description: "The DCO Signed-off-by trailer (git commit -s) is a SEPARATE requirement from GPG/SSH cryptographic signing (git commit -S); a commit can be -S signed yet still fail the pr-policy DCO check because it lacks the trailer. Use when: (1) a PR is BLOCKED and the pr-policy / required-checks-gate CI gate fails with 'missing Signed-off-by: Name <email> trailer' even though git log --show-signature shows a valid GPG signature, (2) automation/agent-generated commits (auto-impl branches) lack the DCO trailer because the generator ran `git commit -S` without `-s`, (3) you need to retroactively add Signed-off-by to every commit on a branch WITHOUT losing GPG signatures, (4) lint passes but required-checks-gate still fails — check pr-policy sub-checks (Check 4 is DCO), (5) you fixed only one blocker (mypy/lint) but the gate is still red on a second independent DCO failure."
+description: "The DCO Signed-off-by trailer (git commit -s) is a SEPARATE requirement from GPG/SSH cryptographic signing (git commit -S); a commit can be -S signed yet still fail the pr-policy DCO check because it lacks the trailer. Use when: (1) a PR is BLOCKED and the pr-policy / required-checks-gate CI gate fails with 'missing Signed-off-by: Name <email> trailer' even though git log --show-signature shows a valid GPG signature, (2) automation/agent-generated commits (auto-impl branches) lack the DCO trailer because the generator ran `git commit -S` without `-s`, (3) you need to retroactively add Signed-off-by to every commit on a branch WITHOUT losing GPG signatures, (4) lint passes but required-checks-gate still fails — check pr-policy sub-checks (Check 4 is DCO), (5) you fixed only one blocker (mypy/lint) but the gate is still red on a second independent DCO failure, (6) `git log` shows TWO (or more) `Signed-off-by` trailers on the same commit after the retroactive fix-all recipe was run more than once — this is a DUPLICATE trailer, not a missing one, caused by `--exec ... -s -S` being run twice with different `user.name` config values, since `-s` dedups by literal string match on the whole trailer line, not by email, (7) you are about to run `git rebase --exec \"git commit --amend --no-edit -s -S\" origin/main` on a branch that may ALREADY carry a Signed-off-by trailer (e.g. a resumed/interrupted rebase session) — reconcile `git config user.name` first to avoid producing a duplicate trailer."
 category: ci-cd
-date: 2026-06-26
-version: "1.0.0"
+date: 2026-07-12
+version: "1.1.0"
 user-invocable: false
 verification: verified-ci
+history: git-dco-signoff-distinct-from-gpg-sign.history
 tags: []
 ---
 
@@ -27,6 +28,8 @@ tags: []
 - You need to retroactively add `Signed-off-by` to every commit on a branch WITHOUT losing GPG signatures.
 - Lint passes but `required-checks-gate` still fails — inspect the `pr-policy` sub-checks (Check 4 is DCO).
 - You fixed only one blocker (mypy/lint) but the gate is still red on a second, independent DCO failure.
+- `git log` shows TWO (or more) `Signed-off-by` trailers on the same commit after running the retroactive fix-all recipe more than once — a DUPLICATE trailer, not a missing one, caused by different `user.name` config between passes.
+- You are about to run the retroactive fix-all recipe on a branch from an interrupted/resumed session and are unsure whether a trailer is already present — reconcile `git config user.name` first to avoid producing a duplicate.
 
 ## Verified Workflow
 
@@ -78,6 +81,81 @@ gh run view --job <id> --log   # grep for "Check 4: DCO Signed-off-by"
    crypto-signing.
 5. **Push.** `git push --force-with-lease` (safer than `--force`).
 
+### Duplicate trailers from re-signing with different user.name
+
+Running the exact recipe from step 3 (`git rebase --exec "git commit --amend
+--no-edit -s -S" origin/main`) a SECOND time — e.g. because a rebase session
+was interrupted and resumed, or a mass-rebase was re-run defensively — does
+NOT deduplicate an existing `Signed-off-by` trailer if `git config user.name`
+differs between the two passes. Instead of one trailer, the commit ends up
+with two:
+
+```text
+Signed-off-by: Micah Villmow <noreply@users.noreply.github.com>
+Signed-off-by: mvillmow <noreply@users.noreply.github.com>
+```
+
+**Root cause.** `-s`/`--signoff` dedups by a LITERAL STRING match on the whole
+trailer line (`Signed-off-by: <exact name> <exact email>`), not by email
+alone. If pass 1 ran under `user.name=mvillmow` and pass 2 ran under
+`user.name="Micah Villmow"` (same email, different display name), git does not
+recognize the second as "the same person already signed off" — it appends a
+new line instead of skipping.
+
+**Functionally harmless for this repo's CI.** `scripts/check_dco_signoff.py`
+in ProjectHephaestus only requires ONE well-formed line matching
+`^Signed-off-by: .+ <[^<>@\s]+@[^<>@\s]+>$` anywhere in the commit body, so a
+duplicate does not fail `pr-policy` Check 4. It is untidy and reads as a
+confusing diff to a human reviewer, but it is not a merge blocker on its own.
+
+**Prevention.** Reconcile `git config user.name` and `git config --global
+user.name` to ONE canonical value BEFORE the first `--exec ... -s -S` pass,
+especially across an interrupted/resumed session:
+
+```bash
+git config user.name            # local override, if any
+git config --global user.name   # global default
+# pick one canonical value and set it before rebasing
+git config user.name "Micah Villmow"
+```
+
+**Recovery if trailers are already duplicated.** Do NOT run `git commit -s`
+again — that risks adding a THIRD variant if `user.name` still isn't
+reconciled. Instead run a second `--exec` pass with a message-rewrite script
+that keeps only the first trailer:
+
+```bash
+git rebase --exec '
+  python3 - <<PYEOF
+import re, subprocess
+msg = subprocess.run(["git", "log", "-1", "--format=%B"], capture_output=True, text=True, check=True).stdout
+lines = msg.splitlines()
+seen_signoff = False
+kept = []
+for line in lines:
+    if line.startswith("Signed-off-by:"):
+        if seen_signoff:
+            continue  # drop every trailer after the first
+        seen_signoff = True
+    kept.append(line)
+new_msg = "\n".join(kept)
+subprocess.run(["git", "commit", "--amend", "-S", "-m", new_msg], check=True)
+PYEOF
+' origin/main
+```
+
+Note the recovery pass's `git commit --amend` uses `-S` only, NOT `-s` — the
+script itself already writes the canonical trailer into the rewritten
+message, so re-adding `-s` would risk re-triggering the same
+literal-string-mismatch dedup failure if `user.name` still isn't reconciled.
+This recovery is a pure commit-MESSAGE rewrite (no file content changes), so
+it runs with zero working-tree conflicts. Verify with:
+
+```bash
+git log origin/main..HEAD --format='%h %(trailers:key=Signed-off-by)'
+# every commit must show exactly ONE Signed-off-by line
+```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -85,6 +163,7 @@ gh run view --job <id> --log   # grep for "Check 4: DCO Signed-off-by"
 | Committed with `git commit -S` only (no -s) | Assumed GPG signing satisfied the policy | pr-policy Check 4 failed: missing Signed-off-by trailer; required-checks-gate then failed downstream | DCO trailer is a separate text requirement from crypto signing — always pass both -s and -S |
 | Fixed the mypy/lint error and assumed the gate would pass | Treated required-checks-gate as a single-cause failure | Gate still red — a second independent DCO failure remained | A required-checks-gate failure can aggregate multiple independent causes; enumerate ALL failing pr-policy sub-checks before re-pushing |
 | Re-signed only the new commit, left the original auto-impl commit untouched | Thought only my own commit needed the trailer | Check 4 validates EVERY commit on the PR, including bot/automation-authored ones | Use `git rebase --exec ... -s -S origin/main` to cover every commit, not just HEAD |
+| Ran `--exec "git commit --amend --no-edit -s -S" origin/main` twice with different `user.name` between passes | Expected `-s` to dedupe an already-present trailer on the second pass | Produced duplicate `Signed-off-by` trailers instead of deduping — `-s` matches the whole trailer line literally, not just the email | Reconcile `user.name` (local + global) to one canonical value before the first pass; recover via a message-rewrite `--exec` pass keeping only the first trailer |
 
 ## Results & Parameters
 
@@ -117,3 +196,36 @@ gh run view --job <id> --log   # grep for "Check 4: DCO Signed-off-by"
 - **Interpreting `%G?`**: `G` = good signature, `U` = signed but
   locally-untrusted key (FINE — GitHub verifies server-side). Both satisfy
   crypto-signing; neither implies the DCO trailer is present.
+- **Duplicate-trailer dedup mechanism**: `-s`/`--signoff` dedups by a LITERAL
+  STRING match on the whole `Signed-off-by: Name <email>` line, not by email
+  alone. Running the retroactive fix-all recipe twice with different
+  `user.name` config values (e.g. `mvillmow` vs `Micah Villmow`, same email)
+  produces two trailers instead of one deduplicated trailer.
+- **Duplicate-trailer recovery recipe** (copy-paste; keeps only the first
+  trailer, re-signs with `-S` only — no `-s` — to avoid re-triggering the same
+  mismatch):
+
+  ```bash
+  git rebase --exec '
+    python3 - <<PYEOF
+  import re, subprocess
+  msg = subprocess.run(["git", "log", "-1", "--format=%B"], capture_output=True, text=True, check=True).stdout
+  lines = msg.splitlines()
+  seen_signoff = False
+  kept = []
+  for line in lines:
+      if line.startswith("Signed-off-by:"):
+          if seen_signoff:
+              continue
+          seen_signoff = True
+      kept.append(line)
+  subprocess.run(["git", "commit", "--amend", "-S", "-m", "\n".join(kept)], check=True)
+  PYEOF
+  ' origin/main
+  ```
+
+- **Verified On**:
+
+  | PR | Repo | Context |
+  |----|------|---------|
+  | [#2056](https://github.com/HomericIntelligence/ProjectHephaestus/pull/2056) | `HomericIntelligence/ProjectHephaestus` | `[Critical] Fail closed autonomous auto-merge paths`, branch `2054-auto-impl`, 17 commits; encountered during a large rebase (~38 commits forward onto `origin/main`) that required two separate `--exec ... -s -S` re-signing passes because of an interrupted/resumed session with different `user.name` config between passes. Verified LOCALLY — the recovery script was run and observed (via `git log --format='%(trailers:key=Signed-off-by)'`) to produce exactly one clean trailer per commit. Not yet verified against this Mnemosyne skill PR's own CI at authoring time. |
