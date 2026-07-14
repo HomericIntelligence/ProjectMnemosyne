@@ -1,13 +1,41 @@
+<!-- markdownlint-disable MD024 -->
+# History: ci-cd-verify-merged-prs-end-to-end
+
+This file is an append-only changelog for the `ci-cd-verify-merged-prs-end-to-end` skill. Newest entry at the top.
+
+## v1.1.0 (2026-07-13)
+
+**Changed by**: a session verifying a CI fix for a tag-gated Docker/C++ build — the `build (agamemnon)` matrix leg.
+
+**Verification**: verified-ci
+
+**What changed**:
+
+- Added the "verify against the EXACT failing path, not a proxy" discipline as a corollary to the Core Insight.
+- Added 3 new rows to the `## Failed Attempts` table (green native C++ checks trusted; `podman build ... | grep` exit code misread; wrong build layer fixed).
+- Extended the `## When to Use` section and the Core Insight with proxy-vs-real-path guidance.
+- Extended the `description:` frontmatter with proxy/tag-gated/pipefail/grep searchable phrases.
+- Added new tags: green-proxy, tag-gated, pipefail, grep-exit-code, exact-failing-path, premature-victory.
+- Added a `## Verified Workflow` step and a `## Results & Parameters` subsection capturing the `build (agamemnon)` case.
+- Bumped `version:` 1.0.0 → 1.1.0 and `date:` to 2026-07-13.
+- Added the `history:` frontmatter field pointing to this changelog.
+
+**Why**: The original skill taught "merged ≠ verified" — that closing an umbrella issue is a distinct end-to-end verification task and that merged-green PRs do not compose. The new session showed a sharper, adjacent failure mode: declaring a fix good against a look-alike *proxy* of the failing path — green native C++ checks, a grep-masked `podman build`, and a native conan build that passed locally — **three separate times** while the ACTUAL failing check (the `build (agamemnon)` matrix leg) stayed red. This is the same family as the existing "tag-triggered jobs were never fired" insight (a job outside the PR's check set can never turn the PR red even while it stays broken), so it belongs in this skill rather than in a new file.
+
+## Previous version (v1.0.0) snapshot
+
+The full v1.0.0 content of `ci-cd-verify-merged-prs-end-to-end.md` as it stood before the v1.1.0 amendment:
+
+```markdown
 ---
 name: ci-cd-verify-merged-prs-end-to-end
-description: "Treat closing an umbrella issue that tracks N sequential implementation PRs as a distinct end-to-end verification task: merged-and-green PRs do not compose. Each PR's CI exercises only its own changed files, so the full pipeline (e.g. packaging: rename → recipe → wheel → release.yml) has never run as a whole. Also: to prove a CI fix works you must verify fix against the EXACT failing job/step/command, not a look-alike green proxy — a tag-gated build (docker-publish on release tags) is not in the PR check set so the PR can go green while the real build stays broken, and 'cmd | grep' means grep masks exit code of the build (use pipefail or check the build's own markers). Reproduce exact failing path (the real container build), never a native/local stand-in, to avoid premature victory. Use when: (1) an umbrella issue stays OPEN after all its child PRs merged, (2) acceptance criteria have not been driven end-to-end, (3) a tag-triggered or rarely-run workflow (release.yml, nightly, weekly E2E) has never actually fired, (4) you suspect 'all PRs merged green so it must work', (5) budgeting effort for a verification pass that uncovers a sequential defect cascade, (6) a green check made you declare a CI fix done but you have not confirmed it was the SAME job/step that was failing."
+description: "Treat closing an umbrella issue that tracks N sequential implementation PRs as a distinct end-to-end verification task: merged-and-green PRs do not compose. Each PR's CI exercises only its own changed files, so the full pipeline (e.g. packaging: rename → recipe → wheel → release.yml) has never run as a whole. Use when: (1) an umbrella issue stays OPEN after all its child PRs merged, (2) acceptance criteria have not been driven end-to-end, (3) a tag-triggered or rarely-run workflow (release.yml, nightly, weekly E2E) has never actually fired, (4) you suspect 'all PRs merged green so it must work', (5) budgeting effort for a verification pass that uncovers a sequential defect cascade."
 category: ci-cd
-date: 2026-07-13
-version: "1.1.0"
-history: ci-cd-verify-merged-prs-end-to-end.history
+date: 2026-05-19
+version: "1.0.0"
 user-invocable: false
 verification: verified-ci
-tags: [verification, merged-prs, acceptance-criteria, end-to-end, release-pipeline, defect-cascade, umbrella-issue, smoke-test, green-proxy, tag-gated, pipefail, grep-exit-code, exact-failing-path, premature-victory]
+tags: [verification, merged-prs, acceptance-criteria, end-to-end, release-pipeline, defect-cascade, umbrella-issue, smoke-test]
 ---
 
 # Verifying Merged PRs End-to-End ("merged ≠ verified")
@@ -16,11 +44,11 @@ tags: [verification, merged-prs, acceptance-criteria, end-to-end, release-pipeli
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-07-13 |
+| **Date** | 2026-05-19 |
 | **Objective** | Establish that closing an umbrella issue tracking N sequential implementation PRs requires actually running the composed artifacts/pipeline — not assuming merged-green PRs compose into a working whole |
 | **Outcome** | Successful — ProjectOdyssey issue #5413 ("Ship ProjectOdyssey as an installable Mojo package") had 4 implementation PRs already merged green, yet driving the 5 acceptance criteria end-to-end surfaced 12 sequential defects, each fixed in its own follow-up PR. Issue closed completed. |
 | **Verification** | verified-ci — all 12 follow-up fix PRs landed with green CI; the release pipeline reached the `create-release` job for the first time |
-| **History** | [changelog](./ci-cd-verify-merged-prs-end-to-end.history) |
+| **History** | n/a (initial version) |
 
 ## When to Use
 
@@ -30,9 +58,6 @@ tags: [verification, merged-prs, acceptance-criteria, end-to-end, release-pipeli
 - You catch yourself (or a teammate) reasoning "all N PRs merged and CI was green, so the feature works"
 - You need to **budget effort** for closing such an issue — a verification pass is inherently iterative and multi-round-trip
 - A feature was split across "PR 1 of N … PR N of N" — the composition was never tested, only the slices
-- You "fixed" a CI failure and a green check made you declare victory — **confirm the check that went green is the SAME job/step that was failing**, not a look-alike proxy
-- The failing step lives in a **tag-gated or rarely-run workflow** (e.g. `docker-publish.yml` on release tags) so it is **NOT in the PR's check set** — the PR can go fully green while the real failing build stays broken
-- You are judging a build/test outcome from a **piped command** (`cmd | grep ...`) whose exit code reflects grep, not the build
 
 ## The Core Insight: Why Merged ≠ Verified
 
@@ -58,29 +83,6 @@ When a feature is split into N sequential PRs, three structural gaps remain afte
 as a distinct verification task with its own effort budget. Actually run the artifacts and the
 pipeline. Do not assume merged PRs compose. Tag-triggered or rarely-run workflows especially need an
 explicit smoke trigger before the issue can be honestly closed.
-
-### Corollary: verify against the EXACT failing path, not a proxy
-
-The same "a job outside the observed set never turns red" trap shows up when you are *fixing* one
-specific failing check. A green signal only counts if it is the green of the check that was actually
-failing. Three crisp lessons:
-
-1. **Before trusting green, confirm the failing job is actually IN the PR's check set.** Grep the
-   workflows for where the failing step runs and under what `on:` triggers. A **tag-gated** job (runs
-   on release tags, not on PRs — e.g. `docker-publish.yml`) will **never turn the PR red** even while
-   it stays broken. A PR going fully green tells you nothing about a check that is not in that PR's set.
-
-2. **`cmd | grep` returns grep's exit status, not `cmd`'s.** A failed build piped to `grep` can exit
-   `0` and read as success — grep masks the build's failure. To judge a build/test outcome: run the
-   command **without the pipe**, or `set -o pipefail`, or check the command's **own success markers**
-   (e.g. `COMMIT` / `Linking`) **AND** separately confirm the error string is absent. Never infer
-   "the build passed" from a piped grep's exit code.
-
-3. **Reproduce the SPECIFIC failing environment, not the closest convenient one.** A native/local
-   build passing (e.g. `conan install` locally) does **NOT** prove the container build
-   (`podman build --target builder` on the real Dockerfile, with different caching/layers) passes.
-   Fix and exercise the layer that actually fails — the exact runner, image, and command from the
-   failing check — not a look-alike stand-in.
 
 ## Verified Workflow
 
@@ -108,19 +110,6 @@ gh issue close <ISSUE> --comment "All N acceptance criteria verified end-to-end.
 ```
 
 ### Detailed Steps
-
-> **Addition (v1.1.0) — verifying a fix against the EXACT failing check.** When the task is to prove a
-> single failing CI check is fixed (not to close an umbrella issue), run this first:
->
-> - **(a) Find the EXACT failing job and its command** from the failing check-run / workflow. Identify
->   the job name, the step, the exact command, and the `on:` trigger it runs under (grep the workflows).
->   If it is tag-gated or otherwise outside the PR's check set, know that the PR going green proves nothing.
-> - **(b) Reproduce THAT command in THAT environment locally.** Here that meant
->   `podman build --target builder` on the *actual* Dockerfile and reading the build's real conclusion
->   (the true `COMMIT`/exit status), **not** a `podman build ... | grep` whose exit code is grep's.
-> - **(c) Only declare fixed once the ACTUAL failing check goes GREEN in real CI.** In this session the
->   bar was explicit: **do NOT declare victory until `build (agamemnon)` passes** — the specific matrix
->   leg that was red. A different-but-green check (native C++ CI, a local conan build) is not that bar.
 
 1. **Extract the acceptance criteria.** They are the verification contract. If the issue lists
    "5 acceptance criteria", you have 5 things to *observe* passing — not 4 PRs to confirm merged.
@@ -155,27 +144,8 @@ gh issue close <ISSUE> --comment "All N acceptance criteria verified end-to-end.
 | Assume merged = done | Treated issue #5413 as effectively complete because its 4 implementation PRs (#5414–#5417) had all merged green | Each PR's CI exercised only its own changed files; the packaging pipeline (rename → recipe → wheel → release.yml) had never run as a composed whole. Driving the acceptance criteria surfaced 12 hidden defects. | Merged-and-green PRs do not compose. Closing an umbrella issue is a separate verification task — actually run the composed artifact/pipeline. |
 | Try to predict the full defect list up front | After hitting the conda `mojo-version` pin bug, attempted to enumerate all remaining packaging defects in one analysis pass | Defects are sequential — each fix unblocks the next failure. Defect N halts the pipeline before defect N+1's code path is even reached, so N+1 is unobservable until N is fixed. | A verification pass is inherently iterative. Budget for many fix→re-run round-trips instead of one big upfront analysis. |
 | Trust `release.yml` because the YAML looked correct | Assumed the tag-triggered release pipeline (validate-version → build → test → create-release) worked because the workflow file passed lint and review | The workflow had never been triggered — no tag was ever pushed — so none of its jobs had ever executed with real inputs. Several bugs only surfaced on the first real run. | Tag-triggered / rarely-run workflows need an explicit smoke trigger (throwaway pre-release tag or `workflow_dispatch`). A never-run job is an unverified job. |
-| Trusted green native C++ checks | Declared the Docker-build fix "fixed" because the PR's native C++ CI went green (twice) | The Dockerfile build only runs in a tag-gated `docker-publish.yml` (release tags, not PRs), so it was never in the PR's check set — the PR was green while the Docker build stayed broken | Before trusting green, grep the workflows to confirm the FAILING job is actually in the PR's check set and under what `on:` trigger; a tag-gated job never turns a PR red. |
-| Judged a build via `podman build ... \| grep -iE "ssl\|error"` | Read the pipeline exiting 0 as build success | `cmd \| grep` returns grep's exit code, not the build's; the build had actually failed but grep masked it | Run the command without the pipe, or `set -o pipefail`, or check the command's OWN success markers (COMMIT/Linking) and separately confirm the error string is absent. |
-| Fixed a different build layer than the one failing | Fixed and verified a native conan build (passed locally) while the container build kept failing | Local `conan install` success ≠ Docker `cmake configure` success — different build path, different caching | Reproduce the SPECIFIC failing environment (the Docker builder / exact runner), not the closest convenient one. |
 
 ## Results & Parameters
-
-### `build (agamemnon)` — verifying a fix against the exact failing check (v1.1.0 case)
-
-- **Failing check:** the `build (agamemnon)` matrix leg — a container/Dockerfile C++ build.
-- **False-positive proxies that each read as "fixed" but were not:**
-  - the PR's **native C++ CI** passing (green, but a different job — the Docker build was tag-gated
-    and outside the PR's check set);
-  - a `podman build ... | grep` pipeline **exiting 0** (grep masked the build's real failure);
-  - a **native conan build** passing locally (different build path/caching than the container build).
-- **What actually confirmed the fix:** running `podman build --target builder` on the *real*
-  Dockerfile and reaching its **true successful conclusion** (not a grep), then watching the
-  `build (agamemnon)` check itself go **GREEN in real CI**. Victory was withheld until that specific
-  leg passed.
-- **Generalization:** verify a fix against the EXACT failing job/step/command in its real environment;
-  a look-alike green proxy (adjacent job, grep-masked pipe, native stand-in for a container build) is
-  not evidence.
 
 ### ProjectOdyssey issue #5413 — defect cascade summary
 
@@ -220,3 +190,8 @@ GitHub-hosted runner supports the `x86-64-v3` level, so this is a safe floor. Se
 - `architecture-shipping-mojo-package-prefix-dev` — the packaging pattern whose end-to-end verification produced this skill
 - `ci-cd-podman-host-container-build-dir-permissions` — one defect class (4 of the 12) from this cascade
 - `mojo-jit-crash-and-retry-strategies` — AVX-512 `--mcpu=x86-64-v3` diagnosis used during the same pass
+```
+
+## v1.0.0 (2026-05-19)
+
+Initial version.
