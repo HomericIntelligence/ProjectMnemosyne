@@ -1,6 +1,50 @@
 <!-- markdownlint-disable MD024 -->
 # pre-commit-hooks-and-linting-config -- History
 
+## v2.6.0 (2026-07-13) -- Add the `SKIP=<hook>`-in-one-job-but-enforced-fail-fast-in-another false-green trap: a hook the repo documents/skips as advisory in one job (e.g. `SKIP=mojo-format pre-commit run --all-files`, run by both the `precommit-benchmark` job and the documented local command) is STILL enforced by a SEPARATE required `pre-commit` job in a distinct "Run mojo format (fail-fast)" step WITHOUT the skip — so the local SKIP form is a false green (ProjectOdyssey PR #5584)
+
+**Changed by:** ProjectOdyssey session completing PR #5584 (the package rename); the 3rd distinct CI failure on the same PR was the required `pre-commit` job's mojo-format fail-fast step, which the documented `SKIP=mojo-format` local check had masked
+**Verification:** verified-ci
+
+### What changed
+
+- Added trigger (25) to frontmatter `description`: a hook marked advisory/skipped via `SKIP=<hook>` in one job (the `precommit-benchmark` job + the documented local command both run `SKIP=mojo-format pixi run pre-commit run --all-files`) is enforced WITHOUT the skip by a separate required `pre-commit` job's fail-fast step — reproduce CI's exact command (full suite, NO skip → rc=0) before pushing; re-run the full no-skip suite after `pixi run mojo format <files>` to avoid whack-a-mole.
+- Added 1 new "When to Use" bullet describing the advisory-in-one-job / enforced-fail-fast-in-another false-green signature with the concrete `precommit-benchmark` vs required `pre-commit` split.
+- Added new Verified Workflow subsection "A hook skipped in ONE job is enforced fail-fast in ANOTHER — `SKIP=<hook>` locally is a false green" with the PR #5584 concrete case, the no-skip reproduction command block, the whack-a-mole warning, and the general rule; explicitly distinguished it from the existing sub-agent `SKIP=hook-id` bypass guidance.
+- Added Failed Attempts row: trusting a local `SKIP=mojo-format pre-commit run --all-files` pass as the pre-commit gate — lesson: reproduce CI's exact no-skip command; a hook advisory in one job may be enforced fail-fast in another.
+- Added "ProjectOdyssey PR #5584" row to the "Verified On" table (verified-ci: `gh pr checks 5584` showed `pre-commit  pass`).
+- Updated Overview table Date (2026-06-23 → 2026-07-13), Version (2.5.0 → 2.6.0), and Outcome line (appended the new trap).
+- Version bumped 2.5.0 → 2.6.0 (minor: new When-to-Use trigger + new Verified Workflow subsection + new Failed Attempts row).
+- Date updated 2026-06-23 → 2026-07-13.
+
+### Why
+
+While completing ProjectOdyssey PR #5584 (a package rename), the local pre-commit check used
+the repo's DOCUMENTED command `SKIP=mojo-format pixi run pre-commit run --all-files` (mojo-format
+is advisory because the Mojo 1.0.0b2 / 0.26.1 formatter has known bugs) and passed — a false
+green. The SEPARATE, REQUIRED `pre-commit` CI job has a distinct "Run mojo format (fail-fast)"
+step that runs mojo-format WITHOUT the skip; it failed with
+`Failed - hook id: mojo-format - files were modified by this hook` on
+`tests/odyssey/integration/test_packaging.mojo` and `tests/odyssey/autograd/test_dropout_backward.mojo`.
+The fix was to apply `pixi run mojo format <files>`, commit, and CRUCIALLY re-run the FULL
+`pixi run pre-commit run --all-files` with NO skip (rc=0) — because mojo-format fail-fast stops
+at the first offending file, fixing only the two named files without re-running the whole suite
+risks whack-a-mole with the next file. This was the 3rd distinct CI failure on the same rename
+PR; each required reproducing that job's EXACT command locally. This is DISTINCT from the
+existing sub-agent `SKIP=hook-id` bypass guidance (v2.x), where an orchestrator forgot to re-run
+a hook a sub-agent skipped on an older-GLIBC host — here the SKIP is baked into the repo's own
+documented command yet a second required job enforces it anyway.
+
+### Previous version (v2.5.0) snapshot
+
+The v2.5.0 Overview block read: Date `2026-06-23`; Version `2.5.0`; Outcome ended at
+"failed-hook commit-abort / phantom-signature trap added (verified-precommit)"; Verification
+"verified-ci; verified-precommit (pip-audit ledger patterns; failed-hook commit-abort trap)".
+The frontmatter `description` ended at trigger (24) (the `git commit` phantom-signature /
+aborted-commit trap). There was no When-to-Use bullet, Verified Workflow subsection, Failed
+Attempts row, or Verified On row for the `SKIP=<hook>` advisory-in-one-job /
+enforced-fail-fast-in-another false-green trap; those were all introduced in v2.6.0.
+
 ## v2.5.0 (2026-06-23) -- Add the failed-hook commit-abort / phantom-signature trap: a failed pre-commit hook aborts `git commit` (rc=1) so HEAD never moves, and `git log --show-signature` then shows the PARENT/main-tip commit's signature, looking like a broken-key problem on a commit that does not exist (ProjectHephaestus)
 
 **Changed by:** ProjectHephaestus session debugging a phantom GPG-signature failure that was really a silently-aborted commit
