@@ -47,7 +47,7 @@ from hephaestus.automation.planner_state import PLAN_COMMENT_MARKER
 
 def _fetch_plan_and_review(comments: list[dict]) -> tuple[str | None, str | None]:
     """Fetch plan and review comment from comments.
-    
+
     Return: (plan_text, review_comment) or (None, None) if no plan found.
     """
     for comment in comments:
@@ -154,7 +154,7 @@ def _fetch_plan_and_review(comments: list[dict]) -> tuple[str | None, str | None
 
 def test_has_plan_prefix_match():
     """Regression: Plan Review comments quoting the plan should NOT count as having a plan.
-    
+
     Issue #715: substring-match was broken because Review comments contain 'The plan:' text.
     """
     # Plan comment (starts with marker)
@@ -162,13 +162,13 @@ def test_has_plan_prefix_match():
         "body": "## Plan\n\n1. Implement foo\n2. Test bar"
     }
     assert _has_plan([plan_comment]) is True
-    
+
     # Review comment (contains word 'plan' but doesn't start with marker) — MUST be False
     review_comment = {
         "body": "## Review:\n\nThe plan is good, implementation is correct."
     }
     assert _has_plan([review_comment]) is False
-    
+
     # Both comments: only plan comment counts
     assert _has_plan([plan_comment, review_comment]) is True
 ```

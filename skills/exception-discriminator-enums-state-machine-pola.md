@@ -51,7 +51,7 @@ class CircuitBreakerOpenReason(str, Enum):
 # Step 2: Add reason field with semantic default
 class CircuitBreakerOpenError(Exception):
     """Raised when circuit breaker is open."""
-    
+
     def __init__(
         self,
         message: str,
@@ -96,7 +96,7 @@ except CircuitBreakerOpenError as exc:
 1. **Define the discriminator enum** with `(str, Enum)` mixin (not `enum.StrEnum` for Python 3.10 compatibility):
    ```python
    from enum import Enum
-   
+
    class YourStateReason(str, Enum):
        """Reason for exception."""
        REASON_A = "reason_a"
@@ -130,7 +130,7 @@ except CircuitBreakerOpenError as exc:
    ```python
    # GOOD: Explicit reason at every raise site
    raise YourException(msg, reason=YourStateReason.REASON_A)
-   
+
    # BAD: Relying on default for some cases, explicit for others
    raise YourException(msg)  # What's the reason? Ambiguous!
    raise YourException(msg, reason=YourStateReason.REASON_B)
@@ -141,7 +141,7 @@ except CircuitBreakerOpenError as exc:
    # OLD: Only check message
    with pytest.raises(CircuitBreakerOpenError, match="Circuit breaker open"):
        breaker.call(fn)
-   
+
    # NEW: Assert both message and reason
    with pytest.raises(CircuitBreakerOpenError) as exc_info:
        breaker.call(fn)
@@ -157,25 +157,25 @@ except CircuitBreakerOpenError as exc:
    def test_half_open_exhaustion_vs_recovery_timeout():
        """Verify both reason codes are reachable in concurrent scenarios."""
        barrier = threading.Event()
-       
+
        # Hold first probe in-flight while second call hits slot exhaustion
        def slow_probe():
            barrier.set()  # Signal that we're in-flight
            time.sleep(0.5)  # Block for a bit
            return True
-       
+
        # Transition to HALF_OPEN, start probe
        breaker.state = CircuitBreakerState.HALF_OPEN
        breaker.max_calls = 1
        t = threading.Thread(target=lambda: breaker.call(slow_probe))
        t.start()
        barrier.wait()  # Wait for probe to be in-flight
-       
+
        # Second call hits slot exhaustion
        with pytest.raises(CircuitBreakerOpenError) as exc_info:
            breaker.call(lambda: None)
        assert exc_info.value.reason == CircuitBreakerOpenReason.HALF_OPEN_EXHAUSTED
-       
+
        t.join()
    ```
 
@@ -223,10 +223,10 @@ from enum import Enum
 
 class CircuitBreakerOpenReason(str, Enum):
     """Reason why circuit breaker is open.
-    
+
     RECOVERY_TIMEOUT: Circuit is in OPEN state, waiting for recovery timeout before
         transitioning to HALF_OPEN. time_until_recovery indicates seconds remaining.
-    
+
     HALF_OPEN_EXHAUSTED: Circuit is in HALF_OPEN state, but all max_calls slots are
         in-flight with probe attempts. Retry after probes complete (typically < 1s).
     """
@@ -239,12 +239,12 @@ class CircuitBreakerOpenReason(str, Enum):
 ```python
 class CircuitBreakerOpenError(Exception):
     """Raised when circuit breaker is in OPEN or HALF_OPEN state.
-    
+
     Attributes:
         time_until_recovery: Seconds to wait before retrying (OPEN state) or 0.0 (HALF_OPEN).
         reason: CircuitBreakerOpenReason discriminator — RECOVERY_TIMEOUT or HALF_OPEN_EXHAUSTED.
     """
-    
+
     def __init__(
         self,
         message: str,

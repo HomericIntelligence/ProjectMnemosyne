@@ -75,7 +75,7 @@ def test_has_plan_prefix_match():
     """Regression: Plan Review comments quoting the plan should NOT count as having a plan."""
     plan_comment = {"body": "## Plan\n\n1. Implement foo\n2. Test bar"}
     assert _has_plan([plan_comment]) is True
-    
+
     review_comment = {"body": "## Review:\n\nThe plan is good, implementation is correct."}
     assert _has_plan([review_comment]) is False  # Critical: Review ≠ Plan
 ```

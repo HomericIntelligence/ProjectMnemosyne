@@ -137,7 +137,7 @@ def get_prs_stats(owner: str, repo: str, state: str = "all") -> PRsStats:
            "hephaestus.github.github_api._gh_call",
            return_value=MockResult(json.dumps(graphql_response))
        )
-       
+
        result = get_prs_stats("owner", "repo")
        assert result.total_count == 100
        assert result.merged_count == 50

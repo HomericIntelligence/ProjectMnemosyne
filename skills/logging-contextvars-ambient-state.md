@@ -53,7 +53,7 @@ _correlation_id_var = contextvars.ContextVar(
 # 2. Accessor function to read current value
 def get_current_correlation_id() -> str | None:
     """Get the current correlation ID from context.
-    
+
     Returns:
         The correlation ID if set, None otherwise.
     """
@@ -62,10 +62,10 @@ def get_current_correlation_id() -> str | None:
 # 3. Setter function to set value
 def set_correlation_id(correlation_id: str | None) -> contextvars.Token:
     """Set the correlation ID in context.
-    
+
     Args:
         correlation_id: The correlation ID to set.
-    
+
     Returns:
         Token that can be used to reset context later.
     """
@@ -74,7 +74,7 @@ def set_correlation_id(correlation_id: str | None) -> contextvars.Token:
 # 4. Context manager for scoped binding
 def correlation_id_scope(correlation_id: str | None):
     """Context manager to temporarily set correlation ID.
-    
+
     Usage:
         with correlation_id_scope("req-123"):
             # Inside this block, get_current_correlation_id() == "req-123"
@@ -82,7 +82,7 @@ def correlation_id_scope(correlation_id: str | None):
         # After exiting, context is restored
     """
     from contextlib import contextmanager
-    
+
     @contextmanager
     def _scope():
         token = set_correlation_id(correlation_id)
@@ -90,17 +90,17 @@ def correlation_id_scope(correlation_id: str | None):
             yield
         finally:
             _correlation_id_var.reset(token)
-    
+
     return _scope()
 
 # 5. Use in subprocesses (inject into environment)
 def run_subprocess(cmd: list[str]) -> str:
     """Run subprocess, injecting correlation ID into environment."""
     env = os.environ.copy()
-    
+
     if cid := get_current_correlation_id():
         env['GH_TRACE_ID'] = cid
-    
+
     result = subprocess.run(cmd, env=env, capture_output=True, text=True)
     return result.stdout
 ```
@@ -110,7 +110,7 @@ def run_subprocess(cmd: list[str]) -> str:
 1. **Define ContextVar at module level** (typically in a logging utilities module):
    ```python
    import contextvars
-   
+
    _correlation_id_var = contextvars.ContextVar('correlation_id', default=None)
    ```
    - Name is arbitrary (used for debugging)
@@ -190,10 +190,10 @@ _correlation_id_var = contextvars.ContextVar('correlation_id', default=None)
 
 def get_current_correlation_id() -> Optional[str]:
     """Get the current correlation ID from context.
-    
+
     Returns:
         The correlation ID if set, None otherwise.
-    
+
     Example:
         >>> set_correlation_id("req-abc123")
         >>> get_current_correlation_id()
@@ -203,13 +203,13 @@ def get_current_correlation_id() -> Optional[str]:
 
 def set_correlation_id(correlation_id: Optional[str]) -> contextvars.Token:
     """Set the correlation ID in context.
-    
+
     Args:
         correlation_id: The correlation ID to set (None to clear).
-    
+
     Returns:
         Token that can be used to reset context later.
-    
+
     Example:
         >>> token = set_correlation_id("req-xyz")
         >>> get_current_correlation_id()
@@ -222,15 +222,15 @@ def set_correlation_id(correlation_id: Optional[str]) -> contextvars.Token:
 @contextmanager
 def correlation_id_scope(correlation_id: Optional[str]):
     """Context manager to temporarily set correlation ID.
-    
+
     Automatically restores the previous value on exit.
-    
+
     Args:
         correlation_id: The correlation ID to set.
-    
+
     Yields:
         None.
-    
+
     Example:
         >>> with correlation_id_scope("req-scope-123"):
         ...     print(get_current_correlation_id())  # "req-scope-123"
@@ -252,25 +252,25 @@ import subprocess
 
 def run_subprocess(cmd: list[str], **kwargs) -> str:
     """Run subprocess, injecting correlation ID into environment.
-    
+
     Args:
         cmd: List of command arguments.
         **kwargs: Additional arguments to subprocess.run().
-    
+
     Returns:
         stdout from the subprocess.
-    
+
     Raises:
         subprocess.CalledProcessError: If subprocess returns non-zero.
     """
     env = kwargs.pop('env', None) or os.environ.copy()
-    
+
     # Inject correlation ID into subprocess environment
     from hephaestus.logging.utils import get_current_correlation_id
-    
+
     if cid := get_current_correlation_id():
         env['GH_TRACE_ID'] = cid
-    
+
     result = subprocess.run(
         cmd,
         env=env,
@@ -317,11 +317,11 @@ def test_thread_isolation():
     """Each thread has isolated correlation ID."""
     import threading
     results = {}
-    
+
     def thread_func(cid):
         set_correlation_id(cid)
         results[threading.current_thread().name] = get_current_correlation_id()
-    
+
     set_correlation_id("main")
     t1 = threading.Thread(target=thread_func, args=("thread-1",), name="T1")
     t2 = threading.Thread(target=thread_func, args=("thread-2",), name="T2")
@@ -329,7 +329,7 @@ def test_thread_isolation():
     t2.start()
     t1.join()
     t2.join()
-    
+
     # Main thread was not affected by thread spawns
     assert get_current_correlation_id() == "main"
     # Each thread had its own value
@@ -339,20 +339,20 @@ def test_thread_isolation():
 def test_subprocess_receives_env_var():
     """Subprocess inherits correlation ID via environment."""
     import subprocess
-    
+
     set_correlation_id("req-subprocess-test")
-    
+
     env = os.environ.copy()
     if cid := get_current_correlation_id():
         env['GH_TRACE_ID'] = cid
-    
+
     result = subprocess.run(
         ["sh", "-c", "echo $GH_TRACE_ID"],
         env=env,
         capture_output=True,
         text=True,
     )
-    
+
     assert "req-subprocess-test" in result.stdout
 ```
 

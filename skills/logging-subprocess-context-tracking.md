@@ -46,13 +46,13 @@ tags:
 # In subprocess runner function
 def run_git_cmd(cmd: list[str], cwd: str | None = None) -> str:
     """Run git command in optional working directory."""
-    
+
     # Conditional log formatting
     if cwd is not None:
         logger.info(f"Running: {' '.join(cmd)} (cwd={cwd})")
     else:
         logger.info(f"Running: {' '.join(cmd)}")
-    
+
     result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
     return result.stdout
 ```
@@ -71,11 +71,11 @@ Locate the function that invokes subprocess calls. Examples:
 ```python
 def run_git_cmd(cmd: list[str], cwd: str | None = None) -> str:
     """Run git command in optional working directory.
-    
+
     Args:
         cmd: Command and arguments as list of strings
         cwd: Working directory for command execution (None = current directory)
-    
+
     Returns:
         stdout from the command
     """
@@ -92,7 +92,7 @@ def run_git_cmd(cmd: list[str], cwd: str | None = None) -> str:
         logger.info(f"Running git command: {' '.join(cmd)} (cwd={cwd})")
     else:
         logger.info(f"Running git command: {' '.join(cmd)}")
-    
+
     result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=True)
     return result.stdout
 ```
@@ -109,7 +109,7 @@ def test_run_git_cmd_with_cwd_logs_context():
     """Test that cwd context is logged when provided."""
     with patch("hephaestus.github.pr_merge.logger") as mock_logger:
         run_git_cmd(["git", "status"], cwd="/tmp/test_repo")
-        
+
         # Verify the logger call includes the cwd context
         call_args = mock_logger.info.call_args
         assert call_args is not None
@@ -120,7 +120,7 @@ def test_run_git_cmd_without_cwd_no_context():
     """Test that cwd is omitted from log when not provided."""
     with patch("hephaestus.github.pr_merge.logger") as mock_logger:
         run_git_cmd(["git", "status"])
-        
+
         # Verify the logger call does NOT include cwd context
         call_args = mock_logger.info.call_args
         assert call_args is not None
@@ -177,13 +177,13 @@ def test_subprocess_runner_with_cwd():
     """Test that working directory context is logged."""
     with patch("module_name.logger") as mock_logger:
         result = run_git_cmd(["git", "log", "--oneline"], cwd="/home/user/repo")
-        
+
         # Verify logger.info was called
         assert mock_logger.info.called
-        
+
         # Extract the logged message (first positional argument)
         logged_msg = mock_logger.info.call_args[0][0]
-        
+
         # Assertions on the message content
         assert "git log --oneline" in logged_msg or isinstance(logged_msg, str)
         assert "(cwd=/home/user/repo)" in logged_msg

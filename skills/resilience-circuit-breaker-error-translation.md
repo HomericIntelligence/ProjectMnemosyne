@@ -54,7 +54,7 @@ _GH_BREAKER = CircuitBreaker(
 # 3. Wrap the call and translate errors
 def _gh_call(cmd, json_output=False, timeout_ms=None):
     """Execute GitHub CLI command with circuit breaker protection.
-    
+
     Raises:
         CircuitBreakerOpenError → GitHubUnavailableError
         subprocess.CalledProcessError → re-raised unchanged
@@ -121,7 +121,7 @@ def _gh_call(cmd, json_output=False, timeout_ms=None):
        _gh_call([...])
    except RuntimeError:  # GitHubUnavailableError is a RuntimeError
        log_error("GitHub is down")
-   
+
    # New code can catch the specific exception:
    try:
        _gh_call([...])
@@ -174,15 +174,15 @@ class GitHubUnavailableError(RuntimeError):
 
 def _gh_call(cmd, json_output=False, timeout_ms=None):
     """Execute GitHub CLI command with circuit breaker protection.
-    
+
     Args:
         cmd: List of CLI arguments (e.g., ["pr", "view", "123"])
         json_output: If True, parse response as JSON
         timeout_ms: Optional timeout in milliseconds
-    
+
     Returns:
         Command output (str) or parsed JSON (dict/list)
-    
+
     Raises:
         GitHubUnavailableError: When GitHub API is unavailable
         subprocess.CalledProcessError: When command returns non-zero

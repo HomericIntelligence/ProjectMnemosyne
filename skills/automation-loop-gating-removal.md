@@ -78,7 +78,7 @@ def test_process_repo_no_skip_without_gating():
 # BEFORE: env var injected with docstring justifying it
 def _phase_env(phase_name):
     """Populate environment with phase-specific variables.
-    
+
     HEPH_LOOP_INDEX and HEPH_TOTAL_LOOPS are gated to drive-green phase only
     because ci_driver.py skips if HEPH_LOOP_INDEX is not set (issue #689 workaround).
     """

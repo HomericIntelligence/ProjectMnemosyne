@@ -85,29 +85,29 @@ query = 'query { repository(owner: $owner, name: $repo) { issue(number: $num) { 
 ```python
 def _fetch_batch_states(batch: list[int], owner: str, repo: str) -> dict[int, IssueState]:
     """Fetch issue states for a batch of issues in one aliased GraphQL call.
-    
+
     Args:
         batch: List of issue numbers to fetch (e.g. [615, 616, 617]).
         owner: Repository owner (e.g. 'HomericIntelligence').
         repo: Repository name (e.g. 'ProjectHephaestus').
-    
+
     Returns:
         dict mapping issue number -> IssueState.
     """
     if not batch:
         return {}
-    
+
     # Build alias fragment with variable references: n0: issue(number: $n0) { ... }
     fragments = [
         f"n{idx}: issue(number: $n{idx}) {{ number state }}"
         for idx in range(len(batch))
     ]
-    
+
     # Build the query template (no interpolation of batch data)
     query = (
         f"query {{'repository(owner: $owner, name: $repo) {{{' '.join(fragments)}}}}}"
     )
-    
+
     # Prepare -F variable flags: owner, repo, n0, n1, n2, ...
     flags = [
         "api", "graphql",
@@ -117,12 +117,12 @@ def _fetch_batch_states(batch: list[int], owner: str, repo: str) -> dict[int, Is
     ]
     for idx, issue_num in enumerate(batch):
         flags.extend(["-F", f"n{idx}={int(issue_num)}"])
-    
+
     # Execute with all variables bound
     result = _gh_call(flags)
     data = json.loads(result.stdout)
     repo_data = data.get("data", {}).get("repository", {})
-    
+
     # Parse aliases back to issue numbers using the reverse mapping
     result_map = {}
     for idx, issue_num in enumerate(batch):
@@ -130,7 +130,7 @@ def _fetch_batch_states(batch: list[int], owner: str, repo: str) -> dict[int, Is
         issue_data = repo_data.get(alias, {})
         state_str = issue_data.get("state", "UNKNOWN")
         result_map[issue_num] = IssueState(state_str)
-    
+
     return result_map
 ```
 
@@ -152,7 +152,7 @@ def _review_threads_for_review(owner: str, repo: str, pr_num: int, review_id: st
         }
       }
     }'''
-    
+
     flags = [
         "api", "graphql",
         "-f", f"query={query}",
@@ -160,15 +160,15 @@ def _review_threads_for_review(owner: str, repo: str, pr_num: int, review_id: st
         "-F", f"repo={repo}",
         "-F", f"prNum={int(pr_num)}",
     ]
-    
+
     result = _gh_call(flags)
     data = json.loads(result.stdout)
     threads = data.get("data", {}).get("repository", {}).get("pullRequest", {}).get("reviewThreads", {}).get("nodes", [])
-    
+
     # Filter to unresolved threads from the target review
     return [
         t for t in threads
-        if not t.get("isResolved") 
+        if not t.get("isResolved")
         and (t.get("comments", {}).get("nodes") or [{}])[0].get("pullRequestReview", {}).get("id") == review_id
     ]
 ```
@@ -214,9 +214,9 @@ def test_fetch_batch_states_single_issue(mocker):
         }
     })
     mocker.patch("hephaestus.automation.github_api._gh_call", return_value=mock_result)
-    
+
     result = _fetch_batch_states([615], "HomericIntelligence", "ProjectHephaestus")
-    
+
     assert result == {615: IssueState.OPEN}
     # Verify the call used parameterised variables
     call_args = _gh_call.call_args[0][0]
@@ -276,11 +276,11 @@ def _fetch_batch_states(batch: list[int], owner: str, repo: str) -> dict[int, Is
     """Fetch issue states using parameterised GraphQL variables."""
     if not batch:
         return {}
-    
+
     # Sanitise owner/repo (defense-in-depth)
     if not OWNER_PATTERN.match(owner) or not REPO_PATTERN.match(repo):
         raise ValueError(f"Invalid repo: {owner}/{repo}")
-    
+
     # Build alias fragments with variable refs (NO data interpolation)
     fragments = [
         f"n{idx}: issue(number: $n{idx}) {{ number state }}"
@@ -293,22 +293,22 @@ def _fetch_batch_states(batch: list[int], owner: str, repo: str) -> dict[int, Is
         }}
       }}
     """
-    
+
     # Prepare flags with parameterised variables
     flags = ["api", "graphql", "-f", f"query={query}", "-F", f"owner={owner}", "-F", f"repo={repo}"]
     for idx, num in enumerate(batch):
         flags.extend(["-F", f"n{idx}={int(num)}"])
-    
+
     result = _gh_call(flags)
     data = json.loads(result.stdout)
     repo_data = data.get("data", {}).get("repository", {})
-    
+
     result_map = {}
     for idx, num in enumerate(batch):
         issue_data = repo_data.get(f"n{idx}", {})
         state = IssueState(issue_data.get("state", "UNKNOWN"))
         result_map[num] = state
-    
+
     return result_map
 ```
 

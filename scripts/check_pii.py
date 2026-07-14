@@ -13,9 +13,7 @@ EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 SSN_RE = re.compile(r"(?<!\d)\d{3}[-. ]\d{2}[-. ]\d{4}(?!\d)")
 PHONE_RE = re.compile(r"(?<!\d)(?:\+?1[-. ]?)?(?:\(\d{3}\)|\d{3})[-. ]\d{3}[-. ]\d{4}(?!\d)")
 PHONE_CONTEXT_RE = re.compile(r"\b(?:phone|tel|mobile|cell|call|contact)\b", re.IGNORECASE)
-CARD_CANDIDATE_RE = re.compile(
-    r"(?<!\d)(?:\d{13,19}|\d{4}[- ]\d{4}[- ]\d{4}(?:[- ]\d{1,7})?)(?!\d)"
-)
+CARD_CANDIDATE_RE = re.compile(r"(?<!\d)(?:\d{13,19}|\d{4}[- ]\d{4}[- ]\d{4}(?:[- ]\d{1,7})?)(?!\d)")
 
 ALLOWED_EMAILS = {
     "git@github.com",
@@ -116,8 +114,7 @@ def main() -> int:
     print("PII-like patterns found:", file=sys.stderr)
     for finding in findings:
         print(
-            f"{finding.path}:{finding.line}:{finding.column}: "
-            f"{finding.kind}: {finding.value}",
+            f"{finding.path}:{finding.line}:{finding.column}: " f"{finding.kind}: {finding.value}",
             file=sys.stderr,
         )
     return 1

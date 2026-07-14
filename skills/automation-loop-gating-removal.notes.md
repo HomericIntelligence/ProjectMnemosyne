@@ -54,7 +54,7 @@ parser.add_argument(
 # hephaestus/automation/loop_runner.py (BEFORE)
 def _phase_env(phase_name: str) -> Dict[str, str]:
     """Populate environment with phase-specific variables.
-    
+
     HEPH_LOOP_INDEX and HEPH_TOTAL_LOOPS are gated to drive-green phase only
     because ci_driver.py skips if HEPH_LOOP_INDEX is not set (issue #689 workaround).
     See: hephaestus/automation/ci_driver.py:_maybe_skip_phase()
@@ -110,7 +110,7 @@ hephaestus-automation-loop \
 # tests/unit/automation/test_loop_runner.py (BEFORE)
 def test_process_repo_skips_issue_phases_when_no_issues():
     """When --issues not provided, plan/review phases are skipped.
-    
+
     This test verifies the gating behavior: ci_driver.py uses HEPH_LOOP_INDEX
     to decide whether to skip phases. When --issues omitted, loop_runner does
     not inject HEPH_LOOP_INDEX, so ci_driver skips phase.
@@ -118,7 +118,7 @@ def test_process_repo_skips_issue_phases_when_no_issues():
     cfg = LoopConfig(issues=[])  # Empty issues list
     with patch.object(loop_runner, "process_repo") as mock_process:
         run_loop(cfg)
-    
+
     # Verify phases were skipped
     for call in mock_process.call_args_list:
         assert "phase" not in call
@@ -132,14 +132,14 @@ def test_process_repo_skips_issue_phases_when_no_issues():
 # tests/unit/automation/test_loop_runner.py (AFTER)
 def test_process_repo_runs_phases_without_issues_flag():
     """Phases always run, regardless of --issues flag presence.
-    
+
     With HEPH_LOOP_INDEX gating removed, ci_driver.py no longer skips phases
     based on env vars. Phases run unconditionally.
     """
     cfg = LoopConfig(issues=[])  # Empty issues list
     with patch.object(loop_runner, "process_repo") as mock_process:
         run_loop(cfg)
-    
+
     # Verify phases ALWAYS run
     mock_process.assert_called()
 ```

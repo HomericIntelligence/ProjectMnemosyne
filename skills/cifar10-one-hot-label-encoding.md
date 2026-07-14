@@ -76,31 +76,31 @@ fn one_hot_encode(
 ) -> Tensor[DType.float32]:
     """
     Convert integer labels to one-hot encoded format.
-    
+
     Args:
         labels: Shape (B,) with values in [0, num_classes)
         num_classes: Number of classes (10 for CIFAR-10)
-    
+
     Returns:
         Shape (B, num_classes) with one 1.0 per row, rest 0.0
     """
     var batch_size = labels.shape[0]
-    
+
     # Create zero tensor (B, num_classes)
     var one_hot = zeros[DType.float32](batch_size, num_classes)
-    
+
     # Set one_hot[i, labels[i]] = 1.0
     for i in range(batch_size):
         var class_idx = int(labels[i])
-        
+
         # Bounds check (safety)
         if class_idx < 0 or class_idx >= num_classes:
             raise ValueError(
                 f"Label {class_idx} out of range [0, {num_classes})"
             )
-        
+
         one_hot[i, class_idx] = Float32(1.0)
-    
+
     return one_hot
 ```
 
@@ -111,7 +111,7 @@ struct CIFAR10Batch:
     var images: Tensor[DType.float32]  # Shape: (B, 3, 32, 32)
     var labels_raw: Tensor[DType.uint8]  # Shape: (B,) with values 0-9
     var labels_onehot: Tensor[DType.float32]  # Shape: (B, 10)
-    
+
     fn __init__(
         out self,
         images: Tensor[DType.float32],
@@ -126,7 +126,7 @@ fn load_cifar10_batch(batch_file: String) -> CIFAR10Batch:
     """Load batch and convert labels to one-hot format"""
     var images = load_images(batch_file)  # (B, 3, 32, 32) float32
     var labels_raw = load_labels(batch_file)  # (B,) uint8
-    
+
     return CIFAR10Batch(images, labels_raw)
 
 fn train_epoch(
@@ -134,17 +134,17 @@ fn train_epoch(
     batch_file: String,
 ) -> Float32:
     """Training epoch with proper label encoding"""
-    
+
     var batch = load_cifar10_batch(batch_file)
-    
+
     # Forward pass
     var logits = model.forward(batch.images)  # (B, 10)
-    
+
     # Cross-entropy expects:
     # - logits: (B, 10) raw predictions
     # - labels: (B, 10) one-hot encoded targets
     var loss = cross_entropy(logits, batch.labels_onehot)
-    
+
     return loss[0, 0]
 ```
 
@@ -157,47 +157,47 @@ fn verify_one_hot_encoding(
     num_classes: Int = 10,
 ) -> Bool:
     """Validate one-hot encoding properties"""
-    
+
     var batch_size = labels.shape[0]
-    
+
     # Check shape
     if one_hot.shape[0] != batch_size or one_hot.shape[1] != num_classes:
         print(f"ERROR: Shape mismatch. Expected ({batch_size}, {num_classes}), got {one_hot.shape}")
         return False
-    
+
     # Check each row
     for i in range(batch_size):
         var row_sum = Float32(0.0)
         var one_count = 0
         var class_idx = int(labels[i])
-        
+
         for j in range(num_classes):
             var val = one_hot[i, j]
-            
+
             // Each value should be 0.0 or 1.0
             if val != 0.0 and val != 1.0:
                 print(f"ERROR: one_hot[{i}, {j}] = {val}, expected 0.0 or 1.0")
                 return False
-            
+
             if val == 1.0:
                 one_count += 1
             row_sum += val
-        
+
         // Each row should sum to exactly 1.0
         if abs(row_sum - 1.0) > 1e-6:
             print(f"ERROR: Row {i} sums to {row_sum}, expected 1.0")
             return False
-        
+
         // Exactly one 1.0 per row
         if one_count != 1:
             print(f"ERROR: Row {i} has {one_count} ones, expected 1")
             return False
-        
+
         // The 1.0 should be at position labels[i]
         if abs(one_hot[i, class_idx] - 1.0) > 1e-6:
             print(f"ERROR: one_hot[{i}, {class_idx}] should be 1.0, got {one_hot[i, class_idx]}")
             return False
-    
+
     return True
 ```
 
@@ -210,33 +210,33 @@ fn process_cifar10_epoch(
     num_batches: Int,
 ) -> List[Float32]:
     """Process multiple batches with proper label encoding"""
-    
+
     var losses = List[Float32]()
-    
+
     for batch_idx in range(num_batches):
         // Load batch (images + raw integer labels)
         var batch = batch_iterator.next()
-        
+
         var images = batch.images  // (B, 3, 32, 32)
         var labels_raw = batch.labels_raw  // (B,) with uint8 values
-        
+
         // Encode labels to one-hot
         var labels_onehot = one_hot_encode(labels_raw, num_classes=10)
-        
+
         // Forward pass
         var logits = model.forward(images)  // (B, 10)
-        
+
         // Compute loss with one-hot encoded labels
         var loss = cross_entropy(logits, labels_onehot)
         losses.append(loss[0, 0])
-        
+
         // Backward pass
         var grad_out = grad_cross_entropy(logits, labels_onehot)
         var gradients = model.backward(grad_out)
-        
+
         // Update parameters
         update_step(model, gradients, lr=0.01)
-    
+
     return losses
 ```
 
@@ -245,16 +245,16 @@ fn process_cifar10_epoch(
 ```mojo
 fn test_one_hot_encoding() -> None:
     """Test one-hot encoding implementation"""
-    
+
     // Test 1: Single sample
     var labels1 = Tensor[DType.uint8](1)
     labels1[0] = 5
     var one_hot1 = one_hot_encode(labels1, num_classes=10)
-    
+
     assert_true(one_hot1.shape == (1, 10), "Shape should be (1, 10)")
     assert_true(one_hot1[0, 5] == 1.0, "Position 5 should be 1.0")
     assert_true(one_hot1[0, 0] == 0.0, "Other positions should be 0.0")
-    
+
     // Test 2: Multiple samples
     var labels2 = Tensor[DType.uint8](4)
     labels2[0] = 0
@@ -262,20 +262,20 @@ fn test_one_hot_encoding() -> None:
     labels2[2] = 5
     labels2[3] = 9
     var one_hot2 = one_hot_encode(labels2, num_classes=10)
-    
+
     assert_true(one_hot2.shape == (4, 10), "Shape should be (4, 10)")
     assert_true(one_hot2[0, 0] == 1.0, "Row 0, class 0 should be 1.0")
     assert_true(one_hot2[1, 1] == 1.0, "Row 1, class 1 should be 1.0")
     assert_true(one_hot2[2, 5] == 1.0, "Row 2, class 5 should be 1.0")
     assert_true(one_hot2[3, 9] == 1.0, "Row 3, class 9 should be 1.0")
-    
+
     // Test 3: Row sums
     for i in range(4):
         var row_sum = Float32(0.0)
         for j in range(10):
             row_sum += one_hot2[i, j]
         assert_true(abs(row_sum - 1.0) < 1e-6, "Each row should sum to 1.0")
-    
+
     print("✓ All one-hot encoding tests passed")
 ```
 
@@ -351,7 +351,7 @@ var loss = cross_entropy(logits, soft_labels)
 
 ```mojo
 // Input: labels = [0, 1, 5, 3] (shape: (4,))
-// Output: one_hot = 
+// Output: one_hot =
 // [1, 0, 0, 0, 0, 0, 0, 0, 0, 0]  // Class 0
 // [0, 1, 0, 0, 0, 0, 0, 0, 0, 0]  // Class 1
 // [0, 0, 0, 0, 0, 1, 0, 0, 0, 0]  // Class 5
@@ -365,7 +365,7 @@ Each sample has exactly one 1.0 (at the true class index) and nine 0.0s.
 ```
 Cross-entropy(logits, labels_onehot) =
   -sum over all i,j: labels_onehot[i,j] * log(softmax(logits[i,j]))
-  
+
 With one-hot labels, this simplifies to:
   -log(softmax(logits[i, true_class[i]]))
 ```
@@ -378,17 +378,17 @@ The loss only depends on the predicted probability of the true class.
 1. Load CIFAR-10 batch
    images: (B, 3, 32, 32) float32
    labels_raw: (B,) uint8 with values [0-9]
-   
+
 2. Encode labels
    labels_onehot = one_hot_encode(labels_raw, 10)
    Result: (B, 10) float32
-   
+
 3. Forward pass
    logits = model.forward(images)  // (B, 10)
-   
+
 4. Compute loss
    loss = cross_entropy(logits, labels_onehot)
-   
+
 5. Backward pass
    grad_out = grad_cross_entropy(logits, labels_onehot)
    gradients = model.backward(grad_out)

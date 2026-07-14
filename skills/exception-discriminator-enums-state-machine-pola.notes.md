@@ -85,19 +85,19 @@ The reason assertion exposed that `test_half_open_max_calls_exceeded` was ambigu
 ```python
 def test_half_open_exhaustion():
     barrier = threading.Event()
-    
+
     def slow_probe():
         barrier.set()  # Signal we're in-flight
         time.sleep(0.5)
         return True
-    
+
     # Hold probe in-flight while second call hits exhaustion
     breaker.state = CircuitBreakerState.HALF_OPEN
     breaker.max_calls = 1
     t = threading.Thread(target=lambda: breaker.call(slow_probe))
     t.start()
     barrier.wait()  # Wait for probe to be in-flight
-    
+
     # Now second call should hit slot exhaustion
     with pytest.raises(CircuitBreakerOpenError) as exc_info:
         breaker.call(lambda: None)

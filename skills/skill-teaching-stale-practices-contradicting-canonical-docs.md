@@ -100,11 +100,11 @@ pre-commit run markdownlint-cli2 --files skills/github-actions-python-cicd/SKILL
    # Check ENTIRE directory for stale tokens (critical — catches hidden files)
    ! grep -rnE 'flake8|black|requirements.txt|setup.py|src/' skills/github-actions-python-cicd/
    # Exit 0 ✓ (no stale tokens found)
-   
+
    # Positive match: confirm correct version/pattern is present
    grep -n 'ruff check' skills/github-actions-python-cicd/SKILL.md
    grep -n 'python-version.*3\.1[0-3]' skills/github-actions-python-cicd/SKILL.md
-   
+
    # Format gate
    pre-commit run markdownlint-cli2 --files skills/github-actions-python-cicd/SKILL.md
    ```

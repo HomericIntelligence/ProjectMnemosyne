@@ -62,10 +62,10 @@ from pathlib import Path
 
 def repo_root() -> Path:
     """Resolve repository root with env-var override + walk-up fallback.
-    
+
     Returns:
         Path to repository root (hephaestus/__init__.py is one level below)
-    
+
     Raises:
         RuntimeError: If repository root cannot be located
     """
@@ -75,14 +75,14 @@ def repo_root() -> Path:
         if (root / 'hephaestus' / '__init__.py').exists():
             return root
         raise RuntimeError(f"HEPHAESTUS_REPO_ROOT={env_path} does not contain hephaestus/__init__.py")
-    
+
     # 2. Walk up from __file__ until pyproject.toml marker is found
     current = Path(__file__).parent
     for _ in range(10):  # Limit iterations to prevent infinite loops
         if (current / 'pyproject.toml').exists():
             return current
         current = current.parent
-    
+
     # 3. Fail explicitly
     raise RuntimeError(
         "Could not locate repository root. "
@@ -91,10 +91,10 @@ def repo_root() -> Path:
 
 def scripts_dir() -> Path:
     """Resolve scripts directory with env-var override + repo_root fallback.
-    
+
     Returns:
         Path to scripts/ directory
-    
+
     Raises:
         RuntimeError: If scripts directory cannot be located
     """
@@ -104,12 +104,12 @@ def scripts_dir() -> Path:
         if scripts.exists() and scripts.is_dir():
             return scripts
         raise RuntimeError(f"HEPHAESTUS_SCRIPTS_DIR={env_path} does not exist or is not a directory")
-    
+
     # 2. Derive from repo_root
     scripts = repo_root() / 'scripts'
     if scripts.exists() and scripts.is_dir():
         return scripts
-    
+
     # 3. Fail explicitly
     raise RuntimeError(f"Scripts directory not found at {scripts}")
 

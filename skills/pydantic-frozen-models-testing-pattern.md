@@ -41,15 +41,15 @@ from pydantic import model_validator
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(frozen=True)
-    
+
     hermes_port: int = 8080
     hermes_public_url: str | None = None
-    
+
     @model_validator(mode="before")
     @classmethod
     def _set_public_url_default(cls, data: object) -> object:
         """Default ``hermes_public_url`` from ``hermes_port`` when unset.
-        
+
         Operates on raw input dict before instance construction (freezing).
         """
         if not isinstance(data, dict):
@@ -69,10 +69,10 @@ class Settings(BaseSettings):
 ```python
 def test_webhook_with_custom_key(monkeypatch: pytest.MonkeyPatch) -> None:
     from hermes.config import get_settings
-    
+
     monkeypatch.setenv("WEBHOOK_SECRET", "my-custom-secret-xxxxx")
     get_settings.cache_clear()  # Force re-instantiation from env vars
-    
+
     settings = get_settings()
     assert settings.webhook_secret == "my-custom-secret-xxxxx"
     # ... rest of test
@@ -90,13 +90,13 @@ class TestDeadLettersGetAuth:
         """Helper to construct a test client with custom DEAD_LETTER_API_KEY."""
         from hermes.config import get_settings
         from hermes.server import app
-        
+
         monkeypatch.setenv("DEAD_LETTER_API_KEY", key)
         get_settings.cache_clear()
-        
+
         # ... set up mock publisher, etc.
         return TestClient(app)
-    
+
     def test_correct_key_returns_200(self, monkeypatch: pytest.MonkeyPatch) -> None:
         client = self._build_client(key="correct-key", monkeypatch=monkeypatch)
         resp = client.get("/dead-letters", headers={"X-Dead-Letter-Key": "correct-key"})
@@ -160,7 +160,7 @@ def reset_settings() -> Generator[None, None, None]:
     a fresh ``Settings()`` with explicit kwargs.
     """
     from hermes.server import app
-    
+
     get_settings.cache_clear()
     app.dependency_overrides.clear()
     yield
@@ -184,7 +184,7 @@ class TestDeadLettersGetAuth:
     def _build_client(self, *, key: str) -> TestClient:
         get_settings().dead_letter_api_key = key  # <-- Raises ValidationError
         return TestClient(app)
-    
+
     def teardown_method(self) -> None:
         get_settings().dead_letter_api_key = ""  # <-- Also raises
 
@@ -194,11 +194,11 @@ class TestDeadLettersGetAuth:
         monkeypatch.setenv("DEAD_LETTER_API_KEY", key)
         get_settings.cache_clear()
         return TestClient(app)
-    
+
     def test_correct_key_returns_200(self, monkeypatch: pytest.MonkeyPatch) -> None:
         client = self._build_client(key="valid-key", monkeypatch=monkeypatch)
         assert client.get("/dead-letters", headers={"X-Dead-Letter-Key": "valid-key"}).status_code == 200
-    
+
     # No teardown_method needed — reset_settings fixture handles cleanup
 ```
 
@@ -210,22 +210,22 @@ Verify that the frozen model actually prevents mutations (regression guard):
 class TestSettingsImmutable:
     def test_settings_is_frozen_direct_mutation_raises(self) -> None:
         from hermes.config import Settings
-        
+
         s = Settings(_env_file=None)
         with pytest.raises(ValidationError):
             s.nats_url = "nats://mutated:4222"  # type: ignore[misc]
-    
+
     def test_settings_is_frozen_via_get_settings(self) -> None:
         from hermes.config import get_settings
-        
+
         get_settings.cache_clear()
         s = get_settings()
         with pytest.raises(ValidationError):
             s.hermes_port = 9999  # type: ignore[misc]
-    
+
     def test_public_url_default_still_applies_under_frozen(self) -> None:
         from hermes.config import Settings
-        
+
         s = Settings(hermes_port=8123, _env_file=None)
         assert s.hermes_public_url == "http://localhost:8123"
 ```
@@ -283,5 +283,5 @@ model_config = SettingsConfigDict(
 
 ---
 
-**Last Updated:** 2026-06-04  
+**Last Updated:** 2026-06-04
 **Author:** Claude Haiku 4.5

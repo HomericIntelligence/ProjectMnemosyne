@@ -71,7 +71,7 @@ def on_enter(self, machine_state):
     # Line 176: guard fires FIRST
     if self.is_plan_go(machine_state):
         return ADVANCE  # Early exit; rest of function never executes
-    
+
     # Line 206: swap logic (unreachable when is_plan_go=True)
     self._swap_plan(machine_state)
 ```
@@ -109,7 +109,7 @@ def on_enter(self, machine_state):
     # Line 176: is_plan_go guard fires first
     if self.is_plan_go(machine_state):
         return ADVANCE  # Short-circuit; lines below never execute
-    
+
     # Line 206: swap logic unreachable when is_plan_go=True
     # (only executes if is_plan_go=False, which is the opposite test case)
     self._swap_plan(machine_state)
@@ -133,7 +133,7 @@ pixi run pytest tests/unit/automation/planning/test_state_machine.py -v
 # WRONG: Claims test verifies swap + defense, but only guards prevent swap
 def test_replan_entry_with_stale_go_swaps_atomically(self):
     """Defense-in-depth protection for the swap logic.
-    
+
     The is_plan_go guard defends against incorrect state transitions,
     and the swap logic provides additional protection.
     """
@@ -193,7 +193,7 @@ test_plan_go_on_entry_fast_forwards_without_swap
 ```python
 def test_<name>(self):
     """The <guard_name> guard fires first and returns <early_exit_result>; <later_path> never reached.
-    
+
     Test verifies:
     - Guard condition: <condition>
     - Early exit: <action>

@@ -68,12 +68,12 @@ struct SGDMomentumOptimizer:
     var lr: Float32
     var momentum: Float32
     var velocities: List[Tensor[DType.float32]]  # One buffer per parameter
-    
+
     fn __init__(out self, lr: Float32 = 0.01, momentum: Float32 = 0.9):
         self.lr = lr
         self.momentum = momentum
         self.velocities = List[Tensor[DType.float32]]()
-    
+
     fn initialize_velocities(
         mut self,
         param_shapes: List[Tuple[Int, ...]],
@@ -88,14 +88,14 @@ struct SGDMomentumOptimizer:
 fn create_optimizer(model: MobileNetV1) -> SGDMomentumOptimizer:
     """Create optimizer and initialize velocity buffers"""
     var optimizer = SGDMomentumOptimizer(lr=0.01, momentum=0.9)
-    
+
     # Collect all parameter shapes
     var param_shapes = List[Tuple[Int, ...]]()
     param_shapes.append(model.dw_weight.shape)
     param_shapes.append(model.pw_weight.shape)
     param_shapes.append(model.bn1.gamma.shape)
     param_shapes.append(model.bn1.beta.shape)
-    
+
     optimizer.initialize_velocities(param_shapes)
     return optimizer
 ```
@@ -126,7 +126,7 @@ fn update_parameters(
     gradients: List[Tensor[DType.float32]],
 ) -> None:
     """Apply momentum-based parameter updates"""
-    
+
     for i in range(gradients.size()):
         # velocity[i] = momentum * velocity[i] + gradient[i]
         var new_velocity = (
@@ -134,11 +134,11 @@ fn update_parameters(
             gradients[i]
         )
         self.velocities[i] = new_velocity
-        
+
         # param -= lr * velocity
         # (This is equivalent to: param -= lr * (momentum * old_velocity + gradient))
         var parameter_update = self.lr * new_velocity
-        
+
         # Update parameters (pseudo-code - actual indexing depends on model structure)
         if i == 0:
             model.dw_weight -= parameter_update
@@ -158,35 +158,35 @@ fn test_convergence_with_fixed_batch(
     num_iterations: Int = 3,
 ) -> List[Float32]:
     """Train on same batch multiple times and verify loss decreases"""
-    
+
     var input, var labels = batch
     var losses = List[Float32]()
-    
+
     # Initialize optimizer with momentum
     var optimizer = create_optimizer(model)
     optimizer.momentum = Float32(0.0)  # Start with pure SGD
-    
+
     for iteration in range(num_iterations):
         # Forward pass
         var logits = model.forward(input)
         var loss = cross_entropy(logits, labels)
         var loss_scalar = loss[0, 0]
         losses.append(loss_scalar)
-        
+
         # Backward pass
         var grad_out = grad_cross_entropy(logits, labels)
         var gradients = model.backward(grad_out)
-        
+
         # Update parameters with momentum
         optimizer.update_parameters(model, gradients)
-        
+
         # Verify convergence: loss should strictly decrease
         if iteration > 0:
             if losses[iteration] >= losses[iteration - 1]:
                 print("WARNING: Loss did not decrease!")
                 print("  Iteration {iteration}: loss = {losses[iteration]}")
                 print("  Previous: {losses[iteration-1]}")
-    
+
     return losses
 ```
 
@@ -200,15 +200,15 @@ fn compare_momentum_values(
     batch: Tuple[Tensor, Tensor],
 ) -> Dict[Float32, List[Float32]]:
     """Compare convergence with different momentum coefficients"""
-    
+
     var results = Dict[Float32, List[Float32]]()
     var momentum_values = [0.0, 0.1, 0.3, 0.9]
-    
+
     for momentum_beta in momentum_values:
         var model = clone_model(model_template)
         var losses = test_convergence_with_fixed_batch(model, batch, momentum=momentum_beta)
         results[momentum_beta] = losses
-    
+
     # Print results
     print("Convergence Results:")
     print("Momentum | Loss@Iter0 | Loss@Iter1 | Loss@Iter2 | Converges?")
@@ -216,7 +216,7 @@ fn compare_momentum_values(
         var losses = results[momentum_beta]
         var converges = "✓" if losses[1] < losses[0] else "✗"
         print(f"{momentum_beta}       | {losses[0]:.6f} | {losses[1]:.6f} | {losses[2]:.6f} | {converges}")
-    
+
     return results
 ```
 
@@ -230,11 +230,11 @@ fn compare_momentum_values(
 fn test_training():
     var model = MobileNetV1()  # Random initialization
     var optimizer = SGDMomentumOptimizer(lr=0.01, momentum=0.9)
-    
+
     var batch = load_batch()
     var loss1 = compute_loss(model.forward(batch[0]), batch[1])
     update_step(model, optimizer)
-    
+
     var loss2 = compute_loss(model.forward(batch[0]), batch[1])
     assert_true(loss2 < loss1, "Loss should decrease")  // FAILS!
 ```
@@ -255,7 +255,7 @@ fn test_training():
 ```mojo
 struct SGDMomentumOptimizer:
     var velocities: List[Tensor]  // Never initialized!
-    
+
     fn update(mut self, model: mut Model, gradients: List[Tensor]):
         for i in range(gradients.size()):
             self.velocities[i] = self.momentum * self.velocities[i] + gradients[i]

@@ -73,26 +73,26 @@ fn train_step(
     lr: Float32,
 ) -> Tuple[Float32, Float32]:
     """Training step with separate batches for gradient and forward"""
-    
+
     # First batch for gradient computation
     var batch1 = batch_loader.load_batch()  # Fresh batch object
     var input1 = batch1[0]  # Extract input (ownership moves)
     var labels1 = batch1[1]  # Extract labels (ownership moves)
-    
+
     # compute_gradients takes ownership of input1 and labels1
     var loss1 = compute_gradients(model, input1, labels1, lr)
     // input1 and labels1 are now destroyed
-    
+
     # Second batch for forward pass (SEPARATE batch object)
     var batch2 = batch_loader.load_batch()  # Fresh batch object
     var input2 = batch2[0]  # Extract input (ownership moves to input2)
     var labels2 = batch2[1]  # Extract labels (ownership moves to labels2)
-    
+
     # model.forward takes ownership of input2 (not input1)
     var logits = model.forward(input2)  // Safe - input2 is fresh
-    
+
     var loss2 = cross_entropy(logits, labels2)
-    
+
     return (loss1, loss2[0, 0])
 ```
 
@@ -106,11 +106,11 @@ fn train_epoch(
     batch: Tensor,
 ) -> Float32:
     """Multiple operations on same batch using references"""
-    
+
     # Option 1: Borrow with & (read-only reference)
     var loss1 = compute_loss(model, batch &)  # & borrows, no move
     var loss2 = compute_loss_alt(model, batch &)  # Can borrow multiple times
-    
+
     return loss1 + loss2
 ```
 
@@ -125,20 +125,20 @@ struct BatchLoader:
     var input_path: String
     var label_path: String
     var batch_size: Int
-    
+
     fn load_batch(self) -> Tuple[Tensor, Tensor]:
         """Load fresh batch - each call creates new tensors"""
         var input_data = read_file(self.input_path)
         var label_data = read_file(self.label_path)
-        
+
         var input_tensor = Tensor[DType.float32](
             self.batch_size,
             input_data.shape[1]
         )
         var label_tensor = Tensor[DType.uint8](self.batch_size)
-        
+
         # ... populate tensors from files
-        
+
         return (input_tensor, label_tensor)
 
 fn train_epoch(model: Model, batch_loader: BatchLoader) -> None:
@@ -147,7 +147,7 @@ fn train_epoch(model: Model, batch_loader: BatchLoader) -> None:
         var batch = batch_loader.load_batch()
         var input = batch[0]
         var labels = batch[1]
-        
+
         _ = compute_gradients(model, input, labels, lr)
         // input, labels destroyed after compute_gradients
 ```
@@ -162,19 +162,19 @@ fn verify_post_training(
     validation_batch: Tuple[Tensor, Tensor],
 ) -> Float32:
     """Forward pass after training complete"""
-    
+
     # Create separate batch for validation
     var eval_batch = load_eval_batch()  # Fresh batch
     var eval_input = eval_batch[0]
     var eval_labels = eval_batch[1]
-    
+
     # Forward pass (may take input by value)
     var logits = model.forward(eval_input)  // input moved
-    
+
     # Compute metrics
     var loss = cross_entropy(logits, eval_labels)
     var accuracy = compute_accuracy(logits, eval_labels)
-    
+
     return loss[0, 0]
 ```
 
@@ -252,7 +252,7 @@ fn full_training_with_verification(
     batch_loader: BatchLoader,
 ) -> Tuple[Float32, Float32]:
     """Training complete with post-training forward pass"""
-    
+
     # Phase 1: Training (consuming batches)
     for epoch in range(num_epochs):
         for step in range(steps_per_epoch):
@@ -260,15 +260,15 @@ fn full_training_with_verification(
             var train_input = train_batch[0]
             var train_labels = train_batch[1]
             _ = compute_gradients(model, train_input, train_labels, lr)
-    
+
     # Phase 2: Post-training verification (SEPARATE batch)
     var eval_batch = batch_loader.load_batch()  // New batch object
     var eval_input = eval_batch[0]
     var eval_labels = eval_batch[1]
-    
+
     var logits = model.forward(eval_input)  // Safe - eval_input is fresh
     var loss = cross_entropy(logits, eval_labels)
-    
+
     return (training_loss, loss[0, 0])
 ```
 

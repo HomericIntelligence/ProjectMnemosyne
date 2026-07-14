@@ -34,7 +34,7 @@ This brittle fragmentation is the **core problem** — any directory structure c
 ```python
 def repo_root() -> Path:
     """Env override → pyproject.toml walk-up → RuntimeError"""
-    
+
 def scripts_dir() -> Path:
     """Env override → repo_root derivation → RuntimeError"""
 

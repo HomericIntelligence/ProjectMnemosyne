@@ -108,7 +108,7 @@ class TestDeadLettersGetAuth:
         client = self._build_client(key=_DEAD_LETTER_KEY, monkeypatch=monkeypatch)
         resp = client.get("/dead-letters", headers={"X-Dead-Letter-Key": _DEAD_LETTER_KEY})
         assert resp.status_code == 200
-    
+
     # No teardown_method — reset_settings fixture handles cleanup
 ```
 
@@ -311,10 +311,10 @@ s = get_settings()  # Fresh instance with new value
 
 ## Test Results
 
-**Commit:** b7191ad  
-**Total Tests:** 544  
-**Pass Rate:** 100% (544/544 pass)  
-**Coverage:** 97.60%  
+**Commit:** b7191ad
+**Total Tests:** 544
+**Pass Rate:** 100% (544/544 pass)
+**Coverage:** 97.60%
 **Duration:** ~30 seconds (full suite)
 
 ### Test Breakdown
@@ -345,7 +345,7 @@ All tests pass with no regressions. The monkeypatch+cache_clear pattern correctl
 
 ---
 
-**Skill File:** pydantic-frozen-models-testing-pattern.md  
-**Notes File:** pydantic-frozen-models-testing-pattern.notes.md  
-**Version:** 1.0.0  
+**Skill File:** pydantic-frozen-models-testing-pattern.md
+**Notes File:** pydantic-frozen-models-testing-pattern.notes.md
+**Version:** 1.0.0
 **Last Updated:** 2026-06-04

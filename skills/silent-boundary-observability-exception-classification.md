@@ -205,7 +205,7 @@ def test_follow_up_expected_failure_logs_warning(caplog):
     with patch("subprocess.run", side_effect=subprocess.CalledProcessError(1, "cmd")):
         with caplog.at_level("WARNING"):
             run_follow_up_issues(...)
-    
+
     assert "expected failure type" in caplog.text
     assert caplog.records[0].levelname == "WARNING"
     assert caplog.records[0].exception_type == "CalledProcessError"
@@ -215,7 +215,7 @@ def test_follow_up_unexpected_failure_logs_error(caplog):
     with patch("some.function", side_effect=AttributeError("bad attr")):
         with caplog.at_level("ERROR"):
             run_follow_up_issues(...)
-    
+
     assert "unexpected exception type" in caplog.text
     assert caplog.records[0].levelname == "ERROR"
     assert caplog.records[0].exception_type == "AttributeError"
@@ -224,7 +224,7 @@ def test_follow_up_always_returns_none(caplog):
     """Even on exception, must return None (fail-safe contract)."""
     with patch("subprocess.run", side_effect=RuntimeError("boom")):
         result = run_follow_up_issues(...)
-    
+
     assert result is None
 ```
 
@@ -316,7 +316,7 @@ def run_follow_up_issues(
     github: GitHub,
 ) -> None:
     """Generate and create follow-up issues for completed tasks.
-    
+
     Returns None on any error — this is a fail-safe operation designed
     to never block the automation loop.
     """

@@ -48,17 +48,17 @@ from pathlib import Path
 @pytest.fixture(autouse=True)
 def _fake_binary_on_path(tmp_path, monkeypatch):
     """Create fake gh binary that outputs environment variables.
-    
+
     Subprocess will find this fake instead of the real gh command.
     """
     fake_bin_dir = tmp_path / "bin"
     fake_bin_dir.mkdir()
-    
+
     # Create fake gh that outputs environment
     fake_gh = fake_bin_dir / "gh"
     fake_gh.write_text("#!/bin/sh\nenv | grep GH_TRACE_ID || echo 'NO_GH_TRACE_ID'\n")
     fake_gh.chmod(0o755)  # ← CRITICAL: must set execute bit
-    
+
     # Prepend to PATH (so fake is found first)
     original_path = os.environ.get("PATH", "")
     monkeypatch.setenv("PATH", str(fake_bin_dir) + ":" + original_path)
@@ -66,17 +66,17 @@ def _fake_binary_on_path(tmp_path, monkeypatch):
 def test_gh_trace_id_propagated_to_subprocess(monkeypatch, _fake_binary_on_path):
     """Integration test: subprocess receives GH_TRACE_ID from context."""
     from hephaestus.logging.utils import set_correlation_id
-    
+
     # Set correlation ID in context
     set_correlation_id("req-integration-test-123")
-    
+
     # Call subprocess (will find fake gh from fixture)
     result = subprocess.run(
         ["gh", "pr", "view", "123"],
         capture_output=True,
         text=True,
     )
-    
+
     # Verify fake gh received the env var
     assert "req-integration-test-123" in result.stdout
 ```
@@ -203,18 +203,18 @@ from pathlib import Path
 @pytest.fixture(autouse=True)
 def _fake_binary_on_path(tmp_path, monkeypatch):
     """Create fake gh binary that echoes environment variables.
-    
+
     This fixture provides a fake gh command that will be found before
     the real gh in PATH. Used to test environment variable propagation
     to subprocesses without requiring a real GitHub CLI installation.
-    
+
     Args:
         tmp_path: pytest fixture providing temporary directory
         monkeypatch: pytest fixture for environment modification
     """
     fake_bin_dir = tmp_path / "bin"
     fake_bin_dir.mkdir()
-    
+
     # Create fake gh script that outputs environment
     fake_gh = fake_bin_dir / "gh"
     fake_gh.write_text(
@@ -223,82 +223,82 @@ def _fake_binary_on_path(tmp_path, monkeypatch):
         "echo 'GH_TRACE_ID='$GH_TRACE_ID\n"
         "echo 'CUSTOM_CONFIG='$CUSTOM_CONFIG\n"
     )
-    
+
     # Set executable permission (CRITICAL!)
     fake_gh.chmod(0o755)
-    
+
     # Prepend fake bin dir to PATH
     original_path = os.environ.get("PATH", "")
     monkeypatch.setenv("PATH", str(fake_bin_dir) + ":" + original_path)
-    
+
     return fake_bin_dir
 
 
 class TestGHTraceIDPropagation:
     """Integration tests for environment variable propagation to subprocesses."""
-    
+
     def test_subprocess_receives_gh_trace_id_from_context(self, monkeypatch, _fake_binary_on_path):
         """Subprocess receives GH_TRACE_ID when set in context."""
         from hephaestus.logging.utils import set_correlation_id
-        
+
         # Set correlation ID in context
         set_correlation_id("req-trace-12345")
-        
+
         # Import and call run_subprocess (which injects correlation ID into env)
         from hephaestus.utils.helpers import run_subprocess
-        
+
         result = run_subprocess(["gh", "pr", "view", "123"])
-        
+
         # Verify fake gh received the env var
         assert "GH_TRACE_ID=req-trace-12345" in result
-    
+
     def test_subprocess_no_trace_id_when_not_set(self, monkeypatch, _fake_binary_on_path):
         """Subprocess does not receive GH_TRACE_ID when not set in context."""
         from hephaestus.logging.utils import set_correlation_id
-        
+
         # Explicitly set to None (no context)
         set_correlation_id(None)
-        
+
         from hephaestus.utils.helpers import run_subprocess
-        
+
         result = run_subprocess(["gh", "pr", "view", "123"])
-        
+
         # Verify fake gh did NOT receive the env var
         # (output will be empty for GH_TRACE_ID or the variable undefined)
         assert "GH_TRACE_ID=" not in result or result.count("GH_TRACE_ID=") == 1
-    
+
     def test_subprocess_receives_custom_env_var(self, monkeypatch, _fake_binary_on_path):
         """Test custom environment variable propagation pattern."""
         import os
-        
+
         env = os.environ.copy()
         env['CUSTOM_CONFIG'] = 'test-value-789'
-        
+
         result = subprocess.run(
             ["gh", "pr", "view", "456"],
             env=env,
             capture_output=True,
             text=True,
         )
-        
+
         assert "CUSTOM_CONFIG=test-value-789" in result.stdout
 
 
 @pytest.mark.skip_on_ci
 class TestGHTraceIDPropagationWithRealGH:
     """Tests that use the real gh command (skip in CI)."""
-    
+
     def test_real_gh_availability(self):
         """Verify real gh is available in the current environment."""
         result = subprocess.run(["which", "gh"], capture_output=True, text=True)
         assert result.returncode == 0, "Real gh not found in PATH"
-    
+
     def test_real_gh_with_trace_id(self):
         """Integration test with real gh (if available)."""
         from hephaestus.logging.utils import set_correlation_id
-        
+
         set_correlation_id("req-real-gh-test")
-        
+
         # This test requires real gh; only runs when explicitly enabled
         # Example: pytest -m real_gh tests/integration/test_gh_trace_id_propagation.py
         result = subprocess.run(
@@ -333,25 +333,25 @@ GH_TRACE_ID=req-123...  # ← Fake binary output
 
 def run_subprocess(cmd: list[str], **kwargs) -> str:
     """Run subprocess, injecting correlation ID into environment.
-    
+
     Args:
         cmd: Command to run (e.g., ["gh", "pr", "view", "123"])
         **kwargs: Additional arguments to subprocess.run()
-    
+
     Returns:
         stdout from the subprocess
-    
+
     Raises:
         subprocess.CalledProcessError: If subprocess returns non-zero
     """
     env = kwargs.pop('env', None) or os.environ.copy()
-    
+
     # Inject correlation ID into environment
     from hephaestus.logging.utils import get_current_correlation_id
-    
+
     if cid := get_current_correlation_id():
         env['GH_TRACE_ID'] = cid
-    
+
     result = subprocess.run(
         cmd,
         env=env,

@@ -70,7 +70,7 @@ fn depthwise_block_forward(
     bn2: BatchNorm2d,
 ) -> Tensor[DType.float32]:
     """Forward pass: depthwise → BN → ReLU → pointwise → BN → ReLU"""
-    
+
     # Depthwise convolution: (B, C, H, W) → (B, C, H', W')
     var dw_out = depthwise_conv2d(
         input,
@@ -78,22 +78,22 @@ fn depthwise_block_forward(
         stride=1,
         padding=1
     )
-    
+
     # Batch norm: normalize per-channel statistics
     var bn1_out = bn1.forward(dw_out)
-    
+
     # ReLU activation
     var relu1_out = relu(bn1_out)
-    
+
     # Pointwise (1x1) convolution: (B, C, H', W') → (B, C_out, H', W')
     var pw_out = conv2d(relu1_out, pw_weight, stride=1, padding=0)
-    
+
     # Second batch norm
     var bn2_out = bn2.forward(pw_out)
-    
+
     # Second ReLU
     var relu2_out = relu(bn2_out)
-    
+
     return relu2_out
 ```
 
@@ -123,27 +123,27 @@ fn depthwise_block_backward(
     pw_weight: Tensor[DType.float32],
 ) -> Tuple[Tensor[DType.float32], Tensor[DType.float32], Tensor[DType.float32]]:
     """Backward pass in reverse order. Returns (grad_input, grad_dw, grad_pw)"""
-    
+
     # 1. ReLU2 backward
     var grad_relu2 = grad_out * (relu2_out > 0).cast[DType.float32]()
-    
+
     # 2. BN2 backward (using cached BN2 output)
     var grad_bn2 = bn2.backward(grad_relu2, bn2_out)
-    
+
     # 3. Pointwise conv backward
     var grad_pw_out = conv2d_backward_data(grad_bn2, pw_weight)
     var grad_pw_weight = conv2d_backward_weight(relu1_out, grad_bn2)
-    
+
     # 4. ReLU1 backward
     var grad_relu1 = grad_pw_out * (relu1_out > 0).cast[DType.float32]()
-    
+
     # 5. BN1 backward (using cached BN1 output)
     var grad_bn1 = bn1.backward(grad_relu1, bn1_out)
-    
+
     # 6. Depthwise conv backward
     var grad_input = depthwise_conv2d_backward_data(grad_bn1, dw_weight)
     var grad_dw_weight = depthwise_conv2d_backward_weight(input, grad_bn1)
-    
+
     return (grad_input, grad_dw_weight, grad_pw_weight)
 ```
 
@@ -159,36 +159,36 @@ fn verify_depthwise_gradients(
     epsilon: Float32 = 1e-5,
 ) -> Bool:
     """Verify analytical gradients match numerical gradients"""
-    
+
     # Forward pass
     var output = depthwise_block_forward(input, dw_weight, pw_weight)
     var loss = output.sum()  # Scalar loss
-    
+
     # Backward pass (analytical)
     var grad_input, var grad_dw, var grad_pw = depthwise_block_backward(...)
-    
+
     # Numerical gradient for dw_weight[i,j,k,l]
     for i in range(dw_weight.shape[0]):
         for j in range(dw_weight.shape[1]):
             var original = dw_weight[i,j,k,l]
-            
+
             # Forward difference
             dw_weight[i,j,k,l] = original + epsilon
             var loss_plus = depthwise_block_forward(...).sum()
-            
+
             dw_weight[i,j,k,l] = original - epsilon
             var loss_minus = depthwise_block_forward(...).sum()
-            
+
             var numerical_grad = (loss_plus - loss_minus) / (2 * epsilon)
             var analytical_grad = grad_dw[i,j,k,l]
-            
+
             # Relative error should be < 1e-4
             var rel_error = abs(numerical_grad - analytical_grad) / (abs(analytical_grad) + 1e-8)
             if rel_error > 1e-4:
                 return False
-            
+
             dw_weight[i,j,k,l] = original
-    
+
     return True
 ```
 
@@ -203,9 +203,9 @@ fn train_step(
     lr: Float32,
 ) -> Float32:
     """Single training step with caching for backward pass"""
-    
+
     var input, var labels = batch
-    
+
     # Forward pass - cache intermediate outputs
     var dw_out = depthwise_conv2d(input, model.dw_weight, ...)
     var bn1_out = model.bn1.forward(dw_out)
@@ -213,20 +213,20 @@ fn train_step(
     var pw_out = conv2d(relu1_out, model.pw_weight, ...)
     var bn2_out = model.bn2.forward(pw_out)
     var logits = relu(bn2_out)
-    
+
     # Loss computation
     var loss = cross_entropy(logits, labels)
-    
+
     # Backward pass with cached tensors
     var grad_out = grad_cross_entropy(logits, labels)
     var grad_input, var grad_dw, var grad_pw = depthwise_block_backward(
         grad_out, input, dw_out, bn1_out, relu1_out, pw_out, bn2_out, ...
     )
-    
+
     # Parameter updates
     model.dw_weight -= lr * grad_dw
     model.pw_weight -= lr * grad_pw
-    
+
     return loss[0, 0]
 ```
 
@@ -239,7 +239,7 @@ fn train_step(
 ```mojo
 struct DepthwiseBlock:
     var depthwise: Conv2d  # Wrapper around depthwise_conv2d
-    
+
 fn forward(self, x: Tensor) -> Tensor:
     return self.depthwise.forward(x)  # Calls conv2d, not depthwise
 ```
@@ -307,7 +307,7 @@ fn forward_with_cache(...) -> Tuple[Tensor, ForwardCache]:
     var bn1_out = bn1.forward(dw_out)
     var relu1_out = relu(bn1_out)
     # ... more computations
-    
+
     var cache = ForwardCache(dw_out, bn1_out, relu1_out, pw_out, bn2_out)
     return (final_output, cache)
 

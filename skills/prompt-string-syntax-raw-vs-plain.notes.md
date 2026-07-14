@@ -115,7 +115,7 @@ unclear whether the gap is intentional (deferred) or accidental (forgotten).
 ```python
 def test_directive_in_implementation_prompt():
     """Validate terse directive in implementation agent prompt.
-    
+
     Note: Requires get_comment_difficulty_prompt() helper, planned for future
     refinement. Currently implementation prompt does not use comment difficulty
     scoring, so this test is deferred.

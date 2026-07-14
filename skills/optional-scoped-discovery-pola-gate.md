@@ -238,11 +238,11 @@ from typing import Optional, List
 
 def setup_cli():
     """Setup a POLA-compliant CLI with optional discovery flags."""
-    
+
     parser = argparse.ArgumentParser(
         description="Drive PRs green via issue-driven or PR-driven discovery."
     )
-    
+
     # Optional issues: gate to issue-driven if provided, PR-driven if absent
     parser.add_argument(
         "--issues",
@@ -252,7 +252,7 @@ def setup_cli():
         dest="issues",
         help="Discover work from specific issues. Omit for auto-discovery from all PRs.",
     )
-    
+
     # Optional org: gate to org-scoped or global discovery
     parser.add_argument(
         "--org",
@@ -261,7 +261,7 @@ def setup_cli():
         dest="org",
         help="Org name to drive. Omit for auto-detect from git remote.",
     )
-    
+
     return parser
 
 
@@ -270,18 +270,18 @@ def discover_work(
     args_org: Optional[str],
 ) -> dict[int, int]:
     """Discover work based on POLA-gated flags.
-    
+
     Args:
         args_issues: Issues to discover (or None if flag not provided)
         args_org: Org name to discover (or None if flag not provided)
-    
+
     Returns:
         dict[int, int]: Discovered {issue_num: pr_num} pairs
     """
-    
+
     # First gate: org scope
     org = args_org if args_org is not None else _auto_detect_org()
-    
+
     # Second gate: discovery mode
     if args_issues is not None:
         # Operator provided --issues (even if empty)
@@ -295,7 +295,7 @@ def discover_work(
         # Operator did NOT provide --issues
         # Go wide: discover from all failing PRs
         discovered = _discover_from_all_prs(org=org)
-    
+
     return discovered
 ```
 
@@ -307,22 +307,22 @@ import pytest
 
 class TestPolaDiscoveryGate:
     """Validate that flag presence gates discovery scope."""
-    
+
     def test_issues_flag_gates_to_issue_driven(self):
         """--issues provided → issue-driven discovery, not PR-driven."""
         # Arrange
         mock_discovered_issues = {1: 100, 2: 200}
         mock_discover_from_issues = lambda issues, **kw: mock_discovered_issues
-        
+
         # Act
         result = discover_work(
             args_issues=[1, 2],  # Flag provided with values
             args_org=None,
         )
-        
+
         # Assert: should not call _discover_from_all_prs
         assert result == mock_discovered_issues
-    
+
     def test_issues_flag_empty_stays_issue_driven(self):
         """--issues with no values → still issue-driven (empty result)."""
         # Arrange
@@ -331,25 +331,25 @@ class TestPolaDiscoveryGate:
             args_issues=[],  # Flag present, no values
             args_org=None,
         )
-        
+
         # Assert: should stay in issue-driven mode, return empty (no work)
         assert result == {}
-    
+
     def test_no_issues_flag_gates_to_pr_driven(self):
         """Omit --issues → PR-driven auto-discovery."""
         # Arrange
         mock_discovered_prs = {300: 300, 301: 301}
-        
+
         # Act: flag NOT provided (None)
         result = discover_work(
             args_issues=None,  # Flag not provided
             args_org=None,
         )
-        
+
         # Assert: should call _discover_from_all_prs, not _discover_from_issues
         # Result should include PRs, not issues
         assert result == mock_discovered_prs
-    
+
     def test_org_flag_gates_to_scoped_discovery(self):
         """--org provided → org-scoped discovery."""
         # Act
@@ -357,7 +357,7 @@ class TestPolaDiscoveryGate:
             args_issues=None,  # Auto-discover PRs
             args_org="homeric-intelligence",  # Scoped to org
         )
-        
+
         # Assert: discovery function should receive the org
         # (Verified via mock.assert_called_with)
         # ...
