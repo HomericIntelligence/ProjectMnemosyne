@@ -56,7 +56,7 @@ SGD with Momentum:
 
 **Convergence pattern with momentum**:
 - First update: velocity = 0 * 0 + g₁ = g₁
-- Second update: velocity = 0.9 * g₁ + g₂ ≈ 0.9*g₁ + g₂ (can be > g₂ if g₁ and g₂ align)
+- Second update: velocity = 0.9 \* g₁ + g₂ ≈ 0.9\*g₁ + g₂ (can be > g₂ if g₁ and g₂ align)
 - Oscillation risk: If velocity becomes large, updates may overshoot the loss minimum
 
 ### Step 2: Initialize Velocity Buffers to Zero
