@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "project-mnemosyne"
-version = "2.1.0"
-description = "Skills marketplace for the HomericIntelligence agentic ecosystem"
+version = "3.0.0"
+description = "Skills and session-memory store for the HomericIntelligence agentic ecosystem"
 requires-python = ">=3.9"
 dependencies = [
     "pyyaml>=6.0.3",

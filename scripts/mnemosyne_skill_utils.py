@@ -2,8 +2,8 @@
 """
 Shared utilities for skill file discovery and frontmatter parsing.
 
-Centralises logic that was previously duplicated across
-validate_plugins.py and generate_marketplace.py (see #914, #928, #1110).
+Centralises skill-file parsing logic used by validate_plugins.py
+(see #914, #928, #1110).
 """
 
 import re

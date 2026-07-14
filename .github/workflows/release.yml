@@ -3,7 +3,7 @@ name: Release
 # Tag-gated publish path for the canonical `release` gate (issue #2913).
 # The dry-run half lives in _required.yml (job `release`) and runs on every
 # PR and main push; this workflow re-validates the same contract against the
-# pushed tag and publishes a GitHub Release with the marketplace snapshot.
+# pushed tag and publishes a GitHub Release with the skills-corpus snapshot.
 
 on:
   push:
@@ -36,11 +36,10 @@ jobs:
             found {print}
           ' CHANGELOG.md > release-notes.md
           test -s release-notes.md
-      - name: Build marketplace snapshot
+      - name: Build skills-corpus snapshot
         run: |
           version="${GITHUB_REF_NAME#v}"
-          tar -czf "mnemosyne-marketplace-${version}.tar.gz" \
-            skills/ .claude-plugin/marketplace.json .claude-plugin/plugin.json
+          tar -czf "mnemosyne-skills-${version}.tar.gz" skills/
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -49,4 +48,4 @@ jobs:
           gh release create "${GITHUB_REF_NAME}" \
             --title "Mnemosyne ${GITHUB_REF_NAME}" \
             --notes-file release-notes.md \
-            "mnemosyne-marketplace-${version}.tar.gz"
+            "mnemosyne-skills-${version}.tar.gz"

@@ -4,12 +4,14 @@ Tests for scripts/validate_release_contract.py.
 
 Covers:
 - find_violations: compliant fixture, one dedicated test per violation branch
-  (non-semver version, plugin.json mismatch, marketplace.json mismatch,
-  missing/misanchored CHANGELOG.md, unparseable plugin.json)
+  (non-semver version, missing/misanchored CHANGELOG.md)
 - check_tag: matching tag, wrong version, missing 'v' prefix
 - main: orchestrator altitude (exit codes + stderr/stdout via capsys),
   argparse default --repo-root branch
 - Live-tree alignment: the real repo satisfies the contract
+
+Mnemosyne is a skills/memory store (Athena is the plugin distribution), so the
+contract no longer tracks any .claude-plugin/ marketplace or plugin.json version.
 """
 
 from pathlib import Path
@@ -33,19 +35,10 @@ COMPLIANT_CHANGELOG = """\
 def make_repo(
     tmp_path: Path,
     version: str = "2.1.0",
-    plugin_version: Optional[str] = None,
-    marketplace_version: Optional[str] = None,
     changelog: Optional[str] = COMPLIANT_CHANGELOG,
-    plugin_json_text: Optional[str] = None,
 ) -> Path:
     """Write a minimal repo fixture; defaults produce a compliant contract."""
     (tmp_path / "pyproject.toml").write_text(f'[project]\nname = "x"\nversion = "{version}"\n')
-    claude_plugin = tmp_path / ".claude-plugin"
-    claude_plugin.mkdir()
-    if plugin_json_text is None:
-        plugin_json_text = f'{{"version": "{plugin_version or version}"}}'
-    (claude_plugin / "plugin.json").write_text(plugin_json_text)
-    (claude_plugin / "marketplace.json").write_text(f'{{"version": "{marketplace_version or version}"}}')
     if changelog is not None:
         (tmp_path / "CHANGELOG.md").write_text(changelog)
     return tmp_path
@@ -63,19 +56,6 @@ class TestFindViolations:
         )
         violations = find_violations(repo)
         assert any("not strict semver" in v for v in violations)
-
-    def test_plugin_json_mismatch(self, tmp_path):
-        repo = make_repo(tmp_path, plugin_version="2.0.0")
-        violations = find_violations(repo)
-        assert len(violations) == 1
-        assert "plugin.json" in violations[0]
-        assert "'2.0.0'" in violations[0] and "'2.1.0'" in violations[0]
-
-    def test_marketplace_json_mismatch(self, tmp_path):
-        repo = make_repo(tmp_path, marketplace_version="2.0.0")
-        violations = find_violations(repo)
-        assert len(violations) == 1
-        assert "marketplace.json" in violations[0]
 
     def test_missing_changelog(self, tmp_path):
         repo = make_repo(tmp_path, changelog=None)
@@ -105,12 +85,6 @@ class TestFindViolations:
         )
         assert find_violations(repo) == []
 
-    def test_unparseable_plugin_json(self, tmp_path):
-        repo = make_repo(tmp_path, plugin_json_text="{not json")
-        violations = find_violations(repo)
-        assert len(violations) == 1
-        assert "cannot parse" in violations[0]
-
     def test_missing_pyproject(self, tmp_path):
         violations = find_violations(tmp_path)
         assert len(violations) == 1
@@ -139,11 +113,15 @@ class TestCheckTag:
 
 class TestMain:
     def test_main_broken_fixture_returns_1(self, tmp_path, capsys):
-        repo = make_repo(tmp_path, plugin_version="2.0.0")
+        repo = make_repo(
+            tmp_path,
+            version="2.1",
+            changelog="# Changelog\n\n## [2.1.0] - 2026-07-03\n\n- x\n",
+        )
         assert main(["--repo-root", str(repo)]) == 1
         captured = capsys.readouterr()
         assert "RELEASE-CONTRACT VIOLATION" in captured.err
-        assert "plugin.json" in captured.err
+        assert "not strict semver" in captured.err
 
     def test_main_compliant_fixture_returns_0(self, tmp_path, capsys):
         repo = make_repo(tmp_path)

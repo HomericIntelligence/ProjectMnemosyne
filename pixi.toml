@@ -1,7 +1,7 @@
 [project]
 name = "project-mnemosyne"
-version = "2.1.0"
-description = "Skills marketplace for the HomericIntelligence agentic ecosystem"
+version = "3.0.0"
+description = "Skills and session-memory store for the HomericIntelligence agentic ecosystem"
 channels = ["conda-forge"]
 platforms = ["linux-64", "osx-arm64"]
 
@@ -21,5 +21,4 @@ validate = "python3 scripts/validate_plugins.py"
 validate-release = "python3 scripts/validate_release_contract.py"
 test = "python3 -m pytest tests/"
 check = { depends-on = ["validate", "validate-release", "test"] }
-generate-marketplace = "python3 scripts/generate_marketplace.py"
-package = "python3 scripts/build_package.py"
+package = "python3 -m build"

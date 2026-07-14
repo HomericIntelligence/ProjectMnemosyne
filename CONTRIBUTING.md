@@ -140,12 +140,12 @@ Common types:
 - `feat:` -- New skill or feature
 - `fix:` -- Bug fix or correction
 - `docs:` -- Documentation changes
-- `chore:` -- Maintenance tasks (e.g., marketplace.json updates)
+- `chore:` -- Maintenance tasks
 
 Examples:
 ```
 feat: add mojo-parametric-dtype-migration skill
-fix: resolve marketplace validation issues and missing frontmatter fields
+fix: resolve skill validation issues and missing frontmatter fields
 docs: update migration status - 100% complete
 ```
 
@@ -162,7 +162,6 @@ docs: update migration status - 100% complete
    - Description is specific (20+ characters).
    - Category is valid.
 6. Once CI passes and the PR is approved, it will be merged.
-7. `marketplace.json` auto-updates on merge.
 
 ## Validation
 
@@ -222,15 +221,13 @@ Skills should be generic enough to work across multiple repositories:
 
 ## Releasing
 
-The marketplace is released as a tagged snapshot. `pyproject.toml`
+The skills corpus is released as a tagged snapshot. `pyproject.toml`
 `[project].version` is the single source of truth.
 
-1. Bump the version in `pyproject.toml`, `.claude-plugin/plugin.json`, and
-   `.claude-plugin/marketplace.json` (the marketplace file also regenerates
-   from pyproject via `scripts/generate_marketplace.py`).
+1. Bump the version in `pyproject.toml`.
 2. Add a matching `## [X.Y.Z] - YYYY-MM-DD` entry at the top of `CHANGELOG.md`.
 3. Merge; the `release` CI check dry-runs
    `scripts/validate_release_contract.py` on every PR and `main` push.
 4. Tag `vX.Y.Z` and push the tag -- `.github/workflows/release.yml` re-validates
    the contract against the tag and publishes a GitHub Release with the
-   marketplace snapshot tarball and the changelog entry as notes.
+   skills-corpus snapshot tarball and the changelog entry as notes.

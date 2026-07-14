@@ -4,8 +4,13 @@ This file provides guidance to Claude Code when working with Mnemosyne.
 
 ## Project Overview
 
-Mnemosyne is a skills marketplace for the HomericIntelligence agentic ecosystem. It stores,
-organizes, and shares learnings from experiments, debugging sessions, and development work.
+Mnemosyne is the skills and session-memory store for the HomericIntelligence agentic
+ecosystem. It stores, organizes, and shares learnings from experiments, debugging sessions,
+and development work as flat skill files under `skills/`.
+
+Mnemosyne is **not** a plugin marketplace — the `/advise` and `/learn` commands live in the
+**Athena** plugin, which is the marketplace. Mnemosyne only holds the corpus those commands
+read and write. Do not add a `.claude-plugin/marketplace.json` to this repo.
 
 **Purpose**: Capture team knowledge so Claude can `/advise` before starting work and prevent
 repeated mistakes.
@@ -23,8 +28,8 @@ Search the skills registry before starting work.
 **Workflow**:
 
 1. Read user's goal/question
-2. Search `marketplace.json` for related plugins
-3. Read matching SKILL.md files
+2. Search the `skills/` corpus for related skill files
+3. Read matching skill `.md` files
 4. Return: what worked, what failed, recommended parameters
 
 **Example**:
@@ -201,8 +206,7 @@ command infrastructure.
    - Optional: create `skills/<name>.notes.md` for raw details
 3. File format: flat markdown with YAML frontmatter, no nested directories
 4. Filename convention: `<topic>-<subtopic>-<short-4-word-summary>.md` (all lowercase, kebab-case)
-5. PR will be validated by CI before merge
-6. `marketplace.json` auto-updates on merge
+5. PR will be validated by CI before merge (skill-file frontmatter + sections)
 
 ## Dependencies
 
@@ -213,10 +217,10 @@ development dependencies are declared there, together with task definitions and 
 - Install everything: `pixi install`
 - Run tasks: `pixi run validate`, `pixi run test`, `pixi run check`, `pixi run package`
 
-The canonical CI `package` check builds the marketplace bundle artifact — a versioned tarball
-of `.claude-plugin/`, `skills/`, `plugins/`, `schemas/`, and `templates/` produced by
-`scripts/build_package.py` — since Mnemosyne distributes a skills marketplace, not a
-Python library.
+The canonical CI `package` check builds the Python wheel + sdist (`mnemosyne_skill_utils`,
+the shared skill-parsing helper) with `python -m build` and smoke-tests the installed wheel.
+Mnemosyne no longer ships a plugin-marketplace bundle — Athena is the plugin distribution;
+Mnemosyne is the skills/memory store.
 
 `requirements.txt` and `requirements-dev.txt` exist as **non-canonical mirrors** for pip-based
 CI jobs and `pip-audit`. Do not hand-edit them as the source of truth — update `pixi.toml`

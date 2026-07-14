@@ -1,9 +1,0 @@
-{
-  "name": "Mnemosyne",
-  "version": "2.1.0",
-  "description": "Skills marketplace for the HomericIntelligence agentic ecosystem. Use when: (1) searching for prior learnings with /advise, (2) saving session knowledge with /learn.",
-  "author": {
-    "name": "HomericIntelligence"
-  },
-  "skills": "./skills"
-}

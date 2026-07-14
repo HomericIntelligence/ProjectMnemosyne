@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Regression checks for intentional skill-memory consolidations."""
 
-import json
 import sys
 from pathlib import Path
 from typing import TypedDict, cast
@@ -12,7 +11,6 @@ from mnemosyne_skill_utils import parse_frontmatter
 
 ROOT = Path(__file__).resolve().parent.parent
 SKILLS_DIR = ROOT / "skills"
-MARKETPLACE_PATH = ROOT / ".claude-plugin" / "marketplace.json"
 
 
 class Consolidation(TypedDict):
@@ -90,13 +88,19 @@ def test_absorbed_skill_snapshots_remain_in_history():
             assert f"name: {absorbed}\n" in history
 
 
-def test_marketplace_only_lists_canonical_consolidation_targets():
-    marketplace = json.loads(MARKETPLACE_PATH.read_text())
-    plugins = {plugin["name"]: plugin for plugin in marketplace["plugins"]}
-
+def test_skill_files_only_keep_canonical_consolidation_targets():
+    """The canonical skill file exists at the expected version and every
+    absorbed skill file has been removed. Checks the skills/ corpus directly
+    (Mnemosyne no longer ships a plugin marketplace to mirror)."""
     for consolidation in CONSOLIDATIONS:
         canonical = consolidation["canonical"]
-        assert plugins[canonical]["version"] == consolidation["version"]
+        canonical_path = SKILLS_DIR / f"{canonical}.md"
+        assert canonical_path.is_file(), f"missing canonical skill: {canonical}"
+        fm, _body, errs = parse_frontmatter(canonical_path.read_text())
+        assert not errs, (canonical, errs)
+        assert fm.get("version") == consolidation["version"]
 
         for absorbed in consolidation["absorbed"]:
-            assert absorbed not in plugins
+            assert not (SKILLS_DIR / f"{absorbed}.md").exists(), (
+                f"absorbed skill still present: {absorbed}"
+            )

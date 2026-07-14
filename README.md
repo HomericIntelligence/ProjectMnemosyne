@@ -1,72 +1,35 @@
 # Mnemosyne
 
 [![Validate Plugins](https://github.com/HomericIntelligence/Mnemosyne/actions/workflows/validate-plugins.yml/badge.svg)](https://github.com/HomericIntelligence/Mnemosyne/actions/workflows/validate-plugins.yml)
-[![Update Marketplace](https://github.com/HomericIntelligence/Mnemosyne/actions/workflows/update-marketplace.yml/badge.svg)](https://github.com/HomericIntelligence/Mnemosyne/actions/workflows/update-marketplace.yml)
 
-Mnemosyne is a skills marketplace for the HomericIntelligence agentic ecosystem.
-Named after Mnemosyne, the Greek goddess of memory, this repository serves as the
-collective memory where team learnings are preserved and made searchable.
+Mnemosyne is the skills and session-memory store for the HomericIntelligence
+agentic ecosystem. Named after Mnemosyne, the Greek goddess of memory, this
+repository is the collective memory where team learnings are preserved and made
+searchable as flat skill files under `skills/`.
+
+> **Mnemosyne is not a plugin marketplace.** The plugins/commands (`/advise`,
+> `/learn`, and the rest) live in **[Athena](https://github.com/HomericIntelligence/Athena)**,
+> which is the marketplace. Mnemosyne only stores the skill corpus that those
+> Athena commands read from and write to. Do not re-introduce a
+> `.claude-plugin/marketplace.json` here.
 
 ## Installation
 
-### Prerequisites
+Mnemosyne itself is not installed as a plugin. Install the **Athena** plugin
+marketplace (which provides `/advise` and `/learn`), and those commands read and
+write the skills stored in this repository.
 
-- Claude Code CLI installed
-- Access to HomericIntelligence/Mnemosyne (private repository)
-
-### Option A: From GitHub (Recommended)
-
-Register the private repository directly.
-
-**From terminal:**
-
-```bash
-claude plugin marketplace add https://github.com/HomericIntelligence/Mnemosyne
-```
-
-**Or inside a Claude Code session:**
-
-```text
-/plugin marketplace add https://github.com/HomericIntelligence/Mnemosyne
-```
-
-### Option B: From Local Directory
-
-If you have the repository cloned locally:
+To work on the corpus directly, clone it:
 
 ```bash
 git clone https://github.com/HomericIntelligence/Mnemosyne.git
 ```
 
-**From terminal:**
-
-```bash
-claude plugin marketplace add /path/to/Mnemosyne
-```
-
-**Or inside a Claude Code session:**
-
-```text
-/plugin marketplace add /path/to/Mnemosyne
-```
-
-### Verify Installation
-
-**From terminal:**
-
-```bash
-claude plugin marketplace list
-```
-
-**Or inside a Claude Code session:**
-
-```text
-/plugin marketplace list
-```
-
 ## Quick Start
 
-These commands work inside any Claude Code session after installation. All skill discovery and installation is handled automatically through the `/advise` and `/learn` commands.
+These commands come from the **Athena** plugin and work inside any Claude Code
+session where Athena is installed. All skill discovery and authoring is handled
+through the `/advise` and `/learn` commands.
 
 ### Search for Knowledge
 
@@ -74,7 +37,7 @@ These commands work inside any Claude Code session after installation. All skill
 /advise <your goal or question>
 ```
 
-Claude will search the marketplace for relevant prior learnings and return:
+Claude will search the skills corpus for relevant prior learnings and return:
 
 - What worked in similar situations
 - What failed and why (critical!)
@@ -95,20 +58,17 @@ Claude automatically:
 
 **Auto-trigger**: On `/exit` or `/clear`, you'll be prompted to save learnings.
 
-## Marketplace Structure
+## Repository Structure
 
 ```text
 skills/
 ├── <name>.md               # Flat skill files with YAML frontmatter
 ├── <name>.notes.md         # (Optional) Additional session context
 └── ...
-
-plugins/
-└── tooling/
-    └── mnemosyne/   # /advise and /learn commands
 ```
 
-Each skill is a flat markdown file with YAML frontmatter:
+The `/advise` and `/learn` commands themselves live in the **Athena** plugin, not
+in this repository. Each skill is a flat markdown file with YAML frontmatter:
 
 ```text
 skills/<name>.md             # Main skill file with YAML frontmatter + markdown content
@@ -117,7 +77,9 @@ skills/<name>.notes.md       # (Optional) Additional context from development se
 
 ## Available Skills
 
-See `marketplace.json` for the complete searchable index of available skills. The `/advise` command will automatically search and retrieve relevant skills for your queries.
+The `skills/` directory is the complete corpus. The `/advise` command (from the
+Athena plugin) automatically searches and retrieves relevant skills for your
+queries.
 
 ## Contributing a Skill
 
@@ -212,10 +174,10 @@ If you use Mnemosyne in your research or work, please cite:
 
 ```bibtex
 @misc{mnemosyne2026,
-  title={Mnemosyne: A Skills Marketplace for HomericIntelligence},
+  title={Mnemosyne: A Skills and Memory Store for HomericIntelligence},
   author={{HomericIntelligence Team}},
   year={2026},
-  note={Skills marketplace and collective memory system},
+  note={Skills corpus and collective memory system},
   url={https://github.com/HomericIntelligence/Mnemosyne}
 }
 ```

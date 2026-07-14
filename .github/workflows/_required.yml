@@ -78,8 +78,6 @@ jobs:
         run: pip install yamllint
       - name: yamllint on workflow YAML
         run: yamllint -c .yamllint.yaml .github/workflows/
-      - name: Validate marketplace.json is parseable
-        run: jq . .claude-plugin/marketplace.json > /dev/null
       - name: Install mypy and dependencies
         run: |
           pip install mypy
@@ -197,7 +195,7 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
-      - name: Run plugin validation script
+      - name: Run skill-file validation script
         run: python3 scripts/validate_plugins.py
       - name: Run test suite
         run: pytest tests/ -v
@@ -207,18 +205,18 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-      - name: Validate marketplace.json has plugins
-        run: jq 'keys | length > 0' .claude-plugin/marketplace.json
-      - name: Validate marketplace.json via python json.tool
-        run: python -m json.tool .claude-plugin/marketplace.json > /dev/null
-      - name: Validate plugin.json structure
-        run: jq 'keys | length > 0' .claude-plugin/plugin.json
-      - name: Cross-check plugin count
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Validate every skill file across the corpus
+        run: python3 scripts/validate_plugins.py
+      - name: Assert the skills corpus is non-empty
         run: |
-          declared=$(jq '.total_plugins' .claude-plugin/marketplace.json)
-          actual=$(jq '.plugins | length' .claude-plugin/marketplace.json)
-          echo "Declared: $declared, Actual: $actual"
-          [ "$declared" -eq "$actual" ] || { echo "Plugin count mismatch"; exit 1; }
+          count=$(find skills -name "*.md" -not -name "*.notes.md" | wc -l)
+          echo "Skill files: $count"
+          [ "$count" -gt 0 ] || { echo "No skill files found"; exit 1; }
 
   # Canonical aggregate test gate (ci-naming-convention.md). Surfaces a single
   # `test` check-run that fails if either split suite fails. The split
@@ -295,8 +293,6 @@ jobs:
           count=$(find . -name "*.md" -path "*/skills/*" | wc -l)
           echo "Total skill files: $count"
           [ "$count" -gt 0 ] || { echo "No skill files found"; exit 1; }
-      - name: Validate marketplace.json structure
-        run: jq . .claude-plugin/marketplace.json > /dev/null
       - name: Validate all JSON files are parseable
         run: |
           find . -name "*.json" -not -path "*/.git/*" | while read f; do
@@ -305,9 +301,9 @@ jobs:
           echo "All JSON files valid"
 
   # Canonical package gate (ci-naming-convention.md). Mnemosyne's distributable
-  # is the marketplace bundle (.claude-plugin/ + skills/ + plugins/ + schemas/
-  # + templates/); the Python wheel remains built here for the install smoke
-  # test below.
+  # is the Python wheel (mnemosyne_skill_utils), built and smoke-tested here.
+  # Athena is the plugin distribution; Mnemosyne is a skills/memory store and no
+  # longer ships a plugin-marketplace bundle.
   package:
     name: package
     runs-on: ubuntu-24.04
@@ -325,20 +321,11 @@ jobs:
         run: python -m build
       - name: twine check
         run: twine check dist/*
-      - name: Build and verify marketplace bundle
-        run: python3 scripts/build_package.py --output-dir marketplace-dist
       - name: Upload dist artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: dist
           path: dist/
-          if-no-files-found: error
-      - name: Upload marketplace package artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
-        with:
-          name: project-mnemosyne-package
-          path: marketplace-dist/*.tar.gz
-          retention-days: 90
           if-no-files-found: error
 
   install:
@@ -406,28 +393,20 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-      - name: Check marketplace plugin versions are valid semver
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Assert every skill declares a valid semver version
+        run: python3 scripts/validate_plugins.py
+      - name: Cross-check pyproject version is valid semver
         run: |
           set -euo pipefail
-          bad=$(jq -r '
-            [.plugins[]
-              | select((.version // "") | test("^[0-9]+\\.[0-9]+\\.[0-9]+$") | not)
-              | .name + "=" + (.version // "<missing>")]
-            | .[]' .claude-plugin/marketplace.json)
-          if [ -n "$bad" ]; then
-            echo "::error::Plugins with non-semver versions:"
-            printf '%s\n' "$bad"
-            exit 1
-          fi
-          echo "Version format check complete"
-      - name: Validate marketplace version field is present on all plugins
-        run: |
-          bad=$(jq '[.plugins[] | select(.version == null or .version == "")] | length' \
-            .claude-plugin/marketplace.json)
-          echo "Plugins missing version: $bad"
-          [ "$bad" -eq 0 ] || { echo "Some plugins are missing version fields"; exit 1; }
-      - name: Cross-check top-level schema version
-        run: jq -e '.version' .claude-plugin/marketplace.json > /dev/null
+          ver=$(python3 -c 'import tomllib,sys; print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')
+          echo "pyproject version: $ver"
+          printf '%s' "$ver" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$' \
+            || { echo "::error::pyproject version is not semver: $ver"; exit 1; }
 
   # Canonical release gate (ci-naming-convention.md). Dry-run validates the
   # release contract (version sync + changelog anchor) on every PR and main

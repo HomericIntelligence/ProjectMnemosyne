@@ -1,6 +1,6 @@
 # Plugin Standards
 
-Standards for creating and validating skills in the Mnemosyne marketplace.
+Standards for creating and validating skills in the Mnemosyne skills/memory store.
 
 > **Format:** Mnemosyne uses the **flat-file skill format** introduced in v2.0.0.
 > Each skill is a single markdown file at `skills/<name>.md`. There is no
@@ -19,8 +19,8 @@ skills/
 
 Optional sibling files alongside `<name>.md`:
 
-- `<name>.notes.md` / `<name>.notes-<topic>.md` — session notes (excluded from marketplace)
-- `<name>.history*` — historical revisions (excluded from marketplace)
+- `<name>.notes.md` / `<name>.notes-<topic>.md` — session notes (excluded from skill validation)
+- `<name>.history*` — historical revisions (excluded from skill validation)
 
 ## SKILL Metadata (YAML Frontmatter in `<name>.md`)
 

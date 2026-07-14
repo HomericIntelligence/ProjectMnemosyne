@@ -3,11 +3,13 @@
 
 Contract (single source of truth: pyproject.toml [project].version):
   1. pyproject version is strict semver (X.Y.Z).
-  2. .claude-plugin/plugin.json .version matches it.
-  3. .claude-plugin/marketplace.json .version matches it.
-  4. CHANGELOG.md's topmost versioned heading '## [X.Y.Z]' matches it
+  2. CHANGELOG.md's topmost versioned heading '## [X.Y.Z]' matches it
      (an '## [Unreleased]' section may precede it).
-  5. With --tag vX.Y.Z (used by the tag-publish workflow): tag == 'v' + version.
+  3. With --tag vX.Y.Z (used by the tag-publish workflow): tag == 'v' + version.
+
+Mnemosyne is a skills/memory store (Athena is the plugin distribution), so the
+release contract no longer tracks any .claude-plugin/ marketplace or plugin.json
+version.
 
 Exit codes: 0 = contract holds, 1 = violation (argparse usage errors exit 2).
 Strictly read-only: never creates or mutates any file it checks.
@@ -16,7 +18,6 @@ Strictly read-only: never creates or mutates any file it checks.
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import sys
 from pathlib import Path
@@ -30,8 +31,6 @@ except ModuleNotFoundError:  # pragma: no cover - Python <3.11 fallback
 SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
 CHANGELOG_HEADING_RE = re.compile(r"^## \[(\d+\.\d+\.\d+)\]", re.MULTILINE)
 
-PLUGIN_JSON = Path(".claude-plugin") / "plugin.json"
-MARKETPLACE_JSON = Path(".claude-plugin") / "marketplace.json"
 CHANGELOG_MD = Path("CHANGELOG.md")
 
 
@@ -52,30 +51,6 @@ def check_semver(version: str) -> List[str]:
     if not SEMVER_RE.match(version):
         return [f"pyproject.toml version {version!r} is not strict semver (X.Y.Z)"]
     return []
-
-
-def _check_json_version_sync(path: Path, version: str) -> List[str]:
-    """Require the JSON file at path to have .version equal to version."""
-    if not path.is_file():
-        return [f"missing file: {path}"]
-    try:
-        data = json.loads(path.read_text())
-    except (OSError, json.JSONDecodeError) as exc:
-        return [f"cannot parse {path}: {exc}"]
-    found = data.get("version")
-    if found != version:
-        return [f"{path} version {found!r} != pyproject.toml version {version!r}"]
-    return []
-
-
-def check_plugin_json_sync(repo_root: Path, version: str) -> List[str]:
-    """Require .claude-plugin/plugin.json .version to match the pyproject version."""
-    return _check_json_version_sync(repo_root / PLUGIN_JSON, version)
-
-
-def check_marketplace_sync(repo_root: Path, version: str) -> List[str]:
-    """Require .claude-plugin/marketplace.json .version to match the pyproject version."""
-    return _check_json_version_sync(repo_root / MARKETPLACE_JSON, version)
 
 
 def check_changelog(repo_root: Path, version: str) -> List[str]:
@@ -119,8 +94,6 @@ def find_violations(repo_root: Path, tag: Optional[str] = None) -> List[str]:
 
     violations: List[str] = []
     violations.extend(check_semver(version))
-    violations.extend(check_plugin_json_sync(repo_root, version))
-    violations.extend(check_marketplace_sync(repo_root, version))
     violations.extend(check_changelog(repo_root, version))
     if tag is not None:
         violations.extend(check_tag(tag, version))

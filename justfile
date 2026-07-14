@@ -20,17 +20,11 @@ default:
 validate:
     python3 scripts/validate_plugins.py
 
-# === Marketplace ===
-
-# Regenerate marketplace.json index from all skill files
-generate-marketplace:
-    python3 scripts/generate_marketplace.py
-
 # === Packaging ===
 
-# Build and verify the marketplace bundle tarball into dist/
+# Build the Python wheel + sdist (mnemosyne_skill_utils) into dist/
 package:
-    python3 scripts/build_package.py
+    python3 -m build
 
 # === Testing ===
 
