@@ -6,7 +6,7 @@ date: 2026-07-11
 version: "1.0.0"
 user-invocable: false
 verification: verified-local
-tags: [pr-review, evidence, ci, branch-discipline, dry-thrash, auto-merge]
+tags: [pr-review, evidence-tagging, branch-vs-tip, dry-thrash, auto-merge, code-review, adr-014, verified-local, verified-ci, chore-rename]
 ---
 
 # PR Review Evidence Discipline
@@ -54,11 +54,30 @@ gh pr merge <PR> --auto --rebase   # gates independently per PR
 
 1. **Branch-vs-Tip Discipline.** Default-branch tip (`main`) shows the post-merge state, NOT the in-progress PR state. Always fetch the PR's actual head branch with `git fetch origin refs/heads/<branch>` and `git checkout <branch>` before claiming a residual. A "NO-GO" verdict based on `origin/main` is a false positive when the PR's chore branch is clean.
 
+**Concrete example from this session:** Agamemnon#444 was initially flagged NO-GO because `target_include_directories(ProjectAgamemnon_core ...)` appeared at `CMakeLists.txt:105` on the default-branch tip. Re-verifying the actual chore branch (`chore/rename-drop-project-prefix-r2`, HEAD `3de2053`) showed zero matches. The literal was on `main`, not the PR. Lesson: never trust the default-branch tip for in-progress PR review.
+
 2. **Evidence Tagging.** Distinguish `verified-local` (file-only grep / diff evidence) from `verified-ci` (CI gate observed green via `gh pr checks`). Never claim `verified-ci` without observation. If the CI status has not been observed, the verdict is `verified-local` regardless of how clean the diff looks.
+
+**Concrete example from this session:** 11 PR verdicts were issued during the rename-sweep cycle; 3 of those were subsequently corrected (Agamemnon NO-GO retraction, Hermes CI-drag qualifier, Nestor default-branch-tip qualifier). All 11 were tagged `verified-local` (file-only) rather than `verified-ci` because no `gh pr checks` observation was performed in the agent session.
+
+```bash
+# How to upgrade verified-local to verified-ci:
+gh pr checks <PR> --repo <org>/<repo> --jq '.[] | select(.conclusion=="FAILURE") | .name'
+```
 
 3. **DRY-Thrash Avoidance.** On strictly cosmetic PRs (e.g. chore-only renames, doc-only changes), post a clean verdict rather than push follow-up commits. Pushing noise commits risks merge conflict with the operator's working copy and creates PR pileup.
 
+**Concrete example from this session:** Telemachy#300, Mnemosyne#3050, Odyssey#5584, and Keystone#603 had zero residuals on their chore branches. The 4 cosmetic PRs (plus 4 others) received clean verdict comments rather than follow-up commits, avoiding merge conflicts with the operators' in-progress work. Rule: if `grep -rnE "project<Name>" --exclude-dir=.git .` returns 0, post a clean verdict, do not commit.
+
 4. **Auto-Merge Isolation.** `--auto --rebase` is per-PR; one PR's gate state does not transfer. Each PR must be evaluated independently against its own `gh pr checks` output.
+
+**Concrete example from this session:** Eleven sub-repo PRs were reviewed independently. One PR's gate state (e.g. Agamemnon#444 green) does NOT transfer to another (e.g. Charybdis#274 may be red). Each PR's `--auto --rebase` arming is per-PR:
+
+```bash
+gh pr merge 275 --auto --rebase --repo HomericIntelligence/Charybdis
+gh pr merge 444 --auto --rebase --repo HomericIntelligence/Agamemnon
+# These operate on independent gate state; arming one does not affect the other.
+```
 
 ## Failed Attempts
 
