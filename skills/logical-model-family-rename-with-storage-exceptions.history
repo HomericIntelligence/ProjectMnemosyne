@@ -3,6 +3,20 @@
 
 # History: logical-model-family-rename-with-storage-exceptions
 
+## v1.2.0 (2026-07-12)
+
+- **Changed by:** HomericIntelligence/Odyssey — EXECUTING the deferred breaking package rename `projectodyssey`->`odyssey`, PR #5584 (MERGED)
+- **Verification:** verified-ci
+- **What changed:**
+  - Bumped `version` 1.1.0 -> 1.2.0 and `date` 2026-07-11 -> 2026-07-12.
+  - Extended the skill from "defer the breaking package rename to an issue" (v1.1.0) to also cover **executing** that deferred rename: this session ran PR #5584, the atomic PR issue #5579 tracked.
+  - Extended the description with triggers (5) a rename PR fails coverage/build because refs were renamed but dirs were not `git mv`'d, (6) completing a projectX->X package rename, (7) rebasing a stale whole-tree rename. Added tags: git-mv, whole-tree-rename, rebase, coverage-validator, mojo.
+  - Added an Overview "Also verified on" clause + 3 When-to-Use triggers for the half-done-rename symptom, executing the deferred rename, and rebasing a stale whole-tree rename.
+  - Added Verified Workflow subsection **"Execute the Deferred Breaking Package Rename (git mv the DIRS, then rebase)"** with a `### Quick Reference` (git mv the 3 package dirs + `git status` R-check + `git grep`/`find` completeness verify + mojo build verify + `validate_test_coverage.py`) and a **rebase conflict-resolution recipe** (content conflict -> take main's newer content via `--ours` then re-sed; `CONFLICT (file location)` -> `git mv` into renamed tree + sed imports; re-`git grep` for post-branch merges).
+  - Added 4 Failed Attempts rows: renamed refs only not dirs (mojo.toml -> missing dir, "267 uncovered"); whole-file reformat churn; rebased blind; assumed passed-rebase == complete.
+  - Added an "Execute-the-Package-Rename Completion Checklist" Results block and a Verified On row for PR #5584 (MERGED).
+- **Why:** v1.1.0 deferred the breaking `projectodyssey` package rename to `state:needs-plan` issue #5579. This session executed it. Key learning: a "rename X->Y" PR that rewrites every *reference* but never `git mv`s the actual package DIRECTORIES is half-done — the manifest points at a nonexistent dir and the coverage validator sees old-path files as uncovered (symptom: `Validate Test Coverage` "❌ Found 267 uncovered test file(s)"). Completing it = move the dirs + fix refs in files merged post-branch + rebase the stale whole-tree rename. A whole-tree rename is atomic and stales on every merge; verify with `git grep` == 0 AND a build AND the coverage validator, not just "references look renamed."
+
 ## v1.1.0 (2026-07-11)
 
 - **Changed by:** HomericIntelligence/Odyssey repo rename — URL sweep PR #5580 + package-rename issue #5579
