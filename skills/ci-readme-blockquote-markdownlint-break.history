@@ -1,0 +1,113 @@
+# ci-readme-blockquote-markdownlint-break — History
+
+## v1.1.0 (2026-07-09)
+
+**Changed by:** ProjectMnemosyne skill PR #3022 — a line-wrapped GitHub issue reference (`#1819`) landed at column 1 and markdownlint parsed it as a malformed ATX heading (MD018).
+**Verification:** verified-ci
+
+### What changed
+
+- Added a new "When to Use" trigger for MD018 / line-leading `#<digit>` in any doc or skill markdown.
+- Added a new subsection to the Verified Workflow: "MD018: line-wrapped issue reference parsed as a heading" with the `grep -nE '^#[0-9]'` detector and the wrap/inline-code fix.
+- Added 2 new Failed Attempts rows:
+  - Relied on `validate_plugins.py` passing (it does NOT run markdownlint).
+  - Reflowed the wrap once (moved the `#<digit>` to the start of the newly-wrapped line instead of removing it).
+- Broadened frontmatter description + tags to cover MD018 and line-leading issue references, so the "why did markdownlint CI fail on my doc/skill edit" search surface hits this skill.
+- Bumped version 1.0.0 → 1.1.0; updated date to 2026-07-09; added `history` frontmatter field.
+
+### Why
+
+The v1.0.0 skill covered only the MD028 blockquote-continuation failure mode. A second,
+adjacent failure mode shares the exact same search surface ("markdownlint CI failed on my
+doc/skill edit; pre-commit / plugin-validation passed but the CI all-files markdownlint run
+failed"): when a bold sentence wraps and the wrap puts a GitHub issue reference like `#1819`
+at column 1, markdownlint reads `#1819...` as an ATX heading with no space after `#` and
+raises MD018/no-missing-space-atx. Critically, `python3 scripts/validate_plugins.py` passed
+(634/634) because it does not invoke markdownlint — plugin-validation-green is NOT
+markdownlint-green. The reliable fix is asserting `grep -nE '^#[0-9]' <file>` returns EMPTY
+(a one-shot reflow can just move the `#<digit>` to the next line's start), then confirming
+with `markdownlint-cli2 <file>` → "Summary: 0 error(s)".
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: ci-readme-blockquote-markdownlint-break
+description: "Markdownlint CI fails when a multi-paragraph blockquote in README.md is missing the > continuation marker on blank lines between paragraphs. Use when: (1) CI markdownlint job fails on README after adding or editing a blockquote, (2) a blockquote renders as two separate blocks when you intended one, (3) pre-commit markdownlint passes on individual files but CI all-files run fails with MD028 or blank-line-in-blockquote."
+category: ci-cd
+date: 2026-06-23
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [ci-cd, markdownlint, readme, blockquote, md028, blank-line, pre-commit, ci-debug]
+---
+
+# CI: README Blockquote Continuation Breaks Markdownlint
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-23 |
+| **Objective** | Drive PR ProjectHephaestus#1570 to green CI |
+| **Outcome** | CI passed after adding missing `>` continuation marker to a blank line inside a README blockquote |
+| **Verification** | verified-ci |
+
+A multi-paragraph blockquote in Markdown requires every blank separator line between
+paragraphs to start with `>`. Without it, the renderer (and markdownlint) treats the
+blank line as ending the blockquote, starting a new one, which violates MD028
+(no-blanks-in-blockquote) and can also trip MD009/MD012. The fix is a single-character
+`>` on the otherwise-empty line.
+
+## When to Use
+
+- CI markdownlint job fails on README.md after editing or adding a blockquote block
+- A blockquote you intended as one unit renders as two separate blockquotes
+- `pre-commit run --files README.md` passes locally but CI `--all-files` catches the violation
+- CI log cites MD028 or a blank-line rule inside a blockquote in README.md or another doc file
+
+## Verified Workflow
+
+### Quick Reference
+
+    # Find broken blockquotes — look for blank lines inside a blockquote block without >
+    grep -n "^>" README.md | head -30
+    # Spot a gap in line numbers that corresponds to a blank line between > lines
+
+    # Fix: every blank line inside a blockquote must start with >
+    # Verify locally before pushing
+    pre-commit run markdownlint --files README.md
+
+### Detailed Steps
+
+1. Open README.md and locate the blockquote block that spans multiple paragraphs.
+2. Find blank lines inside the blockquote that are missing the `>` prefix.
+3. Add `>` (optionally with a space: `> `) to every blank separator line inside the blockquote.
+4. Run `pre-commit run markdownlint --files README.md` to confirm the rule passes locally.
+5. Commit the fix and push — CI markdownlint gate should go green.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Running pre-commit on changed files only | `pre-commit run --files <diff-files>` passed | the fix was missing from an earlier commit | Always run `pre-commit run markdownlint --files README.md` any time README blockquotes are edited |
+
+## Results & Parameters
+
+The fix for PR #1570 / issue #1554 was a single-character change in README.md: adding `>` to
+the blank line between two blockquote paragraphs (MD028 / no-blanks-in-blockquote). CI commit
+`c7883e49` on branch `1554-auto-impl`.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | PR #1570 / Issue #1554 — packaging scaffolding + MIGRATION link | CI markdownlint gate went green after adding `>` to blank continuation line; commit c7883e49 |
+```
+
+---
+
+## v1.0.0 (2026-06-23)
+
+**Initial version.** Documented the MD028 blockquote-continuation failure mode from
+ProjectHephaestus PR #1570 / issue #1554.
