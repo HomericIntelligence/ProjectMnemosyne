@@ -34,15 +34,30 @@ description: "Use when: (1) creating isolated git worktrees for parallel agent e
   copies (e.g. `github/rate_limit.py`, `automation/advise_runner.py`) and no generic helper — extract
   one `file_lock` contextmanager, don't add a third copy, (21) an in-process `threading.Lock` appears
   'not working' / fails to serialize because the contention is actually ACROSS PROCESSES, so the
-  guard must be an advisory `fcntl.flock(LOCK_EX)` on a sentinel file."
+  guard must be an advisory `fcntl.flock(LOCK_EX)` on a sentinel file, (22) cleaning agent worktrees
+  in a repo that has git SUBMODULES (e.g. a meta-repo with `research/ProjectOdyssey`) and
+  `git worktree remove <path>` REFUSES with `fatal: working trees containing submodules cannot be
+  moved or removed` EVEN WHEN the worktree is clean or its only diff is a submodule-pointer artifact
+  — `git submodule deinit` does NOT unblock it, and `git worktree remove --force` is Safety-Net-blocked,
+  so hand the exact `git worktree remove --force <wt> && git worktree prune` to the USER, (23) deciding
+  whether a merged worktree branch is prunable when `git branch --merged` does NOT list it — a
+  SQUASH-merged PR shows commits-ahead > 0 and is absent from `--merged`, so trust the PR `MERGED`
+  state from `gh pr list --head <br> --state all`, not `--merged`/commits-ahead, and delete with
+  `git branch -D` (not `-d`) handed to the user with PR-MERGED proof, (24) a dirty worktree whose
+  uncommitted changes are actually junk (an abandoned partial REVERT of an already-merged feature) —
+  inspect the diff and ASK the user (discard/stash/leave) rather than auto-commit or auto-discard;
+  on discard, HAND them `rm -rf <wt> && git worktree prune && git branch -D <branch>` because
+  `git checkout -- .`/`reset --hard`/`rm -rf`/`branch -D` are all Safety-Net-blocked even after an
+  explicit user 'discard' approval."
 category: tooling
-date: 2026-06-22
-version: "1.4.0"
+date: 2026-07-13
+version: "1.5.0"
 verification: verified-local
 user-invocable: false
 history: git-worktree-parallel-execution-lifecycle.history
 tags: [worktree, git, parallel-agents, wave-execution, cleanup, branch-collision, contamination,
-  locked-worktree, staged-files, rebase-merge, myrmidon, safety-net, lifecycle]
+  locked-worktree, staged-files, rebase-merge, myrmidon, safety-net, lifecycle, submodule,
+  squash-merge, hand-to-user]
 ---
 # Git Worktree Parallel Execution Lifecycle
 
@@ -89,6 +104,12 @@ mass cleanup. Includes the critical "no-worktree-at-all" anti-pattern warning.
   clone-within-a-repo (e.g. `build/.worktrees/...`, `build/<OtherProject>`)
 - Distinguishing stale-checkout drift (redundant-with-main dirty diff) from real uncommitted work
 - A bulk `git reset --hard` / `git clean -fd` / `git worktree remove --force` got safety-net-blocked
+- Cleaning worktrees in a repo with git SUBMODULES where `git worktree remove` refuses with
+  `fatal: working trees containing submodules cannot be moved or removed` (even when clean)
+- Deciding if a merged worktree branch is prunable when `git branch --merged` does not list it
+  (squash-merge caveat: trust the PR `MERGED` state, not `--merged`/commits-ahead)
+- A dirty worktree whose uncommitted changes are junk (an abandoned partial revert of merged work)
+  — inspect + ASK the user rather than auto-commit/auto-discard
 
 **Cross-process subprocess contention:**
 
@@ -506,6 +527,90 @@ git worktree unlock <path> && git worktree remove <path>      # no --force neede
 
 Only the force-discard of dirty-but-redundant trees needs user hands; everything clean is automatic.
 
+#### Submodule Worktrees Refuse `git worktree remove` — Even When Clean (verified-local, HomericIntelligence Odysseus 2026-07-13)
+
+In a repo with initialized git **submodules** (e.g. the HomericIntelligence Odysseus meta-repo,
+~14 submodules incl. `research/ProjectOdyssey`), `git worktree remove <path>` REFUSES with:
+
+```text
+fatal: working trees containing submodules cannot be moved or removed
+```
+
+This fires even when the worktree is otherwise CLEAN, and even for a worktree whose only "dirty"
+line is a submodule-POINTER change (`M research/ProjectOdyssey`) that is an artifact, not real
+work (0 unique commits ahead of `origin/main`). Two workarounds that DID NOT clear it in-session:
+
+- `git submodule deinit -f research/ProjectOdyssey` inside the worktree first — this cleared the
+  submodule checkout, but `git worktree remove` STILL refused.
+- `git worktree remove --force <path>` — blocked by the CC Safety Net (destructive).
+
+**Resolution that worked:** hand the user the exact force-remove command to run themselves. Once
+the user ran it, the worktree entries deregistered and the directories were gone.
+
+```bash
+# HAND TO USER (do not auto-run — --force is Safety-Net-blocked):
+git worktree remove --force <worktree-path> && git worktree prune
+# For a submodule-containing worktree that ALSO has a branch to delete after PR MERGED:
+git worktree remove --force <worktree-path> && git worktree prune && git branch -D <branch>
+```
+
+**Three-method worktree classification that drove the keep/prune decision** (run all three per
+worktree; a worktree is `CLEAN_PRUNE_OK` only when PR is MERGED AND status is clean):
+
+```bash
+for wt in $(git worktree list --porcelain | awk '/^worktree /{print $2}' | tail -n +2); do
+  br=$(git -C "$wt" branch --show-current)
+  # (1) PR state — MERGED / OPEN / none
+  pr=$(gh pr list --head "$br" --state all --json number,state --jq '.[0] | "\(.state) #\(.number)"' 2>/dev/null || echo "NO_PR")
+  # (2) commits ahead of main (squash-merge caveat below)
+  ahead=$(git -C "$wt" rev-list --count origin/main..HEAD 2>/dev/null)
+  # (3) dirty check
+  dirty=$(git -C "$wt" status --porcelain | wc -l)
+  echo "$wt | br=$br | pr=$pr | ahead=$ahead | dirty=$dirty"
+done
+```
+
+| PR state | ahead | dirty | Classification |
+| -------- | ----- | ----- | -------------- |
+| MERGED | >0 (squash) | 0 | `CLEAN_PRUNE_OK` — safe to remove |
+| OPEN | ≥0 | any | `KEEP` — in-flight PR |
+| none (`worktree-agent-*`, no remote) | 0 | 0 | throwaway — remove |
+| any | any | dirty with real diff | INSPECT before deciding (see preserve-first below) |
+
+**Squash-merge caveat:** a squash-merged PR's branch shows `ahead > 0` AND is ABSENT from
+`git branch --merged` (squash collapses history into one new commit, so the old tip is not an
+ancestor of main). Do NOT trust `git branch --merged` to detect merged work — trust the PR
+`MERGED` state from `gh pr list`. Deleting such a branch needs `git branch -D` (capital), not
+`-d` (which refuses a non-ancestor tip); hand it to the user WITH the PR-MERGED proof.
+
+**Preserve-first: inspect dirty diffs before discarding — an "uncommitted change" can be junk
+superseding merged work.** One worktree (`odyssey-5551-wt`) was dirty with uncommitted changes
+that, on inspection, were an abandoned PARTIAL REVERT of an already-MERGED feature (PR #5582).
+Correct handling: inspect (`git -C <wt> diff HEAD --stat`, then read a changed file), recognize it
+as junk that would undo merged work, and ASK the user (discard / stash / leave) rather than
+auto-commit or auto-discard. When the user chose discard, hand them:
+
+```bash
+# HAND TO USER (rm -rf + branch -D are Safety-Net-blocked / destructive):
+rm -rf <worktree-path> && git worktree prune && git branch -D <branch>
+```
+
+**Orphan on-disk worktree dirs:** a `.claude/worktrees/agent-XXXX/` directory can exist on disk
+WITHOUT being a registered worktree (`git worktree list` won't show it). Those are orphans —
+`rm -rf` them directly (they hold no git registration to deregister).
+
+**Safety-Net blocks encountered this session (ALL hand-to-user — do not work around):**
+
+| Operation | Blocked | Hand-to-user command |
+| --------- | ------- | -------------------- |
+| `git worktree remove --force <wt>` | Yes | print for user + `git worktree prune` |
+| `git checkout -- .` / `git reset --hard` (discard uncommitted) | Yes (even with explicit user "discard") | `git -C <wt> checkout -- . && git -C <wt> clean -fd` OR `rm -rf <wt>` |
+| `git branch -D <branch>` (force-delete squash-merged/unmerged) | Yes | print with PR-MERGED proof; user runs it |
+| `rm -rf <worktree-dir>` | Yes | print for user |
+
+Pattern: for ANY destroy-uncommitted-or-unmerged op, PRINT the exact command for the user; do
+not try to work around the Safety Net.
+
 #### Gitignore Hygiene (Phase 0.5)
 
 Run before cleanup operations to prevent re-accumulation:
@@ -710,6 +815,11 @@ gh api --method DELETE "repos/$REPO/git/refs/heads/<branch-name>"
 | `worktree_path.exists()`-then-`git worktree add` guard | Checked path existence, then created the worktree if absent | Across processes this is a TOCTOU race — the second process passes the `.exists()` check before the first's `git worktree add` completes, then collides | Serialize the WHOLE create (and its enclosing sweep) under a cross-process `file_lock`; the second holder re-globs/re-loads and finds the records already terminal → no-ops |
 | Add a third inline `fcntl.flock` copy for the new lock site | Was about to inline another flock block in `ci_driver.py` like the two existing ones | Two inline flock copies already existed (`github/rate_limit.py`, `automation/advise_runner.py`) with no generic helper — a third copy is a DRY violation | Extract ONE reusable `hephaestus/utils/file_lock.py` `@contextmanager file_lock(path, *, blocking=True)` (secure `O_NOFOLLOW` open, `LockUnavailableError` on `LOCK_NB`, Windows no-op) and route all sites through it |
 | Fix the visible `/compact` "No conversation found with session ID" warning | Investigated the `/compact` session-id warning as the primary bug | It was a CASCADED downstream symptom: the worktree-creation race self-recovered via a repo-root fallback whose fresh /learn session had a deterministic session_uuid that never existed | Trace cascading warnings back to the ORIGINAL masked failure; fixing the cross-process race at the source eliminated both the collision and the `/compact` warning |
+| `git worktree remove <wt>` on a CLEAN worktree in a submodule repo | Ran plain `git worktree remove` on an Odysseus worktree whose only diff was a `M research/ProjectOdyssey` submodule-pointer artifact (0 unique commits) | `fatal: working trees containing submodules cannot be moved or removed` — git refuses to remove ANY worktree containing an initialized submodule, clean or not | In a submodule repo, `git worktree remove` cannot remove submodule-containing worktrees at all; `--force` is required and it is Safety-Net-blocked — hand the exact `git worktree remove --force <wt> && git worktree prune` to the user |
+| `git submodule deinit -f <submodule>` inside the worktree, then `git worktree remove` | Deinitialized `research/ProjectOdyssey` inside the worktree hoping `git worktree remove` would then succeed | The submodule checkout cleared, but `git worktree remove` STILL refused with the same "contains submodules" fatal | `git submodule deinit` does not unblock `git worktree remove` — do not chase this workaround; go straight to handing the user `git worktree remove --force` |
+| Trust `git branch --merged` to detect merged worktree branches | Used `git branch --merged` to decide which worktree branches were safe to prune | Squash-merged PR branches are ABSENT from `--merged` (squash collapses history so the old tip is not an ancestor of main) and show `rev-list --count origin/main..HEAD > 0`, looking like unreleased work | Trust the PR `MERGED` state from `gh pr list --head <br> --state all`, not `git branch --merged`/commits-ahead; delete the branch with `git branch -D` (capital) handed to the user with the PR-MERGED proof |
+| Auto-discard a dirty worktree's uncommitted changes as cleanup noise | About to `git checkout -- .`/`rm -rf` the dirty `odyssey-5551-wt` worktree as throwaway | The uncommitted diff was an abandoned PARTIAL REVERT of an already-MERGED feature (PR #5582) — auto-discarding is defensible but auto-committing would have re-broken merged work; either way the agent shouldn't unilaterally decide | Preserve-first: inspect the dirty diff (`git -C <wt> diff HEAD --stat` + read a file), and if it's junk superseding merged work, ASK the user (discard/stash/leave); on discard, HAND them `rm -rf <wt> && git worktree prune && git branch -D <branch>` (both are Safety-Net-blocked) |
+| `git checkout -- .` / `git reset --hard` to discard uncommitted worktree changes after the user said "discard" | Tried to run the discard directly since the user had approved discarding | CC Safety Net blocks discard-uncommitted ops (`checkout -- .`, `reset --hard`, `rm -rf <wt>`, `branch -D`) even WITH an explicit user "discard" approval — the approval is not the permission system | For any destroy-uncommitted-or-unmerged op, PRINT the exact command for the user to run via the `!` prefix; do not try to work around the Safety Net even after verbal user approval |
 
 ## Results & Parameters
 
@@ -747,7 +857,11 @@ gh api --method DELETE "repos/$REPO/git/refs/heads/<branch-name>"
 | `git worktree remove --force` (dirty merged-PR) | Yes | Unlock first, then ask user to run `--force` manually |
 | `git reset --hard` | Yes | Use `pull --rebase` instead |
 | `git checkout --` / `git restore` on tracked artifacts | Yes | Use `git stash` to park before rebase, then `git stash drop` after |
+| `git worktree remove` (submodule-containing worktree, even clean) | N/A — git itself refuses (`--force` needed) | `--force` is Safety-Net-blocked; hand `git worktree remove --force <wt> && git worktree prune` to the user |
+| `git checkout -- .` / `git reset --hard` (discard uncommitted) | Yes (even with user "discard" approval) | Print for user; `git stash` if recoverable is acceptable |
+| `git branch -D <branch>` (force-delete squash-merged/unmerged) | Yes | Print with PR-MERGED proof for the user to run |
 | `rm -rf /tmp/mnemosyne-skill-*` inside sub-agent | Yes | Run from orchestrator before spawning sub-agents |
+| `rm -rf <worktree-dir>` (discard abandoned worktree) | Yes | Print for user; combine with `git worktree prune && git branch -D` |
 
 **Stale /tmp cleanup before parallel /learn agents:**
 
@@ -795,3 +909,4 @@ WORKTREE_PATH=$(git worktree list --porcelain 2>/dev/null | \
 | ProjectOdyssey | `scripts/rebase-all-branches.sh` inline cleanup refactor (PR #5408) | 2026-05-14 |
 | ProjectHephaestus | Worktree-cleanup safety session: cross-repo hiding under `build/.worktrees/mnemo-skill-911` (belonged to Mnemosyne via stray `build/Mnemosyne` clone); stale-checkout drift on merged worktrees proven redundant via `git cat-file -e main:<file>`; bulk `reset --hard`/`clean -fd`/`remove --force` across 14 trees safety-net-blocked → handed per-worktree commands to user (verified-local, read-only audit + recommendation) | worktree-cleanup safety 2026-06-15 |
 | ProjectHephaestus | Cross-PROCESS worktree-creation race in the issue-major automation loop (issues 1553/1547): two `hephaestus-ci-driver` subprocesses ran `_sweep_orphaned_arming_records` simultaneously → `create_worktree(issue-1547)` collision (`fatal: ... already exists`); fixed with new reusable `hephaestus/utils/file_lock.py` (`fcntl.flock`) wrapping the sweep, extracted from two pre-existing inline flock copies. PR #1568 / issue #1567. Verified-local: 2017 unit tests pass, mypy clean (411 files), ruff clean, TDD RED→GREEN for both `file_lock` and the sweep regression; PR CI still PENDING (unit-test matrix) at capture time | cross-process-orphan-sweep-race 2026-06-21 |
+| HomericIntelligence Odysseus | Cleaning ~7 agent worktrees in the Odysseus meta-repo (~14 submodules incl. `research/ProjectOdyssey`) after a long parallel session. 3-method classification (PR state / commits-ahead / dirty) pruned 2 merged-PR worktrees cleanly by the agent; submodule-containing + dirty ones hit `fatal: working trees containing submodules cannot be moved or removed` (even after `git submodule deinit`), and `--force`/`reset --hard`/`branch -D`/`rm -rf` were Safety-Net-blocked → handed exact commands to the user, who completed them. Squash-merge caveat (merged branches show ahead>0, absent from `--merged`) and a preserve-first abandoned-revert case (`odyssey-5551-wt`, junk revert of merged PR #5582) surfaced. Read-only classification + hand-to-user (procedure, not a CI-tested artifact) | worktree-cleanup-submodule 2026-07-13 |

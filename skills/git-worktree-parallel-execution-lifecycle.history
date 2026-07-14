@@ -1,6 +1,70 @@
 <!-- markdownlint-disable MD024 -->
 # git-worktree-parallel-execution-lifecycle — History
 
+## v1.5.0 (2026-07-13)
+
+**Changed by:** HomericIntelligence Odysseus meta-repo worktree-cleanup session (~14 submodules incl. `research/ProjectOdyssey`; cleaning ~7 agent worktrees after a long parallel session) — read-only classification + hand-to-user
+**Verification:** verified-local
+
+### What changed
+
+- Added a Verified Workflow subsection "Submodule Worktrees Refuse `git worktree remove` — Even
+  When Clean" inside Phase 6, capturing:
+  - `git worktree remove <path>` REFUSES with `fatal: working trees containing submodules cannot be
+    moved or removed` in a repo with initialized submodules — even for a CLEAN worktree or one whose
+    only diff is a `M research/ProjectOdyssey` submodule-pointer artifact (0 unique commits).
+  - Two workarounds that did NOT clear it: `git submodule deinit -f <sub>` inside the worktree first
+    (cleared the submodule but `remove` still refused), and `git worktree remove --force` (Safety-Net
+    blocked). Resolution: hand the user `git worktree remove --force <wt> && git worktree prune`.
+  - The 3-method worktree classification (PR state via `gh pr list --head <br> --state all`,
+    commits-ahead via `rev-list --count origin/main..HEAD`, dirty via `status --porcelain`) with a
+    keep/prune decision table (MERGED+clean = CLEAN_PRUNE_OK; OPEN = KEEP; no-remote `worktree-agent-*`
+    +0 ahead = throwaway; dirty-with-real-diff = INSPECT).
+  - Squash-merge caveat: a squash-merged PR branch shows `ahead > 0` AND is ABSENT from
+    `git branch --merged` — trust the PR `MERGED` state, not `--merged`/commits-ahead; delete with
+    `git branch -D` (not `-d`) handed to the user with PR-MERGED proof.
+  - Preserve-first: a dirty worktree (`odyssey-5551-wt`) whose uncommitted changes were an abandoned
+    partial REVERT of already-merged PR #5582 — inspect the diff and ASK the user (discard/stash/leave)
+    rather than auto-commit/auto-discard; on discard hand `rm -rf <wt> && git worktree prune &&
+    git branch -D <branch>`.
+  - Orphan on-disk `.claude/worktrees/agent-XXXX/` dirs (not in `git worktree list`) → `rm -rf` directly.
+  - Safety-Net-blocks-encountered table (all hand-to-user): `remove --force`, `checkout -- .`/`reset
+    --hard` (blocked even with explicit user "discard"), `branch -D`, `rm -rf <wt>`.
+- Added 6 Failed Attempts rows (plain `worktree remove` on submodule worktree; `submodule deinit`
+  still refuses; trusting `branch --merged` for squash-merges; auto-discarding a dirty worktree that
+  was a revert of merged work; `checkout -- .`/`reset --hard` blocked even after user "discard").
+- Extended the Safety Net interaction table with 4 new rows (submodule `worktree remove`,
+  discard-uncommitted, `branch -D`, `rm -rf <worktree-dir>`).
+- Added 3 frontmatter `description` triggers (22 submodule `worktree remove` refusal, 23 squash-merge
+  vs `--merged` classification, 24 preserve-first abandoned-revert) + matching tags (submodule,
+  squash-merge, hand-to-user).
+- Added 3 "When to Use" Cleanup bullets mirroring the new triggers.
+- Added a Verified On row for the HomericIntelligence Odysseus worktree-cleanup session (2026-07-13).
+- Bumped version 1.4.0 → 1.5.0 (minor — new findings + new failed attempts + new triggers; no
+  breaking changes). Skill `date` → 2026-07-13; skill-level `verification` stays `verified-local`.
+
+### Why
+
+Cleaning ~7 agent worktrees in the HomericIntelligence Odysseus meta-repo (~14 git submodules)
+surfaced a class of cleanup blocker the prior skill did not cover: `git worktree remove` flatly
+refuses to remove ANY worktree containing an initialized submodule (`fatal: working trees
+containing submodules cannot be moved or removed`), regardless of cleanliness, and `git submodule
+deinit` does not unblock it — only `--force` does, which the CC Safety Net blocks. The working
+resolution was to prune the 2 clean merged-PR worktrees the agent could remove, and hand the user
+the exact `--force`/`rm -rf`/`branch -D` commands for the submodule-containing and dirty ones. Two
+further traps: squash-merged branches look unreleased under `git branch --merged`/commits-ahead
+(trust the PR MERGED state instead), and a dirty worktree can hold junk (an abandoned partial
+revert of already-merged PR #5582) that should be surfaced to the user, not auto-handled.
+
+### Previous version (v1.4.0) snapshot
+
+See `git show HEAD:skills/git-worktree-parallel-execution-lifecycle.md` at the commit prior to
+this amendment for the complete pre-amendment snapshot (this amendment only ADDS the Phase 6
+submodule subsection, 6 Failed Attempts rows, 4 Safety-Net-table rows, 3 triggers, 3 When-to-Use
+bullets, and 1 Verified On row).
+
+---
+
 ## v1.4.0 (2026-06-22)
 
 **Changed by:** ProjectHephaestus issue-major automation-loop cross-process worktree race (real 2026-06-21 output.log, issues 1553/1547) → fix PR #1568 / issue #1567 (new `hephaestus/utils/file_lock.py`)
