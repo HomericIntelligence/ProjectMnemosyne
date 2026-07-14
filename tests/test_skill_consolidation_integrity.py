@@ -101,6 +101,4 @@ def test_skill_files_only_keep_canonical_consolidation_targets():
         assert fm.get("version") == consolidation["version"]
 
         for absorbed in consolidation["absorbed"]:
-            assert not (SKILLS_DIR / f"{absorbed}.md").exists(), (
-                f"absorbed skill still present: {absorbed}"
-            )
+            assert not (SKILLS_DIR / f"{absorbed}.md").exists(), f"absorbed skill still present: {absorbed}"
