@@ -1,420 +1,185 @@
 ---
 name: code-quality-audit-principles
-description: Comprehensive codebase audit against 7 core development principles (KISS,
-  YAGNI, TDD, DRY, SOLID, Modularity, POLA). Generates ratings, files issues, and
-  creates audit report.
+description: "Use when reviewing, planning, or implementing repository changes that must apply KISS, YAGNI, TDD, DRY, SOLID, modularity, and POLA without creating brittle prose tests or maintenance-only artifacts."
 category: tooling
-date: 2025-02-09
-version: 1.0.0
+date: 2026-07-15
+version: "2.0.0"
 user-invocable: false
+verification: verified-ci
+tags:
+  - code-quality
+  - repository-review
+  - pull-request-review
+  - kiss
+  - yagni
+  - tdd
+  - dry
+  - solid
+  - modularity
+  - pola
+  - behavior-testing
+  - durable-artifacts
 ---
-# Code Quality Audit Against Development Principles
 
-| Attribute | Value |
-| ----------- | ------- |
-| **Date** | 2025-02-09 |
-| **Objective** | Audit ProjectScylla codebase against 7 core development principles for public release readiness |
-| **Outcome** | ✅ 6.3/10 rating, GO with conditions, 13 issues filed (P0-P2), comprehensive audit report created |
-| **Context** | Pre-release quality assessment for ProjectScylla (~33K lines Python, 90 source files) |
-
-## When to Use This Skill
-
-Use this audit process when:
-- **Preparing for public release** - need comprehensive quality assessment
-- **Taking over legacy codebase** - understand technical debt
-- **Post-rapid-development cleanup** - after sprint, assess code health
-- **Setting improvement roadmap** - prioritize technical debt
-- **Team onboarding** - document known issues upfront
-
-**Don't use when**:
-- Single feature development (too heavyweight)
-- Already have recent audit (< 3 months old)
-- Just need specific issue analysis (not full audit)
-
-## The 7 Development Principles
-
-### 1. KISS - Keep It Simple Stupid
-**Rule**: Don't add complexity when a simpler solution works
-**Red flags**:
-- Functions >100 lines
-- Nested conditionals >5 levels deep
-- Complex logic that requires comments to understand
-
-### 2. YAGNI - You Ain't Gonna Need It
-**Rule**: Don't add things until they are required
-**Red flags**:
-- Unused functions/classes
-- Over-engineered abstractions
-- Features built for hypothetical future needs
-
-### 3. TDD - Test Driven Development
-**Rule**: Write tests to drive implementation
-**Red flags**:
-- Modules with 0% test coverage
-- Code without corresponding tests
-- Tests written after implementation (acceptable but suboptimal)
-
-### 4. DRY - Don't Repeat Yourself
-**Rule**: Don't duplicate functionality, data structures, or algorithms
-**Red flags**:
-- Copy-paste code across files
-- Same logic in >2 places
-- Repeated patterns not extracted
-
-### 5. SOLID Principles
-**Rules**:
-- **S**ingle Responsibility - one class, one purpose
-- **O**pen-Closed - open for extension, closed for modification
-- **L**iskov Substitution - subtypes must be substitutable
-- **I**nterface Segregation - many specific interfaces > one general
-- **D**ependency Inversion - depend on abstractions, not concretions
-
-**Red flags**:
-- God classes (>500 lines, many responsibilities)
-- Classes that do everything
-- Tight coupling between modules
-
-### 6. Modularity
-**Rule**: Develop independent modules through well-defined interfaces
-**Red flags**:
-- Circular dependencies
-- Modules that can't be tested independently
-- No clear separation of concerns
-
-### 7. POLA - Principle of Least Astonishment
-**Rule**: Create intuitive and predictable interfaces
-**Red flags**:
-- Surprising behavior
-- Inconsistent naming
-- Unclear error messages
-
-## Verified Workflow
-
-### Phase 1: Codebase Statistics
-
-Gather baseline metrics:
-
-```bash
-# Count source files
-find scylla -name "*.py" | wc -l
-# Output: 90 files
-
-# Count test files
-find tests -name "*.py" | wc -l
-# Output: 77 files
-
-# Count lines of code
-cloc scylla/ --quiet
-# Output: ~33K lines
-
-# Check for unexpected file types
-find . -name "*.mojo" | wc -l
-# Output: 0 (revealed documentation inaccuracy)
-```
-
-### Phase 2: Module-by-Module Assessment
-
-For each major module, evaluate against all 7 principles:
-
-**Assessment Template**:
-
-```markdown
-### Module: scylla/[module-name]/
-**Files**: X source files (~Y lines) | **Rating: Z/10** | **Status: GO/NO-GO**
-
-| Principle | Score | Assessment |
-|-----------|-------|------------|
-| KISS | X/10 | [Specific findings] |
-| YAGNI | X/10 | [Specific findings] |
-| TDD | X/10 | [Specific findings] |
-| DRY | X/10 | [Specific findings] |
-| SOLID | X/10 | [Specific findings] |
-| Modularity | X/10 | [Specific findings] |
-| POLA | X/10 | [Specific findings] |
-
-**Critical Issues**:
-1. [Issue 1 - specific file:line]
-2. [Issue 2 - specific file:line]
-...
-
-**Recommendation**: [GO/NO-GO with conditions]
-```
-
-**Modules to assess**:
-1. Core business logic (e2e/, executor/, judge/)
-2. Supporting libraries (metrics/, analysis/, reporting/)
-3. Adapters and integrations (adapters/, config/)
-4. Infrastructure (cli/, core/, discovery/)
-5. Documentation and scripts (docs/, scripts/)
-
-### Phase 3: Issue Prioritization
-
-Classify findings into priority tiers:
-
-**P0 - Blocking for Release**:
-- Critical violations that confuse users immediately
-- Missing tests for foundational code
-- Severe DRY violations (>80% duplication)
-- God classes (>2000 lines)
-
-**P1 - High Priority**:
-- Missing tests for important modules
-- Large functions (>200 lines)
-- Moderate duplication
-
-**P2 - Should Address Soon**:
-- Minor duplication
-- Documentation issues
-- TODO markers
-- Deep nesting
-
-### Phase 4: Known-Issue Comments
-
-For issues that can't be fixed immediately, add inline documentation:
-
-```python
-"""Module docstring.
-
-KNOWN ISSUE: [Brief description of problem]
-See GitHub Issue #XXX - [Issue title]
-TODO: [What needs to be done]
-"""
-```
-
-**Benefits**:
-- Acknowledges technical debt
-- Prevents confusion
-- Provides tracking reference
-- Shows transparency
-
-### Phase 5: GitHub Issue Creation
-
-For each identified issue, create detailed GitHub issue:
-
-```bash
-gh issue create \
-  --title "[P0] Brief description of issue" \
-  --label "P0,refactoring,tech-debt" \
-  --body "$(cat <<'EOF'
-## Objective
-[What needs to be fixed]
-
-## Problem
-[Detailed description with evidence]
-
-### Impact
-- [Impact point 1]
-- [Impact point 2]
-
-## Proposed Solution
-[Specific steps to fix]
-
-## Success Criteria
-- [ ] Criterion 1
-- [ ] Criterion 2
-
-## Dependencies
-[Any blockers]
-
-## Risk Assessment
-[Low/Medium/High with rationale]
-EOF
-)"
-```
-
-**Issue template sections**:
-- Objective (1-2 sentences)
-- Problem (with code examples/metrics)
-- Proposed Solution (actionable steps)
-- Success Criteria (measurable)
-- Dependencies
-- Risk Assessment
-
-### Phase 6: Audit Report Generation
-
-Create comprehensive audit document:
-
-```markdown
-# Code Quality Audit - [Date]
-
-## Executive Summary
-**Rating: X.X/10** | **Go/No-Go: GO with conditions**
-
-[Brief summary of findings]
-
-## Module-by-Module Assessment
-[Table of all modules with ratings]
-
-## Critical Issues (P0)
-[List of blocking issues]
-
-## Recommendations
-[Prioritized action items]
-
-## Testing Metrics
-[Coverage gaps and test count]
-
-## Appendix: GitHub Issues Filed
-[Links to all filed issues]
-```
-
-**Save location**: `docs/dev/code-quality-audit-YYYY-MM.md`
+# Code Quality Decisions Through Development Principles
 
 ## Overview
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | YYYY-MM-DD |
-| **Objective** | Skill objective |
-| **Outcome** | Success/Operational |
+| **Date** | 2026-07-15 |
+| **Objective** | Apply seven development principles to both product changes and the review process, while adding only behavior-changing or directly useful repository artifacts. |
+| **Outcome** | Replaced a report-generating audit recipe with an evidence-first decision method. Athena PR #9 implemented the policy, passed 110 tests with 92% branch coverage, passed every required CI check, and merged. |
+| **Verification** | verified-ci |
 
-## Results & Parameters
+## When to Use
 
-Copy-paste ready configurations and expected outputs.
+Use this guidance when:
+
+- reviewing a repository or pull request for unnecessary complexity, duplication, coupling, weak
+  tests, surprising interfaces, or unclear module boundaries;
+- deciding whether a finding warrants code, a computable regression test, documentation, a tracking
+  issue, or no new artifact;
+- planning a fix whose proposed scaffolding, compatibility layer, registry, report, or generator may
+  cost more to maintain than the product change;
+- evaluating a test that asserts prose, headings, counts, snapshots, timing, network state, or an
+  implementation detail instead of the behavior that failed.
+
+Use the repository's `repo-review` or `pr-review` workflow for audit coverage, evidence collection,
+grading, and verdicts. This lesson supplies decision rules; it does not duplicate those review
+rubrics.
+
+## Verified Workflow
+
+### Quick Reference
+
+1. Identify the current requirement, affected consumer, and executable failure.
+2. Apply KISS, YAGNI, TDD, DRY, SOLID, modularity, and POLA to the proposed remedy.
+3. Add an artifact only when it directly implements, verifies, distributes, operates, secures, or
+   explains the current product.
+4. For executable defects, prove a focused RED test, make the smallest GREEN change, then refactor.
+5. Run the repository's focused checks, complete required gate, and current-head CI.
+6. Report evidence in the review or PR. Create another persistent artifact only when a demonstrated
+   consumer or explicit repository policy requires it.
+
+### 1. Establish evidence before scoring
+
+Read repository policy, linked requirements, affected code, public contracts, tests, packaging, and
+CI configuration. Treat file size, coverage, nesting, and duplication metrics as investigation
+signals, not universal pass/fail thresholds. A finding needs a concrete consumer impact, violated
+contract, demonstrated risk, or failed executable check.
+
+Do not hide an executable failure behind a grade average. Conversely, do not manufacture work from
+an arbitrary metric when the code remains simple, tested, and unsurprising in its actual context.
+
+### 2. Apply the seven principles to the remedy
+
+| Principle | Decision rule |
+| --------- | ------------- |
+| KISS | Prefer the smallest design that satisfies the demonstrated requirement. Reject scaffolding whose only justification is possible future work. |
+| YAGNI | Do not add compatibility layers, generators, registries, reports, extension points, or configuration without a current consumer. |
+| TDD | For executable behavior, first reproduce the defect with a focused failing test, make it pass minimally, then refactor under the test. |
+| DRY | Keep one authority for each rule or data set. Remove duplicated logic and manually synchronized representations when a single source works. |
+| SOLID | Keep responsibilities cohesive, extend through stable seams when extension is required, preserve substitutability, expose focused interfaces, and inject unstable dependencies at boundaries. |
+| Modularity | Give independent modules explicit inputs, outputs, ownership, and tests; avoid ambient state and hidden working-directory contracts. |
+| POLA | Make defaults, names, failures, side effects, and authority boundaries match a reasonable user's expectations. Fail closed when safety or identity is ambiguous. |
+
+These principles constrain the review process too. A quality audit should not create the complexity,
+duplication, speculative machinery, or surprising side effects it criticizes.
+
+### 3. Use the durable-artifact gate
+
+Before adding a file, require a clear answer to both questions:
+
+1. Which current product or contributor workflow consumes this artifact?
+2. Who or what keeps it correct when the underlying behavior changes?
+
+Add the artifact only when it directly implements, verifies, distributes, operates, secures, or
+explains the current product. Prefer an existing repository surface over a parallel representation.
+
+Do not create these by default:
+
+- generated or periodic audit reports;
+- manually maintained changelogs when release policy does not require one;
+- duplicated or dynamic registries, catalogs, indexes, inventories, or count summaries;
+- generated documentation without an existing supported generation pipeline and consumer;
+- inline known-issue comments that merely repeat a tracking issue;
+- unrelated cleanup files bundled with the requested change.
+
+A repository may legitimately require one of these artifacts. In that case, cite the existing
+consumer and update mechanism rather than inferring a generic best practice.
+
+### 4. Test behavior and executable contracts
+
+For a code or automation defect, the regression test must fail for the reported defect before the
+fix and pass after it. Assert computable outcomes such as return values, state transitions, parsed
+data, exit status, security boundaries, archive membership, schema validity, or filesystem effects.
+
+Do not add tests that freeze:
+
+- documentation sentences, headings, paragraphs, word counts, or snapshots;
+- README or policy wording used only as prose;
+- manually repeated counts or catalog contents;
+- private implementation details that are not part of an executable contract;
+- real time, external network availability, nondeterministic ordering, or host-specific state when
+  a deterministic boundary can be injected.
+
+Use existing Markdown lint and link checks for documentation syntax. A documentation-only change
+does not justify a new test harness. Structured documentation may be tested only when a real tool
+consumes it as executable data; test the parser or schema contract, not editorial wording.
+
+### 5. Verify proportionally and report in place
+
+Run the focused regression first, then the repository's formatter, linter, type checks, complete
+test suite, packaging or distribution checks, and required CI as applicable. Record exact commands,
+results, revision, and any authorized deferral in the PR or review response.
+
+Create a GitHub issue only for genuinely deferred work that needs ownership and only when the user or
+repository workflow authorizes that external write. Do not create an issue for every observation.
+Do not create a separate audit document merely to restate the review.
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-| --------- | ---------------- | --------------- | ---------------- |
-| N/A | Direct approach worked | N/A | Solution was straightforward |
-## Results & Verified Parameters
+| ------- | -------------- | ------------- | -------------- |
+| Mandatory audit artifacts | Required every audit to generate a dated report, inline known-issue comments, many issues, and recurring rating updates | The artifacts had no guaranteed consumer, duplicated live evidence, created maintenance work, and violated KISS and YAGNI | Keep findings in the review or PR unless an existing workflow explicitly requires another durable artifact |
+| Prose-string regression tests | Tested documentation wording, headings, counts, and snapshots to prevent drift | Editorial changes broke tests without changing executable behavior, while the tests still could not prove the product contract | Test computable behavior or a real parser/schema contract; lint prose with existing documentation checks |
+| Universal numeric thresholds | Treated file length, function length, nesting, and coverage percentages as correctness grades | Context-free thresholds produced false positives and encouraged metric gaming | Use metrics to locate risk, then require repository-specific impact and evidence |
+| Speculative infrastructure | Added generators, registries, compatibility layers, and abstraction seams for hypothetical consumers | The extra machinery increased coupling and update burden before any requirement existed | Add the simplest current solution and extend only when a real consumer appears |
+| Issue per observation | Filed external work items for every review note | This created noise, fragmented ownership, and expanded scope without authority | Fix in scope, report non-actionable context, and track only explicitly authorized deferrals |
 
-### Audit Findings (ProjectScylla)
+## Results & Parameters
 
-**Overall Rating**: 6.3/10 (GO with conditions)
+### Artifact decision matrix
 
-**Top Issues Filed**:
-- #478 [P0] - God class (2269 lines, 383-line function)
-- #479 [P0] - Copy-paste adapters (~80% duplication)
-- #480 [P1] - Missing tests for core/discovery (0% coverage)
-- #481 [P1] - Long report functions (>200 lines each)
-- #482-490 [P2] - Various cleanup items
+| Proposed change | Default decision | Evidence that can justify it |
+| --------------- | ---------------- | ---------------------------- |
+| Focused behavior test | Add for an executable defect | Demonstrated RED before the fix and GREEN after it |
+| Documentation edit | Edit the existing canonical page | Current user or contributor need; existing lint/link checks pass |
+| New documentation test | Reject | Only justified when a real parser consumes structured data; test its schema, not prose |
+| Audit report file | Reject | Existing repository policy names a consumer, owner, location, and update lifecycle |
+| Changelog entry | Reject unless required | Release tooling or documented release policy consumes it |
+| Registry, catalog, or generated index | Reject unless required | A current runtime or contributor workflow consumes one authority with an automated update path |
+| Tracking issue | Ask or follow explicit policy | Deferred actionable work needs ownership and external-write authority |
 
-**Module Ratings**:
-| Module | Rating | Status | Key Issue |
-| -------- | -------- | -------- | ----------- |
-| metrics/ | 8/10 | GO | Minor duplication |
-| judge/ | 7/10 | GO | to_dict repetition |
-| e2e/ | 5/10 | NO-GO* | God class |
-| core/ | 5/10 | NO-GO* | Zero tests |
+### Evidence recorded from the verified implementation
 
-### Scoring Rubric
+| Evidence | Result |
+| -------- | ------ |
+| Focused and full tests | 110 of 110 passed |
+| Aggregate branch coverage | 92% |
+| Per-executable coverage floor | Every executable script at or above 80% |
+| Static and distribution gates | Ruff, formatting, strict mypy, plugin validation, packaging, workflow schema, and Markdown lint passed |
+| Required CI | All jobs and the aggregate required-check gate passed on Athena PR #9 head `69e806f` |
+| Delivery | Athena PR #9 merged as `9a03d9f` |
 
-**10/10** - Exemplary
-- All principles followed perfectly
-- Comprehensive tests
-- Clean, maintainable code
+## Verified On
 
-**8-9/10** - Good
-- Minor violations only
-- Good test coverage (>80%)
-- Mostly clean code
+| Project | Context | Details |
+| ------- | ------- | ------- |
+| Athena | PR #9, merged 2026-07-15 | Review skills and development policy adopted the seven principles, prohibited brittle prose tests and maintenance-only artifacts, and passed the complete local and required CI gates. |
 
-**6-7/10** - Acceptable
-- Some violations
-- Decent coverage (>60%)
-- Fixable issues
+## References
 
-**4-5/10** - Concerning
-- Major violations
-- Poor coverage (<60%)
-- Significant refactoring needed
-
-**1-3/10** - Critical
-- Severe violations
-- Little/no tests
-- Major overhaul required
-
-### Issue Priority Guidelines
-
-**P0** - Must fix before public release:
-- Documentation inaccuracies that confuse immediately
-- Critical DRY violations (>50% duplication)
-- Zero test coverage for core modules
-- God classes (>2000 lines with >5 responsibilities)
-
-**P1** - Fix in first post-release sprint:
-- Missing tests for important modules
-- Functions >200 lines
-- Moderate duplication (20-50%)
-
-**P2** - Address in backlog:
-- Minor issues
-- TODO markers
-- Documentation improvements
-- Deep nesting (>5 levels)
-
-## Recovery from Failures
-
-### Issue: Discovered Huge God Class
-**Symptom**: File is >2000 lines with multiple responsibilities
-**Don't**: Try to refactor immediately during audit
-**Do**:
-1. File detailed GitHub issue with decomposition plan
-2. Add known-issue comment to file
-3. Mark module as NO-GO* (conditional)
-4. Schedule refactoring for separate session
-
-### Issue: Found Documentation Inaccuracy
-**Symptom**: Documentation claims X but code does Y (e.g., "Mojo First" but 0 .mojo files)
-**Do**:
-1. Fix documentation immediately (low risk)
-2. Commit fix in audit PR
-3. Note in audit report
-
-### Issue: Discovered Pre-Existing Test Failures
-**Symptom**: Running full test suite reveals failures unrelated to current work
-**Do**:
-1. Create separate branch to fix test failures
-2. File issue tracking the failures
-3. Fix tests in isolated PR
-4. Note in audit report that tests were pre-existing failures
-
-## Success Metrics
-
-Audit is successful if:
-- ✅ Every module has rating and GO/NO-GO status
-- ✅ All P0 issues have GitHub issues filed
-- ✅ Known-issue comments added to problem areas
-- ✅ Comprehensive audit report created
-- ✅ Clear prioritized roadmap for improvements
-- ✅ Team understands technical debt and trade-offs
-
-## Post-Audit Actions
-
-1. **Immediate** (during audit session):
-   - Fix documentation inaccuracies
-   - Add known-issue comments
-   - Create all GitHub issues
-   - Generate audit report
-
-2. **Before Release** (P0 items):
-   - Fix blocking issues
-   - Verify fixes don't break tests
-   - Update audit report with resolution status
-
-3. **After Release** (P1/P2 items):
-   - Prioritize in backlog
-   - Assign to sprints
-   - Track progress
-   - Update audit ratings quarterly
-
-## Anti-Patterns to Avoid
-
-❌ **Don't** rate based on "feel" - use objective metrics
-❌ **Don't** try to fix everything during audit - document and track
-❌ **Don't** skip baseline statistics phase
-❌ **Don't** file issues without proposed solutions
-❌ **Don't** give every module 7/10 - differentiate clearly
-❌ **Don't** audit without creating tracking issues
-❌ **Don't** ignore test failures found during audit
-
-## Related Skills
-
-- `github-issue-workflow` - Creating and managing issues
-- `pr-workflow` - Creating PRs for fixes
-- `code-review` - Reviewing code quality
-
-## Tags
-
-`#audit` `#quality` `#principles` `#technical-debt` `#kiss` `#yagni` `#tdd` `#dry` `#solid` `#modularity` `#pola`
+- [Athena PR #9](https://github.com/HomericIntelligence/Athena/pull/9)
+- [Athena development policy](https://github.com/HomericIntelligence/Athena/blob/main/docs/policies/development.md)
