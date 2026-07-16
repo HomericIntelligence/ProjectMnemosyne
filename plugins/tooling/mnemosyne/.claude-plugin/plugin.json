@@ -1,7 +1,7 @@
 {
   "name": "mnemosyne",
   "version": "2.0.0",
-  "description": "Skills registry for the HomericIntelligence ecosystem. Provides documentation-patterns and validation-workflow skills for skill authoring. Commands have moved to the hephaestus plugin in ProjectHephaestus.",
+  "description": "Skills registry for the HomericIntelligence ecosystem. Provides documentation-patterns and validation-workflow skills for skill authoring. Commands are provided by the Athena plugin.",
   "author": {
     "name": "ML Odyssey Team"
   },
