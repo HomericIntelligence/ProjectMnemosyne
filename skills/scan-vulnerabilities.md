@@ -1,80 +1,111 @@
 ---
 name: scan-vulnerabilities
-description: Detect security vulnerabilities in code and dependencies. Use when auditing
-  security.
+description: "Detect and gate code or dependency vulnerabilities. Use when: (1) auditing source or dependencies, (2) enforcing Grype findings in CI, (3) allowing a temporary vulnerability exception without creating a broad permanent suppression."
 category: tooling
-date: '2026-03-19'
-version: 1.0.0
-mcp_fallback: none
-tier: 2
+date: 2026-07-15
+version: "1.1.0"
+user-invocable: false
+verification: verified-ci
+history: scan-vulnerabilities.history
+tags:
+  - vulnerability-scanning
+  - grype
+  - syft
+  - sca
+  - exceptions
+  - ci-policy
 ---
+
 # Scan Vulnerabilities
 
 ## Overview
 
-| Item | Details |
-| ------ | --------- |
-| Date | N/A |
-| Objective | Systematically scan code for security vulnerabilities including unsafe patterns, known CVEs, and potential exploits. |
-| Outcome | Operational |
-
-Systematically scan code for security vulnerabilities including unsafe patterns, known CVEs, and potential exploits.
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-07-15 |
+| **Objective** | Scan source and dependency inventories, fail closed on actionable findings, and govern unavoidable exceptions narrowly. |
+| **Outcome** | Operational: Athena PR #14 passed required CI with a locked Grype scan over a native Syft inventory and a narrowly approved, expiring exception. |
+| **Verification** | verified-ci |
+| **History** | [changelog](./scan-vulnerabilities.history) |
 
 ## When to Use
 
-- Regular security audits
-- Before releasing code to production
-- When updating dependencies
-- In CI/CD security checks
+- Auditing source code for unsafe patterns or known dependency CVEs.
+- Adding a required software-composition-analysis gate to CI.
+- Scanning a prebuilt Syft SPDX inventory with Grype instead of rescanning a different input.
+- A fixable High or Critical finding must block a pull request.
+- A vendor has no usable fix and a temporary exception is unavoidable.
+
+## Verified Workflow
 
 ### Quick Reference
 
 ```bash
-# Python security scanning
-pip install bandit safety
+# Produce the inventory once, then make the policy scanner consume that exact evidence.
+syft scan <authoritative-input> -o spdx-json=build.spdx.json
+grype sbom:build.spdx.json -o json > grype-report.json
 
-# Scan code for security issues
-bandit -r . -ll
-
-# Check for known vulnerabilities in dependencies
-safety check
-
-# Advanced: SAST scanning
-python3 -m pip install semgrep
-semgrep --config=p/security-audit --json .
+# Preserve the complete report even when policy rejects a finding.
+# The policy command should parse grype-report.json and exit nonzero after writing it.
+python3 scripts/enforce_vulnerability_policy.py grype-report.json exceptions.yaml
 ```
 
-## Verified Workflow
+### Detailed Steps
 
-1. **Scan code for issues**: Identify unsafe patterns (SQL injection, exec, hardcoded secrets)
-2. **Check dependencies**: Scan for known vulnerabilities (CVEs)
-3. **Review findings**: Analyze severity and exploitability
-4. **Prioritize fixes**: Address critical/high severity issues first
-5. **Document fixes**: Record how vulnerabilities were resolved
+1. Lock the scanner, inventory generator, and build environment versions. A floating scanner or
+   database makes a green result difficult to reproduce.
+2. Generate one authoritative dependency inventory and feed that exact SBOM to the vulnerability
+   scanner. Do not independently rescan the filesystem and assume the evidence sets are equal.
+3. Retain the full machine-readable scanner report on both pass and failure. Enforcement should
+   happen after report creation, and artifact retention should use an unconditional workflow step.
+4. Fail closed on the repository's declared threshold. For Athena, a High or Critical finding is
+   actionable only when the scanner reports a usable fixed version.
+5. Treat exceptions as exact records, not free-form ignore strings. Require the vulnerability ID,
+   package name, affected version, severity, rationale, approving identity, approval date, expiry
+   date, and a durable issue URL.
+6. Reject expired exceptions and records whose package/version/severity do not exactly match the
+   finding. Keep exception parsing and matching covered by positive and negative tests.
+7. Run the real scan in required CI. Unit tests for parsers do not prove that the locked tools,
+   database, inventory, and workflow wiring operate end to end.
 
-## Output Format
+Example exception schema:
 
-Security scan report:
-
-- Vulnerability type (SQL injection, hardcoded secret, etc.)
-- Location (file, line number)
-- Severity (critical/high/medium/low)
-- CVSS score (if applicable)
-- Vulnerable dependency version (if applicable)
-- Recommended fix
-- Fixed version (if dependency)
+```yaml
+exceptions:
+  - vulnerability: CVE-YYYY-NNNN
+    package: exact-package-name
+    version: 1.2.3
+    severity: High
+    rationale: No usable fixed version is available; compensating control documented in issue.
+    approved_by: github-user-or-team
+    approved_on: 2026-07-15
+    expires_on: 2026-08-14
+    issue: https://github.com/OWNER/REPO/issues/NN
+```
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-| --------- | ---------------- | --------------- | ---------------- |
-| N/A | Direct approach worked | N/A | Solution was straightforward |
+| ------- | -------------- | ------------- | -------------- |
+| Rescanned the repository instead of consuming the generated SBOM | The policy scan independently discovered dependencies from the workspace | The enforcement evidence could differ from the SBOM published with the release | Generate once and scan the exact retained inventory with `grype sbom:<path>`. |
+| Used a broad CVE ignore | A vulnerability ID alone suppressed every matching package and version | The exception silently covered future or unrelated findings | Match the full finding tuple and require approval, rationale, issue, and expiry metadata. |
+| Uploaded the report only after a successful scan | The scanner's nonzero exit skipped the later artifact step | The report disappeared precisely when investigation was needed | Write the report first and retain it with an unconditional artifact step. |
+| Treated any listed fixed version as actionable | The scanner reported a fix that was not available for the deployed release line | CI demanded an impossible upgrade | Encode the repository's usable-fix rule explicitly and test the boundary. |
+
 ## Results & Parameters
 
-N/A — this skill describes a workflow pattern.
+| Parameter | Verified value |
+| --------- | -------------- |
+| Inventory | Native Syft SPDX 2.3 document |
+| Scanner | Locked Grype environment consuming `sbom:<path>` |
+| Athena threshold | Fixable High or Critical findings fail required CI |
+| Exception matching | Exact vulnerability, package, version, and severity tuple |
+| Exception governance | Rationale, approver, approval date, expiry, and durable issue required |
+| Evidence retention | Full JSON report retained on pass and failure |
+| Verification | Athena PR #14, required dependency-scan and aggregate gate passed at commit `7c9ac8356ed0828787ceb303b82cf20048e64db5` |
 
-## References
+## Verified On
 
-- See CLAUDE.md > Security standards for security guidelines
-- See `quality-security-scan` skill for automated CI scanning
-- OWASP Top 10 for common vulnerability categories
+| Project | Context | Details |
+| ------- | ------- | ------- |
+| Athena | Issue #10 / PR #14 supply-chain enforcement | Locked Syft/Grype execution, exact exception validation, negative policy tests, and required CI all passed. |
