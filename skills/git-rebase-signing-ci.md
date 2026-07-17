@@ -1,13 +1,13 @@
 ---
 name: git-rebase-signing-ci
-description: "Rebase and sign commits to pass CI pr-policy checks. Use when: (1) CI pr-policy fails on unsigned commits, (2) need to re-sign all PR commits after rebase, (3) force push signed commits to update a PR, (4) a rebase using --exec stops on a real conflict and you need to resume it correctly instead of hand-invoking the exec command."
+description: "Rebase and sign commits to pass CI pr-policy checks. Use when: (1) CI pr-policy fails on unsigned commits, (2) need to re-sign all PR commits after rebase, (3) force push signed commits to update a PR, (4) a rebase using --exec stops on a real conflict and you need to resume it correctly instead of hand-invoking the exec command, (5) pr-policy fails with 'commit signature is missing or invalid' immediately after GitHub's Update branch button or gh pr update-branch --rebase — the server-side rebase re-creates every commit UNSIGNED, so never use it on a signed-commits repo, (6) git push --force-with-lease is rejected with 'stale info' after a server-side branch update — fetch the branch to refresh the remote-tracking ref, verify the remote head is the expected rewrite, then push, (7) branch protection requires strictly up-to-date branches AND signed commits — every merge to main invalidates sibling PRs and each needs its own local re-signed rebase + force-push, one PR per cycle (server-side update is never usable), (8) a stacked PR's base branch was squash-merged — rebase with git rebase --onto origin/main <old-base-head> to shed the base's commits before pushing."
 category: tooling
-date: 2026-07-12
-version: "1.1.0"
+date: 2026-07-16
+version: "1.2.0"
 user-invocable: false
-verification: verified-local
+verification: verified-ci
 history: git-rebase-signing-ci.history
-tags: [git, signing, rebase, ci, gpg, exec, conflict-resolution]
+tags: [git, signing, rebase, ci, gpg, exec, conflict-resolution, update-branch, force-with-lease, stale-info, branch-protection, up-to-date, stacked-pr, squash-merge]
 ---
 
 # Git Rebase Signing for CI
@@ -16,10 +16,10 @@ tags: [git, signing, rebase, ci, gpg, exec, conflict-resolution]
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-07-12 |
-| **Objective** | Sign all PR commits to pass CI pr-policy checks that require GPG signatures, and avoid commit corruption when a `--exec` rebase stops on a real conflict |
-| **Outcome** | Successful — all commits show 'G' (good signature) after rebase; corrupted-commit failure mode documented and a safe recovery + redo procedure verified |
-| **Verification** | verified-local |
+| **Date** | 2026-07-16 |
+| **Objective** | Sign all PR commits to pass CI pr-policy checks that require GPG signatures, avoid commit corruption when a `--exec` rebase stops on a real conflict, and avoid the server-side branch updater that silently strips signatures |
+| **Outcome** | Successful — all commits show 'G' (good signature) after rebase; corrupted-commit failure mode documented with a safe recovery + redo procedure; server-side `update-branch` signature-stripping confirmed red-then-green in CI across two PRs |
+| **Verification** | verified-ci |
 | **History** | [changelog](./git-rebase-signing-ci.history) |
 
 ## When to Use
@@ -31,6 +31,12 @@ tags: [git, signing, rebase, ci, gpg, exec, conflict-resolution]
   need to resume it without corrupting the in-progress commit
 - `git reflog` shows an amend landed directly on a `rebase (start): checkout`
   entry with no intervening pick — signals the corruption described below
+- `pr-policy` fails with `commit signature is missing or invalid` right after the PR branch was
+  updated via GitHub's **Update branch** button or `gh pr update-branch --rebase`
+- `git push --force-with-lease` is rejected with `stale info` after a server-side branch update
+- The repository requires strictly up-to-date branches AND signed commits, and several PRs must
+  merge in sequence
+- A stacked PR's base branch was squash-merged and the branch now shows CONFLICTING
 
 ## Verified Workflow
 
@@ -97,12 +103,42 @@ commits for the general `--exec` signing pattern on conflict-heavy rebase
 chains — this skill's warning applies there too whenever a pick in that
 chain conflicts.
 
+### Server-side branch updates strip signatures (v1.2.0)
+
+GitHub's **Update branch** button and `gh pr update-branch --rebase` perform the rebase
+server-side: every commit is re-created by GitHub **without your GPG signature**, so a
+signed-commits `pr-policy` gate that was green goes red on the next run with
+`<sha>: commit signature is missing or invalid`. On a repo that requires signed commits,
+NEVER update a PR branch server-side. Instead:
+
+```bash
+# Local re-signed rebase (commit.gpgsign re-signs each replayed commit)
+git fetch origin main <branch>          # refresh BOTH refs; stale tracking ref => lease 'stale info'
+git -c commit.gpgsign=true rebase origin/main
+git log --show-signature -2             # expect 'Good signature' on every replayed commit
+git push --force-with-lease --force-if-includes origin <branch>
+```
+
+- **Lease rejection `stale info`:** after any server-side update the remote-tracking ref no
+  longer matches the remote, and `--force-with-lease` (correctly) refuses. Fetch the branch,
+  confirm the remote head is exactly the known server-side rewrite (not someone else's work),
+  then push again.
+- **Strict up-to-date + signed commits = serial merge queue:** each merge advances `main` and
+  flips every sibling PR to BEHIND, and the server-side updater is unusable, so each PR needs its
+  own local re-signed rebase, force-push, and full CI cycle — plan merges one at a time and
+  rebase the NEXT PR only after the previous one lands.
+- **Stacked PR whose base was squash-merged:** the branch still carries the base's original
+  commits (now absent from `main`'s history), so it shows CONFLICTING. Shed them with
+  `git rebase --onto origin/main <old-base-head> <branch>`, then re-verify signatures and push.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
 | `git commit --amend -S` per commit | Manual signing of each commit | Tedious and error-prone with multiple commits | Use `--exec` flag to sign all commits in one rebase |
 | `git push --force` | Force push without lease check | Could overwrite remote changes from other collaborators | Use `--force-with-lease` for safety |
+| `gh pr update-branch --rebase` to satisfy a strict up-to-date branch-protection rule | Server-side rebase to bring two green PRs current with main | GitHub re-created every commit unsigned; the previously-green signed-commits `pr-policy` gate failed on both PRs with `commit signature is missing or invalid` | Never update a signed-commits PR server-side; do a local `git -c commit.gpgsign=true rebase origin/main` and force-push with lease |
+| `git push --force-with-lease` immediately after a server-side branch update | Pushing the locally re-signed rebase over the server-side rewrite | Rejected with `stale info` — the local remote-tracking ref predated the server-side rewrite, so the lease check failed | Fetch the branch first, verify the remote head is the expected rewrite, then push; the rejection is the lease working as designed |
 | Hand-invoking the queued `--exec` command (`git add <file>` then `git commit --amend --no-edit -s -S`) after resolving a conflict, instead of `git rebase --continue` | Rebase paused mid-conflict showing "Next command to do: exec ..."; resolved the conflict then manually replicated the exec command to "help it along" | The conflicted commit had not yet been finalized as a commit object — `git rebase` was still mid-`pick`. `git commit --amend` amended the rebase's "onto" checkout (base branch tip, which was HEAD at that moment) instead of the picked change, producing a corrupted commit whose diff was the union of an unrelated upstream commit's changes plus the PR's own changes, under the wrong commit message/title. Diagnosed via `git reflog` showing `rebase (start): checkout <base>` immediately followed by `commit (amend): <wrong title>` with no intervening pick entry, plus `git diff <merge-base> <bad-commit> --stat` showing far more files than the original commit's own `git show <sha> --stat` | Always run `git rebase --continue` after resolving a conflict, even when the rebase reports a queued `exec` line next — never hand-invoke the exec command yourself. If already corrupted: recover via `git reset --keep <pre-rebase-sha>` + `git rebase --quit` (when `--abort` is blocked), then redo as a plain rebase followed by one standalone amend pass |
 
 ## Results & Parameters
@@ -121,3 +157,4 @@ chain conflicts.
 | HomericIntelligence/ProjectHephaestus | PR #1171 — show-prompt CLI | 4 commits rebased and signed, pr-policy passes |
 | example-org/inference-service | PR #82 — Move inference_service module | Commits signed for pr-policy compliance |
 | HomericIntelligence/ProjectHephaestus | PR #2099 — branch `2053-auto-impl`, rebase onto ~38 new commits with one real conflict; `--exec` hand-invocation corrupted a commit by merging in an unrelated upstream commit's diff; recovered via `reset --keep` + `rebase --quit`, redone as plain rebase + standalone amend | verified-local (not yet confirmed in this skill PR's own CI) |
+| HomericIntelligence/Athena | PRs #35/#36 — `gh pr update-branch --rebase` stripped signatures on both (pr-policy red with `commit signature is missing or invalid`); recovered with local `git -c commit.gpgsign=true rebase origin/main` + lease push after a branch fetch (first push rejected `stale info`); #35 re-merged green | verified-ci (pr-policy observed red on the server-side rewrite and green on the re-signed heads) |
