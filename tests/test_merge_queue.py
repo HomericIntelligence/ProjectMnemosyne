@@ -47,13 +47,13 @@ EXPECTED_MERGE_QUEUE_RULE = {
 }
 
 
-def _load_workflow(path: Path) -> dict[str, Any]:
+def _load_workflow(path: Path) -> dict[Any, Any]:
     workflow = yaml.safe_load(path.read_text())
     assert isinstance(workflow, dict), f"{path} must contain a workflow mapping"
     return workflow
 
 
-def _on_block(workflow: dict[str, Any]) -> dict[str, Any]:
+def _on_block(workflow: dict[Any, Any]) -> dict[Any, Any]:
     """Return the Actions trigger block despite PyYAML 1.1 coercing `on`."""
     on_block = workflow.get(True, workflow.get("on"))
     assert isinstance(on_block, dict), "workflow `on` block must be a mapping"
