@@ -3,6 +3,43 @@
 
 This file preserves the full original content of the skills merged into this canonical.
 
+## v1.3.0 (2026-07-17)
+
+**Changed by:** Athena v0.3.0 protected-main release
+**Verification:** verified-ci
+
+### What changed
+
+- Added the verified protected-branch release sequence: signed manifest-bump PR, required PR
+  gate, merge-group success, detached `origin/main`, signed annotated tag, remote tag
+  verification, release-workflow watch, and release-asset readback.
+- Added fail-closed remote trust assertions: GitHub's tag ref must point to an annotated tag,
+  `verification.verified` must be true, and the embedded target SHA must be the queue-merged
+  protected-main commit.
+- Added the reusable-workflow permission rule: a called workflow cannot elevate the caller's
+  token, so a release caller must grant required policy reads such as `issues: read`.
+- Corrected the tag command to `git tag -s vX.Y.Z -m ...`; signing already creates an annotated
+  tag, so a redundant `-a` is unnecessary.
+
+### Why
+
+Local checks and a signed PR head alone do not prove the published tag identifies the commit that
+passed merge-queue integration, nor that GitHub accepted the annotation/signature or uploaded the
+expected release artifacts. The Athena v0.3.0 run proved every step in CI and supplied a reusable
+readback contract.
+
+### Previous version (v1.2.0) snapshot
+
+The exact pre-amendment content is preserved by immutable Git object
+`383bf4e:skills/gha-release-package-workflow-patterns.md` (the parent of this amendment branch).
+It is retrievable with:
+
+```bash
+git show 383bf4e:skills/gha-release-package-workflow-patterns.md
+```
+
+---
+
 ## v1.2.0 (2026-06-20)
 
 Release-notes extraction footer-bleed fix (verified-local). MINOR bump because it corrects
