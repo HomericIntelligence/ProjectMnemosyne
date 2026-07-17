@@ -1,0 +1,27 @@
+# automation-loop-exclude-epic-roadmap-issues — History
+
+## v1.1.0 (2026-07-17)
+
+**Changed by:** Session triaging an org-wide `state:skip` mass-mislabel: the entry's own
+anywhere-in-title detection rule skip-parked Hephaestus issue #2245 — a bug report whose title
+mentioned "epic labels" mid-sentence — live, during the investigation.
+**Verification:** verified-ci (Hephaestus PR #2253 merged with CI green; regression tests pin the
+mid-title mention and the hyphenated leading marker).
+
+### What changed
+
+- Corrected the detection rule: the title signal matches `epic`/`roadmap` as a standalone token
+  only within the first ~3 title words (`_EPIC_TITLE_LEADING_TOKENS`), never anywhere in the title.
+- Updated the inline `is_epic` snippet to the leading-tokens form and noted that hyphens do NOT
+  block the token regex ("roadmap-exclusion" matches).
+- Added a Failed Attempts row for the anywhere-in-title false positive with the live incident.
+- Added a When-to-Use trigger for "issue ABOUT epic handling got excluded/skip-parked".
+- Bumped 1.0.0 → 1.1.0; verification verified-local → verified-ci.
+
+### Why
+
+The v1.0.0 rule ("epic/roadmap substring in title") was written when zero labelled epics existed
+and recall mattered most. In production it false-positived on issues that merely mention epics —
+including the bug report tracking the mislabeling investigation itself — and each false positive
+is durably tagged `state:skip`, silently removing the issue from all future planning. Tracking
+issues lead with the marker, so precision costs no known recall.

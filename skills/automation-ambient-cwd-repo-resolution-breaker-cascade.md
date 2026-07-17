@@ -1,9 +1,10 @@
 ---
 name: automation-ambient-cwd-repo-resolution-breaker-cascade
-description: "Diagnose why a handful of wrong-repo 404s silently opens a SHARED circuit breaker and poisons an ENTIRE multi-repo automation run. Use when: (1) a multi-repo loop aborts with hundreds of 'poisoned' items, CircuitBreakerOpenError, or 'FAIL:poisoned' and near-zero useful work, (2) you see 'Could not resolve to an Issue with the number of N' 404s in a cross-repo run, (3) a caught/swallowed exception still trips a breaker ('WARNING: ...using cache' next to 'ERROR: Non-transient error'), (4) a GitHub helper takes a bare issue NUMBER with no owning repo, (5) triaging a multi-repo abort and deciding how many DISTINCT root-cause bugs to file."
+description: "Diagnose why a handful of wrong-repo 404s silently opens a SHARED circuit breaker and poisons an ENTIRE multi-repo automation run. Use when: (1) a multi-repo loop aborts with hundreds of 'poisoned' items, CircuitBreakerOpenError, or 'FAIL:poisoned' and near-zero useful work, (2) you see 'Could not resolve to an Issue with the number of N' 404s in a cross-repo run, (3) a caught/swallowed exception still trips a breaker ('WARNING: ...using cache' next to 'ERROR: Non-transient error'), (4) a GitHub helper takes a bare issue NUMBER with no owning repo, (5) triaging a multi-repo abort and deciding how many DISTINCT root-cause bugs to file, (6) labels/comments/state appear on the WRONG repo's issues with no error anywhere — the silent WRITE twin (verified: epic state:skip tags landed on the cwd repo's colliding issue numbers)."
 category: debugging
-date: 2026-07-10
-version: "1.0.0"
+date: 2026-07-17
+version: "1.1.0"
+history: automation-ambient-cwd-repo-resolution-breaker-cascade.history
 user-invocable: false
 verification: verified-ci
 tags:
@@ -69,9 +70,21 @@ The `WARNING ... (using cache)` proves the CALLER recovered. It does **not** pro
 
 Treat any function signature that takes a bare `issue: int` (or `issue_number`) and then calls GitHub as **suspect**. Without an explicit `(owner, name)` it will resolve against whatever the ambient CWD happens to be — correct in a single-repo tool, catastrophic in a multi-repo loop.
 
-### 3. The silent-corruption twin (WORSE than the 404s)
+### 3. The silent-corruption twin (WORSE than the 404s) — now VERIFIED on the write side
 
 Where issue numbers **collide** across repos there is no 404 at all — so no error, no log line, no breaker trip. The loop silently reads/acts on an unrelated object in the wrong repo.
+
+**Verified occurrence (2026-07-16/17, fixed in Hephaestus PR #2248):** the epic skip-tag chokepoint
+(`github_api.skip_epics` → `gh_issue_add_labels`) built `gh issue edit N --add-label state:skip`
+with no `--repo` selector. In the multi-repo parent process (cwd = the launch checkout), other
+repos' epic numbers were written onto the cwd repo: Proteus#81 / Telemachy#92 / Hermes#316,#545
+tagged Hephaestus#81/#92/#316/#545 — every write a clean 200. Because `state:skip` overrides all
+planning, the mislabeled issues silently vanished from the loop. Label timelines
+(`gh api repos/O/R/issues/N/timeline`) were the only evidence trail; see
+[[github-label-mass-mislabel-forensics]] for the triage workflow. The fix threads an optional
+`(owner, name)` through `gh_issue_add_labels` / `gh_list_labels` / `gh_create_label` / `skip_epics`
+(appending `--repo owner/name` and keying the label cache by the explicit slug) — the same
+thread-the-owning-repo pattern as PR #2047, applied to the WRITE path.
 
 - Example: `ProjectAgamemnon#188` is a real issue; `ProjectHephaestus#188` also exists — as a merged PR. An ambient-CWD lookup for "188" while CWD=Hephaestus returns the wrong object with a 200.
 

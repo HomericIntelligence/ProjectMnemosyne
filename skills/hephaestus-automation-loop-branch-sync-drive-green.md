@@ -1,9 +1,9 @@
 ---
 name: hephaestus-automation-loop-branch-sync-drive-green
-description: "Diagnose and fix ProjectHephaestus automation-loop completion failures by enforcing fresh branch/worktree sync before implementation, limiting each worker's drive-green scope to its owned issue/PR, and running a final catch-all drive-green pass. Also: how to drive all existing open PRs to green — use --drive-green-all, NOT --phases drive-green (which crashes with KeyError on the uninitialized REPO stage). Use when: (1) automation loops leave planned issues or PRs unfinished, (2) existing issue worktrees or branches are reused across runs, (3) drive-green acts on unrelated PRs, (4) Codex-authored commits must satisfy signed and Signed-off-by policy gates, (5) you want to drive existing open PRs to green without planning/implementing new issues."
+description: "Diagnose and fix ProjectHephaestus automation-loop completion failures by enforcing fresh branch/worktree sync before implementation, limiting each worker's drive-green scope to its owned issue/PR, and running a final catch-all drive-green pass. Also: how to drive all existing open PRs to green — use --drive-green-all, NOT --phases drive-green (which crashes with KeyError on the uninitialized REPO stage). Use when: (1) automation loops leave planned issues or PRs unfinished, (2) existing issue worktrees or branches are reused across runs, (3) drive-green acts on unrelated PRs, (4) Codex-authored commits must satisfy signed and Signed-off-by policy gates, (5) you want to drive existing open PRs to green without planning/implementing new issues, (6) --drive-green-all logs 'ci:None: PR #N lacks state:implementation-go; regressing to pr_review' and swept-in PRs are dropped instead of driven, (7) a single failed drive-green attempt durably tags issues state:skip (--max-merge-attempts default 1; replaced by --drive-green-loops default 5)."
 category: tooling
-date: 2026-07-11
-version: "1.1.0"
+date: 2026-07-17
+version: "1.2.0"
 user-invocable: false
 verification: verified-local
 history: hephaestus-automation-loop-branch-sync-drive-green.history
@@ -41,6 +41,31 @@ tags:
 - Codex is the selected agent and commits must satisfy both signed-commit and `Signed-off-by` policy checks.
 - You want to drive all **existing open PRs** to green (rebase + fix CI on PRs that already exist) without planning or implementing new issues from scratch.
 - An attempt to run only the drive-green stage via `--phases drive-green` crashes with `KeyError: <StageName.REPO: 'repo'>` and reports the item "poisoned at repo".
+
+## v1.2.0 findings (2026-07-17)
+
+### Orphan PRs swept by --drive-green-all were dropped, not driven (fixed: PR #2254)
+
+`--drive-green-all` seeds orphan open PRs (no tracked issue) into the CI stage as PR-only items
+(`issue=None`). The CI entry gate regressed any PR lacking `state:implementation-go` to pr_review —
+but pr_review terminates PR-only items ("no issue number"), so every swept-in PR logged
+`ci:None: PR #N lacks state:implementation-go; regressing to pr_review` and died without one rebase
+or CI fix. Fix (verified-ci, and confirmed live: the restarted loop logs
+`orphan PR #N ... proceeding with drive-green (no issue-flow gate)`): PR-only items skip the
+implementation-go gate and proceed to REBASE_WAIT. Merge containment is unchanged
+(`defer_auto_merge` + fail-closed merge_wait, #2054).
+
+**Known residual gap (under watch, unfixed):** orphan PRs reach REBASE_WAIT with no item worktree
+(they never passed through implementation) and log
+`ci:N: mechanical rebase requires an item worktree; failing back to implementation` — verify on a
+live run whether the fallback completes before relying on --drive-green-all end-to-end.
+
+### --max-merge-attempts replaced by --drive-green-loops (PR #2249)
+
+`--max-merge-attempts` defaulted to 1, so ONE transient drive-green failure durably tagged the
+issue `state:skip` — a single overnight run (2026-07-11) skip-parked 76 issues org-wide this way.
+The option is REMOVED; use `--drive-green-loops N` (default 5), which feeds the same `merge`
+budget. Old invocations passing `--max-merge-attempts` now fail argparse.
 
 ## Verified Workflow
 

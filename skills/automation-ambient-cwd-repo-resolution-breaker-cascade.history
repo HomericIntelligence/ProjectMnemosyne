@@ -1,0 +1,26 @@
+# automation-ambient-cwd-repo-resolution-breaker-cascade — History
+
+## v1.1.0 (2026-07-17)
+
+**Changed by:** Session triaging an org-wide `state:skip` mass-mislabel that turned out to be this
+entry's predicted "silent-corruption twin", realized on the label-WRITE path.
+**Verification:** verified-ci (Hephaestus PR #2248 merged with CI green; the restarted loop tags
+epics on the correct repo).
+
+### What changed
+
+- Key Insight 3 upgraded from prediction to verified occurrence: epic `state:skip` writes via
+  `gh issue edit` with no `--repo` landed on the cwd repo's colliding issue numbers
+  (Proteus#81/Telemachy#92/Hermes#316,#545 → Hephaestus#81/#92/#316/#545), all clean 200s.
+- Documented the fix (Hephaestus PR #2248): thread `(owner, name)` through the label helpers and
+  key the label cache by the explicit slug — the PR #2047 pattern applied to writes.
+- Added a When-to-Use trigger for wrong-repo labels/comments/state with no error anywhere.
+- Linked [[github-label-mass-mislabel-forensics]] for the timeline-based triage workflow.
+- Bumped 1.0.0 → 1.1.0.
+
+### Why
+
+v1.0.0 warned that the number-collision half of ambient-cwd resolution "will not appear in any
+error grep" but had only observed the read-side 404 cascade. The write-side twin then occurred in
+production exactly as predicted; recording the verified instance, its evidence trail, and its fix
+turns the warning into a diagnosable, fixable pattern.

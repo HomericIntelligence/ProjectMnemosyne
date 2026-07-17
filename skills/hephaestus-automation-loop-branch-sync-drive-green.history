@@ -1,5 +1,28 @@
 # hephaestus-automation-loop-branch-sync-drive-green — History
 
+## v1.2.0 (2026-07-17)
+
+**Changed by:** Session root-causing an org-wide state:skip mass-mislabel and the observation that
+--drive-green-all started reviewer machinery for every open PR while driving none of them.
+**Verification:** verified-ci (Hephaestus PRs #2249 and #2254 merged with CI green; #2254's gate
+fix additionally confirmed on the restarted live loop). The orphan-worktree residual gap is
+observed-live and explicitly UNFIXED.
+
+### What changed
+- Added the orphan-PR drop finding: --drive-green-all swept PRs regressed to pr_review, which
+  terminates PR-only items — zero PRs driven. Fixed by skipping the implementation-go gate for
+  issue-less items (PR #2254), with the residual REBASE_WAIT no-worktree gap documented.
+- Added the flag replacement: --max-merge-attempts (default 1, one transient failure skip-parks an
+  issue; 76 issues parked in one overnight run) removed in favor of --drive-green-loops (default 5)
+  (PR #2249).
+- Added When-to-Use triggers for both signatures; bumped 1.1.0 → 1.2.0.
+
+### Why
+v1.1.0 taught the correct --drive-green-all invocation but not that the swept PRs were silently
+dropped downstream, nor that the merge-attempt budget's default of 1 turned every transient failure
+into a durable skip-park. Both defects mass-produce state:skip noise that looks like operator
+intent.
+
 ## v1.1.0 (2026-07-11)
 
 **Changed by:** Session driving all open PRs to green on a ProjectHephaestus repo — a `--dry-run` of `--phases drive-green` surfaced a `KeyError` before any live invocation; `--drive-green-all` then confirmed working on a live ~3-minute run over 14 open PRs.
