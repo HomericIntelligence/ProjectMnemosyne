@@ -1,5 +1,37 @@
 # git-rebase-signing-ci — History
 
+## v1.3.0 (2026-07-17)
+
+**Changed by:** HomericIntelligence/Athena PR #45 (pytest GHSA bump) merge — the repo has a
+GitHub **merge queue** enabled. A local re-signed rebase (`9b0f1fd`) was prepared to satisfy the
+strict up-to-date rule, but the merge queue rebuilt and merged the PR server-side (merge commit
+`93a2e7f`, GitHub-signed) and it landed MERGED before the re-signed branch was ever pushed.
+
+**Verification:** verified-ci (PR #45 observed MERGED via the queue, pytest 9.x on `main`, no
+author force-push)
+
+### What changed
+
+- New guidance: a real GitHub **merge queue** makes the local re-signed rebase + force-push cycle
+  UNNECESSARY. A green PR queued for merge is rebuilt on the current base and merged server-side
+  (merge-signed by GitHub), landing MERGED with no author push. Check
+  `gh pr view <N> --json state,mergeStateStatus` before starting any serial re-sign-rebase cycle.
+- Disambiguated the former "serial merge queue" bullet: it described the *no-queue* manual case
+  and was relabeled accordingly, with an explicit contrast bullet for the queue-enabled case.
+- New warning: the merge queue's transient head can show as unsigned (`N`) and carry extra
+  queue-machinery commits while processing — ephemeral queue state, not a signature failure to fix.
+- Description trigger (7) qualified with "and NO merge queue is enabled"; new trigger (9) for the
+  queue-enabled case; added a `When to Use` item, a Failed Attempts row, a Verified On row, and the
+  `merge-queue` tag.
+
+### Why
+
+v1.2.0 taught a strict serial local re-sign-rebase cycle for every open PR under up-to-date +
+signed protection, and metaphorically called that a "serial merge queue." That advice is wrong when
+the repo has an ACTUAL GitHub merge queue: the queue performs the up-to-date rebuild and the signed
+merge itself, so the manual rebase is wasted work. Athena PR #45 demonstrated this concretely —
+the queue merged it while a hand-prepared re-signed rebase sat unpushed.
+
 ## v1.2.0 (2026-07-16)
 
 **Changed by:** HomericIntelligence/Athena PRs #35/#36 merge sequence — a repo with
