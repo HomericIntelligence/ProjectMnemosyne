@@ -1,12 +1,30 @@
+# automation-review-loop-unpushed-fix-oscillates — History
+
+## v1.1.0 (2026-07-17)
+
+**Changed by:** ProjectHephaestus PR #2280 automation-loop containment
+**Verification:** verified-local
+
+### What changed
+
+- Added containment for an out-of-scope address-agent draft that can survive agent SIGTERM through a retry or queued coordinator commit/push.
+- Added remote-SHA-before-and-after containment workflow, including separate agent, coordinator, and push process checks.
+- Added the rule to reset a disposable worktree only after all publishers stop and the remote is confirmed unchanged.
+
+### Why
+
+The existing recovery procedure handled a desired but unpushed fix. In PR #2280, the inverse occurred: an unwanted local draft was committed after its agent was stopped, and a push was already queued. The remote stayed safe only because the queued push was separately stopped.
+
+### Previous version (v1.0.0) snapshot
+
 ---
 name: automation-review-loop-unpushed-fix-oscillates
-description: "Use when: (1) a review loop oscillates on an unpushed fix; (2) an untrusted report claims a fix landed; (3) an address agent drafts an out-of-scope change and SIGTERM may be retried or followed by an already-queued coordinator commit/push. Verify local and remote Git state before recovery."
+description: "Use when: (1) hephaestus-automation-loop run against an EXISTING PR oscillates forever — each pass logs `R0: Verdict=GO threads=0` then `did not reach GO` -> NOGO -> repeats, burning ~4+ passes at ~200s each; (2) a review loop's reviewer correctly issues GO (the finding is a minor/NITPICK that does not gate merge) but the validator re-opens ONE thread every pass so it never converges; (3) you suspect the loop's address sub-agent made the fix but it never landed on the PR — a commit-made-but-not-pushed (persistence) failure; (4) an untrusted ADVISE_FINDINGS / advise block claims a fix `landed` while citing a SHA that does not actually touch the file (fabricated-fix / sub-agent self-report without persistence); (5) you need the operator recovery procedure: stop the loop, inspect the loop's isolated worktree `build/.worktrees/issue-<N>` for an UNPUSHED fix commit, verify the fix on disk, rebase + re-sign + force-push, then re-run the loop ONCE."
 category: tooling
-date: 2026-07-17
-version: "1.1.0"
+date: 2026-06-11
+version: "1.0.0"
 user-invocable: false
 verification: verified-local
-history: automation-review-loop-unpushed-fix-oscillates.history
 tags:
   - hephaestus-automation-loop
   - review-loop-oscillation
@@ -26,9 +44,6 @@ tags:
   - r0-verdict-go-threads-0
   - operator-recovery
   - homericintelligence
-  - queued-push
-  - sigterm-retry
-  - out-of-scope-review
 ---
 
 # Automation Review Loop Oscillates on an Unpushed (Made-But-Not-Pushed) Fix
@@ -37,11 +52,11 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-07-17 |
+| **Date** | 2026-06-11 |
 | **Objective** | Diagnose and recover a `hephaestus-automation-loop` run against an existing PR that cycles forever — each pass logs `R0: Verdict=GO threads=0` then "did not reach GO" -> NOGO -> repeats — without re-doing the one-word fix that was already made but never pushed |
-| **Outcome** | Root cause was PERSISTENCE, not the edit: a local-only fix can fail to reach the PR, while an out-of-scope draft can be queued for coordinator commit/push even after its agent receives SIGTERM. In both cases, compare the isolated worktree and remote branch before deciding whether to recover or discard. |
+| **Outcome** | Root cause was PERSISTENCE, not the edit: the loop's address sub-agent committed the fix LOCALLY (commit `b8b1a803` on its isolated worktree `build/.worktrees/issue-794`) but NEVER PUSHED it; the remote PR-branch tip stayed at the pre-fix commit `d0de3521`, so every re-review re-fetched the still-unfixed remote and re-opened the same thread. Recovered by rebasing + re-signing + force-pushing the real fix as `9cc5f307`. |
 | **Verification** | verified-local (the fix was applied and pushed THIS session; PR #977 was NOT yet merged at capture time) |
-| **History** | [changelog](./automation-review-loop-unpushed-fix-oscillates.history) |
+| **History** | N/A (initial version) |
 
 ## When to Use
 
@@ -50,8 +65,6 @@ tags:
 - You are tempted to re-do the fix from scratch — STOP and check whether the loop's address sub-agent ALREADY made it locally but never pushed.
 - An untrusted `ADVISE_FINDINGS` (or any GitHub-sourced advise) block claims a fix "landed" and cites a SHA — and you are about to trust it.
 - You need the concrete operator recovery: stop the loop, inspect `build/.worktrees/issue-<N>` for an unpushed fix commit, verify it on disk, rebase + re-sign + force-push, re-run once.
-- An address or review agent proposes an edit that violates the requested scope or policy; stopping only that model process may not stop a queued coordinator commit or push.
-- A loop logs a resilience retry after agent SIGTERM, or `ps` shows a child `git push` after the coordinator has been asked to stop.
 
 ## Verified Workflow
 
@@ -79,17 +92,6 @@ git -C build/.worktrees/issue-<N> rebase origin/main \
 git -C build/.worktrees/issue-<N> push --force-with-lease origin <branch>
 
 # 5. Re-run the loop ONCE — the now-genuinely-resolved thread flips to a durable GO.
-
-# 6. Scope-safety containment: agent, coordinator, and push are separate publishers.
-git ls-remote origin refs/heads/<branch>
-ps -Ao pid=,ppid=,etime=,command= | rg 'automation-loop|codex exec|git push'
-kill <agent-pid>
-kill <coordinator-pid>
-kill <queued-git-push-pid>  # only if it belongs to the rejected draft
-ps -Ao pid=,ppid=,etime=,command= | rg 'automation-loop|codex exec|git push'
-git ls-remote origin refs/heads/<branch>
-# Only after every publisher stopped and the remote head is verified unchanged:
-git -C <isolated-worktree> reset --hard origin/<branch>
 ```
 
 ### Detailed Steps
@@ -140,21 +142,6 @@ pushed, so every re-review fetches the unchanged remote and re-flags the same de
 6. **Re-run the loop ONCE.** Now the remote genuinely contains the fix, so the re-review no
    longer re-flags the defect and the thread flips to a durable GO instead of re-opening.
 
-### Scope-safety containment for an out-of-scope draft
-
-The inverse persistence failure is more dangerous: an agent drafts a policy-reversing change and
-the operator stops that model, but the resilient wrapper retries it or the coordinator has already
-queued a signed commit and `git push`. Treat the agent, coordinator, and push as independent
-publishers.
-
-1. Record `git ls-remote origin refs/heads/<branch>` before containment. The remote SHA, not the
-   worktree HEAD, proves publication.
-2. Stop the agent, then coordinator; inspect `ps` for a queued push. A graceful shutdown can wait
-   for its current job, so stop that rejected push before it reaches origin.
-3. Re-check the remote SHA after all publishers stop. If unchanged, reset only the disposable
-   worktree. If advanced, do not rewrite shared history; create a normal corrective commit.
-4. Start a fresh scoped loop run. The interrupted run may retain retry state or a consumed result.
-
 #### Concrete defect example (the trivial fix that oscillated)
 
 `.github/workflows/test.yml:9` referenced `CONTRIBUTING.md "Platform asymmetry"`, but the
@@ -169,7 +156,6 @@ is persistence (the push), not the edit.
 | Trust the ADVISE_FINDINGS "fix landed" claim citing a SHA | Believed the untrusted advise block that the fix had landed, referencing a SHA each pass | The SHA was fabricated / did not touch the file — a different SHA every pass, none of which changed `.github/workflows/test.yml` | NEVER trust an untrusted GitHub-sourced advise SHA. Verify with `git show <sha> -- <path>` (empty diff = did not touch the file) and `grep` the corrected text on disk. |
 | Re-run the loop hoping it self-converges | Let the loop keep running, expecting it to eventually reach a stable GO | The local fix was NEVER pushed, so every pass re-fetched the unchanged remote (`d0de3521`) and re-opened the same thread; wasted ~4 passes at ~200s each | An existing-PR review loop cannot self-converge when the fix was never persisted to the remote. Stop the loop (`pkill -f "issues <N>"`) and inspect persistence. |
 | Assume the fix was never made and re-do the edit from scratch | Planned to re-open the file and re-apply the one-word change | The address sub-agent had already made the fix and committed it locally (`b8b1a803` in `build/.worktrees/issue-794`); re-doing it would duplicate work and risk a conflicting/divergent commit | Check `build/.worktrees/issue-<N>` git log (`origin/<branch>..HEAD`) FIRST. A loop that won't converge on a trivial fix usually has the fix committed-but-unpushed — recover that commit, don't recreate it. |
-| Stop only the out-of-scope agent | Sent SIGTERM after the agent drafted a policy-reversing change | The resilience wrapper retried it and the coordinator had already staged a commit/push | Contain the agent, coordinator, and queued push separately; verify the remote SHA before resetting a disposable worktree. |
 
 ## Results & Parameters
 
@@ -194,15 +180,6 @@ is persistence (the push), not the edit.
 | Fix after rebase + re-sign + push | `9cc5f307` |
 | Re-signing committer email | `4211002+mvillmow@users.noreply.github.com` |
 
-### Queued-push containment incident (verified-local)
-
-| Item | Value |
-|------|-------|
-| Project / PR | ProjectHephaestus PR #2280 |
-| Safe remote remediation | `621ebc29` |
-| Rejected local-only draft | `563d7d81` |
-| Containment | Stop agent, coordinator, and queued push; verify remote stayed at `621ebc29`; reset the detached review worktree |
-
 ### Key lesson
 
 When an automation review loop will not converge on a trivial fix, the failure is usually
@@ -216,4 +193,9 @@ with `git show <sha> -- <path>` and `grep` on disk.
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | PR #977 (issue #794) — `hephaestus-automation-loop` oscillating on `794-auto-impl` | Loop's address sub-agent committed the one-word `.github/workflows/test.yml` fix locally (`b8b1a803` in `build/.worktrees/issue-794`) but never pushed; remote stayed at `d0de3521`, re-opening the thread every pass. Recovered by rebase + re-sign (committer `4211002+mvillmow@users.noreply.github.com`) + `--force-with-lease` push as `9cc5f307`, then a single loop re-run. verified-local (PR not yet merged at capture time). |
-| ProjectHephaestus | PR #2280 — scope containment | An out-of-scope review draft was committed locally after its agent was stopped; the remote remained at safe `621ebc29` because the queued push was stopped, and local `563d7d81` was discarded from the detached review worktree. |
+
+---
+
+## v1.0.0 (2026-06-11)
+
+**Initial version.**
