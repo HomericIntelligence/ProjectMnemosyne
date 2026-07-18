@@ -210,22 +210,26 @@ command infrastructure.
 
 ## Dependencies
 
-`pixi.toml` is the **canonical** dependency specification for this project. All runtime and
-development dependencies are declared there, together with task definitions and a committed
-`pixi.lock` for reproducible environments.
+`pyproject.toml` is the **canonical** dependency specification for this project (ADR-017).
+Runtime dependencies live in `[project.dependencies]`; the development toolchain (pytest,
+pytest-cov, mypy, yamllint, ruff, jsonschema, build, twine) lives in the uv-native
+`[dependency-groups]` dev group. `uv.lock` is the committed, reproducible lockfile.
 
-- Install everything: `pixi install`
-- Run tasks: `pixi run validate`, `pixi run test`, `pixi run check`, `pixi run package`
+- Install everything: `uv sync` (add `--group dev` explicitly, or `--locked` in CI)
+- Run tasks: `just validate`, `just test`, `just check`, `just package` — each recipe wraps
+  `uv run`, so no manual environment activation is needed
+- Equivalent raw invocations: `uv run python scripts/validate_plugins.py`,
+  `uv run python -m pytest tests/`, `uv build`
 
 The canonical CI `package` check builds the Python wheel + sdist (`mnemosyne_skill_utils`,
-the shared skill-parsing helper) with `python -m build` and smoke-tests the installed wheel.
+the shared skill-parsing helper) with `uv build` and smoke-tests the installed wheel.
 Mnemosyne no longer ships a plugin-marketplace bundle — Athena is the plugin distribution;
 Mnemosyne is the skills/memory store.
 
-`requirements.txt` and `requirements-dev.txt` exist as **non-canonical mirrors** for pip-based
-CI jobs and `pip-audit`. Do not hand-edit them as the source of truth — update `pixi.toml`
-and keep the pip files in sync. `requirements-dev.txt` includes `requirements.txt` via
-`-r requirements.txt`, so both files must be present.
+`[project.optional-dependencies] dev` is retained purely for pip compatibility
+(`pip install .[dev]`); it mirrors the uv `[dependency-groups]` dev group. The CI
+`security/dependency-scan` (`pip-audit`) job audits the exact runtime dependencies exported
+from `uv.lock`, so there are no separate `requirements*.txt` mirrors to keep in sync.
 
 ## References
 

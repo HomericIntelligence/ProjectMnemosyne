@@ -1,6 +1,7 @@
 # Mnemosyne command runner — wraps Python scripts for consistent developer experience.
 # All path variables are configurable at the top of the file.
-# Note: equivalent tasks are also defined in pixi.toml for pixi users.
+# Recipes run under uv (ADR-017): `uv run` resolves the locked environment from
+# pyproject.toml + uv.lock, so no separate activation step is needed.
 
 # Directory containing skill markdown files
 skills_dir := "skills"
@@ -18,19 +19,19 @@ default:
 
 # Validate all skill files in the skills/ directory
 validate:
-    python3 scripts/validate_plugins.py
+    uv run python scripts/validate_plugins.py
 
 # === Packaging ===
 
 # Build the Python wheel + sdist (mnemosyne_skill_utils) into dist/
 package:
-    python3 -m build
+    uv run python -m build
 
 # === Testing ===
 
 # Run all tests
 test:
-    python3 -m pytest {{ test_dir }}
+    uv run python -m pytest {{ test_dir }}
 
 # === Composite ===
 

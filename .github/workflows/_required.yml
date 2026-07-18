@@ -73,27 +73,23 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+      - name: Setup uv
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e  # v6.8.0
         with:
           python-version: '3.11'
-      - name: Install yamllint
-        run: pip install yamllint
+      - name: Install dev toolchain (locked)
+        run: uv sync --locked --group dev
       - name: yamllint on workflow YAML
-        run: yamllint -c .yamllint.yaml .github/workflows/
-      - name: Install mypy and dependencies
-        run: |
-          pip install mypy
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+        run: uv run yamllint -c .yamllint.yaml .github/workflows/
       - name: Run mypy
         run: |
           if [ -d scripts ] || [ -d tests ]; then
-            python -m mypy
+            uv run python -m mypy
           else
             echo "::notice::No scripts/ or tests/ directory — skipping mypy"
           fi
       - name: Run direct PII pattern check
-        run: python3 scripts/check_pii.py
+        run: uv run python scripts/check_pii.py
 
   markdownlint:
     name: markdownlint
@@ -112,6 +108,14 @@ jobs:
             !.claude/**
           config: ".markdownlint.yaml"
 
+  # NOTE: The check-run name stays `pixi-check` on purpose (ADR-017 uv migration).
+  # It is a REQUIRED status context in the live `homeric-main-extras` ruleset
+  # (id 18221133), and the merge-queue readiness contract in
+  # configs/github/merge-queue-policy.json + docs/ci/merge-queue.md pins that exact
+  # name. Renaming the check-run would deadlock the merge queue until an Odysseus
+  # operator (issue #386) re-points the ruleset. So the NAME is held stable while
+  # the body is migrated from `pixi install --locked` to `uv sync --locked`.
+  # Renaming to `uv-check` is a follow-up that must be coordinated with the ruleset.
   pixi-check:
     name: pixi-check
     runs-on: ubuntu-24.04
@@ -121,30 +125,14 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-      - name: Skip if no pixi.toml
-        id: detect
-        run: |
-          if [ ! -f pixi.toml ]; then
-            echo "::notice::No pixi.toml in repo, skipping pixi-check"
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Setup pixi
-        if: steps.detect.outputs.skip == 'false'
-        uses: prefix-dev/setup-pixi@a09b6247153796b190642a2b53fac4241043cf6f  # v0.10.0
+      - name: Setup uv
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e  # v6.8.0
         with:
-          pixi-version: v0.67.2
-          cache: false
-      - name: pixi install (locked)
-        if: steps.detect.outputs.skip == 'false'
-        run: |
-          if [ -f pixi.lock ]; then
-            pixi install --locked
-          else
-            echo "::notice::pixi.toml present but pixi.lock missing — running unlocked (tracked in #1464)"
-            pixi install
-          fi
+          python-version: '3.11'
+      - name: uv sync (locked)
+        run: uv sync --locked --group dev
+      - name: Verify locked environment runs the test suite
+        run: uv run python -m pytest tests/ -q
 
   justfile-check:
     name: justfile-check
@@ -192,28 +180,30 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+      - name: Setup uv
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e  # v6.8.0
         with:
           python-version: '3.11'
-      - name: Install dependencies
-        run: pip install -r requirements-dev.txt
+      - name: Install dependencies (locked)
+        run: uv sync --locked --group dev
       - name: Run skill-file validation script
-        run: python3 scripts/validate_plugins.py
+        run: uv run python scripts/validate_plugins.py
       - name: Run test suite
-        run: pytest tests/ -v
+        run: uv run pytest tests/ -v
 
   integration-tests:
     name: integration-tests
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+      - name: Setup uv
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e  # v6.8.0
         with:
           python-version: '3.11'
-      - name: Install dependencies
-        run: pip install -r requirements-dev.txt
+      - name: Install dependencies (locked)
+        run: uv sync --locked --group dev
       - name: Validate every skill file across the corpus
-        run: python3 scripts/validate_plugins.py
+        run: uv run python scripts/validate_plugins.py
       - name: Assert the skills corpus is non-empty
         run: |
           count=$(find skills -name "*.md" -not -name "*.notes.md" | wc -l)
@@ -237,17 +227,16 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+      - name: Setup uv
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e  # v6.8.0
         with:
           python-version: '3.11'
-      - name: Run pip-audit
+      - name: Run pip-audit against the locked runtime dependencies
         run: |
-          pip install pip-audit
-          if [ -f requirements.txt ]; then
-            pip-audit --requirement requirements.txt
-          else
-            pip-audit
-          fi
+          # Export the resolved runtime deps from uv.lock (the source of truth
+          # after the ADR-017 migration) and audit exactly what ships.
+          uv export --frozen --no-dev --no-emit-project --format requirements-txt > audit-requirements.txt
+          uvx pip-audit --requirement audit-requirements.txt
 
   security-secrets-scan:
     name: security/secrets-scan
@@ -314,15 +303,14 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+      - name: Setup uv
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e  # v6.8.0
         with:
           python-version: '3.11'
-      - name: Install build tooling
-        run: pip install --quiet build twine
       - name: Build sdist and wheel
-        run: python -m build
+        run: uv build
       - name: twine check
-        run: twine check dist/*
+        run: uvx twine check dist/*
       - name: Upload dist artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
@@ -341,7 +329,8 @@ jobs:
       # Deliberately NO checkout: the smoke test must import the installed
       # wheel, and an absent repo tree guarantees `mnemosyne_skill_utils` cannot be
       # satisfied from the checkout's scripts/ directory.
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+      - name: Setup uv
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e  # v6.8.0
         with:
           python-version: '3.11'
       - name: Download dist artifact
@@ -352,11 +341,11 @@ jobs:
       - name: Install the wheel into a clean virtualenv
         run: |
           set -euo pipefail
-          python -m venv "$RUNNER_TEMP/mnemosyne-venv"
+          uv venv "$RUNNER_TEMP/mnemosyne-venv"
           # shellcheck disable=SC1091
           . "$RUNNER_TEMP/mnemosyne-venv/bin/activate"
           wheel=$(ls dist/*.whl)
-          pip install --quiet "$wheel"
+          uv pip install --quiet "$wheel"
       - name: Import-smoke the installed package
         run: |
           set -euo pipefail
@@ -377,16 +366,15 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+      - name: Setup uv
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e  # v6.8.0
         with:
           python-version: '3.11'
-      - name: Install check-jsonschema
-        run: pip install check-jsonschema
       - name: Validate workflow YAML files against GitHub schema
         run: |
           # Use the built-in GitHub Actions schema bundled with check-jsonschema
           # to avoid transient 503 failures fetching from json.schemastore.org
-          check-jsonschema \
+          uvx check-jsonschema \
             --builtin-schema vendor.github-workflows \
             .github/workflows/*.yml
 
@@ -395,17 +383,22 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+      - name: Setup uv
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e  # v6.8.0
         with:
           python-version: '3.11'
-      - name: Install dependencies
-        run: pip install -r requirements-dev.txt
+      - name: Install dependencies (locked)
+        run: uv sync --locked --group dev
       - name: Assert every skill declares a valid semver version
-        run: python3 scripts/validate_plugins.py
+        run: uv run python scripts/validate_plugins.py
       - name: Cross-check pyproject version is valid semver
         run: |
           set -euo pipefail
-          ver=$(python3 -c 'import tomllib,sys; print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')
+          ver=$(uv run python - <<'PY'
+          import tomllib
+          print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])
+          PY
+          )
           echo "pyproject version: $ver"
           printf '%s' "$ver" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$' \
             || { echo "::error::pyproject version is not semver: $ver"; exit 1; }
@@ -420,8 +413,9 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+      - name: Setup uv
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e  # v6.8.0
         with:
           python-version: '3.11'
       - name: Validate release contract (dry-run)
-        run: python3 scripts/validate_release_contract.py
+        run: uv run python scripts/validate_release_contract.py

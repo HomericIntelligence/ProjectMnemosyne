@@ -11,11 +11,14 @@ build/
 # Package artifacts
 dist/
 
+# Package metadata
+*.egg-info/
+
 # Temporary files
 tmp/
 
-# Pixi environment
-.pixi/
+# uv / virtual environment
+.venv/
 
 # Pytest cache
 .pytest_cache/

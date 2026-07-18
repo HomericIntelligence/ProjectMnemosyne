@@ -6,15 +6,35 @@ build-backend = "setuptools.build_meta"
 name = "project-mnemosyne"
 version = "3.0.0"
 description = "Skills and session-memory store for the HomericIntelligence agentic ecosystem"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "pyyaml>=6.0.3",
 ]
 
 [project.optional-dependencies]
+# Kept for pip compatibility (`pip install .[dev]`); mirrors the uv-native
+# [dependency-groups] dev group below.
 dev = [
     "pytest>=9.0",
     "pytest-cov>=7.0",
+]
+
+# uv-native dev dependency group (ADR-017). Mirrors the [project.optional-dependencies]
+# dev group (pytest, pytest-cov) and adds the tools previously pip-installed ad hoc
+# in CI (mypy, yamllint) plus the ruff/jsonschema/type-stub toolchain the lint and
+# schema jobs need. Installed via `uv sync --group dev` (or `uv sync`, which pulls
+# the default dev group automatically).
+[dependency-groups]
+dev = [
+    "pytest>=9.0",
+    "pytest-cov>=7.0",
+    "mypy>=2.2",
+    "yamllint>=1.35",
+    "ruff>=0.6",
+    "jsonschema>=4.26",
+    "types-PyYAML",
+    "build>=1.2",
+    "twine>=5.0",
 ]
 
 # Flat repo layout (scripts/, skills/, tests/, ...) breaks setuptools
@@ -30,7 +50,7 @@ testpaths = ["tests"]
 addopts = "--cov=scripts --cov-report=term-missing"
 
 [tool.ruff]
-target-version = "py39"
+target-version = "py310"
 line-length = 120
 
 [tool.ruff.lint]

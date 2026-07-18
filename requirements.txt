@@ -1,3 +1,0 @@
-# NON-CANONICAL — pixi.toml is the canonical dependency source (see CLAUDE.md).
-# This file exists only for pip-based CI jobs and `pip-audit`. Keep in sync with pixi.toml [dependencies].
-pyyaml==6.0.3
