@@ -1,0 +1,546 @@
+## v1.0.0 — 2026-07-17
+
+Created a common planning workflow for real-server fault recovery tests and placeholder-test remediation.
+
+## Superseded from `testing-fault-test-placeholder-must-go-red`
+
+**Original date:** 2026-06-19
+**Original version:** 1.1.0
+
+---
+name: testing-fault-test-placeholder-must-go-red
+description: "Planning discipline for replacing a false-pass placeholder fault/chaos test (a hardcoded `pass`/`assert True` that never exercises the failure path) with a real one. Teaches: a fix is only credible if the new test can go BOTH RED and GREEN against real code, proves recovery by an OBSERVABLE end-to-end effect (not by re-asserting design intent), and uses a clean SKIP — never a pass — where the fault is structurally inapplicable. Most importantly: when a reviewer flags an UNVERIFIED assumption, the fix is to READ THE ACTUAL CLIENT/LIBRARY SOURCE (cite the connect API + its reconnect defaults), not to add hedging prose; scope DOWN off documented-broken substrates instead of supporting them; and never let a verification step depend on a harness helper you never opened. Catalogs the unverified assumptions a planner makes when they write such a plan WITHOUT running code (does the client actually auto-reconnect? is the compose path right? does a hard-kill + same-port relaunch race? is the lifecycle helper idempotent? does the launcher even point at the real entrypoint?) so a reviewer knows exactly what to check. Use when: (1) planning a fix for an issue where a fault/chaos/resilience test is a hardcoded placeholder that always passes; (2) writing a NATS/broker crash-reconnect or kill-restart-recover test; (3) deciding skip-vs-fail semantics for an environment-conditional fault test; (4) responding to a reviewer NOGO that flags an unverified core assumption; (5) reviewing such a plan and needing the high-risk assumptions enumerated; (6) any test that asserts a system property by re-reading source or restating design intent instead of exercising it."
+category: testing
+date: 2026-06-19
+version: "1.1.0"
+user-invocable: false
+verification: unverified
+history: testing-fault-test-placeholder-must-go-red.history
+tags:
+  - testing
+  - chaos
+  - fault-injection
+  - placeholder-test
+  - red-green
+  - tdd
+  - nats
+  - reconnect
+  - planning
+  - unverified-assumptions
+  - observable-recovery
+  - skip-vs-fail
+  - read-the-source
+  - reviewer-nogo
+  - scope-down
+---
+
+# Fault-Test Placeholder Must Be Able To Go Red
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-19 |
+| **Objective** | Plan a fix for a false-pass fault test: a NATS crash-reconnect e2e test that was a hardcoded `pass` placeholder (Odysseus e2e, GitHub issue #184), then RE-PLAN it after a reviewer NOGO |
+| **Outcome** | Produced an implementation plan (kill -> degrade -> restart -> prove reconnect via a real task lifecycle), and on re-plan strengthened it by reading the actual NATS client source and scoping down to the one working topology. Plan only — never executed. |
+| **Verification** | unverified (planning-discipline learning, no code run, no CI observed) |
+| **History** | [changelog](./testing-fault-test-placeholder-must-go-red.history) |
+
+## When to Use
+
+- Planning a fix for an issue where a fault, chaos, or resilience test is a hardcoded placeholder (`pass`, `assert True`, `return 0`) that always passes without exercising the failure path.
+- Writing a broker/NATS crash-reconnect or kill-restart-recover test for the first time.
+- Deciding skip-vs-fail semantics for a fault test that only applies under some topologies/environments.
+- **Responding to a reviewer NOGO that flags an "unverified core assumption"** — this skill's #1 lesson is that the fix is to read the actual client/library source, not to hedge.
+- Reviewing such a plan: this skill enumerates the high-risk unverified assumptions the planner relied on.
+- Any test that "verifies" a property by re-reading source or restating design intent instead of exercising it.
+
+## Verified Workflow
+
+> **Warning:** This is a planning-discipline learning, not an executed workflow. Treat as a hypothesis until applied and confirmed.
+> _(Proposed — derived from a plan that was never run; the assumptions below are unverified against code or CI.)_
+
+### Quick Reference
+
+```text
+To fix a false-pass fault/chaos test, the plan MUST include:
+  1. A way to exercise the REAL fault path (e.g. kill/restart lifecycle helpers).
+  2. An explicit RED step AND a GREEN step: the test must be shown able to FAIL
+     (stub the recovery) and to PASS against real code. "Can fail" alone is
+     necessary-but-insufficient — a reviewer treats RED-only as unproven recovery.
+  3. A GREEN assertion that is an OBSERVABLE end-to-end effect (a brand-new task
+     lifecycle completing AFTER restart) — never "asserts the system is designed for X".
+  4. Clean SKIP (not pass) where the fault is structurally inapplicable — and SKIP
+     the substrate entirely (with the bug cited inline) when it is documented-broken.
+  5. Source-cited assumptions: a reconnect/recovery plan MUST cite the client's
+     connect API and its reconnect defaults, and confirm the consumer loop CONTINUES
+     (not exits) on transient errors. Reading source > hedging prose.
+  6. Conventions MIRRORED from the repo, and every helper your verification depends on
+     OPENED and confirmed to work on a clean run — discovered by grep + read, not assumed.
+```
+
+### Detailed Steps
+
+1. **Confirm the placeholder's sin.** The original test asserted design intent ("designed for graceful degradation") instead of exercising it. Re-asserting source or design is the same bug class you are fixing.
+2. **Add a real fault path.** Introduce lifecycle helpers (`nats_kill`, `nats_restart`) that actually SIGKILL the broker and relaunch it, mirroring existing repo kill helpers found by grep rather than inventing a new style.
+3. **Drive an observable effect.** After restart, run a brand-new end-to-end task lifecycle and assert it completes. Recovery is proven by the new work succeeding, not by re-reading config.
+4. **Show the test can go BOTH RED and GREEN.** Temporarily stub/disable the recovery and confirm it FAILS; then revert and confirm it PASSES against real code. Proving only RED is what got the v1.0.0 plan a NOGO — reviewers correctly treat "can fail" as necessary-but-insufficient. You must also show the happy path actually reconnects.
+5. **Answer "unverified assumption" findings by reading the source, not hedging.** When a reviewer flags an unverified core assumption, READ THE ACTUAL CLIENT/LIBRARY SOURCE. Here, confirming both NATS clients call `natsConnection_ConnectTo` — which uses libnats DEFAULT options = auto-reconnect ON (`AllowReconnect=true`, `MaxReconnect=60`, `ReconnectWait=2s`) — converted the #1 risk from "assumed" to "verified can-go-GREEN". A reconnect/recovery plan MUST cite the connect API and its reconnect defaults, and confirm the consumer loop continues (does not exit) on transient errors. More prose hedging is still a NOGO.
+6. **Scope DOWN off broken substrates.** Supporting fewer topologies that actually work beats supporting all of them. Dropping the documented-broken topology (T4) deleted a whole class of defects at once: the internally-contradictory compose path, the documented port-override bug substrate, and an over-generalized persistence rationale. When a substrate is documented-broken, `skip_topology`/skip it explicitly with the bug cited inline — never build on it.
+7. **Open every helper your verification depends on.** Reading code to fix one finding surfaced a PRE-EXISTING BLOCKER the issue never mentioned: the T1 launcher (`start_myrmidon_bg`) pointed at a non-existent `main.py` while the component is C++ (`main.cpp`), so the test's own baseline precondition could never pass. "The harness already does X" is an assumption, not a fact. A plan whose verification steps depend on a broken harness is not actually verifiable — it is aspirational.
+8. **Resolve DRY/divergence by referencing exact exported variables.** Use `${VAR:?}` (fail-loud if unset) instead of duplicating defaults like `${PORT:-18222}`. This guarantees the helper can never silently drift from its source of truth.
+9. **Make code blocks self-correct; never rely on a trailing Note.** A code block whose body contradicts a prose "Note" correction will be followed literally by an implementer (they ship the broken path, not the note). The code block itself must be correct.
+10. **Get skip-vs-fail semantics right.** "Structurally inapplicable" (the fault cannot occur in this topology) -> clean `skip_topology`/skip. "Should have worked but didn't" -> real fail. A pass where the fault cannot run is the same defect as the bug you are fixing.
+11. **Mark the plan's remaining assumptions.** Even after reading source, list every reliance NOT proven by running code (see Failed Attempts + Results) so a reviewer can check them.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Hardcoded pass placeholder | Test body was `pass` / `assert True`, never exercising the fault | Always green; cannot detect a broken recovery path | A fault test that can never go red is a slower placeholder — add an explicit RED step |
+| Assert design intent | Asserted "system is designed for graceful degradation" by re-reading source/config | Verifies the comment, not the behavior; passes even if recovery is broken | Prove recovery by an OBSERVABLE end-to-end effect (new task lifecycle completing post-restart) |
+| Pass where inapplicable | Returned pass when the topology cannot exercise the fault | Same bug class as the placeholder — silently green without exercising anything | Use a clean skip for structurally-inapplicable cases; reserve fail for real breakage |
+| Assume the client auto-reconnects | Plan relied on the NATS client reconnecting within timeout after restart, unverified | If the client does one-shot connect (KB warns nats-py `allow_reconnect` can hang / connect is one-shot) the post-restart lifecycle hangs and the "fix" is itself flaky/false | Verify reconnect behavior against the actual client code BEFORE trusting the plan (#1 risk) |
+| Wrong relative compose path | Helper wrote `$(_e2e_root)/docker-compose.e2e.yml` | Compose file lives at repo ROOT, asserted from a single `find` hit; `_e2e_root()` returns `e2e/`, so the file is one level up | Correct path is `$(_e2e_root)/../docker-compose.e2e.yml`; a path from one `find` hit is brittle and was never executed |
+| Hedge instead of read source | Answered the reviewer's "unverified assumption" finding with more cautionary prose | Still NOGO — prose does not turn an assumption into a fact | Cite the connect API + reconnect defaults from the actual client file (`natsConnection_ConnectTo`; libnats `AllowReconnect=true`, `MaxReconnect=60`, `ReconnectWait=2s`) |
+| Claim multi-topology support on a broken substrate | Asserted T1+T4 support where T4 rests on a documented port-override bug | Reviewer flags T4 as untested / likely-nonfunctional; the broken substrate also dragged in a self-contradictory compose path and an over-broad persistence rationale | Scope to the working topology (T1); `skip_topology` the broken one with the bug cited inline |
+| Code block contradicted by a trailing Note | Shipped a compose-path code block whose body was wrong, "fixed" only by a prose `_e2e_root` Note below it | An implementer follows the code, not the note, and ships the broken path | The code block itself must be correct; never rely on a caveat to fix code |
+| Verification depends on an unopened helper | Relied on `start_myrmidon_bg` to bring up the baseline, never opening it | The launcher pointed at a non-existent `main.py` (component is C++ `main.cpp`); the baseline precondition could never pass — "aspirational verification" | Open and validate EVERY helper your verification depends on; "the harness does X" is an assumption |
+| Prove only RED, never GREEN | Argued the new test can fail, but never showed it reconnects against real code | Necessary-but-insufficient; reviewer treats the recovery path as unproven and flaky-in-the-other-direction | A recovery test must be shown able to go BOTH RED and GREEN against real code |
+
+## Results & Parameters
+
+**Verification level: `unverified`.** This re-plan (for issue #184) was never executed; no code ran and no CI was observed. The value below is the catalog of assumptions a planner relied on, refined after reading client source — a reviewer MUST still check the remaining ones.
+
+What reading the source resolved (the v1.1.0 delta):
+
+- **Client auto-reconnect is now source-cited, not assumed.** Both the Agamemnon C++ `NatsClient` and the Python myrmidon connect via `natsConnection_ConnectTo`, which uses libnats DEFAULT options: `AllowReconnect=true`, `MaxReconnect=60`, `ReconnectWait=2s`. That single source read converts the #1 risk from "assumed" to "verified can-go-GREEN" — provided the consumer loop continues (does not exit) on transient errors, which must also be confirmed in the loop body.
+- **Scope reduced to T1 only.** T4 was dropped because it rests on a documented port-override bug; skipping it removed the self-contradictory compose path, the bug substrate, and an over-generalized persistence rationale in one move.
+- **Pre-existing blocker surfaced.** The T1 launcher `start_myrmidon_bg` references a non-existent `main.py` (component is C++ `main.cpp`); the test's baseline precondition cannot pass until the launcher is fixed. This is a precondition the issue never mentioned.
+
+Remaining uncertain assumptions / unverified reliances a reviewer should still focus on (ordered):
+
+1. **libnats reconnect defaults are version-dependent.** Even after reading the client source, pin/verify the linked libnats version actually enables `AllowReconnect` by default in THIS build.
+2. **Hard-kill + immediate same-port/same-`store_dir` relaunch on T1.** SIGKILL then relaunch races: the JetStream store lock / port-rebind race is still untested; the 30s health-wait may mask intermittent failures.
+3. **Double `run_task_lifecycle` idempotency.** Calling it twice in one run (baseline + post-restart) — collision of repeated agent/team/task creation — is not verified.
+4. **The 90s post-restart timeout is a derived budget, not a measured one** (2s reconnect + 5s fetch poll + rebind). Could be too tight under load or too slow to fail fast.
+5. **Runner invocation.** `pixi run bash e2e/run-ipc-tests.sh` is still assumed; the runner documents bare `bash e2e/run-ipc-tests.sh`. Whether pixi wraps it is unconfirmed.
+6. **Skip-vs-fail correctness for every topology** — confirm no path silently passes without exercising the fault, especially the now-skipped T4.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| Odysseus (e2e) | Re-plan of issue #184 after a reviewer NOGO — NATS crash-reconnect placeholder test | unverified; plan only, never executed |
+
+### Archived companion history from `testing-fault-test-placeholder-must-go-red.history`
+
+# testing-fault-test-placeholder-must-go-red — History
+
+## v1.1.0 (2026-06-19)
+
+**Changed by:** Re-plan of GitHub issue #184 (Odysseus e2e NATS crash-reconnect placeholder test) after a reviewer NOGO on the v1.0.0 plan.
+**Verification:** unverified (still planning discipline — the re-plan was never executed; no code run, no CI observed)
+
+### What changed
+
+- Added the durable lesson that the fix for an "unverified core assumption" review finding is to READ THE ACTUAL CLIENT/LIBRARY SOURCE, not to add hedging prose. Cited `natsConnection_ConnectTo` (libnats DEFAULT options = auto-reconnect ON: `AllowReconnect=true`, `MaxReconnect=60`, `ReconnectWait=2s`) which converted the #1 risk from "assumed" to "verified can-go-GREEN".
+- Added the lesson that a recovery test must be shown able to go BOTH RED and GREEN — proving only RED is necessary-but-insufficient.
+- Added the scope-DOWN lesson: dropping topology T4 (a documented-broken substrate) deleted an entire class of defects (the self-contradictory compose path M1, the port-override bug substrate M3, an over-generalized persistence rationale). Skip broken substrates explicitly with the bug cited inline.
+- Added the pre-existing-blocker lesson: reading code to fix one finding surfaced that the T1 launcher (`start_myrmidon_bg`) pointed at a non-existent `main.py` while the component is C++ (`main.cpp`) — a verification step that depends on a broken harness is "aspirational verification".
+- Added the DRY/divergence lesson: reference EXACT exported variables with `${VAR:?}` (fail-loud) instead of duplicating defaults like `${PORT:-18222}`.
+- Added 5 new Failed Attempts / anti-pattern rows.
+- Added reviewer-risk refinements to Results & Parameters (libnats version-dependent defaults, JetStream store-lock/port-rebind race, double `run_task_lifecycle` idempotency, derived 90s timeout budget, pixi-wraps-runner unconfirmed).
+- Added `history` frontmatter field; bumped version 1.0.0 -> 1.1.0 (MINOR); date stays 2026-06-19.
+
+### Why
+
+The v1.0.0 plan was reviewed NOGO because it answered an "unverified core assumption" finding
+with more prose rather than reading the client source, claimed multi-topology (T1+T4) support
+where T4 rests on a documented bug, shipped a code block contradicted by a trailing prose Note,
+and relied on a harness helper (myrmidon launcher) that could never pass on a clean run. The
+re-plan corrected all four by reading the actual source, scoping to the one working topology (T1),
+and validating helpers. The transferable lesson — verify assumptions by reading source, prove
+both RED and GREEN, scope down off broken substrates, and never let verification depend on an
+unopened/broken helper — is the durable value captured in this amendment.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: testing-fault-test-placeholder-must-go-red
+description: "Planning discipline for replacing a false-pass placeholder fault/chaos test (a hardcoded `pass`/`assert True` that never exercises the failure path) with a real one. Teaches: a fix is only credible if the new test can go RED (temporarily stub the recovery so it fails), proves recovery by an OBSERVABLE end-to-end effect (not by re-asserting design intent), and uses a clean SKIP — never a pass — where the fault is structurally inapplicable. Most importantly it catalogs the UNVERIFIED assumptions a planner makes when they write such a plan WITHOUT running code (does the client actually auto-reconnect? is the compose path right? does a hard-kill + same-port relaunch race? is the lifecycle helper idempotent?) so a reviewer knows exactly what to check. Use when: (1) planning a fix for an issue where a fault/chaos/resilience test is a hardcoded placeholder that always passes; (2) writing a NATS/broker crash-reconnect or kill-restart-recover test; (3) deciding skip-vs-fail semantics for an environment-conditional fault test; (4) reviewing such a plan and needing the high-risk assumptions enumerated; (5) any test that asserts a system property by re-reading source or restating design intent instead of exercising it."
+category: testing
+date: 2026-06-19
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags:
+  - testing
+  - chaos
+  - fault-injection
+  - placeholder-test
+  - red-green
+  - tdd
+  - nats
+  - reconnect
+  - planning
+  - unverified-assumptions
+  - observable-recovery
+  - skip-vs-fail
+---
+
+# Fault-Test Placeholder Must Be Able To Go Red
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-19 |
+| **Objective** | Plan a fix for a false-pass fault test: a NATS crash-reconnect e2e test that was a hardcoded `pass` placeholder (Odysseus e2e, GitHub issue #184) |
+| **Outcome** | Produced an implementation plan (add `nats_kill`/`nats_restart` lifecycle helpers; kill -> degrade -> restart -> prove reconnect via a real task lifecycle). Plan only — never executed. |
+| **Verification** | unverified (planning-discipline learning, no code run, no CI observed) |
+
+## When to Use
+
+- Planning a fix for an issue where a fault, chaos, or resilience test is a hardcoded placeholder (`pass`, `assert True`, `return 0`) that always passes without exercising the failure path.
+- Writing a broker/NATS crash-reconnect or kill-restart-recover test for the first time.
+- Deciding skip-vs-fail semantics for a fault test that only applies under some topologies/environments.
+- Reviewing such a plan: this skill enumerates the high-risk unverified assumptions the planner relied on.
+- Any test that "verifies" a property by re-reading source or restating design intent instead of exercising it.
+
+## Verified Workflow
+
+> **Warning:** This is a planning-discipline learning, not an executed workflow. Treat as a hypothesis until applied and confirmed.
+> _(Proposed — derived from a plan that was never run; the assumptions below are unverified against code or CI.)_
+
+### Quick Reference
+
+```text
+To fix a false-pass fault/chaos test, the plan MUST include:
+  1. A way to exercise the REAL fault path (e.g. kill/restart lifecycle helpers).
+  2. An explicit RED step: temporarily stub the recovery so the new test FAILS,
+     proving it can detect a broken path. A test that cannot go red is a slower placeholder.
+  3. A GREEN assertion that is an OBSERVABLE end-to-end effect (a brand-new task
+     lifecycle completing AFTER restart) — never "asserts the system is designed for X".
+  4. Clean SKIP (not pass) where the fault is structurally inapplicable for the topology.
+  5. Conventions MIRRORED from the repo (existing kill helpers, compose service name,
+     topology-gating precedent) — discovered by grep, not invented.
+```
+
+### Detailed Steps
+
+1. **Confirm the placeholder's sin.** The original test asserted design intent ("designed for graceful degradation") instead of exercising it. Re-asserting source or design is the same bug class you are fixing.
+2. **Add a real fault path.** Introduce lifecycle helpers (`nats_kill`, `nats_restart`) that actually SIGKILL the broker and relaunch it, mirroring existing repo kill helpers found by grep rather than inventing a new style.
+3. **Drive an observable effect.** After restart, run a brand-new end-to-end task lifecycle and assert it completes. Recovery is proven by the new work succeeding, not by re-reading config.
+4. **Add the RED step.** Before trusting the test, temporarily stub/disable the recovery (e.g. do not restart, or break reconnect) and confirm the test FAILS. Only then revert and confirm GREEN. This is the single check that distinguishes a real test from a placeholder.
+5. **Get skip-vs-fail semantics right.** "Structurally inapplicable" (the fault cannot occur in this topology) -> clean `skip_topology`/skip. "Should have worked but didn't" -> real fail. A pass where the fault cannot run is the same defect as the bug you are fixing.
+6. **Mark the plan's assumptions.** Explicitly list every reliance that was NOT verified by running code (see Failed Attempts + Results) so a reviewer can check them before trusting the plan.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Hardcoded pass placeholder | Test body was `pass` / `assert True`, never exercising the fault | Always green; cannot detect a broken recovery path | A fault test that can never go red is a slower placeholder — add an explicit RED step |
+| Assert design intent | Asserted "system is designed for graceful degradation" by re-reading source/config | Verifies the comment, not the behavior; passes even if recovery is broken | Prove recovery by an OBSERVABLE end-to-end effect (new task lifecycle completing post-restart) |
+| Pass where inapplicable | Returned pass when the topology cannot exercise the fault | Same bug class as the placeholder — silently green without exercising anything | Use a clean skip for structurally-inapplicable cases; reserve fail for real breakage |
+| Assume the client auto-reconnects | Plan relied on the NATS client reconnecting within timeout after restart, unverified | If the client does one-shot connect (KB warns nats-py `allow_reconnect` can hang / connect is one-shot) the post-restart lifecycle hangs and the "fix" is itself flaky/false | Verify reconnect behavior against the actual client code BEFORE trusting the plan (#1 risk) |
+| Wrong relative compose path | Helper wrote `$(_e2e_root)/docker-compose.e2e.yml` | Compose file lives at repo ROOT, asserted from a single `find` hit; `_e2e_root()` returns `e2e/`, so the file is one level up | Correct path is `$(_e2e_root)/../docker-compose.e2e.yml`; a path from one `find` hit is brittle and was never executed |
+
+## Results & Parameters
+
+**Verification level: `unverified`.** This plan (for issue #184) was never executed; no code ran and no CI was observed. The value below is the catalog of assumptions a planner relied on WITHOUT running code — a reviewer MUST check these.
+
+Uncertain assumptions / unverified reliances:
+
+- **Compose path is brittle.** Asserted from a single `find` hit that `docker-compose.e2e.yml` lives at repo root. The in-helper code first wrote `$(_e2e_root)/docker-compose.e2e.yml` (WRONG) and needed correction to `$(_e2e_root)/../docker-compose.e2e.yml`. The T4 branch was never run.
+- **Client auto-reconnect (#1 RISK).** Assumed Agamemnon's C++ `NatsClient` and the Python myrmidon auto-reconnect after the server restarts within the test timeout. NOT verified against client code. If either does a one-shot connect and never retries, the post-restart task lifecycle hangs/fails and the new test is itself flaky/false.
+- **Hard-kill + same-store relaunch race.** Assumed the T1 background NATS relaunch with the SAME `--store_dir` cleanly re-attaches JetStream state and that no stale lock/PID prevents rebinding the same ports immediately after SIGKILL. Port-rebind races and JetStream store locks after a hard kill were not tested.
+- **Lifecycle idempotency.** Assumed `run_task_lifecycle` is side-effect-safe to call twice in one run (baseline + post-restart) — i.e. creating a second agent/team/task does not collide. Not verified.
+- **Runner invocation.** Assumed `pixi run bash e2e/run-ipc-tests.sh ...` is valid; the runner is documented as `bash e2e/run-ipc-tests.sh` and whether it is wrapped by pixi/just was not confirmed.
+- **Line numbers drift.** Relied on point-in-time line numbers (`lib/process.sh:64-78`, `nats.sh:~108`, test lines 27-56) captured from one read; these will drift.
+
+Risks a reviewer should focus on (ordered):
+
+1. Does the actual NATS client auto-reconnect within timeout? Verify against Agamemnon `NatsClient` and myrmidon `main.py` before trusting the plan — if not, the new test is flaky/false.
+2. T4 compose path correctness; that `compose stop nats` / `start nats` targets the right service and the monitor port maps through.
+3. Hard-kill (SIGKILL) + immediate same-port/same-`store_dir` relaunch race on T1.
+4. Idempotency of calling `run_task_lifecycle` twice.
+5. Skip-vs-fail correctness for every topology — confirm no path silently passes without exercising the fault.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| Odysseus (e2e) | Planning fix for issue #184 — NATS crash-reconnect placeholder test | unverified; plan only, never executed |
+```
+
+---
+
+## v1.0.0 (2026-06-19)
+
+**Initial version.** Planning-discipline learning from the first plan for GitHub issue #184
+(Odysseus e2e NATS crash-reconnect placeholder test). Established the core rule that a fault
+test must be able to go RED, prove recovery by an observable end-to-end effect, and use a clean
+SKIP (never a pass) where the fault is structurally inapplicable — plus a catalog of the
+unverified assumptions a planner makes when writing such a plan without running code.
+
+## Superseded from `testing-real-server-fault-test-planning-pitfalls`
+
+**Original date:** 2026-06-19
+**Original version:** 1.1.0
+
+---
+name: testing-real-server-fault-test-planning-pitfalls
+description: "Planning discipline and risk catalog for authoring a REAL-server kill/restart/recover fault-injection integration test for an async service (Python FastAPI + NATS JetStream), BEFORE any code is run. Covers the positive patterns that make such a plan credible — a DEDICATED subprocess broker so the kill cannot break the other ~40 integration tests, RED+GREEN discrimination via a no-restart companion test, proving recovery by an OBSERVABLE end-to-end effect (poll /health for 200, never re-read config), clean SKIP (shutil.which) vs real FAIL semantics, suppressing the noisy nats logger around the intentional disconnect, and deriving the recovery budget from the configured reconnect interval — AND it enumerates the UNCERTAIN ASSUMPTIONS a planner makes when they write the plan WITHOUT executing it: unverified nats-server CLI flags (-js / -sd), monkeypatching private lifecycle internals (Publisher._reconnect_task / _stop_event / _reconnect_loop) instead of driving the real loop via a Settings override, treating a same-port rebind poll as a JetStream store-lock-release guarantee, _free_port() TOCTOU, and recovery-budget arithmetic that disagrees between prose and code. Use when: (1) planning a NATS/broker kill-restart-recover integration test against a REAL spawned server; (2) planning any real-process fault/chaos test for an async service that drives its own reconnect loop (nats-py allow_reconnect=False); (3) reviewing such a plan and needing the high-risk assumptions enumerated; (4) deciding skip-vs-fail and RED-vs-GREEN discipline for a real-server fault test; (5) choosing between a Settings override and monkeypatching private internals to exercise a recovery loop in a test."
+category: testing
+date: 2026-06-19
+version: "1.1.0"
+user-invocable: false
+verification: unverified
+history: testing-real-server-fault-test-planning-pitfalls.history
+tags: []
+---
+
+# Real-Server Fault-Test Planning Pitfalls
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-19 |
+| **Objective** | Plan an integration test for ProjectHermes issue #527 — "Hermes recovers after a real NATS restart" — that starts a real `nats-server` subprocess, hard-kills it, restarts it on the same port + JetStream `store_dir`, and proves recovery by polling `/health` for a 200; plus a RED-proof companion test that kills and never restarts. |
+| **Outcome** | Produced a plan (positive patterns + a catalog of uncertain assumptions). Plan only — never executed: no test run, no CI observed. The value is the risk catalog a reviewer must check. |
+| **Verification** | stays **unverified** (planning-discipline learning; the test was never executed and no CI run exists — only the env-override mechanism is verified, by source read) |
+| **History** | [changelog](./testing-real-server-fault-test-planning-pitfalls.history) |
+
+## When to Use
+
+- Planning a NATS / broker **kill-restart-recover** integration test against a **real spawned server** (not a mock, not the shared session broker).
+- Planning any **real-process fault/chaos test** for an async service that drives its **own external reconnect loop** — e.g. ProjectHermes, whose `Publisher` connects nats-py with `allow_reconnect=False` (`publisher.py:159`) and runs its own reconnect loop, so the test must exercise that loop rather than rely on client auto-reconnect.
+- Reviewing such a plan: this skill enumerates the high-risk unverified assumptions the planner relied on so you know exactly what to challenge.
+- Deciding **skip-vs-fail** and **RED-vs-GREEN** discipline for a real-server fault test.
+- Choosing between a **Settings override** (short reconnect interval) and **monkeypatching private internals** to exercise a recovery loop.
+
+## Verified Workflow
+
+> **⚠️ UNVERIFIED — this workflow was authored and reviewed but NEVER executed end-to-end; no CI run exists. Treat every step as a hypothesis until validated.**
+
+### Quick Reference
+
+```text
+To plan a credible REAL-server kill/restart/recover fault test (unverified until CI):
+  1. DEDICATED subprocess broker. Spawn a fresh nats-server for THIS test; never kill
+     the shared TEST_NATS_URL — a hard-kill there breaks the other ~40 integration tests.
+  2. RED + GREEN. A no-restart COMPANION test (kill, never restart, assert /health never
+     returns 200) proves the test discriminates real recovery from a pass-by-accident.
+     RED-only is insufficient.
+  3. OBSERVABLE recovery. Prove recovery by an end-to-end effect: poll /health for 200.
+     NEVER re-read config / restate design intent.
+  4. SKIP vs FAIL. Clean SKIP when nats-server is absent (shutil.which); real FAIL when
+     it "should have recovered but didn't". Never `pass`.
+  5. Quiet the noise. Raise the `nats` logger to CRITICAL around the intentional
+     disconnect to avoid error-spam masking the real signal.
+  6. PUBLIC OVERRIDE > PRIVATE MONKEYPATCH (headline). Drive the REAL loop via a public
+     env/Settings knob: monkeypatch.setenv("NATS_RECONNECT_INTERVAL","0.2") + plain connect().
+     Works because Settings has no env_prefix & case_sensitive=False. GOTCHA: only takes
+     effect if get_settings.cache_clear() runs per test (autouse fixture) — get_settings is
+     @lru_cache, so without the clear the override is SILENTLY ignored.
+  7. SINGLE recovery budget. Derive it from the configured interval — and keep ONE source
+     of truth in code; prose must reference the code, not restate the arithmetic.
+  VERIFY THE BINARY: confirm exact nats-server flags via `nats-server --help` before
+  relying on -js / -sd. Highest-risk items: unverified CLI flags (#1) and private-internals
+  monkeypatching (#2).
+```
+
+### Detailed Steps
+
+1. **Spawn a dedicated `nats-server` subprocess** for this test alone (own port via `_free_port()`, own JetStream `store_dir`). The kill is destructive, so it must not touch the shared `TEST_NATS_URL` that ~40 other integration tests in the session depend on.
+2. **Verify the binary's flags first.** Before relying on `-js -sd <dir> -a 127.0.0.1 -p <port>`, confirm via `nats-server --help` in the target env that `-js` enables JetStream and `-sd` sets the store dir. Do not trust convention/memory — flag drift between versions causes flakes/skips.
+3. **Point Hermes at the dedicated broker and drive its real reconnect loop via a PUBLIC env/Settings override — the headline lesson.** Hermes uses `allow_reconnect=False` (`publisher.py:159`) and owns its reconnect loop, so inject fast timing through the public config surface, NOT private internals. **Verified mechanism:** Hermes' `Settings` is pydantic-settings `BaseSettings` with NO `env_prefix` and `case_sensitive=False` (`config.py:27-31`), so field `nats_reconnect_interval` maps directly to env var `NATS_RECONNECT_INTERVAL`. A plain `monkeypatch.setenv("NATS_RECONNECT_INTERVAL", "0.2")` + ordinary `connect()` makes production code (`publisher.py:107,130` reads `settings.nats_reconnect_interval`) launch a fast reconnect loop with ZERO coupling to private `_stop_event` / `_reconnect_task`. **NON-OBVIOUS GOTCHA:** this works ONLY because an autouse fixture calls `get_settings.cache_clear()` per test (`conftest.py:46-55`); `get_settings` is `@lru_cache` (`config.py:248`), so WITHOUT that cache-clear the env override is silently ignored. This is the only genuinely VERIFIED item in this skill (verified by source read, not by executing the test).
+4. **Kill → degrade.** Hard-kill (SIGKILL) the subprocess; poll `/health` until it flips to 503 (the loop must observe `nc.is_closed`). Note this kill→503 poll (a 10s budget) is itself a derived guess.
+5. **Restart → recover.** Relaunch on the **same port + same `store_dir`**. Tolerate a transient `start()` failure with a brief retry — the store-dir lock can outlive the port being connectable. Then poll `/health` for a 200 to prove recovery.
+6. **RED-proof companion test.** A second test kills and **never** restarts, asserting `/health` never returns 200 within the budget. This proves the green test is not passing by accident.
+7. **Keep ONE recovery budget in code.** Derive it from the configured interval (e.g. `interval * N + slack`) and have prose reference the code constant — never restate the arithmetic in two places.
+8. **List remaining unverified reliances** (see Failed Attempts + Results) so a reviewer can check each one.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Unverified `nats-server` CLI flags | Assumed flags `-js -sd <dir> -a 127.0.0.1 -p <port>` from convention/memory | Never confirmed via `nats-server --help` in the target env; flag drift between nats-server versions causes flakes/skips | A real-process integration-test plan MUST verify exact binary flags (`-js` enables JetStream, `-sd` sets store dir) before relying on them — **highest-risk item** |
+| Monkeypatch private lifecycle internals | Replaced `Publisher._reconnect_task` with a hand-rolled fast `_reconnect_loop`, reaching into `pub._stop_event` / `pub._reconnect_task` / `pub._reconnect_loop` to inject a 0.2s loop | Couples the test to private internals churned by #524/#526; if `connect()`'s task-management contract changes, the test breaks silently or double-runs two loops | Prefer driving the REAL loop via a Settings override (short `nats_reconnect_interval`); if you must use privates, document WHY the override is insufficient — **second-highest-risk item** |
+| Same-port rebind treated as a guarantee | `_wait(lambda: not _port_listening(port))` to confirm the port is free before relaunch | TCP TIME_WAIT / SO_REUSEADDR ≠ JetStream store-lock release; the store-dir lock can outlive the port being connectable | For kill+same-store relaunch, also tolerate a transient `start()` failure with a brief retry, not just a port-free poll |
+| `_free_port()` TOCTOU | Bind `:0`, read the port, close, later re-bind in the subprocess | Classic race — another process can grab the port in the gap | Acceptable for local/CI but must be called out as a known small flake window |
+| Recovery budget stated two ways | `_RECOVERY_BUDGET`: prose said `interval*3 + 10 ≈ 25s` but code said `interval*10 + 10 ≈ 12s` | Inconsistent timeout arithmetic between prose and code is a reviewer red flag and a maintenance trap | Keep a SINGLE source of truth in code and have prose reference it |
+| Trust an unverified KB skill's reconnect claim | Leaned on `testing-fault-test-placeholder-must-go-red` for reconnect behavior | That skill is itself `unverified`, and its auto-reconnect claim is for C++/libnats, NOT nats-py | Cross-check against the actual client: Hermes uses nats-py with `allow_reconnect=False` (`publisher.py:159`) and drives its own loop — the C++ claim does not transfer |
+| Assume kill→503 is prompt | Relied on `/health` flipping to 503 quickly after the hard kill | Depends on the reconnect loop observing `nc.is_closed`; the kill→503 step has its own 10s poll that is itself a derived guess | The degrade signal is not free — budget and verify it like the recovery signal |
+| P1/KISS — monkeypatched churned private internals when a public knob existed | Reached into `Publisher._stop_event` / `_reconnect_task` to inject fast timing even though `NATS_RECONNECT_INTERVAL` / `nats_reconnect_interval` is a public Settings field the production path already reads | Reviewer escalated to a Major, GO-blocking finding: testing through private internals couples the test to recently-churned implementation detail when a stable public seam exists | Before poking private attrs in a test, grep for an env var / Settings field the production path already reads and drive the behavior through that public seam instead |
+| P7/POLA — derived timeout stated two contradictory ways | Prose said the recovery budget was `interval*3 + 10 ≈ 25s` while the code computed `interval*10 + 10 ≈ 12s` | Two different arithmetic statements for one value is a POLA violation and a maintenance trap; a reviewer flagged it Minor | One named module constant is the single source of truth; prose REFERENCES the constant and never restates differing arithmetic |
+| Same-store/same-port relaunch race | Used only a TCP port-free poll (`not _port_listening(port)`) to decide it was safe to relaunch on the same port + same JetStream store_dir | A port-free poll is necessary but NOT sufficient: port-free ≠ JetStream store-lock released, so the relaunch can still fail to acquire the store lock | Use a bounded `start(attempts=5)` spawn-retry that kills + re-probes on listen-timeout, instead of trusting a single port-free poll |
+| Unverified CLI flags blind-spawned | Assumed `nats-server -js -sd -p -a` would all be accepted and spawned the subprocess directly | Flag drift between nats-server versions silently breaks the spawn and produces confusing failures | Gate the spawn with a `_flags_supported()` probe of `nats-server --help` that `pytest.skip`s if `-js` / `-sd` / `-p` / `-a` are not all present — never blind-spawn |
+
+## Results & Parameters
+
+**Verification level: `unverified`.** The plan for issue #527 was authored but **never executed** — no test run, no CI observed. The value below is (a) the positive patterns to carry forward and (b) the catalog of uncertain assumptions a reviewer MUST check.
+
+**Headline verified fact (the one genuinely verified item):** Drive the real reconnect loop through a PUBLIC env/Settings override, not private internals. Hermes' `Settings` is pydantic-settings `BaseSettings` with no `env_prefix` and `case_sensitive=False` (`config.py:27-31`), so `monkeypatch.setenv("NATS_RECONNECT_INTERVAL", "0.2")` + a plain `connect()` makes the production path (`publisher.py:107,130`) launch a fast reconnect loop with zero coupling to `_stop_event` / `_reconnect_task`. **Cache-clear gotcha:** this works ONLY because an autouse fixture calls `get_settings.cache_clear()` per test (`conftest.py:46-55`); `get_settings` is `@lru_cache` (`config.py:248`), so without that clear the env override is silently ignored. This is the only item verified (by source read, not by executing the test).
+
+**Positive signals the reviewer accepted (keep):**
+
+- **Dedicated subprocess broker** spawned for this test alone (not the shared session `TEST_NATS_URL`), so the destructive kill cannot break the other ~40 integration tests.
+- **RED+GREEN discriminating companion test** — a no-restart kill test that asserts `/health` never returns 200 within budget, proving the green test does not pass by accident.
+- **Observable `/health` proof** of recovery (poll for 200), not a config re-read or restated design intent.
+- **Clean SKIP vs honest FAIL** — `pytest.skip` when the binary is absent (`shutil.which`), a real FAIL when it "should have recovered but didn't"; never `pass`.
+- **Single named recovery-budget constant** — one source of truth in code that prose references, never restated arithmetic.
+
+**Honest caveat:** these patterns were validated only by a reviewer NOGO→revision cycle on a PLAN, not by running anything. Only the env-override fact is verified (by source read of `config.py` / `publisher.py` / `conftest.py`); the test itself was never executed and no CI run exists. Verification therefore stays `unverified`.
+
+**What worked (positive patterns to carry forward):**
+
+- **Dedicated subprocess broker.** Spawn a fresh `nats-server` for this test instead of killing the shared `TEST_NATS_URL`, so the destructive kill cannot break the other ~40 integration tests in the session.
+- **RED+GREEN discipline.** A no-restart companion test proves the test discriminates *real* recovery from a passing-by-accident assertion. RED-only is insufficient.
+- **Observable recovery.** Prove recovery by an end-to-end effect (poll `/health` for 200), NOT by re-reading config or restating design intent.
+- **Skip-vs-fail semantics.** Clean SKIP when `nats-server` is absent (`shutil.which`), real FAIL when "should have recovered but didn't." Never `pass`.
+- **Quiet the noise.** Raise the `nats` logger to CRITICAL around the intentional disconnect to avoid error-spam drowning the real signal.
+- **Derived recovery budget.** Derive the budget from the configured reconnect interval (good) — just keep it consistent in a single code constant (see assumption #5).
+
+**Reviewer focus — highest-risk items:** **#1 unverified `nats-server` CLI flags** and **#2 private-internals monkeypatching**. Challenge these first.
+
+**Unverified external dependencies (relied on without direct verification):**
+
+1. **KB skill `testing-fault-test-placeholder-must-go-red` is itself unverified**, and its auto-reconnect claim is for **C++/libnats, NOT nats-py**. The plan correctly flagged this and cross-checked against `publisher.py:159` (`allow_reconnect=False`) — Hermes drives its own reconnect loop, so the libnats auto-reconnect claim does not transfer.
+2. **`nats-server` binary version / flag set** — exact flags (`-js`, `-sd`) unconfirmed in the target env (same as assumption #1 above).
+3. **Prompt `/health` → 503 after hard kill** depends on the reconnect loop observing `nc.is_closed`; the kill→503 step has its own 10s poll that is itself a derived guess.
+
+### Archived companion history from `testing-real-server-fault-test-planning-pitfalls.history`
+
+# testing-real-server-fault-test-planning-pitfalls — History
+
+## v1.1.0 (2026-06-19)
+
+**Changed by:** ProjectHermes issue #527 plan revision (reviewer NOGO R0 grade C → R1 addressing all findings)
+**Verification:** unverified
+
+### What changed
+- Added the headline NEW VERIFIED FACT: prefer a public Settings/env override (`monkeypatch.setenv("NATS_RECONNECT_INTERVAL","0.2")` + plain `connect()`) over monkeypatching private async-lifecycle internals — with the non-obvious cache-clear gotcha called out.
+- Added 4 new reviewer-finding rows to Failed Attempts (P1/KISS escalation, P7/POLA contradictory-arithmetic, same-store/same-port relaunch race, unverified-CLI-flags probe gate).
+- Updated Results & Parameters with the verified fact, the positive signals the reviewer accepted, and an explicit honest caveat that only the env-override fact is verified-by-source-read; the test itself was never executed and no CI run exists.
+- HONESTY FIX: removed the HTML-comment "validator token" hack from v1.0.0 and replaced it with a real `## Verified Workflow` heading + a prominent visible UNVERIFIED warning banner (matching the honest convention used by the other unverified skills in this repo).
+- Added `history:` frontmatter field.
+
+### Why
+The #527 plan was revised after a reviewer NOGO. The revision validated v1.0.0's predictions and surfaced one genuinely verified fact (the env-override mechanism, confirmed by reading ProjectHermes config.py:27-31,62 + publisher.py:107,130 + conftest.py:46-55). Everything else remains a reviewed-but-unexecuted hypothesis, so verification stays `unverified`.
+
+### Previous version (v1.0.0) snapshot
+
+---
+name: testing-real-server-fault-test-planning-pitfalls
+description: "Planning discipline and risk catalog for authoring a REAL-server kill/restart/recover fault-injection integration test for an async service (Python FastAPI + NATS JetStream), BEFORE any code is run. Covers the positive patterns that make such a plan credible — a DEDICATED subprocess broker so the kill cannot break the other ~40 integration tests, RED+GREEN discrimination via a no-restart companion test, proving recovery by an OBSERVABLE end-to-end effect (poll /health for 200, never re-read config), clean SKIP (shutil.which) vs real FAIL semantics, suppressing the noisy nats logger around the intentional disconnect, and deriving the recovery budget from the configured reconnect interval — AND it enumerates the UNCERTAIN ASSUMPTIONS a planner makes when they write the plan WITHOUT executing it: unverified nats-server CLI flags (-js / -sd), monkeypatching private lifecycle internals (Publisher._reconnect_task / _stop_event / _reconnect_loop) instead of driving the real loop via a Settings override, treating a same-port rebind poll as a JetStream store-lock-release guarantee, _free_port() TOCTOU, and recovery-budget arithmetic that disagrees between prose and code. Use when: (1) planning a NATS/broker kill-restart-recover integration test against a REAL spawned server; (2) planning any real-process fault/chaos test for an async service that drives its own reconnect loop (nats-py allow_reconnect=False); (3) reviewing such a plan and needing the high-risk assumptions enumerated; (4) deciding skip-vs-fail and RED-vs-GREEN discipline for a real-server fault test; (5) choosing between a Settings override and monkeypatching private internals to exercise a recovery loop in a test."
+category: testing
+date: 2026-06-19
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags: []
+---
+
+# Real-Server Fault-Test Planning Pitfalls
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-06-19 |
+| **Objective** | Plan an integration test for ProjectHermes issue #527 — "Hermes recovers after a real NATS restart" — that starts a real `nats-server` subprocess, hard-kills it, restarts it on the same port + JetStream `store_dir`, and proves recovery by polling `/health` for a 200; plus a RED-proof companion test that kills and never restarts. |
+| **Outcome** | Produced a plan (positive patterns + a catalog of uncertain assumptions). Plan only — never executed: no test run, no CI observed. The value is the risk catalog a reviewer must check. |
+| **Verification** | unverified (planning-discipline learning; no code run, no CI) |
+
+## When to Use
+
+- Planning a NATS / broker **kill-restart-recover** integration test against a **real spawned server** (not a mock, not the shared session broker).
+- Planning any **real-process fault/chaos test** for an async service that drives its **own external reconnect loop** — e.g. ProjectHermes, whose `Publisher` connects nats-py with `allow_reconnect=False` (`publisher.py:159`) and runs its own reconnect loop, so the test must exercise that loop rather than rely on client auto-reconnect.
+- Reviewing such a plan: this skill enumerates the high-risk unverified assumptions the planner relied on so you know exactly what to challenge.
+- Deciding **skip-vs-fail** and **RED-vs-GREEN** discipline for a real-server fault test.
+- Choosing between a **Settings override** (short reconnect interval) and **monkeypatching private internals** to exercise a recovery loop.
+
+## Proposed Workflow
+
+> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
+
+<!-- validator token: ## Verified Workflow (heading deliberately titled "Proposed Workflow" because verification=unverified; this comment satisfies the repo section-presence check) -->
+
+### Quick Reference
+
+```text
+To plan a credible REAL-server kill/restart/recover fault test (unverified until CI):
+  1. DEDICATED subprocess broker. Spawn a fresh nats-server for THIS test; never kill
+     the shared TEST_NATS_URL — a hard-kill there breaks the other ~40 integration tests.
+  2. RED + GREEN. A no-restart COMPANION test (kill, never restart, assert /health never
+     returns 200) proves the test discriminates real recovery from a pass-by-accident.
+     RED-only is insufficient.
+  3. OBSERVABLE recovery. Prove recovery by an end-to-end effect: poll /health for 200.
+     NEVER re-read config / restate design intent.
+  4. SKIP vs FAIL. Clean SKIP when nats-server is absent (shutil.which); real FAIL when
+     it "should have recovered but didn't". Never `pass`.
+  5. Quiet the noise. Raise the `nats` logger to CRITICAL around the intentional
+     disconnect to avoid error-spam masking the real signal.
+  6. Drive the REAL loop. Prefer a Settings override (short nats_reconnect_interval) over
+     monkeypatching private lifecycle internals; if you must reach into privates, document
+     WHY the override path is insufficient.
+  7. SINGLE recovery budget. Derive it from the configured interval — and keep ONE source
+     of truth in code; prose must reference the code, not restate the arithmetic.
+  VERIFY THE BINARY: confirm exact nats-server flags via `nats-server --help` before
+  relying on -js / -sd. Highest-risk items: unverified CLI flags (#1) and private-internals
+  monkeypatching (#2).
+```
+
+### Detailed Steps
+
+1. **Spawn a dedicated `nats-server` subprocess** for this test alone (own port via `_free_port()`, own JetStream `store_dir`). The kill is destructive, so it must not touch the shared `TEST_NATS_URL` that ~40 other integration tests in the session depend on.
+2. **Verify the binary's flags first.** Before relying on `-js -sd <dir> -a 127.0.0.1 -p <port>`, confirm via `nats-server --help` in the target env that `-js` enables JetStream and `-sd` sets the store dir. Do not trust convention/memory — flag drift between versions causes flakes/skips.
+3. **Point Hermes at the dedicated broker and drive its real reconnect loop.** Hermes uses `allow_reconnect=False` and owns its reconnect loop, so set a short `nats_reconnect_interval` via a **Settings override** to make recovery fast. Prefer this over monkeypatching `Publisher._reconnect_task` / `_stop_event` / `_reconnect_loop`.
+4. **Kill → degrade.** Hard-kill (SIGKILL) the subprocess; poll `/health` until it flips to 503 (the loop must observe `nc.is_closed`). Note this kill→503 poll (a 10s budget) is itself a derived guess.
+5. **Restart → recover.** Relaunch on the **same port + same `store_dir`**. Tolerate a transient `start()` failure with a brief retry — the store-dir lock can outlive the port being connectable. Then poll `/health` for a 200 to prove recovery.
+6. **RED-proof companion test.** A second test kills and **never** restarts, asserting `/health` never returns 200 within the budget. This proves the green test is not passing by accident.
+7. **Keep ONE recovery budget in code.** Derive it from the configured interval (e.g. `interval * N + slack`) and have prose reference the code constant — never restate the arithmetic in two places.
+8. **List remaining unverified reliances** (see Failed Attempts + Results) so a reviewer can check each one.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Unverified `nats-server` CLI flags | Assumed flags `-js -sd <dir> -a 127.0.0.1 -p <port>` from convention/memory | Never confirmed via `nats-server --help` in the target env; flag drift between nats-server versions causes flakes/skips | A real-process integration-test plan MUST verify exact binary flags (`-js` enables JetStream, `-sd` sets store dir) before relying on them — **highest-risk item** |
+| Monkeypatch private lifecycle internals | Replaced `Publisher._reconnect_task` with a hand-rolled fast `_reconnect_loop`, reaching into `pub._stop_event` / `pub._reconnect_task` / `pub._reconnect_loop` to inject a 0.2s loop | Couples the test to private internals churned by #524/#526; if `connect()`'s task-management contract changes, the test breaks silently or double-runs two loops | Prefer driving the REAL loop via a Settings override (short `nats_reconnect_interval`); if you must use privates, document WHY the override is insufficient — **second-highest-risk item** |
+| Same-port rebind treated as a guarantee | `_wait(lambda: not _port_listening(port))` to confirm the port is free before relaunch | TCP TIME_WAIT / SO_REUSEADDR ≠ JetStream store-lock release; the store-dir lock can outlive the port being connectable | For kill+same-store relaunch, also tolerate a transient `start()` failure with a brief retry, not just a port-free poll |
+| `_free_port()` TOCTOU | Bind `:0`, read the port, close, later re-bind in the subprocess | Classic race — another process can grab the port in the gap | Acceptable for local/CI but must be called out as a known small flake window |
+| Recovery budget stated two ways | `_RECOVERY_BUDGET`: prose said `interval*3 + 10 ≈ 25s` but code said `interval*10 + 10 ≈ 12s` | Inconsistent timeout arithmetic between prose and code is a reviewer red flag and a maintenance trap | Keep a SINGLE source of truth in code and have prose reference it |
+| Trust an unverified KB skill's reconnect claim | Leaned on `testing-fault-test-placeholder-must-go-red` for reconnect behavior | That skill is itself `unverified`, and its auto-reconnect claim is for C++/libnats, NOT nats-py | Cross-check against the actual client: Hermes uses nats-py with `allow_reconnect=False` (`publisher.py:159`) and drives its own loop — the C++ claim does not transfer |
+| Assume kill→503 is prompt | Relied on `/health` flipping to 503 quickly after the hard kill | Depends on the reconnect loop observing `nc.is_closed`; the kill→503 step has its own 10s poll that is itself a derived guess | The degrade signal is not free — budget and verify it like the recovery signal |
+
+## Results & Parameters
+
+**Verification level: `unverified`.** The plan for issue #527 was authored but **never executed** — no test run, no CI observed. The value below is (a) the positive patterns to carry forward and (b) the catalog of uncertain assumptions a reviewer MUST check.
+
+**What worked (positive patterns to carry forward):**
+
+- **Dedicated subprocess broker.** Spawn a fresh `nats-server` for this test instead of killing the shared `TEST_NATS_URL`, so the destructive kill cannot break the other ~40 integration tests in the session.
+- **RED+GREEN discipline.** A no-restart companion test proves the test discriminates *real* recovery from a passing-by-accident assertion. RED-only is insufficient.
+- **Observable recovery.** Prove recovery by an end-to-end effect (poll `/health` for 200), NOT by re-reading config or restating design intent.
+- **Skip-vs-fail semantics.** Clean SKIP when `nats-server` is absent (`shutil.which`), real FAIL when "should have recovered but didn't." Never `pass`.
+- **Quiet the noise.** Raise the `nats` logger to CRITICAL around the intentional disconnect to avoid error-spam drowning the real signal.
+- **Derived recovery budget.** Derive the budget from the configured reconnect interval (good) — just keep it consistent in a single code constant (see assumption #5).
+
+**Reviewer focus — highest-risk items:** **#1 unverified `nats-server` CLI flags** and **#2 private-internals monkeypatching**. Challenge these first.
+
+**Unverified external dependencies (relied on without direct verification):**
+
+1. **KB skill `testing-fault-test-placeholder-must-go-red` is itself unverified**, and its auto-reconnect claim is for **C++/libnats, NOT nats-py**. The plan correctly flagged this and cross-checked against `publisher.py:159` (`allow_reconnect=False`) — Hermes drives its own reconnect loop, so the libnats auto-reconnect claim does not transfer.
+2. **`nats-server` binary version / flag set** — exact flags (`-js`, `-sd`) unconfirmed in the target env (same as assumption #1 above).
+3. **Prompt `/health` → 503 after hard kill** depends on the reconnect loop observing `nc.is_closed`; the kill→503 step has its own 10s poll that is itself a derived guess.
+
+---
+
+## v1.0.0 (2026-06-19)
+
+**Initial version.** Created via PR #2624.

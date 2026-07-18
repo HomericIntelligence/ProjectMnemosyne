@@ -1,12 +1,12 @@
 ---
 name: license-scan-marker-excluded-fallback
-description: "Documents how to fix CI license-scan blind spots for PEP 508 marker-excluded deps. Use when: (1) CI scans licenses on a single Python/OS matrix leg and silently skips marker-gated deps, (2) a dep has platform_system or python_version markers that exclude the CI environment, (3) you need fail-closed behavior for ungated deps, (4) adding a new gated dep and need a coverage-completeness lock test."
+description: "Classify PEP 508 marker-excluded distributed dependencies in a single-leg CI license scan with a fail-closed fallback license map. Use when: (1) a platform- or Python-version-gated dependency is skipped because it is not installable on the CI leg, (2) a scan claims another matrix row will classify a dependency but no such row exists, (3) adding an unreachable dependency or validating fallback-map coverage and values against metadata or NOTICE."
 category: ci-cd
-date: 2026-06-13
-version: "2.0.0"
+date: 2026-07-17
+version: "3.0.0"
 user-invocable: false
 verification: verified-ci
-tags: ["license", "pep508", "markers", "fallback", "ci-coverage", "tomli", "tzdata", "fail-closed", "coverage-completeness", "patch-dict"]
+tags: ["license", "pep508", "markers", "fallback", "ci-coverage", "fail-closed", "static-map", "staleness-mitigation", "notice"]
 history: license-scan-marker-excluded-fallback.history
 ---
 
@@ -16,157 +16,128 @@ history: license-scan-marker-excluded-fallback.history
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-13 |
-| **Objective** | Fix CI license-scan blind spot for PEP 508 marker-excluded distributed deps (`tomli`, `tzdata`) |
-| **Outcome** | `FALLBACK_LICENSES` dict added to scan script; marker-excluded deps now classified from authoritative literals; unknown gated deps cause `sys.exit(2)` instead of silent skip; coverage-completeness lock test prevents future regressions |
-| **Verification** | verified-ci — PR #1303 on ProjectHephaestus, all 29 tests pass (4 skipped: dep not installed locally, expected) |
-| **History** | v1.0.0 archived in `license-scan-marker-excluded-fallback.history` |
+| **Date** | 2026-07-17 |
+| **Objective** | Eliminate license-coverage holes for distributed dependencies excluded from a single CI environment by PEP 508 markers |
+| **Outcome** | A single fail-closed fallback-map workflow with source-specific tests for coverage and value staleness |
+| **Verification** | verified-ci — ProjectHephaestus issues #1256/#1258, PRs #1303/#1304 |
+| **History** | [prior canonical and absorbed source snapshots](./license-scan-marker-excluded-fallback.history) |
 
 ## When to Use
 
-- A CI license-scan job runs on a single Python version/OS matrix leg (e.g., Python 3.13 / Ubuntu 24.04)
-- Some distributed deps have PEP 508 markers that exclude the CI environment (e.g., `python_version < '3.11'`, `platform_system == 'Windows'`)
-- Those deps are silently skipped with a note claiming "another CI row will classify them" — but no such row exists
-- A new gated dep is added to `pyproject.toml` and you need to ensure it gets license-classified
-- The `_installable_in_current_env` function returns `False` for a dep that is part of the distributed package
+- A CI license job runs on one Python/OS combination and `distributed_requirements(None)` reports `installable_now=False` for a distributed dependency
+- A dependency is gated by a Python-version or platform marker and `importlib.metadata` cannot inspect it on the current CI leg
+- Existing code silently skips the dependency or promises another matrix row will classify it without verifying that row exists
+- A new marker-excluded dependency needs an SPDX fallback and a regression guard against missing or stale entries
 
 ## Verified Workflow
 
 ### Quick Reference
 
 ```python
-# In scripts/check_license_compatibility.py, after ALLOWED_EXTRA_COPYLEFT:
-
+# Keep names and SPDX identifiers in the same representation used by the
+# existing compatibility checker. NOTICE is authoritative when the dependency
+# is not installed on this CI platform.
 FALLBACK_LICENSES: dict[str, list[str]] = {
-    "tomli": ["MIT"],        # NOTICE: "toml extra / tomli  MIT"
-    "tzdata": ["Apache-2.0"],  # NOTICE: "tzdata  Apache-2.0"
+    "tomli": ["MIT"],
+    "tzdata": ["Apache-2.0"],
 }
 
-# In scan(), when PackageNotFoundError fires with installable_now=False:
-#   Replace the silent-skip-with-note block entirely.
-fallback = FALLBACK_LICENSES.get(pkg)
-if fallback is None:
-    print(
-        f"FATAL: distributed dependency {pkg!r} is not installable "
-        "in this environment (marker excludes it) AND has no entry in "
-        "FALLBACK_LICENSES. Add its NOTICE-documented license to "
-        "FALLBACK_LICENSES in scripts/check_license_compatibility.py.",
-        file=sys.stderr,
-    )
-    sys.exit(2)
-print(
-    f"note: {pkg!r} not installable here (marker excluded); "
-    f"classifying from FALLBACK_LICENSES: {fallback}",
-    file=sys.stderr,
-)
-ids = fallback
-# falls through to the existing is_compatible() check -- do NOT duplicate it
+# In the PackageNotFoundError branch for a distributed dependency:
+if not installable_now:
+    fallback = FALLBACK_LICENSES.get(pkg)
+    if fallback is None:
+        print(
+            f"FATAL: {pkg!r} is marker-excluded and has no fallback license entry",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    ids = fallback
+    # Fall through to the existing is_compatible() check.
+else:
+    raise
 ```
 
 ### Detailed Steps
 
-1. **Identify marker-excluded distributed deps**: Run `distributed_requirements(None)` and collect entries where `installable_now=False`. In ProjectHephaestus, these are `tomli` (`python_version < '3.11'`) and `tzdata` (`platform_system == 'Windows'`) on Python 3.13 / Linux.
+1. Run `distributed_requirements(None)` in the CI environment and identify every distributed dependency where `installable_now=False`.
+2. Derive each fallback SPDX value from the repository's authoritative `NOTICE` entry; do not use `pip show` for a dependency that is deliberately unavailable on this platform.
+3. Add the package to one module-level fallback map using the naming and license-ID representation already used by the compatibility checker.
+4. Replace only the marker-excluded silent-skip path. Set `ids` from the fallback and fall through to the existing compatibility check; do not duplicate `is_compatible()` in the exception branch.
+5. If the package has no fallback entry, print a diagnostic to stderr and exit nonzero. A missing fallback is a CI configuration error, not a warning or a skip.
+6. Add tests for the success path, the missing-entry `SystemExit(2)` path, an incompatible fallback value, and completeness of the fallback map for all currently marker-excluded distributed dependencies.
+7. Update any module documentation that described the old skip behavior, then verify that the CI job now reports the formerly skipped dependencies.
 
-2. **Look up licenses from NOTICE file**: Check the `NOTICE` file for the license of each excluded dep. Do NOT rely on `pip show` — the dep is not installed. NOTICE is the authoritative source per the script's own docstring.
+### Worked Example — ProjectHephaestus single-leg CI
 
-3. **Add `FALLBACK_LICENSES` dict**: Add a module-level `FALLBACK_LICENSES: dict[str, list[str]]` constant after `ALLOWED_EXTRA_COPYLEFT` in `check_license_compatibility.py`, keyed by package name, values as SPDX identifiers.
+On Python 3.13/Linux, `tomli` (`python_version < '3.11'`) and `tzdata`
+(`platform_system == 'Windows'`) are distributed but unavailable. The fallback map uses
+`MIT` and `Apache-2.0`, respectively, from `NOTICE`.
 
-4. **Replace silent-skip branch in `scan()`**: When `PackageNotFoundError` fires for an `installable_now=False` dep, look up the fallback. Set `ids = fallback` and fall through to the existing `is_compatible()` call. Do NOT duplicate `is_compatible()` in the branch — falling through reuses the same code path and avoids divergence risk.
+- Patch `distributed_requirements` and metadata lookup to prove a known excluded package is classified rather than skipped.
+- Patch the map with a synthetic incompatible value such as `GPL-3.0` and assert the ordinary compatibility path reports a violation.
+- Assert `excluded - set(FALLBACK_LICENSES)` is empty. Skip that live check only when package metadata is unavailable in the test environment.
+- Confirm the `tomli` entry comes from the distributed `toml` runtime extra, not an unrelated development extra.
 
-5. **Call `sys.exit(2)` when no fallback entry exists**: Fail closed. `exit(2)` (not a warning, not a skip) breaks CI loudly when a gated dep has no entry.
+### Worked Example — Static-map staleness validation
 
-6. **Add `TestLoudFailure` test class** with three targeted tests:
-   - `test_marker_excluded_dep_classified_from_fallback` — `installable_now=False` + dep in `FALLBACK_LICENSES` → classified, not skipped
-   - `test_marker_excluded_dep_not_in_fallback_exits_nonzero` — `installable_now=False` + dep NOT in map → `SystemExit(2)`
-   - `test_marker_excluded_dep_with_incompatible_fallback_is_violation` — `FALLBACK_LICENSES` entry with incompatible license (e.g., `GPL-3.0`) surfaces as a violation
-
-7. **Add `TestFallbackLicenses` test class** with a coverage-completeness lock test:
-   - `test_fallback_covers_all_marker_excluded_deps` — calls `distributed_requirements(None)` to get all `installable_now=False` deps and asserts every one is in `FALLBACK_LICENSES`
-
-8. **Run CI**: Confirm the license-scan job passes on Python 3.13 / Ubuntu 24.04 and that previously-skipped deps now appear in the scan output.
-
-### Copy-paste ready tests
+Membership coverage does not prove that an SPDX value is still correct. Add both checks below
+when a fallback map is expected to live across dependency updates:
 
 ```python
-# TestLoudFailure -- three targeted tests:
+@pytest.mark.parametrize("pkg", FALLBACK_LICENSES)
+def test_fallback_values_match_installed_metadata_when_available(pkg):
+    if importlib.util.find_spec(pkg) is None:
+        pytest.skip(f"{pkg!r} is marker-excluded on this platform")
+    assert set(FALLBACK_LICENSES[pkg]) & set(resolve_license(md.metadata(pkg)))
 
-def test_marker_excluded_dep_classified_from_fallback(self):
-    with patch("check_license_compatibility.distributed_requirements", return_value=[("tomli", False)]):
-        with patch("check_license_compatibility.md.metadata", side_effect=md.PackageNotFoundError("tomli")):
-            result = scan(None)
-    assert result == []
 
-def test_marker_excluded_dep_not_in_fallback_exits_nonzero(self):
-    with patch("check_license_compatibility.distributed_requirements", return_value=[("unknown-gated-pkg", False)]):
-        with patch("check_license_compatibility.md.metadata", side_effect=md.PackageNotFoundError("unknown-gated-pkg")):
-            with pytest.raises(SystemExit) as exc:
-                scan(None)
-    assert exc.value.code == 2
-
-def test_marker_excluded_dep_with_incompatible_fallback_is_violation(self):
-    with patch.dict("check_license_compatibility.FALLBACK_LICENSES", {"bad-pkg": ["GPL-3.0"]}):
-        with patch("check_license_compatibility.distributed_requirements", return_value=[("bad-pkg", False)]):
-            with patch("check_license_compatibility.md.metadata", side_effect=md.PackageNotFoundError("bad-pkg")):
-                result = scan(None)
-    assert result == [("bad-pkg", ["GPL-3.0"])]
-
-# TestFallbackLicenses -- coverage-completeness lock:
-
-def test_fallback_covers_all_marker_excluded_deps(self):
-    try:
-        excluded = {name for name, installable_now in distributed_requirements(None) if not installable_now}
-    except (md.PackageNotFoundError, SystemExit):
-        pytest.skip("HomericIntelligence-Hephaestus not installed in this env")
-        return
-    missing = excluded - set(FALLBACK_LICENSES)
-    assert not missing, (
-        f"Distributed deps excluded from this interpreter have no FALLBACK_LICENSES "
-        f"entry: {sorted(missing)}. Add each to FALLBACK_LICENSES in "
-        "scripts/check_license_compatibility.py with its NOTICE-documented license."
-    )
+def test_fallback_values_match_notice_per_package():
+    notice_text = NOTICE_PATH.read_text(encoding="utf-8")
+    for pkg, spdx_ids in FALLBACK_LICENSES.items():
+        pkg_lines = [line for line in notice_text.splitlines() if pkg.lower() in line.lower()]
+        assert pkg_lines
+        for spdx_id in spdx_ids:
+            assert any(spdx_id in line for line in pkg_lines)
 ```
 
-### Patching notes
-
-- `patch.dict("check_license_compatibility.FALLBACK_LICENSES", {"bad-pkg": ["GPL-3.0"]})` injects synthetic entries without modifying the real map — safe for isolation.
-- `test_tomli_in_fallback_on_py311_plus` skips on Python < 3.11 (where tomli is installable and the fallback is not exercised), runs on 3.11+ where tomli is marker-excluded.
-- `tzdata` is always excluded on Linux so the completeness test always exercises at least tzdata in CI.
+Scope the NOTICE assertion to lines that name the package. A whole-file SPDX search gives false
+confidence when another package has the same license (for example, `packaging` and `tzdata` both
+use `Apache-2.0`).
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| CI matrix expansion for `tzdata` | Add a Python 3.10 CI leg to cover `tomli` | Covers `tomli` but still cannot classify `tzdata` (`platform_system == 'Windows'`) on Linux CI; a Windows runner would be disproportionate for one dep | A single static fallback map is simpler and more maintainable than matrix expansion for platform-specific deps |
-| Trusting the skip message | Rely on the original `scan()` code which printed "classified on the matching CI matrix row" | No such matching CI row existed — the promise was hollow; the dep was silently unclassified | Never rely on a skip message that claims "another row will handle it" without verifying the other row exists |
+| Add a second Python CI leg | Cover old-Python dependencies through matrix expansion | It increases wall-clock time and still cannot classify a Windows-only dependency on Linux | Use a fallback map for marker dimensions that the chosen CI matrix does not cover |
+| Trust a skip message | Continue after claiming another CI row will classify the dependency | The named row did not exist, leaving a permanent coverage hole | Never skip a distributed dependency without classification or a nonzero failure |
+| Duplicate the compatibility check in the fallback branch | Validate fallback licenses separately before returning | Later compatibility-rule changes can diverge between the two paths | Set `ids` and fall through to the existing common check |
+| Validate only map keys or search all NOTICE text | Assert a package is present or that an SPDX string appears somewhere | A stale or wrong per-package value can pass accidentally | Validate metadata when available and scope NOTICE checks to the target package's lines |
 
 ## Results & Parameters
 
-### Known Gated Deps (ProjectHephaestus, as of 2026-06-13)
+### Required invariants
 
-| Package | Marker | SPDX License | Source |
-|---------|--------|--------------|--------|
-| `tomli` | `python_version < '3.11'` | `MIT` | NOTICE (toml extra / tomli MIT) |
-| `tzdata` | `platform_system == 'Windows'` | `Apache-2.0` | NOTICE (tzdata Apache-2.0) |
+```text
+installable_now=False for a distributed dependency
+    => dependency is present in FALLBACK_LICENSES
+    => fallback IDs pass through the normal compatibility check
 
-### Key invariant enforced by coverage-completeness test
-
-```
-all pkg: installable_now=False => pkg in FALLBACK_LICENSES
+missing fallback entry => stderr diagnostic + exit(2)
 ```
 
-This test runs in CI on every future PR, so a new gated dep added without a fallback entry fails immediately.
+### Test matrix
 
-### Critical gotcha — `tomli` extra placement
-
-The `tomli` dep that matters is in the `toml` **runtime** extra, NOT the `dev` extra. The `dev` extra copy is excluded from the distributed package. Confusing these two is an easy mistake during review.
-
-### Files changed
-
-- `scripts/check_license_compatibility.py`: +`FALLBACK_LICENSES` dict after `ALLOWED_EXTRA_COPYLEFT`; replaced silent-skip branch with fallback lookup + fall-through; updated module docstring `FAILS LOUDLY` section
-- `tests/unit/scripts/test_check_license_compatibility.py`: +`TestLoudFailure` (3 tests) and `TestFallbackLicenses` (1 coverage-completeness lock test); renamed `test_uninstalled_other_python_dep_skipped_not_failed` to `test_uninstalled_other_python_dep_with_fallback_classifies_not_fails`
+| Behavior | Expected result |
+|----------|-----------------|
+| Known marker-excluded dependency | Classified with fallback IDs; never silently skipped |
+| Unknown marker-excluded dependency | `SystemExit(2)` |
+| Incompatible fallback ID | Reported by the existing compatibility path |
+| New marker-excluded dependency | Completeness lock fails until a fallback entry is added |
+| Installed fallback dependency changes license metadata | Metadata cross-check fails |
+| NOTICE value drifts or is attached to another package | Per-package NOTICE cross-check fails |
 
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectHephaestus | Issue #1256, PR #1303 | All 29 tests pass (4 skipped: dep not installed locally, expected and intentional). Commit signature verified. All policy checks pass. |
+| ProjectHephaestus | Issues #1256/#1258, PRs #1303/#1304 | Verified in CI; the NOTICE staleness check was corrected to scope SPDX assertions per package. |

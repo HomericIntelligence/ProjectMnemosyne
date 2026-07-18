@@ -1,9 +1,9 @@
 ---
 name: testing-module-patch-target-after-extraction
-description: "After extracting a module from a god-class, unit tests must patch symbols at the NEW module's import binding, not the original. Use when: (1) refactoring a large module into collaborators, (2) tests fail with unexpected call counts after extraction, (3) mock side_effect lists are consumed incorrectly, (4) during rebase conflict resolution on test files after parallel cluster extraction — prefer HEAD's patch targets (main's version already has correct targets for the new module), (5) need to distinguish stdlib module-object patches (e.g. subprocess.run) from named-function patches — stdlib patches at old_module still intercept calls from new_module; named-function patches do NOT."
+description: "Patch mocks at every module import binding after extracting collaborators, including direct and delegated dual call paths. Use when: (1) a refactor moves code from a god-class to collaborators, (2) tests have unexpected mock call counts or exhausted side effects, (3) the same symbol is called by both a driver and a collaborator, (4) resolving rebase conflicts in patch targets, (5) distinguishing shared stdlib module-object patches from named-function bindings that must move."
 category: testing
-date: 2026-06-15
-version: "1.1.0"
+date: 2026-07-17
+version: "2.0.0"
 user-invocable: false
 verification: verified-ci
 tags:
@@ -21,6 +21,9 @@ tags:
   - stdlib
   - rebase
   - cluster-extraction
+  - dual-patch
+  - call-paths
+history: testing-module-patch-target-after-extraction.history
 ---
 
 # Testing: Module-Level Patch Target After Extraction
@@ -113,7 +116,7 @@ tags:
    pixi run pytest tests/unit/automation/test_ci_driver.py -v
    ```
 
-### Dual-patch pattern for split call paths
+### Worked Example — Dual-patch pattern for split call paths
 
 When a method chain splits across modules (e.g., pre-agent SHA snapshot moved to a collaborator while post-agent SHA read stays on the host):
 

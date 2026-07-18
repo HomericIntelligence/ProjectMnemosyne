@@ -1,3 +1,12 @@
+## v2.0.0 — 2026-07-17 — MAJOR bump
+
+Consolidated the dual import-binding patch pattern into the module-extraction patch-target canonical.
+
+## Superseded from `testing-dual-patch-multiple-call-paths`
+
+**Original date:** 2026-06-13
+**Original version:** 1.0.0
+
 ---
 name: testing-dual-patch-multiple-call-paths
 description: "When a function is called from multiple modules (driver AND collaborator), tests must patch BOTH call sites or side_effect lists are consumed incorrectly. Use when: (1) a driver delegates to a collaborator but also calls the same function directly, (2) tests show StopIteration on a side_effect list, (3) mock call counts are wrong after adding a collaborator layer."

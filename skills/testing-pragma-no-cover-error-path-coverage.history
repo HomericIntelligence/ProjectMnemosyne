@@ -1,3 +1,13 @@
+## v2.0.0 — 2026-07-17 — MAJOR bump
+
+Consolidated the verified exception-handler fallback results into the broader pragma
+classification workflow.
+
+## Superseded from `testing-pragma-no-cover-exception-handler-fallback-tests`
+
+**Original date:** 2026-06-30
+**Original version:** 1.0.0
+
 ---
 name: testing-pragma-no-cover-exception-handler-fallback-tests
 description: "Replace prose-justified `# pragma: no cover` on exception/guard handlers with real fallback tests. Use when: (1) a coverage pragma sits on an except/guard branch with a prose justification, (2) reducing a coverage omit/pragma list, (3) you need to prove an exception fallback (returns [] / False / empty map) actually behaves as documented."

@@ -1,170 +1,119 @@
 ---
 name: png-jpeg-to-idx-conversion
-description: 'Create a Python interop script converting PNG/JPEG images to IDX binary
-  format for Mojo inference pipelines. Use when: (1) a Mojo inference entry point
-  expects IDX format but users only have PNG/JPEG, (2) bridging PIL/Pillow image loading
-  into Mojo-native data formats, (3) replacing manual numpy workarounds with a dedicated
-  CLI script.'
+description: "Convert PNG/JPEG images to MNIST-style IDX files for an inference pipeline, in single-image or directory/glob batch mode. Use when: (1) a model accepts IDX but users supply raster images, (2) adding a Pillow-backed CLI bridge to a Mojo or ML inference workflow, (3) writing a multi-image IDX file with a count greater than one, (4) preserving EMNIST preprocessing and reproducible input order."
 category: tooling
-date: 2026-03-07
-version: 1.0.0
+date: 2026-07-17
+version: "2.0.0"
 user-invocable: false
+verification: verified-ci
+tags: ["idx", "image-conversion", "png", "jpeg", "pillow", "batch", "emnist", "mojo"]
+history: png-jpeg-to-idx-conversion.history
 ---
+
+# PNG/JPEG to IDX Conversion
+
 ## Overview
 
 | Field | Value |
-| ------- | ------- |
-| **Skill** | png-jpeg-to-idx-conversion |
-| **Category** | tooling |
-| **Language** | Python 3.7+ |
-| **Dependencies** | Pillow (PIL) |
-| **Output** | `scripts/convert_image_to_idx.py` + `tests/scripts/test_convert_image_to_idx.py` |
-| **ADR** | Python justified by ADR-001 (no stdlib image IO in Mojo v0.26.1) |
+|-------|-------|
+| **Date** | 2026-07-17 |
+| **Objective** | Provide a dependable PNG/JPEG-to-IDX CLI for one image or an ordered batch of images |
+| **Outcome** | One conversion workflow with single-image and directory/glob batch examples |
+| **Verification** | verified-ci — ProjectOdyssey PRs #3702 and #4775 |
+| **History** | [absorbed batch-conversion source](./png-jpeg-to-idx-conversion.history) |
 
 ## When to Use
 
-- Mojo inference pipeline reads IDX format but users have PNG/JPEG input images
-- README shows a manual PIL+numpy workaround that should be replaced with a dedicated script
-- Adding Python interop for image preprocessing to an ML example directory
-- Need a one-liner `python scripts/convert_image_to_idx.py input.png output.idx` for users
+- An inference entry point consumes MNIST-style IDX image files but users have PNG or JPEG input
+- A project needs Pillow for image decoding because the inference runtime has no suitable native image I/O
+- Input must be transformed to a 28×28 grayscale image, optionally with EMNIST orientation correction
+- A user needs either one output image (`count=1`) or a reproducibly ordered multi-image IDX batch (`count=N`)
 
 ## Verified Workflow
 
-### 1. Create the conversion script
-
-Key design decisions:
-
-- **Graceful import error**: Wrap `from PIL import Image` in try/except and print install hint
-- **ADR-001 justification header**: Python is used because Mojo stdlib has no image IO
-- **EMNIST transform**: `Image.TRANSPOSE` + `Image.FLIP_LEFT_RIGHT` by default (matches EMNIST model weights); `--no-emnist-transform` flag skips it
-- **IDX header**: `struct.pack(">IIII", 2051, 1, 28, 28)` — big-endian, magic 2051, count 1, 28×28
-- **Total output**: 16-byte header + 784 pixel bytes = 800 bytes
+### Quick Reference
 
 ```python
-#!/usr/bin/env python3
-"""Convert PNG/JPEG image to IDX format for LeNet-5 inference.
-
-ADR-001 Justification: Python required for PIL image decoding
-(not available in Mojo v0.26.1 stdlib).
-"""
-
-import argparse
-import struct
-import sys
-from pathlib import Path
-
-try:
-    from PIL import Image
-except ImportError:
-    print("Error: Pillow not installed. Install with: pip install Pillow")
-    sys.exit(1)
-
-
-def load_and_preprocess(image_path: Path, emnist_transform: bool) -> bytes:
-    img = Image.open(image_path).convert("L")
-    img = img.resize((28, 28), Image.LANCZOS)
-    if emnist_transform:
-        img = img.transpose(Image.TRANSPOSE).transpose(Image.FLIP_LEFT_RIGHT)
-    return bytes(img.getdata())
-
-
-def write_idx_image(pixel_bytes: bytes, output_path: Path) -> None:
-    header = struct.pack(">IIII", 2051, 1, 28, 28)
-    output_path.write_bytes(header + pixel_bytes)
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Convert PNG/JPEG to IDX format for run_infer.mojo")
-    parser.add_argument("input", type=Path)
-    parser.add_argument("output", type=Path)
-    parser.add_argument("--no-emnist-transform", action="store_true")
-    args = parser.parse_args()
-
-    if not args.input.exists():
-        print(f"Error: Input file not found: {args.input}")
-        return 1
-
-    pixel_bytes = load_and_preprocess(args.input, not args.no_emnist_transform)
-    write_idx_image(pixel_bytes, args.output)
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+def write_idx_images(images: list[Image.Image], output_path: Path) -> None:
+    """Write one or more preprocessed 28×28 grayscale images as IDX."""
+    header = struct.pack(">IIII", 2051, len(images), 28, 28)
+    output_path.write_bytes(header + b"".join(bytes(image.getdata()) for image in images))
 ```
 
-### 2. Write tests (15 tests across 3 classes)
+The IDX contract is always `[magic=2051][count][rows=28][cols=28][count × 784 pixel bytes]`.
+For one image, `count=1` and the file is 800 bytes; for `N` images, the file is `16 + N × 784` bytes.
 
-Test classes and what they cover:
+### Detailed Steps
 
-| Class | Tests |
-| ------- | ------- |
-| `TestLoadAndPreprocess` | 784-byte output, uint8 range, JPEG accepted, transform changes pixels |
-| `TestWriteIdxImage` | file created, 800-byte size, IDX magic/count/rows/cols, pixel data verbatim |
-| `TestMain` | end-to-end PNG, end-to-end JPEG, missing input exits 1, `--no-emnist-transform` flag |
+1. Build a small Python CLI around Pillow, with a clear installation failure if Pillow is unavailable. Document why Python is the image-I/O bridge when the target runtime cannot decode raster images itself.
+2. Load every image as grayscale (`L`), resize with `Image.LANCZOS` to 28×28, and apply the EMNIST transpose/flip by default. Expose `--no-emnist-transform` for models that do not require it.
+3. Centralize IDX writing so single and batch modes share the same big-endian header and byte serialization. Do not write float pixels; the consumer expects raw uint8 pixels.
+4. Keep a single-image positional-input path for the common case. Return a nonzero error when the file does not exist.
+5. Add `--batch` only when one output must contain multiple images. Accept a directory or glob as a raw string, resolve it to a sorted list of `.png`, `.jpg`, and `.jpeg` paths, and exit nonzero if the result is empty.
+6. In batch mode, preprocess each resolved path, optionally print its preview, and write one IDX output whose header count equals the number of images. Do not change the single-image path's behavior.
+7. Test header fields, exact file size, pixel ordering, preprocessing flags, missing input, direct `main()` invocation, and the single-image equivalence of the shared writer.
 
-Key testing pattern — avoid subprocess, call `main()` directly:
-
-```python
-def _run_main(self, args: list) -> int:
-    old_argv = sys.argv
-    try:
-        sys.argv = ["convert_image_to_idx.py"] + args
-        return self.main()
-    finally:
-        sys.argv = old_argv
-```
-
-Guard tests when Pillow is unavailable:
-
-```python
-pytestmark = pytest.mark.skipif(not PIL_AVAILABLE, reason="Pillow not installed")
-```
-
-### 3. Update README
-
-Replace the manual numpy workaround section with a new "Converting Custom Images" section:
-
-```markdown
-## Converting Custom Images
+### Worked Example — Single image for an EMNIST inference command
 
 ```bash
 python scripts/convert_image_to_idx.py my_digit.png my_digit.idx
 pixi run mojo run -I . examples/lenet-emnist/run_infer.mojo \
-    --checkpoint lenet5_weights \
-    --image my_digit.idx
-```
+  --checkpoint lenet5_weights --image my_digit.idx
 ```
 
-### 4. Run pre-commit and verify
+Call `main()` directly in unit tests by temporarily replacing `sys.argv`; avoid subprocess tests
+for a pure argparse wrapper. Mark Pillow-dependent tests skipped when Pillow is not installed.
 
-```bash
-pixi run pre-commit run --files scripts/convert_image_to_idx.py \
-    tests/scripts/test_convert_image_to_idx.py \
-    examples/lenet-emnist/README.md
-pixi run python -m pytest tests/scripts/test_convert_image_to_idx.py -v
+### Worked Example — Directory or glob batch input
+
+```python
+def resolve_batch_inputs(input_arg: str) -> list[Path]:
+    input_path = Path(input_arg)
+    if input_path.is_dir():
+        matches = sorted(
+            path for path in input_path.iterdir()
+            if path.suffix.lower() in {".png", ".jpg", ".jpeg"}
+        )
+    else:
+        matches = [
+            Path(path) for path in sorted(glob.glob(input_arg))
+            if Path(path).suffix.lower() in {".png", ".jpg", ".jpeg"}
+        ]
+    if not matches:
+        raise SystemExit(1)
+    return matches
 ```
 
-All 15 tests pass in ~1.3s. Ruff may reformat the argparse description line (line length).
+Use `Path.is_dir()` rather than inspecting `*` or `?` characters. It correctly handles paths
+whose names contain glob-like characters and prevents a directory from being mistaken for an
+image file. Assert that image 0 starts at byte 16 and image 1 at `16 + 784`.
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-| --------- | ---------------- | --------------- | ---------------- |
-| `sys.path` insert in test file | Used `sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts"))` | Works, but test runner must be invoked from repo root | Always insert scripts path relative to `__file__`, not cwd |
-| Writing IDX with `float32` pixels | Considered writing float32 values (0.0–1.0) instead of uint8 | EMNIST IDX images use uint8; run_infer.mojo normalizes internally | Keep pixel bytes as raw uint8 and let the Mojo side normalize |
-| Subprocess-based CLI tests | Considered `subprocess.run(["python", script, ...])` | Adds process overhead and path resolution complexity | Call `main()` directly by patching `sys.argv` — faster and simpler |
+|---------|----------------|---------------|----------------|
+| Use float32 pixels | Serialized normalized floats | IDX image consumers expect uint8 and normalize themselves | Preserve raw grayscale bytes |
+| Keep `type=Path` for batch input | Let argparse coerce a glob before resolution | The CLI lost the intended raw glob semantics | Use a raw string when `--batch` accepts globs |
+| Identify globs by characters | Branched only on `*` or `?` | Directory paths are not glob patterns and may contain those characters | Test `Path.is_dir()` first |
+| Return an empty batch | Let the caller write a zero-image IDX file | A silent empty output violates the single-image error contract | Exit nonzero in input resolution |
+| Use subprocess for CLI tests | Spawned Python to test argparse | It added overhead and path-resolution complexity | Call `main()` directly with controlled argv |
 
 ## Results & Parameters
 
 | Parameter | Value |
-| ----------- | ------- |
-| Output size | 800 bytes (16 header + 784 pixels) |
-| IDX magic | 2051 (0x00000803) |
-| Image size | 28×28 pixels |
-| Color mode | Grayscale (L) |
-| Resize filter | `Image.LANCZOS` |
-| EMNIST transform | `Image.TRANSPOSE` + `Image.FLIP_LEFT_RIGHT` |
-| Test count | 15 |
-| Test runtime | ~1.3s |
-| Pre-commit hooks | bandit, mypy, ruff format, ruff check, markdownlint — all pass |
+|-----------|-------|
+| IDX magic | `2051` (`0x00000803`) |
+| Dimensions | 28×28 grayscale |
+| Header | `struct.pack(">IIII", 2051, count, 28, 28)` |
+| Pixel order | Image-major, 784 uint8 bytes per image |
+| Single output size | 800 bytes |
+| Batch output size | `16 + count × 784` bytes |
+| Accepted input extensions | `.png`, `.jpg`, `.jpeg`, case-insensitive |
+| Batch order | Lexicographic path order |
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectOdyssey | PR #3702 | Single-image PNG/JPEG bridge, tests and pre-commit green. |
+| ProjectOdyssey | PR #4775 | Directory/glob batch mode, 21 new tests green; known unrelated baseline failures preserved. |

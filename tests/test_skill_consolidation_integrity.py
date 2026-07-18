@@ -3,7 +3,7 @@
 
 import sys
 from pathlib import Path
-from typing import TypedDict, cast
+from typing import NotRequired, TypedDict, cast
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
@@ -17,6 +17,7 @@ class Consolidation(TypedDict):
     canonical: str
     version: str
     absorbed: list[str]
+    requires_major_bump: NotRequired[bool]
 
 
 CONSOLIDATIONS: list[Consolidation] = [
@@ -55,6 +56,59 @@ CONSOLIDATIONS: list[Consolidation] = [
             "testing-os-environ-pollution-local-vs-ci-false-failure",
         ],
     },
+    {
+        "canonical": "license-scan-marker-excluded-fallback",
+        "version": "3.0.0",
+        "absorbed": ["license-scan-static-fallback-marker-excluded-deps"],
+    },
+    {
+        "canonical": "architecture-ocp-dip-abc-protocol-planning-risks",
+        "version": "2.0.0",
+        "absorbed": [
+            "architecture-ocp-dip-verify-before-planning",
+            "python-abc-protocol-contract-test-regression",
+        ],
+    },
+    {
+        "canonical": "testing-module-patch-target-after-extraction",
+        "version": "2.0.0",
+        "absorbed": ["testing-dual-patch-multiple-call-paths"],
+    },
+    {
+        "canonical": "png-jpeg-to-idx-conversion",
+        "version": "2.0.0",
+        "absorbed": ["batch-image-to-idx-conversion"],
+    },
+    {
+        "canonical": "security-md-version-sync",
+        "version": "2.0.0",
+        "absorbed": ["security-md-version-sync-planning-gaps"],
+    },
+    {
+        "canonical": "testing-pragma-no-cover-error-path-coverage",
+        "version": "2.0.0",
+        "absorbed": ["testing-pragma-no-cover-exception-handler-fallback-tests"],
+    },
+    {
+        "canonical": "ci-cd-canonical-check-nonlibrary-repo",
+        "version": "1.0.0",
+        "requires_major_bump": False,
+        "absorbed": [
+            "ci-cd-canonical-install-check-inline-build",
+            "ci-cd-canonical-release-check-manifest-repo",
+            "cicd-canonical-package-check-dataset-repo",
+            "planning-canonical-package-check-nonlibrary-repo",
+        ],
+    },
+    {
+        "canonical": "testing-real-server-fault-test-recovery",
+        "version": "1.0.0",
+        "requires_major_bump": False,
+        "absorbed": [
+            "testing-fault-test-placeholder-must-go-red",
+            "testing-real-server-fault-test-planning-pitfalls",
+        ],
+    },
 ]
 
 
@@ -80,7 +134,10 @@ def test_absorbed_skill_snapshots_remain_in_history():
     for consolidation in CONSOLIDATIONS:
         canonical = consolidation["canonical"]
         history = (SKILLS_DIR / f"{canonical}.history").read_text()
-        assert "MAJOR bump" in history
+        if consolidation.get("requires_major_bump", True):
+            assert "MAJOR bump" in history
+        else:
+            assert f"## v{consolidation['version']}" in history
 
         for absorbed in consolidation["absorbed"]:
             assert not (SKILLS_DIR / f"{absorbed}.md").exists()

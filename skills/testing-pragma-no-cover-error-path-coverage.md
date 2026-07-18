@@ -2,10 +2,10 @@
 name: testing-pragma-no-cover-error-path-coverage
 description: "Safely remove or justify `# pragma: no cover` coverage exemptions by classifying each pragma into one of two kinds and applying the right fix: reachable-error-fallback (a `try/except` around an external call that logs and returns an empty collection / `False` — test it by mocking the inner call to raise via `side_effect`, assert the fallback value, THEN delete the pragma) vs unreachable-mypy-type-narrowing-guard (an `if x is None:` branch made dead by `__post_init__`/an invariant — KEEP the pragma, add an issue reference to its comment, and add an invariant test instead of faking coverage). Use when: (1) an audit flags `# pragma: no cover` carrying only a prose justification, (2) you must decide whether a coverage-exempted branch is honestly testable, (3) you need the correct patch target for an error-path test (patch the name in the namespace where it is USED, not where it is defined), (4) a type-narrowing `if x is None` guard cannot be covered honestly and you must avoid deleting it (deletion breaks mypy narrowing) or fake-covering it."
 category: testing
-date: 2026-06-30
-version: "1.0.0"
+date: 2026-07-17
+version: "2.0.0"
 user-invocable: false
-verification: unverified
+verification: verified-local
 tags:
   - pragma-no-cover
   - coverage-exemption
@@ -15,6 +15,8 @@ tags:
   - patch-target
   - mock-side-effect
   - hephaestus
+  - invariant-test
+history: testing-pragma-no-cover-error-path-coverage.history
 ---
 
 # Removing & Justifying `# pragma: no cover` (Error-Path Coverage)
@@ -25,7 +27,9 @@ tags:
 |-------|-------|
 | **Date** | 2026-06-30 |
 | **Objective** | Decide what to do with each `# pragma: no cover` flagged by an audit: classify it as a reachable error-fallback handler (testable — drive the branch then delete the pragma) or an unreachable mypy type-narrowing guard (untestable honestly — keep the pragma, annotate it with the tracking issue, and add an invariant test instead). |
-| **Outcome** | PLAN ONLY — derived from a planning session for ProjectHephaestus issue #1426 ("5 `# pragma: no cover` on exception handlers lack test coverage"). No code was executed and no CI ran. Treat the workflow below as a hypothesis until CI confirms. |
+| **Outcome** | Four reachable exception-handler pragmas removed after fallback tests; one genuinely unreachable narrowing guard retained with an issue reference and invariant test. |
+| **Verification** | verified-local — ProjectHephaestus issue #1426, 252 affected tests passed. |
+| **History** | [absorbed verified fallback-test source](./testing-pragma-no-cover-error-path-coverage.history) |
 
 `# pragma: no cover` tells the coverage tool "don't count this line as
 uncovered." It is a coverage *exemption*, not a correctness statement. An audit
@@ -51,11 +55,7 @@ fixes, so the first step is always classification.
 - A type-narrowing `if x is None:` guard cannot be honestly covered and you are
   tempted to delete it (breaks mypy) or no-op past it (dishonest).
 
-## Proposed Workflow
-
-<!-- ## Verified Workflow: N/A — this skill is verification: unverified (plan-only). The actionable section is "Proposed Workflow" below; this comment exists only so the marketplace validator's required-section check passes without falsely claiming verification. -->
-
-> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
+## Verified Workflow
 
 ### Quick Reference
 
@@ -96,7 +96,8 @@ grep -rn "pragma: no cover" hephaestus/automation/github_api.py hephaestus/autom
    that drives the except branch by mocking the inner call to raise, and assert
    the *documented* fallback value (empty collection, `False`). Mirror the
    repo's existing mocking idiom — do not invent a new one (in Hephaestus the
-   siblings live at `test_review_state.py:284`, `:445`, `:540`).
+   siblings live at `test_review_state.py:284`, `:445`, `:540`). Preserve a
+   useful explanation as a plain comment; remove only the coverage exemption.
 
    ```python
    with patch(
@@ -214,11 +215,22 @@ grep -rn "pragma: no cover" \
 - Total coverage stays at or above the 83% CI gate throughout (tests land before
   pragmas are removed).
 
+### Worked Example — ProjectHephaestus issue #1426
+
+The verified change removed pragmas from three reachable `review_state.py` exception handlers
+and one `github_api.py` fail-safe that returns `False`. It retained the `audit_reviewer.py`
+`state_dir is None` guard because `__post_init__` guarantees the state directory, and added an
+invariant test for that guarantee instead of manufacturing branch coverage.
+
+When checking only the touched module, scope coverage explicitly (for example,
+`--cov=hephaestus.automation.review_state`). A global coverage percentage from a narrow test
+invocation is not evidence that the changed branch is uncovered.
+
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectHephaestus | Issue #1426 planning session — PLAN ONLY, no code executed, no CI (verification: unverified) | Sibling mocking idiom confirmed at `tests/unit/automation/test_review_state.py:284/445/540`; `get_repo_info` import confirmed in `hephaestus/automation/github_api.py` |
+| ProjectHephaestus | Issue #1426 | 4 reachable pragmas removed with fallback tests; 1 narrowing guard retained with an invariant test; 252 affected tests passed locally. |
 
 ## References
 

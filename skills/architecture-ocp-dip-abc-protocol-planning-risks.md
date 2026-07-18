@@ -1,120 +1,138 @@
 ---
 name: architecture-ocp-dip-abc-protocol-planning-risks
-description: "Planning assumptions and risks when adding Protocol/ABC interfaces (OCP/DIP refactoring) to an existing codebase with no existing abstractions. Use when: (1) planning to introduce typing.Protocol or abc.ABC to an automation pipeline, (2) adding abstract methods to existing base classes, (3) reviewing an OCP/DIP refactoring plan before implementation."
+description: "Plan and implement safe Python ABC/Protocol refactors by verifying real hierarchy and test constraints first, then combining abstract inheritance enforcement with structural Protocol coverage. Use when: (1) adding abc.ABC or typing.Protocol to an existing hierarchy, (2) adding an abstract method to a base class with concrete or test-only subclasses, (3) introducing a shared interface across mixed-inheritance classes, (4) protecting lazy package-import boundaries and contract tests during an OCP/DIP refactor."
 category: architecture
-date: 2026-06-13
-version: "1.0.0"
+date: 2026-07-17
+version: "2.0.0"
 user-invocable: false
 verification: verified-ci
-tags: ["ocp", "dip", "protocol", "abc", "abstractmethod", "solid", "refactoring", "planning"]
+tags: ["ocp", "dip", "protocol", "abc", "abstractmethod", "runtime-checkable", "contract-test", "planning", "refactoring"]
+history: architecture-ocp-dip-abc-protocol-planning-risks.history
 ---
 
-# OCP/DIP ABC/Protocol Refactoring — Planning Risks
+# Safe Python ABC/Protocol Refactoring
 
 ## Overview
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-13 |
-| **Objective** | Document planning assumptions and risks when introducing typing.Protocol and abc.ABC to an existing codebase (ProjectHephaestus issue #1193) |
-| **Outcome** | Planning risks confirmed by implementation — see `python-abc-protocol-contract-test-regression.md` for implementation learnings |
-| **Verification** | verified-ci (implementation completed 2026-06-13, CI green) |
+| **Date** | 2026-07-17 |
+| **Objective** | Introduce ABC and Protocol contracts without inventing APIs, breaking subclasses, or weakening package boundaries |
+| **Outcome** | One verified lifecycle covering planning risks, structural interface design, and contract-test regression prevention |
+| **Verification** | verified-ci — ProjectHephaestus issue #1193 |
+| **History** | [absorbed planning and implementation sources](./architecture-ocp-dip-abc-protocol-planning-risks.history) |
 
 ## When to Use
 
-- Before implementing an OCP/DIP refactoring plan that adds Protocol or ABC definitions
-- When reviewing a plan that assumes existing method names, inheritance hierarchies, or entry-points that were inferred from grep output rather than direct file inspection
-- When introducing abstract methods to base classes that already have concrete subclasses
-- Before adding `@abstractmethod` to any existing base class in a pipeline with multiple concrete implementations
-- Before exporting new protocol/interface types from a package's `__init__.py` that has automation-boundary tests
+- Adding `abc.ABC`, `@abstractmethod`, or `typing.Protocol` to an existing Python hierarchy
+- A proposed abstract method was inferred from a grep summary rather than direct source inspection
+- Some classes need a common interface but do not share an inheritance base
+- Existing contract tests contain stub, fake, dummy, or bogus subclasses
+- A new interface may tempt an eager export from a lazily loaded package `__init__.py`
 
 ## Verified Workflow
-
-> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
 
 ### Quick Reference
 
 ```bash
-# Verify entry-point method names before adding @abstractmethod
-grep -n "def run\|def execute\|def __call__" hephaestus/automation/phase_*.py
+# Establish facts before designing the interface.
+grep -n "^class\|def run\|def execute\|def __call__" path/to/concrete_subclasses.py
+grep -rn "class .*\(TargetBase\)\|TargetBase(" tests/
+sed -n '1,180p' package/__init__.py
 
-# Verify reviewer inheritance before adding abstract methods to BaseReviewer
-grep -n "class.*Reviewer" hephaestus/automation/pr_reviewer.py hephaestus/automation/address_review.py hephaestus/automation/plan_reviewer.py hephaestus/automation/audit_reviewer.py 2>/dev/null
-
-# Verify DatasetDownloader subclass method signatures before adding download_dataset abstract
-grep -n "def download_" hephaestus/datasets/*.py
-
-# Inspect __init__.py before adding exports to avoid automation-boundary violations
-cat hephaestus/automation/__init__.py
-grep -r "from hephaestus.automation" tests/unit/test_automation_boundary.py
+# Verify implementation and contract coverage synchronously.
+pytest tests/path/to/contract_tests.py -q
+pytest tests/path/to/interface_tests.py -q
+mypy path/to/interfaces.py path/to/base.py
+ruff check tests/path/to/interface_tests.py --select D103
 ```
 
-### Detailed Steps
+### Phase 1 — Verify the proposed contract
 
-1. **Verify every assumed method name before adding `@abstractmethod`**
+1. Read every concrete subclass directly and record its actual entry-point name and signature. Grep is a discovery aid, not proof.
+2. Map the inheritance graph, including classes with similar names that are standalone. Do not assume a `Reviewer`-like suffix implies a shared base.
+3. Search production and test code for direct construction of the target base and for test-only subclasses. An abstract-method change is a public contract change for both.
+4. Inspect the package export mechanism before adding interface imports. Preserve lazy loading and layer boundaries unless a public export is explicitly required.
+5. Treat a proposed name absent from all concrete subclasses as a new API, not a rename; budget implementations and migrations for every affected class.
 
-   Do NOT assume entry-point method names from grep summaries. Read each subclass file directly to confirm the method exists with the exact name.
+### Phase 2 — Choose the smallest enforcement mechanism
 
-2. **Verify inheritance hierarchy for all concrete subclasses**
+| Need | Mechanism |
+|------|-----------|
+| Enforce implementation for subclasses of one base | `ABC` plus `@abstractmethod` |
+| Verify a behavioral shape across classes with mixed inheritance | `@runtime_checkable Protocol` |
+| Cover both conditions | Use both: ABC for inheritors and Protocol for structural conformance |
 
-   If a plan says "AuditReviewer and PlanReviewer are standalone," confirm this by reading their class definitions. If they DO inherit the ABC base class, adding an abstract method will break them at instantiation if they use a different method name.
+Keep a protocol in a private interface module when package exports are lazy or importing it would violate a dependency boundary. Do not make an unrelated hierarchy abstract merely because it shares a domain term.
 
-3. **Treat any new abstract method as a new API, not a rename**
+### Phase 3 — Implement and verify safely
 
-   When a plan proposes adding `download_dataset()` to a DatasetDownloader ABC, this is a new method — each subclass needs a concrete implementation added (not just a rename of existing methods).
+1. Add the abstract method only after every intended concrete inheritor has a compatible implementation.
+2. Give every test-only subclass a minimal implementation of the new abstract method so its test reaches the behavior it was meant to exercise.
+3. Add Protocol conformance tests for each required class, including standalone classes that cannot be covered by the ABC.
+4. Add required test-function docstrings and run linting before commit when the project enforces them.
+5. Run affected contract and interface tests synchronously, then type-check and run the full affected test directory. Do not commit before checking background-task output.
 
-4. **Audit `__init__.py` before adding protocol exports**
+### Worked Example — Mixed reviewer hierarchy
 
-   Read the target `__init__.py` to check what `__all__` currently contains. For `hephaestus/automation/__init__.py`, also run the automation-boundary test to verify exporting from it does not expose the automation layer to the base import surface.
+In ProjectHephaestus, `PRReviewer` and `AddressReviewer` inherit `BaseReviewer`, while
+`AuditReviewer` and `PlanReviewer` are standalone. `BaseReviewer(ABC)` with an abstract `run()`
+enforces the contract for the two inheritors; a runtime-checkable `ReviewerProtocol` gives all four
+classes a common structural contract.
 
-5. **Run automation-boundary tests explicitly after any `__init__.py` change**
+```python
+@runtime_checkable
+class ReviewerProtocol(Protocol):
+    def run(self) -> Any: ...
 
-   ```bash
-   pixi run pytest tests/unit/test_automation_boundary.py tests/unit/test_import_surface.py -v
-   ```
+
+class BaseReviewer(ABC):
+    @abstractmethod
+    def run(self) -> Any:
+        """Execute the review pipeline."""
+```
+
+When an existing contract test defines `class BogusSubclass(BaseReviewer): pass`, add a minimal
+`run()` stub. Otherwise ABC construction fails before the test can reach the error path it is
+supposed to validate.
+
+### Worked Example — Do not generalize a missing downloader method
+
+If concrete downloader classes expose `download_<name>()` methods rather than a shared
+`download_dataset()`, the latter is a new interface. Either design and implement it across every
+concrete class or leave the hierarchy unchanged; an ABC declaration alone is not a refactor.
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| Infer entry-point from grep | Grep output showed `run()` in pipeline output but not all phase files were read directly | StageMixin plan assumed all five phase subclasses have `run()` — unverified for FollowUpPhase and others | Always open each file directly; grep shows definitions but misses inheritance or aliasing |
-| Assume reviewer inheritance from class name | "Reviewer" suffix was treated as evidence of BaseReviewer inheritance | AuditReviewer and PlanReviewer may be standalone; if they DO inherit BaseReviewer with a different method name, `@abstractmethod review_issues` would break them | Read each class definition's base class list explicitly |
-| Plan `download_dataset` as a rename | DatasetDownloader subclasses each define `download_<name>` — plan treated `download_dataset` as a thin wrapper | No such method exists; adding it abstract requires adding a concrete implementation to every subclass, potentially with signature mismatches | Never propose an abstract method that doesn't already exist in at least one subclass without explicitly flagging it as a new API addition |
-| Export from automation __init__ without reading it | Plan added protocol exports to `hephaestus/automation/__init__.py` without checking current `__all__` or automation-boundary constraints | Automation-boundary tests (`test_automation_boundary.py`, `test_import_surface.py`) enforce that the library layer cannot import from `hephaestus.automation`; new exports might be safe within automation but could silently break the boundary | Always read `__init__.py` and run boundary tests before modifying exports |
+| Infer entry points from grep | Treated a partial search result as proof that every phase exposed `run()` | Several classes used domain-specific entry points | Read every relevant class before naming an abstract contract |
+| Make a base abstract without auditing test stubs | Added an abstract method while contract tests had no-method subclasses | Instantiation raised `TypeError` before tests reached their intended assertions | Audit production and test subclasses together |
+| Rely on ABC for a mixed hierarchy | Expected a common base to enforce behavior on standalone classes | Non-inheriting classes are outside ABC enforcement | Pair an ABC with a structural Protocol when the family is mixed |
+| Export an interface eagerly | Added imports to a lazy package initializer | It defeated lazy loading or crossed the automation boundary | Keep private interfaces private unless an audited public export is required |
+| Verify asynchronously then commit | Started tests in the background and did not inspect their result | A contract regression was committed despite a failing test | Run the final affected suite synchronously and inspect its exit status |
 
 ## Results & Parameters
 
-### Five High-Risk Assumptions to Verify Before Implementing
+### Completion checklist
 
-1. **StageMixin entry-point**: All five `StageMixin` subclasses (PlanPhase, ImplementPhase, ReviewPhase, PRCreatePhase, FollowUpPhase) were assumed to have a `run()` method. Verify with:
-   ```bash
-   grep -n "def run\b" hephaestus/automation/phase_plan.py hephaestus/automation/phase_implement.py hephaestus/automation/phase_review.py hephaestus/automation/phase_pr_create.py hephaestus/automation/phase_follow_up.py 2>/dev/null
-   ```
+- Every method name and concrete signature was read directly.
+- Every ABC subclass, including test doubles, implements the new abstract method.
+- Protocol tests cover classes outside the ABC hierarchy.
+- Lazy exports and import-layer boundaries remain intact.
+- Contract tests, interface tests, type checks, and required lint checks pass.
 
-2. **Reviewer inheritance**: AuditReviewer and PlanReviewer were noted as "standalone" (not inheriting BaseReviewer). If they do NOT inherit, the ABC constraint is irrelevant. If they DO inherit with a different method name, the abstract method breaks them. Verify with:
-   ```bash
-   grep -n "^class.*Reviewer" hephaestus/automation/audit_reviewer.py hephaestus/automation/plan_reviewer.py 2>/dev/null
-   ```
+### Expected verification
 
-3. **DatasetDownloader `download_dataset`**: No unified `download_dataset()` method exists across subclasses — this is a new API addition, not a rename. Each subclass must have a concrete `download_dataset()` added. Verify subclass methods with:
-   ```bash
-   grep -n "def download_" hephaestus/datasets/*.py
-   ```
-
-4. **`automation/__init__.py` exports**: Read the file before adding exports and confirm current `__all__` and whether it is safe to add protocol types to the public surface.
-
-5. **Automation boundary**: Any `_interfaces.py` placed in `hephaestus/automation/` is internal to the automation layer. External library code cannot import it without violating the boundary. Protocols intended for cross-layer use should be placed in the library layer (e.g., `hephaestus/utils/` or a dedicated `hephaestus/interfaces/` module).
-
-### General Pattern
-
-When proposing OCP/DIP abstractions for an existing pipeline:
-- The plan is only as reliable as its file-level verification
-- Grep-based inference of method names is a starting hypothesis, not a guarantee
-- Abstract method additions to existing base classes are high-risk — each concrete subclass must already implement the method OR the plan explicitly budgets for adding it
-- Automation-boundary tests are easy to accidentally violate when adding new exports
+| Check | Expected result |
+|-------|-----------------|
+| Contract tests | Test doubles instantiate and reach their intended assertion paths |
+| Protocol tests | Every selected concrete and standalone class conforms structurally |
+| Type check | Missing abstract implementations are reported before CI |
+| Lint | Newly added tests meet repository documentation/style rules |
 
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectHephaestus | Issue #1193 OCP/DIP refactoring plan | Planning artifact validated — implementation completed 2026-06-13, CI green |
+| ProjectHephaestus | Issue #1193 | ABC/Protocol refactor completed with contract tests, mypy, pre-commit, and CI green. |

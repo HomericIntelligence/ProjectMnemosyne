@@ -1,0 +1,792 @@
+## v1.0.0 — 2026-07-17
+
+Created a single canonical decision workflow for meaningful package, release, and install
+check-runs in non-library repositories.
+
+## Superseded from `ci-cd-canonical-install-check-inline-build`
+
+**Original date:** 2026-07-03
+**Original version:** 1.0.0
+
+---
+name: ci-cd-canonical-install-check-inline-build
+description: "Plan/implement a canonical `install` CI check-run (clean-venv install smoke of the built artifact, per the Odysseus ci-naming convention) when the upstream `package` job does NOT exist yet and the repo may not even be buildable. Use when: (1) an ecosystem CI-naming issue asks for `name: install` but the sibling `package` gap issue has not merged (no [build-system] in pyproject.toml, setuptools flat-layout auto-discovery failure), (2) you must decide between `needs: package` + download-artifact handoff vs building the wheel inline inside the install job, (3) designing an import-smoke that must not depend on the not-yet-decided package layout — derive modules from the installed wheel's top_level.txt and fail loudly if empty, (4) tempted to add a 'skip if not buildable' branch to a canonical check (don't — a skipping canonical check emits green without testing), (5) the repo keeps mirrored workflow files (a PR/push gate like _required.yml plus a workflow_call mirror like _checks.yml) and every canonical job must be added to both, (6) writing the plan's step 1 as an explicit buildability gate (`python -m build`) that STOPS implementation if the prerequisite is still missing."
+category: ci-cd
+date: 2026-07-02
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags:
+  - canonical-checks
+  - ci-naming-convention
+  - install-check
+  - package-check
+  - install-smoke
+  - clean-venv
+  - import-smoke
+  - top-level-txt
+  - wheel
+  - sdist
+  - python-build
+  - blocked-prerequisite
+  - workflow-mirror
+  - fail-loud
+  - signal-fidelity
+  - planning-methodology
+---
+
+# CI: Canonical `install` Check via Inline Build When `package` Doesn't Exist Yet
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-07-02 |
+| **Objective** | Plan the canonical `install` check-run (Mnemosyne issue #2912, Odysseus ecosystem CI-naming unification) for a repo whose `package` prerequisite is unmerged and whose `pyproject.toml` has no `[build-system]` — i.e. the artifact the check must install-smoke cannot be built yet. |
+| **Outcome** | Plan produced (R0). Key design: self-contained `install` job that builds the wheel inline, clean-venv installs it, and import-smokes modules derived from the wheel's own `top_level.txt`. NOT executed — plan only. |
+| **Verification** | unverified |
+
+## When to Use
+
+- An ecosystem CI-naming issue asks for a canonical `install` check but the sibling `package` issue (buildability) has not merged.
+- Deciding between `needs: package` + `actions/download-artifact` handoff and an inline `python -m build` inside the install job.
+- Designing an install/import smoke that must survive an unknown future package layout.
+- The repo mirrors its job set across a PR/push workflow (`_required.yml`) and a `workflow_call` twin (`_checks.yml`).
+- Writing a plan for an issue that is explicitly "blocked on" another issue — the plan must encode the block as an executable gate, not prose.
+
+## Verified Workflow
+
+> **Warning:** This workflow has not been validated end-to-end. It is an implementation PLAN (R0, pre-review, nothing executed — no YAML committed, no CI run). Treat as a hypothesis until CI confirms.
+
+### Quick Reference
+
+```yaml
+# Canonical install job — self-contained (no needs: package while that job doesn't exist)
+install:
+  name: install
+  runs-on: ubuntu-24.04
+  timeout-minutes: 10
+  steps:
+    - uses: actions/checkout@<same-SHA-pin-as-sibling-jobs>
+    - uses: actions/setup-python@<same-SHA-pin-as-sibling-jobs>
+      with:
+        python-version: '3.11'
+    - name: Build distributable (wheel + sdist)
+      run: |
+        pip install build
+        python -m build --outdir dist/
+    - name: Clean-venv install smoke
+      run: |
+        python -m venv /tmp/install-venv
+        /tmp/install-venv/bin/pip install --no-cache-dir dist/*.whl
+        /tmp/install-venv/bin/pip check
+    - name: Import smoke
+      run: |
+        /tmp/install-venv/bin/python - <<'EOF'
+        import importlib
+        import importlib.metadata as md
+        dist = md.distribution("<dist-name>")
+        tops = (dist.read_text("top_level.txt") or "").split()
+        if not tops:
+            raise SystemExit("ERROR: wheel records no top-level modules; nothing to import-smoke")
+        for name in tops:
+            importlib.import_module(name)
+        EOF
+```
+
+```bash
+# Plan step 1 — buildability gate: if this fails, the issue is STILL blocked; stop.
+python -m build --outdir /tmp/dist-check
+```
+
+### Detailed Steps
+
+1. **Grep for the predecessor jobs before designing.** `grep -rn 'name: install\|name: package' .github/workflows/` — confirm neither exists. A `needs: package` design is un-implementable when `package` is absent from the tree, and the future `package` job's artifact-upload contract (artifact name, wheel vs bundle) is unknown. Decide: build inline, keep the build step isolated and named so a later switch to `needs: package` + `download-artifact` is a small, separable follow-up.
+
+2. **Encode the "blocked on" as an executable gate, step 1 of the implementation order.** Run `python -m build` at repo root; if it fails (no `[build-system]`, flat-layout auto-discovery error), STOP and report the blocking state. Do not paper over it in the job.
+
+3. **No skip branch in a canonical check.** A "skip if not buildable" branch makes the check emit green without testing anything — the canonical name's whole value is signal fidelity. If the tree regresses to unbuildable, `install` goes red; that is the point. Also keeps parity with a forbid-suppressions gate (no `|| true`, no `continue-on-error: true`).
+
+4. **Derive the import-smoke population from the installed wheel itself** (`top_level.txt` via `importlib.metadata.distribution(...).read_text`), and fail loudly when the list is empty. This decouples the smoke from the package-layout decision the sibling issue will make, and prevents a vacuous pass when the wheel ships no importable code.
+
+5. **Mirror the job into every workflow twin.** If the repo keeps a PR/push gate plus a `workflow_call` mirror with parallel job sets, add the identical job to both — even if the mirror has no in-repo caller (it may be invoked cross-repo).
+
+6. **Match sibling-job idiom exactly:** same SHA-pinned action versions, same runner label, `timeout-minutes` set, yamllint line-length respected. Verify with the repo's own gates: `yamllint`, `check-jsonschema --builtin-schema vendor.github-workflows`, and a suppressions grep.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| `needs: package` + `actions/download-artifact` handoff | Canonical convention reads "install verifies the artifact produced by package", so first instinct was a job dependency | The `package` job does not exist in the tree yet, and its artifact contract (name, contents) is undecided in the unmerged sibling issue — the YAML would not even be valid | When the upstream job is unmerged, build inline in an isolated named step; switch to the artifact handoff as a follow-up once `package` lands |
+| Metadata-only smoke (`pip show` / version check) | Simplest post-install assertion | Verifies dist-info exists but never imports code — a wheel that ships zero importable modules would pass | Import-smoke must actually `importlib.import_module` something; derive the module list from the wheel's `top_level.txt` and error when empty |
+| "Skip if not buildable" guard branch in the job | Would let the check land before the `package` PR merges | A canonical check that skips emits green without testing — defeats the signal-fidelity purpose of the canonical name | Sequence the PR after the prerequisite instead of weakening the check; encode the block as a stop-the-work gate in the plan |
+| Hardcoding the import target (e.g. `import scripts`) | Direct and readable | The sibling `package` issue has not decided the package layout/top-level module names yet — any hardcoded name is a guess that breaks when the layout lands | Read `top_level.txt` from the installed distribution at runtime instead of guessing the layout |
+
+## Results & Parameters
+
+- **Job shape:** see Quick Reference. Substitute the repo's exact SHA-pinned `actions/checkout` / `actions/setup-python` (copy from a sibling job) and the real distribution name from `pyproject.toml [project].name`.
+- **Insertion points (Mnemosyne, at plan time — line numbers WILL drift):** after the `build` job in `.github/workflows/_required.yml` (~line 305) and `.github/workflows/_checks.yml` (~line 243).
+- **Local simulation of the job body:**
+
+```bash
+rm -rf dist/ && pip install build && python -m build --outdir dist/
+python -m venv /tmp/install-venv
+/tmp/install-venv/bin/pip install --no-cache-dir dist/*.whl
+/tmp/install-venv/bin/pip check
+```
+
+### Known uncertain assumptions (carry into review)
+
+- **`top_level.txt` is a setuptools convention.** Hatchling and flit do NOT write it. If the sibling `package` issue picks a non-setuptools backend, the import smoke fails loudly on a perfectly good wheel (false red). Mitigation if that happens: fall back to parsing `RECORD` for top-level packages, or pin the module list once the layout is decided.
+- **The Odysseus `ci-naming-convention.md` was never fetched** — the plan relied on the issue body's paraphrase of the convention (canonical name `install`, clean-venv smoke semantics, artifact-of-`package` relationship).
+- **The `workflow_call` mirror (`_checks.yml`) has no in-repo caller** (grep found none) — mirroring into it assumes cross-repo callers exist; if it is dead, the mirror edit is harmless but unverifiable.
+- **Cited line numbers** (`_required.yml:305`, `_checks.yml:243`) are read-once and will drift; re-grep at implementation time.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| Mnemosyne | Issue #2912 planning session (plan only, not executed) | Canonical `install` check plan for the Odysseus CI-naming unification |
+
+## Superseded from `ci-cd-canonical-release-check-manifest-repo`
+
+**Original date:** 2026-07-03
+**Original version:** 1.0.0
+
+---
+name: ci-cd-canonical-release-check-manifest-repo
+description: "How to plan the canonical `release` CI check (Odysseus ecosystem CI-naming board) for a GitOps/manifest/dataset repo where a release step looks N/A — the board is GENERATED from live check-runs on main (scripts/gen-ecosystem-table.sh), so documenting 'N/A' in the repo can never fill the board cell; the only real options are (a) a genuine release job emitting check-run name `release` on main or (b) leaving the issue-linked gap. For a dataset repo the honest release artifact is a versioned dataset snapshot (tar of the manifest dirs + RELEASE_INFO manifest with commit SHA/date/counts) uploaded as a workflow artifact on every main push and published via `gh release create` on v* tags — the convention explicitly sanctions 'a release-tag-gated job that still emits release on main' and forbids fabricating a passing no-op. Use when: (1) an ecosystem CI-naming issue asks to add a canonical check (release/package/install) to a repo where the category seems inapplicable, (2) you are choosing between 'add real job' vs 'document N/A' for a generated status board, (3) you plan a release job in a repo with strict no-silent-failure guards (forbid-continue-on-error, forbid-or-true, forbid-advisory-warnings) and pinned-SHA action policy, (4) the job needs `gh release create` with GITHUB_TOKEN and you have not verified org settings allow workflow-created releases, (5) you pin a third-party action SHA from memory instead of the release page, (6) versioning on shallow checkouts — git describe sees no tags, so tag names must come from GITHUB_REF_NAME."
+category: ci-cd
+date: 2026-07-03
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags:
+  - ci-naming-convention
+  - canonical-check-run
+  - ecosystem-status-board
+  - release-check
+  - manifest-repo
+  - dataset-repo
+  - gitops
+  - myrmidons
+  - odysseus
+  - publish-artifacts
+  - gh-release-create
+  - github-token-permissions
+  - pinned-action-sha
+  - upload-artifact
+  - shallow-checkout-tags
+  - no-silent-failures
+  - planning-methodology
+  - unverified-assumptions
+---
+
+# Canonical `release` CI Check for a Manifest/Dataset Repo
+
+> ⚠️ **UNVERIFIED — PLAN ONLY.** This skill captures a *planning* pattern produced for
+> Myrmidons issue #751 (add canonical `release` check for the Odysseus ecosystem CI board).
+> No workflow was committed, no CI run executed, no release published. Tool-behavior and
+> API-permission claims below are assumptions to re-verify at implementation time.
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-07-03 |
+| **Objective** | Plan the canonical `release` CI check for Myrmidons (GitOps agent-dataset repo) per the Odysseus ecosystem CI-naming convention |
+| **Outcome** | Plan produced (real dataset-snapshot release job, not an N/A doc) — NOT implemented; no workflow committed, no CI run |
+| **Verification** | unverified |
+| **History** | initial version |
+
+## When to Use
+
+- An ecosystem CI-naming issue asks a repo to emit a canonical check (`release`, `package`, `install`) that seems N/A for the repo type (manifest/dataset/docs repo).
+- You must choose between "add a real job" and "document N/A" for a status board that is **generated from live check-runs** — prose in the target repo cannot fill a generated cell.
+- The repo enforces no-silent-failure guards (`forbid-continue-on-error`, `forbid-or-true`, `forbid-advisory-warnings`) and pinned-SHA actions, constraining how the new workflow may be written.
+- The release job must call `gh release create` with `GITHUB_TOKEN` and you have not confirmed org/repo settings permit it.
+- You need a version string on a shallow checkout (`fetch-depth: 1` has no tags — `git describe` fails; use `GITHUB_REF_NAME` on tag events).
+
+## Verified Workflow
+
+> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
+
+### Quick Reference
+
+```bash
+# Read the convention doc read-only before deciding N/A vs real job:
+gh api repos/<org>/Odysseus/contents/docs/ci-naming-convention.md --jq .content | base64 -d
+
+# Decision rule: board generated from live check-runs => documenting N/A never fills the cell.
+# Real-but-honest release job for a dataset repo:
+#   package: tar dataset dirs + RELEASE_INFO(commit, %cI date, counts) -> dist/
+#   every main push: upload-artifact; v* tag: gh release create
+# Version on shallow checkout: tag events use $GITHUB_REF_NAME, else snapshot-$(git rev-parse --short HEAD)
+
+# Post-merge proof (the ONLY command that proves the board criterion):
+gh api repos/<org>/<repo>/commits/main/check-runs --jq '.check_runs[].name' | grep -x release
+```
+
+### Detailed Steps
+
+1. **Fetch the naming convention doc read-only first.** It defines the canonical check-run name, sanctions "a release-tag-gated job that still emits `release` on `main`", and forbids fabricating a passing no-op job. It also reveals the board is generated from live check-runs — which kills the "document N/A" option for filling the cell.
+2. **Find the repo's honest release artifact.** For a dataset/manifest repo: a versioned snapshot archive of the canonical dirs plus a RELEASE_INFO manifest (commit SHA, `git log -1 --format=%cI` commit date so re-runs are deterministic, file counts). Consumers that reconcile against the dataset can pin it.
+3. **Put packaging logic in a script under the repo's validator dir, not inline YAML** — gets existing shellcheck coverage and CI↔local parity (`just package` and CI call the same script). Guard against packaging an empty tree (refuse when counts are 0).
+4. **Job emits the canonical name exactly** (`jobs.release.name: release`); triggers on PR (dry-run), main push (board signal + artifact upload), and `v*` tags (publish step gated by `if: startsWith(github.ref, 'refs/tags/v')`).
+5. **Respect the repo's guard suite**: no `continue-on-error`, no `|| true`, no `::warning::`; `set -euo pipefail`; checkout pinned to the same SHA every other workflow uses; rely on the existing actionlint/yamllint/workflow-schema gates rather than adding new lint wiring.
+6. **Label verification by what it proves**: local packaging + pre-commit prove lint/packaging only; the board criterion is proved ONLY post-merge by querying check-runs on main (`gh api .../commits/main/check-runs`), and the shields `nameFilter` badge resolving.
+7. **Keep required-checks unchanged and document why** — publishing is post-merge; record the deliberate omission in the branch-protection doc so it is not mistaken for drift.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Document `release` as N/A | Issue option 2: write "N/A for a manifest repo" in the repo docs | The board is generated from live check-runs on main; no prose in the target repo can fill a generated cell — the gap would persist as an issue-linked hole | For generated status boards, only an emitted check-run changes the cell; docs-only "N/A" is a non-fix |
+| Hollow green `release` job | A no-op job that just exits 0 to satisfy the name filter | Convention explicitly forbids fabricating a passing job ("Do not fabricate a passing job") | Attach the canonical name to real work — for a dataset repo, package+verify+upload the snapshot every run |
+| `git describe` for versioning in CI | Derive the version from tags inside the job | Default `actions/checkout` is shallow with no tags; `git describe --tags` fails or lies | On tag events take the version from `GITHUB_REF_NAME`; otherwise `snapshot-<shortsha>` |
+| Pin action SHA from memory | Wrote `actions/upload-artifact@ea165f8d…  # v4.6.2` from recall | SHA↔tag mapping was never checked against the release page — a wrong pin either breaks the job or silently pins a different version | Always re-verify third-party action SHAs against the tag on github.com before committing; let Renovate track them afterward |
+| Assume `gh release create` just works with `GITHUB_TOKEN` | Publish step uses `GH_TOKEN: ${{ github.token }}` + job `contents: write` | Org/repo Actions settings can restrict the default token (read-only default, or release creation blocked); never executed | Verify Actions token permissions policy before relying on workflow-created releases; the first tag push is the real test |
+| `contents: write` on a job that also runs on pull_request | One job-level permission block for all three triggers | Grants a write-scoped token to PR-triggered runs that only need read (forks get read regardless, but same-repo PRs would carry write) — broader than needed | Scope write to the publish path: either split the publish into a tag-only job, or accept and document the trade-off explicitly |
+
+## Results & Parameters
+
+- Plan target: Myrmidons `.github/workflows/release.yml` + `scripts/package-dataset.sh` + `just package` recipe + README badge + CLAUDE.md CI/CD bullet + branch-protection design note.
+- Dataset measured at planning time: 51 agent YAMLs (excluding `_templates/`), 6 fleet YAMLs.
+- Canonical check-run name: `release` (job key AND `name:` field).
+- Badge: `https://img.shields.io/github/check-runs/<org>/<repo>/main?nameFilter=release&label=release`.
+
+### Unverified assumptions a reviewer MUST check (verbatim)
+
+- `actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02` really is v4.6.2 (recalled from memory, never checked against the release page).
+- Repo/org Actions settings allow `gh release create` with the default `GITHUB_TOKEN` under job-level `permissions: contents: write` (never executed; only proven by the first `v*` tag push).
+- The shields per-check-run endpoint (`nameFilter=release`) resolves once the check-run exists on main (taken from the convention doc, not exercised).
+- GNU tar accepts `-C dist RELEASE_INFO` mid-argument-list as planned (standard on ubuntu runners, not re-tested).
+- Emitting a `release` check-run on pull_request events does not confuse the board (board reads main check-runs only, per the convention doc's badge mechanism).
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| Myrmidons | Issue #751 planning session (2026-07-03) — plan only, not implemented | Odysseus ecosystem CI-naming rollout |
+
+## Superseded from `cicd-canonical-package-check-dataset-repo`
+
+**Original date:** 2026-07-03
+**Original version:** 1.0.0
+
+---
+name: cicd-canonical-package-check-dataset-repo
+description: "How to fill a canonical `package` CI check-run for a GitOps/manifest dataset repo (no sdist/wheel/container): build the dataset itself as a reproducible tar.gz + SHA256SUMS, round-trip-verify it, and upload as artifact. Use when: (1) an ecosystem CI-status board tracks canonical check-run names (build/test/lint/security/package/...) and a manifest-only repo shows a `package` gap, (2) you must choose between adding a real package job vs documenting N/A — check whether the board is GENERATED from live check-runs (then N/A has no marker mechanism and only a real job fills the cell), (3) you need a deterministic/reproducible tar of dataset dirs (--sort=name --owner=0 --group=0 --numeric-owner --mtime pinned), (4) a repo has forbid-suppression guards (no `|| true`, no `continue-on-error: true`, no `::warning::`) and the new job must pass them, (5) you must verify a CI job's run blocks locally before pushing (byte-identical simulation), including when the actionlint system binary is absent locally or a safety net blocks `rm -rf` on mktemp dirs, (6) registering the new job as a required branch-protection context post-merge with an idempotent jq snippet."
+category: ci-cd
+date: 2026-07-03
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - canonical-check-run
+  - ecosystem-ci-board
+  - package-job
+  - dataset-repo
+  - manifest-repo
+  - reproducible-tar
+  - sha256sums
+  - round-trip-verify
+  - upload-artifact
+  - branch-protection
+  - required-status-checks
+  - actionlint
+  - forbid-suppressions
+  - doc-sync
+---
+
+# CI/CD: Canonical `package` Check for a Dataset/Manifest Repo
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-07-03 |
+| **Objective** | Fill the missing canonical `package` check-run cell on an ecosystem CI-status board for Myrmidons, a GitOps dataset repo (agent YAML manifests) with no sdist/wheel/container to build |
+| **Outcome** | Success — `package` job added to `_required.yml` (`needs: build`, reproducible tar + SHA256SUMS + round-trip verify + SHA-pinned upload-artifact); docs synced in 3 homes; all local gates green |
+| **Verification** | verified-local — pre-commit --all-files green (actionlint run via downloaded pinned binary), byte-identical local simulation of both run blocks passed (54 YAMLs round-tripped, checksum OK); CI on PR #755 pending at capture time |
+
+## When to Use
+
+- An ecosystem CI-status board (e.g. Odysseus) tracks canonical check-run names per repo and a manifest/dataset repo shows a gap for `package` (or another category that "doesn't obviously apply").
+- The issue offers "add the job OR document N/A" — decide by checking how the board is produced: if it is **generated from live check-runs on `main`**, there is no N/A marker mechanism, so only a real check-run fills the cell.
+- You need a **reproducible release archive** of data directories as the repo's distributable.
+- The repo enforces **forbid-suppression guards** (`|| true`, `continue-on-error: true`, `::warning::` all blocked) and any new job must be fail-fast to pass them.
+- You want to **verify the job's run blocks locally** before pushing, in an environment where the actionlint system binary is missing or a safety net blocks `rm -rf` outside cwd.
+
+## Verified Workflow
+
+### Quick Reference
+
+```yaml
+# .github/workflows/_required.yml — job runs on both pull_request and push to main
+package:
+  name: package            # check-run name must EXACTLY match the canonical name
+  runs-on: ubuntu-latest
+  timeout-minutes: 10
+  needs: build             # only package a schema-valid dataset (build = schema gate)
+  steps:
+    - uses: actions/checkout@<pinned-sha>  # match the repo's existing pin
+    - name: Build dataset release archive
+      run: |
+        set -euo pipefail
+        mkdir -p dist
+        sha="$(git rev-parse --short HEAD)"
+        tar --sort=name --owner=0 --group=0 --numeric-owner \
+          --mtime='UTC 2020-01-01' \
+          -czf "dist/<repo>-dataset-${sha}.tar.gz" agents/ fleets/ schemas/
+        (cd dist && sha256sum -- *.tar.gz > SHA256SUMS)
+    - name: Verify archive integrity (round-trip)
+      run: |
+        set -euo pipefail
+        workdir="$(mktemp -d)"
+        tar -xzf dist/<repo>-dataset-*.tar.gz -C "${workdir}"
+        for dir in agents fleets schemas; do diff -r "${dir}" "${workdir}/${dir}"; done
+        yaml_count="$(find "${workdir}/agents" -name '*.yaml' | wc -l)"
+        [ "${yaml_count}" -gt 0 ] || { echo '::error::archive contains no agent YAMLs'; exit 1; }
+        (cd dist && sha256sum --check SHA256SUMS)
+    - name: Upload dataset artifact
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+      with:
+        name: <repo>-dataset
+        path: dist/
+        if-no-files-found: error
+        retention-days: 14
+```
+
+```bash
+# Post-merge (admin): register as required context — idempotent
+gh api repos/<owner>/<repo>/branches/main/protection/required_status_checks \
+  | jq '.contexts += ["package"] | .contexts |= unique' \
+  | gh api --method PATCH \
+    repos/<owner>/<repo>/branches/main/protection/required_status_checks --input -
+```
+
+### Detailed Steps
+
+1. **Decide option 1 (real job) vs option 2 (document N/A) from ground truth, not the issue's framing.** Fetch the actual naming-convention doc: if it defines `package` as "sdist/wheel, container image, **or release archive**", a dataset repo has a genuine distributable — the dataset archive its consumers read. If the status board is generated from live check-runs (a `gen-*-table.sh` script + shields.io `nameFilter=` badges), an N/A note in a README cannot mark the cell — only a real check-run can. A tar + checksum + round-trip-verify + artifact upload is a real artifact build, not a fabricated pass (naming docs typically say "do not fabricate a passing job").
+2. **Put the job in the workflow that already triggers on both `pull_request` and `push: branches: [main]`** — the board reads check-runs on `main`, and PRs need the gate too. Emit the canonical name via `name: package` (GitHub's required-check string is the job's `name:` field, not its YAML key).
+3. **Gate on the schema/build job** (`needs: build`) so only a validated dataset is packaged.
+4. **Make the tar reproducible**: `--sort=name --owner=0 --group=0 --numeric-owner --mtime='UTC 2020-01-01'` (GNU tar). Name it with `git rev-parse --short HEAD`. Write `SHA256SUMS` beside it.
+5. **Verify the artifact in the same job**: extract to `mktemp -d`, `diff -r` every packaged dir against the source tree, guard against an empty archive with a file-count check, then `sha256sum --check SHA256SUMS`. Every step `set -euo pipefail`; use `::error::` (permitted) never `::warning::`/`|| true`/`continue-on-error` (blocked by forbid-suppression guards).
+6. **SHA-pin the upload action** to match the repo's pinned-action convention; `if-no-files-found: error` so a silent empty upload fails.
+7. **Sync the contract in ALL documented homes** (doc-drift discipline): branch-protection required-checks table, the full-restore `contexts` JSON list, an incremental-add jq snippet, and the CI job list in CLAUDE.md/README. Give any one-time migration snippet a **lead-in sentence** ("To register the new `package` check post-merge (one-time migration):") — a near-verbatim duplicate snippet floating without a lead-in draws a PR-review comment (this happened; PR #755 review).
+8. **Verify locally before pushing** with a byte-identical simulation of the job's run blocks (same tar flags, same diff/checksum sequence). Run the full pre-commit suite; see Failed Attempts for the actionlint-binary and safety-net workarounds.
+9. **Post-merge admin step**: register the new required context with the idempotent `jq '.contexts += [...] | .contexts |= unique'` PATCH, then confirm the check-run exists on `main` so the board picks it up.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Run repo's `actionlint-system` pre-commit hook locally | `pixi run --environment lint pre-commit run --all-files` | Hook requires a system-installed actionlint binary (repo policy for Go <1.16 compat); binary absent in the sandbox → hook fails with "Executable `actionlint` not found" while every other hook passes | Download the pinned release binary (`v1.7.7` linux_amd64 tarball from rhysd/actionlint releases) to /tmp and run it directly on the workflow file; treat the hook failure as an environment limitation, not a lint finding — but say so explicitly in the report |
+| Clean up local simulation with `rm -rf dist "${workdir}"` (mktemp dir) | Copy-pasting the CI verify block verbatim including cleanup | CC Safety Net blocks `rm -rf` on paths outside cwd (mktemp under /tmp), and also blocks `find <dir> -delete` | Scope ALL scratch dirs inside the cwd (e.g. `.package-sim/`) when simulating CI steps locally, and clean up with explicit `rm <files>` + `rm -r <known-subdirs>` + `rmdir` — the CI job itself can keep `mktemp -d` since runners are ephemeral |
+| Duplicate the generic incremental-add snippet with only the context name changed | Added a second near-verbatim `gh api ... jq '.contexts += ["package"]'` block right after the generic example, with no lead-in text | PR reviewer flagged it: near-verbatim duplicate floating without a lead-in sentence reads as accidental duplication | One-time migration commands need a one-line lead-in stating their purpose ("To register the new X check post-merge (one-time migration):"); alternatively fold the new context into the existing example's array |
+
+## Results & Parameters
+
+- Reproducible tar flags (GNU tar): `--sort=name --owner=0 --group=0 --numeric-owner --mtime='UTC 2020-01-01'`
+- Upload action pin: `actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a` (= v7.0.1 tag commit, verified against upstream)
+- actionlint pinned binary: `https://github.com/rhysd/actionlint/releases/download/v1.7.7/actionlint_1.7.7_linux_amd64.tar.gz`
+- Local simulation output: `myrmidons-dataset-<sha>.tar.gz: OK` / `OK: archive round-trips (54 agent YAMLs packaged)`
+- Local gates: pre-commit --all-files all green except env-missing actionlint (run directly instead: clean); `pixi run test-doc-drift`: 7 files, 0 errors
+- Board badge check (post-merge): `curl -sI "https://img.shields.io/github/check-runs/<owner>/<repo>/main?nameFilter=package&label=package"`
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| Myrmidons | Issue #749 / PR #755 — canonical `package` check for the Odysseus Ecosystem CI Status board | verified-local; CI pending at capture time |
+
+## Superseded from `planning-canonical-package-check-nonlibrary-repo`
+
+**Original date:** 2026-07-03
+**Original version:** 1.1.0
+
+---
+name: planning-canonical-package-check-nonlibrary-repo
+description: "Plan the ecosystem-mandated canonical `package` CI check for a repo whose distributable is NOT a Python library (data/skills marketplace, config repo, doc repo, manifest/dataset repo). Use when: (1) a CI-naming convention requires a `package` check-run but the repo has no [build-system] and python -m build fails on flat-layout multi-top-dir, (2) deciding between making pyproject buildable vs defining `package` as the repo's real bundle artifact, (3) mirroring a new job into a workflow_call file whose caller you have not verified, (4) an issue paraphrases an external convention doc you did not fetch, (5) a canonical category 'seems N/A' for the repo — the ecosystem board is generated from live check-runs on main and has no N/A marker, so the only way to fill the cell is a real check-run, (6) the workflow you would add the job to is PR-only (the check-run would never appear on main), (7) the target workflow has policy-guard jobs (forbid-suppressions) that reject || true / continue-on-error / ::warning::, (8) sequencing branch-protection registration of the new required context."
+category: ci-cd
+date: 2026-07-03
+version: "1.1.0"
+user-invocable: false
+verification: unverified
+history: planning-canonical-package-check-nonlibrary-repo.history
+tags:
+  - ci-naming-convention
+  - canonical-check
+  - package-check
+  - bundle-artifact
+  - data-repo
+  - manifest-repo
+  - release-archive
+  - deterministic-tar
+  - workflow-call
+  - board-check-runs
+  - branch-protection
+  - policy-guards
+  - plan-review-risks
+  - yagni
+---
+
+# Planning the Canonical `package` Check for a Non-Library Repo
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-07-03 (v1.1.0; original 2026-07-02) |
+| **Objective** | Plan the canonical `package` check-run (Odysseus CI-naming convention) for non-library repos: Mnemosyne #2911 (skills marketplace, v1.0.0) and Myrmidons #749 (agent-manifest/dataset repo, v1.1.0) |
+| **Outcome** | Plans produced: `package` defined as the repo's REAL bundle/release archive (tarball of content dirs + SHA256SUMS), built and round-trip verified; PyPI-style build and "document as N/A" both rejected with evidence |
+| **Verification** | unverified — plan-only, implementation and CI validation pending |
+
+## When to Use
+
+- An ecosystem CI-naming convention demands a canonical check (`package`, `build`, `test`) whose literal meaning (sdist/wheel) does not apply to the repo's content type
+- `pyproject.toml` exists but has no `[build-system]`, and setuptools auto-discovery fails with "Multiple top-level packages discovered in a flat-layout"
+- You must decide: make the package pip-buildable (add build backend + explicit packages) vs define `package` as the repo's real distributable (bundle tarball)
+- You are about to mirror a new job into a `workflow_call` workflow file without having verified any workflow actually calls it
+- The issue you are planning against paraphrases an external convention doc (another repo's `ci-naming-convention.md`) that you have not fetched
+- A canonical category (e.g. `package`) "seems N/A" for a manifest/dataset repo and the issue offers a "document as N/A" option — the ecosystem board is generated from live check-runs on `main`, so that option is usually a dead end
+- You are choosing which workflow file hosts the new job — a PR-only workflow never emits the check-run on `main` and leaves the board cell empty
+- The hardened workflow you are adding to has policy-guard jobs (e.g. a `forbid-suppressions` job rejecting `|| true`, `continue-on-error: true`, `::warning::`)
+- You must sync every documented home of the required-check list and sequence branch-protection registration of the new context (post-merge, never in the same PR)
+
+## Verified Workflow
+
+> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
+
+### Quick Reference
+
+```bash
+# 1. Establish the repo has no real Python distributable before choosing the bundle route
+grep -n "build-system" pyproject.toml                 # absent -> nothing declares a build backend
+grep -rn "cov=scripts" pyproject.toml                 # scripts/ is tooling, not a shipped library
+# The live "submit-pypi" style check may be GitHub dependency-graph auto-submission, NOT a publish
+
+# 2. Verify a workflow_call file actually has a caller before mirroring jobs into it
+grep -rn "uses: ./.github/workflows/_checks.yml" .github/workflows/   # no hits -> mirrored job is dead code
+
+# 3. Keep the CI job thin; put build+verify in a tested script
+python3 scripts/build_package.py --output-dir dist    # exit 0 built+verified, 1 failure, 2 argparse usage
+
+# 4. Version parse that honors requires-python >= 3.9 (tomllib is 3.11+)
+python3 -c "import re,pathlib; print(re.search(r'^version\s*=\s*\"([^\"]+)\"', pathlib.Path('pyproject.toml').read_text(), re.M).group(1))"
+
+# 5. Category "seems N/A"? Fetch the convention doc FIRST — the definition usually admits a real artifact
+#    (Odysseus defines `package` as "sdist/wheel, container image, or release archive")
+# 6. Find the nearest sibling repo's canonical job shape via org-wide code search
+gh api "search/code?q=org:<org>+package+in:file+filename:_required.yml"
+
+# 7. Before adding a job to a hardened workflow, read its policy-guard jobs
+grep -n "forbid-suppressions\|continue-on-error\|::warning::" .github/workflows/_required.yml
+
+# 8. Deterministic tar for a manifest/dataset release archive (GNU tar; ubuntu-latest OK, BSD tar fails)
+tar --sort=name --owner=0 --group=0 --numeric-owner --mtime='2026-01-01 00:00:00Z' \
+  -czf dist/<project>-<version>.tar.gz agents/ fleets/ schemas/
+( cd dist && sha256sum *.tar.gz > SHA256SUMS )
+```
+
+### Detailed Steps
+
+1. **Decide the distribution model from repo evidence, not the check's name.** If the repo is a data/skills marketplace (content = markdown + JSON, Python is repo tooling only), define `package` as the bundle artifact: a versioned tarball of the content dirs (e.g. `.claude-plugin/`, `skills/`, `plugins/`, `schemas/`, `templates/`). Adding a build backend to ship tooling scripts to a registry nobody publishes to violates YAGNI/KISS.
+
+2. **Library-first: build + verify logic lives in a tested script, the CI job is a thin invocation.** `build_package(repo_root, output_dir) -> Path` plus a read-only `verify_package(tarball) -> list[str]` that re-opens the artifact and checks required members (marketplace.json present AND parseable, at least one `skills/*.md`). If the repo lints/type-checks `scripts/` and `tests/` already, the new files enter the existing gates with zero config changes.
+
+3. **Verify job-emission wiring before mirroring.** If the repo duplicates jobs across a directly-triggered workflow (`on: pull_request/push`) and a `workflow_call` file, grep for the caller (`uses: ./.github/workflows/<file>.yml`) before claiming the mirrored job emits a check-run. A `workflow_call` file with no caller emits nothing — the mirror is dead code and the plan must say so or drop it.
+
+4. **Fetch the external convention doc the issue cites.** Exact requirements (must the check upload an artifact? is `twine check` semantics expected? exact check-run name casing?) come from the convention doc, not the issue's paraphrase. If unfetchable at planning time, list it explicitly as an unverified assumption for the reviewer.
+
+5. **Honor repo-local CI constraints when authoring the job**: pinned action SHAs copied from existing jobs, no `|| true` / `continue-on-error` (repos may have a forbid-suppressions gate), yamllint line-length limits, canonical-check comment pattern matching the existing aggregate `test` job.
+
+6. **Give the script collision-free exit codes** (0 built+verified, 1 build/verify failure, argparse's own 2 for usage errors) and one dedicated negative test per verify error kind, plus a real-repo ships-green test so the new gate is green on the current tree.
+
+### Variant: manifest/dataset repo with a hardened workflow (Myrmidons #749, v1.1.0)
+
+7. **When the category "seems N/A", fetch the convention doc FIRST.** The Odysseus `docs/ci-naming-convention.md` defines `package` as "sdist/wheel, container image, **or release archive**" — a dataset repo's release archive (tar.gz of `agents/` + `fleets/` + `schemas/` with SHA256SUMS) is a REAL distributable, not a fabricated job. The doc simultaneously forbids fabricating passing jobs and provides NO N/A-marker mechanism (the board is generated from live check-runs on `main`), so an issue's "document as N/A" option is usually a dead end — the only way to fill the board cell is a real check-run with the exact canonical name.
+
+8. **Check-run name = the job's `name:` field, and the board needs it on `main`.** Put the job in a workflow that triggers on BOTH `pull_request` and `push: branches: [main]` (Myrmidons `_required.yml` already does). A PR-only workflow (e.g. `validate.yml`) never emits the check-run on `main` and leaves the board cell empty forever.
+
+9. **Mirror the nearest sibling repo's canonical job shape.** Find precedent via org-wide code search: `gh api "search/code?q=org:<org>+package+in:file+filename:_required.yml"`, then fetch the sibling's job. ProjectHermes's `package` job: `needs: build`, validates the artifact the build produced, SHA-pinned `actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1`, `if-no-files-found: error`.
+
+10. **Give the packaging job real teeth** — this is what separates a genuine `package` check from a fabricated green job: deterministic tar (`--sort=name --owner=0 --group=0 --numeric-owner --mtime=<fixed>`), SHA256SUMS, a round-trip verify step (`tar -x` to a mktemp dir + `diff -r` per top-level dir + non-zero file-count assertion + `sha256sum --check`), and artifact upload with `if-no-files-found: error`.
+
+11. **Read the hardened workflow's policy-guard jobs before adding anything.** Myrmidons `_required.yml` has a `forbid-suppressions` job rejecting `|| true`, `continue-on-error: true`, and `::warning::` in workflow files — a new job using any of those would fail CI. `::error::` is permitted.
+
+12. **Sync all documented homes of the required-check list and sequence registration post-merge.** Update the `docs/branch-protection.md` table + full-restore contexts + an idempotent incremental snippet (`jq '.contexts += ["package"] | .contexts |= unique'`) and the CLAUDE.md CI/CD job list. Branch-protection registration is a manual post-merge admin step — registering a required context before the job exists on `main` would block every merge, including the PR that introduces the job.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Option 1: make pyproject pip-buildable | Considered adding `[build-system]` + explicit packages to run `python -m build` + `twine check` | Flat layout with `skills/ plugins/ schemas/ templates/` top-level dirs breaks auto-discovery; the only Python is repo tooling under `scripts/`; the existing `submit-pypi` check is dependency-graph auto-submission, not a publish path — nothing would ever consume the wheel | Define the canonical check around the repo's REAL distributable; do not force-fit a library build onto a data repo |
+| Inline tar command in the workflow YAML | Considered `tar czf dist/... .claude-plugin skills ...` directly in the job step | Untestable, no verify step, invisible to ruff/mypy/pytest; violates the library-first executable-convention-guard pattern | Build+verify logic goes in a tested script; the CI job stays a one-line invocation |
+| `tomllib` for version parsing | Considered `tomllib.load()` to read `[project] version` | `tomllib` is Python 3.11+ but the repo declares `requires-python = ">=3.9"` — the script would break for local 3.9/3.10 users even though CI pins 3.11 | Regex-parse the version line (or read from a format available at the floor version); match the repo's declared floor, not CI's pin |
+| Mirroring the job into `_checks.yml` without verifying its caller | Plan mirrors the `package` job into a `workflow_call` file because every other job is duplicated there | No caller of `_checks.yml` was ever verified by grep — if nothing calls it, the mirrored job emits no check-run and the "mirror" rationale is cargo-culting an existing (possibly dead) pattern | Grep for `uses: ./.github/workflows/<file>.yml` BEFORE citing job mirroring as load-bearing; flag it as an assumption otherwise |
+| Trusting the issue's paraphrase of the convention doc | Planned `package` semantics from the issue body's summary of Odysseus `ci-naming-convention.md` | The doc itself was never fetched; exact requirements (artifact upload mandatory? naming casing? verify semantics?) are unconfirmed | External convention docs must be fetched during planning, or explicitly listed as unverified inputs for the reviewer |
+| Documenting `package` as N/A (Myrmidons #749 issue option 2) | Considered closing the board gap by documenting the category as not-applicable for a manifest repo | Convention doc has no N/A marker; board is generated from live check-runs on `main`; the cell would point at an open issue forever | Fetch the convention doc before assuming a category is inapplicable — the definition (e.g. "release archive") usually admits a real artifact |
+| Adding the job to a PR-only workflow (`validate.yml`) | Considered hosting the new `package` job in the existing PR validation workflow | It only triggers on `pull_request`, so no check-run ever appears on `main` and the board badge stays empty | The board reads check-runs on `main`; the job must live in a push+PR workflow (e.g. `_required.yml`) |
+| Registering `package` in branch protection in the same PR | Considered adding the new context to required status checks alongside the job-introducing PR | The context would be required before any run of the job exists on `main`, blocking the very PR that introduces it | Branch-protection registration is a manual post-merge admin step |
+
+## Results & Parameters
+
+### Canonical `package` job for a bundle-artifact repo (GitHub Actions)
+
+```yaml
+  package:
+    name: package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@<same-pinned-sha-as-sibling-jobs>
+      - uses: actions/setup-python@<same-pinned-sha-as-sibling-jobs>
+        with:
+          python-version: '3.11'
+      - name: Build and verify marketplace bundle
+        run: python3 scripts/build_package.py --output-dir dist
+      - name: Upload package artifact
+        uses: actions/upload-artifact@<same-pinned-sha-as-sibling-jobs>
+        with:
+          name: <project>-package
+          path: dist/*.tar.gz
+          retention-days: 90
+```
+
+### Script contract
+
+- `build_package(repo_root, output_dir) -> Path` — tarball named `<project>-<version>.tar.gz`; hard-fails (`FileNotFoundError`) if any declared bundle dir is missing; excludes `__pycache__`/`*.pyc`; sorted members for near-determinism (gzip mtime still varies — fine for a check, not for release signing)
+- `verify_package(tarball) -> list[str]` — read-only; reopens the tarball; returns problem strings (missing manifest, unparseable JSON, zero content files)
+- Exit codes: 0 built+verified, 1 failure, 2 argparse usage
+
+### Reviewer risk checklist (what to verify before GO)
+
+- [ ] Does anything call the `workflow_call` file the job was mirrored into? (`grep -rn "uses: ./.github/workflows/" .github/workflows/`)
+- [ ] Does the ecosystem convention doc impose requirements beyond "emit a check named `package`"? Fetch it.
+- [ ] Coverage interaction: if pytest `addopts` has `--cov=scripts`, the new script joins the coverage report — confirm no global `fail-under` makes partially-covered branches a gate failure
+- [ ] Line numbers cited in the plan (`_required.yml:305` etc.) drift — re-grep, don't trust
+- [ ] Hard-required bundle dirs (`schemas/`, `templates/`) make the check fail if a dir is later removed — confirm that is intended coupling
+
+### Canonical `package` job for a manifest/dataset repo — deterministic release archive (Myrmidons #749, v1.1.0)
+
+```yaml
+  package:
+    name: package
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@<same-pinned-sha-as-sibling-jobs>
+      - name: Build release archive (deterministic)
+        run: |
+          mkdir -p dist
+          tar --sort=name --owner=0 --group=0 --numeric-owner \
+            --mtime='2026-01-01 00:00:00Z' \
+            -czf "dist/${PROJECT}-${VERSION}.tar.gz" agents/ fleets/ schemas/
+          ( cd dist && sha256sum ./*.tar.gz > SHA256SUMS )
+      - name: Round-trip verify
+        run: |
+          tmp="$(mktemp -d)"
+          tar -xzf dist/*.tar.gz -C "$tmp"
+          for d in agents fleets schemas; do diff -r "$d" "$tmp/$d"; done
+          count="$(find "$tmp" -type f | wc -l)"
+          [ "$count" -gt 0 ] || { echo "::error::empty archive"; exit 1; }
+          ( cd dist && sha256sum --check SHA256SUMS )
+      - name: Upload package artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: <project>-package
+          path: dist/
+          if-no-files-found: error
+```
+
+### Risks & uncertain assumptions (v1.1.0 additions — Myrmidons plan, unexecuted)
+
+- Odysseus convention doc and ProjectHermes workflow were fetched live at plan time (2026-07-03) and can drift
+- The `actions/upload-artifact` SHA pin was copied from ProjectHermes, not independently verified against the upstream release tag
+- Deterministic-tar flags are GNU-tar-specific (fine on ubuntu-latest runners; fails on BSD tar)
+- Plan not executed: no local or CI validation of the job YAML has run
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| Mnemosyne | Issue #2911 planning (plan-only, not yet implemented) | Plan posted to the issue; implementation PR pending |
+| HomericIntelligence/Myrmidons | Issue #749 planning — canonical `package` check via deterministic release archive in `_required.yml` (plan-only, nothing executed) | unverified — Odysseus convention doc + ProjectHermes precedent fetched live 2026-07-03; branch-protection registration sequenced post-merge |
+
+### Archived companion history from `planning-canonical-package-check-nonlibrary-repo.history`
+
+# planning-canonical-package-check-nonlibrary-repo — History
+
+## v1.1.0 (2026-07-03)
+
+**Changed by:** Myrmidons issue #749 planning — "Add canonical `package` CI check" for an
+agent-manifest/dataset repo (plan-only; nothing executed).
+
+**Verification:** unverified (both versions are PLAN-only; no CI has validated either job YAML).
+
+### What changed (minor bump 1.0.0 → 1.1.0 — additive, core workflow unchanged)
+
+- Added a "Variant: manifest/dataset repo with a hardened workflow" section (Detailed Steps 7–12):
+  1. When a canonical category "seems N/A", fetch the convention doc FIRST — Odysseus defines
+     `package` as "sdist/wheel, container image, or release archive", so a dataset repo's release
+     archive is a REAL distributable; the doc has no N/A marker and the board is generated from
+     live check-runs on `main`, so "document as N/A" is a dead end.
+  2. Check-run name = the job's `name:` field; the job must live in a workflow triggering on both
+     `pull_request` and `push: branches: [main]` or the board cell stays empty.
+  3. Mirror the nearest sibling repo's canonical job shape (org-wide `gh api search/code` for
+     `filename:_required.yml`; ProjectHermes precedent with `needs: build`, SHA-pinned
+     upload-artifact, `if-no-files-found: error`).
+  4. Real teeth: deterministic GNU tar flags, SHA256SUMS, round-trip verify (extract + `diff -r`
+     + non-zero file count + `sha256sum --check`).
+  5. Read the hardened workflow's policy-guard jobs first (Myrmidons `forbid-suppressions`
+     rejects `|| true`, `continue-on-error: true`, `::warning::`; `::error::` is permitted).
+  6. Sync all documented homes of the required-check list; branch-protection registration is a
+     manual POST-merge step.
+- Added 3 Failed Attempts rows: documenting `package` as N/A; hosting the job in a PR-only
+  workflow; registering the context in branch protection in the same PR.
+- Results & Parameters: added the deterministic release-archive job YAML and a v1.1.0
+  risks/uncertain-assumptions list (doc/precedent drift, unverified SHA pin, GNU-tar-only flags,
+  plan unexecuted).
+- Added Quick Reference commands 5–8; extended description/tags/When-to-Use; added a Verified On
+  row for HomericIntelligence/Myrmidons #749.
+
+### Why
+
+A second plan-only session (Myrmidons #749) hit the same canonical-`package` problem shape on a
+different non-library repo type (agent-manifest dataset) and produced durable, transferable
+learnings — especially the "fetch the convention doc before assuming N/A" and "board reads
+check-runs on main" rules — that belong in this skill rather than a near-duplicate new one.
+
+### Previous version (v1.0.0) snapshot
+
+---
+name: planning-canonical-package-check-nonlibrary-repo
+description: "Plan the ecosystem-mandated canonical `package` CI check for a repo whose distributable is NOT a Python library (data/skills marketplace, config repo, doc repo). Use when: (1) a CI-naming convention requires a `package` check-run but the repo has no [build-system] and python -m build fails on flat-layout multi-top-dir, (2) deciding between making pyproject buildable vs defining `package` as the repo's real bundle artifact, (3) mirroring a new job into a workflow_call file whose caller you have not verified, (4) an issue paraphrases an external convention doc you did not fetch."
+category: ci-cd
+date: 2026-07-02
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags:
+  - ci-naming-convention
+  - canonical-check
+  - package-check
+  - bundle-artifact
+  - data-repo
+  - workflow-call
+  - plan-review-risks
+  - yagni
+---
+
+# Planning the Canonical `package` Check for a Non-Library Repo
+
+## Overview (v1.0.0)
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-07-02 |
+| **Objective** | Plan Mnemosyne issue #2911: emit a canonical `package` check-run (Odysseus CI-naming convention) in a skills-marketplace repo with no buildable Python package |
+| **Outcome** | Plan produced: `package` defined as the marketplace bundle tarball built+verified by a tested `scripts/build_package.py`; PyPI-style build rejected with evidence |
+| **Verification** | unverified — plan-only, implementation and CI validation pending |
+
+## When to Use (v1.0.0)
+
+- An ecosystem CI-naming convention demands a canonical check (`package`, `build`, `test`) whose literal meaning (sdist/wheel) does not apply to the repo's content type
+- `pyproject.toml` exists but has no `[build-system]`, and setuptools auto-discovery fails with "Multiple top-level packages discovered in a flat-layout"
+- You must decide: make the package pip-buildable (add build backend + explicit packages) vs define `package` as the repo's real distributable (bundle tarball)
+- You are about to mirror a new job into a `workflow_call` workflow file without having verified any workflow actually calls it
+- The issue you are planning against paraphrases an external convention doc (another repo's `ci-naming-convention.md`) that you have not fetched
+
+## Verified Workflow (v1.0.0)
+
+> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
+
+### Quick Reference (v1.0.0)
+
+```bash
+# 1. Establish the repo has no real Python distributable before choosing the bundle route
+grep -n "build-system" pyproject.toml                 # absent -> nothing declares a build backend
+grep -rn "cov=scripts" pyproject.toml                 # scripts/ is tooling, not a shipped library
+# The live "submit-pypi" style check may be GitHub dependency-graph auto-submission, NOT a publish
+
+# 2. Verify a workflow_call file actually has a caller before mirroring jobs into it
+grep -rn "uses: ./.github/workflows/_checks.yml" .github/workflows/   # no hits -> mirrored job is dead code
+
+# 3. Keep the CI job thin; put build+verify in a tested script
+python3 scripts/build_package.py --output-dir dist    # exit 0 built+verified, 1 failure, 2 argparse usage
+
+# 4. Version parse that honors requires-python >= 3.9 (tomllib is 3.11+)
+python3 -c "import re,pathlib; print(re.search(r'^version\s*=\s*\"([^\"]+)\"', pathlib.Path('pyproject.toml').read_text(), re.M).group(1))"
+```
+
+### Detailed Steps (v1.0.0)
+
+1. **Decide the distribution model from repo evidence, not the check's name.** If the repo is a data/skills marketplace (content = markdown + JSON, Python is repo tooling only), define `package` as the bundle artifact: a versioned tarball of the content dirs (e.g. `.claude-plugin/`, `skills/`, `plugins/`, `schemas/`, `templates/`). Adding a build backend to ship tooling scripts to a registry nobody publishes to violates YAGNI/KISS.
+
+2. **Library-first: build + verify logic lives in a tested script, the CI job is a thin invocation.** `build_package(repo_root, output_dir) -> Path` plus a read-only `verify_package(tarball) -> list[str]` that re-opens the artifact and checks required members (marketplace.json present AND parseable, at least one `skills/*.md`). If the repo lints/type-checks `scripts/` and `tests/` already, the new files enter the existing gates with zero config changes.
+
+3. **Verify job-emission wiring before mirroring.** If the repo duplicates jobs across a directly-triggered workflow (`on: pull_request/push`) and a `workflow_call` file, grep for the caller (`uses: ./.github/workflows/<file>.yml`) before claiming the mirrored job emits a check-run. A `workflow_call` file with no caller emits nothing — the mirror is dead code and the plan must say so or drop it.
+
+4. **Fetch the external convention doc the issue cites.** Exact requirements (must the check upload an artifact? is `twine check` semantics expected? exact check-run name casing?) come from the convention doc, not the issue's paraphrase. If unfetchable at planning time, list it explicitly as an unverified assumption for the reviewer.
+
+5. **Honor repo-local CI constraints when authoring the job**: pinned action SHAs copied from existing jobs, no `|| true` / `continue-on-error` (repos may have a forbid-suppressions gate), yamllint line-length limits, canonical-check comment pattern matching the existing aggregate `test` job.
+
+6. **Give the script collision-free exit codes** (0 built+verified, 1 build/verify failure, argparse's own 2 for usage errors) and one dedicated negative test per verify error kind, plus a real-repo ships-green test so the new gate is green on the current tree.
+
+## Failed Attempts (v1.0.0)
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Option 1: make pyproject pip-buildable | Considered adding `[build-system]` + explicit packages to run `python -m build` + `twine check` | Flat layout with `skills/ plugins/ schemas/ templates/` top-level dirs breaks auto-discovery; the only Python is repo tooling under `scripts/`; the existing `submit-pypi` check is dependency-graph auto-submission, not a publish path — nothing would ever consume the wheel | Define the canonical check around the repo's REAL distributable; do not force-fit a library build onto a data repo |
+| Inline tar command in the workflow YAML | Considered `tar czf dist/... .claude-plugin skills ...` directly in the job step | Untestable, no verify step, invisible to ruff/mypy/pytest; violates the library-first executable-convention-guard pattern | Build+verify logic goes in a tested script; the CI job stays a one-line invocation |
+| `tomllib` for version parsing | Considered `tomllib.load()` to read `[project] version` | `tomllib` is Python 3.11+ but the repo declares `requires-python = ">=3.9"` — the script would break for local 3.9/3.10 users even though CI pins 3.11 | Regex-parse the version line (or read from a format available at the floor version); match the repo's declared floor, not CI's pin |
+| Mirroring the job into `_checks.yml` without verifying its caller | Plan mirrors the `package` job into a `workflow_call` file because every other job is duplicated there | No caller of `_checks.yml` was ever verified by grep — if nothing calls it, the mirrored job emits no check-run and the "mirror" rationale is cargo-culting an existing (possibly dead) pattern | Grep for `uses: ./.github/workflows/<file>.yml` BEFORE citing job mirroring as load-bearing; flag it as an assumption otherwise |
+| Trusting the issue's paraphrase of the convention doc | Planned `package` semantics from the issue body's summary of Odysseus `ci-naming-convention.md` | The doc itself was never fetched; exact requirements (artifact upload mandatory? naming casing? verify semantics?) are unconfirmed | External convention docs must be fetched during planning, or explicitly listed as unverified inputs for the reviewer |
+
+## Results & Parameters (v1.0.0)
+
+### Canonical `package` job for a bundle-artifact repo (GitHub Actions)
+
+```yaml
+  package:
+    name: package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@<same-pinned-sha-as-sibling-jobs>
+      - uses: actions/setup-python@<same-pinned-sha-as-sibling-jobs>
+        with:
+          python-version: '3.11'
+      - name: Build and verify marketplace bundle
+        run: python3 scripts/build_package.py --output-dir dist
+      - name: Upload package artifact
+        uses: actions/upload-artifact@<same-pinned-sha-as-sibling-jobs>
+        with:
+          name: <project>-package
+          path: dist/*.tar.gz
+          retention-days: 90
+```
+
+### Script contract (v1.0.0)
+
+- `build_package(repo_root, output_dir) -> Path` — tarball named `<project>-<version>.tar.gz`; hard-fails (`FileNotFoundError`) if any declared bundle dir is missing; excludes `__pycache__`/`*.pyc`; sorted members for near-determinism (gzip mtime still varies — fine for a check, not for release signing)
+- `verify_package(tarball) -> list[str]` — read-only; reopens the tarball; returns problem strings (missing manifest, unparseable JSON, zero content files)
+- Exit codes: 0 built+verified, 1 failure, 2 argparse usage
+
+### Reviewer risk checklist (v1.0.0)
+
+- [ ] Does anything call the `workflow_call` file the job was mirrored into? (`grep -rn "uses: ./.github/workflows/" .github/workflows/`)
+- [ ] Does the ecosystem convention doc impose requirements beyond "emit a check named `package`"? Fetch it.
+- [ ] Coverage interaction: if pytest `addopts` has `--cov=scripts`, the new script joins the coverage report — confirm no global `fail-under` makes partially-covered branches a gate failure
+- [ ] Line numbers cited in the plan (`_required.yml:305` etc.) drift — re-grep, don't trust
+- [ ] Hard-required bundle dirs (`schemas/`, `templates/`) make the check fail if a dir is later removed — confirm that is intended coupling
+
+## Verified On (v1.0.0)
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| Mnemosyne | Issue #2911 planning (plan-only, not yet implemented) | Plan posted to the issue; implementation PR pending |
+
+---

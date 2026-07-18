@@ -1,3 +1,13 @@
+## v2.0.0 — 2026-07-17 — MAJOR bump
+
+Consolidated SECURITY.md supported-release rows with the Python-version provenance and
+compatibility-policy documentation workflow.
+
+## Superseded from `security-md-version-sync-planning-gaps`
+
+**Original date:** 2026-06-13
+**Original version:** 2.0.0
+
 ---
 name: security-md-version-sync-planning-gaps
 description: "Fix SECURITY.md Python version precision: floor-only claims, missing tested ceiling, absent pyproject.toml reference, or missing COMPATIBILITY.md cross-reference. Use when: (1) SECURITY.md states only a floor version (e.g. 'Python >= 3.10') without a ceiling or canonical source reference, (2) the CI matrix adds or drops a Python version and docs need updating, (3) auditing whether security/policy docs reflect the full tested range rather than just the minimum, (4) SECURITY.md prose lacks a cross-reference to COMPATIBILITY.md."
@@ -201,3 +211,143 @@ This would complement the existing `check-version-single-source` hook.
 | --------- | --------- | --------- |
 | ProjectHephaestus | Planning session 2026-06-13 | v1.0.0 — plan only, unverified |
 | ProjectHephaestus | Issue #1204 — SECURITY.md Python version precision fix 2026-06-13 | v2.0.0 — pre-commit passed; PR #1204 open; commit `docs(security): align Python version range with pyproject + CI matrix` |
+
+### Archived companion history from `security-md-version-sync-planning-gaps.history`
+
+## v1.0.0 — 2026-06-13
+
+---
+name: security-md-version-sync-planning-gaps
+description: "Plan and verify SECURITY.md Python interpreter version range accuracy. Use when: (1) SECURITY.md states only a floor version (e.g. 'Python >= 3.10') without a ceiling, (2) the CI matrix adds or drops a Python version and docs need updating, (3) auditing whether security/policy docs reflect the full tested range rather than just the minimum."
+category: documentation
+date: 2026-06-13
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags:
+  - security
+  - versioning
+  - documentation
+  - python-version
+  - SECURITY.md
+  - ci-matrix
+  - policy-doc
+---
+
+# SECURITY.md Python Version Range Planning Gaps
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-06-13 |
+| **Objective** | Ensure SECURITY.md accurately states both the floor AND ceiling of supported Python versions, triangulating pyproject.toml, CI matrix, and pixi.toml simultaneously |
+| **Outcome** | Planning session only — implementation not yet verified |
+| **Verification** | unverified |
+
+## When to Use
+
+- When planning fixes to SECURITY.md or other policy docs that state only a Python version floor (e.g. `Python >= 3.10`) without the tested ceiling
+- When a CI matrix changes (new Python version added or dropped) and policy docs need updating
+- When auditing whether security/policy docs accurately reflect the supported version range vs. just the minimum
+- When `COMPATIBILITY.MD` and `SECURITY.md` may both be stale simultaneously
+
+## Verified Workflow
+
+> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
+
+### Quick Reference
+
+```bash
+# 1. Check pyproject.toml floor
+grep "requires-python" pyproject.toml
+
+# 2. Check CI matrix range
+grep -n "python-version" .github/workflows/test.yml | head -20
+
+# 3. Check pixi.toml ceiling
+grep "python" pixi.toml | head -5
+
+# 4. Verify SECURITY.md fix (flexible pattern — avoid order-dependent greps)
+grep -n "3\.10\|3\.13\|3\.14" SECURITY.md
+# Prefer this over: grep -n "3\.10.*3\.13\|3\.13.*3\.10" SECURITY.md  (order-dependent, brittle)
+```
+
+### Detailed Steps
+
+Triangulate these three canonical sources simultaneously:
+
+1. **`pyproject.toml` `requires-python`** — the floor (minimum supported version). This is the canonical install-time gate.
+
+2. **`.github/workflows/test.yml` CI matrix** — the tested range (floor + ceiling). Check whether `_required.yml` uses a narrower subset (e.g. only 3.12) — that does not change the tested range for the main matrix.
+
+3. **`pixi.toml` python constraint** — the dev-env ceiling signal (e.g. `>=3.10,<3.14`). This is not the canonical source but confirms where active development caps.
+
+4. **Existing policy docs** (`COMPATIBILITY.md`, `SECURITY.md`) — compare against sources 1–3 to identify staleness.
+
+5. **Update SECURITY.md** — change a floor-only claim like `Python >= 3.10` to state the full tested range (e.g. `Python 3.10 through 3.13`). The claim should surface the ceiling, not just the floor.
+
+6. **Cross-check COMPATIBILITY.md** — do not assume it is accurate; verify its version list independently against the CI matrix.
+
+7. **Run pre-commit hooks** — `pre-commit run --all-files` to confirm markdown formatting is clean.
+
+8. **Commit with conventional format** — `docs(security): surface Python ceiling in supported versions`
+
+### Known Automation Gap
+
+No pre-commit hook enforces `SECURITY.md` / `pyproject.toml` Python version sync. Unlike `check-version-single-source` which guards `pyproject.toml` structural invariants, there is no equivalent guard for `SECURITY.md` content. After applying this fix, the doc will drift again whenever the CI matrix is updated unless an automated check is added.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Assuming test.yml is the only CI matrix file | Treating `test.yml:64` as the complete source of the tested range | `_required.yml` uses only Python 3.12 for its steps — could be mistaken for a narrowing of the tested range | Always check all workflow files in `.github/workflows/`; a narrower subset job does not change the main matrix range |
+| Order-dependent verification grep | `grep -n "3\.10.*3\.13\|3\.13.*3\.10" SECURITY.md` | Will miss the fix if the text uses a different ordering or format such as "3.10 through 3.13" | Use flexible individual-version greps instead of order-dependent compound patterns |
+| Taking COMPATIBILITY.md at face value | Assuming `COMPATIBILITY.md:13` was recently updated and accurate | Both `SECURITY.md` and `COMPATIBILITY.md` can be stale simultaneously — neither validates the other | Always verify policy docs independently against the CI matrix, not against each other |
+
+## Results & Parameters
+
+### Version Claim Pattern
+
+Replace floor-only claims:
+
+```markdown
+<!-- Before: floor-only, misleading by omission -->
+Supported Python versions: >= 3.10
+
+<!-- After: full tested range, explicit ceiling -->
+Supported Python versions: 3.10, 3.11, 3.12, and 3.13 (tested in CI)
+```
+
+### Triangulation Checklist
+
+| Source | What It Tells You | Canonical? |
+| -------- | ------------------- | ----------- |
+| `pyproject.toml` `requires-python` | Install-time floor | Yes — canonical floor |
+| `.github/workflows/test.yml` CI matrix | Tested range (floor + ceiling) | Yes — canonical tested range |
+| `pixi.toml` python constraint | Dev-env ceiling signal | No — informational |
+| `COMPATIBILITY.md` | Historical policy claim | No — must be verified against above |
+| `SECURITY.md` | Policy claim | No — must be verified against above |
+
+### Commit Message Template
+
+```
+docs(security): surface Python ceiling in supported versions
+
+Closes #<issue-number>
+```
+
+### Automation Opportunity
+
+A pre-commit hook or CI step that:
+1. Extracts the python-version matrix from `test.yml`
+2. Checks that `SECURITY.md` mentions both the lowest and highest version in that matrix
+3. Fails with a diff showing the gap
+
+This would complement the existing `check-version-single-source` hook.
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectHephaestus | Planning session 2026-06-13 | Not yet implemented — plan only |
