@@ -1,250 +1,202 @@
 ---
 name: pr-compliance-dco-and-rebase-fix
-description: "Fix pr-policy CI failures caused by missing DCO trailers and merge conflicts. Use when: (1) pr-policy check fails with DCO missing, (2) rebase creates conflicts requiring resolution, (3) need to amend commit with both GPG signature and DCO trailer."
+description: "Repair a failing Hephaestus pr-policy gate by rewriting every offending PR commit with a verified cryptographic signature, DCO trailer, and Conventional Commit subject. Use when: (1) pr-policy reports unsigned, invalidly signed, or DCO-missing commits, (2) one or more historical PR commits have non-conventional subjects, (3) a final compliance commit would leave invalid commits in the PR range, or (4) a rebase requires conflict resolution."
 category: ci-cd
-date: 2026-06-27
-version: "1.0.0"
+date: 2026-07-18
+version: "1.1.0"
 user-invocable: false
-verification: verified-ci
-tags: [dco-signoff, pr-policy, merge-conflict, ci-fix, dcosignoff, pr-compliance, rebase-conflict]
+verification: unverified
+history: pr-compliance-dco-and-rebase-fix.history
+tags: [dco-signoff, pr-policy, merge-conflict, ci-fix, commit-signing, conventional-commits, rebase]
 ---
 
-# PR Compliance: DCO Sign-off & Rebase Conflict Resolution
+# PR Policy: Rewrite and Re-sign the Whole PR Range
 
 ## Overview
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-27 |
-| **Objective** | Fix two related PR CI failures in one workflow: missing DCO trailers causing pr-policy rejection and merge conflicts from rebasing onto updated main |
-| **Outcome** | Successful — all CI gates green (69 tests passed, 39/39 pre-commit hooks, all required checks) |
-| **Verification** | verified-ci |
-| **Context** | PR #1638, issue #1412, HomericIntelligence/ProjectHephaestus, branch `1412-auto-impl` |
+| **Date** | 2026-07-18 |
+| **Objective** | Repair a PR-policy failure without leaving earlier non-compliant commits hidden beneath a later fix commit |
+| **Outcome** | Procedure expanded from a last-commit DCO fix to a whole-range rewrite; the PR #2280 application remains unverified until its new `pr-policy` check succeeds |
+| **Verification** | unverified for the PR #2280 extension; v1.0.0's last-commit/rebase procedure was previously verified in CI |
+| **History** | [changelog](./pr-compliance-dco-and-rebase-fix.history) |
+| **Context** | HomericIntelligence/Hephaestus PR #2280, whose required `pr-policy` check failed at 2026-07-18T17:01:14Z |
+
+> **Warning:** The procedure below is the exact remediation directed by the live
+> `pr-policy` workflow, but its PR #2280 application has not yet passed CI.
+> The GitHub `pr-policy` result, not a local approximation, is the final verdict.
 
 ## When to Use
 
-- **Trigger 1**: pr-policy check fails with "missing Signed-off-by: Name `<email>` trailer" even though commit appears signed
-- **Trigger 2**: Merge conflict appears after `git rebase origin/main` on a PR branch
-- **Trigger 3**: Need to amend last commit to add BOTH `-s` (DCO trailer) AND `-S` (GPG signature)
-- **Trigger 4**: PR combines auto-impl changes (which often lack DCO) with rebase-onto-updated-main (which creates conflicts)
+- The required `pr-policy` check fails and the workflow identifies any unsigned or invalidly signed commit.
+- One or more commits lack a well-formed `Signed-off-by: Name <email>` trailer.
+- A historical commit subject, such as `f511311c` on PR #2280, is not a Conventional Commit.
+- A PR has several invalid commits: adding one final signed commit would leave the earlier commits in the PR range non-compliant.
+- A range rewrite must be rebased onto the current target branch and safely force-pushed.
 
-## Verified Workflow - Quick Reference
+## Verified Workflow
 
-```bash
-# Step 1: Ensure you're on the correct branch
-git checkout 1412-auto-impl
-
-# Step 2: Add DCO trailer + GPG signature to last commit
-git commit --amend -s -S
-
-# Step 3: If rebase conflict occurs, resolve manually
-git rebase origin/main
-# On conflict, git status shows conflicted files
-# Edit each file, keeping improvements from both sides
-git add <conflicted-files>
-git rebase --continue
-
-# Step 4: Force-push to PR branch (safe with --force-with-lease)
-git push origin 1412-auto-impl --force-with-lease
-
-# Step 5: Monitor CI in GitHub
-# - pr-policy check should now pass (DCO detected)
-# - All pre-commit hooks should pass (39/39 for Hephaestus)
-# - All tests should pass (69 for Hephaestus)
-# - All CI gates should turn GREEN
-```
-
-## Verified Workflow - Detailed Steps
-
-### Step 1: Diagnose the Failures
+### Quick Reference
 
 ```bash
-# Check pr-policy output
-gh pr view <number> --json statusCheckRollup \
-  --jq '.statusCheckRollup[] | select(.name == "pr-policy") | {name, conclusion, status}'
-# Look for: conclusion=FAILURE, status=COMPLETED
+# Treat the required CI check as the source of truth.
+PR=2280
+REPO=HomericIntelligence/Hephaestus
+gh pr checks "$PR" --repo "$REPO" --required
 
-# Check if commits are signed but lack DCO trailer
-git log --pretty=fuller -1
-# Should show both:
-#  - "Commit: <hash>" with "GPG signature" line (GPG check)
-#  - "Signed-off-by: Name <email>" trailer (DCO check)
-# If only the GPG line is present, the DCO trailer is missing.
+# Fetch the PR's current base and rewrite *the complete PR range*.
+git fetch origin main
+BASE=origin/main
+git rebase -i --rebase-merges --exec 'git commit --amend --no-edit -S -s' "$BASE"
+
+# In the interactive todo, change each bad-subject commit from `pick` to `reword`.
+# Give it an accurate allowed subject, for example: fix(scope): concise description
+# Resolve conflicts, then safely publish the rewritten range.
+git push --force-with-lease origin HEAD
+
+# A local preflight is useful, but only the refreshed GitHub pr-policy check is final.
+gh pr checks "$PR" --repo "$REPO" --required
 ```
 
-### Step 2: Add DCO Trailer + GPG Signature
+### Detailed Steps
 
-The key insight: **`git commit -S` (GPG-only) does NOT add the DCO trailer.**
+1. Read the current required check before changing history. Do not infer compliance from a newly created final commit:
 
-```bash
-# Both flags are REQUIRED per ProjectHephaestus PR policy:
-#  -s : adds "Signed-off-by: Name <email>" trailer (DCO)
-#  -S : adds GPG cryptographic signature
-git commit --amend -s -S
-# This command:
-# 1. Opens $EDITOR for optional message edit (save and exit to keep current message)
-# 2. Adds the DCO trailer to the commit
-# 3. Signs the commit with GPG
+   ```bash
+   gh pr checks "$PR" --repo "$REPO" --required
+   gh pr view "$PR" --repo "$REPO" --json headRefOid,statusCheckRollup \
+     --jq '{headRefOid, prPolicy: [.statusCheckRollup[] | select(.name == "pr-policy")]}'
+   ```
 
-# Verify the trailer was added
-git log --pretty=fuller -1 | grep "Signed-off-by"
-# Should show: Signed-off-by: Your Name <your-email>
-```
+   On PR #2280, `pr-policy` failed while the rest of the required run was still
+   pending. The failure was therefore a merge blocker, not a harmless advisory.
 
-### Step 3: Rebase Onto Updated Main (If Conflicts)
+2. Read the CI implementation to identify what it enforces. The required
+   `.github/workflows/_required.yml` job checks, independently and for **every
+   PR commit**:
 
-```bash
-# Attempt rebase
-git rebase origin/main
+   - GitHub GraphQL `commit.signature.isValid == true` (cryptographic signature),
+   - an allowed Conventional Commit subject,
+   - a valid DCO `Signed-off-by: Name <email>` trailer, and
+   - the separate PR-body `Closes #N` requirement.
 
-# If conflicts appear:
-git status
-# Output shows conflicted files (both ours and theirs)
+   `git commit -S` and `git commit -s` are orthogonal. `-S` makes a cryptographic
+   signature; `-s` adds the DCO trailer. Neither one repairs earlier commits.
 
-# Edit each conflicted file manually
-# - Read the conflict markers: <<<<<<< HEAD / ======= / >>>>>>> <sha>
-# - Keep improvements from BOTH sides (merge, don't pick one side)
-# - Remove conflict markers
+3. Capture the immutable current range, fetch the target branch, and inspect all
+   commits before rewriting. Keep the hash list in the incident record; never
+   guess from `HEAD~1`.
 
-# Example: for file hephaestus/automation/some_module.py
-# 1. Open the file
-# 2. Find <<<<<<< HEAD sections
-# 3. Merge the two versions: keep base improvements + PR's new code
-# 4. Remove the markers: <<<<<<< / ======= / >>>>>>>
-nano hephaestus/automation/some_module.py
+   ```bash
+   git fetch origin main
+   BASE=$(git merge-base origin/main HEAD)
+   git log --reverse --format='%H%n%s%n%B%n---' "$BASE..HEAD"
+   ```
 
-# Stage all resolved files
-git add hephaestus/automation/some_module.py
-git add <other-resolved-files>
+   For PR #2280 the failed CI evidence identified missing DCO trailers on
+   `2f4a24da`, `c68df607`, `f133622c`, `a66c25ee`, `5993d392`, `ecf25567`, and
+   `698fa09e`; `f511311c` also needed a Conventional Commit subject. Re-check
+   the current check output and hashes immediately before rewriting because a
+   force-push changes every commit ID.
 
-# Continue rebase (no --no-edit flag; rebase doesn't support it)
-GIT_EDITOR=true git rebase --continue
-# If the commit is now empty (content already on main), use:
-# git rebase --skip
-```
+4. Rewrite the entire offending range. Start interactive rebase at the current
+   base, leave the topology intact with `--rebase-merges` when applicable, and
+   add an `exec` that amends **each** rewritten commit with both required forms
+   of attestation:
 
-### Step 4: Force-Push (Safe Method)
+   ```bash
+   git rebase -i --rebase-merges \
+     --exec 'git commit --amend --no-edit -S -s' "$BASE"
+   ```
 
-```bash
-# Always use --force-with-lease (safer than --force)
-# It checks that the remote matches what you expect before pushing
-git push origin 1412-auto-impl --force-with-lease
-# If push fails with "stale info", the remote changed — fetch and retry:
-git fetch origin
-git push origin 1412-auto-impl --force-with-lease
-```
+   In the generated todo, change every non-conventional commit from `pick` to
+   `reword`. At the stop, choose an accurate subject with an allowed type:
 
-### Step 5: Monitor & Verify
+   ```text
+   fix(scope): concise, accurate description
+   ```
 
-```bash
-# Open PR in GitHub and wait for CI
-gh pr view <number>
+   Do not invent a scope or use a generic compliance subject; inspect that
+   commit's diff before rewording it. The allowed types are `feat`, `fix`,
+   `docs`, `refactor`, `test`, `chore`, `ci`, `build`, `perf`, `style`, and
+   `revert` (optional non-empty scope; a non-empty description is required).
 
-# Check specific gates
-gh pr view <number> --json statusCheckRollup \
-  --jq '.statusCheckRollup[] | select(.name | test("pr-policy|lint|tests")) | {name, conclusion, status}'
+5. Resolve rebase conflicts manually, preserving both the target branch and PR
+   changes. Then stage and continue:
 
-# Expected state:
-# - pr-policy: conclusion=SUCCESS (DCO now detected)
-# - lint: conclusion=SUCCESS (pre-commit hooks passed)
-# - tests: conclusion=SUCCESS (all tests passed)
-# When all are SUCCESS, the PR is unblocked.
-```
+   ```bash
+   git status
+   git add <resolved-path>
+   GIT_EDITOR=true git rebase --continue
+   ```
 
-## Failed Attempts Table
+   If an already-landed patch becomes empty, inspect it before using
+   `git rebase --skip`; do not skip a commit just to make the rebase finish.
+
+6. Run a local preflight across the final range. This detects malformed subjects,
+   missing trailers, and locally unverifiable signatures early, but it cannot
+   prove GitHub's `signature.isValid` result:
+
+   ```bash
+   set -euo pipefail
+   git log --format=%s "$BASE..HEAD" | python3 scripts/check_conventional_commit.py -
+   git log -z --format=%B "$BASE..HEAD" | python3 scripts/check_dco_signoff.py -
+   git rev-list "$BASE..HEAD" | while read -r oid; do
+     git verify-commit "$oid"
+   done
+   ```
+
+7. Publish the rewritten history with a lease and wait for CI. A successful push
+   is not evidence of compliance:
+
+   ```bash
+   git push --force-with-lease origin HEAD
+   gh pr checks "$PR" --repo "$REPO" --required --watch
+   ```
+
+   The remediation is verified-ci only when the new-head `pr-policy` check is
+   `pass` and all other required checks are complete and passing. If it still
+   fails, read the **new** check output and repeat from the actual current range.
+
+## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| Initial commit with `git commit -S` only | Used GPG signing flag (-S) alone, skipped DCO flag (-s) | pr-policy Check 4 failed: "missing Signed-off-by trailer"; the gate requires BOTH flags separately | DCO sign-off (-s) is orthogonal to GPG signature (-S); Git's -S does NOT automatically add the text trailer; always use both: `git commit -s -S` |
-| Tried to merge conflicts with `git checkout --theirs` | Attempted to auto-resolve conflicts by taking one side | Lost PR's changes; base branch improvements were incorporated but PR's new code was discarded | Manual resolution required: edit each conflicted file and MERGE both sides' improvements; never auto-take one side |
-| Force-pushed without `--force-with-lease` | Used `git push --force` | No immediate failure, but risky — if branch changed elsewhere concurrently, could overwrite another's work | Always use `--force-with-lease` for safety; it verifies the remote state before pushing |
-| Rebased before adding DCO trailer | Attempted rebase first, thinking it would auto-add DCO during rebase | Rebase stripped GPG signatures; commit still lacked DCO trailer after rebase push | Add DCO+GPG signature to the commit BEFORE rebasing; if rebasing anyway, re-sign all commits with `git rebase --exec "git commit --amend --no-edit -s -S" origin/main` |
-| Assumed conflict was resolved without git add | Manually edited conflicted files but forgot to stage them | Git rebase --continue refused with "unresolved conflicts" | After manually resolving each conflicted file, MUST `git add <file>` before calling `git rebase --continue` |
+| Add one final signed commit | Added a compliant follow-up without rewriting previous commits | `pr-policy` evaluates every commit in the PR range, so earlier invalid commits still fail | Rewrite every offending commit; a final fix commit cannot mask history-policy violations |
+| Use `git commit -S` only | Added a cryptographic signature but no DCO trailer | The DCO checker validates a separate text trailer on every message | Re-sign with both flags: `git commit --amend --no-edit -S -s` |
+| Add DCO only to `HEAD` | Used `git commit --amend -s` on the newest commit | PR #2280 had seven earlier commits missing sign-offs | Rebase the entire `$BASE..HEAD` range with an amend exec, then verify the final range |
+| Treat local signature verification as final | Used `git verify-commit` as proof of GitHub acceptance | CI uses GitHub's GraphQL `signature.isValid`, which can differ from local trust configuration | Use local checks as preflight and the new-head required `pr-policy` result as the source of truth |
+| Leave an old non-conventional subject untouched | Re-signed commits but did not reword `f511311c` | Signatures and DCO do not change the commit subject | Mark each bad subject `reword` during interactive rebase and validate subjects across the final range |
+| Force-push without a lease | Used `git push --force` after rewriting history | It can overwrite unseen remote work | Use `git push --force-with-lease`; fetch and re-evaluate if the lease is stale |
 
-## Results & Parameters - Copy-Paste Workflow
+## Results & Parameters
 
-```bash
-# Complete end-to-end fix for PR #1638 / issue #1412 scenario
-BRANCH="1412-auto-impl"
-ISSUE_NUM="1412"
+```text
+Required PR-policy contract (non-Dependabot PRs):
+  1. PR body has a standalone `Closes #N` line.
+  2. Every PR commit has GitHub `signature.isValid == true`.
+  3. Every PR commit subject is a Conventional Commit.
+  4. Every PR commit has `Signed-off-by: Name <email>`.
 
-# 1. Checkout the branch
-git checkout $BRANCH
-
-# 2. Add DCO + GPG to last commit
-git commit --amend -s -S
-
-# 3. Rebase onto main (may have conflicts)
-git rebase origin/main
-
-# 4. If conflicts appear (you'll see "CONFLICT" in output):
-#    - Edit conflicted files
-#    - Keep improvements from both sides
-#    - Remove conflict markers
-#    - git add each resolved file
-git add hephaestus/automation/some_module.py   # Example file
-git add hephaestus/automation/another_module.py
-
-# 5. Continue rebase
-GIT_EDITOR=true git rebase --continue
-
-# 6. Force-push with lease check
-git push origin $BRANCH --force-with-lease
-
-# 7. Monitor PR
-gh pr view $ISSUE_NUM --json statusCheckRollup \
-  --jq '.statusCheckRollup[] | {name, conclusion, status}'
-```
-
-## Results & Parameters - Expected Outputs
-
-After successful execution, you should observe:
-
-```bash
-# 1. Commit log shows both DCO trailer AND GPG signature
-git log --pretty=fuller -1
-# Output includes:
-# commit <sha>
-# Commit: <hash>
-#     gpg: Signature made <timestamp> with key <key-id>
-#     gpg: Good signature from "<name>"
-# Signed-off-by: Your Name <you@users.noreply.github.com>
-
-# 2. All pre-commit hooks pass (ProjectHephaestus has 39/39)
-pre-commit run --all-files
-# Output: all hooks green, no failures
-
-# 3. All tests pass (ProjectHephaestus has 69+ tests)
-pixi run pytest tests/unit --co -q | wc -l
-# Should show numeric count ≥ 69
-
-# 4. All CI gates turn GREEN in GitHub
-# - pr-policy: SUCCESS (DCO verified, conventional commits verified)
-# - lint: SUCCESS (pre-commit hooks passed)
-# - mypy: SUCCESS (type checking passed)
-# - tests: SUCCESS (all test suites passed)
+PR #2280 initial evidence (2026-07-18):
+  - required `pr-policy`: fail
+  - DCO-missing commits: 2f4a24da, c68df607, f133622c, a66c25ee,
+    5993d392, ecf25567, 698fa09e
+  - non-conventional subject: f511311c
+  - validation status: unverified until the rewritten branch's new `pr-policy` run passes
 ```
 
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectHephaestus | PR #1638, Issue #1412 | Fixed auto-impl branch `1412-auto-impl`; added DCO trailer via `git commit --amend -s -S`; resolved rebase conflict on main by manually merging both sides; force-pushed with `--force-with-lease`; all 69 tests passed, 39/39 pre-commit hooks passed, all CI gates green (verified-ci) |
-
-## Key Learnings
-
-1. **DCO is Separate from GPG**: The `git commit -s` flag adds a *text trailer* (`Signed-off-by: ...`). The `git commit -S` flag adds a *cryptographic signature*. They are orthogonal. ProjectHephaestus PR policy requires BOTH, passed as separate flags.
-
-2. **Rebase Conflicts Require Manual Resolution**: Auto-merge tools like `git checkout --ours` or `git checkout --theirs` lose one side's work. Always manually edit conflicted files, keeping improvements from both sides, then stage the resolved files.
-
-3. **Force-Push Safely**: `git push --force-with-lease` is safer than `git push --force` because it checks that the remote matches your expectation before overwriting.
-
-4. **PR Policy is Multi-Check**: A single `pr-policy` failure can mask multiple independent blockers (DCO, conventional commits, etc.). Always inspect the gate's sub-checks, not just the top-level status.
+| ProjectHephaestus | PR #1638, issue #1412 | v1.0.0 last-commit DCO/signature + rebase workflow passed all CI gates (verified-ci) |
+| ProjectHephaestus | PR #2280 | Expanded whole-range remediation derived from the live failed required `pr-policy` check; rewrite and CI confirmation pending (unverified) |
 
 ## References
 
-- **git-dco-signoff-distinct-from-gpg-sign.md**: Detailed explanation of DCO vs GPG signatures
-- **pr-rebase-conflict-resolution-patterns.md**: Comprehensive rebase and conflict resolution playbook (section K3 covers DCO+GPG re-signing in cluster PRs)
-- **ProjectHephaestus CLAUDE.md**: PR policy requirements, commit message format, signing rules
-- **PR #1638**: The actual fix PR that resolved issue #1412
-- **Issue #1412**: auto-impl branch requiring DCO fix + rebase conflict resolution
+- `.github/workflows/_required.yml` — authoritative four-part `pr-policy` implementation
+- `scripts/check_conventional_commit.py` — accepted commit types and subject grammar
+- `scripts/check_dco_signoff.py` — exact DCO trailer requirements and CI-provided re-sign command
+- `CONTRIBUTING.md` — Developer Certificate of Origin requirement
