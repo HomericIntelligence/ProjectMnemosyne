@@ -1,5 +1,25 @@
 # architecture-executable-convention-guard-pattern — History
 
+## v1.12.0 (2026-07-17)
+
+**Changed by:** ProjectHephaestus issue #2168 plan (publish a complete script catalog + completeness guard)
+**Verification:** unverified — plan-only session; the `git ls-files` enumeration and per-file header reads WERE performed, but the guard test was authored, not executed, and no CI validated it. Frontmatter `verification` stays `verified-local` for the earlier executed instances; the new #2168 sub-pattern is explicitly labeled unverified.
+
+### What changed
+
+- Added a new sub-pattern "Docs-Catalog↔Tracked-File-Set Completeness Guard (`git ls-files` ground truth)" (ProjectHephaestus issue #2168): a README section implicitly claiming completeness over a file set ("Available Scripts") is a membership invariant whose source of truth is `git ls-files <dir>` — the TRACKED set, never a filesystem glob (untracked scratch false-fails; "tracked" is the claim domain). The 7-step proposed workflow: re-derive BOTH numbers of the audit's "documents N of M" claim at plan time (issue said 10/31; ground truth was 9/29 — the drift IS the defect); use `git ls-files` via subprocess (precedent: `check_build_dir_untracked.py`); match each entry as a backticked dir-relative path (`shell/install.sh`) so subdirectory entries are exact with no markdown parser; paraphrase each one-line description from the file's own header docstring (never invent); place the guard in the sanctioned docs-test dir (`tests/unit/docs/`) with an actionable failure message and a fail-loud empty-population assert; never add new fenced command blocks to a README swept by a README-command validator (`validate_readme_commands.py` EXECUTES them) — prose bullets only; and treat the reverse direction (stale entry for a deleted file) as a stricter `**\`path\`**` bullet-anchor parse to plan or explicitly decline (KISS).
+- Added 3 Failed Attempts rows: trusted the audit's "10 of 31" count (re-derive both sides at plan time); considered a filesystem glob as ground truth (tracked set is the claim domain); nearly documented new scripts as runnable README snippets (the README-command validator executes code blocks — prose bullets only).
+- Added a "Docs-catalog completeness generalization (v1.12.0, unverified)" paragraph to Results & Parameters and a ProjectHephaestus #2168 row to Verified On.
+- Extended the frontmatter description with trigger (13); added tags `docs-catalog-completeness`, `git-ls-files-ground-truth`, `readme-command-validator-trap`, `backticked-path-match` (frontmatter + footer). Bumped frontmatter version 1.11.0 → 1.12.0; date 2026-07-17.
+
+### Why
+
+The existing doc-drift sub-patterns cover doc-table↔`__all__` membership (#1506/#1507); #2168 is the complementary catalog case where the source of truth is git's tracked file set rather than a live import surface. The distinct durable material: `git ls-files` (not glob) as the ground-truth choice with its rationale, backticked relative-path match keys that make the guard a plain string check, the README-command-validator trap (a catalog "improvement" that adds runnable blocks silently enlarges an executable doc surface), and the honest treatment of the asymmetric reverse direction. Captured as plan-only so the verification level is honest until the Hephaestus PR lands and CI confirms.
+
+### Previous version (v1.11.0) snapshot
+
+The v1.11.0 rendered `.md` content prior to this amendment is preserved in git history at the parent commit of this amendment.
+
 ## v1.11.0 (2026-07-03)
 
 **Changed by:** ProjectScylla issue #2027 plan (canonical `release` check via dry-run pipeline validator)
