@@ -1,6 +1,21 @@
 <!-- markdownlint-disable MD024 -->
 # Change History: python-packaging-pyproject-editable-install
 
+## v1.1.0 (2026-07-18)
+
+**Changed by:** Session triaging a 2.25h ProjectHephaestus automation-loop run that produced 0 commits/0 PRs — every agent prompt render crashed in `jinja2.PackageLoader` because the running checkout had the prompt-catalog code but not its committed `templates/*.j2` data tree.
+**Verification:** verified-local — root cause confirmed on disk (`origin/main` has 55 committed templates; the running off-`main` checkout had 0) and against the run log (172 identical `PackageLoader could not find 'templates/default'` errors); the two guards (package-data ship-test + startup preflight) are recommended, tracked in Hephaestus #2283.
+
+### What changed
+- Added subsection **2b. Runtime DATA files missing from the checkout the code runs against**: an importable-but-resource-less package (Jinja templates / packaged resources absent) crashes at runtime; declare the data as package data AND add a fail-fast startup preflight; includes the sdist content-test pattern and the on-disk detection commands.
+- Added a When-to-Use trigger (6/7) for `PackageLoader`/`importlib.resources` "could not find" runtime failures and no-op agent runs from a missing resource.
+- Added a Failed Attempts row for running the loop against the resource-less package.
+- Noted the related classifier smell: an infra "cannot build a prompt" error must not be routed to `finished(fail)` as agent *poison*.
+- Bumped 1.0.0 -> 1.1.0; tags += package-data, jinja-templates, packageloader, importlib-resources, runtime-resource-missing, startup-preflight, fail-fast.
+
+### Why
+v1.0.0 covered stale *console scripts* after an editable install, but not the distinct failure where the code is importable yet its runtime DATA files are missing — which silently burned a multi-hour agent run. Both share the intent "the install/checkout doesn't actually contain what the running code needs," so this is the correct home.
+
 ## v1.0.0 (2026-06-07)
 
 Consolidated 4 overlapping pyproject.toml-centric packaging skills into this general canonical:

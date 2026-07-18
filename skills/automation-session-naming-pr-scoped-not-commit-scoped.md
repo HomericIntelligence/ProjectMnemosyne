@@ -2,8 +2,8 @@
 name: automation-session-naming-pr-scoped-not-commit-scoped
 description: "When an automation loop drives a long-lived artifact (issue / PR) with short-lived Claude sessions via `claude --resume <session_id>`, the deterministic session id MUST be scoped to the artifact, not to the live trunk commit. Silent session recreation has two independent causes: (1) id-scope drift — tuple includes `githash` so every main-bump mints a new UUID the wrapper cannot resume; (2) cwd mismatch — `invoke_claude_with_session` determines create-vs-resume by checking `transcript = session_jsonl_path(sid, cwd); should_resume = transcript.exists()`, so if turn 1 and turn 2 use different `cwd` values the transcript resolves to a non-existent path and the second turn silently creates a fresh session. Fix (1): drop `githash` from the session-name tuple. Fix (2): all turns in a multi-turn session MUST pass the same `cwd`. Also covers: advise-as-first-implementer-turn two-turn pattern; marketplace-path relativization bug when `cwd=worktree_path`. Use when: session resume silently fails, an agent starts fresh each iteration, implementing multi-turn session patterns with advise + implementation turns."
 category: architecture
-date: 2026-06-08
-version: "1.1.0"
+date: 2026-07-18
+version: "1.2.0"
 user-invocable: false
 history: automation-session-naming-pr-scoped-not-commit-scoped.history
 tags:
@@ -50,6 +50,7 @@ Use this skill when any of the following apply:
 - You are auditing the call graph of an automation pipeline and notice **only some** of the agent invocation sites pass a `githash` (any subset is wrong — a partial removal forks the session family at the boundary between updated and not-updated callers).
 - You are implementing a **two-turn session pattern** where turn 1 is an advise/context-gathering step and turn 2 is the main implementation, and you want both to share the same transcript.
 - A **path-relativization helper** is called with `repo_root` but the session runs with `cwd=worktree_path` — paths outside the worktree become incorrect relative paths.
+- **DIFFERENT invocation helpers disagree on `cwd` for the SAME session key**: one family of call sites passes `cwd=repo_root`, another passes `cwd=worktree`. The create-vs-resume probe is `create = not session_jsonl_path(sid, cwd).exists()`, so a session created under one cwd is probed under the other, `.exists()` is False, and turn 2 silently re-creates. **Audit ALL call sites of the invoker, not one** — a single divergent family (e.g. a shared `agent_stage`/`run_direct_agent` helper vs the per-stage pipeline calls) forks the whole session family.
 
 ## Verified Workflow
 
@@ -277,3 +278,4 @@ hephaestus/automation/<wrapper>.py
 | --------- | --------- | --------- |
 | ProjectHephaestus | PR #845 closes #841 — session-naming fix (id-scope) | `session_name` and `session_uuid` lost `githash`; `invoke_claude_with_session` lost the matching kwarg; 8 callers updated in lockstep. Regression test uses `**bad_kwargs` unpacking. PR merged via CI. |
 | ProjectHephaestus | PR #1100 — advise session isolation + cwd invariant + marketplace-path fix | Two-turn advise-as-implementer-turn pattern; cwd=worktree_path enforced for both turns; `repo_root=str(worktree_path)` passed to `get_advise_prompt`; Codex guard preserved. 1303 tests pass; pre-commit hooks clean. |
+| ProjectHephaestus | 2026-07-17 run — cause-2 RECURRENCE at a NEW call-site family | On-disk proof: 19 same-artifact sessions written twice under two cwd-encoded project dirs (e.g. `Hephaestus_2164_pr-reviewer_fable` = 150KB under the repo-root dir + 143KB under the `issue-2164` worktree dir), ~940K redundant re-sent tokens. Cause: `agent_stage.py:92,121` (`run_agent_stage`/`run_direct_agent`) pass `cwd=repo_root` while every pipeline stage (`planning.py:289,313`, `implementation.py:394+`, `plan_review`, `pr_review`, `ci.py:551`, `merge_wait.py:440`) passes `cwd=<worktree>`; probe is `claude_invoke.py:307`. Session *id* was correct (no SHA drift). Fix direction: make `agent_stage` use the worktree cwd to match the pipeline convention. Tracked Hephaestus #2284. |

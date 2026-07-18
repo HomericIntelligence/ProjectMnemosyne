@@ -1,9 +1,9 @@
 ---
 name: python-packaging-pyproject-editable-install
-description: "Use when: (1) migrating a Python project from hardcoded version in pyproject.toml to hatch-vcs dynamic versioning from git tags, (2) a newly-merged [project.scripts] entry yields 'command not found' after git pull because the editable install is stale — re-run 'pixi run dev-install' or 'pip install -e .', (3) a console-script sweep needs to enumerate [project.scripts] in pyproject.toml rather than grep for 'def main' (misses *_main-suffixed callables), (4) migrating from pytest-watch to pytest-watcher to drop the unmaintained docopt transitive dependency, (5) shipping a Python package to PyPI with hatchling/hatch-vcs/pixi.lock and configuring trusted-publishing."
+description: "Use when: (1) migrating a Python project from hardcoded version in pyproject.toml to hatch-vcs dynamic versioning from git tags, (2) a newly-merged [project.scripts] entry yields 'command not found' after git pull because the editable install is stale — re-run 'pixi run dev-install' or 'pip install -e .', (3) a console-script sweep needs to enumerate [project.scripts] in pyproject.toml rather than grep for 'def main' (misses *_main-suffixed callables), (4) migrating from pytest-watch to pytest-watcher to drop the unmaintained docopt transitive dependency, (5) shipping a Python package to PyPI with hatchling/hatch-vcs/pixi.lock and configuring trusted-publishing, (6) code imports a package that loads NON-.py DATA FILES at runtime (Jinja templates, JSON/YAML resources) via importlib.resources / jinja2.PackageLoader and it raises 'could not find a <dir> directory in the <pkg> package' / FileNotFoundError because the data tree is present in the repo but MISSING from the checkout/build the code runs against, (7) a long automation/agent run does a large amount of no-op work because a required runtime resource was absent and nothing failed fast — add a startup preflight."
 category: tooling
-date: 2026-06-07
-version: "1.0.0"
+date: 2026-07-18
+version: "1.1.0"
 user-invocable: false
 history: python-packaging-pyproject-editable-install.history
 tags:
@@ -25,6 +25,13 @@ tags:
   - trusted-publishing
   - pixi
   - pytest-watcher
+  - package-data
+  - jinja-templates
+  - packageloader
+  - importlib-resources
+  - runtime-resource-missing
+  - startup-preflight
+  - fail-fast
 ---
 
 # Python Packaging: pyproject.toml, hatch-vcs, and Editable Installs
@@ -230,6 +237,78 @@ NEW=$(python -c "import hephaestus; print(hephaestus.__version__)")  # 0.9.3.dev
 
 **Diff-trigger heuristic** — re-run `dev-install` after a pull whenever the `pyproject.toml` diff touches any of: `[project.scripts]` (new entry-point stubs), `[project.optional-dependencies]`, `[project.dependencies]`, `[tool.hatch.build.hooks.vcs]` / `version-file`, or any `[build-system]` change. Cost: a few seconds vs. minutes of "command not found" debugging.
 
+#### 2b. Runtime DATA files (templates/resources) missing from the checkout the code runs against
+
+A package can be **importable** yet **broken at runtime** because its non-`.py`
+data tree (Jinja templates, packaged JSON/YAML) is absent from the tree the code
+actually executes against. Verified failure (ProjectHephaestus, 2026-07-17): a
+2.25h `hephaestus-automation-loop` run produced **0 commits / 0 PRs** because
+`hephaestus.prompts.catalog` (a `jinja2.PackageLoader(..., "templates/default")`)
+raised on **every** agent-prompt render — plan, implement, review, AND the
+`commit_push` commit-message generation — **172 times**:
+
+```text
+ValueError: PackageLoader could not find a 'templates/default' directory
+in the 'hephaestus.prompts' package.
+```
+
+**Why it happened:** the loop ran from a checkout at an off-`main` WIP commit that
+had the catalog `catalog.py` **code** but **zero committed** `templates/*.j2`
+files (a stray `hephaestus/prompts/__pycache__/` made the module importable with
+no templates). `origin/main` had all 55 templates committed. Downstream symptoms
+MASKED the cause: "no commits vs base → state:skip", "poisoned at implementation",
+and reviewer "zero-thread NOGO" were all consequences, not the disease.
+
+**Two independent guards — do BOTH:**
+
+1. **Declare the data as package data** so an installed/built artifact can never
+   be resource-less. With hatchling, `[tool.hatch.build.targets.wheel]
+   packages = ["<pkg>"]` includes non-`.py` files under the package, but ADD an
+   sdist/wheel content test that asserts the data ships:
+
+```python
+# tests/integration/test_sdist_contents.py style — fail if templates are dropped
+import tarfile, subprocess, glob
+subprocess.run(["python", "-m", "build", "--sdist", "--no-isolation"], check=True)
+sdist = sorted(glob.glob("dist/*.tar.gz"))[-1]
+names = tarfile.open(sdist).getnames()
+assert any(n.endswith("prompts/templates/default/implementation/implementation.j2")
+           for n in names), "prompt templates missing from sdist"
+```
+
+2. **Fail fast with a startup preflight** — a long agent/automation run must NOT
+   dispatch work when a required runtime resource is absent. Render one prompt (or
+   probe the resource) BEFORE the first job; abort with a clear remediation:
+
+```python
+def preflight_prompt_catalog() -> None:
+    """Abort fast if the prompt templates are missing (packaging regression)."""
+    try:
+        from mypkg.prompts.catalog import current
+        current()  # constructs the PackageLoader -> raises here if templates absent
+    except Exception as exc:
+        raise SystemExit(
+            f"prompt templates unavailable ({exc}); the checkout/install is "
+            f"missing package data - run `uv sync` (or reinstall) and retry"
+        ) from exc
+```
+
+**Detect it after the fact:** grep the run log for a single repeated
+resource-loader error (`PackageLoader could not find`, `FileNotFoundError`,
+`importlib.resources`), then confirm on disk that the data tree is absent from
+the RUNNING checkout while present on `main`:
+
+```bash
+git ls-tree -r origin/main --name-only | grep -c '<pkg>/prompts/templates/'   # e.g. 55
+find <running-checkout>/<pkg>/prompts/templates -name '*.j2' | wc -l          # 0 == broken
+git -C <running-checkout> rev-parse --short HEAD    # is it even an on-main commit?
+```
+
+The classifier bug (an infra "cannot build a prompt" routed to `finished(fail)`
+as if the work item were *poison*) is a related smell: distinguish "the harness
+could not build a prompt" from "the agent produced bad output" so a packaging
+regression fails fast instead of silently burning items.
+
 #### 3. Enumerate `[project.scripts]` — do NOT `grep '^def main'`
 
 `grep -rln '^def main'` only finds entry points named `module:main`. It silently misses suffixed callables like `check_version_consistency_main`, `bench_precommit_main`, `validate_agents_main`. In one verified session this missed **10 of 41 console_scripts (24%)**. Suffixed names are correct and idiomatic — a module can host several CLIs (e.g. `validation/markdown.py` exposes both `main` and `check_readmes_main`).
@@ -305,6 +384,7 @@ Wheel-only build: add `[tool.hatch.build] targets = ["wheel"]` ABOVE the `[tool.
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 | --------- | --------------- | --------------- | ---------------- |
+| Ran the loop against an importable-but-resource-less package | Launched `hephaestus-automation-loop` from a checkout whose `prompts` package had `catalog.py` but no committed `templates/*.j2` (only `__pycache__`) | `jinja2.PackageLoader(..., "templates/default")` raised on every prompt render — 172x — so 0 commits/PRs across a 2.25h run; symptoms ("no commits->skip", "poisoned") masked the cause | Declare runtime data as package data + ship-test it; add a startup preflight that renders one prompt and aborts fast; verify the running checkout has the data tree (and is an on-`main` commit) before launching |
 | Use the **import name** with `importlib.metadata.version()` | `__version__ = _pkg_version("hephaestus")` when the distribution is `HomericIntelligence-Hephaestus` | `PackageNotFoundError`: the lookup is a PEP 503 normalized match against installed `*.dist-info`; there is no `hephaestus-*.dist-info`. `__version__` silently becomes `"unknown"` | `importlib.metadata.version()` requires the **distribution name** (literal `[project].name`), not the import package directory name |
 | Parse `pyproject.toml` for `[project].version` in a drift check | `tomllib.load(...)["project"]["version"]` after the migration | `KeyError` — once `dynamic = ["version"]` is set, `[project].version` no longer exists; hatch-vcs removes it | Derive the canonical version from `git describe --tags --abbrev=0 --match 'v[0-9]*'` with `importlib.metadata` fallback |
 | Add `hatch-vcs` to `pixi.toml [pypi-dependencies]` | `hatch-vcs = ">=0.4.0,<1"` under `[pypi-dependencies]` | Unnecessary; pip resolves it from `[build-system].requires`. Adds lockfile noise | `hatch-vcs` is build-time only — declare it in `[build-system].requires` only |

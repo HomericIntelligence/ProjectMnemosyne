@@ -1,5 +1,18 @@
 # automation-session-naming-pr-scoped-not-commit-scoped — History
 
+## v1.2.0 (2026-07-18)
+
+**Changed by:** Session analyzing a ProjectHephaestus automation-loop run's on-disk session transcripts, which showed cause-2 (cwd mismatch) recurring at a call-site family the PR #1100 fix did not cover.
+**Verification:** verified-local — 19 same-artifact sessions found written twice under two cwd-encoded project dirs (~940K redundant re-sent tokens); root cause confirmed in code (`agent_stage.py:92,121` `cwd=repo_root` vs pipeline stages `cwd=<worktree>`; probe `claude_invoke.py:307`). Fix tracked in Hephaestus #2284.
+
+### What changed
+- Added a When-to-Use trigger: DIFFERENT invocation helpers disagreeing on `cwd` for the same session key fork the session family; audit ALL invoker call sites, not one.
+- Added a Verified-On row documenting the 2026-07-17 recurrence with the exact divergent call sites, the on-disk duplicate-transcript evidence, and the token-waste floor.
+- Bumped 1.1.0 -> 1.2.0.
+
+### Why
+v1.1.0 fixed the cwd invariant for the advise/implement two-turn pattern (PR #1100) but the same class of bug reappeared where a *shared* agent-invocation helper (`agent_stage`) uses `repo_root` while the pipeline stages use the worktree. The lesson generalizes: the cwd invariant must hold across EVERY caller of the session invoker, and the audit must enumerate all call sites.
+
 ## v1.1.0 (2026-06-08)
 
 **Changed by:** PR #1100 — advise session isolation bug-fix (ProjectHephaestus)
