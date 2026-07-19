@@ -7,7 +7,7 @@ Standards for creating and validating skills in the Mnemosyne skills/memory stor
 > nested `<name>/SKILL.md`, no per-skill `plugin.json`, and no `.claude-plugin/`
 > directory inside each skill. The only documented exception is
 > `plugins/tooling/mnemosyne/` (command infrastructure), which is *not* a skill.
-> See `CLAUDE.md` for repo structure and `templates/skill-template.md` for a
+> See `AGENTS.md` for repo structure and `templates/skill-template.md` for a
 > ready-to-copy template.
 
 ## Required Structure
