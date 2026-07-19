@@ -1,9 +1,9 @@
 ---
 name: python-packaging-pyproject-editable-install
-description: "Use when: (1) migrating a Python project from hardcoded version in pyproject.toml to hatch-vcs dynamic versioning from git tags, (2) a newly-merged [project.scripts] entry yields 'command not found' after git pull because the editable install is stale — re-run 'pixi run dev-install' or 'pip install -e .', (3) a console-script sweep needs to enumerate [project.scripts] in pyproject.toml rather than grep for 'def main' (misses *_main-suffixed callables), (4) migrating from pytest-watch to pytest-watcher to drop the unmaintained docopt transitive dependency, (5) shipping a Python package to PyPI with hatchling/hatch-vcs/pixi.lock and configuring trusted-publishing, (6) code imports a package that loads NON-.py DATA FILES at runtime (Jinja templates, JSON/YAML resources) via importlib.resources / jinja2.PackageLoader and it raises 'could not find a <dir> directory in the <pkg> package' / FileNotFoundError because the data tree is present in the repo but MISSING from the checkout/build the code runs against, (7) a long automation/agent run does a large amount of no-op work because a required runtime resource was absent and nothing failed fast — add a startup preflight."
+description: "Use when: (1) migrating a Python project from hardcoded version in pyproject.toml to hatch-vcs dynamic versioning from git tags, (2) a newly-merged [project.scripts] entry yields 'command not found' after git pull because the editable install is stale — re-run 'pixi run dev-install' or 'pip install -e .', (3) a console-script sweep needs to enumerate [project.scripts] in pyproject.toml rather than grep for 'def main' (misses *_main-suffixed callables), (4) migrating from pytest-watch to pytest-watcher to drop the unmaintained docopt transitive dependency, (5) shipping a Python package to PyPI with hatchling/hatch-vcs/pixi.lock and configuring trusted-publishing, (6) code imports a package that loads NON-.py DATA FILES at runtime (Jinja templates, JSON/YAML resources) via importlib.resources / jinja2.PackageLoader and it raises 'could not find a <dir> directory in the <pkg> package' / FileNotFoundError because the data tree is present in the repo but MISSING from the checkout/build the code runs against, (7) a long automation/agent run does a large amount of no-op work because a required runtime resource was absent and nothing failed fast — add a startup preflight, (8) the SAME 'PackageLoader could not find <dir>' / importlib.resources error fires even though the data files ARE on disk and the checkout is on main — a transient race right after an editable-install rebuild (uv sync / pip install -e .) that spawns workers before importlib metadata settles; fix by resolving data via a __file__-relative FileSystemLoader instead of PackageLoader."
 category: tooling
 date: 2026-07-18
-version: "1.1.0"
+version: "1.2.0"
 user-invocable: false
 history: python-packaging-pyproject-editable-install.history
 tags:
@@ -32,6 +32,9 @@ tags:
   - runtime-resource-missing
   - startup-preflight
   - fail-fast
+  - rebuild-race
+  - filesystemloader
+  - file-relative-path
 ---
 
 # Python Packaging: pyproject.toml, hatch-vcs, and Editable Installs
@@ -259,7 +262,36 @@ no templates). `origin/main` had all 55 templates committed. Downstream symptoms
 MASKED the cause: "no commits vs base → state:skip", "poisoned at implementation",
 and reviewer "zero-thread NOGO" were all consequences, not the disease.
 
-**Two independent guards — do BOTH:**
+**Second, DISTINCT cause — the editable-rebuild import race (verified
+2026-07-18, fixed in Hephaestus PR #2310):** the SAME `PackageLoader could not
+find 'templates/default'` error also fires when the templates ARE present on
+disk and the checkout IS on `main`. `jinja2.PackageLoader` (like
+`importlib.resources`) resolves package data through importlib package
+*metadata*, which is transiently inconsistent for the few seconds after an
+editable-install rebuild. An automation loop that runs `uv sync` (rebuild) at
+launch and immediately spawns worker processes will have some workers import
+the catalog inside that window and crash — 12 reviewer jobs died this way in
+one run (a ~5-minute burst right after the rebuild, then never again). Tell the
+two causes apart by the log's time-distribution: **stale-checkout** crashes
+persist for the whole run; **rebuild-race** crashes cluster in the minutes
+right after the `Building… Uninstalled 1… Installed 1` lines, then stop.
+
+The fix is to make the loader **not depend on package metadata** — resolve the
+data by a `__file__`-relative filesystem path:
+
+```python
+# BAD: consults importlib metadata → races an editable rebuild
+loaders.append(PackageLoader("mypkg.prompts", "templates/default"))
+# GOOD: filesystem path relative to the module, no metadata dependency
+_DIR = Path(__file__).resolve().parent / "templates" / "default"
+loaders.append(FileSystemLoader(str(_DIR)))
+```
+
+A byte-hash render test proves the swap is behavior-preserving (same output);
+add a test asserting the templates resolve by the `__file__` path so nobody
+reintroduces `PackageLoader`.
+
+**Two independent guards for the missing-DATA case — do BOTH:**
 
 1. **Declare the data as package data** so an installed/built artifact can never
    be resource-less. With hatchling, `[tool.hatch.build.targets.wheel]
@@ -384,6 +416,7 @@ Wheel-only build: add `[tool.hatch.build] targets = ["wheel"]` ABOVE the `[tool.
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 | --------- | --------------- | --------------- | ---------------- |
+| Kept PackageLoader after templates were confirmed on disk | Verified the checkout was on main with all 55 `.j2` files present, assumed the crash was fixed | The SAME `PackageLoader could not find 'templates/default'` still fired transiently — 12 reviewer jobs in a 5-min burst right after the launch-time `uv sync` rebuild, then never again. PackageLoader consults importlib package metadata, inconsistent for seconds post-rebuild | Resolve packaged data by a `__file__`-relative `FileSystemLoader`, not `PackageLoader`; a byte-hash render test proves it is behavior-preserving (Hephaestus PR #2310) |
 | Ran the loop against an importable-but-resource-less package | Launched `hephaestus-automation-loop` from a checkout whose `prompts` package had `catalog.py` but no committed `templates/*.j2` (only `__pycache__`) | `jinja2.PackageLoader(..., "templates/default")` raised on every prompt render — 172x — so 0 commits/PRs across a 2.25h run; symptoms ("no commits->skip", "poisoned") masked the cause | Declare runtime data as package data + ship-test it; add a startup preflight that renders one prompt and aborts fast; verify the running checkout has the data tree (and is an on-`main` commit) before launching |
 | Use the **import name** with `importlib.metadata.version()` | `__version__ = _pkg_version("hephaestus")` when the distribution is `HomericIntelligence-Hephaestus` | `PackageNotFoundError`: the lookup is a PEP 503 normalized match against installed `*.dist-info`; there is no `hephaestus-*.dist-info`. `__version__` silently becomes `"unknown"` | `importlib.metadata.version()` requires the **distribution name** (literal `[project].name`), not the import package directory name |
 | Parse `pyproject.toml` for `[project].version` in a drift check | `tomllib.load(...)["project"]["version"]` after the migration | `KeyError` — once `dynamic = ["version"]` is set, `[project].version` no longer exists; hatch-vcs removes it | Derive the canonical version from `git describe --tags --abbrev=0 --match 'v[0-9]*'` with `importlib.metadata` fallback |

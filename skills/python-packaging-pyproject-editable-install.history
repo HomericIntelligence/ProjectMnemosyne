@@ -1,6 +1,20 @@
 <!-- markdownlint-disable MD024 -->
 # Change History: python-packaging-pyproject-editable-install
 
+## v1.2.0 (2026-07-18)
+
+**Changed by:** Session log-analysis found the `PackageLoader could not find 'templates/default'` crash RECURRED even after the checkout was confirmed on main with all templates present — a distinct cause from the v1.1.0 stale-checkout finding.
+**Verification:** verified-ci (Hephaestus PR #2310: `__file__`-relative FileSystemLoader; a byte-hash render test proves output unchanged, a new test pins metadata-independent resolution).
+
+### What changed
+- Added the SECOND cause to subsection 2b: an editable-install rebuild (`uv sync`) at launch spawns workers before importlib package metadata settles, so `PackageLoader` (metadata-based) transiently fails for ~5 minutes even though the data is on disk. Distinguish it from the stale-checkout cause by the log's time-distribution (post-`Building… Installed 1` burst that then stops, vs. whole-run persistence).
+- Documented the fix: resolve packaged data via a `__file__`-relative `FileSystemLoader`, not `PackageLoader`; byte-hash test proves behavior-preserving.
+- Added When-to-Use trigger (8), tags (rebuild-race, filesystemloader, file-relative-path), and a Failed Attempts row.
+- Bumped 1.1.0 -> 1.2.0.
+
+### Why
+v1.1.0 attributed the crash entirely to a template-less checkout and prescribed package-data + preflight guards. Those are necessary but do not fix the case where the data IS present — the metadata race is a separate failure mode with its own fix (drop PackageLoader for a path-based loader). Both causes now live in one subsection so a reader diagnoses by log timing rather than guessing.
+
 ## v1.1.0 (2026-07-18)
 
 **Changed by:** Session triaging a 2.25h ProjectHephaestus automation-loop run that produced 0 commits/0 PRs — every agent prompt render crashed in `jinja2.PackageLoader` because the running checkout had the prompt-catalog code but not its committed `templates/*.j2` data tree.
