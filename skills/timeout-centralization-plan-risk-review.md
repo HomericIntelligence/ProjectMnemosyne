@@ -108,4 +108,3 @@ _Not applicable._ This skill is `unverified`: it captures a planning risk checkl
 - Grep completeness: search for positional timeout args, assigned variables, and wrapper defaults, not just timeout=<literal>.
 - Diagnostics: warnings and logs should interpolate the resolved constants so env overrides are visible.
 ```
-
