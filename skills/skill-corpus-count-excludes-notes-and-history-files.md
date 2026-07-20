@@ -107,4 +107,4 @@ done | sort | uniq -c | sort -rn
 ## References
 
 - [Epic #1823 — second-pass consolidation](https://github.com/HomericIntelligence/Mnemosyne/issues/1823)
-- [CLAUDE.md — Plugin Standards](../CLAUDE.md)
+- [AGENTS.md — Plugin Standards](../AGENTS.md)
