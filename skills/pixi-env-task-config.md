@@ -2,8 +2,8 @@
 name: pixi-env-task-config
 description: "Use when: (1) setting up a new Mojo/MAX/Python project with pixi.toml and choosing between nightly/stable channels, (2) wrapping pixi tasks with a justfile for cross-repo convention alignment, (3) eliminating DRY violations by using pixi feature composition (environments = {features = [shared, dev]}) to share dev tools across environments, (4) adding justfile delegation recipes to a meta-repo, (5) auditing pixi task definitions for consistency with CI workflows, (6) a pixi [tasks] entry whose command body is itself `pixi run ...` (nested/recursive pixi invocation smell) — relocate it into the target environment's [feature.<env>.tasks] with a depends-on alias."
 category: tooling
-date: 2026-06-22
-version: "1.2.0"
+date: 2026-07-18
+version: "1.3.0"
 user-invocable: false
 history: pixi-env-task-config.history
 tags:
@@ -21,18 +21,68 @@ tags:
   - solve-groups
   - depends-on
   - recursive-invocation
+  - uv
+  - adr-018
+  - mojo-uv
+  - migration
 ---
 
 # Pixi Environment and Task Configuration
+
+> ⚠️ **SUPERSEDED for HomericIntelligence by Odysseus ADR-018** — uv is now the
+> ecosystem-wide Python/build standard; pixi.toml is removed from all repos. Use
+> uv (pyproject.toml + uv.lock + `uv sync`/`uv run`) for new work. This entry is
+> retained for context and for non-HI pixi projects. See the
+> [uv migration mapping](#uv-migration-mapping-adr-018) section below for the
+> verified pixi→uv translation, including the key finding that uv **can** install
+> the full Mojo/C++ toolchain (proven in CI across 5 HI repos).
 
 ## Overview
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-06-22 |
-| **Objective** | Author pixi.toml for Mojo/MAX/Python projects, wrap pixi tasks with a justfile for ecosystem convention alignment, and de-duplicate dev tools via pixi feature composition |
-| **Outcome** | Single source covering project scaffolding (pixi/uv/pip/conda), justfile wrapping/delegation, and feature-composition DRY elimination |
+| **Date** | 2026-07-18 |
+| **Objective** | Author pixi.toml for Mojo/MAX/Python projects, wrap pixi tasks with a justfile for ecosystem convention alignment, and de-duplicate dev tools via pixi feature composition. **For HomericIntelligence: superseded by uv per ADR-018 (see uv migration mapping below).** |
+| **Outcome** | Single source covering project scaffolding (pixi/uv/pip/conda), justfile wrapping/delegation, feature-composition DRY elimination, and the verified pixi→uv supersession (ADR-018) |
 | **Verification** | verified-ci |
+
+## uv Migration Mapping (ADR-018)
+
+**HomericIntelligence has migrated pixi → uv ecosystem-wide** (Odysseus
+ADR-018). uv is the standard; `pixi.toml` is removed from all HI repos. New work
+uses `pyproject.toml` + `uv.lock` + `uv sync`/`uv run`, with `just` remaining the
+task front door (justfile recipes now call `uv run` instead of `pixi run`).
+
+### Key verified feasibility finding (corrects a prior belief)
+
+A prior belief held that uv **"cannot"** install non-Python toolchains, which
+would have scoped the migration to pure-Python repos only. That is **WRONG**. uv
+**can** drive the full ecosystem — verified in real CI across 5 HI repos:
+
+| Toolchain need | uv-installable? | How | Proven on |
+| ---------------- | ----------------- | ----- | ----------- |
+| **Mojo compiler** | Yes | `uv pip install mojo` or `uv add mojo --prerelease allow --extra-index-url https://modular.gateway.scarf.sh/simple/` (Mojo v0.25.6+; PyPI `mojo==1.0.0b2` is the **same build id** as the conda pin) | ProjectOdyssey — compiled real Mojo code in CI |
+| **cmake / ninja / conan / gcovr** | Yes | PyPI binary wheels in a uv `[dependency-groups].dev` | Agamemnon 178/178, Nestor 115/115, Charybdis 15/15, Keystone 223 gtest targets |
+| **cxx-compiler / clang-tools / openssl / libcurl-dev** | System apt | ubuntu runners already ship gcc/g++; `apt install` the rest | (ubuntu-latest baseline) |
+| **jq / go-yq** | apt / release binaries | `apt install` or download pinned release binary | (CI baseline) |
+| **just** | pinned action | `extractions/setup-just` action | (CI baseline) |
+
+The Mojo PyPI wheel (`mojo==1.0.0b2`) carries the **same build id** as the conda
+pin, so it is not a different/weaker build — it compiles the identical real Mojo
+code in CI (proven on ProjectOdyssey).
+
+### Task / command mapping
+
+| pixi | uv equivalent |
+| ------ | --------------- |
+| `pixi install` | `uv sync --locked` |
+| `pixi run X` | `uv run X` |
+| `pixi.toml [tasks]` | justfile recipes calling `uv run` (`just` stays the task front door) |
+| `deps`/`version-sync` comparing `pixi.toml` | `uv lock --check` |
+
+`just` remains the task front door across the migration: recipes that previously
+delegated to `pixi run <task>` now delegate to `uv run <task>`, and the meta-repo
+delegation pattern (`cd <submodule> && just <recipe>`) is unchanged.
 
 ## When to Use
 
@@ -432,6 +482,7 @@ python3 -c "import tomllib;d=tomllib.load(open('pixi.toml','rb'));t=d['feature']
 | Deleting/moving a task because "it exists" without a consumer grep | Assumed the top-level `audit` task was load-bearing | "The task exists" ≠ "anyone invokes it" — CI and justfile actually called `pixi run --environment lint pip-audit` directly, so the top-level alias had zero real consumers | Grep `.github/ justfile *.md *.py` for the **bare** task name first (exclude `.pixi/` and `build/` worktrees → false positives); relocate freely only when the grep is empty |
 | Trusting an issue-body file path | Issue said "MIGRATION.md not linked from README" implying a root file | The file actually lived at `docs/MIGRATION.md`; issue-body paths are frequently approximate | `grep -rni "migration.md"` to find the real path before writing the link |
 | Assuming a documented-gap is uniformly absent | Audit item "document macOS/Windows CI absence" was already DONE in `.github/workflows/test.yml` but missing in the sibling gate `_required.yml` | A doc/gap can be present in one of two authoritative files and absent in the other | Read BOTH sibling files before planning the change; don't assume a gap is uniform across mirrored configs |
+| Scoping pixi→uv migration to pure-Python repos only | Claimed uv "physically cannot" install Mojo/C++ toolchains | WRONG — re-checked PyPI: `mojo`, `cmake`, `ninja`, `conan` are all uv-installable (`mojo==1.0.0b2` is the same build id as the conda pin, and cmake/ninja/conan ship binary wheels) | Verify toolchain-installability against PyPI before scoping a migration; the correction required a superseding ADR (018) and a full-ecosystem migration, not a pure-Python-only carve-out |
 
 ## Results & Parameters
 
@@ -527,6 +578,8 @@ just = ">=1.25.0,<2"
 | ProjectHephaestus | Issue #747 — pixi dependency de-duplication | Six dev tools into `[feature.shared]`, regression test, 24 pixi tests pass |
 | Odysseus (meta-repo) | 4-submodule delegation via 2-wave myrmidon swarm, 2026-04-05 | Wave 1: 3 Sonnet agents (~70s); Wave 2: 1 Sonnet agent (~120s); verified `just --list` |
 | ProjectHephaestus | Issue #1554 (4-item packaging/DX nitpick bundle) — PLANNING only, 2026-06-22 | Observed nested `pixi run` task smell (`audit = "pixi run --environment lint pip-audit"`); confirmed TASKS-first resolution via `pixi run audit --help`; consumer grep showed top-level `audit` had ZERO real consumers. Proposed `depends-on` relocation NOT yet executed/CI-confirmed |
+| ProjectOdyssey | ADR-018 pixi→uv migration — uv installs Mojo compiler, 2026-07-18 | `uv add mojo` (PyPI `mojo==1.0.0b2`, same build id as conda pin) compiled real Mojo code in CI — verified-ci |
+| ProjectAgamemnon / ProjectNestor / ProjectCharybdis / ProjectKeystone | ADR-018 pixi→uv migration — uv installs C++ toolchain (cmake/ninja/conan/gcovr wheels) | C++ built green under uv: Agamemnon 178/178, Nestor 115/115, Charybdis 15/15, Keystone 223 gtest targets — verified-ci |
 
 ---
 *Project setup content adapted from [modular/skills](https://github.com/modular/skills) under Apache License 2.0. Copyright (c) Modular Inc.*

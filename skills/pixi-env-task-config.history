@@ -4,6 +4,26 @@
 
 Changelog and superseded-skill archive for the merged canonical skill.
 
+## v1.3.0 (2026-07-18)
+
+MINOR — record the VERIFIED HomericIntelligence pixi→uv supersession (Odysseus
+ADR-018): uv is now the ecosystem-wide Python/build standard and `pixi.toml` is
+removed from all HI repos. Adds a prominent supersession note near the top and a
+new "uv Migration Mapping (ADR-018)" section. The key verified-ci finding
+corrects a prior belief that uv "cannot" install non-Python toolchains: uv CAN
+drive the full ecosystem — Mojo compiler via PyPI (`mojo==1.0.0b2`, same build id
+as the conda pin, compiled real Mojo on ProjectOdyssey) and cmake/ninja/conan/
+gcovr via PyPI binary wheels (C++ built green on Agamemnon 178/178, Nestor
+115/115, Charybdis 15/15, Keystone 223 gtest targets); cxx-compiler/clang-tools/
+openssl/libcurl-dev via apt; jq/go-yq via apt/release binaries; just via the
+pinned setup-just action. Adds the task/command mapping (`pixi install` →
+`uv sync --locked`; `pixi run X` → `uv run X`; `[tasks]` → justfile recipes
+calling `uv run`; version-sync → `uv lock --check`), with `just` remaining the
+task front door. Adds a Failed Attempts row (scoping migration to pure-Python
+repos on the wrong "uv physically cannot" claim) and two verified-ci Verified-On
+rows. New tags: `uv`, `adr-018`, `mojo-uv`, `migration`. Historical pixi guidance
+retained intact below the note for non-HI pixi projects.
+
 ## v1.2.0 (2026-06-22)
 
 MINOR — add the nested/recursive `pixi run` task smell (a `[tasks]` entry whose
