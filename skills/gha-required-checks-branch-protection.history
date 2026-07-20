@@ -1,5 +1,42 @@
 <!-- markdownlint-disable MD024 -->
 
+## v1.12.0 (2026-07-18)
+
+**Changed by:** Merge-queue ejection trap capture (HomericIntelligence/Agamemnon #457, Nestor #133)
+**Verification:** verified-ci
+
+### What changed
+- Added Section O — merge-queue ejection by a non-required-context job that lives INSIDE the Required-Checks gate WORKFLOW. A merge queue re-runs the whole gate workflow on the `gh-readonly-queue/...` merge-result; a non-required job (e.g. `markdownlint`) failing there makes the workflow report failure and ejects the armed/queued PR.
+- Sharpened the gate bar: "all REQUIRED status-check contexts green" is necessary but NOT sufficient to merge via a queue — every JOB in the Required-Checks workflow must be green too.
+- Added When-to-Use trigger #17 and a Failed-Attempts row for the silent-never-merges symptom.
+- Added the detection `gh api` snippet (filter `head_branch` contains `gh-readonly-queue`, then drill into the failed run's jobs) and two fix options (fix the failing job's content, or move it into a standalone advisory workflow).
+- Added Verified-On rows for Agamemnon #457 (MD024 duplicate `Changed` heading) and Nestor #133 (MD013).
+- Added tags: merge-queue-ejection, readonly-queue, markdownlint, required-checks-workflow.
+
+### Why
+v1.11.0 proved live merge-queue activation but modeled a non-required-context job only as advisory ("green-but-non-blocking," trigger #10). The Agamemnon #457 pixi→uv migration surfaced the sharper inverse: the PR was armed with all 18 required contexts green and queued, yet was ejected because the Required-Checks workflow's `markdownlint` job failed MD024 on the merge-result. Fixing the CHANGELOG heading re-admitted it. Nestor #133 hit the same class via MD013. The skill lacked the "a non-required job inside the gate workflow can still eject you from the queue" failure mode.
+
+### Previous version (v1.11.0) snapshot
+
+~~~~markdown
+category: ci-cd
+date: 2026-07-17
+version: "1.11.0"
+verification: verified-ci
+
+Overview → Outcome: Consolidated guidance covering twelve interacting concerns; v1.11.0 adds
+verified live activation, the repository auto-merge prerequisite, and an end-to-end queue smoke
+procedure.
+
+When to Use ended at trigger (16): live-enabling a merge queue across a repository fleet —
+snapshot and preserve each ruleset, verify the exact queue object, require repository auto-merge
+availability, and prove it with a completed merge-group run.
+
+Sections A–N present. Section O (merge-queue ejection by a non-required-context job inside the
+gate workflow) was NOT yet present; the model treated a non-required job only as advisory
+(green-but-non-blocking, trigger #10 / Section J).
+~~~~
+
 ## v1.11.0 (2026-07-17)
 
 **Changed by:** HomericIntelligence fleet merge-queue live activation
