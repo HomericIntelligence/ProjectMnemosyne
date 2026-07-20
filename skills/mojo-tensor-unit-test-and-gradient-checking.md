@@ -2,8 +2,8 @@
 name: mojo-tensor-unit-test-and-gradient-checking
 description: "Use when: (1) writing or extending Mojo tensor unit tests (dtype-aware string/repr, BFloat16 NaN canonicalization, UInt bitwise boundary tests, view vs copy semantics in slice tests), (2) re-enabling NOTE-disabled or TODO-stubbed Mojo test files and resolving TODO(#N) markers, (3) writing numerical gradient checks for conv2d, depthwise conv2d, batch norm, layer norm, or pooling backward passes in Mojo, (4) a gradient check reports analytical≈0 vs numerical≈nonzero for a normalization layer (often caused by symmetric weight initialization), (5) adding end-to-end convergence tests as a complement to per-op finite-difference checks, (6) diagnosing symmetric-weight-init dead-symmetry pathology where uniform-fill weights produce algebraically zero gradients to early layers, (7) adding hardware-guarded BF16 precision recommendations to dtype selection functions."
 category: testing
-date: 2026-06-07
-version: "1.1.0"
+date: 2026-07-19
+version: "1.2.0"
 user-invocable: false
 history: mojo-tensor-unit-test-and-gradient-checking.history
 tags:
@@ -320,6 +320,7 @@ large+no-BF16→float16 (Apple guard), large+no-FP16→float32.
 | Blamed conv2d backward for ln(C) plateau | Saw chance-loss plateau + 1e-8 conv grads | Symmetric init produces the SAME fingerprint as a real substrate bug | Rerun with asymmetric init AND do manual-vs-autograd L2 compare to disambiguate |
 | `_make_asymmetric(shape, 0.05, 0.0)` | Wanted "almost uniform" init | `slope=0.0` IS uniform — same pathology | Slope must be measurably nonzero; `slope = base/n` |
 | Trusting FD checks as sufficient | Per-op tests passed while training hit 2.76% (chance) | FD validates gradient values, not training dynamics; missed upstream batch-copy bug | Pair every per-op check with ≥1 end-to-end convergence test |
+| Trusting an optimizer's step-1 state unit test | `test_adopt_step1_bounded`/`test_adan_prev_grad_seeded` passed after the fix, so re-ran a multi-hour campaign — full run STILL underfit ~40pts vs PyTorch | A passing per-step state test does not prove full-run convergence; the residual cause was separate (baseline adam/momentum bypassed the parity-tested library op via a hand-rolled `_adam_update`) | ALWAYS sanity-run ONE real cell with the fixed binary before a long campaign; add a PyTorch-parity **reference column** and localize by arm — if plain/momentum match the reference but adam doesn't, the bug is the adaptive-optimizer dispatch, not the backward |
 | Run tests via `just test-group` | Used `just` runner | `just` not in PATH in worktree | Use `pixi run mojo test <file>` directly |
 
 ## Results & Parameters

@@ -1,5 +1,24 @@
 <!-- markdownlint-disable MD024 -->
 
+## v1.2.0 (2026-07-19)
+
+**Changed by:** Predictive-coding Odyssey optimizer-underfit root-cause session
+**Verification:** verified-ci
+
+### What changed
+- Added one Failed Attempts row: "Trusting an optimizer's step-1 state unit test" — a passing
+  per-step state test (e.g. ADOPT `v0=g0^2`, Adan `prev_grad=g0`) does NOT prove full-run
+  convergence; ALWAYS sanity-run one real cell before a long campaign, and add a PyTorch-parity
+  reference column to localize which optimizer arm is wrong.
+
+### Why
+Extends the existing "Trusting FD checks as sufficient" row with a distinct instance: after the
+step-1 seed fixes passed their unit tests, a multi-hour campaign was re-run and STILL underfit
+~40pts vs PyTorch. The residual cause was an optimizer-DISPATCH bug (baseline adam/momentum
+bypassed the parity-tested library op via a hand-rolled `_adam_update`), not a gradient bug — so
+the parity reference column (plain matches torch, adam doesn't) was the tool that localized it.
+
+
 # mojo-tensor-unit-test-and-gradient-checking — History
 
 ## v1.1.0 (2026-06-07)
