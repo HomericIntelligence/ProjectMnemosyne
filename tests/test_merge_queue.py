@@ -11,6 +11,7 @@ WORKFLOWS_DIR = REPO_ROOT / ".github" / "workflows"
 REQUIRED_WORKFLOW = WORKFLOWS_DIR / "_required.yml"
 VALIDATE_WORKFLOW = WORKFLOWS_DIR / "validate-plugins.yml"
 RELEASE_WORKFLOW = WORKFLOWS_DIR / "release.yml"
+SMOKE_WORKFLOW = WORKFLOWS_DIR / "merge-queue-smoke.yml"
 MERGE_QUEUE_POLICY = REPO_ROOT / "configs" / "github" / "merge-queue-policy.json"
 
 EXPECTED_REQUIRED_CONTEXTS_BY_RULESET = {
@@ -86,20 +87,32 @@ def test_policy_pins_exact_approved_queue_rule() -> None:
     assert _load_policy()["merge_queue_rule"] == EXPECTED_MERGE_QUEUE_RULE
 
 
-def test_only_required_workflow_adds_exact_merge_group_trigger() -> None:
+def test_only_smoke_workflow_adds_exact_merge_group_trigger() -> None:
     required_on = _on_block(_load_workflow(REQUIRED_WORKFLOW))
     validate_on = _on_block(_load_workflow(VALIDATE_WORKFLOW))
+    smoke_on = _on_block(_load_workflow(SMOKE_WORKFLOW))
 
     assert required_on == {
         "pull_request": {"branches": ["main"]},
         "push": {"branches": ["main"]},
-        "merge_group": {"types": ["checks_requested"]},
     }
     assert validate_on == {
         "pull_request": None,
         "push": {"branches": ["main"]},
         "workflow_dispatch": None,
     }
+    assert smoke_on == {
+        "merge_group": {"types": ["checks_requested"]},
+    }
+
+
+def test_smoke_workflow_runs_exactly_one_fast_merge_queue_job() -> None:
+    smoke = _load_workflow(SMOKE_WORKFLOW)
+
+    assert list(smoke["jobs"]) == ["merge-queue-smoke"]
+    job = smoke["jobs"]["merge-queue-smoke"]
+    assert job["name"] == "merge-queue-smoke"
+    assert job["timeout-minutes"] == 5
 
 
 def test_required_workflow_emits_every_policy_context_exactly_once() -> None:
