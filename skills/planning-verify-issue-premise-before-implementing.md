@@ -1,13 +1,13 @@
 ---
 name: planning-verify-issue-premise-before-implementing
-description: "Verify issue and plan premises against authoritative sources before acting. Use this when an issue, PR plan, review, CI fix, or enforcement change assumes an artifact exists, prior work merged, a live service still needs work, a full population was checked, a CI job gates, an implementation returns a shape, or an integration point exists. Convert the premise into deterministic checks before implementing, closing, gating, or declaring work complete."
+description: "Verify issue and plan premises against authoritative sources before acting. Use this when an issue, PR plan, review, CI fix, or enforcement change assumes an artifact exists, prior work merged, a live service still needs work, a full population was checked, a CI job gates, an implementation returns a shape, or an integration point exists. Convert the premise into deterministic checks before implementing, closing, gating, or declaring work complete. Includes the temporal check: a premise token absent from the current tree may mean the issue was valid at filing and later overtaken by a merged PR (half-zombie issue) — date the removal with git log --full-history and triage each ask separately."
 category: architecture
 date: 2026-06-20
-version: "3.0.0"
+version: "3.1.0"
 user-invocable: false
 verification: unverified
 history: planning-verify-issue-premise-before-implementing.history
-tags: [planning, issue-premise, verify-before-implementing, premise-verification, assumption-verification, authoritative-source, full-population-check, live-state-check, merge-state, prerequisite-verification, unmerged-branch, self-contained-pr, enforcement-gate, integration-point, ci-gate, ruleset, implementation-shape, route-shape, deterministic-gate, no-op-forbidden, issue-claims, follow-up-issue]
+tags: [planning, issue-premise, verify-before-implementing, premise-verification, assumption-verification, authoritative-source, full-population-check, live-state-check, merge-state, prerequisite-verification, unmerged-branch, self-contained-pr, enforcement-gate, integration-point, ci-gate, ruleset, implementation-shape, route-shape, deterministic-gate, no-op-forbidden, issue-claims, follow-up-issue, overtaken-by-events, half-zombie-issue, per-ask-triage, git-history-archaeology, deleted-file-history]
 ---
 
 # Planning: Verify Premises Before Acting
@@ -20,9 +20,9 @@ This skill consolidates the planning-verify family into one generic workflow. It
 
 | Field | Value |
 |-------|-------|
-| Date | 2026-07-04 |
+| Date | 2026-07-17 |
 | Objective | Merge similar planning-verification memories into a generic rule with concrete issue examples retained. |
-| Version | 3.0.0, major bump because this replaces seven standalone memories with a broader canonical recommendation. |
+| Version | 3.1.0, minor bump: adds the temporal overtaken-by-events check and per-ask triage for multi-ask issues (Hephaestus #2166). |
 | Verification | unverified for this consolidation; source examples are preserved verbatim in history. |
 
 ## When to Use
@@ -35,6 +35,8 @@ This skill consolidates the planning-verify family into one generic workflow. It
 - A test assertion depends on an implementation return shape that has not been read from source.
 - A live external state, such as GitHub rulesets or CI status, may differ from repository files.
 - The next step would be a no-op, defer, close, or human-ratified judgment instead of a runnable proof.
+- A premise token has zero matches in the current tree and the issue predates a recently merged migration, rename, or removal PR that could have deleted the premise surface wholesale.
+- An issue contains more than one ask (a fix plus a test, a doc edit plus a guard) and any one of them may already be complete while another is still live.
 
 ## Verified Workflow
 
@@ -63,12 +65,14 @@ git ls-files | rg '<population-pattern>'
 1. Name the premise before choosing a fix. Common premise classes are: artifact exists, prior PR merged, branch contains a helper, live work remains, all entities were checked, CI job gates, implementation returns a shape, or an enforcement integration point exists.
 2. Pick the authoritative source. Use `origin/main` or `HEAD` for branch-local artifacts, GitHub PR metadata for merge state, live APIs for rulesets and repository population, workflow/ruleset definitions for gates, and source code for return shapes.
 3. Convert the claim into a deterministic command. The command should be repeatable by the next agent and should return a result that changes the plan if false.
-4. Decide disposition from evidence, not intent. Valid dispositions are self-contained implementation, explicit dependency with a hard halt, verified close, verified already-complete, or expanded scope. A no-op is forbidden when the premise is unverified.
-5. If an artifact exists only on an unmerged branch and can be reproduced, make the PR self-contained. If it cannot be reproduced, encode the dependency explicitly and stop until the dependency is merged.
-6. For enforcement and CI, prove consumption. A job that runs is not a gate unless the branch protection or ruleset requires its context. A guard cannot be added at an integration point that does not exist.
-7. For populations, enumerate the full set from the authority before sampling. Named issue examples are clues, not coverage.
-8. For implementation behavior, read the actual route/function/helper before asserting response shape, return keys, side effects, or test expectations.
-9. Preserve the evidence in the plan: command, observed output summary, and how it changed scope or disposition.
+4. Decide disposition from evidence, not intent. Valid dispositions are self-contained implementation, explicit dependency with a hard halt, verified close, verified already-complete, expanded scope, or partially complete with only the residual asks implemented. A no-op is forbidden when the premise is unverified.
+5. When a premise token has zero matches in the current tree, do not stop at "premise false" or "misrouted issue". Date the disappearance: `git log --full-history -- <deleted-or-renamed-path>` finds the removing commit, `git show <removing-sha>^:<path>` proves whether the premise held immediately before removal, and `gh issue view <n> --json createdAt` places the issue relative to that removal. Valid-at-filing plus later removal is overtaken-by-events — a different disposition from never-valid or misrouted, and it forbids "correcting" the premise surface back into existence.
+6. Triage per-ask, not per-issue. Enumerate every deliverable in the issue body and give each its own premise check and disposition. A half-zombie issue can have its primary ask verified already-complete while a secondary ask (a test, a guard, documentation) is still live; implement only the residual asks and record why the completed ask needs no re-implementation.
+7. If an artifact exists only on an unmerged branch and can be reproduced, make the PR self-contained. If it cannot be reproduced, encode the dependency explicitly and stop until the dependency is merged.
+8. For enforcement and CI, prove consumption. A job that runs is not a gate unless the branch protection or ruleset requires its context. A guard cannot be added at an integration point that does not exist.
+9. For populations, enumerate the full set from the authority before sampling. Named issue examples are clues, not coverage.
+10. For implementation behavior, read the actual route/function/helper before asserting response shape, return keys, side effects, or test expectations.
+11. Preserve the evidence in the plan: command, observed output summary, and how it changed scope or disposition.
 
 ### Worked Examples
 
@@ -82,6 +86,7 @@ git ls-files | rg '<population-pattern>'
 | Ecosystem branch migration #24 | Named subset treated as full population | Enumerated the live repository population and current branch state. | Expand to the full population or close as already complete when live state proves no remaining work. |
 | Doc-config enforcement gate and Grafana issue #179 | Gate matcher assumes exact shipped layout | Tested the matcher against the post-fix tree using tracked files. | Validate the shipped layout with `git ls-files`; do not rely on pre-fix paths or recursive filesystem assumptions. |
 | Ruleset/live-state issue #177 | Static repository file treated as source of truth | Read live GitHub rulesets and compared them to proposed file edits. | Preserve live applied enforcement; a static edit that weakens live state is a regression. |
+| ProjectHephaestus #2166 | Premise token absent from current tree; multi-ask issue | `grep -ci pixi CONTRIBUTING.md` returned 0 today, but `git log --full-history -- pixi.toml` showed a uv-migration PR (#2236) deleted the file two days after the issue was filed, and `git show <migration-sha>^:CONTRIBUTING.md` contained the exact broken command the issue reported. | Primary ask (fix the command) verified already-complete via the migration; residual ask (documentation validation test) still live — implement only the test and do not reintroduce a "corrected" command for a removed toolchain. |
 
 ## Failed Attempts
 
@@ -96,6 +101,8 @@ git ls-files | rg '<population-pattern>'
 | Static config edited without live check | Proposed a repository file change against an already-applied live ruleset. | The static edit would have regressed live enforcement. | Compare desired config with live API state before changing enforcement. |
 | Gate matcher not tested on shipped tree | Designed a matcher around pre-fix or recursive filesystem assumptions. | The gate did not match the actual tracked layout. | Test gates against the post-fix tracked tree with `git ls-files`. |
 | Missing integration point ignored | Planned a guard at an architecture hook that was absent. | There was nowhere reliable to attach enforcement. | First verify the integration point exists; otherwise change scope to create or replace it. |
+| Zero-match grep treated as invalid or misrouted issue | Concluded from a zero-hit grep that the issue premise was false or belonged to another repository. | The premise was true when the issue was filed; an intervening merged migration PR had removed the surface wholesale. | Absence in the current tree has three explanations — never valid, misrouted, or overtaken by events; date the removal against the issue's creation date before choosing. |
+| Per-issue zombie disposition | Treated an issue overtaken by a later PR as fully complete and closable. | One of its asks (a validation test) was never delivered by the overtaking PR. | Dispose each ask separately; an overtaken issue can still carry live residual work. |
 
 ## Results & Parameters
 
@@ -121,6 +128,11 @@ git ls-files | rg '<population-pattern>'
 
 # Tracked-tree gate simulation.
 git ls-files | <gate-command-or-filter>
+
+# Premise surface deleted from the current tree: date the removal.
+git log --full-history --oneline -1 -- <deleted-path>
+git show <removing-sha>^:<path>
+gh issue view <number> --json createdAt
 ```
 
 Parameters to capture:
@@ -129,5 +141,6 @@ Parameters to capture:
 - `authority`: the source that can prove or disprove it.
 - `command`: the deterministic check used.
 - `observed_result`: concise output or fact, not speculation.
-- `disposition`: self-contained implementation, explicit dependency, expanded scope, verified close, or verified already-complete.
+- `disposition`: self-contained implementation, explicit dependency, expanded scope, verified close, verified already-complete, or partially complete (residual asks only).
+- `per_ask_dispositions`: for multi-ask issues, one disposition per deliverable, not one for the whole issue.
 - `examples`: issue-specific facts belong in the plan and in this skill's history, not in new duplicate memories unless the rule is genuinely different.

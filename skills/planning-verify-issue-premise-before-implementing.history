@@ -1,5 +1,17 @@
 # planning-verify-issue-premise-before-implementing — History
 
+## v3.1.0 (2026-07-17)
+
+**Changed by:** Hephaestus #2166 half-zombie-issue triage.
+**Verification:** unverified for this amendment; the temporal check and per-ask triage additions were exercised live against Hephaestus #2166 (a closed issue with one surviving ask).
+
+### What changed
+
+- MINOR bump (3.0.0 -> 3.1.0): added the temporal overtaken-by-events check — a premise token absent from the current tree may mean the issue was valid at filing and later overtaken by a merged PR (half-zombie issue), not that the premise was never valid or the issue was misrouted. Date the removal with `git log --full-history -- <path>` and `git show <sha>^:<path>` before concluding.
+- Added per-ask triage: enumerate every deliverable in a multi-ask issue and give each its own premise check and disposition, since one ask can be already-complete while another is still live.
+- Extended the disposition list (workflow step 4) with "partially complete with only the residual asks implemented."
+- Renumbered workflow steps 5-9 to 7-11 to make room for the two new steps.
+
 ## v3.0.0 (2026-07-04)
 
 **Changed by:** Mnemosyne memory consolidation pass.
