@@ -9,10 +9,14 @@ description: >-
   redefinition error after rebase, (5) branch-switching causes missing files/directories in the
   working tree, (6) running `git submodule update --remote <path>` produces unexpected
   modifications to OTHER submodules in `git status` (the selective-vs-all foot-gun), (7) doing
-  a partial pin bump where only some submodules are eligible because others have open PRs.
+  a partial pin bump where only some submodules are eligible because others have open PRs,
+  (8) a `git cherry-pick` of a pin-bump commit onto a fresh branch off main fails with
+  `CONFLICT (submodule): ... commits don't follow merge-base` and you WANT to keep the
+  cherry-picked commit (not abort) — resolve by checking out the target SHA inside the
+  submodule and `git add`-ing it, since it is a pointer that cannot fast-forward, not a code merge.
 category: ci-cd
-date: 2026-05-16
-version: "1.1.0"
+date: 2026-07-18
+version: "1.2.0"
 user-invocable: false
 verification: verified-ci
 history: odysseus-multi-branch-submodule-pin-management.history
@@ -27,6 +31,8 @@ tags:
   - force-with-lease
   - submodule-update-remote
   - selective-pin-bump
+  - merge-base
+  - cherry-pick-conflict-resolution
 ---
 
 # Odysseus Multi-Branch Submodule Pin Management
@@ -35,15 +41,16 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-05-16 (v1.1.0); originally 2026-05-04 (v1.0.0) |
-| **Objective** | Manage submodule pins across Odysseus branches: rebase, cherry-pick avoidance, justfile recipe collisions, AND safe selective `--remote` pin bumps on long-lived clones |
-| **Outcome** | Successful — original 2026-05-04 CI hardening shipped; 2026-05-16 partial pin-bump PR #284 shipped with EXACTLY the 5 intended bumps (8 unintended rewinds caught) |
-| **Verification** | verified-ci — Odysseus PR #284 (2026-05-16) shipped via this procedure; original v1.0.0 verified-local on 2026-05-04 |
+| **Date** | 2026-07-18 (v1.2.0); 2026-05-16 (v1.1.0); originally 2026-05-04 (v1.0.0) |
+| **Objective** | Manage submodule pins across Odysseus branches: rebase, cherry-pick avoidance AND in-place cherry-pick pointer-conflict resolution, justfile recipe collisions, AND safe selective `--remote` pin bumps on long-lived clones |
+| **Outcome** | Successful — original 2026-05-04 CI hardening shipped; 2026-05-16 partial pin-bump PR #284 shipped with EXACTLY the 5 intended bumps (8 unintended rewinds caught); 2026-07-18 cherry-pick pointer-conflict resolution produced a clean commit bumping all 15 pins as intended |
+| **Verification** | verified-ci for the established workflow (Odysseus PR #284, 2026-05-16); the 2026-07-18 cherry-pick pointer-conflict resolution is verified-local (executed this session, clean commit produced; its own skill-PR gate not yet observed green) |
 
 ## When to Use
 
 - A submodule's upstream PR (e.g., ProjectHephaestus adding `install.sh`) merges to main while your Odysseus feature branch still pins the old SHA
 - You need to cherry-pick a submodule pointer update between branches but get `CONFLICT (submodule)`
+- A `git cherry-pick <pin-bump-sha>` onto a fresh branch off main fails with `CONFLICT (submodule): ... commits don't follow merge-base` and you want to KEEP the cherry-picked commit (a dedicated pins PR), not abort it
 - Rebasing an Odysseus feature branch fails because both main and your branch added justfile recipes
 - CI "Harden checks" fails with `Recipe 'X' first defined on line N is redefined on line M`
 - Switching branches in the same Odysseus worktree causes `ls tests/install/` or similar to fail with "no such file or directory"
@@ -206,6 +213,58 @@ git commit -m "chore(submodules): refresh pins ..."
 3. **NEVER** `git add .` for submodule bumps. Always stage explicit paths.
 4. Cross-reference [[multi-repo-pr-orchestration-swarm-pattern]] for the broader guardrail: do NOT bump a submodule pin while that submodule has an open PR in flight (defer it).
 
+### Resolve a Cherry-Pick Submodule Pointer Conflict (keep the commit)
+
+> _(verified-local — executed this session on Odysseus; the clean commit was produced, but
+> this skill PR's own CI gate has not yet been observed green.)_
+
+Step 2 above says to AVOID cherry-picking a submodule pointer when you can just advance the pin
+directly. But sometimes you genuinely want the **cherry-picked commit itself** — e.g. a pin-bump
+commit was accidentally made on a feature branch (that also carries other, unrelated submodule
+bumps) and you want a clean, dedicated pins PR: `git checkout -b <new> origin/main && git
+cherry-pick <bump-sha>`.
+
+That cherry-pick fails with:
+
+```text
+CONFLICT (submodule): Merge conflict in provisioning/Myrmidons
+Failed to merge submodule provisioning/Myrmidons (commits don't follow merge-base)
+```
+
+**Why:** the source branch recorded the submodule at commit `A` (a bump NOT present on main);
+main records it at commit `B`. The cherry-picked diff is "`A` → target", which git cannot replay
+onto main's `B` because `A` is not an ancestor of `B` — there is no linear merge-base for the
+submodule POINTER. This is **not** a text/content conflict; there is nothing to hand-merge.
+
+For a "bump pins to latest/target" intent, the correct resolution is always "take the target SHA
+recorded in the commit you are cherry-picking". Resolve it in place — do NOT abort, do NOT hunt
+for text conflict markers:
+
+```bash
+# 1. Read the TARGET submodule SHA straight out of the commit being cherry-picked.
+git ls-tree <bump-sha> provisioning/Myrmidons
+#    -> 160000 commit <target-sha>    provisioning/Myrmidons  (SHA is the 3rd field)
+
+# 2. Check that exact SHA out INSIDE the submodule.
+git -C provisioning/Myrmidons checkout <target-sha>
+
+# 3. Stage the resolved pointer in the superproject.
+git add provisioning/Myrmidons
+
+# 4. Continue the cherry-pick. If a non-executable / noisy pre-commit hook blocks it,
+#    bypass hooks ONLY for the continue (the content is already correct):
+git cherry-pick --continue --no-edit
+# git -c core.hooksPath=/dev/null cherry-pick --continue   # only if hook noise blocks it
+
+# 5. Verify the final pins BEFORE pushing — all intended bumps, nothing rewound.
+git submodule status
+git diff origin/main --stat   # confirms exactly the pins you intended (e.g. all 15) changed
+```
+
+**Key insight:** treat every `CONFLICT (submodule)` as "pick the right SHA, then `git add`",
+never as a code merge. When the intent is "bump to latest", the right SHA is the one recorded in
+the cherry-picked commit's tree (`git ls-tree <bump-sha> <path>`), so step 1 resolves it exactly.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -217,6 +276,8 @@ git commit -m "chore(submodules): refresh pins ..."
 | Checking GitHub merge status immediately after force-push | `gh pr view --json mergeable` right after `git push --force-with-lease` | Shows `CONFLICTING` / `DIRTY` for 10-30 seconds while GitHub re-evaluates | `sleep 15 && gh pr view <PR> --json mergeable,mergeStateStatus` |
 | Trust `git submodule update --remote <path1> <path2>` to be selective | Ran `git submodule update --remote infrastructure/ProjectHermes control/ProjectNestor ...` on a long-lived working clone; expected only the 5 listed submodules to show modified in `git status` | 8 OTHER submodules showed modified because their working-tree HEADs had drifted from pinned SHAs in prior session work; `--remote` (and the implicit `--init`) surfaced/advanced them as a side effect | ALWAYS run `git submodule update --init --recursive` to reset the working clone FIRST, then `--remote` only on intended paths; inspect `git status --short` before staging |
 | `git add .` after `git submodule update --remote` | Staged everything visible in `git status` after bumping pins, including unintended submodule rewinds | Would have shipped 8 incorrect pin downgrades in the Odysseus PR #284 pin-bump (caught only by manual inspection) | NEVER `git add .` for submodule bumps — always `git add <explicit-path-1> <explicit-path-2> ...` and re-run `git status --short` to confirm only intended paths staged |
+| Plain cherry-pick of a pin-bump commit onto a branch off main | `git checkout -b <new> origin/main && git cherry-pick <bump-sha>` to move an accidental pin-bump commit to a dedicated PR | `CONFLICT (submodule): ... commits don't follow merge-base` — the source branch's submodule SHA is not an ancestor of main's, so the pointer cannot fast-forward | Do NOT abort; resolve in place: `git ls-tree <bump-sha> <path>` for the target SHA, `git -C <path> checkout <target-sha>`, `git add <path>`, then `git cherry-pick --continue` |
+| Assumed the submodule conflict was a file-content clash | Searched the working tree for text conflict markers / tried to hand-merge after `CONFLICT (submodule)` | It is purely a submodule POINTER that cannot fast-forward — there is no text to merge; time wasted looking for `<<<<<<<` markers | Treat every `CONFLICT (submodule)` as "pick the right SHA, then `git add`", not a code merge; for a bump-to-latest intent the right SHA is the cherry-picked commit's tree entry |
 
 ## Results & Parameters
 
@@ -262,3 +323,4 @@ ecosystem-install:
 |---------|---------|---------|
 | Odysseus | feat/issue-22-ci-hardening — CI hardening PR with justfile extensions and submodule updates | Session 2026-05-04 |
 | Odysseus | PR #284 — partial pin bump sweep (5 of 10 in-scope submodules bumped: Nestor, Hermes, Keystone, Telemachy, Mnemosyne; 5 deferred because their bundle PRs were still open). Caught 8 unintended pin rewinds via manual `git status` inspection before staging. | Session 2026-05-16 — verified the 6-step Safe Selective Pin Bump procedure |
+| Odysseus | Cherry-picked a pin-bump commit onto a fresh branch off main; hit `CONFLICT (submodule): ... commits don't follow merge-base` on `provisioning/Myrmidons`; resolved via `git ls-tree` target SHA + `git -C <path> checkout` + `git add` + `cherry-pick --continue`. Final `git diff origin/main --stat` showed all 15 pins bumped as intended. | Session 2026-07-18 (verified-local) — clean commit produced; skill-PR CI gate not yet observed green |

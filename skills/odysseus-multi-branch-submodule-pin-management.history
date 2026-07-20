@@ -1,5 +1,76 @@
 # Amendment History — odysseus-multi-branch-submodule-pin-management
 
+## v1.2.0 — 2026-07-18
+
+**Changed by:** Session resolving an Odysseus cherry-pick submodule pointer conflict (`/learn`).
+**Verification:** verified-local (the cherry-pick pointer-conflict resolution was executed this
+session and produced a clean commit whose `git diff origin/main --stat` showed all 15 pins bumped
+as intended; this skill PR's own CI gate has not yet been observed green).
+
+### What changed
+
+- Added a new Verified-Workflow subsection "Resolve a Cherry-Pick Submodule Pointer Conflict
+  (keep the commit)" — the in-place `git ls-tree <bump-sha> <path>` → `git -C <path> checkout
+  <target-sha>` → `git add <path>` → `cherry-pick --continue` procedure for
+  `CONFLICT (submodule): ... commits don't follow merge-base`.
+- Added 2 Failed Attempts rows: (1) plain cherry-pick of a pin-bump commit onto a branch off
+  main → merge-base pointer conflict → resolve in place, don't abort; (2) assuming the submodule
+  conflict is a file-content clash → wasted time hunting for text markers.
+- Extended `description` with trigger (8) and added tags `merge-base`,
+  `cherry-pick-conflict-resolution`.
+- Added Overview + Verified-On rows for the 2026-07-18 session; bumped date and version.
+
+### Why
+
+v1.1.0's Step 2 said to AVOID cherry-picking a submodule pointer (advance the pin directly
+instead). That is correct when you only need the SHA, but it left a gap: when you deliberately
+WANT the cherry-picked commit (moving an accidental pin-bump to a dedicated PR), aborting is the
+wrong move. The `commits don't follow merge-base` conflict is a pointer that cannot fast-forward,
+not a code merge — the correct resolution is to check out the target SHA from the cherry-picked
+commit's tree and `git add` it. Same search surface as the existing skill (anyone hitting the
+submodule conflict lands here), so amended rather than split into a new skill.
+
+### Previous version (v1.1.0) snapshot
+
+```yaml
+---
+name: odysseus-multi-branch-submodule-pin-management
+description: >-
+  Manage submodule pins across multiple Odysseus branches with rebase, cherry-pick avoidance,
+  and justfile recipe collision resolution. Use when: (1) updating a submodule SHA on a feature
+  branch while main has a different pin, (2) rebasing an Odysseus feature branch onto main after
+  justfile changes on both sides, (3) cherry-picking a submodule pointer update between branches
+  fails with CONFLICT (submodule), (4) CI "Harden checks" job fails with justfile recipe
+  redefinition error after rebase, (5) branch-switching causes missing files/directories in the
+  working tree, (6) running `git submodule update --remote <path>` produces unexpected
+  modifications to OTHER submodules in `git status` (the selective-vs-all foot-gun), (7) doing
+  a partial pin bump where only some submodules are eligible because others have open PRs.
+category: ci-cd
+date: 2026-05-16
+version: "1.1.0"
+user-invocable: false
+verification: verified-ci
+history: odysseus-multi-branch-submodule-pin-management.history
+tags:
+  - odysseus
+  - submodule
+  - pin
+  - rebase
+  - justfile
+  - multi-branch
+  - cherry-pick
+  - force-with-lease
+  - submodule-update-remote
+  - selective-pin-bump
+---
+```
+
+v1.1.0 body added the "Safe Selective Pin Bump" section (6-step procedure, verified on Odysseus
+PR #284, 2026-05-16) and 2 Failed Attempts rows about the `--remote` selective foot-gun and the
+`git add .` hazard, on top of the v1.0.0 base.
+
+---
+
 ## v1.0.0 — 2026-05-04
 
 Initial skill capturing the verified-local workflow for managing submodule pins across multiple Odysseus branches: rebase, cherry-pick avoidance, justfile recipe collision resolution, and force-with-lease workflows. Verified on Odysseus `feat/issue-22-ci-hardening` (2026-05-04).
