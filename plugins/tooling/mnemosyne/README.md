@@ -30,4 +30,4 @@ The SKILL.md files here document their behaviour and remain the authoritative re
 - Do **not** convert this directory to the flat-file format — the harness expects the
   nested layout for plugin manifests.
 - Do **not** add new skills here. New skills belong in `skills/<name>.md`.
-- See `CLAUDE.md` → *Plugin Standards* for the full rationale and the exception note.
+- See `AGENTS.md` → *Plugin Standards* for the full rationale and the exception note.
