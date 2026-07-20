@@ -2,11 +2,11 @@
 name: container-ci-uid-permissions-rootless
 description: "Use when: (1) a justfile recipe fails writing to build/ or dist/ because rootless Podman left those directories owned by a subuid-mapped UID the host user cannot write, (2) fixing rootless Podman CI failures involving Dockerfile ARG scoping across FROM boundaries, workspace UID mapping, or compose provider compatibility, (3) implementing multi-stage Docker builds, multi-arch OCI images, or integrating pixi-volume isolation and GHA cache extraction into container workflows, (4) cleaning up CI workflows referencing non-existent test directories with dead Docker steps."
 category: ci-cd
-date: 2026-06-07
-version: "1.0.0"
+date: 2026-07-18
+version: "1.1.0"
 user-invocable: false
 history: container-ci-uid-permissions-rootless.history
-tags: [podman, rootless, subuid, uid-mapping, justfile, permissions, build-dir, dist, docker, multistage, oci, multi-arch, pixi, gha-cache, dockerfile-arg, compose, dead-step-cleanup, container-ci]
+tags: [podman, rootless, subuid, uid-mapping, justfile, permissions, build-dir, dist, docker, multistage, oci, multi-arch, pixi, gha-cache, dockerfile-arg, compose, dead-step-cleanup, container-ci, uv, uv-sync, uv-venv, bind-mount, UV_PYTHON_INSTALL_DIR, UV_PROJECT_ENVIRONMENT, astral-uv-image]
 ---
 
 # Container CI UID Permissions and Rootless Podman Patterns
@@ -15,10 +15,10 @@ tags: [podman, rootless, subuid, uid-mapping, justfile, permissions, build-dir, 
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-07 |
-| **Objective** | One canonical reference for container-level CI failures involving rootless Podman UID/GID mapping, subuid namespacing, host/container `build/`-`dist/` write boundaries, multi-stage Dockerfile patterns, multi-arch OCI builds, pixi-volume isolation, GHA cache extraction, and dead Docker CI step cleanup |
-| **Outcome** | Successful — consolidates 5 verified skills; each specific case (rootless build-dir permissions, ARG scoping, multistage size reduction, dead-step cleanup) retained as a concrete example |
-| **Verification** | verified-ci — all absorbed fixes merged with green CI across ProjectOdyssey, ProjectScylla, and AchaeanFleet |
+| **Date** | 2026-07-18 |
+| **Objective** | One canonical reference for container-level CI failures involving rootless Podman UID/GID mapping, subuid namespacing, host/container `build/`-`dist/` write boundaries, multi-stage Dockerfile patterns, multi-arch OCI builds, pixi-volume isolation, GHA cache extraction, dead Docker CI step cleanup, and uv-in-container gotchas (uv-managed CPython UID traversal, compose bind-mount masking the venv, podman `COPY --from` of the astral uv image) surfaced migrating C++ repos pixi -> uv |
+| **Outcome** | Successful — consolidates 5 verified skills; each specific case (rootless build-dir permissions, ARG scoping, multistage size reduction, dead-step cleanup) retained as a concrete example. v1.1.0 adds three uv-in-container gotchas reproduced via real `podman build` across Charybdis/Keystone/Scylla pixi -> uv migrations |
+| **Verification** | verified-ci — all absorbed fixes merged with green CI across ProjectOdyssey, ProjectScylla, and AchaeanFleet; the uv-container gotchas were reproduced via real `podman build` across the Charybdis/Keystone/Scylla pixi -> uv migrations |
 
 ## When to Use
 
@@ -39,6 +39,18 @@ tags: [podman, rootless, subuid, uid-mapping, justfile, permissions, build-dir, 
   local repro, or integrating pixi-volume isolation into a container workflow
 - A CI workflow references a non-existent test directory (dead Docker step) and you need to
   decide whether to implement the tests or remove the step
+- A Dockerfile removes system `python3` and runs `uv sync` (so uv downloads its OWN CPython), then
+  switches to a non-root `USER` in the same stage, and the next `conan`/`cmake` call dies with
+  `crun: executable file 'conan' not found` / `Permission denied` (exit 126/127) — the uv-managed
+  interpreter landed in root's private `/root/.local/share/uv` (mode 0700) the non-root user cannot
+  traverse
+- A compose `dev` service bind-mounts the host repo over the same path where `uv sync` created the
+  venv (default `/workspace/.venv`), and tools installed into that venv vanish at runtime —
+  `compose exec dev conan …` / `cmake` fail `not found in $PATH` (exit 127) because the bind-mount
+  MASKS the image-baked venv
+- A `COPY --from=ghcr.io/astral-sh/uv:<tag>@<digest>` (tag AND digest together) is REJECTED by
+  podman/buildah with `no stage or image found with that name`, or a wrong uv-image digest gives
+  `reading manifest … manifest unknown`
 
 ## Why Rootless Podman UID Mismatches Happen
 
@@ -74,6 +86,9 @@ session alone.
 | Production image bloated with build tools | gcc/g++/make in runtime image | Multi-stage build: copy artifacts from builder, drop build tools |
 | `type=docker` for multi-arch build | docker output is single-platform | Use `type=oci,dest=<dir>` (no `.tar`) for multi-arch OCI layout |
 | CI step references non-existent `tests/docker/` | Dead step never ran meaningful tests | Remove the dead step, document the decision in an ADR |
+| `conan`/`cmake` `not found` / `Permission denied` (126/127) after non-root `USER` switch | uv-managed CPython landed in root's `/root/.local/share/uv` (0700); non-root user can't traverse `/root` | `ENV UV_PYTHON_INSTALL_DIR=/opt/uv-python` (outside `/root`) + `chmod -R a+rX /opt/uv-python /opt/venv`; or use a proper multi-stage build |
+| `conan`/`cmake` `not found in $PATH` (127) via `compose exec dev` | compose bind-mount `.:/workspace:Z` MASKS the venv baked at `/workspace/.venv` | `ENV UV_PROJECT_ENVIRONMENT=/opt/venv` (venv outside the mount) + `ENV PATH="/opt/venv/bin:$PATH"` |
+| `COPY --from=ghcr.io/astral-sh/uv:<tag>@<digest>` → `no stage or image found with that name` | podman/buildah rejects tag-AND-digest as a `COPY --from` reference | Alias it as a named stage: `FROM ghcr.io/astral-sh/uv:<tag>@<digest> AS uv` then `COPY --from=uv /uv /uvx /usr/local/bin/` |
 
 ```bash
 # FIX A — recipe must run in the container: wrap it in the _run wrapper
@@ -284,6 +299,90 @@ badges that would break.
 # Entrypoint script testing is tracked in GitHub issue #1113
 ```
 
+#### 8. uv-in-container gotchas (pixi -> uv migration)
+
+Migrating C++ repos off pixi onto uv introduces three container-specific traps, all reproduced with
+a real `podman build`. The unifying theme: uv's DEFAULT locations (root's private home for the
+managed CPython, `/workspace/.venv` for the project venv) collide with rootless-container UID
+traversal rules and compose bind-mounts. Redirect both out of those defaults into shared `/opt`
+paths.
+
+**Gotcha A — uv-managed CPython in root's home breaks non-root container users.**
+When a Dockerfile removes system `python3` and runs `uv sync`, uv downloads its OWN CPython and, by
+default, installs it under ROOT's private home `/root/.local/share/uv/…` (dir mode `0700`). If the
+stage later switches to a non-root `USER` (single-stage, or a same-stage switch), that user CANNOT
+traverse `/root` to reach the interpreter, so the next `conan`/`cmake` call dies with
+`crun: executable file 'conan' not found` / `Permission denied` (exit 126/127). Move the managed
+interpreter to a shared `/opt` path OUTSIDE `/root` and make it traversable:
+
+```dockerfile
+# Put uv's managed CPython outside /root and make it non-root-readable
+ENV UV_PYTHON_INSTALL_DIR=/opt/uv-python
+RUN uv sync --frozen \
+    && chmod -R a+rX /opt/uv-python /opt/venv    # traversable by the non-root USER
+USER app     # single-stage / same-stage switch is exactly the case that breaks by default
+```
+
+NOTE: a proper MULTI-STAGE Dockerfile is IMMUNE — run the uv build as root in a `builder` stage, and
+in the final stage only `COPY --from=builder` the built artifact plus switch `USER` for runtime; the
+non-root user never touches uv. The bug is specific to the single-stage-with-early-USER-switch shape.
+(Repro: Charybdis pixi -> uv migration.)
+
+**Gotcha B — a compose bind-mount MASKS the uv venv.**
+If `uv sync` creates the venv at the default `/workspace/.venv` and a docker/podman-compose `dev`
+service bind-mounts the host repo over the same path (`.:/workspace:Z`), the image-baked venv is
+HIDDEN by the mount at runtime, so tools installed into it vanish and `conan`/`cmake` (invoked by
+bare name inside the container via `compose exec`) fail `not found in $PATH` (exit 127). Put the
+venv OUTSIDE the bind-mounted path so the mount cannot shadow it, and add its `bin/` to `PATH` for
+bare-name resolution:
+
+```dockerfile
+# venv lives outside /workspace so the compose bind-mount can't mask it
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+RUN uv sync --frozen
+```
+
+```yaml
+# compose dev service: the mount over /workspace no longer hides the venv at /opt/venv
+services:
+  dev:
+    volumes:
+      - .:/workspace:Z
+# make deps -> `podman-compose exec dev conan …` now resolves conan from /opt/venv/bin
+```
+
+(Repro: Keystone pixi -> uv migration — `make deps` execs `podman-compose exec dev conan …`;
+validated by reproducing the bind-mount-over-`/workspace` scenario, after which `make deps`
+succeeds.)
+
+**Gotcha C — podman `COPY --from` of the astral uv image rejects tag-AND-digest.**
+`COPY --from=ghcr.io/astral-sh/uv:<tag>@<digest>` (tag AND digest together) is REJECTED by
+podman/buildah with `no stage or image found with that name`. Alias the image as a named build
+stage first, then `COPY --from` the stage name. Also VERIFY the digest resolves via the ghcr
+manifest API BEFORE using it — a wrong digest gives `reading manifest … manifest unknown`:
+
+```dockerfile
+# WRONG — podman/buildah: "no stage or image found with that name"
+COPY --from=ghcr.io/astral-sh/uv:0.11.21@sha256:ff07b86af50d4d9391d9daf4ff89ce427bc544f9aae87057e69a1cc0aa369946 /uv /uvx /usr/local/bin/
+
+# CORRECT — alias as a named stage, then COPY --from the stage
+FROM ghcr.io/astral-sh/uv:0.11.21@sha256:ff07b86af50d4d9391d9daf4ff89ce427bc544f9aae87057e69a1cc0aa369946 AS uv
+# … your build stages …
+COPY --from=uv /uv /uvx /usr/local/bin/
+```
+
+```bash
+# Verify the digest resolves BEFORE using it (a wrong digest → "manifest unknown")
+# ff07b86… is the real 0.11.21 digest; Scylla first hit sha256:0b6dc79… which did NOT exist.
+curl -sSL -H "Authorization: Bearer $(curl -sSL \
+  'https://ghcr.io/token?scope=repository:astral-sh/uv:pull' | jq -r .token)" \
+  -H 'Accept: application/vnd.oci.image.index.v1+json' \
+  https://ghcr.io/v2/astral-sh/uv/manifests/sha256:ff07b86af50d4d9391d9daf4ff89ce427bc544f9aae87057e69a1cc0aa369946
+```
+
+(Repro: Scylla pixi -> uv migration.)
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -304,6 +403,9 @@ badges that would break.
 | `RUN pre-commit install` in the Dockerfile | Installed hooks at image build time | The workspace bind-mount is not active at build time; hooks get shadowed at runtime | Install pre-commit hooks in `entrypoint.sh` at container startup, not in the Dockerfile |
 | Assuming new test failures were regressions | 4 test groups failed after the container fixes | Those tests were previously skipped because the container build failed; fixing infra exposed pre-existing bugs | When fixing infrastructure, expect to uncover pre-existing failures hidden by earlier-stage breaks |
 | Implementing heavyweight Docker integration tests in PR CI | Considered Option A (write the missing tests) for a dead `tests/docker/` step | The tests needed API keys not available in CI and were heavyweight for PR CI | Remove the dead step + document in an ADR (Option B) when tests require secrets or are heavyweight |
+| Left uv-managed CPython in root's default home, then switched to non-root `USER` | `uv sync` with no `UV_PYTHON_INSTALL_DIR`, then `USER app` in the same stage | uv put its CPython in `/root/.local/share/uv` (mode 0700); the non-root user can't traverse `/root`, so `conan`/`cmake` die 126/127 (`not found` / `Permission denied`) | Set `UV_PYTHON_INSTALL_DIR=/opt/uv-python` (outside `/root`) + `chmod -R a+rX` it; or use a proper multi-stage build where the non-root user never touches uv (Charybdis) |
+| Left the uv venv at default `/workspace/.venv` under a compose bind-mount | `uv sync` created `/workspace/.venv`; compose `dev` bind-mounts `.:/workspace:Z` over it | The bind-mount MASKS the image-baked venv at runtime; `compose exec dev conan …` fails `not found in $PATH` (127) | Set `UV_PROJECT_ENVIRONMENT=/opt/venv` so the venv lives outside the mount + `ENV PATH="/opt/venv/bin:$PATH"` for bare-name resolution (Keystone) |
+| `COPY --from=ghcr.io/astral-sh/uv:<tag>@<digest>` directly | Referenced the astral uv image by tag AND digest in a single `COPY --from` | podman/buildah rejects it: `no stage or image found with that name`; a wrong digest also gives `manifest unknown` | Alias as a named stage `FROM …@<digest> AS uv` then `COPY --from=uv /uv /uvx /usr/local/bin/`, and verify the digest via the ghcr manifest API first (Scylla hit a nonexistent `sha256:0b6dc79…`; `ff07b86…` is the real 0.11.21 digest) |
 
 ## Results & Parameters
 
@@ -371,3 +473,6 @@ docker run --rm app:multi-stage gcc --version         # expect: gcc: not found (
 | ProjectOdyssey | Rootless Podman CI: Dockerfile ARG scoping, workspace chmod, justfile `{{mode}}`, SBOM tarball | Fixed all 3 failing CI workflows on main |
 | ProjectScylla | Multi-stage Docker build (Issue #601, PR #649); dead Docker CI step cleanup (Issue #1114, PR #1157) | 246MB/30% image reduction; 3185 tests passing |
 | AchaeanFleet | Multi-arch OCI, pixi isolation, GHA cache extraction patterns | container build/runtime consolidation |
+| ProjectCharybdis | pixi -> uv migration — Gotcha A: uv-managed CPython in root's home breaks non-root container users | Reproduced via `podman build`; fixed with `UV_PYTHON_INSTALL_DIR=/opt/uv-python` + `chmod -R a+rX` |
+| ProjectKeystone | pixi -> uv migration — Gotcha B: compose bind-mount over `/workspace` masks the uv venv | Reproduced the bind-mount-over-`/workspace` scenario; `UV_PROJECT_ENVIRONMENT=/opt/venv` + `PATH` fix makes `make deps` (`podman-compose exec dev conan …`) succeed |
+| ProjectScylla | pixi -> uv migration — Gotcha C: podman `COPY --from` of the astral uv image (tag+digest) rejected | Alias as a named stage; verify digest via ghcr manifest API (nonexistent `sha256:0b6dc79…` → `manifest unknown`; `ff07b86…` is the real 0.11.21 digest) |

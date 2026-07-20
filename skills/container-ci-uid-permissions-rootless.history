@@ -2,6 +2,28 @@
 
 # container-ci-uid-permissions-rootless — History
 
+## v1.1.0 (2026-07-18)
+
+Added three verified uv-in-container gotchas surfaced migrating C++ repos from pixi to uv, all
+reproduced with a real `podman build`:
+
+- **Gotcha A** — uv-managed CPython lands in root's private home `/root/.local/share/uv` (0700);
+  a non-root `USER` switch in the same stage can't traverse `/root`, so `conan`/`cmake` die 126/127.
+  Fix: `ENV UV_PYTHON_INSTALL_DIR=/opt/uv-python` + `chmod -R a+rX`; proper multi-stage builds are
+  immune. (Repro: ProjectCharybdis.)
+- **Gotcha B** — a compose bind-mount `.:/workspace:Z` masks the venv at the default
+  `/workspace/.venv`; tools vanish and `compose exec … conan` fails 127. Fix:
+  `ENV UV_PROJECT_ENVIRONMENT=/opt/venv` + `ENV PATH="/opt/venv/bin:$PATH"`. (Repro: ProjectKeystone.)
+- **Gotcha C** — podman/buildah rejects `COPY --from=ghcr.io/astral-sh/uv:<tag>@<digest>`
+  (`no stage or image found with that name`). Fix: alias as `FROM …@<digest> AS uv` then
+  `COPY --from=uv`; verify the digest via the ghcr manifest API first. (Repro: ProjectScylla.)
+
+Added "When to Use" triggers, Quick-Reference + Failed-Attempts rows, a "uv-in-container gotchas"
+Verified-Workflow section (#8), Verified-On rows, and tags `uv`, `uv-sync`, `uv-venv`, `bind-mount`,
+`UV_PYTHON_INSTALL_DIR`, `UV_PROJECT_ENVIRONMENT`, `astral-uv-image`. Version 1.0.0 -> 1.1.0 (minor).
+
+---
+
 ## v1.0.0 (2026-06-07)
 
 Initial consolidation merging 5 container/CI UID-permission skills into one canonical:
