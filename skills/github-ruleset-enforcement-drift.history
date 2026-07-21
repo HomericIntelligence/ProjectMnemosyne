@@ -1,13 +1,41 @@
+# github-ruleset-enforcement-drift — History
+
+## v1.1.0 (2026-07-20)
+
+**Changed by:** ProjectHephaestus issue #2330 CI simplification planning record
+**Verification:** verified-local precondition; retirement implementation unverified
+
+### What changed
+
+- Added a fail-closed precondition for retiring duplicate CI enforcement: verify the default
+  branch, ruleset name, branch target, active enforcement, ref conditions, and
+  `required_signatures` before editing and again before shipping.
+- Added a cross-layer retirement audit covering workflow YAML, runtime exact-name special cases,
+  regression tests, test-only helpers, hooks, script inventories, documentation, and comments.
+- Added the rule that shared commit-message metadata must remain when Conventional Commit and DCO
+  checks still consume it.
+- Recorded live Hephaestus evidence for ruleset `15556494` and explicitly marked the proposed
+  workflow/runtime cleanup as unverified.
+
+### Why
+
+Removing a duplicate CI check is safe only while the replacement enforcement layer is demonstrably
+active on the protected branch. A ruleset name alone does not prove coverage: its target,
+enforcement state, ref conditions, and rule types can drift. Deleting the YAML job alone is also
+incomplete when coordinators, exemptions, tests, and docs still encode the retired policy name.
+
+### Previous version (v1.0.0) snapshot
+
+~~~~markdown
 ---
 name: github-ruleset-enforcement-drift
-description: "Canonical config file says `evaluate` but live GitHub ruleset is already `active`; idempotent re-apply would silently downgrade enforcement. Use when: (1) flipping a GitHub branch ruleset from evaluate to active mode and the on-disk JSON carries `evaluate`, (2) confirming whether a canonical config file matches its live deployed state before re-applying, (3) preserving a rollback/shadow-test path after the base config file changes enforcement mode, (4) aligning variant apply-target files (e.g. `*-active.json`) that were not updated when the base file was fixed, (5) auditing required_status_checks context strings for the correct bare-name + integration_id form vs stale prefixed form, (6) retiring a duplicate CI policy check only after proving an active branch ruleset still enforces the same invariant on the default branch."
+description: "Canonical config file says `evaluate` but live GitHub ruleset is already `active`; idempotent re-apply would silently downgrade enforcement. Use when: (1) flipping a GitHub branch ruleset from evaluate to active mode and the on-disk JSON carries `evaluate`, (2) confirming whether a canonical config file matches its live deployed state before re-applying, (3) preserving a rollback/shadow-test path after the base config file changes enforcement mode, (4) aligning variant apply-target files (e.g. `*-active.json`) that were not updated when the base file was fixed, (5) auditing required_status_checks context strings for the correct bare-name + integration_id form vs stale prefixed form."
 category: ci-cd
-date: 2026-07-20
-version: "1.1.0"
+date: 2026-06-19
+version: "1.0.0"
 user-invocable: false
 verification: verified-local
-history: github-ruleset-enforcement-drift.history
-tags: [github, rulesets, branch-protection, enforcement, drift, rollback, evaluate, active, integration_id, required-signatures, ci-policy-retirement, fail-closed]
+tags: [github, rulesets, branch-protection, enforcement, drift, rollback, evaluate, active, integration_id]
 ---
 
 # GitHub Ruleset Enforcement Drift
@@ -16,11 +44,10 @@ tags: [github, rulesets, branch-protection, enforcement, drift, rollback, evalua
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-07-20 |
-| **Objective** | Keep repository policy aligned with live GitHub rulesets and retire duplicate CI enforcement without opening a protection gap |
-| **Outcome** | Existing drift remediation remains verified locally; v1.1.0 adds a fail-closed retirement workflow whose live ruleset precondition was verified locally, while the planned code and workflow changes remain unverified |
-| **Verification** | verified-local — the original pre-commit/jq checks passed, and the v1.1.0 Hephaestus ruleset query confirmed an active branch ruleset covering `main` with `required_signatures`; the retirement implementation and CI were not executed |
-| **History** | [changelog](./github-ruleset-enforcement-drift.history) |
+| **Date** | 2026-06-19 |
+| **Objective** | Fix `enforcement: evaluate` in canonical GitHub ruleset JSON files that should be `active`, without downgrading the live deployed state or breaking the rollback/shadow-test path |
+| **Outcome** | Successful — on-disk config aligned with live enforcing ruleset; rollback path preserved via dedicated evaluate file and explicit `--evaluate` flag; stale prefixed contexts in variant files corrected |
+| **Verification** | verified-local — pre-commit and jq assertions passed; PR #307 merged to HomericIntelligence/Odysseus; Mnemosyne CI gate not observed |
 
 ## When to Use
 
@@ -29,8 +56,6 @@ tags: [github, rulesets, branch-protection, enforcement, drift, rollback, evalua
 - A runbook's two-phase rollout uses bare script invocation as the "shadow (evaluate) pass", but the script's bare default was changed to `active` — the documented flow is now silently active-then-active.
 - A variant file (`*-active.json`, `*-evaluate.json`) was left unedited when the base file was fixed, remaining a live apply path with stale context strings.
 - `required_status_checks` context entries use the stale prefixed form (`"Required Checks / lint"`) instead of the canonical bare-name + `integration_id` form (`"lint"` + `"integration_id": 15368`).
-- A GitHub Actions job duplicates an invariant already enforced by a live branch ruleset, and you need to remove the duplicate without weakening merge-time policy.
-- A retired workflow job name still appears in runtime filtering, documentation, test exemptions, or test-only helpers after the YAML job is removed.
 
 ## Verified Workflow
 
@@ -70,24 +95,6 @@ jq '[.rules[] | select(.type=="required_status_checks")
 jq '[.rules[] | select(.type=="required_status_checks")
      | .parameters.required_status_checks[]] | length' configs/github/repo-ruleset.json
 # Expected: 8 (not 9 — forbid-suppressions is a workflow job, NOT a required context)
-
-# 7. Before removing duplicate signature validation, prove the live ruleset owns it.
-repo=ORG/REPO
-default_branch=$(gh api "repos/$repo" --jq .default_branch)
-ruleset_id=$(gh api "repos/$repo/rulesets" --paginate --jq '
-  .[] | select(.name == "homeric-main-baseline"
-    and .target == "branch" and .enforcement == "active") | .id' | head -n 1)
-test "$default_branch" = main
-test -n "$ruleset_id"
-gh api "repos/$repo/rulesets/$ruleset_id" | python3 -c '
-import json, sys
-r = json.load(sys.stdin)
-include = r.get("conditions", {}).get("ref_name", {}).get("include", [])
-exclude = r.get("conditions", {}).get("ref_name", {}).get("exclude", [])
-assert any(ref in include for ref in ("refs/heads/main", "~DEFAULT_BRANCH", "~ALL"))
-assert not any(ref in exclude for ref in ("refs/heads/main", "~DEFAULT_BRANCH", "~ALL"))
-assert any(rule.get("type") == "required_signatures" for rule in r.get("rules", []))
-'
 ```
 
 ### Detailed Steps
@@ -115,38 +122,6 @@ assert any(rule.get("type") == "required_signatures" for rule in r.get("rules", 
      configs/github/repo-ruleset-evaluate.json && echo OK
    ```
 
-### Ruleset-backed CI policy retirement
-
-> **Warning:** The retirement sequence below is proposed from ProjectHephaestus issue #2330.
-> Its live precondition was verified locally on 2026-07-20, but the workflow/runtime edits and
-> CI validation were not executed. Treat the sequence as unverified until the implementation PR
-> passes CI and the post-edit ruleset query still succeeds.
-
-1. **Name the policy owner before deleting anything.** A workflow check may be removed only when
-   another active enforcement layer owns the same invariant. For cryptographic commit signing,
-   verify the default branch, named ruleset, branch target, active enforcement, ref include/exclude
-   conditions, and the `required_signatures` rule. A matching ruleset name alone is insufficient.
-2. **Run the proof twice.** Execute the live precondition immediately before editing and again
-   immediately before shipping. If the first check fails, leave the CI check intact. If the final
-   check fails, restore the removed workflow query/step and its documentation attribution, then
-   stop without shipping.
-3. **Remove only the duplicated assertion.** If other checks still need the same fetched metadata,
-   preserve that query. For example, removing signature fields from a commit query must not remove
-   full commit messages still consumed by Conventional Commit or DCO validation.
-4. **Retire the policy across every layer.** Search the workflow job name and checker symbol across
-   workflow YAML, runtime coordinators, docs, tests, pre-commit hooks, script inventories, and code
-   comments. Delete exact-name filters and policy-only success branches so a former advisory check
-   cannot keep bypassing the generic failure/fix path after its job disappears.
-5. **Write regression tests against the former special-case name.** A terminal poll should classify
-   any failed required check as failing, and the failure handler should route that same name into
-   the normal fix flow. Using the retired name in the test proves the old bypass branch is gone.
-6. **Do not preserve retired YAML shape as a unit-test API.** Delete tests and test-only helpers
-   whose only behavior is parsing repository-owned workflow files. Keep fixture-based tests for
-   reusable parsers/helpers and use YAML/schema/security tooling to validate live workflows.
-7. **Reassign documentation authority.** Every policy statement should identify the ruleset as the
-   merge-time signature authority while retaining CI ownership for independent checks such as PR
-   linkage, Conventional Commit subjects, and DCO trailers.
-
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -155,9 +130,6 @@ assert any(rule.get("type") == "required_signatures" for rule in r.get("rules", 
 | Change bare default without updating runbook | Apply script bare default changed from evaluate to active, but runbook still called bare invocation as the "evaluate mode shadow pass" | Reviewer caught that the two-phase rollout was now silently active-then-active — shadow step lost | Every time a script flag default changes, audit ALL runbook examples that relied on that bare invocation and update them to use explicit flags |
 | Remove `-active.json` variant files to reduce duplication | Prior plan proposed deleting `repo-ruleset-active.json` and `org-ruleset-active.json` as they were now identical to the base | Removing them broke the rollback path and the `--active` flag; the NOGO review flagged scope creep + irreversible delete | Preserve variant files even when they become temporarily identical to the base — they serve as explicit named apply paths; cleanup is a separate issue |
 | Use prefixed context form in org-ruleset-active.json | Kept `"Required Checks / lint"` form from the original config | GitHub Actions reports bare job `name:` values (`"lint"`), not workflow-prefixed; contexts without `integration_id` are also unreliable | Always derive context strings from the LIVE ruleset API, not from the config file or KB assumption |
-| Remove duplicate CI signature validation after checking only the ruleset name | Assumed an existing `homeric-main-baseline` object protected the default branch | A ruleset can be inactive, target another resource, exclude `main`, or omit `required_signatures`; the workflow removal would silently open a policy gap | Prove default branch, target, enforcement, ref conditions, and rule type before editing and again before shipping; fail closed and restore on final drift |
-| Delete an advisory job but keep its exact-name runtime branch | Removed workflow YAML while retaining coordinator logic that treated that name as policy-only success/blocking | The dead name continued to bypass the generic CI fix flow and obscured the real state machine | Search by the exact retired job name across production code and add a regression using that former name to prove generic failure routing |
-| Keep unit tests that parse the retired live workflow structure | Preserved tests and a helper whose only contract was the old YAML job inventory | The tests coupled Python code to mutable workflow layout and forced dead policy concepts to survive after deletion | Delete live-tree structural assertions with the policy; retain fixture-based helper behavior and validate live YAML through workflow-native tooling |
 
 ## Results & Parameters
 
@@ -202,20 +174,15 @@ test "$(jq '[.rules[] | select(.type=="required_status_checks")
 jq -e '.enforcement == "evaluate"' configs/github/repo-ruleset-evaluate.json
 ```
 
-### Ruleset-backed signature authority evidence
-
-| Field | ProjectHephaestus observation on 2026-07-20 |
-|-------|---------------------------------------------|
-| Default branch | `main` |
-| Ruleset | `homeric-main-baseline` (ID `15556494`) |
-| Target and enforcement | `branch`, `active` |
-| Ref condition | Includes `refs/heads/main`; exclusion list empty |
-| Relevant rule | `required_signatures` present |
-| Retirement implementation | Unverified — the live Hephaestus tree still contained the duplicate workflow signature step, `auto-merge-policy`, runtime special cases, and the tag-coupled security hook at capture time |
-
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
 | HomericIntelligence/Odysseus | PR #307, issue #177, 2026-06-19 | Flipped `repo-ruleset.json` and `org-ruleset.json` to `active`; fixed `org-ruleset-active.json` prefixed contexts; added `repo-ruleset-evaluate.json`; added `--evaluate` flag; updated runbook two-phase rollout |
-| HomericIntelligence/Hephaestus | Issue #2330 planning record, 2026-07-20 | Live precondition verified locally: default `main`, active branch ruleset `15556494`, `refs/heads/main` included, no exclusions, and `required_signatures` present. Proposed CI/runtime/test cleanup was not implemented or CI-verified. |
+~~~~
+
+---
+
+## v1.0.0 (2026-06-19)
+
+**Initial version.**

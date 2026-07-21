@@ -81,7 +81,7 @@ CONSOLIDATIONS: list[Consolidation] = [
     },
     {
         "canonical": "security-md-version-sync",
-        "version": "3.0.0",
+        "version": "3.1.0",
         "absorbed": ["security-md-version-sync-planning-gaps"],
     },
     {
