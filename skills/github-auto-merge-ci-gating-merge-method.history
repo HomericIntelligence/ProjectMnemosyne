@@ -2,6 +2,19 @@
 
 # History: github-auto-merge-ci-gating-merge-method
 
+## v1.7.0 (2026-07-21)
+
+Added merge-queue fallback handling to `github-auto-merge-ci-gating-merge-method`: when the direct REST merge API returns HTTP 405 `Pull Request is in the merge queue`, `_merge_pr` now falls back to `_enqueue_pr`, `gh pr merge <n>` is used with no merge-method flag, and `queued` is logged as success.
+
+- **What changed:**
+  - Bumped `version` 1.6.0 -> 1.7.0 and `date` 2026-07-06 -> 2026-07-21.
+  - Extended the description with trigger (19) and added merge-queue / REST merge fallback tags.
+  - Added a new Overview row, When-to-Use bullet, merge-queue fallback subsection, decision-tree branch, Failed Attempts row, Results & Parameters entry, and a Verified On row for ProjectHephaestus PR #2312 / issue #2311.
+- **Why:**
+  - The REST merge API returns HTTP 405 on merge-queue-protected repos. That signal means the queue owns strategy; retrying the REST merge call just burns loop budget. Enqueue via CLI with no merge-method flag instead.
+- **Verification:** verified-ci — ProjectHephaestus PR #2312 / issue #2311 merged with the queue fallback.
+- **Previous version snapshot:** the full v1.6.0 entry remains below in this append-only file.
+
 ## v1.6.0 (2026-07-06)
 
 Added the "why is my armed ProjectHephaestus PR not merging" manual-drive gotcha set, observed while merging 6 PRs by hand in epic #1809, and corrected a pre-existing mislabel bug in the completion checklist.

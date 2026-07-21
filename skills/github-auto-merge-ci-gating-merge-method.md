@@ -1,9 +1,9 @@
 ---
 name: github-auto-merge-ci-gating-merge-method
-description: "Use when: (1) a PR has mergeStateStatus CLEAN or MERGEABLE but auto-merge never fires despite all checks passing, (2) gh pr merge --auto --rebase or --squash returns an error or silently fails on a squash-only repo, (3) a PR is BLOCKED because required CI status contexts never post (workflow never triggered, paths filter excluded PR, required check name mismatch), (4) GPG-signing failures or mismatched committer emails cause commits to be unsigned and block the pr-policy gate, (5) branch protection rulesets and classic branch protection disagree and their union blocks merge, (6) a CI ruleset chicken-and-egg deadlock blocks a PR that introduces a new workflow, (7) an advisory check should not block merge but currently does because it lives in the required gate, (8) deciding which merge method a repo supports before arming auto-merge, (9) auditing required-check names after adding or removing CI jobs, (10) state:implementation-go label or pr-policy gates auto-merge arming, (11) per-issue arming-state machine is triggered on the wrong event (optimistic point vs detected merge), (12) mergeStateStatus=BLOCKED with all CI green and auto-merge armed - unresolved review threads are the PRIMARY blocker to check FIRST before assuming CI failure, (13) stale failed status-rollup entries must be distinguished from current-head required checks before deciding a PR is blocked or complete, (14) you applied state:implementation-go with `gh issue edit` and the auto-merge-policy gate stays FAILURE - the label must be on the PR (`gh pr edit`) not the issue, (15) required-checks-gate shows FAILURE alongside a later SUCCESS of the same check - the newer run is current, the FAILURE is stale, (16) your isolated-clean PR's lint job fails because CI runs pre-commit on the merge-result (pull/N/merge) and main drifted since you branched (e.g. ruff-format), (17) hephaestus-review-prs first run truncates at worktree-setup and posts zero threads - an empty thread list is NOT a clean pass unless the log reached 'Analysis complete for PR #N', (18) a sub-agent's disk-direct file writes leaked into the MAIN checkout, breaking editable-installed console scripts with ModuleNotFoundError for all later runs"
+description: "Use when: (1) a PR has mergeStateStatus CLEAN or MERGEABLE but auto-merge never fires despite all checks passing, (2) gh pr merge --auto --rebase or --squash returns an error or silently fails on a squash-only repo, (3) a PR is BLOCKED because required CI status contexts never post (workflow never triggered, paths filter excluded PR, required check name mismatch), (4) GPG-signing failures or mismatched committer emails cause commits to be unsigned and block the pr-policy gate, (5) branch protection rulesets and classic branch protection disagree and their union blocks merge, (6) a CI ruleset chicken-and-egg deadlock blocks a PR that introduces a new workflow, (7) an advisory check should not block merge but currently does because it lives in the required gate, (8) deciding which merge method a repo supports before arming auto-merge, (9) auditing required-check names after adding or removing CI jobs, (10) state:implementation-go label or pr-policy gates auto-merge arming, (11) per-issue arming-state machine is triggered on the wrong event (optimistic point vs detected merge), (12) mergeStateStatus=BLOCKED with all CI green and auto-merge armed - unresolved review threads are the PRIMARY blocker to check FIRST before assuming CI failure, (13) stale failed status-rollup entries must be distinguished from current-head required checks before deciding a PR is blocked or complete, (14) you applied state:implementation-go with `gh issue edit` and the auto-merge-policy gate stays FAILURE - the label must be on the PR (`gh pr edit`) not the issue, (15) required-checks-gate shows FAILURE alongside a later SUCCESS of the same check - the newer run is current, the FAILURE is stale, (16) your isolated-clean PR's lint job fails because CI runs pre-commit on the merge-result (pull/N/merge) and main drifted since you branched (e.g. ruff-format), (17) hephaestus-review-prs first run truncates at worktree-setup and posts zero threads - an empty thread list is NOT a clean pass unless the log reached 'Analysis complete for PR #N', (18) a sub-agent's disk-direct file writes leaked into the MAIN checkout, breaking editable-installed console scripts with ModuleNotFoundError for all later runs, (19) merge-queue-protected repos return HTTP 405 from the REST merge API and must enqueue via `gh pr merge` with no merge-method flag"
 category: ci-cd
-date: 2026-07-06
-version: "1.6.0"
+date: 2026-07-21
+version: "1.7.0"
 user-invocable: false
 history: github-auto-merge-ci-gating-merge-method.history
 tags:
@@ -24,6 +24,9 @@ tags:
   - current-head-checks
   - status-rollup
   - dco-signoff
+  - merge-queue
+  - queued
+  - rest-merge-api
   - pr-label-not-issue-label
   - stale-required-checks-gate
   - lint-on-merge-result
@@ -38,6 +41,7 @@ tags:
 
 | Date | Objective | Outcome |
 | ------ | ----------- | --------- |
+| 2026-07-21 | Extend the auto-merge / merge-method guidance to cover merge-queue-protected repos where the direct REST merge API returns HTTP 405 and the correct path is to enqueue via `gh pr merge` with no merge-method flag. | verified-ci: `hephaestus-merge-prs` now falls back from REST merge to queue enqueue on merge-queue repos, and `queued` is treated as success rather than a retryable error. |
 | 2026-06-07 | Consolidated canonical for why GitHub auto-merge does not fire and how to arm it correctly: wrong merge method, missing/required CI status contexts, two-layer branch protection, GPG-signing blockers, ruleset bootstrap deadlock, the `state:implementation-go` arming-state machine, and advisory-vs-required gate split | Each failure mode has a verified diagnosis + fix; verified across many HomericIntelligence repos in live CI |
 | 2026-06-14 | Add the classic-vs-ruleset review-count UNION hard gate (a required human approval automation cannot provide), the keystone-PR self-introduced-required-context merge-train deadlock (merge keystone first, then re-rebase the queue), and duplicate check-run resolution after a re-run | Diagnosed live across 13 open ProjectHephaestus PRs during a `/myrmidon-swarm` drive (verified-local; the PRs had not yet merged at capture, the review-union gate was confirmed by API inspection) |
 | 2026-06-14 | Expanded unresolved review thread diagnostic to verified-ci status: PR #1282 was BLOCKED despite all CI green and auto-merge armed; the stated "lint failure" was stale; the real blockers were 2 unresolved review threads. Resolving via `resolveReviewThread` GraphQL mutation immediately triggered auto-merge (merged 2026-06-15T03:05:38Z by app/github-actions). Added full GraphQL copy-paste workflow for thread query + reply + resolve. | verified-ci — PR #1282 ProjectHephaestus merged within seconds of thread resolution |
@@ -68,6 +72,7 @@ GitHub auto-merge is **stricter than branch protection** and fires only when EVE
 - Your branch is lint-clean in isolation but the PR's `lint` job FAILS — CI runs `pre-commit run --all-files` on the merge-result (`pull/N/merge`), so a ruff-format (or other) drift another PR merged to main since you branched now fails your PR.
 - `hephaestus-review-prs` (the standalone reviewer) posted 0 threads on its first run — verify the log reached `Analysis complete for PR #N` before trusting an empty unresolved-thread list; a truncated worktree-setup death also yields zero threads but is NOT a clean pass.
 - After a sub-agent that did "disk-direct" file writes (bypassing Read/Edit), the editable-installed console scripts break with `ModuleNotFoundError` — the sub-agent leaked worktree-only files into the MAIN checkout; `git -C <main-repo> status` and restore the leaked tracked files.
+- `hephaestus-merge-prs` hits HTTP 405 `Pull Request is in the merge queue` from the direct REST merge API and should enqueue instead of retrying the merge call.
 
 ## Verified Workflow
 
@@ -517,6 +522,14 @@ pixi run python -c "import hephaestus.automation.review_prs"   # or the leaked m
 Prevention: after ANY sub-agent that did "disk-direct writes", run `git -C <main-repo> status` and
 restore leaked tracked files before the next console-script run.
 
+**Gotcha 6 — merge-queue-protected repos must enqueue on HTTP 405, not retry REST merge.**
+When the direct GitHub REST merge API returns `HTTP 405` `Pull Request is in the merge queue`,
+`_merge_pr` should treat that as a queue-protected repo signal and call `_enqueue_pr` instead of
+retrying the merge call. The enqueue path must use `gh pr merge <n>` with no merge-method flag,
+because the queue owns the strategy; the returned `queued` result is success and should be logged as
+"enqueued in the merge queue" rather than another failure. This is the same behavior that fixed
+ProjectHephaestus PR #2312 / issue #2311.
+
 #### Merge-readiness checklist for driving a ProjectHephaestus PR to green (manual)
 
 Walk this in order; each step maps to one of the five gotchas above plus the pre-existing policy gates:
@@ -547,6 +560,7 @@ Walk this in order; each step maps to one of the five gotchas above plus the pre
 | Assumed no required checks => immediate merge | Verified protection had no required checks | GitHub still waits for a check event signal | Auto-merge != "merge when CLEAN" |
 | `gh pr merge --auto --rebase` on a squash-only repo | Followed stale CLAUDE.md / hardcoded `--rebase` | `allow_rebase_merge: false` — CLI silently fails to arm; API fails loudly with GraphQL "Rebase merges are not allowed" | Detect allowed methods via `gh api repos/<repo>`; pick rebase->squash->merge; guard with a source-inspection test |
 | Swapped a hardcoded `--rebase` for a hardcoded `--squash` | Reactive one-flag fix | Still wrong on a rebase-only/merge-only target | Settings-aware `choose_merge_flag`, not a new hardcode |
+| Treated HTTP 405 `Pull Request is in the merge queue` as a retryable REST-merge failure | Kept retrying the direct merge API on a merge-queue-protected repo | The queue owns the merge strategy; direct REST merge must fall back to enqueue, and passing a merge-method flag on the enqueue path is rejected | Catch the merge-queue 405, call `_enqueue_pr`, use `gh pr merge <n>` with no merge-method flag, and log `queued` as success |
 | `gh pr list` without `--limit` | Listed open PRs to arm a backlog | Default limit is 30 — 31+ open PRs silently omit the older ones | Always `--limit 200` when sweeping a backlog |
 | Ran `gh pr create` then `gh pr merge --auto` sequentially | Two sequential commands | `pr-policy` read `autoMergeRequest` ~4s later, before enablement propagated → `Auto-merge is not enabled` | Enable fast; add the `auto_merge_enabled` trigger so the gate self-heals; else re-run after the run completes |
 | Edited the PR body to add `Closes #N` expecting a re-run | Edited body, waited | `pull_request` does not fire on `edited` | Re-run the failed job; body edits never re-trigger |
@@ -748,6 +762,7 @@ later successful required run plus `state=MERGED`, `mergedAt`, and `mergeCommit`
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
+| ProjectHephaestus | PR #2312 / issue #2311 — merge-queue fallback | Direct REST merge returned HTTP 405 `Pull Request is in the merge queue`; `_enqueue_pr` fell back to `gh pr merge <n>` with no merge-method flag and logged `queued` as success. verified-ci. |
 | AchaeanFleet | 11 CLEAN+armed PRs stuck 9+ hours with zero CI | Path filter broadened; remaining merged manually |
 | ProjectCharybdis | 32 armed PRs; review requirement relaxed but 23 did not auto-fire; bootstrap deadlock on PRs #4/#5 | Swept armed state with `gh pr merge --squash`; deadlock resolved via admin bypass |
 | ProjectScylla | Ruleset 15556492 — empty-array PUT returned 422 | Remove-rule PUT succeeded, PR merged, ruleset restored |
