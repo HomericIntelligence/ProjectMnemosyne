@@ -1,12 +1,12 @@
 ---
 name: security-md-version-sync
-description: "Keep SECURITY.md release-support and Python-compatibility statements synchronized with canonical project metadata and CI. Use when: (1) a release version changes, (2) a supported-versions table is stale, (3) SECURITY.md states only a Python floor or omits the tested ceiling, (4) policy prose lacks pyproject.toml provenance or a COMPATIBILITY.md reference, (5) a CI matrix changes."
+description: "Keep SECURITY.md release-support and Python-compatibility statements synchronized with the project's actual version authority and executable guards. Use when: (1) a release tag or static version changes, (2) a hatch-vcs project has no static version field, (3) a supported-versions table drifts, (4) a guard requires a specific number of supported series, (5) a CI interpreter matrix changes."
 category: documentation
-date: 2026-07-17
-version: "2.0.0"
+date: 2026-07-20
+version: "3.0.0"
 user-invocable: false
-verification: verified-precommit
-tags: ["security", "versioning", "documentation", "SECURITY.md", "pyproject.toml", "ci-matrix", "compatibility"]
+verification: verified-local
+tags: ["security", "versioning", "documentation", "SECURITY.md", "hatch-vcs", "release-tags", "pre-commit", "ci-matrix", "compatibility"]
 history: security-md-version-sync.history
 ---
 
@@ -16,66 +16,91 @@ history: security-md-version-sync.history
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-07-17 |
-| **Objective** | Keep release-support rows and interpreter-support prose in SECURITY.md accurate and attributable |
-| **Outcome** | One verified documentation workflow with separate table and policy-prose branches |
-| **Verification** | verified-precommit — ProjectHephaestus issues #47 and #1204 |
-| **History** | [absorbed Python-range planning source](./security-md-version-sync.history) |
+| **Date** | 2026-07-20 |
+| **Objective** | Keep release-support rows and interpreter-support prose synchronized with the project's declared version authority, release tags, CI, and executable policy guards |
+| **Outcome** | Source-aware workflow covers static versions and VCS-derived versions without overriding repository-specific support-series rules |
+| **Verification** | verified-local — direct guard plus 19 targeted ProjectHephaestus tests passed; CI validation pending |
+| **History** | [changelog](./security-md-version-sync.history) |
 
 ## When to Use
 
-- A release version in `pyproject.toml` changes and the SECURITY.md supported-version rows may be stale
-- SECURITY.md gives only a Python minimum, without the CI-tested ceiling or canonical source reference
+- A release tag or static package version advances and `SECURITY.md` may still name the previous minor series
+- A project uses hatch-vcs or another dynamic version provider and intentionally has no static `[project].version`
+- A repository guard rejects stale, missing, or multiple supported-version rows
 - The main CI matrix adds or removes a Python version
-- SECURITY.md or COMPATIBILITY.md may be reflecting each other rather than authoritative metadata
+- `SECURITY.md` or `COMPATIBILITY.md` may be reflecting each other rather than authoritative metadata
 
 ## Verified Workflow
+
+> **Verification scope:** Verified locally only — CI validation pending.
 
 ### Quick Reference
 
 ```bash
-# Release series and install-time Python floor
-grep -n 'version\|requires-python' pyproject.toml
+# Discover whether version authority is static metadata or VCS tags.
+rg -n 'dynamic = \["version"\]|^version\s*=|source\s*=\s*"vcs"' pyproject.toml
+git tag --list 'v*' --sort=-version:refname | head
 
-# Tested interpreter range and development constraint
-rg -n 'python-version' .github/workflows
-grep -n 'python' pixi.toml | head -5
+# Inspect policy and executable enforcement before choosing a table shape.
+sed -n '/Supported Versions/,+8p' SECURITY.md
+rg -n 'SECURITY\.md|supported.*version|version.*consisten' scripts .pre-commit-config.yaml tests
 
-# Existing policy statements
-grep -A6 'Supported Versions' SECURITY.md
-grep -n 'Python\|pyproject.toml\|COMPATIBILITY.md' SECURITY.md COMPATIBILITY.md
-
-# Documentation validation; skip an environment-incompatible formatter if necessary.
-SKIP=mojo-format pre-commit run --all-files
+# ProjectHephaestus example; use the repository's equivalent guard and tests.
+python3 scripts/check_security_version_consistency.py
+uv run pytest tests/unit/scripts/test_check_security_version_consistency.py --no-cov -q
+uv run pytest 'tests/unit/scripts/test_scripts_smoke.py::test_script_help_exits_zero' \
+  -k check_security_version_consistency --no-cov -q
 ```
 
 ### Detailed Steps
 
-1. Read `[project].version` and `requires-python` in `pyproject.toml`. They are the canonical release series and install-time Python floor.
-2. Inspect all CI workflow matrices to establish the tested interpreter floor and ceiling. A narrower auxiliary job does not redefine the main test matrix.
-3. Inspect the development-environment Python constraint as corroborating information, not as the canonical policy source.
-4. Compare SECURITY.md and COMPATIBILITY.md independently with the sources above. Neither document proves the other is current.
-5. Update the matching branch or branches below, then run formatting and flexible positive/negative text checks.
+1. Identify the repository's version authority before editing policy data:
+   - For a static package version, read `[project].version` or the repository's declared equivalent.
+   - For hatch-vcs or another VCS-derived version, keep static metadata absent and derive the current minor from version-sorted release tags.
+2. Read the existing policy guard and its unit tests. Treat their accepted table shape as an executable repository invariant unless the task explicitly changes policy.
+3. Compare the canonical current minor `X.Y` with the supported and end-of-life rows in `SECURITY.md`.
+4. Make the smallest policy-data edit. Do not modify a correct guard or broaden test scope merely because the document drifted.
+5. Run the guard directly against the real repository and available tags. A `--help` smoke test does not prove the policy is aligned.
+6. Run the guard's focused unit suite, including aligned, drifted, missing-row, and multiple-row cases.
+7. Run the affected script smoke test and the configured pre-commit hook when present.
+8. Report `verified-local` until CI confirms the branch; only then promote the evidence level to `verified-ci`.
 
-### Worked Example — Supported release table
+### Worked Example — VCS-derived single supported series
 
-When the release series changes, update the table immediately below the supported-versions heading:
+Suppose hatch-vcs derives the package version from tags, the latest version-sorted tag is
+`v0.10.0`, and the guard accepts exactly one supported series. The policy data is:
 
 ```markdown
-| Version | Supported |
-|---------|-----------|
-| X.Y.x   | Yes       |
-| X.(Y-1).x | Yes     |
-| < X.(Y-1) | No       |
+| Version | Supported      |
+|---------|----------------|
+| 0.10.x  | Supported      |
+| < 0.10  | End of life    |
 ```
 
-Keep the preceding release supported unless it is explicitly end-of-life. Use `X.Y.x` notation
-and commit the documentation update with the release change.
+Do not add a static `version` field, preserve `0.9.x` as a second supported row, or edit a
+correct guard. Those actions conflict with the repository's version model or executable policy.
 
-### Worked Example — Python support provenance prose
+### Worked Example — Static version with an explicit overlap policy
 
-When the policy prose is floor-only or lacks attribution, surface the entire tested range and its
-sources above the table:
+If the repository stores a static `X.Y.Z` version and explicitly supports the current and
+preceding minor series, a two-series table can be correct:
+
+```markdown
+| Version   | Supported   |
+|-----------|-------------|
+| X.Y.x     | Supported   |
+| X.(Y-1).x | Supported   |
+| < X.(Y-1) | End of life |
+```
+
+The overlap is a project policy, not a universal default. Confirm it in the guard, release
+policy, or tests before retaining the previous series.
+
+### Python support provenance prose
+
+For interpreter policy, derive the install-time floor from `requires-python` and the tested
+range from all relevant CI matrices. Treat development-environment constraints as
+corroborating information, and verify `SECURITY.md` and `COMPATIBILITY.md` independently.
 
 ```markdown
 Project supports **Python 3.10–3.13** (`requires-python = ">=3.10"` in
@@ -83,40 +108,47 @@ Project supports **Python 3.10–3.13** (`requires-python = ">=3.10"` in
 [COMPATIBILITY.md](COMPATIBILITY.md) for the full compatibility policy.
 ```
 
-Verify each endpoint separately rather than using an order-dependent multi-version regex. The
-prose must identify the `pyproject.toml` field and cross-link COMPATIBILITY.md; do not update only
-the release table when the interpreter policy is also stale.
-
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| Read only one CI workflow | Treated a single job as the entire support matrix | Auxiliary jobs may use a narrower subset | Inspect all workflow files before stating a tested range |
-| Trust COMPATIBILITY.md | Used one policy document to validate the other | Both documents can drift together | Compare both with metadata and CI independently |
-| Use an order-dependent grep | Required version endpoints to occur in a fixed textual order | Equivalent wording caused false failures | Check floor and ceiling separately |
-| Run an incompatible formatter unconditionally | Ran all hooks on a GLIBC-mismatched host | `mojo-format` failed for the host, not the docs | Skip only the known incompatible hook and baseline unrelated failures on main |
+| Assume `[project].version` always exists | Used static package metadata as the universal release source | hatch-vcs projects intentionally declare `dynamic = ["version"]` and derive versions from tags | Discover the repository's version model first; do not introduce a static version field |
+| Sort tags as plain text | Compared `v0.10.0` and `v0.9.9` lexicographically | Lexical ordering can place `0.9` after `0.10` | Use version-aware sorting such as `git tag --sort=-version:refname` |
+| Keep the previous minor supported by default | Applied a generic two-series table | Some guards require exactly one supported series | Read the executable guard and tests before choosing the table shape |
+| Edit the guard and tests with the policy row | Expanded a documentation-drift fix into enforcement changes | The existing guard already encoded the intended invariant | Change policy data only when enforcement is already correct |
+| Run only the script help smoke test | Verified CLI startup but not tag-to-policy consistency | `--help` exits before evaluating the repository state | Run the real guard first, then focused unit and smoke tests |
+| Read only one CI workflow | Treated a single job as the entire interpreter support matrix | Auxiliary jobs may use a narrower subset | Inspect all workflow files before stating a tested range |
+| Trust `COMPATIBILITY.md` | Used one policy document to validate another | Both documents can drift together | Compare both with metadata, tags, and CI independently |
+| Run an incompatible formatter unconditionally | Ran all hooks on a host lacking the formatter's runtime requirements | The formatter failed for the host, not the documentation | Skip only a known incompatible hook and baseline unrelated failures on main |
 
 ## Results & Parameters
 
 | Source | Authority |
 |--------|-----------|
-| `pyproject.toml` `[project].version` | Canonical release series |
-| `pyproject.toml` `requires-python` | Canonical install-time floor |
-| Main CI matrix | Canonical tested range |
-| `pixi.toml` Python constraint | Development-environment signal only |
-| SECURITY.md and COMPATIBILITY.md | Policy outputs to validate, not sources of truth |
+| Static `[project].version` | Canonical release only when the repository declares a static version |
+| Version-sorted release tags | Canonical release series for hatch-vcs/VCS-derived projects |
+| Repository consistency guard and its tests | Executable table-shape and alignment invariant |
+| `pyproject.toml` `requires-python` | Canonical install-time Python floor |
+| Main CI matrices | Canonical tested interpreter range |
+| Development environment constraint | Corroborating signal only |
+| `SECURITY.md` and `COMPATIBILITY.md` | Policy outputs to validate, not independent sources of truth |
 
 ### Acceptance checks
 
-- The current release series appears in the supported-version table.
-- SECURITY.md mentions both ends of the CI-tested Python range.
-- The prose names `pyproject.toml` and links COMPATIBILITY.md.
-- Stale floor-only text is absent.
-- Markdown and repository documentation hooks pass.
+- The current canonical minor appears in the supported-version table.
+- The number and range of supported rows match the repository's explicit policy guard.
+- The direct consistency guard passes against real tags or metadata.
+- Focused tests cover aligned, drifted, missing, and multiple-row policies.
+- The affected script smoke test passes.
+- If interpreter prose changed, both ends of the CI-tested Python range are present and attributable.
+
+ProjectHephaestus's observed commands and outputs are preserved in
+[session notes](./security-md-version-sync.notes.md).
 
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectHephaestus | Issue #47, PR #76 | Supported release table updated and pre-commit verified. |
-| ProjectHephaestus | Issue #1204 | Python-range provenance prose verified with pre-commit. |
+| ProjectHephaestus | `v0.10.*` supported-series correction, commit `31ed68e` | Direct guard, 18 guard unit tests, and 1 filtered smoke test passed locally on 2026-07-20; [notes](./security-md-version-sync.notes.md) |
+| ProjectHephaestus | Issue #47, PR #76 | Supported release table updated and pre-commit verified |
+| ProjectHephaestus | Issue #1204 | Python-range provenance prose verified with pre-commit |
