@@ -1,5 +1,29 @@
 # automation-review-authorization-ci-boundary — History
 
+## v1.5.0 (2026-07-21)
+
+**Changed by:** ProjectHephaestus PR #2357 direct-review admission check.
+**Verification:** verified-local.
+
+### What changed
+
+- Added a deterministic direct-PR admission preflight for one exact standalone `Closes #N` line and a usable linked requirement.
+- Documented that `--prs`, reviewer-model selection, and reasoning effort are downstream of this invariant; a failing preflight intentionally creates zero reviewer jobs.
+- Recorded PR #2357's Sol/medium run as a local, fail-closed example and clarified that this is admission control rather than an LLM policy duplicate or CI dependency.
+
+### Why
+
+An operator can correctly configure a reviewer but still receive no review if the selected PR has
+no requirements context. Treating that result as a model failure encourages useless retries and
+can obscure the actual repair: link the real issue with the exact closing syntax. The automated
+gate must remain fail-closed before any reviewer-model cost or authority is consumed.
+
+### Previous version (v1.4.0) snapshot
+
+The exact v1.4.0 source is preserved at [automation-review-authorization-ci-boundary.md in parent commit `626b400`](https://github.com/HomericIntelligence/ProjectMnemosyne/blob/626b400/skills/automation-review-authorization-ci-boundary.md).
+
+---
+
 ## v1.4.0 (2026-07-20)
 
 **Changed by:** ProjectHephaestus issue #2283 / PR #2347 review and merge path.
