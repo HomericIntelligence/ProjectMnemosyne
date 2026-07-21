@@ -1,9 +1,9 @@
 ---
 name: automation-review-authorization-ci-boundary
-description: "Keep automation-loop source-review authorization independent of CI/CD. Use when: (1) a strict PR review is mistakenly implemented as a required CI check, (2) an agent loop cannot observe or control the external workflow that is supposed to authorize it, (3) loop approval must survive restart using only loop-owned PR state, or (4) a downstream rerun must short-circuit on a merged PR because GitHub clears autoMergeRequest after merge."
+description: "Keep automation-loop source-review authorization independent of CI/CD. Use when: (1) a strict PR review is mistakenly implemented as a required CI check, (2) an agent loop cannot observe or control the external workflow that is supposed to authorize it, (3) loop approval must survive restart using only loop-owned PR state, (4) a direct `--prs` review run must prove its closing-issue requirements before consuming a reviewer-model job, or (5) a downstream rerun must short-circuit on a merged PR because GitHub clears autoMergeRequest after merge."
 category: architecture
-date: 2026-07-20
-version: "1.4.0"
+date: 2026-07-21
+version: "1.5.0"
 user-invocable: false
 verification: verified-ci
 history: automation-review-authorization-ci-boundary.history
@@ -26,7 +26,7 @@ tags:
 |-------|-------|
 | **Date** | 2026-07-20 |
 | **Objective** | Keep a code-automation loop's strict source-review decision inside that loop rather than delegating its authorization to CI/CD, and enforce it at the auto-merge boundary. |
-| **Outcome** | ProjectHephaestus moved strict-review proof, workflow triggers, artifacts, leases, and CI-status contracts out of the authorization path. The loop's own CI-free PR review applies `state:implementation-go` after a GO verdict; its review-local payload is then reduced to a fixed non-authorizing context before `merge_wait` can consume the label. PR #2347 showed the complete path: a B/GO review reported its own sandbox verification gap, applied the label, and merged after the repository's independent required checks passed. |
+| **Outcome** | ProjectHephaestus moved strict-review proof, workflow triggers, artifacts, leases, and CI-status contracts out of the authorization path. The loop's own CI-free PR review applies `state:implementation-go` after a GO verdict; its review-local payload is then reduced to a fixed non-authorizing context before `merge_wait` can consume the label. PR #2347 showed the complete path: a B/GO review reported its own sandbox verification gap, applied the label, and merged after the repository's independent required checks passed. PR #2357 confirmed the complementary admission behavior: a direct `--prs 2357` run with `reviewer-model=sol` and medium effort produced zero agent jobs because the PR had no standalone `Closes #N` requirement link. |
 | **Verification** | verified-ci — PR #2347's full CI suite and required-checks gate passed before merge; the review decision itself remained source-review-only. |
 
 ## When to Use
@@ -36,6 +36,7 @@ tags:
 - A restart path needs to determine whether a PR may proceed without reconstructing a CI-run proof artifact.
 - You need to retire an external review-proof system while preserving historical ADRs and making the active contract unambiguous.
 - A direct `--prs` discovery route can create an issue-less work item that reaches merge-wait with a stale or externally applied GO label.
+- You are about to launch a direct `--prs` review run and need to know whether a selected reviewer model will actually be invoked, rather than merely selected by CLI configuration.
 - A process-local strict-review mutex is released at a stage handoff even though the successor has not yet confirmed the live head and armed auto-merge.
 - Review-local head, verdict, or evidence data remains in a work item after the label has been applied, where a later stage could accidentally turn it into a second authorization requirement.
 - A downstream rerun evaluates a PR after merge and must short-circuit on PR state instead of expecting `autoMergeRequest` to still be present; GitHub clears `autoMergeRequest` on merged PRs.
@@ -63,11 +64,38 @@ CI/CD is outside this decision:
   - do not make an external CI result a prerequisite for loop progress
 ```
 
+### Direct-PR admission preflight
+
+```bash
+PR=2357
+REPO=HomericIntelligence/Hephaestus
+
+# `--prs` selects a target; it does not override the requirements-context invariant.
+gh pr view "$PR" --repo "$REPO" --json number,body,closingIssuesReferences \
+  --jq '{number, closingIssuesReferences, body}'
+
+# Require exactly one standalone closing line before spending a reviewer-model job.
+gh pr view "$PR" --repo "$REPO" --json body --jq .body \
+  | rg -x 'Closes #[0-9]+'
+```
+
+If this preflight has no exact closing line or no usable linked requirement, stop and repair the
+PR metadata first. Do not retry with a different reviewer model or reasoning effort: model
+selection is downstream of deterministic admission, so it cannot turn an orphaned PR into a
+reviewable one.
+
 ### Detailed Steps
 
 1. Establish a single decision owner. Source-review authorization belongs to the automation loop when that loop is responsible for planning, implementation, review, and advancement. CI/CD may validate a repository independently, but it is not evidence the loop can depend on for this decision.
 
 2. Run the strict PR review as an in-loop, CI-free operation against the live PR diff. Require an explicit GO result before transition; a missing, ambiguous, or NO-GO result must not apply the approval label.
+
+   For direct `--prs` operation, first verify the requirements context deterministically. `--prs`
+   identifies the PR but does not waive the exact standalone `Closes #N` contract or synthesize
+   acceptance criteria from prose such as `Addresses #N`. When the preflight fails, the correct
+   result is a fail-closed terminal record with zero reviewer jobs; changing `--reviewer-model` or
+   its reasoning effort must not bypass that result. This is admission control, not a duplicate
+   LLM policy check and not a CI dependency.
 
 3. Report review evidence precisely. A reviewer may issue GO from sufficient source and local evidence even when its sandbox cannot independently rerun every claimed test, but it must name the gap, avoid claiming those tests passed, and grade the evidence accordingly. Do not turn that disclosure into a CI dependency for the loop decision.
 
@@ -81,7 +109,7 @@ CI/CD is outside this decision:
 
 8. Keep the boundary mechanically enforceable. Delete CI workflows and automatic tasks that trigger from review or implementation-go solely to produce authorization proof. Remove their references from active documentation, agent directions, prompt contracts, and tests.
 
-9. Cover direct PR discovery as well as issue-driven discovery. If the strict stage needs issue/comment context, pass the PR number as its work-item context for a PR discovered without a closing issue. Passing `None` converts a valid PR into a terminal strict-review failure. If direct PRs deliberately remain issue-less, they must stop at merge-wait under step 6; never treat a label alone as enough to compensate for missing requirements context.
+9. Cover direct PR discovery as well as issue-driven discovery. First distinguish a PR with a valid closing requirement from an orphan: only the former may reach strict review. For that valid PR, if the strict stage needs issue/comment context, pass the PR number as its work-item context rather than `None`. Passing `None` converts a valid PR into a terminal strict-review failure. If direct PRs deliberately remain issue-less, they must stop at admission/merge-wait under step 6; never treat a label alone, the `--prs` selector, or reviewer-model configuration as enough to compensate for missing requirements context.
 
 10. Preserve ADR history. Do not rewrite accepted historical decisions just to erase obsolete policy. Add a new superseding ADR and update the ADR index so active readers find the current contract while audits retain the original record.
 
@@ -97,6 +125,7 @@ CI/CD is outside this decision:
 | Restart from external proof data | `merge_wait` depended on workflow artifacts, leases, and status records. | Those records were external coupling, could be absent or stale after restart, and were unnecessary once loop-owned approval existed. | Restart from the loop-owned approval label and live PR state only. |
 | Preserve strict-review ingress fields dynamically | A review pass snapshotted its ingress payload keys and kept those keys after GO. | An unknown alias or forged snapshot entry could preserve review evidence; after a NOGO retry, the stale snapshot could drop fresh implementation context. | At the GO boundary, retain a small fixed set of non-authorizing context keys instead of trying to classify or remember review fields. |
 | Treat a repository-wide PR as an issue-less strict review | Direct PR discovery constructed a work item with `issue=None`. | The strict stage requires issue/comment context and rejected the work item as terminal. | For direct PR review, use the PR number as the work-item context unless the design supplies an equivalent explicit context. |
+| Retry an orphaned direct PR with a different reviewer setting | Launched `hephaestus-automation-loop --prs 2357 --reviewer-model sol --reviewer-reasoning-effort medium` without first proving an exact closing requirement. | The admission gate found no standalone `Closes #N` line, completed with `agent jobs: 0`, and no reviewer model was invoked; `Addresses #2138 and #2223` was not usable requirements context. | Preflight direct PR metadata before dispatch. `--prs` and model flags select work only after the deterministic requirements-context invariant passes. |
 | Trust strict review as the only orphan check | An unlinked direct PR with a stale `state:implementation-go` label was routed around strict review and into merge-wait. | The strict-stage check never ran on that path, so merge-wait could otherwise arm auto-merge without requirements context. | Repeat the invariant at the irreversible side-effect boundary: defer, confirm deferral, and fail before merge-wait reads labels or arms. |
 | Release strict guard at the stage transition | The guard was released as soon as strict review routed to merge-wait. | A competing strict reviewer could enter while the first item was between review approval and confirmed arming. | Retain ownership through merge-wait's first successful arm and release on its `POLL` continuation; all finish/park/exception paths remain idempotent releases. |
 | Treat `autoMergeRequest` as a post-merge signal | A rerun checked `autoMergeRequest` after the PR had already merged. | GitHub clears `autoMergeRequest` on merged PRs, so the rerun misread a terminal PR as still pending. | Post-merge consumers must check `state` and short-circuit on non-`OPEN` instead of treating `autoMergeRequest` as durable. |
@@ -110,6 +139,7 @@ CI/CD is outside this decision:
 | Prohibited dependencies | CI checks, workflow runs, artifacts, deployments, external status contexts, and review-proof leases. |
 | Review-state handoff | After the label's current-head readback, retain only fixed non-authorizing context, cleanup, and the ephemeral handoff mutex; discard all review result and proof aliases. |
 | Direct-PR correction | Use the PR number as strict-review work-item context rather than `None`. |
+| Direct-PR admission | Before launching reviewer work, require one exact standalone `Closes #N` line and a usable linked requirement. `Addresses #N` is not a substitute; failed admission means zero agent jobs by design. |
 | Defense in depth | `merge_wait.on_enter` rejects `issue=None` before consuming labels or arming; deferral is confirmed by a fresh PR-state read. |
 | Guard lifetime | Strict-review ownership covers the strict-to-merge-wait handoff and first successful arm; it is released only after that arm confirms continuation to polling. |
 | Post-merge terminality | PR #2306 / issue #2177 merged at `2026-07-21T01:53:35Z` with `state=MERGED`; `autoMergeRequest` is `null` and `mergeStateStatus` was `UNKNOWN` after merge. Downstream reruns must key off PR state and treat terminal PRs as complete. |
@@ -124,3 +154,4 @@ CI/CD is outside this decision:
 | ProjectHephaestus | PR #2280 / issues #2053 and #2276 | CI-free source review and loop-owned `state:implementation-go` authorization. The direct repository-wide PR route now supplies PR context to strict review. Local swarm review then found that dynamic review-payload preservation could retain an aliased proof or survive a NOGO retry; a fixed allowlist removes those fields only after the label's current-head readback. Local verification only; no CI/CD state was queried. |
 | ProjectHephaestus | PR #2306 / issue #2177 | Docs PR that reached merged state through the normal review-to-merge path: review GO, loop-owned `state:implementation-go`, and merge_wait. Post-merge `gh pr view` showed `state=MERGED` with `autoMergeRequest=null`, confirming reruns must short-circuit on terminal PR state. |
 | ProjectHephaestus | PR #2347 / issue #2283 | The review posted B/GO at `ecba01d9`, explicitly recorded that its sandbox could not rerun pytest or artifact builds, and applied `state:implementation-go` at `2026-07-21T04:35:08Z`. `merge_wait` completed the merge at `2026-07-21T04:44:01Z` as `fde855ad`, after the independent required-checks gate succeeded. |
+| ProjectHephaestus | PR #2357 | A scoped direct-PR run selected Sol at medium reasoning effort, but the deterministic admission gate found no exact `Closes #N` link and completed with `agent jobs: 0`. The independent strict review could still inspect the source, but the in-loop reviewer was correctly not invoked. Verified locally; no CI conclusion follows from this admission result. |
