@@ -1,5 +1,26 @@
 # automation-review-authorization-ci-boundary — History
 
+## v1.4.0 (2026-07-20)
+
+**Changed by:** ProjectHephaestus issue #2283 / PR #2347 review and merge path.
+**Verification:** verified-ci.
+
+### What changed
+
+- Added the evidence-reporting rule: a source-review GO may be correct despite a sandbox test-execution gap only when that gap and its effect on confidence are explicit.
+- Recorded the observed sequence: B/GO review, `state:implementation-go`, independent required-checks success, then merge_wait merge.
+- Raised verification from `verified-local` to `verified-ci` based on the merged PR's observed CI and required-checks results.
+
+### Why
+
+PR #2347 demonstrated that review authorization and repository CI are separate responsibilities: the reviewer did not overclaim tests it could not rerun, the loop persisted its own GO decision, and branch protection's independent checks completed before merge.
+
+### Previous version (v1.3.0) snapshot
+
+The exact v1.3.0 source is preserved at [automation-review-authorization-ci-boundary.md in parent commit `24b7b79b`](https://github.com/HomericIntelligence/Mnemosyne/blob/24b7b79b78b99da58318adb52dcdcf5f8166b52e/skills/automation-review-authorization-ci-boundary.md).
+
+---
+
 ## v1.3.0 (2026-07-21)
 
 **Changed by:** ProjectHephaestus PR #2306 merge verification.
