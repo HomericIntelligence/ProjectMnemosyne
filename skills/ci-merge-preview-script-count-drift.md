@@ -2,8 +2,8 @@
 name: ci-merge-preview-script-count-drift
 description: "Use when: (1) CI fails with 'prose says N console scripts but pyproject.toml [project.scripts] has N+1 entries', (2) pre-commit fails with '[missing-from-docs] hephaestus-<script> is in [project.scripts] but has no row in COMPATIBILITY.md', (3) a branch cut before parallel PRs landed now has stale script counts in README/docs/COMPATIBILITY.md on the merge-preview SHA, (4) updating prose counts in README.md or docs/index.md that reference the number of console scripts, (5) a strict audit flags a stale literal count in a roadmap/planning doc (e.g. ROADMAP.md) where the number contradicts pyproject.toml [project.scripts] but CI is not currently failing, (6) a doc, ADR, or module docstring advertises a console script that is absent from [project.scripts] entirely — reference drift, not count drift; diff backticked doc command tokens against declared entry points and decide register-vs-remove from evidence, (7) a prose script count lives in a file no validator scans (e.g. COMPATIBILITY.md 'installs N console scripts') so every checker is green while the number is wrong."
 category: ci-cd
-date: 2026-06-07
-version: "1.2.0"
+date: 2026-07-21
+version: "1.3.0"
 user-invocable: false
 history: ci-merge-preview-script-count-drift.history
 verification: verified-ci
@@ -30,9 +30,9 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-07 |
+| **Date** | 2026-07-21 |
 | **Objective** | Diagnose and fix CI failures caused by `[project.scripts]` count drift between a feature branch and main's merge-preview SHA, and fix stale literal counts in planning/roadmap docs discovered by strict audits |
-| **Outcome** | Successfully applied to 8 PRs in one session (2026-06-07); also covers single-token doc-only fixes for roadmap/planning files where CI is not failing; v1.2.0 adds reference-drift diagnosis (a doc advertises a command absent from `[project.scripts]`) and the register-vs-remove decision rule (ProjectHephaestus issue #2169) |
+| **Outcome** | Successfully applied to 8 PRs in one session (2026-06-07); also covers single-token doc-only fixes for roadmap/planning files where CI is not failing; v1.2.0 adds reference-drift diagnosis (a doc advertises a command absent from `[project.scripts]`) and the register-vs-remove decision rule (ProjectHephaestus issue #2169); v1.3.0 closes that loop in PR #2323 with the command registered, the inventory surfaces kept in sync, and a verified NOGO->GO->merge path |
 | **Verification** | verified-ci |
 
 ## When to Use
@@ -46,6 +46,7 @@ tags:
 - A doc or a module's own docstring advertises a `hephaestus-*` command that is **absent from `[project.scripts]` entirely** (reference drift, not count drift) — the count and tier checkers stay green because neither validates command references across docs
 - A prose script count lives in a file **no validator scans** (e.g., `COMPATIBILITY.md` "installs N console scripts") — every check is green while the number is wrong
 - An issue or audit body quotes a script count — treat it as suspect prose and recount from `pyproject.toml` (issue #2169 claimed 51; the real count was 48)
+- A reviewer NOGO tells you the checker stopped guarding the full inventory surface — restore the missing docs surfaces rather than narrowing the check to the easiest file
 
 ## Verified Workflow
 
@@ -183,6 +184,7 @@ For each offender, decide **register vs remove** from evidence, not preference:
 | The module has a working `main()` and its docstring self-describes as this CLI | Register |
 | Every sibling stage CLI is registered | Register (consistency) |
 | A shell wrapper works around the absence via `python -m package.module` | Register, then simplify the wrapper |
+| The checker is narrowed to README/pyproject and stops scanning the other documented surfaces | The PR no longer guards the full inventory drift class | Keep the validation surface aligned with the issue scope; if docs are part of the contract, the checker must still read them |
 
 Registering cascades: the pyproject `[project.scripts]` entry, a COMPATIBILITY.md tier row,
 a README CLI-table row, and prose counts incremented in every file from Steps 3–4. Prefer
@@ -250,12 +252,13 @@ CLI-doc reconciliation so count fixes and reference fixes land in one change. Kn
 validator blind spots it catches that count checks miss: commands advertised only in
 architecture docs or ADRs, and prose counts in files outside the checker's scan set.
 
-**Session results:** Applied fix to 8 PRs in one session (2026-06-07). All 8 passed CI after updating prose counts + COMPATIBILITY.md rows. The failure was caused by two parallel PRs (#1046 adding `hephaestus-check-cli-tier-docs` and #1067 adding `hephaestus-audit-prs`) merging into main after the affected branches were cut.
+**Session results:** Applied fix to 8 PRs in one session (2026-06-07). All 8 passed CI after updating prose counts + COMPATIBILITY.md rows. PR #2323 / issue #2169 later completed the same register-vs-remove path: the automation worktree was salvaged, rebased onto current main, and merged after the reviewer moved from NOGO to GO. The failure was caused by two parallel PRs (#1046 adding `hephaestus-check-cli-tier-docs` and #1067 adding `hephaestus-audit-prs`) merging into main after the affected branches were cut.
 
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
+| ProjectHephaestus | PR #2323, issue #2169, 2026-07-21 | `hephaestus-drive-prs-green` was registered, the inventory surfaces stayed aligned, and the review path moved from an initial NOGO on a partial checker to GO after the full validation surface was restored; PR merged after rebasing onto current main. verified-ci |
 | ProjectHephaestus | 8 PRs in session 2026-06-07 | Merge-preview SHA showed N+2 scripts from main vs. N in branch docs; fixed by updating README.md, docs/index.md, COMPATIBILITY.md |
 | ProjectHephaestus | PR #1270, issue #1190, 2026-06-13 | Strict audit found `docs/ROADMAP.md:15` said "37 declared tools" but pyproject.toml had 47; single-token fix (`37`→`47`); README and COMPATIBILITY.md already correct; CI passed cleanly on first push |
 | ProjectHephaestus | Issue #2169 planning, 2026-07-17 | Both existing checkers green while COMPATIBILITY.md said 53 vs actual 48, and an architecture doc advertised unregistered `hephaestus-drive-prs-green` (module had a working `main()`, self-describing docstring, registered siblings; `git log -S` empty = never registered). Diagnosis verified locally with the Step 7 snippet — exactly one true offender, zero false positives; register-side fix is planned in the issue #2169 implementation plan (not yet CI-verified) |
