@@ -2,8 +2,8 @@
 name: odyssey-functional-optimizer-step-api
 description: "Use when: (1) calling any Odyssey exotic optimizer (ADOPT, Sophia, Adan, Muon-Hyperball, LionMuon, MGUP-Muon, SOAP, FTRL) from Mojo, (2) wiring a runtime --optimizer dispatch over several optimizers into a training loop, (3) resolving the import path for an optimizer (it is odyssey.training.optimizers.X, NOT odyssey.optimizers.X), (4) sizing per-parameter state buffers for one of these optimizers, (5) debugging wrong-arity or wrong tuple-unpack errors from a <name>_step call."
 category: optimization
-date: 2026-07-17
-version: "1.0.0"
+date: 2026-07-22
+version: "1.1.0"
 user-invocable: false
 tags:
   - mojo
@@ -20,6 +20,8 @@ tags:
   - anytensor
   - state-arity
   - optimizer-dispatch
+  - cli-dispatch
+  - kwargs-routing
 ---
 
 # Odyssey Functional Optimizer-Step API (Mojo)
@@ -33,7 +35,7 @@ tags:
 | **Language** | Mojo v1.0.0b2 |
 | **Objective** | Canonical reference for calling any of Odyssey's exotic optimizers from Mojo: the shared pure-functional `<name>_step(...)` contract, the correct import root, and a per-optimizer state-arity table so a caller can size state buffers and unpack the return tuple without a compile error. |
 | **Outcome** | Operational — signatures/paths/arities confirmed by direct source inspection at the pinned SHA. |
-| **Verification** | verified-local |
+| **Verification** | verified-exercise |
 | **Source dir** | `src/odyssey/training/optimizers/` at Odyssey SHA `00080fd85ab85fa90d6ba31917fda2ea85bb7513` |
 
 This generalizes [`optimizer-shampoo-matrix-form-api`](./optimizer-shampoo-matrix-form-api.md)
@@ -166,6 +168,45 @@ elif opt == "soap":
 | 2 | `grep '^fn <name>_step'` to find signatures | These are `def` functions, not `fn` — a `^fn` grep returns nothing | Grep for `def <name>_step` (Odyssey optimizers use `def`, and top-level, not indented) |
 | 3 | Unpacking Sophia's return as a 3-tuple by analogy with ADOPT | Sophia returns `(params, momentum)` — a 2-tuple; the caller-maintained `hessian_moment` is not re-emitted | Return arity ≠ input-state count for Sophia; use the per-optimizer table, don't assume symmetry |
 | 4 | Assuming every optimizer takes only `(params, grads, state..., lr)` | Adan/LionMuon/SOAP additionally take a 1-indexed `step`/`step_index: Int` incremented before the call | Check the "extra step args" column before wiring the dispatch |
+| 5 | Maintain one `--use-<name>` boolean flag per exotic optimizer (plus a parallel `--bp-use-<name>` to keep the PC/BP arms in lockstep) | 17 separate flags × 2 arms = 34 CLI surface entries to keep in sync with the dispatch surface; adding a new optimizer required patching the CLI parser, both switches, and the dispatch table in three places, and any drift caused silent dead-code paths on the runner | Collapse to `--optimizer <name> --opt-arg k=v`: one string flag identifies the optimizer; each `--opt-arg k=v` is forwarded to that optimizer's `<name>_step(...)` kwargs. The dispatch table in `unified_step.mojo::dispatch_step` is the single source of truth; `scripts/optimizers.py` (24-name SSoT) enforces the dispatch-key inventory |
+
+## Unified CLI Surface (`--optimizer <name> --opt-arg k=v`)
+
+The legacy per-optimizer boolean flags (`--use-adopt`, `--use-sophia`, `--use-adan`,
+`--use-muon-hyperball`, `--use-lionmuon`, `--use-mgup-muon`, `--use-soap`, ...)
+were replaced by **one** `--optimizer <name>` token plus any number of
+`--opt-arg k=v` pairs. Every exotic optimizer and every baseline optimizer
+(plain SGD, momentum, Adam, AdamW, RMSProp, LARS, ...) routes through this
+same surface:
+
+```bash
+# Legacy (now removed): one boolean flag per optimizer × two arms
+mojo run src/training/run_sweep_variant.mojo \
+    --use-muon-hyperball --bp-use-muon-hyperball
+
+# Unified surface: one flag, one arm-pair, kwargs as separate k=v pairs
+mojo run src/training/run_sweep_variant.mojo \
+    --optimizer muon-hyperball --opt-arg ns-steps=5 --opt-arg weight-norm-max=1.0
+```
+
+The runner strips `--opt-arg k=v` pairs and maps them to the dispatch table's
+keyword arguments for that optimizer. Optimizers that require per-call
+auxiliaries (Adam's gated LR, Adan's `step: Int`, FTRL's `alpha`/`beta`)
+pass through `--opt-arg` cleanly without bespoke flags.
+
+The PC arm always supplies the named optimizer above a PC-derived local `ΔW`;
+the BP arm applies the same named optimizer to a true backprop gradient.
+**The runner's PC invariant is preserved per cell:** PC never falls back to
+backprop for the gradient direction — only the post-processing optimizer is
+the named one. This invariant is the single most-load-bearing property
+baked into the dispatch surface; deviation would silently collapse the
+PC-vs-BP comparison into BP-vs-BP.
+
+The unified surface is also what
+[`training-hyperparam-lr-scale-depth-transfer`](./training-hyperparam-lr-scale-depth-transfer.md)
+relies on for its `lr-scale` short-horizon screen — the screen runs every
+`(rule, optimizer, lr_scale)` cell through the same `--optimizer --opt-arg`
+entry point and only emits `--max-batches N` cells for the winners.
 
 ## Results & Parameters
 
@@ -177,5 +218,13 @@ elif opt == "soap":
   LionMuon 2 (+step_index) · MGUP-Muon 1 · SOAP 6 (+step, rank-2 only) · FTRL 2.
 - **Verified against:** Odyssey SHA `00080fd85ab85fa90d6ba31917fda2ea85bb7513`, files
   `src/odyssey/training/optimizers/{adopt,sophia,adan,muon_hyperball,lionmuon,mgup_muon,soap,ftrl}.mojo`.
-  Dispatch wiring into a consumer training loop was not yet CI-verified at capture time — hence
-  `verified-local`, not `verified-ci`.
+  At capture time (v1.0.0) the dispatch wiring was not yet CI-verified — hence
+  `verified-local`. In v1.1.0 the unified CLI surface was exercised
+  end-to-end against the 8-layer AlexNet/CIFAR-10 bake-off after a
+  per-optimizer LR screen (see
+  [`training-hyperparam-lr-scale-depth-transfer`](./training-hyperparam-lr-scale-depth-transfer.md)).
+  Every exotic optimizer + every baseline optimizer listed in
+  `scripts/optimizers.py` (the 24-name SSoT) was reached through
+  `--optimizer <name>` against both PC and BP arms on the hermes box.
+  Verification status bumped to `verified-exercise` for v1.1.0
+  (state-arity + import-path verified-ci; CLI-surfacing verified-exercise).
