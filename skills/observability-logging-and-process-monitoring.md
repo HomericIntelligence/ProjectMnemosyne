@@ -1,9 +1,9 @@
 ---
 name: observability-logging-and-process-monitoring
-description: "Add structured observability to Python/shell pipelines. Use when: (1) adding JSON log formatting to a shared library for Loki/Promtail/ELK integration, (2) adding stage logging with timing to multi-stage pipeline workers, (3) implementing SIGINT/SIGTERM graceful shutdown with checkpoint save, (4) adding real-time progress indicators to parallel tier execution, (5) suppressing noisy ERROR logs for subprocess failures that callers intentionally catch, (6) adding a log level function to a shared bash logging library, (7) overwriting transient terminal status lines with carriage return, (8) extracting duplicate logger.info/warning blocks into a shared helper method."
+description: "Add structured observability to Python/shell pipelines. Use when: (1) adding JSON log formatting to a shared library for Loki/Promtail/ELK integration, (2) adding stage logging with timing to multi-stage pipeline workers, (3) implementing SIGINT/SIGTERM graceful shutdown with checkpoint save, (4) adding real-time progress indicators to parallel tier execution, (5) suppressing noisy ERROR logs for subprocess failures that callers intentionally catch, (6) adding a log level function to a shared bash logging library, (7) overwriting transient terminal status lines with carriage return, (8) extracting duplicate logger.info/warning blocks into a shared helper method, (9) a successful coordinator exits 130 or reports interrupted after normal worker-pool teardown."
 category: tooling
-date: 2026-06-07
-version: "1.1.0"
+date: 2026-07-24
+version: "1.2.0"
 user-invocable: false
 history: observability-logging-and-process-monitoring.history
 tags:
@@ -17,6 +17,7 @@ tags:
   - checkpoint
   - progress
   - subprocess
+  - interruption-semantics
   - log-suppress
   - shell
   - terminal
@@ -31,10 +32,10 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-05-19 |
-| **Objective** | Synthesise eight skills covering the observability layer of running processes: structured JSON logging, stage logging, graceful signal handling, tier progress indicators, subprocess log suppression, shell log levels, inline terminal status, and logging helper extraction |
-| **Outcome** | Merged canonical — verified across ProjectHephaestus, ProjectScylla, Odysseus |
-| **Verification** | verified-ci (members individually verified) |
+| **Date** | 2026-07-24 (v1.2.0); 2026-05-19 (v1.0.0) |
+| **Objective** | Cover the observability layer of running processes: structured JSON logging, stage logging, graceful signal handling, tier progress indicators, subprocess log suppression, shell log levels, inline terminal status, logging helper extraction, and unambiguous interruption semantics during worker-pool teardown. |
+| **Outcome** | Canonical guidance updated with a real-pool diagnosis: ordinary teardown must not manufacture an interruption outcome. |
+| **Verification** | verified-local for v1.2.0; previous members verified-ci |
 
 ## When to Use
 
@@ -46,6 +47,7 @@ tags:
 - **Shell log level**: A bash logging library defines a color variable (`BLUE`) but no function uses it; need `log_debug()`
 - **Inline terminal status**: A console tool floods the terminal with repeated transient status lines (DISCONNECTED, RECONNECTING); need `\r` overwrite
 - **Extract logging helper**: Identical `logger.info/warning` blocks appear in 2+ branches; a DRY review comment flags them
+- **False interruption**: A coordinator reports `interrupted`, exits `130`, or writes an interrupted checkpoint after a successful or fatal run whose only shutdown was ordinary `finally` cleanup
 
 ## Verified Workflow
 
@@ -345,6 +347,62 @@ class RateLimitCoordinator:
 
 Check shutdown **before** starting new work (tier, run, task), not mid-task.
 
+#### Preserve Interruption Semantics During Normal Teardown
+
+An interruption event is an outcome signal, not a generic resource-cleanup
+signal. Its owner must be the coordinator (or its actual signal handler).
+Workers may observe it to cancel work, but a worker-pool cleanup method called
+from an unconditional `finally` block must not set it for that call. Otherwise a
+clean run can be reclassified as an interrupt after it has completed its work.
+
+Use an explicit cleanup-mode parameter where a pool is also usable as a
+standalone cancellation primitive:
+
+```python
+class WorkerPool:
+    def shutdown(self, *, mark_interrupted: bool = True) -> None:
+        if mark_interrupted:
+            self._shutdown.set()
+        # join workers and release pool resources
+
+class Coordinator:
+    def _shutdown_pool(self) -> None:
+        if self._pool is not None:
+            self._pool.shutdown(mark_interrupted=False)
+
+    def _signal_handler(self, _signum: int, _frame: object) -> None:
+        self.shutdown.set()
+```
+
+Keep the existing default when direct pool callers intentionally use
+`shutdown()` as cancellation. The coordinator's explicit `False` value makes
+its ownership of exit status auditable and avoids changing direct callers. Do
+not instead calculate the exit code before teardown: that leaves the event
+polluted and can race with a real signal during cleanup.
+
+Regression tests must exercise the production pool implementation rather than
+only a fake:
+
+```python
+def test_clean_coordinator_run_is_not_interrupted(tmp_path):
+    coordinator = make_default_coordinator(tmp_path, seed_from_cli=[])
+    assert coordinator.run() == 0
+    assert not coordinator.shutdown.is_set()
+
+def test_fatal_coordinator_run_is_not_interrupted(tmp_path):
+    coordinator = make_default_coordinator(tmp_path, seed_from_cli=[])
+    coordinator._run_cycle = raise_expected_fatal  # test seam
+    assert coordinator.run() == 1
+    assert not coordinator.shutdown.is_set()
+
+def test_pool_cleanup_mode_preserves_direct_cancellation_behavior():
+    pool = make_default_pool()
+    pool.shutdown(mark_interrupted=False)
+    assert not pool.shutdown_event.is_set()
+    pool.shutdown()
+    assert pool.shutdown_event.is_set()
+```
+
 #### Inline Status: Padding is Critical
 
 Without padding to terminal width, shorter lines leave residue from longer previous lines. Always pad: `' ' * max(0, _term_width() - len(line))`.
@@ -359,6 +417,7 @@ Without padding to terminal width, shorter lines leave residue from longer previ
 | Pass `format=` to `basicConfig` with custom formatter | Passed `format` kwarg alongside a custom handler formatter | The `format` kwarg can override handler formatters in some configurations | When using custom formatters, set them on handlers explicitly; omit `format` from `basicConfig` |
 | Print every status on new line (terminal) | Each transient state (DISCONNECTED, RECONNECTING) used `print()` | Creates a wall of repeating status text when service is down — hundreds of lines | Transient states should overwrite in place; only permanent states deserve their own line |
 | Suppress transient states entirely (terminal) | Skip printing DISCONNECTED/RECONNECTING, only show CONNECTED | Loses all visibility during reconnection; user sees nothing and thinks it is frozen | Transient states must be visible but should not accumulate; inline overwrite is the right balance |
+| Use one shared event for both cleanup and interruption | A coordinator's unconditional `finally` called `WorkerPool.shutdown()`, and that method set the shared event used by the exit-code mapper | Every normal or fatal path then looked interrupted and returned `130`, even though no signal occurred | Interruption is an outcome owned by the coordinator/signal handler. Make ordinary pool teardown explicit (`mark_interrupted=False`) and retain the default only for callers that deliberately cancel work. |
 
 ## Results & Parameters
 
@@ -401,6 +460,15 @@ Without padding to terminal width, shorter lines leave residue from longer previ
 | `<project>/automation/git_utils.py` | Add `log_errors: bool = True` kwarg; guard `logger.error()` |
 | Call sites (probe / first-try-cleanup) | Pass `log_on_error=False` or `log_errors=False` |
 
+### Interruption Outcome Invariant
+
+| End condition | Event state | Process result |
+| --- | --- | --- |
+| Normal completion | clear | `0` |
+| Expected fatal failure | clear | nonzero domain failure (not `130`) |
+| SIGINT/SIGTERM | set by signal handler | `130` |
+| Direct caller requests pool cancellation | set by `WorkerPool.shutdown()` default | cancellation/interruption behavior |
+
 ### Shell Log Level: Key Details
 
 - Use `$*` (not `$1`) for variadic messages
@@ -416,3 +484,4 @@ Without padding to terminal width, shorter lines leave residue from longer previ
 | Odysseus | odysseus-console.py NATS event viewer inline status | Syntax checked; eliminates terminal spam during NATS downtime |
 | ProjectHephaestus | Issue #781 / PR #829 - add log_debug() to docker_common.sh | ShellCheck + pre-commit passed; auto-merge |
 | ProjectScylla | Issue #713 / PR #761 - extract duplicate checkpoint logging helper | 9 tests pass (4 pre-existing + 5 new) |
+| ProjectHephaestus | Automation-loop plan canary, 2026-07-24 | Real default-pool reproduction: a clean empty run completed with `rc=130`, `shutdown=True`, and `fatal=False`. Root cause: unconditional coordinator teardown invoked a pool method that set the coordinator's shared interruption event before exit-code evaluation. Regression matrix and upstream code fix pending. |
