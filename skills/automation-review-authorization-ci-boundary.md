@@ -30,7 +30,7 @@ tags:
 |-------|-------|
 | **Date** | 2026-07-24 |
 | **Objective** | Keep a code-automation loop's strict source-review decision inside that loop rather than delegating its authorization to CI/CD, bind the decision to the exact GitHub head SHA, and prevent the queue from mutating externally owned auto-merge. |
-| **Outcome** | The pending ProjectHephaestus #2423 worktree design snapshots a stable GitHub body/diff/head and verifies the exact head in a clean checkout through a dedicated Git job. Every label write requires fresh open/unarmed state; approving/GO labels additionally require the matching reviewed head. Queue stages stand down on any populated auto-merge request; the conditional normal merge replacement remains separately tracked in issue #2419. |
+| **Outcome** | The pending ProjectHephaestus #2423 worktree design snapshots stable GitHub metadata and proves the exact head in a clean checkout through a dedicated Git job, which derives the review diff locally from the verified base/head pair. Every label write requires fresh open/unarmed state; approving/GO labels additionally require the matching reviewed head. Queue stages stand down on any populated auto-merge request; the conditional normal merge replacement remains separately tracked in issue #2419. |
 | **Verification** | verified-local for the v2.0.0 head-proof and no-auto-merge interlock: live GitHub schema inspection plus local ProjectHephaestus tests, Ruff, format, and mypy. The #2423 implementation has not yet reached a PR or CI; do not treat this as the behavior of the published `main` branch. Earlier CI-free authorization observations remain historical evidence, not evidence for the new interlock. |
 
 ## When to Use
@@ -62,9 +62,9 @@ tags:
 
 ```text
 automation loop owns source-review authorization
-  1. snapshot GitHub PR body, diff, and head; reject the snapshot if the head moves
-  2. verify a clean checkout at that exact head in a dedicated Git job
-  3. run the strict PR review in the loop (CI-free) against the snapshot
+  1. snapshot GitHub PR metadata and its head; reject it if the head moves
+  2. verify a clean checkout at that exact head in a dedicated Git job, then derive its diff locally from the verified base/head pair
+  3. run the strict PR review in the loop (CI-free) against that metadata and derived diff
   4. before every state-changing label, re-read OPEN + explicit autoMergeRequest:null
   5. require the exact reviewed head only for an approving/GO label; drift revokes proof and re-reviews
   6. merge_wait consumes the label and exact-head proof but only stands by; it never mutates auto-merge
@@ -105,9 +105,9 @@ reviewable one.
 
 1. Establish a single decision owner. Source-review authorization belongs to the automation loop when that loop is responsible for planning, implementation, review, and advancement. CI/CD may validate a repository independently, but it is not evidence the loop can depend on for this decision.
 
-2. Capture a stable review context before dispatching the reviewer. Read GitHub PR metadata including its head SHA, fetch the mutable diff, and read the head again. If the two heads differ, discard the context rather than reviewing a moving target. Run a dedicated Git job that proves the worktree was clean, synchronized to that exact head, has `HEAD` equal to it, and remained clean after synchronization. An expected SHA embedded only in an agent prompt is not checkout evidence.
+2. Capture stable GitHub metadata before dispatching the reviewer. Read the body, base branch, and head SHA, then read the head again. If the two heads differ, discard the context rather than reviewing a moving target. Run a dedicated Git job that proves the worktree was clean, synchronized to that exact head, has `HEAD` equal to it, and remained clean after synchronization. After that proof, fetch the named base branch and derive the diff locally from the verified base/head pair. Do not use a remotely fetched mutable diff as review evidence: an ABA head change can otherwise pair an intermediate diff with a restored head. An expected SHA embedded only in an agent prompt is not checkout evidence.
 
-   Run strict PR review as an in-loop, CI-free operation against that immutable body/diff/head snapshot. Require an explicit GO result before transition; a missing, ambiguous, or NO-GO result must not apply the approval label.
+   Run strict PR review as an in-loop, CI-free operation against that metadata and checkout-derived diff. Require an explicit GO result before transition; a missing, ambiguous, or NO-GO result must not apply the approval label.
 
    For direct `--prs` operation, first verify the requirements context deterministically. `--prs`
    identifies the PR but does not waive the exact standalone `Closes #N` contract or synthesize
@@ -152,7 +152,7 @@ reviewable one.
 | Trust strict review as the only orphan check | An unlinked direct PR with a stale `state:implementation-go` label was routed around strict review and into merge-wait. | The strict-stage check never ran on that path, so merge-wait could otherwise consume an authorization without requirements context. | Repeat the invariant at the irreversible state boundary: terminally block before merge-wait consumes labels; do not perform auto-merge cleanup. |
 | Release strict guard at the stage transition | The guard was released as soon as strict review routed to merge-wait. | A competing strict reviewer could enter while the first item was between review approval and final exact-head verification. | Retain ownership through the reviewed-head-safe continuation; all finish/park/exception paths remain idempotent releases. |
 | Treat `autoMergeRequest` as a post-merge signal | A rerun checked `autoMergeRequest` after the PR had already merged. | GitHub clears `autoMergeRequest` on merged PRs, so the rerun misread a terminal PR as still pending. | Post-merge consumers must check `state` and short-circuit on non-`OPEN` instead of treating `autoMergeRequest` as durable. |
-| Review a PR without binding its head | The reviewer saw a diff while a push could occur, and the later label write reused the result. | Approval of one revision was treated as approval of a different revision. | Fetch head before and after the diff, verify a clean checkout at that SHA in a Git job, and clear the proof on every drift or refresh. |
+| Review a PR without binding its head | The reviewer saw a remotely fetched diff while a push could occur, and the later label write reused the result. | Approval of one revision was treated as approval of a different revision; even a head-before/head-after check permits an ABA change that restores the original head while retaining an intermediate diff. | Snapshot metadata and head, verify a clean checkout at that SHA in a Git job, derive the diff locally from the verified base/head pair, and clear the proof on every drift or refresh. |
 | Treat a missing `autoMergeRequest` field as null | A partial PR response defaulted absent data to unarmed. | A failed or narrowed fetch became false safety evidence for a label mutation. | Require the field to be present with value `null`; otherwise fail closed. |
 | Try to disable a request that looked queue-owned | The design compared a later request's visible fields to an earlier queue arm before disabling it. | GitHub has no conditional disable mutation or persisted client nonce; another actor can replace an indistinguishable request between reads. | Never enable, defer, disable, adopt, create, or poll auto-merge from a shared queue; stand down on every populated request. |
 | Rewrite accepted ADRs to remove obsolete instructions | Historical ADR text was modified in place. | It obscured the decision record and broke the repository's ADR immutability convention. | Preserve accepted ADRs verbatim; add a superseding ADR and make the index point to the active policy. |
@@ -179,7 +179,7 @@ reviewable one.
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectHephaestus | Issue #2423 reviewed-head interlock | Verified locally: GitHub head is snapshotted before and after diff collection; a clean-checkout Git job proves the reviewed SHA before dispatch; all label paths require fresh open/unarmed state, while GO additionally requires the matching reviewed head; merge-wait stands by. Live schema inspection established that auto-merge disable has no conditional ownership token. CI pending. |
+| ProjectHephaestus | Issue #2423 reviewed-head interlock | Verified locally: GitHub metadata/head is snapshotted and rechecked; a clean-checkout Git job proves the reviewed SHA, fetches the named base, and derives the review diff locally before dispatch. All label paths require fresh open/unarmed state, while GO additionally requires the matching reviewed head; merge-wait stands by. Live schema inspection established that auto-merge disable has no conditional ownership token. CI pending. |
 | ProjectHephaestus | PR #2280 / issues #2053 and #2276 | CI-free source review and loop-owned `state:implementation-go` authorization. The direct repository-wide PR route now supplies PR context to strict review. Local swarm review then found that dynamic review-payload preservation could retain an aliased proof or survive a NOGO retry; a fixed allowlist removes those fields only after the label's current-head readback. Local verification only; no CI/CD state was queried. |
 | ProjectHephaestus | PR #2306 / issue #2177 | Docs PR that reached merged state through the normal review-to-merge path: review GO, loop-owned `state:implementation-go`, and merge_wait. Post-merge `gh pr view` showed `state=MERGED` with `autoMergeRequest=null`, confirming reruns must short-circuit on terminal PR state. |
 | ProjectHephaestus | PR #2347 / issue #2283 | The review posted B/GO at `ecba01d9`, explicitly recorded that its sandbox could not rerun pytest or artifact builds, and applied `state:implementation-go` at `2026-07-21T04:35:08Z`. `merge_wait` completed the merge at `2026-07-21T04:44:01Z` as `fde855ad`, after the independent required-checks gate succeeded. |
