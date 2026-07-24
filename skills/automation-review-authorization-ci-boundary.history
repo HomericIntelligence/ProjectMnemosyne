@@ -32,7 +32,9 @@ merge to a separately reviewed implementation.
 
 ### Previous version (v1.7.0) snapshot
 
-The v1.7.0 source and its v1.6.0 snapshot are retained below.
+The v1.7.0 release entry and its v1.6.0 snapshot are retained below. The exact v1.7.0
+source is in main-branch commit
+[`290203b`](https://github.com/HomericIntelligence/Mnemosyne/blob/290203b49c184e6d6161521dc9d1931bbccf0988/skills/automation-review-authorization-ci-boundary.md).
 
 ---
 

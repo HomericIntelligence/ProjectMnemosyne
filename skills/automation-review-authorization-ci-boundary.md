@@ -92,8 +92,8 @@ gh pr view "$PR" --repo "$REPO" --json number,body,closingIssuesReferences \
   --jq '{number, closingIssuesReferences, body}'
 
 # Require exactly one standalone closing line before spending a reviewer-model job.
-gh pr view "$PR" --repo "$REPO" --json body --jq .body \
-  | rg -x 'Closes #[0-9]+'
+test "$(gh pr view "$PR" --repo "$REPO" --json body --jq .body \
+  | rg -x 'Closes #[0-9]+' | wc -l | tr -d ' ')" = 1
 ```
 
 If this preflight has no exact closing line or no usable linked requirement, stop and repair the
