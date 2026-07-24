@@ -2,6 +2,42 @@
 
 # History: github-auto-merge-ci-gating-merge-method
 
+## v1.8.0 (2026-07-24)
+
+**Changed by:** ProjectHephaestus issues #2419 and #2423 queue-safety review.
+**Verification:** verified-local — live GitHub GraphQL schema inspection and local
+ProjectHephaestus test/lint/type validation; implementation CI is pending.
+
+### What changed
+
+- Bumped the skill from v1.7.0 to v1.8.0 and added the shared-queue ownership trigger.
+- Added the proof that auto-merge ownership cannot be recovered from a later
+  `autoMergeRequest` readback: enable supports `expectedHeadOid`, while disable has no
+  matching conditional ownership token and the request does not persist a client nonce.
+- Added a fail-closed queue interlock: no enable, defer, disable, adoption, or polling;
+  require `OPEN` and explicit `autoMergeRequest: null` before every state-changing
+  label, and require the reviewed head SHA only for approving/GO labels; use a
+  separately reviewed conditional normal merge instead.
+- Replaced stale administrator-bypass, protection-removal, force-push, and Pixi command
+  guidance with a non-rewriting staged configuration transition and UV commands.
+
+### Why
+
+An external actor can replace an indistinguishable auto-merge request between the
+queue's read and its final disable. A queue that performs that disable can revoke
+another actor's approval. GitHub's exposed API does not supply the compare-and-swap
+operation necessary to close that race.
+
+### Previous version (v1.7.0) snapshot
+
+The exact v1.7.0 document is retained in main-branch commit
+[`290203b`](https://github.com/HomericIntelligence/Mnemosyne/blob/290203b49c184e6d6161521dc9d1931bbccf0988/skills/github-auto-merge-ci-gating-merge-method.md)
+and its v1.7.0 release entry remains below. This addition changes
+the queue-ownership recommendation while preserving the historical diagnostic and
+repository-owned auto-merge guidance.
+
+---
+
 ## v1.7.0 (2026-07-21)
 
 Added merge-queue fallback handling to `github-auto-merge-ci-gating-merge-method`: when the direct REST merge API returns HTTP 405 `Pull Request is in the merge queue`, `_merge_pr` now falls back to `_enqueue_pr`, `gh pr merge <n>` is used with no merge-method flag, and `queued` is logged as success.
