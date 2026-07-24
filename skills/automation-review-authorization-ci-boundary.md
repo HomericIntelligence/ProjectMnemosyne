@@ -64,10 +64,10 @@ automation loop owns source-review authorization
   4. merge_wait consumes that loop-owned label and the live PR head
 
 merge-wait is also the authorization boundary of last resort
-  1. reject an item without required issue/requirements context before any arm
-  2. durably defer any existing auto-merge request and re-read its state
-  3. only then terminally fail the orphaned item
-  4. retain the strict-review guard until the first successful arm confirmation
+  1. reject an item without required issue/requirements context before label use or arm
+  2. leave any observed auto-merge request untouched; its owner is external or ambiguous
+  3. terminally fail the orphaned item without a label or auto-merge mutation
+  4. retain the strict-review guard only through operations the current queue actually owns
 
 merge-wait terminal-state contract
   1. an externally armed OPEN PR is BLOCKED, not FINISH_PASS; do not mutate it
@@ -126,7 +126,7 @@ reviewable one.
 
 5. Discard review-local state after the label's post-write current-head confirmation and before transition to `merge_wait`. Use a fixed allowlist of ordinary issue/implementation context, the cleanup worktree path, and the process-local handoff mutex. Do not retain review heads, verdicts, attempts, artifacts, leases, evidence, or a dynamically captured ingress-key list. A denylist cannot anticipate aliases; a dynamic ingress list can preserve a forged or stale proof after a retry. The current-head check must precede sanitization so a concurrent head change still follows the normal containment path with the original review state available.
 
-6. Enforce the requirements-context invariant at `merge_wait.on_enter`, not only at strict review. An unlinked direct PR may have an externally retained GO label, and a stage-routing regression can otherwise bypass the strict-stage orphan check. Before recovery, label consumption, or arming, invoke the same fail-closed helper used for unsafe arm state: request auto-merge deferral, re-read live PR state to confirm it is disarmed, then return terminal failure. This makes stale labels non-authoritative when the work item lacks its required context.
+6. Enforce the requirements-context invariant at `merge_wait.on_enter`, not only at strict review. An unlinked direct PR may have an externally retained GO label, and a stage-routing regression can otherwise bypass the strict-stage orphan check. The orphan entry path terminally rejects it before label use or arming. In the normal ARM flow, a fresh live-state read treats a present or ambiguous auto-merge request as externally owned, leaves it untouched, and blocks with no label mutation. This makes stale labels non-authoritative when the work item lacks its required context.
 
 7. Treat the strict-review guard as a handoff mutex, not merely a strict-stage mutex. Keep it held after strict review advances to merge-wait. Release it only when merge-wait's first arm operation has returned its successful continuation after live-label/head verification and arm confirmation. Preserve ownership through fail-back/retry to strict review; release idempotently on terminal finish, shutdown parking, or exception handling.
 
@@ -136,7 +136,7 @@ reviewable one.
 
 10. Preserve ADR history. Do not rewrite accepted historical decisions just to erase obsolete policy. Add a new superseding ADR and update the ADR index so active readers find the current contract while audits retain the original record.
 
-11. Validate the source-only behavior locally: resolve the PR identity and exact head, inspect the source diff and active contracts, run targeted stage/documentation tests, and run `git diff --check`. Tests must cover (a) an orphaned merge-wait item with GO label: defer is attempted, no arm occurs, terminal failure; (b) a competing strict reviewer remains blocked during merge-wait arm and proceeds only after the successful arm continuation; and (c) known, unknown, and forged review-proof aliases do not cross the successful GO handoff. State clearly that this is not CI evidence.
+11. Validate the source-only behavior locally: resolve the PR identity and exact head, inspect the source diff and active contracts, run targeted stage/documentation tests, and run `git diff --check`. Tests must cover (a) an orphaned merge-wait item with GO label: any existing arm is left untouched, no queue arm occurs, and the item terminates; (b) a competing strict reviewer remains blocked during an owned merge-wait operation; and (c) known, unknown, and forged review-proof aliases do not cross the successful GO handoff. State clearly that this is not CI evidence.
 
 12. Short-circuit downstream reruns on terminal PR state. If a later workflow or review pass reruns after the PR has merged, fetch PR `state` first and exit 0 when it is not `OPEN`. GitHub clears `autoMergeRequest` on merged PRs, so a null arm is expected and not a blocker.
 
@@ -155,7 +155,7 @@ reviewable one.
 | Preserve strict-review ingress fields dynamically | A review pass snapshotted its ingress payload keys and kept those keys after GO. | An unknown alias or forged snapshot entry could preserve review evidence; after a NOGO retry, the stale snapshot could drop fresh implementation context. | At the GO boundary, retain a small fixed set of non-authorizing context keys instead of trying to classify or remember review fields. |
 | Treat a repository-wide PR as an issue-less strict review | Direct PR discovery constructed a work item with `issue=None`. | The strict stage requires issue/comment context and rejected the work item as terminal. | For direct PR review, use the PR number as the work-item context unless the design supplies an equivalent explicit context. |
 | Retry an orphaned direct PR with a different reviewer setting | Launched `hephaestus-automation-loop --prs 2357 --reviewer-model sol --reviewer-reasoning-effort medium` without first proving an exact closing requirement. | The admission gate found no standalone `Closes #N` line, completed with `agent jobs: 0`, and no reviewer model was invoked; `Addresses #2138 and #2223` was not usable requirements context. | Preflight direct PR metadata before dispatch. `--prs` and model flags select work only after the deterministic requirements-context invariant passes. |
-| Trust strict review as the only orphan check | An unlinked direct PR with a stale `state:implementation-go` label was routed around strict review and into merge-wait. | The strict-stage check never ran on that path, so merge-wait could otherwise arm auto-merge without requirements context. | Repeat the invariant at the irreversible side-effect boundary: defer, confirm deferral, and fail before merge-wait reads labels or arms. |
+| Trust strict review as the only orphan check | An unlinked direct PR with a stale `state:implementation-go` label was routed around strict review and into merge-wait. | The strict-stage check never ran on that path, so merge-wait could otherwise act on a stale label without requirements context. | Repeat the invariant at the irreversible side-effect boundary: leave an observed auto-merge request untouched, block it as external, and fail before merge-wait reads labels or arms. |
 | Release strict guard at the stage transition | The guard was released as soon as strict review routed to merge-wait. | A competing strict reviewer could enter while the first item was between review approval and confirmed arming. | Retain ownership through merge-wait's first successful arm and release on its `POLL` continuation; all finish/park/exception paths remain idempotent releases. |
 | Treat `autoMergeRequest` as a post-merge signal | A rerun checked `autoMergeRequest` after the PR had already merged. | GitHub clears `autoMergeRequest` on merged PRs, so the rerun misread a terminal PR as still pending. | Post-merge consumers must check `state` and short-circuit on non-`OPEN` instead of treating `autoMergeRequest` as durable. |
 | Treat an externally armed open PR as successful merge-wait completion | `merge_wait` returned `FINISH_PASS` for an auto-merge request created before or outside the current run. | The PR remained open, so the loop reported completion without owning or observing the arm; it also made an operator-owned setting look like loop progress. | External arms are `BLOCKED` and untouched. Only a current-run arm may enter bounded pending polling. |
@@ -173,7 +173,7 @@ reviewable one.
 | Review-state handoff | After the label's current-head readback, retain only fixed non-authorizing context, cleanup, and the ephemeral handoff mutex; discard all review result and proof aliases. |
 | Direct-PR correction | Use the PR number as strict-review work-item context rather than `None`. |
 | Direct-PR admission | Before launching reviewer work, require one exact standalone `Closes #N` line and a usable linked requirement. `Addresses #N` is not a substitute; failed admission means zero agent jobs by design. |
-| Defense in depth | `merge_wait.on_enter` rejects `issue=None` before consuming labels or arming; deferral is confirmed by a fresh PR-state read. |
+| Defense in depth | `merge_wait.on_enter` rejects `issue=None` before consuming labels or arming; the normal ARM flow blocks an observed external arm and leaves it untouched after a fresh PR-state read. |
 | Guard lifetime | Strict-review ownership covers the strict-to-merge-wait handoff and first successful arm; it is released only after that arm confirms continuation to polling. |
 | Merge-wait ownership and budget | PR #2418 / issue #2386: an external open arm returns `BLOCKED` with zero mutation and zero `merge` attempts; a current-run pending arm retries only until the positive `merge` budget, then returns `FINISH_FAIL` / `merge_wait_exhausted` without changing labels. |
 | Restart/reseed contract | PR #2421 / issue #2420: queue state is in memory; restart uses ordinary classifier reseeding and never recovers per-run ownership. Other-run open arms remain blocked and untouched. |

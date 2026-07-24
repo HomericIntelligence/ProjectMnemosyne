@@ -8,12 +8,15 @@
 ### What changed
 
 - Added the in-memory restart contract: ordinary classifier reseeding replaces retired durable recovery, and another run's auto-merge arm is never adopted, mutated, or re-armed.
+- Corrected the remaining orphan/recovery guidance to leave observed external
+  auto-merge requests untouched; GitHub cannot provide a safe conditional
+  deferral boundary for a shared queue.
 - Added the docs-review correction: replace prose/identifier-absence snapshots with direct source links and existing Markdown/link validation for docs-only changes.
 - Recorded the verified review-to-merge evidence for PR #2421.
 
 ### Why
 
-PR #2421 / issue #2420 exposed stale documentation for a durable merge-wait recovery flow removed by PR #2280 and reintroduced by later documentation consolidation. The live contract is in-memory queue state, ordinary reseeding, and operator handling for another run's arm. Athena review also rejected the initial prose/absence regression request as a documentation snapshot, so the docs-only fix used source links and the existing Markdown/link suite.
+PR #2421 / issue #2420 exposed stale documentation for a durable merge-wait recovery flow removed by PR #2280 and reintroduced by later documentation consolidation. The live contract is in-memory queue state, ordinary reseeding, and operator handling for another run's arm; it never attempts to defer an observed external arm. Athena review also rejected the initial prose/absence regression request as a documentation snapshot, so the docs-only fix used source links and the existing Markdown/link suite.
 
 ### Previous version (v1.6.0) snapshot
 
