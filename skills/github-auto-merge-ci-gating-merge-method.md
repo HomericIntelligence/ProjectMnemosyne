@@ -58,7 +58,18 @@ GitHub auto-merge is **stricter than branch protection** and fires only when EVE
 
 > **Queue ownership boundary (ProjectHephaestus, pending issue #2419):** a queue must not enable, defer, disable, adopt, or poll GitHub auto-merge. A later readback cannot safely prove that the request it sees is the request it created: `enablePullRequestAutoMerge` has an expected-head precondition, but `disablePullRequestAutoMerge` has no matching conditional ownership field and `AutoMergeRequest` does not expose a persistent client nonce. If an unarmed proof is required for a label transition, require a fresh explicit `autoMergeRequest: null`; otherwise stand down without mutation. The replacement merge action must be a normal conditional REST merge pinned to the reviewed SHA, not an auto-merge mutation. This newer queue rule overrides the historical arming examples below for that pipeline.
 
-**Verification: verified-ci** (most failure modes observed and fixed live; the advisory-split and per-issue arming refinements are verified-local where noted).
+> **Availability precondition:** the interlock itself is pending ProjectHephaestus
+> issue #2423 and has not reached a PR or CI. Until it lands green, use this section
+> as a verified-local design constraint, not a description of the published `main`
+> implementation. Because the temporary interlock cannot merge its own PR, its normal
+> non-bypass landing path needs explicit operator/process authority before issue #2419
+> can replace it with a conditional normal merge.
+
+**Historical diagnostics: verified-ci.** Most older sole-owner failure modes were
+observed and fixed live. **Current shared-queue ownership rule: verified-local only**;
+the ProjectHephaestus #2423 interlock has not reached a PR or CI, and the conditional
+merge implementation remains pending issue #2419. Do not treat the newest queue rule
+as published-main behavior until those changes land green.
 
 ## When to Use
 

@@ -30,8 +30,8 @@ tags:
 |-------|-------|
 | **Date** | 2026-07-24 |
 | **Objective** | Keep a code-automation loop's strict source-review decision inside that loop rather than delegating its authorization to CI/CD, bind the decision to the exact GitHub head SHA, and prevent the queue from mutating externally owned auto-merge. |
-| **Outcome** | The ProjectHephaestus design now snapshots a stable GitHub body/diff/head and verifies the exact head in a clean checkout through a dedicated Git job. Every label write requires fresh open/unarmed state; approving/GO labels additionally require the matching reviewed head. Queue stages stand down on any populated auto-merge request; the conditional normal merge replacement remains separately tracked in issue #2419. |
-| **Verification** | verified-local for the v2.0.0 head-proof and no-auto-merge interlock: live GitHub schema inspection plus local ProjectHephaestus tests, Ruff, format, and mypy. CI is pending. Earlier CI-free authorization observations remain historical evidence, not evidence for the new interlock. |
+| **Outcome** | The pending ProjectHephaestus #2423 worktree design snapshots a stable GitHub body/diff/head and verifies the exact head in a clean checkout through a dedicated Git job. Every label write requires fresh open/unarmed state; approving/GO labels additionally require the matching reviewed head. Queue stages stand down on any populated auto-merge request; the conditional normal merge replacement remains separately tracked in issue #2419. |
+| **Verification** | verified-local for the v2.0.0 head-proof and no-auto-merge interlock: live GitHub schema inspection plus local ProjectHephaestus tests, Ruff, format, and mypy. The #2423 implementation has not yet reached a PR or CI; do not treat this as the behavior of the published `main` branch. Earlier CI-free authorization observations remain historical evidence, not evidence for the new interlock. |
 
 ## When to Use
 
@@ -49,6 +49,14 @@ tags:
 - The queue sees `autoMergeRequest` populated and is tempted to defer, disable, adopt, or replace it. GitHub does not expose a conditional disable operation that can prove ownership of that request.
 
 ## Verified Workflow
+
+> **Availability precondition:** The reviewed-head/no-auto-merge interlock is pending
+> in ProjectHephaestus issue #2423 and is not yet merged or CI-validated. Do not rely
+> on this workflow to describe the current published `main` behavior until that PR
+> lands green; the earlier merge-wait behavior remains active in the meantime. The
+> temporary interlock intentionally cannot merge its own PR, so its normal
+> non-bypass landing path requires explicit operator/process authority before #2419
+> can supersede it with a conditional normal merge.
 
 ### Quick Reference
 
