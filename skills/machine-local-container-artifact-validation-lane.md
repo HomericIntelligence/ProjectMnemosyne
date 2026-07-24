@@ -1,10 +1,11 @@
 ---
 name: machine-local-container-artifact-validation-lane
-description: "Keep a local validation lane containerized against a machine-local, digest-verified image artifact while hosted CI uses a host lane, and fail closed when the artifact is missing. Use when: (1) `just validate` (or equivalent) must run in a reviewed container locally but hosted runners lack that container runtime, (2) a validation wrapper must bootstrap before the normal language/private helpers can be trusted, (3) a build/run tool does NOT fetch or build the runtime image so it must be materialized per machine, (4) a digest check only validates manifest text rather than the actual image bytes, (5) strict review flags stale rootfs reuse, unsafe shell interpolation, or a PR bundling unrelated scope."
+description: "Keep a local validation lane containerized against a machine-local, digest-verified image artifact while hosted CI uses a host lane, fail closed when the artifact is missing, and isolate long-lived runtime inputs with least-privilege mounts. Use when: (1) `just validate` (or equivalent) must run in a reviewed container locally but hosted runners lack that container runtime, (2) a validation wrapper must bootstrap before the normal language/private helpers can be trusted, (3) a build/run tool does NOT fetch or build the runtime image so it must be materialized per machine, (4) a digest check only validates manifest text rather than the actual image bytes, (5) strict review flags stale rootfs reuse, unsafe shell interpolation, broad writable mounts, host-checkout imports, linked-worktree assumptions, or a PR bundling unrelated scope."
 category: ci-cd
-date: 2026-07-18
-version: "1.0.0"
-tags: [ci-cd, validation, container, image-artifact, digest, fail-closed, host-vs-local-lane, materialization, shell-wrapper, strict-review, scope-reduction]
+date: 2026-07-24
+version: "1.1.0"
+verification: verified-ci
+tags: [ci-cd, validation, container, image-artifact, digest, fail-closed, host-vs-local-lane, materialization, runtime-isolation, least-privilege-mounts, linked-worktree, shell-wrapper, strict-review, scope-reduction]
 user-invocable: false
 ---
 
@@ -14,10 +15,10 @@ user-invocable: false
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-07-18 |
-| **Objective** | Preserve a containerized local validation lane backed by a machine-local, digest-verified image artifact, split from a host lane for hosted CI, without stale-rootfs reuse or unsafe shell parsing. |
-| **Outcome** | Reusable pattern: dual local/host lanes, verify-image-bytes-by-digest, fail-closed on a missing artifact, treat the image as separately materialized per machine, and reduce unrelated PR scope under strict review. |
-| **Verification** | verified-ci (generalized from a container-validation wrapper hardening whose local + hosted PR checks passed; the concrete container runtime and product names are intentionally omitted). |
+| **Date** | 2026-07-24 |
+| **Objective** | Preserve a containerized local validation lane backed by a machine-local, digest-verified image artifact, split from a host lane for hosted CI, and isolate long-lived runtime inputs without stale-rootfs reuse, unsafe shell parsing, or broad host authority. |
+| **Outcome** | Reusable pattern: dual local/host lanes, verify image bytes and provenance, fail closed on a missing artifact, treat the image as separately materialized per machine, isolate runtime inputs with least-privilege mounts, and reduce unrelated PR scope under strict review. |
+| **Verification** | verified-ci (generalized from container-validation and runtime-isolation hardening whose local + hosted PR checks passed; concrete runtimes and product names are intentionally omitted). |
 
 ## When to Use
 
@@ -27,6 +28,8 @@ user-invocable: false
 - A digest check currently only validates manifest text rather than the actual image bytes.
 - Strict review flags stale container rootfs reuse, regex/interpolation injection in a shell parser, missing fail-closed behavior, or a PR that bundles unrelated lifecycle/logging/evidence changes with the wrapper work.
 - The build/run tool reports the runtime image missing on one machine but succeeds on another, and you must tell a missing reviewed artifact apart from a language/runtime/lifecycle failure.
+- A long-lived container must execute a reviewed runtime artifact without importing code from the host checkout, while still receiving configuration and generated runtime inputs.
+- A runtime uses a linked worktree, has comma-bearing mount options, or needs a narrow writable state area without granting broad write access to host mounts.
 
 ## Verified Workflow
 
@@ -57,6 +60,10 @@ just --dry-run _validate-host
 5. **Bind the verified bytes to the started rootfs.** If a same-named container rootfs already exists, remove it before create/start so a stale rootfs is never silently reused. Repeated staging must overwrite stale staged files and restore the expected permission mode.
 6. **Avoid unsafe shell parsing.** Do not interpolate untrusted manifest fields into regexes or command strings in the wrapper; parse defensively so a crafted manifest value cannot inject behavior.
 7. **Treat the image as per-machine materialized.** The runtime image is a machine-local reviewed artifact — it is not built or downloaded by the build/run tool. When it is missing on one machine but present on another, the fix is to materialize it on that machine, not to debug the language runtime. Document this so a "missing runtime artifact" is diagnosed as materialization, distinct from a language/scheduler/lifecycle failure.
+8. **Bind runtime provenance to the artifact.** Rebuild from a clean reviewed source revision, pin the resulting artifact in a later reviewable change, and verify the artifact digest, embedded revision, required tools, and exact-image process behavior before use.
+9. **Stage runtime inputs; do not import host code.** Resolve the runtime manifest before launch, write the resolved snapshot atomically beneath private owner-only state, and mount that snapshot plus configuration and token inputs read-only. Normalize every container-visible path to an absolute path. Do not pass a host checkout as a code or import source.
+10. **Apply least-privilege mount policy.** Keep only dedicated runtime state writable. Mount shared data and scheduler-client inputs read-only, and make configuration and resolved-manifest file overlays read-only. Use a list delimiter that preserves comma-bearing mount options; a semicolon-delimited list is suitable when the mount syntax itself uses commas.
+11. **Support linked worktrees without expanding the production image.** When validation runs in a linked worktree, reuse its already-mounted Git metadata locations. Do not add Git merely to accommodate validation metadata, and make tests construct their own linked-worktree fixture rather than relying on the checkout that happens to run the test.
 
 ## Failed Attempts
 
@@ -68,6 +75,10 @@ just --dry-run _validate-host
 | Interpolate manifest fields into a shell regex/parser | Built the wrapper's parsing with raw interpolation | Injection risk / brittle parsing flagged by strict review | Parse defensively; never interpolate untrusted manifest values into regex or command strings |
 | Debug the language runtime when the image was "missing" | Chased a Python/runtime error on one machine | The image is a machine-local artifact not fetched by the build tool | Materialize the reviewed image per machine; diagnose a missing artifact as materialization, not a runtime bug |
 | Ship the wrapper fix bundled with unrelated changes | Left lifecycle/logging/evidence edits in the PR | Strict review blocked on bundled scope | Restore unrelated files to base; keep the PR focused on the wrapper |
+| Pass a host runtime-manifest path into an isolated container | The container received a path meaningful only in the host checkout | The runtime could not read the manifest without restoring host-code access | Stage a fully resolved snapshot in private mounted state and pass its container-visible absolute path |
+| Mount broad host paths writable for convenience | Shared data and scheduler-client paths were writable in the runtime | The runtime had unnecessary authority over host-owned resources | Mount broad dependencies read-only; reserve write access for dedicated state only |
+| Split comma-bearing mount options with commas | The wrapper treated mount-option commas as list separators | Read-only options were corrupted or discarded | Use a delimiter outside the mount-option grammar, while accepting legacy syntax only when required |
+| Depend on ambient linked-worktree metadata in tests | Tests assumed the executing checkout's Git shape | The behavior was untested or required adding Git to the production image | Build an explicit linked-worktree fixture and reuse mounted metadata paths |
 
 ## Results & Parameters
 
@@ -75,8 +86,17 @@ just --dry-run _validate-host
 - **Digest contract**: `sha256:<64 hex>`, verified against the real image bytes, fail-closed before any container call.
 - **Rootfs**: remove same-named rootfs before start; overwrite stale staged files; restore expected mode.
 - **Materialization**: image is per-machine reviewed artifact, not fetched by the build/run tool.
+- **Runtime provenance**: rebuild from clean reviewed source; pin and verify digest, embedded revision, required tools, and exact-image behavior.
+- **Runtime isolation**: exclude host checkout code/imports; stage resolved inputs owner-only and mount them read-only; normalize container paths to absolute paths.
+- **Mount policy**: only dedicated state is writable; shared and scheduler inputs are read-only; use a delimiter that preserves comma-bearing mount options.
+- **Linked worktrees**: reuse mounted metadata without adding Git to the production image; tests create explicit fixtures.
 - **Review discipline**: rebase to minimize drift, restore unrelated files to base, keep the diff focused.
 
 ## Attribution
 
-Generalized from a project-specific container-validation wrapper hardening (a SquashFS/Enroot-backed `just validate` lane), with the concrete container runtime, product, and cluster names removed. The transferable core — dual local/host lanes, digest-verified image bytes, fail-closed on missing artifacts, per-machine materialization, and strict-review scope discipline — is host- and project-neutral.
+Generalized from project-specific container-validation and long-lived runtime-isolation hardening, with concrete container runtimes, products, cluster names, paths, revisions, and digests removed. The transferable core — dual local/host lanes, digest-verified artifact provenance, fail-closed materialization, host-code exclusion, least-privilege mounts, linked-worktree compatibility, and strict-review scope discipline — is host- and project-neutral.
+
+## Verified On
+
+- 2026-07-24: Containerized local validation passed against the pinned runtime artifact, exercising exact artifact bytes, embedded source provenance, required tools, isolated process behavior, read-only inputs, dedicated writable state, and linked-worktree handling.
+- 2026-07-24: Hosted validation passed through the separate host lane.
