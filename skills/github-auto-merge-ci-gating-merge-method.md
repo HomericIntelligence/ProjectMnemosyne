@@ -1,9 +1,9 @@
 ---
 name: github-auto-merge-ci-gating-merge-method
-description: "Use when: (1) a PR has mergeStateStatus CLEAN or MERGEABLE but auto-merge never fires despite all checks passing, (2) gh pr merge --auto --rebase or --squash returns an error or silently fails on a squash-only repo, (3) a PR is BLOCKED because required CI status contexts never post (workflow never triggered, paths filter excluded PR, required check name mismatch), (4) GPG-signing failures or mismatched committer emails cause commits to be unsigned and block the pr-policy gate, (5) branch protection rulesets and classic branch protection disagree and their union blocks merge, (6) a CI ruleset chicken-and-egg deadlock blocks a PR that introduces a new workflow, (7) an advisory check should not block merge but currently does because it lives in the required gate, (8) deciding which merge method a repo supports before arming auto-merge, (9) auditing required-check names after adding or removing CI jobs, (10) state:implementation-go label or pr-policy gates auto-merge arming, (11) per-issue arming-state machine is triggered on the wrong event (optimistic point vs detected merge), (12) mergeStateStatus=BLOCKED with all CI green and auto-merge armed - unresolved review threads are the PRIMARY blocker to check FIRST before assuming CI failure, (13) stale failed status-rollup entries must be distinguished from current-head required checks before deciding a PR is blocked or complete, (14) you applied state:implementation-go with `gh issue edit` and the auto-merge-policy gate stays FAILURE - the label must be on the PR (`gh pr edit`) not the issue, (15) required-checks-gate shows FAILURE alongside a later SUCCESS of the same check - the newer run is current, the FAILURE is stale, (16) your isolated-clean PR's lint job fails because CI runs pre-commit on the merge-result (pull/N/merge) and main drifted since you branched (e.g. ruff-format), (17) hephaestus-review-prs first run truncates at worktree-setup and posts zero threads - an empty thread list is NOT a clean pass unless the log reached 'Analysis complete for PR #N', (18) a sub-agent's disk-direct file writes leaked into the MAIN checkout, breaking editable-installed console scripts with ModuleNotFoundError for all later runs, (19) merge-queue-protected repos return HTTP 405 from the REST merge API and must enqueue via `gh pr merge` with no merge-method flag"
+description: "Use when: (1) a PR has mergeStateStatus CLEAN or MERGEABLE but auto-merge never fires despite all checks passing, (2) gh pr merge --auto --rebase or --squash returns an error or silently fails on a squash-only repo, (3) a PR is BLOCKED because required CI status contexts never post (workflow never triggered, paths filter excluded PR, required check name mismatch), (4) GPG-signing failures or mismatched committer emails cause commits to be unsigned and block the pr-policy gate, (5) branch protection rulesets and classic branch protection disagree and their union blocks merge, (6) a CI ruleset chicken-and-egg deadlock blocks a PR that introduces a new workflow, (7) an advisory check should not block merge but currently does because it lives in the required gate, (8) deciding which merge method a sole-owner workflow supports before arming auto-merge, (9) auditing required-check names after adding or removing CI jobs, (10) state:implementation-go label or pr-policy gates auto-merge arming, (11) per-issue arming-state machine is triggered on the wrong event (optimistic point vs detected merge), (12) mergeStateStatus=BLOCKED with all CI green and auto-merge armed - unresolved review threads are the PRIMARY blocker to check FIRST before assuming CI failure, (13) stale failed status-rollup entries must be distinguished from current-head required checks before deciding a PR is blocked or complete, (14) you applied state:implementation-go with `gh issue edit` and the auto-merge-policy gate stays FAILURE - the label must be on the PR (`gh pr edit`) not the issue, (15) required-checks-gate shows FAILURE alongside a later SUCCESS of the same check - the newer run is current, the FAILURE is stale, (16) your isolated-clean PR's lint job fails because CI runs pre-commit on the merge-result (pull/N/merge) and main drifted since you branched (e.g. ruff-format), (17) hephaestus-review-prs first run truncates at worktree-setup and posts zero threads - an empty thread list is NOT a clean pass unless the log reached 'Analysis complete for PR #N', (18) a sub-agent's disk-direct file writes leaked into the MAIN checkout, breaking editable-installed console scripts with ModuleNotFoundError for all later runs, (19) a repository-owned merge queue receives HTTP 405 from the REST merge API and may enqueue via its documented native path, or (20) a shared queue must coexist with an externally owned auto-merge request without adopting, disabling, or replacing it"
 category: ci-cd
-date: 2026-07-21
-version: "1.7.0"
+date: 2026-07-24
+version: "1.8.0"
 user-invocable: false
 history: github-auto-merge-ci-gating-merge-method.history
 tags:
@@ -27,6 +27,10 @@ tags:
   - merge-queue
   - queued
   - rest-merge-api
+  - auto-merge-ownership
+  - conditional-merge
+  - expected-head-oid
+  - toctou
   - pr-label-not-issue-label
   - stale-required-checks-gate
   - lint-on-merge-result
@@ -41,7 +45,8 @@ tags:
 
 | Date | Objective | Outcome |
 | ------ | ----------- | --------- |
-| 2026-07-21 | Extend the auto-merge / merge-method guidance to cover merge-queue-protected repos where the direct REST merge API returns HTTP 405 and the correct path is to enqueue via `gh pr merge` with no merge-method flag. | verified-ci: `hephaestus-merge-prs` now falls back from REST merge to queue enqueue on merge-queue repos, and `queued` is treated as success rather than a retryable error. |
+| 2026-07-21 | Historical repository-owned merge-queue guidance: direct REST merge returned HTTP 405 and the native queue enqueue path succeeded. | verified-ci: ProjectHephaestus then used `hephaestus-merge-prs` fallback to queue enqueue; this does not apply to the current reviewed-SHA shared queue. |
+| 2026-07-24 | Make an automation queue fail closed when it discovers an external auto-merge request. GitHub exposes `expectedHeadOid` to enable auto-merge but exposes no conditional disable mutation and does not persist an attributable client nonce. | verified-local: live schema inspection and local ProjectHephaestus tests. The conditional direct-merge replacement is pending CI in issue #2419; do not treat this row as an authorization to arm, adopt, or disable an existing request. |
 | 2026-06-07 | Consolidated canonical for why GitHub auto-merge does not fire and how to arm it correctly: wrong merge method, missing/required CI status contexts, two-layer branch protection, GPG-signing blockers, ruleset bootstrap deadlock, the `state:implementation-go` arming-state machine, and advisory-vs-required gate split | Each failure mode has a verified diagnosis + fix; verified across many HomericIntelligence repos in live CI |
 | 2026-06-14 | Add the classic-vs-ruleset review-count UNION hard gate (a required human approval automation cannot provide), the keystone-PR self-introduced-required-context merge-train deadlock (merge keystone first, then re-rebase the queue), and duplicate check-run resolution after a re-run | Diagnosed live across 13 open ProjectHephaestus PRs during a `/myrmidon-swarm` drive (verified-local; the PRs had not yet merged at capture, the review-union gate was confirmed by API inspection) |
 | 2026-06-14 | Expanded unresolved review thread diagnostic to verified-ci status: PR #1282 was BLOCKED despite all CI green and auto-merge armed; the stated "lint failure" was stale; the real blockers were 2 unresolved review threads. Resolving via `resolveReviewThread` GraphQL mutation immediately triggered auto-merge (merged 2026-06-15T03:05:38Z by app/github-actions). Added full GraphQL copy-paste workflow for thread query + reply + resolve. | verified-ci — PR #1282 ProjectHephaestus merged within seconds of thread resolution |
@@ -50,6 +55,8 @@ tags:
 | 2026-07-06 | Added the "why is my armed ProjectHephaestus PR not merging" operational gotcha set observed while manually driving 6 PRs in epic #1809: (1) `state:implementation-go` must go on the PR (`gh pr edit`) NOT the issue (`gh issue edit`) — the auto-merge-policy/required-checks-gate jobs read the PR's labels; (2) a `required-checks-gate: FAILURE` is usually STALE — a newer SUCCESS of the same check supersedes it; (3) CI lint runs on the merge-result `pull/N/merge`, so main's ruff-format drift fails your isolated-clean PR; (4) `hephaestus-review-prs` first run intermittently truncates at worktree-setup, and an empty unresolved-thread list is NOT a clean pass; (5) a sub-agent's disk-direct writes can leak into the MAIN checkout and break editable-installed console scripts. Corrected the pre-existing `gh issue edit <PR> --add-label` mislabel bug in the checklist to `gh pr edit`. | verified-ci — all observed while merging 6 ProjectHephaestus PRs in epic #1809 |
 
 GitHub auto-merge is **stricter than branch protection** and fires only when EVERY check (required and non-required) reaches a clean terminal state, the chosen merge method is allowed, every required status context has actually posted, all commits are verified-signed, and BOTH protection layers (ruleset + classic) are satisfied. A PR that looks ready (`mergeStateStatus: CLEAN`/`MERGEABLE`) can sit forever when any one of those is silently unmet. This skill covers the merge-blocking mechanics; it does NOT cover general CI failure diagnosis, rebase-conflict resolution, review-loop orchestration, or PR enumeration.
+
+> **Queue ownership boundary (ProjectHephaestus, pending issue #2419):** a queue must not enable, defer, disable, adopt, or poll GitHub auto-merge. A later readback cannot safely prove that the request it sees is the request it created: `enablePullRequestAutoMerge` has an expected-head precondition, but `disablePullRequestAutoMerge` has no matching conditional ownership field and `AutoMergeRequest` does not expose a persistent client nonce. If an unarmed proof is required for a label transition, require a fresh explicit `autoMergeRequest: null`; otherwise stand down without mutation. The replacement merge action must be a normal conditional REST merge pinned to the reviewed SHA, not an auto-merge mutation. This newer queue rule overrides the historical arming examples below for that pipeline.
 
 **Verification: verified-ci** (most failure modes observed and fixed live; the advisory-split and per-issue arming refinements are verified-local where noted).
 
@@ -73,6 +80,7 @@ GitHub auto-merge is **stricter than branch protection** and fires only when EVE
 - `hephaestus-review-prs` (the standalone reviewer) posted 0 threads on its first run — verify the log reached `Analysis complete for PR #N` before trusting an empty unresolved-thread list; a truncated worktree-setup death also yields zero threads but is NOT a clean pass.
 - After a sub-agent that did "disk-direct" file writes (bypassing Read/Edit), the editable-installed console scripts break with `ModuleNotFoundError` — the sub-agent leaked worktree-only files into the MAIN checkout; `git -C <main-repo> status` and restore the leaked tracked files.
 - `hephaestus-merge-prs` hits HTTP 405 `Pull Request is in the merge queue` from the direct REST merge API and should enqueue instead of retrying the merge call.
+- Your automation sees `autoMergeRequest` already populated and needs to decide whether it may disable, defer, or replace it. It may not: treat the request as externally owned and stop queue mutations. Use a conditional merge by reviewed SHA only after a separately reviewed design has implemented it.
 
 ## Verified Workflow
 
@@ -88,7 +96,8 @@ gh run list --branch "$(gh pr view <PR> --json headRefName --jq .headRefName)"  
 # 3. Which merge method does the TARGET repo allow? (detect, do not hardcode)
 gh api repos/<OWNER>/<REPO> --jq '{rebase:.allow_rebase_merge, squash:.allow_squash_merge, merge:.allow_merge_commit}'
 
-# 4. Arm with the correct flag, then verify it actually armed
+# 4. ONLY when the acting system is the sole documented owner: arm with the correct flag,
+# then verify it actually armed. A shared automation queue must stand down instead.
 gh pr merge <PR> --auto --squash         # squash-only repos REJECT/ignore --rebase
 gh pr view <PR> --json autoMergeRequest --jq '.autoMergeRequest.mergeMethod'   # expect SQUASH
 
@@ -100,14 +109,16 @@ gh api repos/<O>/<R>/rulesets/<RID> --jq '.rules[]|select(.type=="required_statu
 gh api graphql -f query='{repository(owner:"O",name:"R"){pullRequest(number:N){reviewThreads(first:50){nodes{isResolved}}}}}' \
   --jq '[.data.repository.pullRequest.reviewThreads.nodes[]|select(.isResolved==false)]|length'
 
-# 7. pr-policy "Auto-merge enabled before GO": un-arm, rerun, let the label workflow arm it
+# 7. HISTORICAL SOLE-OWNER REPOSITORY ONLY: repair a policy mismatch.
+# A shared queue must stand down and never disable or arm auto-merge.
 gh run view <run-id> --log-failed | grep '::error::'
 gh pr merge <PR> --disable-auto && gh run rerun <run-id> --failed
 
 # 8. Bulk batch: list ALL open PRs (default limit is 30 — silently omits older PRs)
 gh pr list -R <O>/<R> --state open --limit 200 --json number,mergeStateStatus,autoMergeRequest
 
-# 9. ProjectHephaestus PR completion: policy + current-head checks
+# 9. HISTORICAL SOLE-OWNER ProjectHephaestus completion example.
+# Do not use this to make the current shared queue mutate auto-merge.
 git log --show-signature -1 --format=fuller
 gh issue create --repo HomericIntelligence/ProjectHephaestus --title "..." --body "..."
 gh issue view <ISSUE> --repo HomericIntelligence/ProjectHephaestus
@@ -120,6 +131,10 @@ gh pr view <PR> --repo HomericIntelligence/ProjectHephaestus \
 ```
 
 ### Detailed Steps
+
+> **Scope:** Except for the current **Queue ownership** subsection, enable/disable
+> instructions in the legacy detailed steps are historical examples for a documented
+> sole-owner repository workflow. They are not commands for a shared automation queue.
 
 #### Squash-only merge-method detection
 
@@ -174,6 +189,45 @@ arm_auto_merge() {  # retry through transient clean/unstable arm-time GraphQL er
   return 1
 }
 ```
+
+#### Queue ownership: no safe conditional auto-merge disable
+
+> **Warning:** This is a verified-local safety finding. The ProjectHephaestus
+> implementation that replaces queue-owned auto-merge with a normal conditional
+> REST merge is pending CI in issue #2419.
+
+Do not infer ownership from an `autoMergeRequest` readback. Its visible fields
+(`enabledAt`, `enabledBy`, and merge method) are descriptive, not a compare-and-swap
+token. A competing actor can disable and enable an indistinguishable request between
+your reads. GitHub accepts `expectedHeadOid` on `enablePullRequestAutoMerge`, but
+the corresponding disable mutation accepts only the pull-request ID and a transient
+client mutation ID; the resulting `AutoMergeRequest` does not retain that ID. There
+is therefore no final conditional operation that proves a queue is disabling its own
+request rather than an external actor's replacement.
+
+For a queue that must preserve external ownership:
+
+1. Remove every queue call that enables, defers, disables, adopts, or polls
+   auto-merge. Blocking only the final disable leaves earlier create/adoption paths
+   unsafe.
+2. Before each state-changing label write, read the PR's full state. Require
+   `state == OPEN` and an **explicitly present** `autoMergeRequest: null`. A missing
+   field is a partial response, not evidence of an unarmed request. An approving/GO
+   label additionally requires that the live head still equals the reviewed head;
+   a drift instead revokes approval and routes the item back to review, where a
+   no-go/recovery write remains safely possible.
+3. When a request is present, write nothing. Report that the queue stood down; do
+   not call disable as cleanup and do not claim it can safely resume later.
+4. Bind approval to a reviewed head SHA. Once normal merge is implemented, call the
+   REST merge endpoint with that exact `sha` and an allowed merge method. Handle head
+   drift as a non-merge result requiring a new review, rather than retrying against a
+   new head. On merge-queue repositories, handle HTTP 405 as a typed failure or
+   re-read result; do not enqueue a non-conditional merge that drops the reviewed-SHA
+   guarantee.
+
+This is not a reason to bypass branch protection, use an administrator merge, or
+force-push. It narrows an automation queue to the authority GitHub can actually
+enforce.
 
 #### Required-check name management
 
@@ -383,7 +437,11 @@ Resolve via: Option 1 admin "Merge without waiting for requirements" (fastest); 
 
 A timing-sensitive sub-check bundled into a REQUIRED gate (e.g. the auto-merge ↔ `state:implementation-go` state machine inside `pr-policy`) blocks correct PRs. The fix is to SPLIT it into its own job (e.g. `auto-merge-policy`) whose name is NOT in the ruleset — making it advisory (reports red as a signal, never blocks). The new job needs its OWN `gh pr view --json autoMergeRequest,labels,state` fetch and the SAME triggers (re-run on `auto_merge_enabled`/`auto_merge_disabled`/`labeled`/`unlabeled`, no `needs:`); trim the parent's fetch to `--json body`. Required-check membership lives in the ruleset, OUTSIDE the YAML — a new job is non-required BY DEFAULT until an operator adds its name. Update any text-based workflow tests that asserted the old bundled fetch string.
 
-#### Arming-state machine (`state:implementation-go` + detected-merge)
+#### Historical sole-owner arming-state machine (`state:implementation-go` + detected-merge)
+
+> **Historical context only:** the following describes an earlier repository-owned
+> workflow. The current shared ProjectHephaestus queue must not copy its enable,
+> disable, or polling actions.
 
 Two distinct state machines gate arming:
 
@@ -522,7 +580,7 @@ pixi run python -c "import hephaestus.automation.review_prs"   # or the leaked m
 Prevention: after ANY sub-agent that did "disk-direct writes", run `git -C <main-repo> status` and
 restore leaked tracked files before the next console-script run.
 
-**Gotcha 6 — merge-queue-protected repos must enqueue on HTTP 405, not retry REST merge.**
+**Historical sole-owner Gotcha 6 — merge-queue-protected repos enqueue on HTTP 405.**
 When the direct GitHub REST merge API returns `HTTP 405` `Pull Request is in the merge queue`,
 `_merge_pr` should treat that as a queue-protected repo signal and call `_enqueue_pr` instead of
 retrying the merge call. The enqueue path must use `gh pr merge <n>` with no merge-method flag,
@@ -530,7 +588,10 @@ because the queue owns the strategy; the returned `queued` result is success and
 "enqueued in the merge queue" rather than another failure. This is the same behavior that fixed
 ProjectHephaestus PR #2312 / issue #2311.
 
-#### Merge-readiness checklist for driving a ProjectHephaestus PR to green (manual)
+#### Historical sole-owner checklist for driving a ProjectHephaestus PR to green (manual)
+
+> **Historical context only:** this checklist predates the shared-queue interlock.
+> The current queue must not execute its auto-merge step.
 
 Walk this in order; each step maps to one of the five gotchas above plus the pre-existing policy gates:
 
@@ -567,6 +628,7 @@ Walk this in order; each step maps to one of the five gotchas above plus the pre
 | Treated `cancelled` sibling jobs as real failures | Counted every non-success rollup entry | One `pr-policy` race failure tore down the run via the `concurrency` group, cancelling all siblings; a green re-run superseded them | Filter by `conclusion=="FAILURE"` AND `startedAt` later than open+60s; cross-check `state` (may be MERGED); never force-merge to escape |
 | Ran `--auto --squash` right after create on a #899 repo | Old habit | `pr-policy` Check 2 fails `Auto-merge is enabled before implementation review GO` | Match the label to the auto-merge state; add `state:implementation-go` OR `--disable-auto` |
 | Enabled auto-merge before the implementation GO label | `gh pr merge --auto --squash` before `state:implementation-go` existed on the PR | The auto-merge-policy/pr-policy gate saw auto-merge armed before review approval state and failed the earlier Required Checks run | Apply `state:implementation-go` first, then rely on auto-merge policy; if a stale pre-label failure remains in the rollup, verify the later current run |
+| Tried to attribute auto-merge ownership from a later `autoMergeRequest` readback | Planned to disable the request only if its enabled-at time, method, and user still matched the queue's earlier arm | Another actor can replace the request with the same observable identity; GitHub has no conditional disable mutation or persisted client nonce to close the final TOCTOU gap | Do not arm, adopt, defer, disable, or poll auto-merge from a shared queue. Treat every populated request as external and use a separately reviewed conditional merge by SHA instead. |
 | Treated stale failed Required Checks rollup entries as current blockers | Read a failed Required Checks entry from before the GO label as if it described the current HEAD | A later Required Checks run passed after the label and did not block the merge | Check current-head `gh pr checks --watch` and the later Required Checks run before deciding the PR is blocked |
 | Claimed completion before the Test matrix reached a terminal state | Saw auto-merge armed and policy prerequisites in place, then stopped watching | Auto-merge only merges after the active required checks finish; queued or in-progress matrix jobs can still fail | Keep `gh pr checks --watch --interval 30` running until the current-head Test matrix is terminal, then confirm `state=MERGED` / `mergedAt` |
 | Added `{"type":"required_conversation_resolution"}` to a ruleset | PUT it into `rules[]` | `HTTP 422: data matches no possible input` — it is classic-only | Keep convo-resolution in classic; `required_linear_history`/`non_fast_forward` ARE valid ruleset types |
@@ -597,9 +659,13 @@ Walk this in order; each step maps to one of the five gotchas above plus the pre
 | Trusted `hephaestus-review-prs` empty-thread result on its first run | Read "0 unresolved threads" as a clean review | The first run intermittently truncated at worktree-setup (~8-line log, no `Analysis complete for PR #N`); a truncated run ALSO posts zero threads, indistinguishable from a genuine clean pass by thread-count alone | Require the log line `Analysis complete for PR #N` before trusting an empty thread list; re-run if the log is truncated |
 | Ignored a sub-agent's "disk-direct" writes; ran console scripts afterward | Let a sub-agent write files via a python script (bypassing Read/Edit) "because the harness cache was stale" | The script targeted the MAIN repo path instead of `build/.worktrees/issue-N`; main's `X.py` got uncommitted mods importing a worktree-only module → `ModuleNotFoundError` broke editable-installed console scripts for ALL later runs | After any disk-direct sub-agent, `git -C <main-repo> status`; restore leaked tracked files via `git show HEAD:path > path` (checkout/restore/reset are safety-net-blocked); confirm `pixi run python -c "import ..."`; the PUSHED branch is fine — only the main tree was contaminated |
 
+> Rows about arming, disabling, and queue enqueue before the shared-queue ownership
+> entry are historical sole-owner observations. The current shared queue follows the
+> explicit no-mutation interlock instead.
+
 ## Results & Parameters
 
-### Auto-merge non-firing decision tree
+### Historical sole-owner auto-merge non-firing decision tree
 
 ```text
 auto-merge armed but not merged
@@ -621,7 +687,25 @@ auto-merge armed but not merged
        → required_signatures / pr-policy signature gate → re-sign with -S (registered key verified)
 ```
 
-### Tiered helper sourcing for cross-repo callers
+### Shared queue interlock
+
+```text
+fresh PR state needed before label or merge action
+├── response lacks autoMergeRequest field
+│      → partial/unknown state → fail closed; write nothing
+├── autoMergeRequest is non-null
+│      → externally owned or unprovable ownership → stand down; do not disable/adopt
+├── reviewed head SHA differs from live head
+│      → review proof stale → return to PR review
+└── OPEN + explicit autoMergeRequest:null + reviewed SHA matches
+       → approving/GO label may proceed; later normal merge must use that SHA conditionally
+
+negative/recovery/skip labels
+└── OPEN + explicit autoMergeRequest:null is sufficient
+       → record the safe outcome; do not demand a stale reviewed head
+```
+
+### Historical sole-owner helper sourcing for cross-repo callers
 
 Prefer **sourcing the helper** over re-defining `choose_merge_flag` inline. The helper exists as
 a real, sourceable file in ProjectHephaestus: `scripts/choose_merge_flag.sh`. A sub-agent running
@@ -713,8 +797,16 @@ call-site bug. Asserting on `_AGENT_PROMPT_TEMPLATE` (assuming a module constant
 | GO label set | `state:plan-go`, `state:plan-no-go`, `state:needs-plan`, `state:implementation-go`, `state:implementation-no-go` |
 | Arming record path | `state_dir/drive-green-armed-<issue>.json` |
 | `gh pr list` default limit | 30 — use `--limit 200` for backlogs |
+| Shared-queue auto-merge ownership | Unprovable from GitHub readback; do not mutate a populated request |
+| Label-mutation safety read | Every label: `OPEN` + explicit `autoMergeRequest: null`; approving/GO label also requires live SHA equal to reviewed SHA |
+| Queue merge direction (pending #2419 CI) | Normal REST merge conditioned on reviewed SHA; no administrator bypass and no auto-merge mutation |
 
-### Label-gated auto-merge workflow constraints
+### Historical repository-owned auto-merge constraints (not shared queue behavior)
+
+The following mechanism is retained as historical guidance for a repository-owned
+workflow whose authority and exclusive ownership are explicit. It is **not** valid
+for the ProjectHephaestus shared automation queue described in the queue-ownership
+section above.
 
 | Constraint | Value |
 | --------- | ----- |
@@ -724,12 +816,13 @@ call-site bug. Asserting on `_AGENT_PROMPT_TEMPLATE` (assuming a module constant
 | Forbidden | `actions/checkout` (do not execute PR-controlled code) |
 | Input guard | numeric-only `PR_NUMBER` |
 | Metadata | re-fetch `gh pr view --json autoMergeRequest,isDraft,labels,state` (event payload is stale) |
-| Arm | `gh pr merge "$PR" --repo "$REPO" --auto --squash` |
+| Arm | Historical sole-owner behavior: `gh pr merge "$PR" --repo "$REPO" --auto --squash`; forbidden for a shared queue |
 
-### ProjectHephaestus current-head PR-policy completion checklist
+### Historical ProjectHephaestus completion checklist (not current queue behavior)
 
-Use this sequence when finishing a ProjectHephaestus PR by hand or verifying that automation did it
-correctly:
+This legacy sequence documents earlier repository policy. Do not use it to make the
+current shared automation queue arm auto-merge; follow the shared-queue interlock
+instead.
 
 ```bash
 # Verify the commit identity and signature before pushing or before trusting the PR policy gate.
