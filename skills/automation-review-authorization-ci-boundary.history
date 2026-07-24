@@ -1,5 +1,41 @@
 # automation-review-authorization-ci-boundary — History
 
+## v2.0.0 (2026-07-24)
+
+**Changed by:** ProjectHephaestus issues #2419 and #2423 reviewed-head and
+auto-merge-ownership safety work.
+**Verification:** verified-local — live GitHub GraphQL schema inspection and local
+ProjectHephaestus automation tests, Ruff, format, and mypy; implementation CI pending.
+
+### What changed
+
+- Replaced the merge-wait auto-merge arming/defer model with a fail-closed interlock:
+  no queue stage enables, defers, disables, adopts, creates, or polls auto-merge.
+- Bound review authorization to a stable GitHub head SHA and a clean exact-SHA checkout
+  verified by a dedicated Git job.
+- Required fresh `OPEN` plus explicitly present `autoMergeRequest: null` before every
+  state-changing label. An approving/GO label additionally requires the reviewed head
+  to equal the live head; negative/recovery labels deliberately remain available after
+  drift, plus exclusive-label post-write verification.
+- Made reviewed-head proof active-run-only and routed restart, refresh, mismatch, and
+  drift back to PR review.
+
+### Why
+
+A review of one revision cannot authorize another revision. Separately, GitHub's
+enable-auto-merge mutation accepts `expectedHeadOid`, but its disable mutation lacks a
+conditional ownership token and `AutoMergeRequest` does not persist a client nonce.
+Readback therefore cannot prove that a queue is disabling its own request instead of an
+external replacement. The queue must stand down and leave a future normal conditional
+merge to a separately reviewed implementation.
+
+### Previous version (v1.5.0) snapshot
+
+The exact v1.5.0 source is preserved in the parent main commit
+[`ec5e4cb`](https://github.com/HomericIntelligence/ProjectMnemosyne/blob/ec5e4cb/skills/automation-review-authorization-ci-boundary.md).
+
+---
+
 ## v1.5.0 (2026-07-21)
 
 **Changed by:** ProjectHephaestus PR #2357 direct-review admission check.
