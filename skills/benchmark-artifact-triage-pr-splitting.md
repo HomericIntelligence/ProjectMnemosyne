@@ -2,11 +2,11 @@
 name: benchmark-artifact-triage-pr-splitting
 description: "Triage generated benchmark result artifacts before committing them. Use when: (1) benchmark/report runs leave many untracked files, (2) result PRs must include durable reports and complete records without logs or scratch residue, (3) Pareto/report assets need validation before staging, (4) large result sets need split into reviewable PRs."
 category: tooling
-date: 2026-06-25
-version: "1.0.0"
+date: 2026-07-24
+version: "1.1.0"
 user-invocable: false
 verification: verified-local
-tags: [benchmark, artifacts, triage, results, pareto, pr-splitting, git, reproducibility]
+tags: [benchmark, artifacts, triage, results, pareto, pr-splitting, git, reproducibility, concurrency, capacity]
 ---
 
 # Benchmark Artifact Triage and PR Splitting
@@ -15,16 +15,17 @@ tags: [benchmark, artifacts, triage, results, pareto, pr-splitting, git, reprodu
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-06-25 |
+| **Date** | 2026-07-24 |
 | **Objective** | Turn a messy benchmark-result worktree into reviewable PRs that preserve useful data and exclude transient run residue. |
-| **Outcome** | Operational. The workflow produced separate result PRs for endpoint reports, model reports, and complete structured benchmark records while leaving logs, placeholders, progress traces, orphan metadata, and partial records untracked. |
-| **Verification** | verified-local. Executed locally in a benchmark-results repository; CI and merge completion were not part of the capture. |
+| **Outcome** | Operational. The workflow produced separate result PRs for endpoint reports, model reports, and complete structured benchmark records while leaving logs, placeholders, progress traces, orphan metadata, and partial records untracked. It preserves concurrency as a measurement dimension so latency baselines and capacity claims remain distinguishable. |
+| **Verification** | verified-local. Executed locally in a benchmark-results repository; the concurrency-coverage amendment was checked against complete-result accounting and local benchmark-report behavior. CI and merge completion were not part of the capture. |
 
 ## When to Use
 
 - A benchmark or report-generation run leaves many visible untracked files and you need to decide what belongs in result PRs.
 - Generated reports reference images, CSV summaries, markdown summaries, raw JSON records, or reproducibility scripts.
 - Some backends or scenarios produced zero-row summaries, placeholders, partial results, interrupted rows, or failure-only evidence.
+- You need to distinguish a single-client latency baseline from a measured concurrency or capacity result.
 - A large result set needs to be split by model family, backend, endpoint, or dataset so reviewers can inspect it without a huge all-in-one PR.
 - You need to preserve durable benchmark information without committing logs, scratch directories, progress files, overlays, or build/runtime residue.
 
@@ -92,16 +93,19 @@ git diff --cached --check
 7. **Validate structured JSON benchmark records by completion.**
    Parse JSON rather than relying on filenames. Require `completed == prompt_count` or `completed == num_prompts` for result PRs that claim complete records. Leave zero-completion and partial records untracked unless the PR title and body are explicitly about failure evidence.
 
-8. **Stage from the reviewed file lists.**
+8. **Preserve concurrency coverage and scope capacity claims.**
+   Treat concurrency as a first-class result dimension. Record the requested and observed concurrency for every retained result, and state the observed set in the report or PR body. A concurrency-one result is a latency baseline; it cannot establish saturation, largest supported concurrency, or maximum throughput. Make those claims only after an explicit sweep over higher concurrency values, and only select a capacity or maximum-performance point from a run with complete prompt accounting, zero failed requests, and finite non-negative throughput. Retain failed or partial sweep records only when they are deliberately included as failure evidence, and never use them as peak-performance candidates.
+
+9. **Stage from the reviewed file lists.**
    Use `git add --pathspec-from-file=/tmp/<list>.txt` so the staged set exactly matches the reviewed set. After staging, compare `git diff --cached --name-only` to the list and investigate any mismatch.
 
-9. **Run a pre-commit staged audit for every PR.**
+10. **Run a pre-commit staged audit for every PR.**
    Before each commit, run staged stats, staged file count, a transient-pattern scan, `git diff --cached --check`, and data-specific validation. The transient scan is allowed to have false positives, but every match should be intentionally explained or removed from staging.
 
-10. **Split PRs by dataset and review size.**
-    Prefer one PR per endpoint/model family/report surface. For large structured JSON sets, split by model family or experiment group so each PR remains reviewable. State exact included counts and excluded categories in every PR body.
+11. **Split PRs by dataset and review size.**
+   Prefer one PR per endpoint/model family/report surface. For large structured JSON sets, split by model family or experiment group so each PR remains reviewable. State exact included counts and excluded categories in every PR body.
 
-11. **Return to trunk and inspect leftovers.**
+12. **Return to trunk and inspect leftovers.**
     After opening PRs, switch back to trunk and run `git status --short --untracked-files=all`. The remaining untracked files should all be intentionally excluded categories, not forgotten report assets.
 
 ## Failed Attempts
@@ -113,6 +117,7 @@ git diff --cached --check
 | Treat metadata-only raw files as results | Keep lone `metadata.json` files without adjacent rows or summaries | Metadata alone usually cannot reproduce a metric and creates review noise | Only commit metadata when it is part of a coherent raw-result bundle or deliberate failure archive. |
 | Include empty backend placeholders | Commit empty summaries for backends that did not run | Empty files imply coverage that does not exist and inflate reviews | Exclude zero-row placeholders unless documenting absence is the explicit objective. |
 | Accept every JSON record in a result directory | Stage partial or zero-completion JSON next to complete records | Partial records contaminate result datasets and make counts misleading | Parse JSON and require complete prompt accounting before staging result records. |
+| Treat concurrency one as a capacity result | Report a latency baseline as the largest supported concurrency or maximum-performance point | A single-client run contains no saturation evidence and conflates latency with capacity | Preserve concurrency in every record and require a higher-concurrency sweep with complete, zero-failure points before making capacity or peak-throughput claims. |
 
 ## Results & Parameters
 
@@ -125,6 +130,8 @@ git diff --cached --check
 | Pareto/report images | Keep if referenced | Confirm every referenced image path exists and is staged. |
 | Reproducibility scripts | Keep when tied to committed results | Confirm script names and paths are described in the PR body. |
 | Complete structured JSON benchmark records | Keep | Require `completed == prompt_count` or `completed == num_prompts`. |
+| Concurrency-one records | Keep as latency baselines | Label as `concurrency=1`; do not use for saturation or capacity claims. |
+| Higher-concurrency sweep records | Keep when complete | Record the requested and observed set; use only complete, zero-failure records for capacity or peak-throughput selection. |
 | Logs, Slurm output, PIDs, server output, progress traces | Exclude | Usually transient runtime evidence. |
 | Preflight scratch, overlays, runtime directories | Exclude | Usually build or environment residue. |
 | Zero-row backend summaries | Exclude | Unless the PR explicitly documents missing coverage. |
